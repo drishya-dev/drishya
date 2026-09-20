@@ -1,0 +1,60 @@
+# ── Recorded agent sessions ───────────────────────────────────────────────
+# Captures contain REAL source code, file paths, command output and possibly
+# secrets. Never commit an unredacted capture. See docs/BLUEPRINT.md §13.1.
+fixtures/local/
+*.jsonl
+!fixtures/redacted/**/*.jsonl
+
+# ── Local store ───────────────────────────────────────────────────────────
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+blobs/
+.drishya/
+
+# ── Secrets ───────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+secrets/
+
+# ── Dependencies ──────────────────────────────────────────────────────────
+node_modules/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+
+# ── Build output ──────────────────────────────────────────────────────────
+dist/
+build/
+out/
+.vite/
+*.tsbuildinfo
+
+# ── Test & coverage ───────────────────────────────────────────────────────
+coverage/
+playwright-report/
+test-results/
+*.trace.zip
+
+# ── Logs ──────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# ── Tooling / editor / OS ─────────────────────────────────────────────────
+.claude/settings.local.json
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── Backups left by scripts/Rename-Project.ps1 ────────────────────────────
+*.bak.*
