@@ -15,7 +15,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | | |
 |---|---|
 | **Milestone** | **M0 — Foundations and the go/no-go** (blueprint §20) |
-| **Repo** | not initialised |
+| **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main` |
 | **Blocked on** | nothing |
 | **Next gate** | Index 10 real OSS repos. *Do the maps look like the systems they represent?* |
 
@@ -35,9 +35,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### @yash
 - **When:** 2026-09-20
-- **Did:** Blueprint v1.2. Named the project Drishya. Verified harness capture formats and the competitive landscape.
+- **Did:** Blueprint v1.2. Named the project Drishya. Created the `drishya-dev` org, initialised the repo and pushed the docs. Renamed the project folder from `vantage` and migrated Claude Code session history across.
 - **Left half-done:** nothing
-- **Watch out for:** nothing yet
+- **Watch out for:** repo is **private** — flip to public when there is something worth showing. `.gitignore` refuses `*.jsonl` by default, so recorded fixtures need an explicit, redacted path (`fixtures/redacted/`) before they can be committed.
 
 ### @partner
 - **When:** —
@@ -94,6 +94,9 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-09-20 | **Observe-only.** Drishya never launches or steers an agent | Control makes it a harness, and it loses that fight | §5.4 |
 | 2026-09-20 | Replay before live | Replay is the durable job; live is what sells it | §3.1, §20 |
 | 2026-09-20 | **Lift** is the signature mechanic — content is lifted out of the map, never faded in | It is the moat made visible in one second | §7.4 |
+| 2026-09-20 | GitHub org **`drishya-dev`**, not `drishya-ai` | `drishya` was taken; `-ai` collides with Drishya AI Labs and contradicts the captured-not-generated positioning | §12 |
+| 2026-09-20 | Org owned by a **personal account**, both builders as **Owners**, 2FA required | No legal entity; either builder must be able to administer | — |
+| 2026-09-20 | Repo starts **private** | Nothing worth showing yet; flip to public at the M1 demo | §18.5 |
 
 ---
 
@@ -103,7 +106,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 |---|---|---|---|
 | 1 | Run Agent Flow against a live session — what does a click actually reveal? | Marketing copy, not code | §22.1 |
 | 2 | Trademark clearance for "Drishya", class 9/42 | Commercial use only | §App. A |
-| 3 | Rename the project folder to `drishya` and migrate Claude Code history? | Repo creation | §App. A2 |
+| 3 | When do we flip the repo public? Proposed: at the M1 hosted demo | Launch timing | §18.5 |
 
 ---
 
