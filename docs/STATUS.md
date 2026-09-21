@@ -98,6 +98,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-09-21 | **Theme: a clean developer tool** (Linear / Vercel / GitHub idiom) — graphite, flat hairline surfaces, one sans + one mono, GitHub-dark syntax, colour only for meaning; replaces glow pools, blur, grain and serif prose | Builder review of the first prototype: functionality right, look too busy | `docs/VISION.md` §5, `docs/prototype/` |
 | 2026-09-21 | Repo workflow: squash-only merges, branches deleted on merge, `CODEOWNERS` auto-requests the other builder, PR template = the non-negotiables, area/`schema`/`decision` labels | Makes "we check each other's work" the default rather than a habit to remember | `.github/`, `AGENTS.md` |
 | 2026-09-21 | **`docs/prototype/` is the design reference**, superseding the first storyboard; Read surfaces show abstract ghost shapes, never uncaptured text | A working scene settles design questions faster than prose; showing lines outside a captured range would invent bytes | `docs/prototype/README.md`, `VISION.md` §4 |
 | 2026-09-21 | **`AGENTS.md` is the single canonical agent file**; `CLAUDE.md` only imports it | One rule set for both builders' agents: Codex reads `AGENTS.md` natively, Claude Code via `@AGENTS.md` | `AGENTS.md` |

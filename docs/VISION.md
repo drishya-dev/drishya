@@ -105,7 +105,7 @@ When the next operation arrives, the previous one doesn't vanish. It **eases bac
 
 ### 3.4 Surface — prose rises beneath the work
 
-When the agent speaks, the finished passage settles and the field *beneath* it darkens softly, like a stage light narrowing. The agent's actual words appear there, **directly on the world** — set in larger, editorial type, no bubble, no box, a small identity glyph at the margin. The paragraph arrives complete and **resolves into focus**, a subtle blur-to-sharp like a camera pulling focus, so it is readable instantly and never typewritten. Then the next passage opens below. This vertical rhythm — *action, action, action · words · action, action* — is the product's heartbeat.
+When the agent speaks, the finished passage settles and the agent's actual words appear beneath it, **unboxed** — plain readable text in the UI sans, no bubble, no card, with a single agent-coloured rule at the left edge and the agent's name above. The paragraph arrives complete and **resolves into focus**, a subtle blur-to-sharp like a camera pulling focus, so it is readable instantly and never typewritten. Then the next passage opens below. This vertical rhythm — *action, action, action · words · action, action* — is the product's heartbeat.
 
 ### 3.5 Resolve — the outcome lands once
 
@@ -132,19 +132,31 @@ The rule from your vision — *not boxes* — means **no generic card template**
 
 ---
 
-## 5. Material, light and type
+## 5. Theme: a clean developer tool
 
-**No boxes means no hard edges.** Surfaces are **feathered scrims**: a darkened, faintly frosted region behind content whose edges dissolve into the map. You never see a rectangle outline; you see content sitting on a pool of shadow.
+*Revised 21 Sep after review of the first prototype: the functionality and what it shows were right; the look was too busy. Glow pools, blur, grain, a serif voice and five accents read as messy. The standard is now the tools developers already trust — Linear, Vercel, GitHub.*
 
-**Light is information.** The map's glow is a *heat memory* of the session — it pools where the agent worked and cools slowly, so a glance at the background tells you where the run has been. It is never ambient decoration. Filaments are the connective tissue: map↔surface, dock↔surface, surface↔surface for genuinely linked evidence.
+**Neutral, flat, precise.** A graphite base, flat surfaces with a 1 px hairline border and a small radius, and a solid app frame — crown, dock and filmstrip — separated by hairlines. No glow pools, no frosted blur, no grain, no vignettes. Precision in alignment and spacing does the work that effects used to.
 
-**Palette** — deep ink, one warm accent, a few semantic colours. Starting tokens from the [experience spec](review/02-experience-spec.md): base `#0B1013`, text `#EDF0EB`, secondary `#B4BDBB`, warm accent `#D7B77A`, read `#89BFC1`, added `#A8CFA7`, removed/failure `#EF9290`. Colour never carries meaning alone; shape and label always back it up.
+**"No boxes" means no *labelled* boxes.** What the builder rejected is the `model thinking:` / `tool call:` / `output:` stack. A clean, content-shaped surface for a file read or a diff is the right developer idiom. The agent's prose stays unboxed: plain text with a single agent-coloured rule at its left edge.
 
-**Type** — one refined sans for UI, one mono for code, and prose set larger and more editorial than UI text. Source is never shrunk below 14 px to fit; density comes from removing decoration, not from tiny type.
+**Colour only where it means something.** Neutral greys for everything structural. Colour is reserved for:
 
-**Depth** — three planes: the map (far, soft), the canvas (near, sharp), the active selection (nearest, lifted). A settled surface steps back a plane; a selected one steps forward. That z-movement is how the user feels focus.
+| Meaning | Colour |
+|---|---|
+| Agent identity | Claude `#E0896A` · Codex `#6FC3B3` · one hue per agent |
+| Pass / added | `#4FC38A`, with a `rgba(46,160,67,.14)` line wash |
+| Fail / removed | `#F2706A`, with a `rgba(248,81,73,.13)` line wash |
+| Edited file | `#E6B98A` |
+| Interactive focus, MCP | `#8B9BFF` |
 
----
+Base `#0A0A0C`, surfaces `#111216` / `#16171C`, borders `rgba(255,255,255,.07–.18)`, text `#EDEDEF` / `#A1A1AA` / `#71717A` / `#52525B`. Syntax colours follow GitHub Dark (keywords `#FF7B72`, strings `#A5D6FF`, functions `#D2A8FF`, numbers `#79C0FF`, comments `#8B949E`). Colour never carries meaning alone; shape and label always back it up.
+
+**Type** — one sans (Inter / Geist, system fallback) for UI and prose, one mono (Geist Mono / JetBrains Mono / Cascadia) for code and paths. No serif, no italics, no letter-spaced uppercase labels. Sentence case everywhere.
+
+**The map is quiet.** The run's files form a spine in the left gutter; the rest of the repository fades out from behind the reading column so no line ever crosses text. Heat is a small, tight glow and a ring for edited files — information, never atmosphere.
+
+**Motion is unchanged** — Lift, Emit, Settle, Surface, Resolve — but the travelling shell now looks like the surface itself arriving, and nothing blooms. Depth comes from opacity and a single shadow, not from scale.
 
 ## 6. Micro-interactions — "every single little thing"
 
