@@ -1,0 +1,49 @@
+name: Bug
+description: Something is wrong, misleading or broken
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never attach an unredacted session recording.** Transcripts and rollout files contain source code, paths and possibly secrets. Describe the problem, or attach a recording only after redacting it.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and where — which screen, operation or moment.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of problem
+      options:
+        - Shows something untrue (wrong file, wrong version, invented link)
+        - Missing or incomplete captured content
+        - Visual or motion problem
+        - Performance or memory
+        - Capture or harness integration
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: harness
+    attributes:
+      label: Harness and version
+      placeholder: e.g. Claude Code 2.1.x, Codex CLI 0.x — or "prototype"
+  - type: input
+    id: env
+    attributes:
+      label: OS and browser
+      placeholder: e.g. Windows 11, Chrome 140
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: As exact as you can make them.

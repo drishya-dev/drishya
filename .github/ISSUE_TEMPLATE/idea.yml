@@ -1,0 +1,27 @@
+name: Idea or feature
+description: Propose something Drishya should do or show
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard, slow or impossible today? Start from the developer's situation, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: For anything visual, say where it lives on screen and what its motion would mean.
+    validations:
+      required: true
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Fits the principles
+      description: See docs/VISION.md and AGENTS.md.
+      options:
+        - label: It observes — it never steers, prompts or launches an agent
+        - label: It shows captured evidence, or clearly labels what is derived
+        - label: Any motion carries information about origin, connection or change

@@ -1,0 +1,25 @@
+## What
+
+<!-- One or two sentences: what this changes. -->
+
+## Why
+
+<!-- The problem it solves, or the decision it implements. Link the STATUS.md item or issue. -->
+
+## How to check it
+
+<!-- What the reviewer should run, open or look at. For UI work: which frame, interaction or state. -->
+
+## Checklist
+
+The non-negotiables from [`AGENTS.md`](../AGENTS.md#non-negotiable-constraints). Tick what applies; say why for anything that does not.
+
+- [ ] **Observe only** — nothing sends a prompt, approves a tool call or launches an agent
+- [ ] **No harness file is written** — all harness paths stay read-only
+- [ ] **Redaction first** — anything persisted, indexed, exported or shown passes redaction before it lands
+- [ ] **Provenance** — derived content is labelled; no location or causal link is drawn without evidence
+- [ ] **Deterministic composer** — no wall-clock reads inside it; golden tests updated if choreography changed
+- [ ] **No telemetry** added, in any form
+- [ ] **UI only:** passes the freeze, truth and ten-minute tests in [`VISION.md`](../docs/VISION.md#8-the-standard), and still works with motion off and the map off
+- [ ] **Schema:** touches the event schema? → labelled `schema` and agreed by both builders
+- [ ] [`docs/STATUS.md`](../docs/STATUS.md) updated — last session, and the decisions log if anything was settled

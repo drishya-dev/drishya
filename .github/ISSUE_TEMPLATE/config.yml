@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Read the vision first
+    url: https://github.com/drishya-dev/drishya/blob/main/docs/VISION.md
+    about: What Drishya is meant to look, move and feel like — the fastest way to see whether an idea fits.

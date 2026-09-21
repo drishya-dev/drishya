@@ -38,7 +38,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Left half-done:** nothing
 - **Watch out for:** repo is **private** — it must be public before any hackathon submission, and going public also unlocks free branch protection. The prototype is synthetic; never present it as a working integration.
 
-### @partner
+### @harsh (Harsh-4210)
 - **When:** —
 - **Did:** —
 - **Left half-done:** —
@@ -98,6 +98,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-09-21 | Repo workflow: squash-only merges, branches deleted on merge, `CODEOWNERS` auto-requests the other builder, PR template = the non-negotiables, area/`schema`/`decision` labels | Makes "we check each other's work" the default rather than a habit to remember | `.github/`, `AGENTS.md` |
 | 2026-09-21 | **`docs/prototype/` is the design reference**, superseding the first storyboard; Read surfaces show abstract ghost shapes, never uncaptured text | A working scene settles design questions faster than prose; showing lines outside a captured range would invent bytes | `docs/prototype/README.md`, `VISION.md` §4 |
 | 2026-09-21 | **`AGENTS.md` is the single canonical agent file**; `CLAUDE.md` only imports it | One rule set for both builders' agents: Codex reads `AGENTS.md` natively, Claude Code via `@AGENTS.md` | `AGENTS.md` |
 | 2026-09-21 | **`docs/VISION.md` is authoritative for creative direction**; `docs/README.md` resolves precedence between overlapping docs | Replaces a three-level chain of override notices an agent had to decode | `docs/VISION.md`, `docs/README.md` |
@@ -131,6 +132,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 |---|---|---|---|
 | 1 | Complete Agent Flow/native-tools task comparison. Source inspection already confirms edit/write snippets and tool results | Workflow differentiation claims; no longer an open question whether any content is shown | `review/04-research-ledger.md` |
 | 2 | Trademark clearance for "Drishya", class 9/42 | Commercial use only | §App. A |
+| 5 | **Require 2FA for the org.** Currently off (verified). Enabling it removes any member without 2FA, so Harsh confirms his first — then an Owner turns it on in org Settings → Authentication security | Security of a repo that will publish an npm package | — |
 | 3 | When do we flip the repo public? Proposed: at the M1 hosted demo. Going public also unlocks free branch protection | Launch timing, enforced review | §18.5 |
 | 4 | Enter the Nebius × NVIDIA hackathon (Best Apps and Agents)? Fit assessed — it fits only if Nemotron does load-bearing, clearly-labeled derived work | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
 

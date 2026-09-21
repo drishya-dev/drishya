@@ -71,10 +71,11 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 
 **Branches and pull requests**
 - `main` always works. Never push broken code to it.
-- Work on a short-lived branch: `<handle>/<topic>` — e.g. `yash/canvas-lift`, `partner/claude-adapter`.
+- Work on a short-lived branch: `<handle>/<topic>` — e.g. `yash/canvas-lift`, `harsh/claude-adapter`.
 - Open a PR into `main`. **The other builder reviews it** before merge — this is how we check each other's work. Docs-only typo fixes may skip review.
-- Squash-merge. The PR title becomes the commit: `area: what changed` (e.g. `canvas: lift surfaces from map origins`).
-- Delete the branch after merge.
+- Squash-merge. The PR title becomes the commit: `area: what changed` (e.g. `canvas: lift surfaces from map origins`). The repo allows squash merges only and deletes branches on merge.
+- `CODEOWNERS` requests review from the other builder automatically. The PR template's checklist is the non-negotiables — tick it honestly.
+- Label issues and PRs by area: `area: capture`, `area: canvas`, `area: map`, `area: privacy`. Anything touching the event schema gets `schema`; anything awaiting a recorded decision gets `decision`.
 
 **Claiming and state**
 - **Claim before starting** — one row in the *Claimed* table in [`docs/STATUS.md`](docs/STATUS.md). Its only job is that two people never edit the same file at once.
