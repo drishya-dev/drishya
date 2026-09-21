@@ -34,7 +34,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### @yash (with Claude)
 - **When:** 2026-09-21
-- **Did:** Committed the Codex review unmodified, then reviewed it and accepted its corrections (HTTP hooks block by default; competitors do render content; temporal ≠ causal; redaction before the first real import; replay slice before the big indexer). Wrote `docs/VISION.md` (creative direction, with the builder's own words) and `docs/README.md` (precedence map). Made `AGENTS.md` the canonical agent file, with `CLAUDE.md` importing it. Assessed hackathon fit in `docs/HACKATHON.md`.
+- **Did:** Committed the Codex review unmodified, then reviewed it and accepted its corrections (HTTP hooks block by default; competitors do render content; temporal ≠ causal; redaction before the first real import; replay slice before the big indexer). Wrote `docs/VISION.md` (creative direction, with the builder's own words) and `docs/README.md` (precedence map). Made `AGENTS.md` the canonical agent file, with `CLAUDE.md` importing it. Assessed hackathon fit in `docs/HACKATHON.md`. Built the interactive design prototype in `docs/prototype/` — the continuous canvas with Lift, Emit, Settle, Surface and Resolve, verified at desktop and phone widths with and without motion.
 - **Left half-done:** nothing
 - **Watch out for:** repo is **private** — it must be public before any hackathon submission, and going public also unlocks free branch protection. The prototype is synthetic; never present it as a working integration.
 
@@ -98,6 +98,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-09-21 | **`docs/prototype/` is the design reference**, superseding the first storyboard; Read surfaces show abstract ghost shapes, never uncaptured text | A working scene settles design questions faster than prose; showing lines outside a captured range would invent bytes | `docs/prototype/README.md`, `VISION.md` §4 |
 | 2026-09-21 | **`AGENTS.md` is the single canonical agent file**; `CLAUDE.md` only imports it | One rule set for both builders' agents: Codex reads `AGENTS.md` natively, Claude Code via `@AGENTS.md` | `AGENTS.md` |
 | 2026-09-21 | **`docs/VISION.md` is authoritative for creative direction**; `docs/README.md` resolves precedence between overlapping docs | Replaces a three-level chain of override notices an agent had to decode | `docs/VISION.md`, `docs/README.md` |
 | 2026-09-21 | Creative doctrine: **quiet at rest, articulate in motion** — motion spent on relationships and arrivals, never on simulating reading | Reconciles the builder's demand for maximal craft with the review's truthfulness constraints | `docs/VISION.md` §1 |

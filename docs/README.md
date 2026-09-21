@@ -25,7 +25,7 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 **New to the project** — [`VISION.md`](VISION.md) → [`review/01-product-review.md`](review/01-product-review.md) → [`STATUS.md`](STATUS.md). Half an hour, and you know what it is, why, and where it stands.
 
-**Before UI work** — [`VISION.md`](VISION.md) → [`reference/04-continuous-canvas.md`](reference/04-continuous-canvas.md) → [`review/02-experience-spec.md`](review/02-experience-spec.md).
+**Before UI work** — [`VISION.md`](VISION.md) → [`prototype/`](prototype/) → [`reference/04-continuous-canvas.md`](reference/04-continuous-canvas.md) → [`review/02-experience-spec.md`](review/02-experience-spec.md).
 
 **Before capture, store or daemon work** — [`review/03-engineering-plan.md`](review/03-engineering-plan.md) → [`reference/03-event-schema.md`](reference/03-event-schema.md) → [`review/04-research-ledger.md`](review/04-research-ledger.md).
 
@@ -41,5 +41,6 @@ When two documents disagree, the one higher in its row wins. When a document her
 | [`HACKATHON.md`](HACKATHON.md) | Fit assessment for the Nebius × NVIDIA hackathon, against its official rules |
 | [`review/`](review/) | The 21 September external review: product, experience, engineering, research ledger, first storyboard |
 | [`reference/`](reference/) | Evidence pack, motion catalog, event schema (draft), continuous canvas |
+| [`prototype/`](prototype/) | **The interactive design reference** — the continuous canvas, all five signature moves. Synthetic data only; never presented as a working integration |
 
 | [`Vantage_Base_Prompt.md`](Vantage_Base_Prompt.md) | The original brief, kept for provenance |

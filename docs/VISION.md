@@ -119,7 +119,7 @@ The rule from your vision — *not boxes* — means **no generic card template**
 
 | Action | Its shape | What makes it feel alive |
 |---|---|---|
-| **Read** | A slice cut from the file: the read lines bright, with **ghost lines above and below** fading into blur — you *see* it is a window into a larger file | Lifts from its map node; the ghosts convey "excerpt" without a label |
+| **Read** | A slice cut from the file: the read lines bright, with **abstract ghost shapes above and below** fading out — you *see* it is a window into a larger file. The ghosts are blurred bars, **never real text**: bytes outside the captured range were not captured, so showing them would invent content | Lifts from its map node; the ghosts convey "excerpt" without a label |
 | **Search** | The query on a fine luminous line; results **hang from it like beads**, each an excerpt with its path | Each bead is linked to its map location by a hairline; hover a bead, its file lights up |
 | **Edit** | A diff with line alignment preserved: removed lines struck and dimmed, added lines warm | The removed line **lifts away**, the new line **settles into place**, using the real captured before and after |
 | **Shell** | The command on a baseline like a prompt; output falls beneath it in a monospace field | Output arrives at real captured chunk boundaries live; exit status resolves as one mark |
