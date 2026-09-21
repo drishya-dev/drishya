@@ -1,6 +1,6 @@
 # STATUS — where we are
 
-**Read [`BLUEPRINT.md`](BLUEPRINT.md) first for *what* we are building. This file is *where we are*.**
+**For *what* we are building, start at [`VISION.md`](VISION.md) and the [precedence map](README.md). This file is *where we are*.**
 
 Two builders, shared ownership, mutual review. No fixed track split — take the next thing from the queue, and **claim it here before you start** so we never edit the same file at once.
 
@@ -32,11 +32,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 *Each person overwrites their own block. Keep it to what the other person needs in order to not redo or undo your work.*
 
-### @yash
-- **When:** 2026-09-20
-- **Did:** Blueprint v1.2. Named the project Drishya. Created the `drishya-dev` org, initialised the repo and pushed the docs. Renamed the project folder from `vantage` and migrated Claude Code session history across.
+### @yash (with Claude)
+- **When:** 2026-09-21
+- **Did:** Committed the Codex review unmodified, then reviewed it and accepted its corrections (HTTP hooks block by default; competitors do render content; temporal ≠ causal; redaction before the first real import; replay slice before the big indexer). Wrote `docs/VISION.md` (creative direction, with the builder's own words) and `docs/README.md` (precedence map). Made `AGENTS.md` the canonical agent file, with `CLAUDE.md` importing it. Assessed hackathon fit in `docs/HACKATHON.md`.
 - **Left half-done:** nothing
-- **Watch out for:** repo is **private** — flip to public when there is something worth showing. `.gitignore` refuses `*.jsonl` by default, so recorded fixtures need an explicit, redacted path (`fixtures/redacted/`) before they can be committed.
+- **Watch out for:** repo is **private** — it must be public before any hackathon submission, and going public also unlocks free branch protection. The prototype is synthetic; never present it as a working integration.
 
 ### @partner
 - **When:** —
@@ -98,6 +98,10 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-09-21 | **`AGENTS.md` is the single canonical agent file**; `CLAUDE.md` only imports it | One rule set for both builders' agents: Codex reads `AGENTS.md` natively, Claude Code via `@AGENTS.md` | `AGENTS.md` |
+| 2026-09-21 | **`docs/VISION.md` is authoritative for creative direction**; `docs/README.md` resolves precedence between overlapping docs | Replaces a three-level chain of override notices an agent had to decode | `docs/VISION.md`, `docs/README.md` |
+| 2026-09-21 | Creative doctrine: **quiet at rest, articulate in motion** — motion spent on relationships and arrivals, never on simulating reading | Reconciles the builder's demand for maximal craft with the review's truthfulness constraints | `docs/VISION.md` §1 |
+| 2026-09-21 | Branch `<handle>/<topic>` → PR → other builder reviews → squash-merge | "We both check each other's work"; branch protection is unavailable on a private Free-plan repo (verified: API 403), so review is by convention | `AGENTS.md` |
 | 2026-09-21 | Continuous canvas is the default: retained left-to-right action passages, unboxed emitted prose beneath, top agents, right tool/MCP origins and a background map | Explicit user refinement: the composition must accumulate and remain navigable; reading focus must not replace the surrounding work | `docs/reference/04-continuous-canvas.md`, experience spec §2 |
 | 2026-09-21 | Review amendments supersede conflicting v1.2 planning claims; schema changes remain proposals | Primary-source research and design review found overstated completeness, causality, competitive and pacing claims | `docs/review/01-product-review.md`, blueprint review notice |
 | 2026-09-21 | First gate is the evidence-linked replay interaction; graph benchmark follows | Prove useful comprehension and visual craft before investing in a comprehensive indexer | Review §8–9, engineering §12 |
@@ -126,7 +130,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 |---|---|---|---|
 | 1 | Complete Agent Flow/native-tools task comparison. Source inspection already confirms edit/write snippets and tool results | Workflow differentiation claims; no longer an open question whether any content is shown | `review/04-research-ledger.md` |
 | 2 | Trademark clearance for "Drishya", class 9/42 | Commercial use only | §App. A |
-| 3 | When do we flip the repo public? Proposed: at the M1 hosted demo | Launch timing | §18.5 |
+| 3 | When do we flip the repo public? Proposed: at the M1 hosted demo. Going public also unlocks free branch protection | Launch timing, enforced review | §18.5 |
+| 4 | Enter the Nebius × NVIDIA hackathon (Best Apps and Agents)? Fit assessed — it fits only if Nemotron does load-bearing, clearly-labeled derived work | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
 
 ---
 

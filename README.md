@@ -35,19 +35,15 @@ Much of that work may be available in harness transcripts, tool results and snap
 
 ## Documentation
 
+Start with **[`docs/VISION.md`](docs/VISION.md)** — what Drishya should look and feel like, in the builders' own words. The **[documentation map](docs/README.md)** lists every document and resolves which one wins where they overlap.
+
 | Document | What it is |
 |---|---|
-| [`docs/review/01-product-review.md`](docs/review/01-product-review.md) | **Latest review:** scope corrections, competitive findings, user need, differentiation, validation and launch |
-| [`docs/review/02-experience-spec.md`](docs/review/02-experience-spec.md) | Premium visual direction, scene choreography, pacing, interaction and accessibility |
-| [`docs/reference/04-continuous-canvas.md`](docs/reference/04-continuous-canvas.md) | **Latest visual direction:** accumulating tool passages, open agent prose, top agents and right-side MCP origins |
-| [`docs/review/03-engineering-plan.md`](docs/review/03-engineering-plan.md) | Architecture amendments, historical content, integrations, performance, privacy and deployment |
-| [`docs/review/04-research-ledger.md`](docs/review/04-research-ledger.md) | Primary sources, inspected competitor code and explicit research limits |
-| [`docs/review/05-experience-storyboard.html`](docs/review/05-experience-storyboard.html) | Interactive synthetic storyboard; a design probe, not a functioning collector |
-| [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md) | **Start here.** The source of truth: need, positioning, architecture, performance contract, roadmap |
+| [`docs/VISION.md`](docs/VISION.md) | Creative direction: the composition, signature moves, materials and the standard |
+| [`docs/review/01-product-review.md`](docs/review/01-product-review.md) | Product, need, differentiation, validation and scope |
+| [`docs/review/03-engineering-plan.md`](docs/review/03-engineering-plan.md) | Architecture: capture, historical content, storage, privacy, performance, packaging |
 | [`docs/STATUS.md`](docs/STATUS.md) | Where the project is, what is next, decisions log |
-| [`docs/reference/01-evidence-pack.md`](docs/reference/01-evidence-pack.md) | Verified harness formats and competitive research, with sources |
-| [`docs/reference/02-motion-catalog.md`](docs/reference/02-motion-catalog.md) | Presentation and motion spec, per agent action type |
-| [`docs/reference/03-event-schema.md`](docs/reference/03-event-schema.md) | The normalized event schema and adapter contract |
+| [`AGENTS.md`](AGENTS.md) | Rules for coding agents working in this repository |
 
 ## Licence
 
