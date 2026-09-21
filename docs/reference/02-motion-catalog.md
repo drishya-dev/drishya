@@ -1,5 +1,9 @@
 # Reference 02 — Presentation & Motion Catalog
 
+> **Latest user-directed composition:** [Continuous canvas](04-continuous-canvas.md) governs retention and layout: left-to-right tool passages accumulate; emitted prose flows unboxed below; history continues downward. Agents are above, tool/MCP origins are on the right, and the repository map remains interactive behind. Do not use the per-event recipes below to create a single replacing panel or a uniform grid of cards.
+
+> **21 September amendments:** The [experience specification](../review/02-experience-spec.md) supersedes conflicting choreography below. Show available text intact, preserve navigation, distinguish structural/access/temporal edges, and never infer causality from sequence. Critical bursts may group visibly while each event remains retrievable. Reading/selection pauses advancement; pointer movement alone does not. Approval holds are scoped to the affected agent. Historical source availability is explicit.
+
 The deliverable requested in base prompt §2.7: for every action an observed agent can take, what it shows, how it appears, how it animates, what drill-down reveals, and how it degrades.
 
 **One entry per action type.** Each entry is written so it can be built without further design input.

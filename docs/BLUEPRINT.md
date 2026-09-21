@@ -2,6 +2,14 @@
 
 **Version 1.2 · 20 September 2026 · End-to-end, concept through deployment**
 
+> **21 September review amendment:** Read [the product review](review/01-product-review.md), [experience specification](review/02-experience-spec.md), [engineering plan](review/03-engineering-plan.md) and [research ledger](review/04-research-ledger.md) before implementing this blueprint. They supersede conflicting planning claims below on capture completeness, competitive exclusivity, hook overhead, causal inference, pacing guarantees, artifact history, privacy sequencing, integration choices and first-milestone scope. Unaffected design intent remains in force. The historical v1.2 text is retained for traceability, not as verified current evidence. The event schema is still a draft; the review proposes amendments for agreement before freezing it.
+
+### Current implementation direction after review
+
+**Latest user-directed visual decision:** [Continuous canvas](reference/04-continuous-canvas.md) supersedes any single-panel/replacing-scene default below or in the first review. Tools accumulate left to right with restrained overlap, agent explanation/response text flows unboxed beneath them, and the next passage continues downward. Agents occupy the top; native tools/MCP server origins occupy the right; the interactive repo map stays behind the work. Preserve earlier material as navigable history. This is the primary experience, not an optional Journey lens.
+
+Build an evidence-linked replay slice before a comprehensive graph engine: captured read → edit → test → hunk inspection, with historical content/gaps, reduced motion and map-off behavior. Use a small second-harness fixture early to challenge the schema. Keep observation independent of agent execution. Default to passive collection, evaluate documented enrichment interfaces, and never promise hidden reasoning or complete capture. Live awareness and paced review have separate clocks; burst summaries preserve individually retrievable events without promising readable dwell for all of them. Redaction precedes the first real import. See the linked review documents for the replacement acceptance gates and architecture.
+
 *Named **Drishya** (दृश्य, "the visible / a scene") — see Appendix A. Two builders, shared ownership. No fixed schedule.*
 
 > **This is the source of truth.** Both builders and both of their agents read this file before doing work. Current position, who did what, and what is next live in [`STATUS.md`](STATUS.md) — this file holds knowledge and decisions, that one holds state. When they disagree, this file is right about *what* and that file is right about *where*.

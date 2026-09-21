@@ -12,8 +12,10 @@ Two builders. Both use coding agents. This file keeps every agent working from t
 |---|---|---|
 | [`docs/BLUEPRINT.md`](docs/BLUEPRINT.md) | **The source of truth.** Concept, need, positioning, architecture, decisions, performance contract, roadmap | Always. Skim the table of contents; read the sections your task touches |
 | [`docs/STATUS.md`](docs/STATUS.md) | Where we are, what is next, who did what, decisions log | Always, at the start of a session |
+| [`docs/review/01-product-review.md`](docs/review/01-product-review.md) and linked review specs | Latest researched corrections, experience direction and architecture amendments | Before implementation; these override conflicting v1.2 planning claims as noted in the blueprint |
 | [`docs/reference/03-event-schema.md`](docs/reference/03-event-schema.md) | The normalized event schema — the seam between capture and rendering | Any adapter, daemon or store work |
 | [`docs/reference/02-motion-catalog.md`](docs/reference/02-motion-catalog.md) | Per-action-type presentation and motion specs | Any renderer or animation work |
+| [`docs/reference/04-continuous-canvas.md`](docs/reference/04-continuous-canvas.md) | Latest user-directed visual composition; overrides replacing-panel defaults | Any UI, graphics, motion, playback or history work |
 | [`docs/reference/01-evidence-pack.md`](docs/reference/01-evidence-pack.md) | Verified harness formats, competitor research, sources | Any capture work, or before making a factual claim about a harness |
 
 `docs/Vantage_Base_Prompt.md` is the original brief, kept for provenance. **It is superseded by the blueprint wherever they disagree** — including the product name.
@@ -28,18 +30,18 @@ Violating any of these is a bug, not a tradeoff. They are argued for in the blue
 2. **Never mutate a harness's files.** All harness paths are read-only, always. Copy what we need into our own store.
 3. **Redact before persisting.** Secrets are scrubbed in the ingest path, before SQLite, before the blob store, before the screen. Never after. (§13.1)
 4. **Captured ≠ derived.** Every rendered string carries provenance. Never present a heuristic summary as if the agent said it. (§12)
-5. **Never invent a location.** If an action cannot be resolved to a graph node above 0.6 confidence, the Terrain stays quiet. A wrong light destroys trust in every other light.
+5. **Never invent a location or causal link.** Use evidence-backed mappings and typed relationships. The old 0.6 heuristic is not a calibrated guarantee; unresolved locations remain explicit.
 6. **The composer is a pure function.** No wall-clock reads inside it; time is injected. Determinism cannot be retrofitted and golden tests depend on it. (§9.6)
-7. **Everything is interruptible.** Any pointer or key event cancels in-flight animation synchronously. Nobody waits for a transition. (§9.7)
+7. **Everything is interruptible.** Deliberate navigation, selection and reading stop automatic advancement. Pointer movement alone does not cancel the scene. Nobody waits for a transition.
 8. **Text is never rendered in WebGL.** Pixi draws the Terrain; DOM draws every character. (§14.3)
 9. **No telemetry. None.** No opt-out, because there is nothing to opt out of.
-10. **The agent must never slow down.** Hooks are async with short timeouts; indexing is niced and capped at half the cores.
+10. **Capture must not depend on presentation.** Prefer passive observation; measure collection overhead and resource competition. HTTP hooks are not automatically asynchronous. Never block an agent on rendering or return control/context instructions from observer hooks.
 
 ---
 
 ## Stack
 
-TypeScript everywhere · Node 22+/Bun · Fastify or Hono · `ws` · `better-sqlite3` (WAL) · `web-tree-sitter` · React 19 · Vite · Zustand · PixiJS v8 (WebGL2) · graphology · CodeMirror 6 · `motion`
+Proposed initial stack after review: TypeScript · pinned Node 24 LTS · Fastify · `ws` · `better-sqlite3` (WAL, dedicated worker, packaging gate) · `web-tree-sitter` · React 19 · Vite · Zustand · PixiJS v8 (WebGL2) · graphology for bounded working sets · CodeMirror 6 · Motion/CSS. Exact package versions remain to be selected and tested.
 
 Decisions and the rejected alternatives are in blueprint §14. If you think one is wrong, say so — but read the rejection first, because it is probably already addressed.
 

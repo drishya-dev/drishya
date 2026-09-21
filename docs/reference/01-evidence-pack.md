@@ -1,5 +1,7 @@
 # Reference 01 — Evidence Pack
 
+> **Historical research, reviewed 21 September:** Some conclusions below are overstated or outdated. Use the [new research ledger](../review/04-research-ledger.md) and [product findings](../review/01-product-review.md#3-findings-that-change-the-plan) for current decisions. Agent Flow does render content; newer documented integration surfaces exist; HTTP hooks are not async command hooks; unavailable Karna evidence and market-exclusivity claims are not current proof. `[V]` below records the previous document's classification, not blanket re-verification by this review.
+
 **Verified 20 September 2026.** Everything in the blueprint tagged `[V]` traces to this file. Everything tagged `[A]` is listed in §5 as still needing validation.
 
 This file exists because base prompt §0 rule 2 says: verify the facts you rely on, and label every claim. The base prompt's own §11 competitor assessment was explicitly offered as a hypothesis to test. §4 below reports the test result, including where it was wrong.

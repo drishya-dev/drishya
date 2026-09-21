@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 — Foundations and the go/no-go** (blueprint §20) |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main` |
 | **Blocked on** | nothing |
-| **Next gate** | Index 10 real OSS repos. *Do the maps look like the systems they represent?* |
+| **Next gate** | Evidence-linked replay slice: captured read → edit → test → inspect/rewind in the continuous canvas, with retained action passages, open prose, historical gaps and reduced motion. See [review](review/01-product-review.md). The ten-repo benchmark becomes a later indexer gate. |
 
 ### Claimed
 
@@ -25,7 +25,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| — | — | — |
 
 ---
 
@@ -45,9 +44,26 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Left half-done:** —
 - **Watch out for:** —
 
+### Codex review
+- **When:** 2026-09-21
+- **Did:** Reviewed blueprint, motion catalog and schema against the original vision; researched current primary harness/product docs; inspected Agent Flow source. Added four review documents and a synthetic interactive storyboard under `docs/review/`. Linked review precedence into the blueprint, README, agent guidance and references. Refined the default composition following user feedback: added `docs/reference/04-continuous-canvas.md`, updated the experience and engineering specs, and rebuilt the storyboard around accumulating action passages, unboxed prose, top agents, right-hand tool/MCP origins and an interactive background map.
+- **Key findings:** Competitors already render content; HTTP hooks do not satisfy a nonblocking promise; Codex/Cursor/OpenCode have documented surfaces missing from the old plan; historical artifact versions and typed evidence links are essential; burst pacing needs separate capture and presentation guarantees.
+- **Validation:** Revised storyboard JavaScript syntax and DOM references checked; browser preview inspected at desktop and 390px width; exercised retained history, MCP emphasis, action expansion, map exploration/return and complete reduced-motion playback. Documentation relative links and whitespace checked. No real capture integration, production performance test or user study was performed.
+- **Left half-done:** No requested review work. Application implementation is still pending. Schema amendments are proposals for builder agreement, not a frozen contract.
+- **Watch out for:** Original v1.2 body remains for traceability; its review notice and linked amendments override conflicting claims. The latest continuous-canvas reference supersedes single swapping-panel defaults. The storyboard is synthetic and must not be marketed as a working integration; production virtualization, adaptive pacing and live streaming remain implementation work.
+
 ---
 
 ## Next up
+
+**Revised first sequence (21 September review):**
+
+1. Agree observation identity, historical artifact availability, typed links and capability semantics before schema freeze.
+2. Build the small replay interaction against synthetic fixtures, then implement redaction before importing any real recording.
+3. Add a real Claude fixture and a small Codex fixture to test the shared model; implement the file/import map alongside the review loop.
+4. Validate understanding and interruption behavior before expanding static analysis and live integrations.
+
+The older capture/scene checklist below is a backlog, not the current priority order. The replacement sequence and gates are in [engineering plan §12](review/03-engineering-plan.md#12-build-sequence-and-tests).
 
 Ordered by dependency, not by owner. Take from the top of either column. Tick when merged, not when written.
 
@@ -82,6 +98,10 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-09-21 | Continuous canvas is the default: retained left-to-right action passages, unboxed emitted prose beneath, top agents, right tool/MCP origins and a background map | Explicit user refinement: the composition must accumulate and remain navigable; reading focus must not replace the surrounding work | `docs/reference/04-continuous-canvas.md`, experience spec §2 |
+| 2026-09-21 | Review amendments supersede conflicting v1.2 planning claims; schema changes remain proposals | Primary-source research and design review found overstated completeness, causality, competitive and pacing claims | `docs/review/01-product-review.md`, blueprint review notice |
+| 2026-09-21 | First gate is the evidence-linked replay interaction; graph benchmark follows | Prove useful comprehension and visual craft before investing in a comprehensive indexer | Review §8–9, engineering §12 |
+| 2026-09-21 | Privacy precedes the first real import; historical artifacts need explicit availability | Prevent irreversible sensitive persistence and misleading replay | Engineering §4, §10 |
 | 2026-09-20 | Named **Drishya** (दृश्य, "the visible / a scene") | Vantage is occupied in devtools; npm `drishya` verified free | §App. A |
 | 2026-09-20 | **Nothing is reused.** Graph engine from scratch, Python + TS only | Existing engines target retrieval, not a timeline with stable layout | §10.6 |
 | 2026-09-20 | **TypeScript everywhere**, incl. daemon | One language for a duo; the schema stops being duplicated | §14.5 |
@@ -104,7 +124,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | # | Question | Blocks | Blueprint |
 |---|---|---|---|
-| 1 | Run Agent Flow against a live session — what does a click actually reveal? | Marketing copy, not code | §22.1 |
+| 1 | Complete Agent Flow/native-tools task comparison. Source inspection already confirms edit/write snippets and tool results | Workflow differentiation claims; no longer an open question whether any content is shown | `review/04-research-ledger.md` |
 | 2 | Trademark clearance for "Drishya", class 9/42 | Commercial use only | §App. A |
 | 3 | When do we flip the repo public? Proposed: at the M1 hosted demo | Launch timing | §18.5 |
 

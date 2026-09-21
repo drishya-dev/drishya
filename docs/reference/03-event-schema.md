@@ -2,6 +2,8 @@
 
 **Schema version `1.0.0-draft`.** Semver, with a stability policy (§7), because third-party adapters depend on it.
 
+> **Do not freeze this draft yet.** The [engineering review](../review/03-engineering-plan.md#3-replace-one-overloaded-event-with-observations-and-projections) proposes immutable observations, stable source IDs, versioned projections, historical artifact availability, typed evidence links and feature-level capabilities. In particular, event-level `captured` provenance must not certify inferred fields; `_raw` must never bypass privacy; timestamp clusters do not prove parallelism; and artifacts must not silently resolve to present-day files. The two builders should reconcile these proposals before the first implementation contract is frozen.
+
 This is the contract that makes blueprint §11.1 true: *the renderer must never know which harness an event came from.*
 
 ---
