@@ -1,0 +1,387 @@
+// The scene composer. A PURE function: projection + playback position + preferences in,
+// the semantic scene out. No clock, no DOM, no randomness (AGENTS.md constraint 6). The UI
+// only renders what this returns, so any paused frame can be rebuilt exactly and golden-tested.
+// Runs in both the daemon (tests, export) and the browser.
+
+import type { Agent, Operation, OperationKind, Projection, Prose, TimelineItem } from '@drishya/contracts';
+
+export const COMPOSER_VERSION = 'c1';
+
+export interface ComposeInput {
+  /** Number of timeline items applied. 0 = before anything; timeline.length = the end. */
+  step: number;
+  /** Follow only this agent, tool or MCP server. Others remain, receded. */
+  filter?: { agentId?: string; tool?: string; server?: string };
+  /** Selected operation: it rises; playback holding is the caller's business. */
+  selectedOperationId?: string;
+}
+
+export type OpPhase = 'arriving' | 'present' | 'settled';
+export type OpState = 'running' | 'ok' | 'error' | 'unknown';
+
+export interface SceneOp {
+  id: string;
+  kind: OperationKind;
+  title: string;
+  tool: string;
+  state: OpState;
+  /** arriving: started on the last applied step. settled: not in the agent's latest passage. */
+  phase: OpPhase;
+  /** The step that completed it landed last: play the Resolve move once. */
+  resolving: boolean;
+  /** Where its motion starts: the map node, the dock instrument, or the MCP server. */
+  origin: { type: 'map'; path: string } | { type: 'dock'; tool: string; kind: OperationKind; key: string } | { type: 'mcp'; server: string; tool: string };
+  paths: string[];
+  matchesFilter: boolean;
+  selected: boolean;
+}
+
+export interface SceneProse {
+  id: string;
+  role: Prose['role'];
+  exposure: Prose['exposure'];
+  arriving: boolean;
+}
+
+export interface ScenePassage {
+  id: string;
+  agentId: string;
+  ops: SceneOp[];
+  prose: SceneProse[];
+  /** Earlier passages ease back; the latest passage per agent is in front. */
+  settled: boolean;
+  matchesFilter: boolean;
+  /** A user turn that opened this passage, if one did. */
+  turnPrompt?: string;
+}
+
+export interface SceneAgent {
+  id: string;
+  label: string;
+  harness: string;
+  parentId?: string;
+  agentType?: string;
+  state: 'waiting' | 'active' | 'idle' | 'stopped';
+  activeOperationIds: string[];
+}
+
+/**
+ * One instrument per kind of action (read, search, edit…), not per harness tool name, so
+ * Claude's Read and a Codex `sed -n` read come from the same place. Tool names are listed.
+ */
+export interface DockInstrument {
+  key: string;
+  kind: OperationKind;
+  tools: string[];
+  uses: number;
+  active: boolean;
+}
+
+export interface DockServer {
+  server: string;
+  open: boolean;
+  tools: { tool: string; uses: number; active: boolean }[];
+}
+
+export interface HeatCell {
+  path: string;
+  /** 0..1, decays with steps since last touch. A pure function of the step. */
+  heat: number;
+  tone: 'read' | 'write' | 'fail' | 'pass' | 'search';
+  /** Edited at some point up to now: keeps a quiet ring even when cold. */
+  edited: boolean;
+  active: boolean;
+}
+
+export interface Marker {
+  step: number;
+  type: 'turn' | 'edit' | 'fail' | 'pass' | 'prose' | 'gap' | 'spawn';
+  label: string;
+}
+
+export interface Scene {
+  composerVersion: string;
+  step: number;
+  total: number;
+  atEnd: boolean;
+  current?: TimelineItem;
+  agents: SceneAgent[];
+  dock: { native: DockInstrument[]; mcp: DockServer[] };
+  passages: ScenePassage[];
+  heat: HeatCell[];
+  /** The newest thing on screen, for follow-scrolling. */
+  focus?: { passageId: string; operationId?: string; proseId?: string };
+}
+
+const HALF_LIFE = 14; // steps
+
+export function compose(p: Projection, input: ComposeInput): Scene {
+  const total = p.timeline.length;
+  const step = Math.max(0, Math.min(total, Math.floor(input.step)));
+  const applied = p.timeline.slice(0, step);
+  const last = applied.at(-1);
+  const ops = new Map(p.operations.map((o) => [o.id, o]));
+
+  // Operation state as of this step: started? ended?
+  const started = new Map<string, number>();
+  const ended = new Map<string, number>();
+  const proseAt = new Map<string, number>();
+  const stoppedAgents = new Set<string>();
+  const turnAt: { step: number; prompt?: string }[] = [];
+  applied.forEach((it, i) => {
+    if (it.type === 'op-start') started.set(it.operationId, i);
+    else if (it.type === 'op-end') ended.set(it.operationId, i);
+    else if (it.type === 'prose') proseAt.set(it.proseId, i);
+    else if (it.type === 'agent-stop') stoppedAgents.add(it.agentId);
+    else if (it.type === 'turn') turnAt.push({ step: i, prompt: it.prompt });
+  });
+
+  const stateOf = (op: Operation): OpState => {
+    if (!ended.has(op.id)) return op.status === 'unknown' && step >= total ? 'unknown' : 'running';
+    return op.status === 'running' ? 'unknown' : op.status;
+  };
+
+  const f = input.filter;
+  const opMatches = (op: Operation) => {
+    if (!f) return true;
+    if (f.agentId && op.agentId !== f.agentId) return false;
+    if (f.server && !(op.origin.type === 'mcp' && op.origin.server === f.server)) return false;
+    if (f.tool && !(op.origin.type === 'native' && op.origin.tool === f.tool)) return false;
+    return true;
+  };
+
+  // Passages visible at this step; the latest per agent stays in front.
+  const visible = p.passages.filter((ps) => ps.firstStep < step);
+  const latestByAgent = new Map<string, string>();
+  for (const ps of visible) latestByAgent.set(ps.agentId, ps.id);
+
+  const passages: ScenePassage[] = visible.map((ps) => {
+    const sceneOps: SceneOp[] = ps.operationIds
+      .filter((id) => started.has(id))
+      .map((id) => {
+        const op = ops.get(id)!;
+        return {
+          id,
+          kind: op.kind,
+          title: op.title,
+          tool: op.tool,
+          state: stateOf(op),
+          phase: started.get(id) === step - 1 ? 'arriving' : latestByAgent.get(ps.agentId) === ps.id ? 'present' : 'settled',
+          resolving: ended.get(id) === step - 1,
+          origin: originOf(op),
+          paths: op.paths.filter((x) => x.role !== 'search-hit').map((x) => x.path),
+          matchesFilter: opMatches(op),
+          selected: input.selectedOperationId === id,
+        };
+      });
+    const sceneProse: SceneProse[] = ps.proseIds
+      .filter((id) => proseAt.has(id))
+      .map((id) => {
+        const pr = p.prose.find((x) => x.id === id)!;
+        return { id, role: pr.role, exposure: pr.exposure, arriving: proseAt.get(id) === step - 1 };
+      });
+    const turn = turnAt.filter((t) => t.step < ps.firstStep).at(-1);
+    const prevPassage = visible[visible.indexOf(ps) - 1];
+    const opensTurn = turn && (!prevPassage || prevPassage.lastStep < turn.step);
+    return {
+      id: ps.id,
+      agentId: ps.agentId,
+      ops: sceneOps,
+      prose: sceneProse,
+      settled: latestByAgent.get(ps.agentId) !== ps.id,
+      matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
+      turnPrompt: opensTurn ? turn!.prompt : undefined,
+    };
+  });
+
+  // Agents.
+  const running = [...started.keys()].filter((id) => !ended.has(id)).map((id) => ops.get(id)!);
+  const agents: SceneAgent[] = p.agents.map((a: Agent) => {
+    const active = running.filter((o) => o.agentId === a.id).map((o) => o.id);
+    const hasBegun = applied.some((it) => it.agentId === a.id);
+    const state: SceneAgent['state'] = stoppedAgents.has(a.id) || (a.stoppedSequence !== undefined && step > a.stoppedSequence && step >= total)
+      ? 'stopped'
+      : !hasBegun
+        ? 'waiting'
+        : active.length || last?.agentId === a.id
+          ? 'active'
+          : 'idle';
+    return { id: a.id, label: a.label, harness: a.harness, parentId: a.parentId, agentType: a.agentType, state, activeOperationIds: active };
+  });
+
+  // Dock: every instrument the recording ever uses, so the dock does not reshuffle while playing.
+  const nativeMap = new Map<string, DockInstrument>();
+  const mcpMap = new Map<string, DockServer>();
+  for (const op of p.operations) {
+    const used = started.has(op.id);
+    const act = used && !ended.has(op.id);
+    if (op.origin.type === 'mcp') {
+      const s = mcpMap.get(op.origin.server) ?? { server: op.origin.server, open: false, tools: [] };
+      let t = s.tools.find((x) => x.tool === op.origin.tool);
+      if (!t) {
+        t = { tool: (op.origin as { tool: string }).tool, uses: 0, active: false };
+        s.tools.push(t);
+      }
+      if (used) t.uses++;
+      if (act) {
+        t.active = true;
+        s.open = true;
+      }
+      mcpMap.set(op.origin.server, s);
+    } else {
+      const key = dockKey(op);
+      const d = nativeMap.get(key) ?? { key, kind: key as OperationKind, tools: [], uses: 0, active: false };
+      if (!d.tools.includes(op.tool)) d.tools.push(op.tool);
+      if (used) d.uses++;
+      if (act) d.active = true;
+      nativeMap.set(key, d);
+    }
+  }
+  const lastOp = last && (last.type === 'op-start' || last.type === 'op-end') ? ops.get(last.operationId) : undefined;
+  if (lastOp?.origin.type === 'mcp') mcpMap.get(lastOp.origin.server)!.open = true;
+
+  // Heat: a pure function of the step.
+  const heat = new Map<string, HeatCell>();
+  const failing = new Map<string, { command: string; tests: string[] }>();
+  applied.forEach((it, i) => {
+    if (it.type !== 'op-start' && it.type !== 'op-end') return;
+    const op = ops.get(it.operationId)!;
+    // A later run clears a failure mark when the same command runs clean, or when the output
+    // lists the failing tests as passing. Nothing else clears it.
+    if (it.type === 'op-end' && op.detail.kind === 'test' && op.detail.summary) {
+      const d = op.detail;
+      const s = d.summary!;
+      const passing = new Set(s.passing);
+      for (const [path, f] of [...failing]) {
+        const cleanSameCommand = s.failed === 0 && s.passed > 0 && f.command === d.command.trim();
+        if (cleanSameCommand || f.tests.every((t) => passing.has(t))) failing.delete(path);
+      }
+    }
+    const age = step - 1 - i;
+    const w = Math.pow(0.5, age / HALF_LIFE);
+    for (const pr of op.paths) {
+      const tone: HeatCell['tone'] = pr.role === 'write' ? 'write' : pr.role === 'test' ? (op.status === 'error' ? 'fail' : 'pass') : pr.role === 'search-hit' ? 'search' : 'read';
+      const c = heat.get(pr.path) ?? { path: pr.path, heat: 0, tone, edited: false, active: false };
+      c.heat = Math.min(1, c.heat * 0.6 + w * (pr.role === 'search-hit' ? 0.35 : 0.8));
+      c.tone = tone;
+      if (pr.role === 'write' && it.type === 'op-end' && op.status === 'ok') c.edited = true;
+      if (pr.role === 'test' && it.type === 'op-end' && op.status === 'error' && op.detail.kind === 'test') {
+        const tests = (op.detail.summary?.failures ?? []).filter((f) => f.file === pr.path).map((f) => f.name);
+        failing.set(pr.path, { command: op.detail.command.trim(), tests });
+      }
+      if (it.type === 'op-start' && !ended.has(op.id)) c.active = true;
+      heat.set(pr.path, c);
+    }
+  });
+  for (const c of heat.values()) {
+    if (failing.has(c.path)) c.tone = 'fail';
+    else if (c.tone === 'fail') c.tone = 'pass';
+  }
+
+  let focus: Scene['focus'];
+  if (last) {
+    const opId = last.type === 'op-start' || last.type === 'op-end' ? last.operationId : undefined;
+    const proseId = last.type === 'prose' ? last.proseId : undefined;
+    const ps = [...passages].reverse().find((x) => (opId && x.ops.some((o) => o.id === opId)) || (proseId && x.prose.some((pr) => pr.id === proseId)));
+    if (ps) focus = { passageId: ps.id, operationId: opId, proseId };
+  }
+
+  return {
+    composerVersion: COMPOSER_VERSION,
+    step,
+    total,
+    atEnd: step >= total,
+    current: last,
+    agents,
+    dock: {
+      native: [...nativeMap.values()].map((d) => ({ ...d, tools: d.tools.sort() })).sort((a, b) => NATIVE_ORDER.indexOf(a.kind) - NATIVE_ORDER.indexOf(b.kind)),
+      mcp: [...mcpMap.values()].sort((a, b) => a.server.localeCompare(b.server)),
+    },
+    passages,
+    heat: [...heat.values()].map((c) => ({ ...c, heat: Math.round(c.heat * 1000) / 1000 })).sort((a, b) => a.path.localeCompare(b.path)),
+    focus,
+  };
+}
+
+const NATIVE_ORDER: OperationKind[] = ['read', 'search', 'edit', 'write', 'shell', 'test', 'web', 'spawn', 'plan', 'other', 'mcp'];
+
+/** Dock instruments group by what the operation did, so Bash-as-test and Bash-as-shell differ. */
+export function dockKey(op: Operation): string {
+  if (op.origin.type === 'mcp') return `mcp:${op.origin.server}`;
+  return op.kind === 'write' ? 'edit' : op.kind;
+}
+
+function originOf(op: Operation): SceneOp['origin'] {
+  if (op.origin.type === 'mcp') return { type: 'mcp', server: op.origin.server, tool: op.origin.tool };
+  // Reads and edits of a file come from the map; everything else from its dock instrument.
+  const file = op.paths.find((x) => x.role === 'read' || x.role === 'write');
+  if ((op.kind === 'read' || op.kind === 'edit' || op.kind === 'write') && file) return { type: 'map', path: file.path };
+  return { type: 'dock', tool: op.tool, kind: op.kind, key: dockKey(op) };
+}
+
+// ─── transport helpers ───────────────────────────────────────────────────────────────────
+
+export function markers(p: Projection): Marker[] {
+  const ops = new Map(p.operations.map((o) => [o.id, o]));
+  const out: Marker[] = [];
+  p.timeline.forEach((it, i) => {
+    const step = i + 1; // the step at which this item is visible
+    if (it.type === 'turn') out.push({ step, type: 'turn', label: clip(it.prompt ?? 'Prompt', 60) });
+    else if (it.type === 'gap') out.push({ step, type: 'gap', label: it.reason });
+    else if (it.type === 'op-start') {
+      const op = ops.get(it.operationId)!;
+      if (op.kind === 'spawn') out.push({ step, type: 'spawn', label: op.title });
+    } else if (it.type === 'op-end') {
+      const op = ops.get(it.operationId)!;
+      if ((op.kind === 'edit' || op.kind === 'write') && op.status === 'ok') out.push({ step, type: 'edit', label: op.title });
+      if (op.kind === 'test') out.push({ step, type: op.status === 'error' ? 'fail' : 'pass', label: op.title });
+      else if (op.status === 'error') out.push({ step, type: 'fail', label: op.title });
+    } else if (it.type === 'prose') out.push({ step, type: 'prose', label: '' });
+  });
+  return out;
+}
+
+export function nextMarker(p: Projection, from: number, type: Marker['type'] | Marker['type'][], dir: 1 | -1 = 1): number | undefined {
+  const types = Array.isArray(type) ? type : [type];
+  const ms = markers(p).filter((m) => types.includes(m.type));
+  return dir === 1 ? ms.find((m) => m.step > from)?.step : ms.reverse().find((m) => m.step < from)?.step;
+}
+
+/** The step at which an operation first appears, for "jump to" from search or links. */
+export function stepOfOperation(p: Projection, operationId: string): number | undefined {
+  const i = p.timeline.findIndex((it) => it.type === 'op-start' && it.operationId === operationId);
+  return i < 0 ? undefined : i + 1;
+}
+
+export function stepOfObservation(p: Projection, observationId: string): number | undefined {
+  const op = p.operations.find((o) => o.observationIds.includes(observationId));
+  if (op) return stepOfOperation(p, op.id);
+  const pr = p.prose.find((x) => x.observationIds.includes(observationId));
+  if (pr) return pr.sequence + 1;
+  return undefined;
+}
+
+/**
+ * Suggested dwell for playback pacing, in ms, from the content's reading cost. The caller owns
+ * the clock; this only says how long a step deserves.
+ */
+export function dwellFor(p: Projection, step: number, speed = 1): number {
+  const it = p.timeline[step - 1];
+  if (!it) return 600 / speed;
+  let ms = 450;
+  if (it.type === 'prose') {
+    const pr = p.prose.find((x) => x.id === it.proseId);
+    const words = pr ? pr.text.split(/\s+/).length : 20;
+    ms = Math.min(6000, 900 + words * (pr?.role === 'reasoning' ? 60 : 110));
+  } else if (it.type === 'turn') ms = 1800;
+  else if (it.type === 'op-end') {
+    const op = p.operations.find((o) => o.id === it.operationId);
+    ms = op?.kind === 'test' || op?.kind === 'edit' || op?.kind === 'write' ? 1800 : op?.status === 'error' ? 1600 : 700;
+  } else if (it.type === 'op-start') ms = 380;
+  return ms / speed;
+}
+
+function clip(s: string, n: number) {
+  const t = s.replace(/\s+/g, ' ').trim();
+  return t.length > n ? t.slice(0, n - 1) + '…' : t;
+}

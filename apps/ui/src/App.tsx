@@ -1,0 +1,168 @@
+import { useEffect } from 'react';
+import { dwellFor } from '@drishya/scene';
+import { bundleSource, daemon, loadBundle, signIn } from './api.ts';
+import { Home } from './components/Home.tsx';
+import { Viewer } from './components/Viewer.tsx';
+import { setMotion, useApp } from './state.ts';
+
+const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
+
+/** Deep links: #/r/<id>, ?at=<step|end>, ?motion=0, ?bundle=<url>, ?demo. */
+function params() {
+  const q = new URLSearchParams(location.search);
+  const at = q.get('at');
+  return {
+    at: at === 'end' ? ('end' as const) : at ? Number(at) : undefined,
+    bundle: q.get('bundle') ?? (q.has('demo') ? DEMO_URL : undefined),
+    motion: q.get('motion'),
+    recording: /^#\/r\/(.+)$/.exec(location.hash)?.[1],
+  };
+}
+
+async function openBundle(url: string) {
+  const at = params().at;
+  const bundle = await loadBundle(url);
+  const source = bundleSource(bundle);
+  useApp.setState({ source, config: await source.config() });
+  await useApp.getState().openRecording(bundle.recording.id, { at: at ?? 0, play: at === undefined });
+}
+
+export function App() {
+  const screen = useApp((s) => s.screen);
+  const error = useApp((s) => s.error);
+
+  // Boot: a replay bundle if asked for; otherwise the local daemon; otherwise the demo.
+  useEffect(() => {
+    const p = params();
+    if (p.motion === '0') setMotion(false);
+    (async () => {
+      try {
+        if (p.bundle) return await openBundle(p.bundle);
+        const auth = await signIn();
+        if (auth === 'ok') {
+          useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings: await daemon.recordings() });
+          if (p.recording) await useApp.getState().openRecording(decodeURIComponent(p.recording), { at: p.at ?? 0 });
+          return;
+        }
+        if (auth === 'signed-out') return useApp.setState({ screen: 'signed-out' });
+        // No daemon: this is the static hosted demo.
+        await openBundle(DEMO_URL).catch(() => useApp.setState({ screen: 'no-daemon' }));
+      } catch (e) {
+        useApp.setState({ screen: 'error', error: (e as Error).message });
+      }
+    })();
+  }, []);
+
+  // A launch link pasted into an open tab only changes the fragment; sign in again. A
+  // recording link opens that recording.
+  useEffect(() => {
+    const onHash = () => {
+      if (/token=/.test(location.hash)) return location.reload();
+      const id = params().recording;
+      const s = useApp.getState();
+      if (id && decodeURIComponent(id) !== s.recordingId && s.source?.kind === 'daemon') void s.openRecording(decodeURIComponent(id));
+      if (!id && s.source?.kind === 'daemon' && s.screen === 'viewer') s.set({ screen: 'home', playing: false });
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  usePlayback();
+  useKeyboard();
+  useLiveUpdates();
+
+  if (screen === 'loading') return <div className="center muted">Starting…</div>;
+  if (screen === 'signed-out')
+    return (
+      <div className="center notice">
+        <h2>Open Drishya from its launch link</h2>
+        <p className="muted">This page needs the one-time link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p>
+      </div>
+    );
+  if (screen === 'no-daemon')
+    return (
+      <div className="center notice">
+        <h2>Drishya is not running</h2>
+        <p className="muted">
+          Start it with <code>pnpm serve</code> (or <code>drishya serve</code>) and open the link it prints.
+        </p>
+        <button className="btn" onClick={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ screen: 'error', error: e.message }))}>
+          Open the demo instead
+        </button>
+      </div>
+    );
+  if (screen === 'error') return <div className="center notice bad">{error}</div>;
+  if (screen === 'home') return <Home openDemo={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
+  return <Viewer />;
+}
+
+/** The playback clock. The composer never reads time; only this hook does. */
+function usePlayback() {
+  const playing = useApp((s) => s.playing);
+  const step = useApp((s) => s.step);
+  const speed = useApp((s) => s.speed);
+  const motion = useApp((s) => s.motion);
+  const projection = useApp((s) => s.projection);
+  useEffect(() => {
+    if (!playing || !projection) return;
+    if (step >= projection.timeline.length) {
+      const live = useApp.getState().recording?.live;
+      if (!live) useApp.setState({ playing: false });
+      return;
+    }
+    const ms = dwellFor(projection, step + 1, speed) * (motion ? 1 : 0.6);
+    const t = setTimeout(() => useApp.setState({ step: step + 1 }), ms);
+    return () => clearTimeout(t);
+  }, [playing, step, speed, motion, projection]);
+}
+
+function useKeyboard() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const s = useApp.getState();
+      const t = e.target as HTMLElement;
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) return;
+      if (s.screen !== 'viewer') return;
+      const k = e.key;
+      if (k === ' ') {
+        e.preventDefault();
+        s.togglePlay();
+      } else if (k === 'ArrowRight') s.stepBy(1);
+      else if (k === 'ArrowLeft') s.stepBy(-1);
+      else if (k === 'e' || k === 'E') s.jump('edit', e.shiftKey ? -1 : 1);
+      else if (k === 'f' || k === 'F') s.jump('fail', e.shiftKey ? -1 : 1);
+      else if (k === 'x' || k === 'X') s.set({ explore: !s.explore });
+      else if (k === 'm' || k === 'M') setMotion(!s.motion);
+      else if (k === '/') {
+        e.preventDefault();
+        s.set({ searchOpen: true });
+      } else if (k === 'Home') s.seek(0, { hold: true });
+      else if (k === 'End') s.seek(s.projection?.timeline.length ?? 0, { hold: true });
+      else if (k === 'Escape') {
+        if (s.searchOpen) s.set({ searchOpen: false });
+        else if (s.filePanel) s.set({ filePanel: undefined });
+        else if (s.selectedOp) s.select(undefined);
+        else if (s.briefingOpen) s.set({ briefingOpen: false });
+        else if (s.explore) s.set({ explore: false });
+        else if (s.filter) s.setFilter(undefined);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+}
+
+/** Live: the daemon announces committed observations; the viewer refetches the projection. */
+function useLiveUpdates() {
+  const source = useApp((s) => s.source);
+  useEffect(() => {
+    if (!source) return;
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    return source.subscribe((e) => {
+      const s = useApp.getState();
+      if (!s.recordingId?.split('+').includes(e.recordingId)) return;
+      clearTimeout(pending);
+      pending = setTimeout(() => void useApp.getState().reloadProjection(), 150);
+    });
+  }, [source]);
+}
