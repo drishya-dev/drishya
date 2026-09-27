@@ -55,12 +55,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** —
 
 ### Codex review
-- **When:** 2026-09-21
-- **Did:** Reviewed blueprint, motion catalog and schema against the original vision; researched current primary harness/product docs; inspected Agent Flow source. Added four review documents and a synthetic interactive storyboard under `docs/review/`. Linked review precedence into the blueprint, README, agent guidance and references. Refined the default composition following user feedback: added `docs/reference/04-continuous-canvas.md`, updated the experience and engineering specs, and rebuilt the storyboard around accumulating action passages, unboxed prose, top agents, right-hand tool/MCP origins and an interactive background map.
-- **Key findings:** Competitors already render content; HTTP hooks do not satisfy a nonblocking promise; Codex/Cursor/OpenCode have documented surfaces missing from the old plan; historical artifact versions and typed evidence links are essential; burst pacing needs separate capture and presentation guarantees.
-- **Validation:** Revised storyboard JavaScript syntax and DOM references checked; browser preview inspected at desktop and 390px width; exercised retained history, MCP emphasis, action expansion, map exploration/return and complete reduced-motion playback. Documentation relative links and whitespace checked. No real capture integration, production performance test or user study was performed.
-- **Left half-done:** No requested review work. Application implementation is still pending. Schema amendments are proposals for builder agreement, not a frozen contract.
-- **Watch out for:** Original v1.2 body remains for traceability; its review notice and linked amendments override conflicting claims. The latest continuous-canvas reference supersedes single swapping-panel defaults. The storyboard is synthetic and must not be marketed as a working integration; production virtualization, adaptive pacing and live streaming remain implementation work.
+- **When:** 2026-09-27
+- **Did:** Fixed the two CI failures on `yash/backend-draft`: shutdown now awaits active ingest work before closing SQLite, and the synthetic demo graph has a fixed generation id. Updated test teardown to exercise the awaited close path and regenerated the committed demo bundle.
+- **Validation:** Typecheck passed; 96 Vitest tests passed; UI production build passed; the demo bundle reproduced with the same SHA-256 hash across two consecutive generations. `git diff --check` passed.
+- **Left half-done:** CI has not been rerun remotely yet; the verified repair still needs the branch push/PR workflow.
+- **Watch out for:** The local `pnpm` wrapper attempted a dependency reconciliation and was blocked by its machine-level ignored-build policy. Direct project binaries were used for validation; GitHub Actions uses its own clean install and was the source of the failures fixed here.
 
 ---
 

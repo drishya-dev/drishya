@@ -44,6 +44,7 @@ export class Ingestor extends EventEmitter {
   private locks = new Map<string, Promise<unknown>>();
   private live = new Map<string, NodeJS.Timeout>();
   private projectionCache = new Map<string, { count: number; projection: Projection }>();
+  private closed = false;
 
   constructor(store: Store, adapters: Adapter[] = defaultAdapters()) {
     super();
@@ -224,6 +225,8 @@ export class Ingestor extends EventEmitter {
     let tick = 0;
     const timer = setInterval(async () => {
       tick++;
+      // A tick queued before stopLive/close must not touch a store that is shutting down.
+      if (this.closed || !this.live.has(recordingId)) return;
       try {
         let changed = tick % 4 === 0; // periodically look for new companion files
         for (const s of this.store.getSources(recordingId)) {
@@ -231,7 +234,7 @@ export class Ingestor extends EventEmitter {
           if (sizes.get(s.path) !== size) changed = true;
           sizes.set(s.path, size);
         }
-        if (changed) await this.sync(recordingId);
+        if (changed && !this.closed && this.live.has(recordingId)) await this.sync(recordingId);
       } catch (e) {
         this.emit('error', e);
       }
@@ -264,6 +267,13 @@ export class Ingestor extends EventEmitter {
   stopAll() {
     for (const t of this.live.values()) clearInterval(t);
     this.live.clear();
+  }
+
+  /** Stops tailing and waits for any read in flight, so the store can be closed safely. */
+  async close() {
+    this.closed = true;
+    this.stopAll();
+    await Promise.allSettled([...this.locks.values()]);
   }
 
   forget(recordingId: string) {

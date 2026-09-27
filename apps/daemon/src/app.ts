@@ -97,8 +97,8 @@ export class App {
     return rekeyIds(maskLocalPaths(bundle, [recording.workspaceRoot, recording.graphRoot]));
   }
 
-  close() {
-    this.ingest.stopAll();
+  async close() {
+    await this.ingest.close();
     this.store.close();
   }
 }

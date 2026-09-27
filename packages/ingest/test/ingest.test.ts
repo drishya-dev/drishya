@@ -16,8 +16,8 @@ beforeEach(() => {
   store = new Store(join(dir, 'data'));
   ingest = new Ingestor(store);
 });
-afterEach(() => {
-  ingest.stopAll();
+afterEach(async () => {
+  await ingest.close();
   store.close();
   rmSync(dir, { recursive: true, force: true });
 });

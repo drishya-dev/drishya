@@ -58,7 +58,7 @@ export async function main() {
       if (!values['no-open'] && !values.dev) openBrowser(running.launchUrl);
       const stop = async () => {
         await running.close();
-        running.app.close();
+        await running.app.close();
         process.exit(0);
       };
       process.on('SIGINT', stop);
@@ -70,7 +70,7 @@ export async function main() {
       const sources = await app.ingest.discover();
       if (values.json) console.log(JSON.stringify(sources, null, 2));
       else for (const s of sources.slice(0, 40)) console.log(`${s.modifiedAt.slice(0, 16).replace('T', ' ')}  ${s.harness.padEnd(11)} ${(s.bytes / 1024).toFixed(0).padStart(7)} KB  ${s.importedRecordingId ? '●' : ' '} ${s.title?.replace(/\s+/g, ' ').slice(0, 70) ?? ''}\n${' '.repeat(40)}${s.path}`);
-      app.close();
+      await app.close();
       return;
     }
     case 'import': {
@@ -95,13 +95,13 @@ export async function main() {
       const p = app.ingest.projection(r.recordingId);
       console.log(`Imported ${r.recordingId} (${adapterId}): +${r.added} observations, ${r.gaps} capture gaps.`);
       console.log(`  ${p.operations.length} operations, ${p.prose.length} prose, ${p.agents.length} agents, ${p.files.length} files — "${p.title ?? ''}"`);
-      app.close();
+      await app.close();
       return;
     }
     case 'list': {
       const app = new App();
       for (const r of app.store.listRecordings()) console.log(`${r.id}  ${r.harness.padEnd(11)} ${String(r.observationCount).padStart(6)} obs  ${r.title.slice(0, 70)}`);
-      app.close();
+      await app.close();
       return;
     }
     case 'export': {
@@ -110,13 +110,13 @@ export async function main() {
       const app = new App();
       const bundle = await app.exportBundle(id);
       writeOut(values.out, bundle);
-      app.close();
+      await app.close();
       return;
     }
     case 'forget': {
       const app = new App();
       app.store.deleteRecording(positionals[0] ?? '');
-      app.close();
+      await app.close();
       return;
     }
     case 'demo-bundle': {
@@ -146,12 +146,16 @@ export async function buildDemoBundle() {
     bundle.recording.title = 'Free orders reach checkout';
     // Fixed export time keeps the committed bundle reproducible.
     bundle.exportedAt = '2026-09-22T00:00:00.000Z';
-    if (bundle.graph) bundle.graph.builtAt = bundle.exportedAt;
-    if (bundle.graph) bundle.graph.stats.ms = 0;
+    if (bundle.graph) {
+      bundle.graph.builtAt = bundle.exportedAt;
+      bundle.graph.stats.ms = 0;
+      // The generation hashes file mtimes, which every checkout changes.
+      bundle.graph.generation = 'synthetic-demo';
+    }
     bundle.recording.createdAt = bundle.recording.updatedAt = bundle.exportedAt;
     return bundle;
   } finally {
-    app.close();
+    await app.close();
     rmSync(dir, { recursive: true, force: true });
   }
 }

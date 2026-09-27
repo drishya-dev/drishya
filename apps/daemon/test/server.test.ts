@@ -22,7 +22,7 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await s.close();
-  s.app.close();
+  await s.app.close();
   rmSync(dir, { recursive: true, force: true });
 });
 
