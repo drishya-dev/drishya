@@ -1,0 +1,266 @@
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { Agent, Operation, Projection, Prose } from '@drishya/contracts';
+import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
+import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
+import { Markdown } from '../lib/markdown.tsx';
+import { useApp } from '../state.ts';
+import { CodeView, DiffView, Output, timeOf, useArtifact } from './common.tsx';
+
+const WINDOW = 50;
+
+export function History({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const follow = useApp((s) => s.follow);
+  const playing = useApp((s) => s.playing);
+  const set = useApp((s) => s.set);
+  const ref = useRef<HTMLDivElement>(null);
+  const [extra, setExtra] = useState(0);
+  const programmatic = useRef(false);
+
+  const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
+  const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
+  const agents = useMemo(() => new Map(projection.agents.map((a) => [a.id, a])), [projection]);
+
+  // Only a window of recent passages is mounted; earlier ones load on request.
+  const start = Math.max(0, scene.passages.length - WINDOW - extra);
+  const visible = scene.passages.slice(start);
+
+  // Follow: keep the newest work in view. A deliberate scroll away turns following off.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !follow) return;
+    programmatic.current = true;
+    el.scrollTo({ top: el.scrollHeight, behavior: useApp.getState().motion && playing ? 'smooth' : 'auto' });
+    const t = setTimeout(() => (programmatic.current = false), 450);
+    return () => clearTimeout(t);
+  }, [scene.step, follow, playing, visible.length]);
+
+  const onScroll = () => {
+    const el = ref.current;
+    if (!el || programmatic.current) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (!atBottom && follow) set({ follow: false });
+    if (atBottom && !follow) set({ follow: true });
+  };
+
+  return (
+    <div className="history" ref={ref} onScroll={onScroll}>
+      <div className="history-inner">
+        {start > 0 && (
+          <button className="load-earlier" onClick={() => setExtra((e) => e + WINDOW)}>
+            Show {Math.min(WINDOW, start)} earlier passages
+          </button>
+        )}
+        {scene.passages.length === 0 && <div className="history-empty">Press <kbd className="kbd">Space</kbd> to play the recording, or scrub the timeline.</div>}
+        {visible.map((ps) => (
+          <PassageView key={ps.id} ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />
+        ))}
+      </div>
+      {!follow && (
+        <button className="follow-pill" onClick={() => set({ follow: true })}>
+          {playing ? 'New activity below' : 'Back to latest'} ↓
+        </button>
+      )}
+    </div>
+  );
+}
+
+const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, focus }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; agent?: Agent; agents: Agent[]; focus: boolean }) {
+  const color = agentColor(agent, agents);
+  const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
+  return (
+    <section className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
+      {ps.turnPrompt && (
+        <div className="turn">
+          <span className="turn-who">You</span>
+          <div className="turn-text">{ps.turnPrompt}</div>
+        </div>
+      )}
+      {ps.ops.length > 0 && (
+        <>
+          <div className="passage-head">
+            <span className="agent-dot" />
+            <span className="passage-agent">{agentName(agent)}</span>
+            {first?.startTime && <span className="passage-time">{timeOf(first.startTime)}</span>}
+          </div>
+          <div className="ops-row">
+            {ps.ops.map((o, i) => {
+              const op = ops.get(o.id);
+              return op ? <OpCard key={o.id} so={o} op={op} index={i} /> : null;
+            })}
+          </div>
+        </>
+      )}
+      {ps.prose.map((p) => {
+        const pr = prose.get(p.id);
+        return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
+      })}
+    </section>
+  );
+});
+
+function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agent?: Agent }) {
+  const set = useApp((s) => s.set);
+  const [open, setOpen] = useState(pr.role !== 'reasoning' || pr.text.length < 600);
+  const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
+  return (
+    <div className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
+      {label && (
+        <button className="prose-label" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          {label}
+          {!open && ' · show'}
+        </button>
+      )}
+      {open && <Markdown text={pr.text} onPath={(p) => set({ hoveredPath: p })} />}
+      {pr.truncated && <div className="prose-trunc">Shortened for display — the full text is in the recording.</div>}
+    </div>
+  );
+}
+
+// ─── operation cards ─────────────────────────────────────────────────────────────────────
+
+const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operation; index: number }) {
+  const selected = useApp((s) => s.selectedOp === op.id);
+  const hoveredPath = useApp((s) => s.hoveredPath);
+  const select = useApp((s) => s.select);
+  const set = useApp((s) => s.set);
+  const lit = !!hoveredPath && op.paths.some((p) => p.path === hoveredPath);
+  const from = so.origin.type === 'map' ? 'from-map' : 'from-dock';
+  const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
+  return (
+    <article
+      className={`op op-${op.kind} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
+      style={{ zIndex: selected ? 50 : 10 + index }}
+      tabIndex={0}
+      onClick={() => select(selected ? undefined : op.id)}
+      onKeyDown={(e) => e.key === 'Enter' && select(op.id)}
+      onMouseEnter={() => set({ hoveredOp: op.id, hoveredPath: op.paths.find((p) => p.role !== 'search-hit')?.path })}
+      onMouseLeave={() => set({ hoveredOp: undefined, hoveredPath: undefined })}
+      aria-label={op.title}
+    >
+      <header className="op-head">
+        <span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}</span>
+        <span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span>
+        <StateMark state={so.state} />
+      </header>
+      <div className="op-body">
+        <OpPreview op={op} />
+      </div>
+      {op.classification.kind === 'derived' && <div className="op-foot" title={`Classified by rule ${op.classification.rule} from the command text`}>derived from {op.tool}</div>}
+    </article>
+  );
+});
+
+function StateMark({ state }: { state: SceneOp['state'] }) {
+  if (state === 'running') return <span className="state state-running" aria-label="running" />;
+  if (state === 'error') return <span className="state state-error" aria-label="failed">✕</span>;
+  if (state === 'ok') return <span className="state state-ok" aria-label="done">✓</span>;
+  return <span className="state state-unknown" aria-label="outcome not captured">?</span>;
+}
+
+function OpPreview({ op }: { op: Operation }) {
+  const d = op.detail;
+  switch (d.kind) {
+    case 'read':
+      return <ReadPreview artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />;
+    case 'edit':
+      return d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={9} /> : <div className="muted">{d.reconstructionNote ?? 'No change captured.'}</div>;
+    case 'search':
+      return (
+        <div className="hits">
+          <div className="query">{d.query}</div>
+          {d.hits.slice(0, 5).map((h, i) => (
+            <div key={i} className="hit">
+              <span className="hit-path">{h.path}</span>
+              {h.line !== undefined && <span className="hit-line">:{h.line}</span>}
+            </div>
+          ))}
+          {d.hits.length > 5 && <div className="muted">{d.hits.length - 5} more</div>}
+          {op.status !== 'running' && d.hits.length === 0 && <div className="muted">No matches</div>}
+        </div>
+      );
+    case 'test': {
+      const s = d.summary;
+      return (
+        <div className="test">
+          <div className="cmd">$ {d.command}</div>
+          {s ? (
+            <div className="test-counts">
+              {s.failed > 0 && <span className="bad">{s.failed} failed</span>}
+              <span className="good">{s.passed} passed</span>
+              {s.skipped > 0 && <span className="muted">{s.skipped} skipped</span>}
+            </div>
+          ) : op.status !== 'running' ? (
+            <div className="muted">exit {d.exitCode ?? '?'}</div>
+          ) : null}
+          {s?.failures[0] && (
+            <div className="failure">
+              <div className="failure-name">{s.failures[0].name}</div>
+              {s.failures[0].message && <div className="failure-msg">{s.failures[0].message}</div>}
+            </div>
+          )}
+        </div>
+      );
+    }
+    case 'shell':
+      return (
+        <div className="shell">
+          <div className="cmd">$ {d.command.split('\n')[0]}{d.command.includes('\n') ? ' …' : ''}</div>
+          {d.outputPreview && <Output text={d.outputPreview} maxLines={4} />}
+          {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
+        </div>
+      );
+    case 'mcp':
+      return (
+        <div className="mcp">
+          <div className="mcp-tool">{d.tool}</div>
+          <div className="mcp-input">{summarizeInput(d.input)}</div>
+          {d.resultPreview && <div className="mcp-result">{d.resultPreview.slice(0, 220)}</div>}
+        </div>
+      );
+    case 'web':
+      return (
+        <div className="web">
+          <div className="query">{d.url ?? d.query}</div>
+          {d.resultPreview && <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div>}
+        </div>
+      );
+    case 'spawn':
+      return (
+        <div className="spawn">
+          <div className="query">{d.agentType ?? 'subagent'}</div>
+          <div className="muted">{d.description}</div>
+        </div>
+      );
+    case 'plan':
+      return (
+        <ul className="plan">
+          {d.items.slice(0, 6).map((it, i) => (
+            <li key={i} className={`plan-${it.status}`}>{it.text}</li>
+          ))}
+        </ul>
+      );
+    default:
+      return <div className="mcp-input">{summarizeInput(d.input) || d.resultPreview?.slice(0, 200)}</div>;
+  }
+}
+
+function ReadPreview({ artifactId, start, path }: { artifactId?: string; start: number; path: string }) {
+  const { text, error } = useArtifact(artifactId);
+  if (!artifactId) return <div className="muted">Content not captured</div>;
+  if (error) return <div className="muted">{error}</div>;
+  if (text === undefined) return <div className="skeleton" />;
+  if (!text) return <div className="muted">Protected file — content never stored</div>;
+  return <CodeView text={text} startLine={start} path={path} maxLines={8} />;
+}
+
+export function summarizeInput(input: unknown): string {
+  if (input === undefined || input === null) return '';
+  if (typeof input === 'string') return input.slice(0, 200);
+  if (typeof input === 'object') {
+    return Object.entries(input as Record<string, unknown>)
+      .slice(0, 4)
+      .map(([k, v]) => `${k}: ${typeof v === 'string' ? v.slice(0, 80) : JSON.stringify(v)?.slice(0, 80)}`)
+      .join('  ·  ');
+  }
+  return String(input);
+}

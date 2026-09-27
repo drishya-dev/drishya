@@ -4,7 +4,35 @@
 
 A local, cross-harness replay and live view for coding agents. It plays an agent's work as **real content** — the source it read, the output it got, the diff it wrote — on a map of your actual repository, on a timeline you can scrub.
 
-> **Status: pre-alpha. No application yet.** This repository holds the design, a researched product review and a synthetic interaction storyboard. Capture, live replay and performance remain unimplemented and unmeasured.
+> **Status: pre-alpha, working draft.** The backend is built and tested: Claude Code and Codex capture, redaction, the local store, projection, repository map, scene composer, local API and model explanations. A base UI exercises all of it. The final frontend design (Pixi map, full motion) is next. Tested on Windows 11 with Node 24.
+
+## Run it
+
+Requires **Node 24** and **pnpm** (`npm i -g pnpm`, or prefix commands with `npx pnpm@10`).
+
+```bash
+pnpm install
+pnpm ui:build
+pnpm serve
+```
+
+`pnpm serve` starts the local app on `127.0.0.1:7878` and opens it with a one-time launch link. The home screen lists your Claude Code and Codex sessions; **Import** replays one, **Watch live** follows a running agent. Drishya only reads those files and never changes them.
+
+| Command | What it does |
+|---|---|
+| `pnpm serve` | Start the local app |
+| `pnpm dev` + `pnpm ui:dev` | Daemon with the Vite dev server on `127.0.0.1:5173` (hot reload) |
+| `pnpm drishya sources` | List harness sessions on this machine |
+| `pnpm drishya import <file> [--live]` | Import a session journal (the harness is detected) |
+| `pnpm drishya export <recording> --out f.json` | Write a sanitized replay bundle, with no local paths |
+| `pnpm demo:bundle` | Rebuild the synthetic demo from `fixtures/synthetic/` |
+| `pnpm check` | Typecheck and run every test |
+
+**Demo with no install:** the built UI with no daemon (or `?demo`) plays the synthetic replay bundle. Deep links: `?demo&at=26` (the edit), `&motion=0` (reduced motion).
+
+**Explanations with NVIDIA Nemotron (optional).** Set `NEBIUS_API_KEY` (Nebius Token Factory) before `pnpm serve`. Nothing is ever sent automatically. Each explanation is an explicit action that first shows exactly what would be sent, sends only redacted evidence, keeps only claims that cite that evidence, and is labelled as generated. Models are configurable with `DRISHYA_MODEL_NANO`, `DRISHYA_MODEL_SUPER`, `DRISHYA_MODEL_ULTRA` and `DRISHYA_LLM_BASE_URL`.
+
+Data lives in `~/.drishya` (override with `DRISHYA_HOME`). The code map is [`docs/CODEBASE.md`](docs/CODEBASE.md).
 
 ---
 
@@ -42,6 +70,7 @@ Start with **[`docs/VISION.md`](docs/VISION.md)** — what Drishya should look a
 | [`docs/VISION.md`](docs/VISION.md) | Creative direction: the composition, signature moves, materials and the standard |
 | [`docs/review/01-product-review.md`](docs/review/01-product-review.md) | Product, need, differentiation, validation and scope |
 | [`docs/review/03-engineering-plan.md`](docs/review/03-engineering-plan.md) | Architecture: capture, historical content, storage, privacy, performance, packaging |
+| [`docs/CODEBASE.md`](docs/CODEBASE.md) | The code as built: packages, data flow, how to add a harness, what is draft |
 | [`docs/STATUS.md`](docs/STATUS.md) | Where the project is, what is next, decisions log |
 | [`AGENTS.md`](AGENTS.md) | Rules for coding agents working in this repository |
 

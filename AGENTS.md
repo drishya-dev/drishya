@@ -13,6 +13,7 @@ Two builders, both working with coding agents (Claude Code and Codex). **This fi
 | [`docs/VISION.md`](docs/VISION.md) | **Creative direction** — the builder's own words and how the product must look, move and feel | Before *any* UI, graphics, motion or layout work |
 | [`docs/README.md`](docs/README.md) | **Precedence map** — which document wins on which topic | Whenever two docs seem to disagree |
 | [`docs/STATUS.md`](docs/STATUS.md) | Where we are, what is next, who did what, decisions log | At the start of every session |
+| [`docs/CODEBASE.md`](docs/CODEBASE.md) | The code as built: packages, data flow, identity, privacy, API, tests, how to add a harness | Before changing any code |
 | [`docs/review/03-engineering-plan.md`](docs/review/03-engineering-plan.md) | Authoritative architecture: observations, projections, historical artifacts, capture, privacy | Before capture, store, daemon or API work |
 | [`docs/reference/04-continuous-canvas.md`](docs/reference/04-continuous-canvas.md) | The layout and interaction contract, with acceptance criteria | Before canvas, history or playback work |
 | [`docs/reference/03-event-schema.md`](docs/reference/03-event-schema.md) | The event schema — **draft, not frozen** | Any adapter or store work |
@@ -59,7 +60,9 @@ Violating any of these is a bug, not a tradeoff.
 
 ## Stack
 
-Proposed, pending the packaging spike: TypeScript · pinned Node 24 LTS · pnpm workspaces · Fastify · `ws` · `better-sqlite3` (WAL, dedicated worker, clean-install gate) · `web-tree-sitter` · React 19 · Vite · Zustand · PixiJS v8 (WebGL2) · graphology for bounded working sets · CodeMirror 6 · Motion/CSS · Vitest · Playwright. Exact versions are chosen after the spike and pinned in the lockfile.
+**Built (draft backend):** TypeScript run directly on Node 24 (type stripping, no backend build; erasable syntax only) · pnpm workspaces · `node:sqlite` (WAL, FTS5) · `node:http` + Server-Sent Events · React 19 · Vite · Zustand · Vitest. The daemon has **zero runtime dependencies**.
+
+**Still to come (frontend and indexer):** PixiJS v8 map · CodeMirror 6 · `web-tree-sitter` import extraction · graphology for bounded working sets · Motion/CSS choreography · Playwright. The deviations from the original proposal (`better-sqlite3`, Fastify, `ws`) and their reasons are in [`docs/CODEBASE.md`](docs/CODEBASE.md#deliberate-deviations-from-the-proposed-stack-see-status-decisions) and the STATUS decisions log.
 
 Rationale and rejected alternatives: [engineering plan §1](docs/review/03-engineering-plan.md#1-application-form-and-stack), [blueprint §14](docs/BLUEPRINT.md). If you think a choice is wrong, say so — but read the rejection first.
 

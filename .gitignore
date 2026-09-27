@@ -4,6 +4,8 @@
 fixtures/local/
 *.jsonl
 !fixtures/redacted/**/*.jsonl
+# Hand-written synthetic recordings: invented content in a real harness format.
+!fixtures/synthetic/**/*.jsonl
 
 # ── Local store ───────────────────────────────────────────────────────────
 *.db
@@ -13,6 +15,7 @@ fixtures/local/
 *.sqlite3
 blobs/
 .drishya/
+.drishya-preview/
 
 # ── Secrets ───────────────────────────────────────────────────────────────
 .env
