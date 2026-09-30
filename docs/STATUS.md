@@ -14,10 +14,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **M0 → M1.** Backend draft complete, with a base UI; the frontend design pass is next |
-| **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main` |
-| **Blocked on** | nothing. Contract freeze needs @harsh's review |
-| **Next gate** | Frontend pass on the working backend: Pixi map, CodeMirror, choreographed Lift/Emit/Settle/Surface/Resolve, against `compose()` goldens. In parallel: a Token Factory key to validate the Nemotron layer. The code map is in [`CODEBASE.md`](CODEBASE.md) |
+| **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
+| **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
+| **Blocked on** | Known privacy bypasses block further real-data persistence/sharing validation. Contract freeze needs both builders' review; implementation work can start with scoped B0 fixes |
+| **Next gate** | **B0 privacy**, then lifecycle/recovery, historical identity, integrated live history and resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [audit](review/06-baseline-audit.md), [handoff](CONTINUITY.md). No model key is needed for the core |
 
 ### Claimed
 
@@ -55,22 +55,25 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** —
 
 ### Codex review
-- **When:** 2026-09-27
-- **Did:** Fixed the two CI failures on `yash/backend-draft`: shutdown now awaits active ingest work before closing SQLite, and the synthetic demo graph has a fixed generation id. Updated test teardown to exercise the awaited close path and regenerated the committed demo bundle.
-- **Validation:** Typecheck passed; 96 Vitest tests passed; UI production build passed; the demo bundle reproduced with the same SHA-256 hash across two consecutive generations. `git diff --check` passed.
-- **Left half-done:** CI has not been rerun remotely yet; the verified repair still needs the branch push/PR workflow.
-- **Watch out for:** The local `pnpm` wrapper attempted a dependency reconciliation and was blocked by its machine-level ignored-build policy. Direct project binaries were used for validation; GitHub Actions uses its own clean install and was the source of the failures fixed here.
+- **When:** 2026-09-30
+- **Did:** Reviewed docs, major backend/UI paths and prototype; researched product/integration boundaries; persisted [product direction](PRODUCT_DIRECTION.md), [implementation roadmap](IMPLEMENTATION_ROADMAP.md), [baseline audit](review/06-baseline-audit.md) and [continuity brief](CONTINUITY.md) directly on `main`, which now contains the backend from PR #1. Aligned VISION, canvas contract, AGENTS, CODEBASE and README with the builder's clarification. Added `scripts/validate-baseline.ts`; production implementation is unchanged.
+- **Validation:** Fresh backend/UI typechecks, 96 tests and Vite 8 build passed. Synthetic persistence/restart/API/partial-line live checks passed. Read-only discovery found 603 sources; four real journals parsed/reduced/composed in memory with zero parser exceptions, visible Claude compaction/unsupported-record gaps and unchanged source hashes. Browser spot checks covered prototype/app, selection and narrower layout. See audit for exact scope.
+- **Found / next:** Two reproduced sanitizer bypasses (retained base64 siblings and object keys); additional source findings for metadata/exports/consent, reconnect, live cursor coupling, historical result exposure, worktree identity and scale. **Implement B0 first.** Real data was not newly persisted or exported. This is a plan/audit commit, not completed backend hardening or final UI.
+- **Prior CI repair:** `23c783f` was pushed; [Linux and Windows CI passed](https://github.com/drishya-dev/drishya/actions/runs/36318704791). This corrects the stale prior note. No new remote CI result is claimed for the current docs/audit work.
+- **Watch out for:** Use pinned pnpm 10.34.5 or direct local binaries; this machine's different pnpm wrapper previously attempted reconciliation. The diagnostic script's zero exit does not mean its known privacy probes passed. Contract/schema changes still require both builders.
 
 ---
 
 ## Next up
 
-**Now (25 Sep), after the backend draft:**
+**Now (30 Sep), backend-first clarification:**
 
-1. **@harsh: review `yash/backend-draft`**, especially `packages/contracts`. Agreeing it is the schema freeze (engineering plan §13).
-2. **Frontend pass** against `compose()`: Pixi map, CodeMirror reader, the five signature moves with origin tethers, real history virtualization, theme finalization. The base UI shows every feature it must keep.
-3. **Nemotron validation:** get a Token Factory key, confirm model ids (`GET /v1/models`), run explain and briefing on real sessions, and tune the prompts.
-4. **Backend follow-ups:** move SQLite to a worker; tree-sitter extraction; the performance harness (engineering plan §9, including the 2,000-events-in-30-seconds burst); a packed-install matrix; Playwright tests of the UI.
+1. **B0: privacy hardening.** Reproduce/fix audit A01–A04 with synthetic tests across all sinks; review policy/version implications before persisted real-session validation.
+2. **B1–B2: lifecycle, recovery and identity.** Bounded/coalesced ingest, surfaced errors, reconnect revisions, safe forget, exact historical evidence, stable history anchors and worktree isolation. Both builders review contract changes before freezing.
+3. **B3: integrated base history.** Existing session chooser and API; port prototype interactions into `apps/ui`; capture/history keep growing while the reader scrolls/selects. Playback optional. No final theme commitment yet.
+4. **B4: scale and installation.** Performance harness, worker boundaries, paged artifacts/history, packed-install matrix and end-to-end browser acceptance. Targets are in the roadmap and are not yet measured passes.
+5. **P1–P2: premium presentation and return-to-work utility.** Content-shaped renderers, five signature moves, since-last-visit, file history and verification freshness; test comprehension with users before feature expansion.
+6. **Later:** additional harnesses, privacy-reviewed packets, theme variants. Optional model validation follows exact-payload consent hardening and is not a baseline dependency.
 
 The older checklist below is kept as a record. Items done by the backend draft are ticked when it merges.
 
@@ -140,6 +143,13 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-09-20 | GitHub org **`drishya-dev`**, not `drishya-ai` | `drishya` was taken; `-ai` collides with Drishya AI Labs and contradicts the captured-not-generated positioning | §12 |
 | 2026-09-20 | Org owned by a **personal account**, both builders as **Owners**, 2FA required | No legal entity; either builder must be able to administer | — |
 | 2026-09-20 | Repo starts **private** | Nothing worth showing yet; flip to public at the M1 demo | §18.5 |
+| 2026-09-30 | **Live history accumulates independently of reading position; recorded playback is optional** | Builder explicitly clarified that scrolling revisits ongoing work and play/pause is not the final live metaphor; supersedes transport-led defaults | `VISION.md`, canvas contract, `PRODUCT_DIRECTION.md` |
+| 2026-09-30 | **Backend hardening + integrated base UI before premium expansion** | Current audit found privacy/recovery/history gaps despite green tests; builder requested a dependable main backend first | `IMPLEMENTATION_ROADMAP.md`, audit |
+| 2026-09-30 | **Keep `apps/ui`; port prototype behaviors, not its synthetic playback engine** | Preserve real integration while improving sizing, scrolling, selection and origins; neither UI is final | Product direction §4–6 |
+| 2026-09-30 | **Real baseline audit stays in memory until known privacy bypasses close** | Synthetic probes failed for retained base64 siblings and secret object keys; avoids new sensitive persistence while still checking local adapter/reducer behavior | `scripts/validate-baseline.ts`, audit |
+| 2026-09-30 | **Prioritize return-to-work comprehension and evidence-linked review** | Live spectacle attracts attention; since-last-visit/file history/verification freshness are testable repeat-use hypotheses, not established demand | Product direction §7–9 |
+| 2026-09-30 | **Consumer ChatGPT/Claude chats are separate from coding-harness journals** | Current local adapters and OpenAI conversation-state APIs do not establish generic live access to consumer chat archives | Roadmap §9, research ledger |
+| 2026-09-30 | **Small docs and low-risk changes go directly on `main`; branch major work** | Builder clarified the preferred workflow after the audit commit. Major code changes still receive the other builder's PR review | `AGENTS.md` |
 
 ---
 

@@ -18,6 +18,14 @@ This section is the source. Everything below it is interpretation and must serve
 
 > Agents at the top. Repo graph in the background, **interactable**. Everything the agent does in the middle, scrolling down. **MCP tools to the right** — main tools, then the many MCPs by name. A small section **comes out of that MCP**, takes the required space, and shows the tool call.
 
+### Builder clarification — 30 September 2026
+
+> “The convo should keep going, the user can just scroll up and revisit all the things … not like a pause button … that's not the final one.”
+
+**The live product is a continuously accumulating history.** New work arrives below while a user reads earlier material. Scrolling, selection and expansion hold the reader's position, never capture or history construction. Return to latest is explicit. A recorded session also opens as readable history; play/pause, speed and scrubbing belong to an optional sequence replay or diagnostic mode. References below to paused frames describe readability and optional replay, not a required live control.
+
+The frontend is not finalized. Keep the integrated app, learn from `docs/prototype/index.html`, and finish the trustworthy backend plus usable base UI before premium expansion. [PRODUCT_DIRECTION](PRODUCT_DIRECTION.md) specifies the content-shaped experience and utility; [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md) sets the gates. This clarification supersedes earlier transport-led live wording.
+
 > Set places for things, with animations, like a **$1M product** that looks clean. Something unique, not just boxes. **Clean and advanced animations for every single little thing.**
 
 > Like Jarvis — full of visualization, putting up its own working. The difference between a **$10 video edit and a $1,000 one**: the smoothness with which things come up and interact with you.
@@ -101,7 +109,7 @@ The tool's mark in the right dock ignites. For an MCP call, **the named server o
 
 ### 3.3 Settle — work accumulates like pages on a desk
 
-When the next operation arrives, the previous one doesn't vanish. It **eases back** — a touch smaller, a little dimmer, sliding to overlap the new surface only at its *margin*, with its title and a meaningful excerpt still readable. After a passage, the whole row settles together into a retained, gently fanned stack. Select any settled surface and it rises to the front, and playback holds for you.
+When the next operation arrives, the previous one doesn't vanish. It **eases back** through restrained contrast and overlap only at its *margin*, with its title and a meaningful excerpt still readable. Do not shrink text to fit more. After a passage, the whole row settles into its retained layout. Select any settled surface and it rises for reading; live follow holds while history keeps accumulating. Optional sequence playback holds too.
 
 ### 3.4 Surface — prose rises beneath the work
 
@@ -163,18 +171,17 @@ Base `#0A0A0C`, surfaces `#111216` / `#16171C`, borders `rgba(255,255,255,.07–
 The $1,000 feel lives in the details people only notice unconsciously. Every one of these must be precise, brief and *reversible*.
 
 - **Hover a line of code** → its file's map node brightens; the tether lights.
-- **Hover a map node** → every surface from that file across the history glows faintly in answer.
+- **Hover/focus a map node** → visible surfaces from that file gain a restrained outline; offscreen matches remain navigable.
 - **Hover a diff line** → a peek of the other state (before/after).
 - **Hover a settled surface** → it lifts a hair and its full title comes into focus.
-- **Near-cursor parallax** → a surface tilts one or two degrees toward the pointer, like a physical sheet. Off under reduced motion.
-- **Select** → the surface rises a plane, gains a soft light bloom beneath, playback holds, a small "Held · resume" appears.
-- **Copy** → a brief shimmer across the copied lines confirms it.
+- **Select** → the surface gains a clear hairline and reading space; live follow detaches without stopping history. Close it to restore the same anchor.
+- **Copy** → a brief confirmation beside the selected range, without moving its text.
 - **Dock item fires** → a short ignition, a ribbon, then quiet.
-- **Agent tool in flight** → its crown presence rotates a thin orbital ring; stops the instant the call resolves.
+- **Agent tool in flight** → a static pending mark at its crown presence; completion resolves once. No idle orbit or pulse.
 - **Scrub** → the whole world rewinds together: surfaces un-settle, the map's heat recedes to that moment.
 - **Focus with keyboard** → an elegant focus ring that matches the material, never the browser default.
 
-**Interruptibility is part of the craft.** Deliberate intent — selecting, scrolling, reading, focusing a control — stops automatic advancement instantly. Merely moving the pointer does not. Nobody ever waits for an animation to finish.
+**Interruptibility is part of the craft.** Deliberate intent — selecting, scrolling, reading, focusing a control — stops viewport following and optional replay advancement instantly. Capture and available live history continue. Merely moving the pointer does not detach follow. Nobody ever waits for an animation to finish.
 
 ---
 

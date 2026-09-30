@@ -25,7 +25,7 @@ This document governs the spatial composition where it conflicts with the earlie
                                                                        Browser
        ... history continues downward ...
 
-                     replay / step / live position
+                     reading position / return to latest
 ```
 
 **Top: agent presence.** A compact, stable row of names, activity states and identity marks. Select a name to emphasize its contributions in the shared history. Do not allocate a permanent box or column to each agent. Only current/recent agents appear by default; the rest are in a searchable roster. Identity remains legible without color.
@@ -36,7 +36,7 @@ This document governs the spatial composition where it conflicts with the earlie
 
 **Right: tool dock.** Stable, quiet labels for native tools, followed by installed/observed MCP server names. Active tool labels briefly brighten. An MCP server can expand to reveal its tool names, but the entire dock is not an always-open catalog. The active item sends its invocation/output surface toward the work canvas. It stays at its dock position so the user learns where actions come from.
 
-**Bottom: time controls.** Small, persistently discoverable play/pause, step, speed, jump-to-edit/failure and live position. Their role is transport, not a dashboard footer full of metrics.
+**Bottom: reading position.** In live/normal history, a quiet status and explicit return-to-latest affordance appear when useful. New work continues below while the user reads. An explicitly entered sequence-replay mode offers play/pause, step, speed and timestamp scrubbing; these are not mandatory live controls. Jump-to-edit/failure remains ordinary history navigation. This is the builder's 30 September clarification, detailed in [PRODUCT_DIRECTION](../PRODUCT_DIRECTION.md).
 
 ## 2. Visual grammar: material and typography
 
@@ -70,7 +70,7 @@ Prose interludes distinguish emitted reasoning summaries from user-facing replie
 
 - The newest operation opens at useful reading width. Previous operations can settle into shorter previews with their title, outcome and a meaningful excerpt intact.
 - Surfaces may overlap **outer scrim margins or deliberately collapsed preview regions**, never the active operation's essential text or controls.
-- Each earlier object retains a visible title/grip and at least one usable preview line. Selecting it brings it forward and pauses automatic advancement.
+- Each earlier object retains a visible title/grip and at least one usable preview line. Selecting it brings it forward and detaches viewport following. Capture and history continue; optional sequence playback holds.
 - The foreground object does not erase previous objects. Selecting another restores the composition without moving the user's vertical history position.
 - Start with at most three simultaneously readable operations per passage at wide desktop sizes. A fourth continues the passage on a wrapped row or in an explicitly counted expandable group. It must not force 9 px code or endless horizontal scrolling.
 - At narrower desktop widths, reduce to two readable operations. On mobile, stack them with a small stagger; source readability wins over overlap.
@@ -104,7 +104,9 @@ Motion-off uses the same topology, labels and retained objects with instantaneou
 
 ## 6. Interaction contract
 
-The central history scroll moves through passages and prose. Scroll inside a deliberately expanded source/output viewer moves that content; scrolling never unexpectedly seeks a different moment. Playback adds/reveals events at its cursor. Scrubbing backward hides later presentation from the replay cursor while retaining it in the recording; forward seeking restores it without manufacturing events.
+The central history scroll moves through passages and prose. Scroll inside a deliberately expanded source/output viewer moves that content; scrolling never unexpectedly seeks a different moment. Live history always includes all available committed work independently of the reader's position. Loading earlier material preserves the same anchor and pixel offset. Selecting an old event must not hide later history. New activity is counted quietly, and returning to latest is explicit.
+
+Only in optional sequence replay does a cursor add/reveal events. Scrubbing backward hides later presentation from that mode while retaining it in the recording; forward seeking restores it without manufacturing events. Historical results/artifacts must respect the as-of cursor, not leak final results through a partially revealed operation. Exiting replay restores normal history and its saved reading position.
 
 The map can be explored by selecting an exposed node or entering Explore. Explore suppresses automatic history follow, dims rather than destroys the work, and offers Back to work. Selecting a node opens related captured activity or explicitly current structural information. Escape returns to the previous selection/scroll position.
 
@@ -114,7 +116,7 @@ On overload, keep the visible chronology coherent: group repeated reads and show
 
 ## 7. Implementation implications
 
-Replace a single swapping `currentArtifact` with a virtualized sequence of passage/prose blocks. Each block has stable identity, operation order, measured height, compact/expanded state, current agent attribution and a playback visibility boundary. Selected or streaming blocks are not recycled until safe.
+Replace a single swapping `currentArtifact` with a virtualized sequence of passage/prose blocks. Each block has stable identity, operation order, measured height, compact/expanded state and current agent attribution. Only optional sequence replay applies a playback visibility boundary. Selected or streaming blocks are not recycled until safe. Late records cannot invalidate the reader's stable anchor.
 
 Compute responsive passage layout before animation. Use measured target rectangles and DOM transforms for source-to-destination shell movement; a separate overlay draws tethers. Actual source text stays in ordinary DOM editors. Reserve space before streaming output expansion to avoid repeated page jumps; preserve the reader's anchor when historical block heights change.
 

@@ -13,6 +13,9 @@ Two builders, both working with coding agents (Claude Code and Codex). **This fi
 | [`docs/VISION.md`](docs/VISION.md) | **Creative direction** — the builder's own words and how the product must look, move and feel | Before *any* UI, graphics, motion or layout work |
 | [`docs/README.md`](docs/README.md) | **Precedence map** — which document wins on which topic | Whenever two docs seem to disagree |
 | [`docs/STATUS.md`](docs/STATUS.md) | Where we are, what is next, who did what, decisions log | At the start of every session |
+| [`docs/CONTINUITY.md`](docs/CONTINUITY.md) | Compact handoff: latest builder direction, baseline findings and next bounded task | After a model/chat switch or compaction |
+| [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) | Current product scope, live-history behavior, content-shaped presentation and validation hypotheses | Before product or experience decisions |
+| [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) | Backend-first execution gates, integrated base UI, performance and deployment | Before choosing implementation work |
 | [`docs/CODEBASE.md`](docs/CODEBASE.md) | The code as built: packages, data flow, identity, privacy, API, tests, how to add a harness | Before changing any code |
 | [`docs/review/03-engineering-plan.md`](docs/review/03-engineering-plan.md) | Authoritative architecture: observations, projections, historical artifacts, capture, privacy | Before capture, store, daemon or API work |
 | [`docs/reference/04-continuous-canvas.md`](docs/reference/04-continuous-canvas.md) | The layout and interaction contract, with acceptance criteria | Before canvas, history or playback work |
@@ -30,8 +33,8 @@ The builder's defining requirement: **"Visualization is the main."** Not boxes o
 1. **Quiet at rest, articulate in motion.** At rest the screen is calm and every frame is readable. In motion, every change is precise and meaningful. Nothing loops, pulses or drifts for attention.
 2. **Motion is spent on relationships and arrivals, never on simulating the reading task.** Content arrives whole and selectable. No typewriter effects on captured text, no counting-up numbers, no fake scanning.
 3. **Everything has one home.** Files come *from the map*. Tool calls come *from the dock*. Words come *from the agent*. Motion always starts at the true origin.
-4. **The composition:** agents across the top · the living repository map behind everything, interactive · tool actions arriving **left to right** in passages · the agent's prose **beneath, unboxed, directly on the world** · history continuing downward · native tools then MCP servers on the **right** · transport at the bottom.
-5. **Work accumulates.** Earlier operations settle back and overlap only at their margins, titles and excerpts still readable. Nothing vanishes; select anything and it rises and playback holds.
+4. **The composition:** agents across the top · the living repository map behind everything, interactive · tool actions arriving **left to right** in passages · the agent's prose **beneath, unboxed, directly on the world** · history continuing downward · native tools then MCP servers on the **right** · reading position at the bottom. Live history accumulates while the user scrolls back; transport belongs to optional sequence replay.
+5. **Work accumulates.** Earlier operations settle back and overlap only at their margins, titles and excerpts still readable. Nothing vanishes; selection opens reading space and detaches live follow. Capture/history continue; optional sequence playback holds.
 6. **Clean developer-tool theme, no *labelled* boxes.** Graphite base, flat surfaces with 1 px hairlines, one sans + one mono, GitHub-dark syntax, colour only for meaning (agent identity, pass, fail, edited). No glow pools, blur, grain or serif. Prose is never boxed. Each action type still has its own content-shaped composition. See `docs/VISION.md` §5.
 7. **The five signature moves:** **Lift** (content unfolds from its map node) · **Emit** (a tool call leaves its dock instrument; MCP servers open like drawers) · **Settle** (prior work eases back) · **Surface** (prose rises beneath the passage with a focus-pull, never typed) · **Resolve** (an outcome lands once and holds).
 8. **Every little thing is crafted** — hovers, selection, copy, focus rings, scrubbing — and every one is reversible and interruptible.
@@ -51,7 +54,7 @@ Violating any of these is a bug, not a tradeoff.
 4. **Captured ≠ derived.** Every rendered string carries provenance. Never present a heuristic or model-generated summary as if the agent said it.
 5. **Never invent a location or causal link.** Use evidence-backed mappings and typed relationships. Temporal proximity is "nearby activity", never "reason". Unresolved locations stay explicitly unresolved.
 6. **The composer is a pure function.** No wall-clock reads inside it; time is injected. Determinism cannot be retrofitted and golden tests depend on it.
-7. **Everything is interruptible.** Deliberate navigation, selection and reading stop automatic advancement. Pointer movement alone does not. Nobody waits for a transition.
+7. **Everything is interruptible.** Deliberate navigation, selection and reading stop viewport following and optional replay advancement. Capture and live history continue independently. Pointer movement alone does not. Nobody waits for a transition.
 8. **Text is never rendered in WebGL.** The GPU draws the map; the DOM draws every character.
 9. **No telemetry. None.** No opt-out, because there is nothing to opt out of.
 10. **Capture must not depend on presentation.** Prefer passive observation and measure overhead. HTTP hooks are *not* automatically asynchronous. Never block an agent on rendering, and never return control or context instructions from an observer hook.
@@ -74,8 +77,8 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 
 **Branches and pull requests**
 - `main` always works. Never push broken code to it.
-- Work on a short-lived branch: `<handle>/<topic>` — e.g. `yash/canvas-lift`, `harsh/claude-adapter`.
-- Open a PR into `main`. **The other builder reviews it** before merge — this is how we check each other's work. Docs-only typo fixes may skip review.
+- Make documentation and other small, low-risk changes directly on `main` after checking them. Use a short-lived branch for major changes: `<handle>/<topic>` — e.g. `yash/canvas-lift`, `harsh/claude-adapter`.
+- Open a PR into `main` for major branch work. **The other builder reviews it** before merge — this is how we check each other's work.
 - Squash-merge. The PR title becomes the commit: `area: what changed` (e.g. `canvas: lift surfaces from map origins`). The repo allows squash merges only and deletes branches on merge.
 - `CODEOWNERS` requests review from the other builder automatically. The PR template's checklist is the non-negotiables — tick it honestly.
 - Label issues and PRs by area: `area: capture`, `area: canvas`, `area: map`, `area: privacy`. Anything touching the event schema gets `schema`; anything awaiting a recorded decision gets `decision`.

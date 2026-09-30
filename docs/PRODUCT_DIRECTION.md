@@ -1,0 +1,172 @@
+# Product direction — work you can follow, evidence you can revisit
+
+**Decision date: 30 September 2026.** This is the durable product plan following the builder's clarification and a review of the working draft. Read with [VISION](VISION.md), the [implementation roadmap](IMPLEMENTATION_ROADMAP.md), and the [baseline audit](review/06-baseline-audit.md). Proposed features below are **not claims about what the application already does**.
+
+## 1. What we are trying to make indispensable
+
+Drishya turns an agent's work into a navigable account of the actual material it encountered and changed. The promise is: **come back understanding the work, with the evidence one action away**. Someone should be able to find the relevant read, compare the edit, inspect the test, and continue reading without reconstructing a story from terminal output.
+
+The builder's ambition remains a product whose motion and presentation feel exceptionally crafted. “Jarvis” describes fluent orchestration of information: material appears from an intelligible origin, assumes the shape it needs, remains available, and responds immediately to the reader. It does not require sci-fi decoration, incessant movement, fabricated reasoning, or an assistant that takes control of the user's harness.
+
+The product must work for people who prompt and leave. Continuous watching is an optional pleasure; efficient return and review are daily utility. We should not optimize watch time or guilt people into supervising every action. The compelling feeling is “I can actually understand what happened here; returning to raw logs would take more effort.”
+
+### The latest builder clarification governs
+
+> “The convo should keep going, the user can just scroll up and revisit all the things … not like a pause button … that's not the final one.”
+
+**Live defaults to an accumulating history.** Scrolling up holds the reader's position, never capture or history construction. New work continues below. A quiet “12 new actions · 2 edits” affordance offers return to latest. Selecting an old file must not hide everything that happened afterward. Recorded history also opens as a readable history; chronological playback is an optional secondary inspection/presentation mode. Play/pause, speed and timestamp scrubbing are useful there and in the diagnostic prototype, but are not the organizing metaphor of normal live use.
+
+This supersedes earlier language that made replay transport the default footer, or treated selection as a reason to stop the live timeline. Pure, time-addressable scenes and historical correctness remain necessary even when no play button is visible.
+
+## 2. Who adopts first, and for what job
+
+“Everyone using agents” is the eventual audience, not a useful first launch segment. Start with individual developers who use Claude Code or Codex for multi-file work and are responsible for reviewing the result. We can serve both builders' actual workflow before expanding.
+
+| Audience | Trigger | Useful outcome | Evidence of demand to seek |
+|---|---|---|---|
+| Agent-heavy solo developer | Returns after 10–30 minutes | Understand changes and unresolved problems without rereading the whole session | Uses Drishya for their next unrelated task voluntarily |
+| Developer reviewing agent changes | Agent claims “fixed” or “tests pass” | Locate the diff and see which test execution the claim refers to | Faster correct review; fewer incorrect assumptions |
+| Developer learning an unfamiliar repo | Agent reads several connected files | Follow actual source excerpts and relevant relationships | Can explain the changed behavior afterward |
+| Pair/small team | Another builder hands over work | Open an explicit, privacy-reviewed evidence packet | Recipient can answer review questions without the author present |
+| Multi-agent user | Several workers touch overlapping areas | Distinguish agents, worktrees and outcomes without losing context | Correctly attributes changes; notices unresolved overlaps |
+
+The first three share one interface. Team sharing and many simultaneous agents raise identity, privacy and scale costs; deliver them after single-session trust and readability.
+
+## 3. Market reality and the differentiation to earn
+
+We are not first to visualize agent activity. Agent Flow documents live Claude Code/Codex graphs, session views, timelines, transcripts, file attention and log replay. These are table stakes for this category, not our moat. This review inspected its published description, not a hands-on feature/performance comparison. [Agent Flow](https://github.com/patoles/agent-flow).
+
+Native environments also keep improving. Cursor documents checkpoints and file previews/restoration, so “see code changes” alone is insufficient. Drishya's opportunity is a consistent, observe-only account across environments, with the actual historical material and useful navigation between it. [Cursor Agent](https://cursor.com/docs/agent/overview).
+
+Langfuse's tracing is adjacent competition for understanding execution. We should compete on the developer's repository and review task, rather than recreating a generic tracing dashboard. [Langfuse observability](https://langfuse.com/docs/observability/overview).
+
+The 2025 Stack Overflow survey reports frustration with almost-correct AI answers (66%) and more time debugging AI code (45%). These are motivation to investigate review/comprehension problems, **not proof of demand for Drishya, market size, or willingness to pay**. [Survey AI section](https://survey.stackoverflow.co/2025/ai).
+
+Our differentiation hypothesis is the combination of five qualities: captured content rather than labels; exact historical availability; fluid movement between history/file/evidence; useful return-to-work review; and consistent behavior across harnesses. No single animation is uncopyable. Defensibility can compound through adapter compatibility fixtures, trustworthy artifact lineage, excellent long-session navigation, and repeated usability learning. We must earn this with users, not declare competitors' UIs “bad.”
+
+## 4. The experience to build first
+
+Keep `apps/ui` as the integrated application. Treat `docs/prototype/index.html` as an interaction reference and a test source. Do not replace the app with the prototype's hardcoded playback engine. Neither surface is the final design.
+
+### One coherent composition
+
+- **Top:** session identity, source/harness, and stable agent presences. Active agents receive emphasis; idle agents stay in a compact overflow after a sensible limit. Do not reshuffle their positions each time activity changes. Default to all agents in one chronological history; selecting an agent filters emphasis, with explicit isolation available.
+- **Behind:** a calm repository map. Work files sit near their corresponding history passages; unrelated structure recedes. Relationships are typed and revealable, not a glowing spaghetti background. The map can be off without losing any information or navigation.
+- **Middle:** one vertically accumulating history. Within a passage, actions arrive left to right; exposed prose sits below on the shared background, unboxed. A new paragraph is visual punctuation, not a new dashboard card.
+- **Right:** stable native instruments, followed by observed MCP servers. A call emits from its actual instrument. Servers disclose their tools as drawers. Clicking a dock entry reveals its activity in history; it is not only an animation anchor. Missing/unobserved tools are not presented as an inventory of installed capabilities.
+- **Bottom:** a small live/reading-position affordance when useful. In ordinary history there is no mandatory movie controller. Explicit “Replay sequence” reveals the transport.
+
+### The first 90 seconds should demonstrate six useful moments
+
+1. Choose an existing session by project, source, date and safe title. Show whether it is imported, updating, stale, unsupported or incomplete. Do not label “live” solely because a file was modified recently.
+2. A captured read lifts from its file node (or a labelled unresolved origin) into actual selectable code. Path, range, availability and provenance are accessible without dominating the composition.
+3. A search emits from the dock. Matches share a query baseline and link directly to their historical excerpts. Hover/focus traces a result to its file; it never claims the search caused the next edit.
+4. A related edit takes the width of a diff. A test result lands as command, outcome and useful failing assertion, not a confetti success tile. Prose remains prose.
+5. Scroll back and select a line. The viewport stays put as new actions arrive. Expand the read in place or enter its reader; close it and return to the same line and surrounding passage.
+6. “Since your last visit” highlights new edits, test executions, failures and gaps. Selecting an item lands on the original event. Returning to latest is explicit and does not run every missed animation.
+
+This small complete journey is more valuable than a gallery of twenty effects. Use the same synthetic scenario across prototype, integrated UI, screenshot review and launch demonstration.
+
+## 5. Content determines the presentation
+
+The visual system needs an intermediate **presentation plan**, not an LLM choosing arbitrary layout. Given an operation, available artifacts, viewport, density and expansion state, it chooses a deterministic shape, bounded preview, relevant anchors and an accessible full reader. This is a proposed view-layer contract; it does not silently change the event schema.
+
+| Material | Default visual composition | Expand / interaction | Truth and overload behavior |
+|---|---|---|---|
+| Source read | File spine, exact range, readable code excerpt | Expand vertically; full-width reader for long lines; copy range | Missing context uses a labelled gap; never fetch today's file as if historically read |
+| Search | Query baseline, file-grouped excerpt rows | Result opens captured location; clear match count | Show result cap and omitted count; text-only when parsing is uncertain |
+| Edit | Inline hunk for a small change; aligned before/after at sufficient width | Change lens can switch between captured before, patch, verified reconstruction and current file | Patch intent, tool success and observed disk write are different facts |
+| Shell | Command line, working directory when captured, output below | Fold noisy output by explicit rule; open bounded full-output reader | Preserve stdout/stderr and exit status when available; no invented progress bars |
+| Test | Outcome aligned with command, failed assertion first | Previous comparable run beside current; jump to evidence | Green means that invocation succeeded; it does not certify all current code |
+| MCP | Server/tool origin, compact input, content-shaped result | Safe JSON tree, table for uniform records, list for search-like output, text fallback | Generic renderer first; no arbitrary remote HTML or untrusted scripts |
+| Delegation | Branch from parent presence to a child presence | Follow child work and return to parent position | Only explicit parent/child evidence creates the branch |
+| Agent prose | Attributed text on a quiet background, normal selection | Expand long exposed rationale; link mentions only with reliable resolution | No hidden reasoning reconstruction; captured words and generated explanation remain separate |
+| Gap / omission | A visible break in the sequence with short reason | Inspect type, bounds and available evidence | Unknown remains unknown; an attractive composition cannot conceal missing capture |
+
+A short command should not occupy a code-sized rectangle. A six-line diff should not be crushed into a 280 px card. A long JSON result should not become a screen of tiny text. This requires deliberate renderers, useful previews and stable expansion, not unlimited automatic resizing.
+
+### Layout rules to implement and test
+
+Start with readable widths rather than fixed card counts: code roughly 420–720 px when available, prose around 65–85 characters per line, minimum body text 14 px on desktop. These are initial design targets, subject to testing.
+
+At wide widths, at most three compact actions share a passage; a substantial diff can occupy the row alone. Around 900 px, collapse secondary navigation before making source unreadable. At narrow widths, actions stack and dock/map become deliberate overlays. Long individual code lines may scroll horizontally; browsing the main passage should not require a horizontal carousel. The inspected base app currently violates the latter at 900 px.
+
+Content arrives whole within its bounded preview. Reserve initial geometry from the presentation plan, grow only at meaningful boundaries, and keep the reader's anchor stable. A changing output should not repeatedly stretch the page beneath the cursor. Full content can use a scrollable reader; avoid nested scrolling until the reader is explicitly expanded.
+
+Earlier actions overlap **only at margins**; titles and useful excerpts remain readable. Do not scale text down to make more fit. Expand one action within its passage, with a full reader as an escape hatch. The inspector/evidence panel can remain for deep debugging, but ordinary reading should not require opening it for every event.
+
+## 6. Craft: motion as an information channel
+
+Retain Lift, Emit, Settle, Surface and Resolve. Implement them as transitions between already-defined semantic states. No animation callback changes captured data, event ordering, selection or availability. The final layout exists first; a presentation overlay bridges origin to destination and disappears. DOM text stays selectable and accessible in the settled composition.
+
+Proposed initial timing vocabulary: focus/hover 100–140 ms, arrival 180–260 ms, settle 140–180 ms, result change 120–180 ms. These are tunable targets, not measured optimums. Limit travel distance on wide screens; the origin indicator and short tether can carry meaning without flying across the whole desktop. Use transforms/opacity, avoid per-frame layout and large backdrop filters, and use measured anchors shared across scroll containers.
+
+During bursts, animate one representative relationship per group and settle the rest immediately with an explicit count. Never queue minutes of spectacle behind live capture. The user may expand the group afterward. If an origin is offscreen, use an attributed edge marker; do not invent a graph position. Offscreen history insertion is quiet. Returning to latest reveals the settled current state, not a catch-up movie.
+
+At rest nothing pulses, orbits or drifts. Static pending marks indicate unfinished operations. Hover/focus makes the relevant relationship crisp. Copy acknowledges once beside the copied range. Selection remains visibly selected until dismissed. Prefer a clean hairline and tonal contrast to glow, blur, tilt or particles. Reduced motion and map-off retain the same meaning and keyboard route.
+
+Every transition must be interruptible by scroll, selection, focus or navigation. Escape unwinds reader → selection → filter/explore while restoring anchors. Do not globally consume Space when a button, input or reader already owns it. The accessibility tree follows reading order, even when visual actions share a horizontal passage. Do not announce every token/action through a live region; coalesce useful status updates.
+
+## 7. Features that can make the product worth returning to
+
+These are prioritized hypotheses. Every feature needs a cheaper raw-transcript comparison and an evidence model before implementation.
+
+### A. Since your last visit — first differentiation feature
+
+Persist a **local per-user reading boundary** by recording revision and stable item identity. On return, show edits, outcomes, still-unfinished operations and capture gaps since that boundary. First implementation is deterministic facts with direct links; no model call. “Last visited” is not proof the person read or understood every item. Allow “mark through here,” preserve the previous boundary until acknowledged, and offer the complete history beside the digest.
+
+The useful moment: someone returns after lunch and goes straight to two edits and a failed verification rather than watching a replay. This is likely a stronger retention mechanism than live animation alone.
+
+### B. One file, through the work
+
+Select a file from any excerpt to see its reads, intended edits, available before/after artifacts and later verification references across the selected session. A compact version rail links captured states; choosing one opens that state. Compare “as read,” “after this edit” and “current” only where each exists, clearly labelled. The current working tree is never a replacement for a missing historical artifact. Same path in different worktrees is not the same file identity.
+
+### C. Verification freshness, with honest limits
+
+Place test executions relative to relevant edits. If a test ran before a later edit, say “last recorded run predates this edit.” When exact test scope or workspace revision is unknown, say so. A later passing command is not automatically proof it covers the change. Use captured command, root, timestamps/order, observed revision and declared test scope where present. No invented coverage score, “safe to merge,” or green badge inferred solely from proximity.
+
+### D. Review trail from a claim to its evidence
+
+Expose a final claim beside the edit/result evidence linked to it, distinguishing explicit references from candidate related events. A click opens the exact excerpt with source and availability. Deterministic identifiers and quoted paths first; generated explanations later, explicitly labelled and cited. Citation existence is not semantic entailment. Let the reader inspect why a suggested link was made and dismiss it.
+
+### E. Continuity across sessions, without false causality
+
+Group sessions by user-approved repository/worktree identity. Show “later work on this file” and “also touched here,” with harness and time. Only explicit native relationships justify “continued from” or “delegated to.” Worktree boundaries remain visible. Do not merge histories automatically merely because two cwd strings look alike.
+
+### F. A review packet worth sharing
+
+Eventually export selected operations, minimal required artifacts, relevant outcomes, gaps and provenance. Preview exactly what leaves the machine; redact again under the chosen export policy and replace all local identities. Offline review needs no account or daemon. The recipient can explore evidence, not only watch a video. Existing full-bundle export needs hardening first; no auto-upload or public share button in the baseline.
+
+### G. Attention aids, not invented intelligence
+
+Later deterministic cues can reveal a file edited by two agents in the same worktree, a failed command with no observed retry, or repeated identical reads of an unchanged captured artifact. Label these conditions literally. A repeated read is not automatically waste; two edits are not automatically a conflict. Provide “why shown” and a link to each observation.
+
+### Deliberately defer or remove
+
+Defer dashboards of token spend without reliable captured accounting, comprehensive runtime/database graphs, every-harness promises, generated architecture narration, team surveillance, and theme marketplaces. Remove mandatory autoplay, idle animation, fake complete-file context, default model-generated titles as if captured, and giant history carousels. Never add prompting, approvals, rollback actions or agent launching: those break the observe-only product.
+
+## 8. Base theme now; alternatives later
+
+Use the established graphite developer-tool theme from VISION: flat surfaces, restrained hairlines, one sans and one mono, syntax consistent with GitHub Dark, color for identity/outcome/change. Improve spacing, composition, contrast and movement before adding skins.
+
+Future theme experiments can be **Graphite**, **Paper** (high-contrast light reading), and **Stage** (more spacious presentation). These are proposed directions, not three apps to build now. Share semantic renderers, density, hit targets and interaction. Theme tokens control colors/type/spacing; motion and quality settings remain separate. Compare the same fixture at the same width, long prose, failure, huge output and reduced motion. Choose by readability and preference testing, not a beautiful empty screenshot.
+
+## 9. Adoption and ethical FOMO
+
+Lead with a concrete before/after task: “Find what changed, why the agent said it changed, and what verification actually ran.” Show a real product interaction with synthetic data: source lifts, diff expands, test links, the user scrolls away while work continues. A short promotional edit should be made from working behavior, with omissions labelled; it must not promise hidden reasoning access.
+
+Launch the local reader with no account and no model key required. Preserve Apache-2.0 as the current project decision. Open development can earn trust around capture/privacy and attract adapter contributions. Paid collaboration, managed review or support are later business hypotheses; there is no pricing evidence yet. Open source is not itself a distribution strategy.
+
+Use an interactive browser demo, a concise install path, compatibility table, sample replay and an evidence-led launch video. Recruit 8–12 developers who already review Claude Code/Codex work. Publish a clear comparison by jobs supported, with dates and links, not competitor insults or unsupported exclusivity. Never upload people's recordings by default for a demo, issue or analytics.
+
+### Decide with pilot evidence
+
+Run matched tasks on native transcripts and Drishya, counterbalance order, and include success, failure, missing content, multi-agent and changed-after-test cases. Measure correct answers to: what changed; what was actually read; which test ran; what remains unknown. Record completion time and confidence calibration. Ask whether they choose it again on their own work after a week.
+
+Proposed pilot gate: at least 8 participants; median task time improves by 25% without a drop in correctness; at least 6 voluntarily use it on a second task; no critical false inference caused by presentation. Small-sample results guide iteration, not population-level claims. If visual polish delights but comprehension does not improve, revise navigation and evidence presentation before expanding effects. No telemetry: use consented observed studies and user-controlled local aggregate reports.
+
+## 10. Build sequence and durable handoff
+
+Finish trust and reliability first, alongside a usable integrated history. Then implement the content-shaped visual system and one differentiating return-to-work feature. Only then expand themes, sharing and harness breadth. [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md) defines gates and acceptance criteria; STATUS identifies the next actual commit.
+
+The next agent should preserve these four things even under a smaller context budget: **live history keeps growing; the reader owns their position; content and evidence drive the layout; backend completion precedes premium expansion**. Read the [continuity brief](CONTINUITY.md) before proposing a new direction. These repository files, not chat memory, are the durable product memory.

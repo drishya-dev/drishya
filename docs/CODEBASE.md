@@ -1,6 +1,6 @@
 # Codebase — the system as built
 
-**Draft, 22–25 Sep 2026.** This maps the code that exists. For *why*, see the [engineering plan](review/03-engineering-plan.md). For how it should look, see [`VISION.md`](VISION.md). The contracts are a working draft, not a frozen schema: [`packages/contracts`](../packages/contracts/src/index.ts) is `0.1.0-draft`, and freezing it needs both builders ([`AGENTS.md`](../AGENTS.md)).
+**Draft built 22–25 Sep; audited 30 Sep 2026.** This maps the code that exists. The [baseline audit](review/06-baseline-audit.md) qualifies verified behavior and known gaps; the [roadmap](IMPLEMENTATION_ROADMAP.md) governs current execution. For architecture rationale see the engineering plan; for creative intent see VISION. [`packages/contracts`](../packages/contracts/src/index.ts) remains `0.1.0-draft`, and freezing it needs both builders ([`AGENTS.md`](../AGENTS.md)).
 
 ## The pipeline
 
@@ -9,7 +9,7 @@ harness journal (read-only)
   │  capture-core/jsonl.ts     bounded incremental read; cursor = offset + generation + fingerprint
   ▼
 adapter-claude / adapter-codex  record → RawObservation (harness names mapped to neutral intents)
-  │  capture-core seal()       privacy: redact every string, drop images, omit protected-file content
+  │  capture-core seal()       best-effort redaction/omission; known bypasses tracked in audit
   ▼
 store                           SQLite (node:sqlite, WAL) + content-addressed blobs; cursor committed
   │                             in the same transaction as the observations
@@ -53,7 +53,9 @@ TypeScript runs directly on Node 24 (type stripping), with no build step for the
 
 ## Privacy (constraint 3)
 
-`seal()` is the only way an observation reaches the store. Every string is run through the redaction rules: private keys, AWS/GitHub/Anthropic/OpenAI/NVIDIA/Google/Slack/Stripe/npm/HF tokens, JWTs, bearer tokens, URL credentials, and high-entropy secret assignments. Code such as `getToken()` and `process.env.X` is left alone. Content read from protected paths (`.env*` except `.example`, keys, credentials) is omitted while the path is kept. Images are never stored. The model layer redacts again before anything leaves the machine. Exported bundles mask local paths and re-key path-derived ids. `packages/ingest/test` greps the actual database and blob files for planted secrets.
+`seal()` applies a best-effort privacy policy before observation storage. Rules cover private keys, common provider tokens, JWTs, bearer tokens, URL credentials and high-entropy assignments. Protected-file content has omission rules; supported image shapes are dropped; model evidence is redacted again; bundle export masks configured paths and re-keys ids. `packages/ingest/test` checks database/blob bytes for selected planted secrets.
+
+**Known gaps, 30 Sep:** not every string is covered. The audit reproduced unsanitized retained siblings in a `base64` object and unsanitized object keys; envelope metadata, other sinks, truncation and combined exports need hardening. Do not describe the current policy as a guarantee or expand real-data persistence/sharing before B0. See [audit A01–A04](review/06-baseline-audit.md) and [roadmap B0](IMPLEMENTATION_ROADMAP.md#3-b0--privacy-and-trust-are-release-blockers).
 
 ## Adapters — how to add a harness
 
@@ -67,11 +69,11 @@ Formats verified on this machine on 22–25 Sep 2026 against 574 Claude Code and
 
 ## Local API and security
 
-Loopback only. `drishya serve` prints a link with a one-time token in the URL fragment (never sent to servers or logs). The UI exchanges it for an `HttpOnly; SameSite=Strict` cookie. Every request is checked for Host (against DNS rebinding) and Origin; state changes need a JSON content type (against CSRF); CSP is strict. `/v1/import` accepts only sessions that discovery found, so there are no arbitrary file reads. Change notices go over Server-Sent Events. Routes are in `apps/daemon/src/server.ts`; security tests are in `apps/daemon/test/server.test.ts`.
+Loopback only. `drishya serve` prints a per-launch token in the URL fragment. The UI sends it to the local API to obtain an `HttpOnly; SameSite=Strict` cookie. The token currently remains reusable for that server lifetime; earlier “one-time” wording overstated the behavior. Host/Origin checks, JSON mutation requirements and CSP are implemented. `/v1/import` is discovery-allowlisted. SSE carries change notices, but durable revision/reconnect recovery is not yet implemented. Routes and tests are in `apps/daemon/src/server.ts` and `apps/daemon/test/server.test.ts`.
 
 ## Base UI — what is placeholder
 
-The UI proves the whole loop: home (sessions, import, watch live, combined views, demo), the continuous canvas (crown agents, file spine, passages left to right, unboxed prose, dock with MCP drawers, filmstrip with markers, E/F jumps, follow/held, filters), the inspector (detail, evidence links, explain with consent), the briefing, search, explore map, reduced motion and phone width.
+The base UI exercises home/session import/watch, combined views, synthetic demo, agent crown, file spine, passages, unboxed prose, dock/MCP filters, filmstrip, inspector, search, map and optional explanations. This is integration scaffolding, not final behavior or complete acceptance coverage. Live updates currently depend on a timed playback cursor; selection holds that cursor. Native dock entries lack equivalent filter actions, and fixed action widths cause horizontal passage scrolling at medium widths. The 30 Sep direction requires independent accumulating history, stable reading anchors and content-shaped expansion. See the audit and roadmap B3.
 
 These parts are placeholders for the frontend pass: the Canvas 2D map (→ PixiJS), the regex highlighter and code views (→ CodeMirror 6), the simple CSS arrivals (→ the choreographed Lift/Emit/Settle/Surface/Resolve with origin tethers), and history windowing (→ proper virtualization). `compose()` output is the contract the frontend renders; change it deliberately and update the goldens.
 
@@ -103,3 +105,9 @@ These are informal, not the performance gates. An 83 MB Claude session: 6,930 ob
 | `web-tree-sitter` | line-anchored import rules | Draft map; tree-sitter replaces extraction, the resolver and layout stay |
 | PixiJS map | Canvas 2D | Base UI only; Pixi is frontend work |
 | DB in a worker | Main thread | Tracked follow-up; fine at measured sizes |
+
+## Current audit and next gate (30 September)
+
+Fresh typechecks, 96 tests and Vite 8 production build passed. Synthetic persistence/restart/API/viewerless tailing checks passed. Four real journals were parsed/reduced/composed in memory only; the sampled Claude records exposed compaction/unsupported-record gaps. This is narrower than a production baseline. `node scripts/validate-baseline.ts --real-read-only` reproduces the opt-in diagnostics without persisting real content.
+
+The [baseline audit](review/06-baseline-audit.md) is authoritative for these results and open findings. The [implementation roadmap](IMPLEMENTATION_ROADMAP.md) orders privacy, lifecycle/recovery, identity/history correctness, integrated base UI and resource/install gates before premium expansion. No frontend design is frozen. Optional remote model calls, packed distribution, long-session performance and complete real-live browser behavior remain unverified.

@@ -2,6 +2,8 @@
 
 21 September 2026 · Proposed architecture amendments and build gates
 
+> **30 September amendment:** [IMPLEMENTATION_ROADMAP](../IMPLEMENTATION_ROADMAP.md) governs current execution order and reliability/live-history/deployment amendments. [Baseline audit](06-baseline-audit.md) distinguishes built behavior from verified results and open defects. The built stack uses `node:sqlite` and `node:http` + SSE; see CODEBASE/STATUS for the recorded deviations from the proposal below. Live history accumulates independently of reading position; playback is optional. Schema proposals still require both builders' agreement.
+
 This plan preserves a local browser application and an independent collector. It narrows the first implementation while making historical replay, privacy and performance explicit. It is not an implemented architecture. Schema changes below are proposals to reconcile with [reference 03](../reference/03-event-schema.md) before its first stable version.
 
 ## 1. Application form and stack
