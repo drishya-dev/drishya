@@ -5,7 +5,9 @@ import type { RedactionNote } from '@drishya/contracts';
 
 // p2: object keys, fields beside a dropped base64 payload and the branch name are redacted, and
 // matching runs before truncation. Data stored under p1 may hold secrets in those places.
-export const PRIVACY_POLICY_VERSION = 'p2';
+// p3: protected-file scopes omit every string except paths and short labels, and shell commands
+// or patches that name a protected file make their output protected. p2 data may hold such content.
+export const PRIVACY_POLICY_VERSION = 'p3';
 
 /** Longest single string kept verbatim; beyond this the tail is cut with a marker. */
 export const MAX_STRING_BYTES = 4 * 1024 * 1024;
@@ -84,6 +86,16 @@ export function isDeniedPath(path: string): boolean {
   return DENY_PATH.test(path) && !ALLOW_PATH.test(path);
 }
 
+/**
+ * Whether free text (a shell command, a patch) names a protected file: `cat .env`,
+ * `grep KEY config/.env.production`, `*** Update File: deploy/.env`. Shell reads and patches
+ * reach protected files without any structured path field, so the path rule alone misses them.
+ * Conservative by design: a command that merely lists a protected file also counts.
+ */
+export function mentionsDeniedPath(text: string): boolean {
+  return text.split(/[\s"'`;|&<>()=,]+/).some((t) => t.length > 0 && isDeniedPath(t));
+}
+
 export interface RedactResult {
   text: string;
   hits: { rule: string; count: number }[];
@@ -125,8 +137,14 @@ export interface SanitizeResult<T> {
   omitted: boolean;
 }
 
-const CONTENT_KEYS = new Set(['content', 'originalFile', 'oldString', 'newString', 'old_string', 'new_string', 'stdout', 'stderr', 'output', 'text', 'result', 'patch', 'input']);
 const PATH_KEYS = new Set(['file_path', 'filePath', 'path', 'notebook_path']);
+/**
+ * Inside a protected scope, the only strings kept besides paths: short identifier-like labels under
+ * these keys (e.g. `kind: "read"`), which the reducer needs to place the operation. Everything else
+ * is omitted whatever its field name, because harness result shapes vary and change.
+ */
+const LABEL_KEYS = new Set(['type', 'kind', 'tool', 'status', 'mode']);
+const isLabel = (v: unknown) => typeof v === 'string' && v.length <= 40 && /^[A-Za-z0-9_.:-]*$/.test(v);
 
 /**
  * Deep-sanitizes an arbitrary JSON value: every string is redacted, images are dropped,
@@ -175,8 +193,8 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
         const f = field ? `${field}.${key}` : key;
         if (key !== k) for (const h of redactText(k).hits) redactions.push({ field: f, rule: h.rule, count: h.count });
         // Path fields themselves are kept so the user can see *that* a protected file was touched.
-        const deny = childDenied && CONTENT_KEYS.has(k);
-        out[key] = PATH_KEYS.has(k) ? walk(x, f, false) : walk(x, f, deny || (childDenied && typeof x === 'object'));
+        const keep = PATH_KEYS.has(k) || (childDenied && LABEL_KEYS.has(k) && isLabel(x));
+        out[key] = walk(x, f, keep ? false : childDenied);
       }
       return out;
     }

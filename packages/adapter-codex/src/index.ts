@@ -11,6 +11,7 @@ import {
   listFiles,
   parseMcpName,
   textOf,
+  touchesProtectedFile,
   type Adapter,
   type ParseContext,
   type RawObservation,
@@ -210,7 +211,9 @@ export function createParser(_ctx: ParseContext): RecordParser {
           const intent = intentOf(name, args, typeof p.namespace === 'string' ? p.namespace : undefined);
           const id = String(p.call_id ?? p.id ?? '');
           if (id) calls.set(id, { tool: name, intent });
-          return [{ ...base, kind: 'tool.call', operationId: id || undefined, payload: { tool: name, input: args, intent } }];
+          // A patch that edits a protected file carries its contents in the call itself.
+          const protectedPatch = intent.kind === 'patch' && touchesProtectedFile(intent);
+          return [{ ...base, kind: 'tool.call', operationId: id || undefined, payload: { tool: name, input: args, intent }, ...(protectedPatch ? { denyContent: true, contentKeys: ['input', 'intent'] } : {}) }];
         }
         case 'function_call_output':
         case 'custom_tool_call_output': {
@@ -226,6 +229,7 @@ export function createParser(_ctx: ParseContext): RecordParser {
             kind: 'tool.result',
             operationId: id || undefined,
             payload: { tool: call?.tool, isError, text: parsed.text, outcome, exitCode: parsed.exitCode, durationMs: parsed.durationMs },
+            denyContent: touchesProtectedFile(intent),
             contentKeys: ['text', 'outcome'],
           }];
           if (intent.kind === 'spawn' && intent.agentType && !isError) {

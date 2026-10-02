@@ -163,15 +163,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (body.live) app.ingest.startLive(r.recordingId);
       return json(res, { ...r, recording: app.store.getRecording(r.recordingId) });
     }
-    if (a === 'recordings' && !id && m === 'GET') return json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, live: app.ingest.isLive(r.id) })) });
+    if (a === 'recordings' && !id && m === 'GET') return json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id) })) });
 
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
-      if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId) } });
+      if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId) } });
       if (!sub && m === 'DELETE') {
-        app.ingest.forget(firstId);
-        app.store.deleteRecording(firstId);
-        return json(res, { ok: true });
+        app.recording(firstId);
+        return json(res, { ok: true, ...(await app.ingest.forget(firstId)) });
       }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
       if (sub === 'observations' && m === 'GET') {

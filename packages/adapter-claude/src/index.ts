@@ -11,6 +11,7 @@ import {
   listFiles,
   parseMcpName,
   textOf,
+  touchesProtectedFile,
   type Adapter,
   type ParseContext,
   type RawHunk,
@@ -20,7 +21,7 @@ import {
   type ToolIntent,
   type ToolOutcome,
 } from '@drishya/capture-core';
-import { isDeniedPath, sanitize } from '@drishya/privacy';
+import { sanitize } from '@drishya/privacy';
 
 export const descriptor: AdapterDescriptor = {
   id: 'claude-code',
@@ -217,7 +218,6 @@ export function createParser(ctx: ParseContext): RecordParser {
             const intent = call?.intent ?? { kind: 'other' as const };
             const outcome = outcomeOf(intent, structured, text);
             const exitMatch = /^Exit code (-?\d+)/m.exec(text ?? '');
-            const path = 'path' in intent ? intent.path : undefined;
             out.push({
               ...base,
               part: i,
@@ -232,7 +232,7 @@ export function createParser(ctx: ParseContext): RecordParser {
                 structured: outcome.kind === 'other' ? structured : undefined,
                 exitCode: intent.kind === 'shell' ? (exitMatch ? Number(exitMatch[1]) : c.is_error ? null : 0) : undefined,
               },
-              denyContent: !!path && isDeniedPath(path),
+              denyContent: touchesProtectedFile(intent),
               contentKeys: ['text', 'outcome', 'structured'],
             });
             if (intent.kind === 'spawn' && outcome.kind === 'spawn' && outcome.childAgentId) {

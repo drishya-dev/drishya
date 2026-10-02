@@ -126,6 +126,7 @@ function RecordingRow({ r, picked, onPick }: { r: RecordingSummary; picked: bool
         <div className="row-title">
           {r.title || 'Untitled'}
           {r.live && <span className="tag live">live</span>}
+          {r.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
         </div>
         <div className="row-sub">
           <span className={`harness h-${r.harness}`}>{HARNESS_LABEL[r.harness] ?? r.harness}</span>
