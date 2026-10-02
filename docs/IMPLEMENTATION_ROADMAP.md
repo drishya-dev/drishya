@@ -58,6 +58,8 @@ Exports need a full multi-recording path/identity policy: all workspace roots, w
 
 ## 4. B1 — reliable collection and recovery
 
+> **Progress, 2 Oct:** the capture lifecycle half is implemented: explicit health states with codes, discovery errors, coalesced bounded live turns, `import --live`. The API and SSE recovery half (revisions, reconnect, buffers, token/session lifetime) is next.
+
 ### Capture lifecycle
 
 Introduce explicit states: discovered, importing, following, idle source, stopped, missing source, unsupported and failed. These describe observer/source status, not certainty that the underlying agent is alive. Surface permission failures separately from an empty list. A missing journal or parser exception produces a visible, sanitized diagnostic. The current server's swallowed ingest errors must be replaced with structured recording health.

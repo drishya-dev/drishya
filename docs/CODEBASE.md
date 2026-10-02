@@ -34,7 +34,7 @@ Replay works with the map absent. The indexer (`indexer`) and the model layer (`
 | `adapter-claude` | `~/.claude/projects/<slug>/<session>.jsonl` plus `<session>/subagents/agent-*.jsonl` | `src/index.ts` |
 | `adapter-codex` | `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` | `src/index.ts` |
 | `store` | SQLite schema, append with cursor, blobs, FTS5 search, projection/graph/generated caches | `src/index.ts` |
-| `ingest` | Import, resume, live tailing (polling), projection caching, combined views, change events | `src/index.ts` |
+| `ingest` | Import, resume, live tailing (polling, coalesced bounded turns), projection caching, combined views, change events, capture health (`health()`, `health` events), discovery error report | `src/index.ts` |
 | `projection` | The reducer, plus derived rules: shell classification, test-output parsing, patch/diff | `src/reduce.ts`, `src/shell.ts`, `src/tests.ts`, `src/patch.ts` |
 | `indexer` | Repository map: file enumeration, import extraction and resolution, deterministic layout | `src/index.ts` |
 | `scene` | `compose()`, markers, pacing (`dwellFor`), step lookups — runs in Node and the browser | `src/index.ts` |
@@ -69,7 +69,7 @@ Formats verified on this machine on 22–25 Sep 2026 against 574 Claude Code and
 
 ## Local API and security
 
-Loopback only. `drishya serve` prints a per-launch token in the URL fragment. The UI sends it to the local API to obtain an `HttpOnly; SameSite=Strict` cookie. The token currently remains reusable for that server lifetime; earlier “one-time” wording overstated the behavior. Host/Origin checks, JSON mutation requirements and CSP are implemented. `/v1/import` is discovery-allowlisted. Model calls (`explain`, `briefing`, `labels`) return a preview with a SHA-256 digest of the exact request: endpoint, model, token budget, messages, privacy and explain versions. Sending requires `consent` equal to that digest. If the rebuilt request no longer matches, the server sends nothing and answers 409 with the new preview. Cached answers are reused only for the same digest. SSE carries change notices, but durable revision/reconnect recovery is not yet implemented. Routes and tests are in `apps/daemon/src/server.ts` and `apps/daemon/test/server.test.ts`.
+Loopback only. `drishya serve` prints a per-launch token in the URL fragment. The UI sends it to the local API to obtain an `HttpOnly; SameSite=Strict` cookie. The token currently remains reusable for that server lifetime; earlier “one-time” wording overstated the behavior. Host/Origin checks, JSON mutation requirements and CSP are implemented. `/v1/import` is discovery-allowlisted. Model calls (`explain`, `briefing`, `labels`) return a preview with a SHA-256 digest of the exact request: endpoint, model, token budget, messages, privacy and explain versions. Sending requires `consent` equal to that digest. If the rebuilt request no longer matches, the server sends nothing and answers 409 with the new preview. Cached answers are reused only for the same digest. SSE carries `change` notices and, separately, `health` notices with each recording's capture state. `/v1/sources` returns `{ sources, errors }`, and recordings carry `health`. Durable revision/reconnect recovery is not yet implemented (B1b). Routes and tests are in `apps/daemon/src/server.ts` and `apps/daemon/test/server.test.ts`.
 
 ## Base UI — what is placeholder
 

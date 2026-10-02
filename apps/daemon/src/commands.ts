@@ -95,7 +95,29 @@ export async function main() {
       const p = app.ingest.projection(r.recordingId);
       console.log(`Imported ${r.recordingId} (${adapterId}): +${r.added} observations, ${r.gaps} capture gaps.`);
       console.log(`  ${p.operations.length} operations, ${p.prose.length} prose, ${p.agents.length} agents, ${p.files.length} files — "${p.title ?? ''}"`);
-      await app.close();
+      if (!values.live) {
+        await app.close();
+        return;
+      }
+      // --live keeps tailing until interrupted (audit A09: the flag used to be ignored).
+      app.ingest.on('change', (e: { recordingId: string; added: number; observationCount: number }) => {
+        if (e.recordingId === r.recordingId && e.added) console.log(`  +${e.added} observations (${e.observationCount} total)`);
+      });
+      app.ingest.on('health', (e: { recordingId: string; health: { state: string; error?: { message: string } } }) => {
+        if (e.recordingId === r.recordingId) console.log(`  capture: ${e.health.state}${e.health.error ? ` — ${e.health.error.message}` : ''}`);
+      });
+      app.ingest.startLive(r.recordingId);
+      console.log('Following. Press Ctrl+C to stop.');
+      // The poll timer is unref'd so a server can exit cleanly; a bare CLI needs its own anchor.
+      const keepAlive = setInterval(() => undefined, 60_000);
+      const stop = async () => {
+        clearInterval(keepAlive);
+        await app.ingest.stopLive(r.recordingId);
+        await app.close();
+        process.exit(0);
+      };
+      process.on('SIGINT', stop);
+      process.on('SIGTERM', stop);
       return;
     }
     case 'list': {

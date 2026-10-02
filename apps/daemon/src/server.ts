@@ -21,7 +21,7 @@ import {
   type ModelConfig,
   type Prepared,
 } from '@drishya/explain';
-import type { ChangeEvent } from '@drishya/ingest';
+import type { ChangeEvent, HealthEvent } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 
@@ -82,8 +82,17 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     const data = `event: change\ndata: ${JSON.stringify(ev)}\n\n`;
     for (const c of clients) c.write(data);
   };
+  // Capture state changes travel on their own event name, so viewers that only reload data on
+  // `change` are not disturbed (B1, audit A05).
+  const onHealth = (ev: HealthEvent) => {
+    const data = `event: health
+data: ${JSON.stringify(ev)}
+
+`;
+    for (const c of clients) c.write(data);
+  };
   app.ingest.on('change', onChange);
-  app.ingest.on('error', () => undefined); // tailing errors surface as gaps, never crash capture
+  app.ingest.on('health', onHealth);
 
   const allowedHosts = () => new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
   const allowedOrigins = () => new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`, ...(opts.devOrigins ?? [])]);
@@ -152,7 +161,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       });
       return;
     }
-    if (a === 'sources' && m === 'GET') return json(res, { sources: await app.ingest.discover() });
+    if (a === 'sources' && m === 'GET') return json(res, await app.ingest.discoverReport());
     if (a === 'import' && m === 'POST') {
       const body = await readJson(req);
       // Only sources that discovery found may be imported over the API: no arbitrary file reads.
@@ -163,11 +172,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (body.live) app.ingest.startLive(r.recordingId);
       return json(res, { ...r, recording: app.store.getRecording(r.recordingId) });
     }
-    if (a === 'recordings' && !id && m === 'GET') return json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id) })) });
+    if (a === 'recordings' && !id && m === 'GET') return json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
 
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
-      if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId) } });
+      if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId), health: app.ingest.health(firstId) } });
       if (!sub && m === 'DELETE') {
         app.recording(firstId);
         return json(res, { ok: true, ...(await app.ingest.forget(firstId)) });
@@ -281,6 +290,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       new Promise<void>((ok) => {
         for (const c of clients) c.end();
         app.ingest.off('change', onChange);
+        app.ingest.off('health', onHealth);
         server.close(() => ok());
         server.closeAllConnections();
       }),

@@ -1,4 +1,4 @@
-import { appendFileSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -249,6 +249,124 @@ describe('privacy policy of stored data', () => {
     expect(ingest.privacyOutdated(r.recordingId)).toBe(false);
     store.db.prepare(`UPDATE observations SET body = json_set(body, '$.privacyPolicyVersion', 'p1') WHERE recording_id = ? AND seq = 0`).run(r.recordingId);
     expect(ingest.privacyOutdated(r.recordingId)).toBe(true);
+  });
+});
+
+// B1 (audit A05): capture health is explicit. A missing or unreadable source, or a failing adapter,
+// is a visible state with a reason, never an empty list or a swallowed error.
+describe('capture health', () => {
+  const tiny = () => {
+    const file = join(dir, `h-${Math.random().toString(36).slice(2)}.jsonl`);
+    writeFileSync(file, claudeLine({ type: 'user', uuid: 'h1', message: { role: 'user', content: 'go' } }));
+    return file;
+  };
+
+  it('reports stopped after an import and following while live', async () => {
+    const r = await ingest.importSource('claude-code', tiny());
+    expect(ingest.health(r.recordingId)).toMatchObject({ state: 'stopped', live: false, error: undefined });
+    ingest.startLive(r.recordingId, 1000);
+    expect(ingest.health(r.recordingId).state).toBe('following');
+    await ingest.stopLive(r.recordingId);
+    expect(ingest.health(r.recordingId).state).toBe('stopped');
+  });
+
+  it('turns a deleted source into missing-source, with a reason, without throwing', async () => {
+    const file = tiny();
+    const r = await ingest.importSource('claude-code', file);
+    const events: string[] = [];
+    ingest.on('health', (e) => events.push(e.health.state));
+    rmSync(file);
+    await ingest.sync(r.recordingId);
+    const h = ingest.health(r.recordingId);
+    expect(h.state).toBe('missing-source');
+    expect(h.error?.code).toBe('missing-source');
+    expect(h.sources[0]).toMatchObject({ role: 'main', state: 'missing' });
+    expect(events).toContain('missing-source');
+  });
+
+  it('turns an unreadable source into failed with a code, and recovers when it is readable again', async () => {
+    const file = tiny();
+    const r = await ingest.importSource('claude-code', file);
+    const saved = readFileSync(file);
+    rmSync(file);
+    mkdirSync(file); // a directory where the journal was: reading it fails
+    await expect(ingest.sync(r.recordingId)).rejects.toThrow();
+    expect(ingest.health(r.recordingId)).toMatchObject({ state: 'failed', error: { code: expect.any(String) } });
+    rmSync(file, { recursive: true });
+    writeFileSync(file, saved);
+    await ingest.sync(r.recordingId);
+    expect(ingest.health(r.recordingId)).toMatchObject({ state: 'stopped', error: undefined });
+  });
+
+  it('marks following as idle once nothing new has arrived for a while', async () => {
+    let now = Date.parse('2026-10-02T10:00:00Z');
+    const ing = new Ingestor(store, undefined, { now: () => new Date(now), idleMs: 60_000 });
+    const r = await ing.importSource('claude-code', tiny());
+    ing.startLive(r.recordingId, 60_000);
+    expect(ing.health(r.recordingId).state).toBe('following');
+    now += 61_000;
+    expect(ing.health(r.recordingId).state).toBe('idle');
+    await ing.close();
+  });
+
+  it('reports discovery failures per adapter instead of an empty list', async () => {
+    const [claude, codex] = defaultAdapters();
+    const failing = { ...codex!, discover: async () => Promise.reject(Object.assign(new Error(`EACCES: permission denied, scandir '/home/me/.codex/sessions' gh${'p_'}${rnd(36)}`), { code: 'EACCES' })) };
+    const ok = { ...claude!, discover: async () => [{ adapterId: 'claude-code', harness: 'claude-code', path: join(dir, 'ok.jsonl'), bytes: 1, modifiedAt: '2026-10-02T00:00:00Z', companions: [] }] };
+    const report = await new Ingestor(store, [ok, failing]).discoverReport();
+    expect(report.sources).toHaveLength(1);
+    expect(report.errors).toEqual([{ adapterId: 'codex', code: 'permission-denied', message: expect.stringContaining('permission denied') }]);
+    expect(JSON.stringify(report.errors)).not.toContain(`gh${'p_'}`);
+  });
+});
+
+// B1 (audit A06): live ticks coalesce — at most one read in flight plus one pending wake-up per
+// recording — and each live turn does bounded work, so a slow store cannot build a backlog.
+describe('live pacing', () => {
+  it('never runs two syncs of one recording at once, and coalesces ticks while one is slow', async () => {
+    const file = join(dir, 'slow.jsonl');
+    writeFileSync(file, claudeLine({ type: 'user', uuid: 's0', message: { role: 'user', content: 'go' } }));
+    const r = await ingest.importSource('claude-code', file);
+    const real = ingest.sync.bind(ingest);
+    let active = 0;
+    let maxActive = 0;
+    let calls = 0;
+    ingest.sync = async (id, opts) => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      calls++;
+      await new Promise((ok) => setTimeout(ok, 120));
+      try {
+        return await real(id, opts);
+      } finally {
+        active--;
+      }
+    };
+    ingest.startLive(r.recordingId, 10);
+    for (let i = 1; i <= 20; i++) {
+      appendFileSync(file, claudeLine({ type: 'user', uuid: `s${i}`, message: { role: 'user', content: `more ${i}` } }));
+      await new Promise((ok) => setTimeout(ok, 20));
+    }
+    await waitFor(() => store.countObservations(r.recordingId) >= 21, 5000);
+    await ingest.stopLive(r.recordingId);
+    expect(maxActive).toBe(1);
+    expect(calls).toBeLessThan(15); // ~40 ticks fired; a coalesced loop runs far fewer syncs
+  });
+
+  it('bounds one turn of work and reports when more remains', async () => {
+    const file = join(dir, 'bounded.jsonl');
+    writeFileSync(file, Array.from({ length: 40 }, (_, i) => claudeLine({ type: 'user', uuid: `b${i}`, message: { role: 'user', content: `line ${i} `.repeat(20) } })).join(''));
+    const r = await ingest.importSource('claude-code', file, { turnBytes: 4096 });
+    expect(r.more).toBe(true);
+    expect(store.countObservations(r.recordingId)).toBeLessThan(40);
+    let turns = 1;
+    while ((await ingest.sync(r.recordingId, { turnBytes: 4096 })).more) turns++;
+    expect(turns).toBeGreaterThan(2);
+    // Same result as one unbounded import of an identical copy.
+    writeFileSync(join(dir, 'bounded-copy.jsonl'), readFileSync(file));
+    const whole = await ingest.importSource('claude-code', join(dir, 'bounded-copy.jsonl'));
+    expect(whole.more).toBe(false);
+    expect(store.countObservations(r.recordingId)).toBe(store.countObservations(whole.recordingId));
   });
 });
 

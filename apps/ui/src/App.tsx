@@ -161,6 +161,11 @@ function useLiveUpdates() {
     return source.subscribe((e) => {
       const s = useApp.getState();
       if (!s.recordingId?.split('+').includes(e.recordingId)) return;
+      if (e.health && !e.added) {
+        // A capture-state change carries no new data: refresh the summary, not the projection.
+        void s.source?.recordings().then((recordings) => useApp.setState({ recordings, recording: recordings.find((r) => r.id === e.recordingId) ?? useApp.getState().recording }));
+        return;
+      }
       clearTimeout(pending);
       pending = setTimeout(() => void useApp.getState().reloadProjection(), 150);
     });

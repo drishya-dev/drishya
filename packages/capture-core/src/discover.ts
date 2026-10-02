@@ -31,7 +31,11 @@ export async function listFiles(dir: string, match: (name: string) => boolean, d
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
-  } catch {
+  } catch (e) {
+    // A harness that is not installed has no root: that is genuinely empty. A root that exists
+    // but cannot be read is a failure discovery must report (B1, audit A05). Deeper unreadable
+    // folders are skipped so one bad session folder does not hide the rest.
+    if (depth === 0 && (e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
     return [];
   }
   const out: string[] = [];
