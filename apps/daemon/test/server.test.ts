@@ -5,12 +5,15 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { App } from '../src/app.ts';
-import { startServer, type RunningServer } from '../src/server.ts';
+import { errorBody, startServer, type RunningServer } from '../src/server.ts';
 
 const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.meta.url));
 let dir: string;
 let s: RunningServer;
 let recId: string;
+/** What the fake model received, so tests can compare it with the consent preview. */
+const sent: { model: string; messages: unknown }[] = [];
+const MODEL_REPLY = '{"summary":"s [E1]","claims":[{"text":"t","evidence":["E1"]}],"unknowns":[]}';
 
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-server-'));
@@ -18,7 +21,12 @@ beforeAll(async () => {
   const r = await app.ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
   app.store.updateRecordingMeta(r.recordingId, { graphRoot: join(fixtures, 'workspace/shop') });
   recId = r.recordingId;
-  s = await startServer({ app, port: 0, uiDir: join(dir, 'no-ui'), model: { baseUrl: 'http://model.invalid', nanoModel: 'n', superModel: 's', ultraModel: 'u' } });
+  s = await startServer({ app, port: 0, uiDir: join(dir, 'no-ui'), model: { baseUrl: 'http://model.invalid', nanoModel: 'n', superModel: 's', ultraModel: 'u' },
+    complete: async (model, messages) => {
+      sent.push({ model, messages });
+      return MODEL_REPLY;
+    },
+  });
 });
 afterAll(async () => {
   await s.close();
@@ -119,5 +127,68 @@ describe('local API', () => {
     expect(r.body.recording.id).toMatch(/^rec_x\d{4}$/);
     expect(JSON.stringify(r.body)).not.toContain(fixtures.replace(/\\/g, '/'));
     expect(JSON.stringify(r.body)).not.toContain(JSON.stringify(fixtures).slice(1, -1));
+  });
+});
+
+const post = (path: string, body: unknown) => call(path, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body });
+const GH = 'gh' + 'p_' + 'Zz9Yy8Xx7Ww6Vv5Uu4Tt3Ss2Rr1Qq0Pp9Oo8';
+
+// Audit A04: a model call sends only what the person reviewed, to the model and endpoint shown.
+describe('model consent', () => {
+  const editId = async () => (await call(`/v1/recordings/${recId}/projection`, { headers: auth() })).body.operations.find((o: { kind: string }) => o.kind === 'edit').id;
+
+  it('refuses a send whose consent does not match the current payload, and shows the new preview', async () => {
+    const before = sent.length;
+    const r = await post(`/v1/recordings/${recId}/explain`, { operationId: await editId(), consent: 'stale-digest' });
+    expect(r.status).toBe(409);
+    expect(r.body.preview.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(sent.length).toBe(before);
+  });
+
+  it('a bare confirm without a reviewed digest sends nothing', async () => {
+    const before = sent.length;
+    const r = await post(`/v1/recordings/${recId}/explain`, { operationId: await editId(), confirm: true });
+    expect(r.body.preview).toBeDefined();
+    expect(r.body.result).toBeUndefined();
+    expect(sent.length).toBe(before);
+  });
+
+  it('sends exactly the previewed messages to the previewed model, then serves the cache', async () => {
+    const opId = await editId();
+    const { preview } = (await post(`/v1/recordings/${recId}/explain`, { operationId: opId })).body;
+    const r = await post(`/v1/recordings/${recId}/explain`, { operationId: opId, consent: preview.digest });
+    expect(r.status).toBe(200);
+    expect(sent.at(-1)).toEqual({ model: preview.model, messages: preview.messages });
+    const again = (await post(`/v1/recordings/${recId}/explain`, { operationId: opId })).body;
+    expect(again.cached.summary).toBe(r.body.result.summary);
+  });
+
+  it('never serves a cached answer made from a different payload', async () => {
+    const opId = await editId();
+    s.app.store.putGenerated(recId, `explain:${opId}`, { identity: { digest: 'f'.repeat(64) }, result: { summary: 'old' } });
+    expect((await post(`/v1/recordings/${recId}/explain`, { operationId: opId })).body.cached).toBeUndefined();
+  });
+
+  it('previews the exact labels payload too', async () => {
+    const { preview } = (await post(`/v1/recordings/${recId}/labels`, {})).body;
+    expect(preview.messages.length).toBe(2);
+    await post(`/v1/recordings/${recId}/labels`, { consent: preview.digest });
+    expect(sent.at(-1)).toEqual({ model: preview.model, messages: preview.messages });
+  });
+});
+
+// Audit A02: user notes and error text are sinks too.
+describe('other sinks', () => {
+  it('redacts bookmark notes before storing them', async () => {
+    await post(`/v1/recordings/${recId}/bookmarks`, { step: 1, note: `remember ${GH}` });
+    const marks = (await call(`/v1/recordings/${recId}/bookmarks`, { headers: auth() })).body.bookmarks;
+    expect(JSON.stringify(marks)).not.toContain(GH);
+    expect(JSON.stringify(marks)).toContain('[REDACTED:github-token]');
+  });
+
+  it('redacts error messages before they reach a response', () => {
+    const r = errorBody(new Error(`upstream said ${GH}`));
+    expect(r.status).toBe(500);
+    expect(JSON.stringify(r.body)).not.toContain(GH);
   });
 });

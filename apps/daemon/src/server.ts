@@ -9,17 +9,20 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { recordingIdFor } from '@drishya/capture-core';
 import {
-  briefing,
-  evidenceForBriefing,
-  evidenceForOperation,
-  explainOperation,
-  labelPassages,
+  httpComplete,
   listModels,
   modelConfigFromEnv,
+  prepareBriefing,
+  prepareExplain,
+  prepareLabels,
   preview,
+  sendPrepared,
+  type Complete,
   type ModelConfig,
+  type Prepared,
 } from '@drishya/explain';
 import type { ChangeEvent } from '@drishya/ingest';
+import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 
 export interface ServerOptions {
@@ -32,6 +35,8 @@ export interface ServerOptions {
   token?: string;
   app?: App;
   model?: ModelConfig;
+  /** The model transport. Tests inject one; the default speaks HTTP to `model.baseUrl`. */
+  complete?: Complete;
 }
 
 export interface RunningServer {
@@ -68,6 +73,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const token = opts.token ?? randomBytes(24).toString('hex');
   const sessions = new Set<string>();
   const model = opts.model ?? modelConfigFromEnv();
+  const complete = opts.complete ?? httpComplete(model);
   const uiDir = opts.uiDir ?? defaultUiDir();
   const clients = new Set<ServerResponse>();
   let port = opts.port ?? 7878;
@@ -114,9 +120,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
 
       await route(req, res, url);
     } catch (e) {
-      const status = e instanceof HttpError ? e.status : 500;
-      if (status === 500) console.error(e);
-      if (!res.headersSent) json(res, { error: e instanceof Error ? e.message : 'error' }, status);
+      const { status, body } = errorBody(e);
+      if (status === 500) console.error(redactText(e instanceof Error ? (e.stack ?? e.message) : String(e)).text);
+      if (!res.headersSent) json(res, body, status);
       else res.end();
     }
   });
@@ -204,11 +210,16 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'bookmarks' && m === 'POST') {
         const body = await readJson(req);
         app.recording(firstId);
-        return json(res, { id: app.store.addBookmark(firstId, Number(body.step ?? 0), String(body.note ?? '').slice(0, 2000)) });
+        // A note is user-typed text, so a pasted token gets the same policy as captured text.
+        const note = redactText(String(body.note ?? '')).text.slice(0, 2000);
+        return json(res, { id: app.store.addBookmark(firstId, Number(body.step ?? 0), note) });
       }
       if (sub === 'generated' && m === 'GET') return json(res, { generated: app.store.listGenerated(firstId) });
 
-      // Model calls: explicit, previewable, derived. `confirm: false` returns what would be sent.
+      // Model calls: explicit, previewable, derived (audit A04). Without `consent` the route returns
+      // the exact request and its digest. With `consent`, it rebuilds the request from current
+      // evidence and sends it only if the digest still matches what the person reviewed;
+      // otherwise nothing is sent and the new preview comes back with 409.
       if ((sub === 'explain' || sub === 'briefing' || sub === 'labels') && m === 'POST') {
         const body = await readJson(req);
         const p = app.projection(id);
@@ -219,30 +230,32 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
             return undefined;
           }
         };
+        let prep: Prepared;
+        let key: string;
         if (sub === 'explain') {
           const opId = String(body.operationId ?? '');
-          const key = `explain:${opId}`;
-          if (!body.confirm) {
-            const cached = app.store.getGenerated(firstId, key);
-            return json(res, { preview: preview(evidenceForOperation(p, opId, art), model, 'explain'), cached });
-          }
-          const r = await explainOperation(p, opId, art, model);
-          app.store.putGenerated(firstId, key, r);
-          return json(res, { result: r });
-        }
-        if (sub === 'briefing') {
+          if (!p.operations.some((o) => o.id === opId)) throw new HttpError(404, 'operation not found');
+          prep = prepareExplain(p, opId, art, model);
+          key = `explain:${opId}`;
+        } else if (sub === 'briefing') {
           const from = body.from === undefined ? undefined : Number(body.from);
           const to = body.to === undefined ? undefined : Number(body.to);
-          const key = `briefing:${from ?? 0}-${to ?? 'end'}`;
-          if (!body.confirm) return json(res, { preview: preview(evidenceForBriefing(p, art, from, to), model, 'briefing'), cached: app.store.getGenerated(firstId, key) });
-          const r = await briefing(p, art, model, { from, to });
-          app.store.putGenerated(firstId, key, r);
-          return json(res, { result: r });
+          prep = prepareBriefing(p, art, model, { from, to });
+          key = `briefing:${from ?? 0}-${to ?? 'end'}`;
+        } else {
+          prep = prepareLabels(p, model);
+          key = 'labels';
         }
-        if (!body.confirm) return json(res, { preview: { endpoint: model.baseUrl, model: model.nanoModel, items: p.passages.length }, cached: app.store.getGenerated(firstId, 'labels') });
-        const r = await labelPassages(p, model);
-        app.store.putGenerated(firstId, 'labels', r);
-        return json(res, { result: r });
+        const shown = preview(prep);
+        if (typeof body.consent !== 'string') {
+          // A cached answer is reused only if it came from this exact request.
+          const stored = app.store.getGenerated(firstId, key) as { identity?: { digest?: string }; result?: unknown } | undefined;
+          return json(res, { preview: shown, cached: stored?.identity?.digest === prep.digest ? stored.result : undefined });
+        }
+        if (!safeEqual(body.consent, prep.digest)) return json(res, { error: 'The evidence, model or destination changed since you reviewed it. Check the updated preview and confirm again.', preview: shown }, 409);
+        const result = await sendPrepared(prep, complete);
+        app.store.putGenerated(firstId, key, { identity: { digest: prep.digest, model: prep.request.model, endpoint: prep.request.endpoint }, result });
+        return json(res, { result });
       }
     }
     throw new HttpError(404, 'no such route');
@@ -291,6 +304,16 @@ function serveStatic(uiDir: string, pathname: string, res: ServerResponse) {
   const ext = extname(file);
   res.writeHead(200, { 'content-type': MIME[ext] ?? 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-store' : 'public, max-age=31536000, immutable' });
   createReadStream(file).pipe(res);
+}
+
+/**
+ * The response for a failed request. Messages are redacted: an upstream error (a model endpoint,
+ * a parser) can quote content, and an error body is a sink like any other (audit A02).
+ */
+export function errorBody(e: unknown): { status: number; body: { error: string } } {
+  const status = e instanceof HttpError ? e.status : 500;
+  const message = e instanceof Error ? e.message : 'error';
+  return { status, body: { error: redactText(message).text.slice(0, 2000) } };
 }
 
 function json(res: ServerResponse, body: unknown, status = 200) {

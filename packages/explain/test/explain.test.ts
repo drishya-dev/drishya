@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Projection } from '@drishya/contracts';
 import { Ingestor } from '@drishya/ingest';
 import { Store } from '@drishya/store';
-import { briefing, evidenceForOperation, explainOperation, validate, type Complete, type ModelConfig } from '../src/index.ts';
+import { briefing, evidenceForOperation, explainOperation, prepareBriefing, prepareExplain, prepareLabels, preview, sendPrepared, validate, type Complete, type ModelConfig } from '../src/index.ts';
 
 const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.meta.url));
 const cfg: ModelConfig = { baseUrl: 'http://model.invalid/v1', apiKey: 'test', nanoModel: 'nano', superModel: 'super', ultraModel: 'ultra' };
@@ -81,5 +81,41 @@ describe('validation of model output', () => {
       return '{"summary":"","claims":[]}';
     });
     expect(sent).not.toContain(token);
+  });
+
+  // Roadmap B0: generated output is sanitized too, before it is cached or shown.
+  it('redacts secrets the model writes back', () => {
+    const token = 'gh' + 'p_' + 'Zz9Yy8Xx7Ww6Vv5Uu4Tt3Ss2Rr1Qq0Pp9Oo8';
+    const pack = evidenceForOperation(p, editOp().id, art);
+    const raw = JSON.stringify({ summary: `uses ${token} [E1]`, claims: [{ text: `token ${token}`, evidence: ['E1'] }], unknowns: [`is ${token} live?`] });
+    const r = validate(pack, raw, 'ultra');
+    expect(JSON.stringify(r)).not.toContain(token);
+    expect(r.claims).toHaveLength(1);
+  });
+});
+
+// Audit A04: consent binds to the exact payload, model and destination that will be sent.
+describe('consent binding', () => {
+  it('fingerprints exactly what will be sent', () => {
+    const a = prepareExplain(p, editOp().id, art, cfg);
+    expect(prepareExplain(p, editOp().id, art, cfg).digest).toBe(a.digest);
+    expect(prepareExplain(p, editOp().id, art, { ...cfg, ultraModel: 'other' }).digest).not.toBe(a.digest);
+    expect(prepareExplain(p, editOp().id, art, { ...cfg, baseUrl: 'http://elsewhere.invalid/v1' }).digest).not.toBe(a.digest);
+    const changed = structuredClone(p);
+    changed.operations.find((o) => o.id === editOp().id)!.title += ' (changed)';
+    expect(prepareExplain(changed, editOp().id, art, cfg).digest).not.toBe(a.digest);
+  });
+
+  it('sends the previewed request byte for byte', async () => {
+    for (const prep of [prepareExplain(p, editOp().id, art, cfg), prepareBriefing(p, art, cfg, {}), prepareLabels(p, cfg)]) {
+      const shown = preview(prep);
+      let sent: { model: string; messages: unknown } | undefined;
+      await sendPrepared(prep, async (model, messages) => {
+        sent = { model, messages };
+        return '{"summary":"","claims":[],"unknowns":[]}';
+      });
+      expect(sent).toEqual({ model: shown.model, messages: shown.messages });
+      expect(shown.digest).toBe(prep.digest);
+    }
   });
 });

@@ -42,6 +42,8 @@ Nemotron or another explanation service is optional and does not block B0–B4. 
 
 ## 3. B0 — privacy and trust are release blockers
 
+> **Progress, 2 Oct:** A01, the A02 sinks listed below, A03 multi-root export and A04 digest-bound consent are implemented with regression tests (policy `p2`). Open: protected-file content in unlisted shapes, safe forget, and handling stores written under `p1`. See STATUS.
+
 The existing redactor handles ordinary supported token patterns and protected-file content, and tests verify selected store/search paths. The audit nevertheless reproduced a `base64`-object sibling bypass and unsanitized object keys. It also found metadata/sink coverage gaps in source review. This is a bounded hardening task, not a promise that regex detection can identify every secret.
 
 Implement a recursive sanitation policy that covers all retained text, including object keys and metadata. When redacting keys, define collision behavior without silently overwriting fields; avoid retaining original keys in redaction diagnostics. Redact complete bounded input before preview truncation, or use a deliberately conservative boundary omission policy. Image removal must still recurse into every retained sibling. For protected paths, test nested, unknown and primitive result shapes rather than relying only on a small key allowlist.

@@ -24,6 +24,8 @@ export interface ModelPreview {
   chars: number;
   items: number;
   messages: { role: string; content: string }[];
+  /** Fingerprint of exactly this request. Sending requires it back, so consent covers only what was shown. */
+  digest: string;
 }
 
 export interface Config {
@@ -43,19 +45,28 @@ export interface DataSource {
   artifact(id: string, artifactId: string): Promise<string>;
   search(id: string, q: string): Promise<{ observationId: string; snippet: string }[]>;
   setLive(id: string, on: boolean): Promise<boolean>;
-  explain(id: string, operationId: string, confirm: boolean): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
-  briefing(id: string, range: { from?: number; to?: number }, confirm: boolean): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
+  /** Without `consent`, returns the preview. With the preview's digest as `consent`, sends exactly that request. */
+  explain(id: string, operationId: string, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
+  briefing(id: string, range: { from?: number; to?: number }, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
   exportUrl(id: string): string | undefined;
   forget(id: string): Promise<void>;
   subscribe(onChange: (e: { recordingId: string; added: number; live: boolean }) => void): () => void;
 }
 
-class HttpError extends Error {
+export class HttpError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** The parsed error body, e.g. the fresh consent preview a 409 carries. */
+  body: Record<string, unknown>;
+  constructor(status: number, message: string, body: Record<string, unknown> = {}) {
     super(message);
     this.status = status;
+    this.body = body;
   }
+}
+
+/** The updated preview when a send was refused because the evidence changed after review. */
+export function changedPreview(e: unknown): ModelPreview | undefined {
+  return e instanceof HttpError && e.status === 409 ? (e.body.preview as ModelPreview | undefined) : undefined;
 }
 
 async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
@@ -67,7 +78,7 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
   });
   const text = await res.text();
   const body = text ? JSON.parse(text) : {};
-  if (!res.ok) throw new HttpError(res.status, body.error ?? res.statusText);
+  if (!res.ok) throw new HttpError(res.status, body.error ?? res.statusText, body);
   return body as T;
 }
 
@@ -98,8 +109,8 @@ export const daemon: DataSource = {
   artifact: async (id, art) => (await req<{ text: string }>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}`)).text,
   search: async (id, q) => (await req<{ hits: { observationId: string; snippet: string }[] }>(`/v1/recordings/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`)).hits,
   setLive: async (id, on) => (await req<{ live: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/live`, { method: 'POST', json: { on } })).live,
-  explain: (id, operationId, confirm) => req(`/v1/recordings/${encodeURIComponent(id)}/explain`, { method: 'POST', json: { operationId, confirm } }),
-  briefing: (id, range, confirm) => req(`/v1/recordings/${encodeURIComponent(id)}/briefing`, { method: 'POST', json: { ...range, confirm } }),
+  explain: (id, operationId, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/explain`, { method: 'POST', json: { operationId, consent } }),
+  briefing: (id, range, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/briefing`, { method: 'POST', json: { ...range, consent } }),
   exportUrl: (id) => `/v1/recordings/${encodeURIComponent(id)}/export`,
   forget: async (id) => {
     await req(`/v1/recordings/${encodeURIComponent(id)}`, { method: 'DELETE' });

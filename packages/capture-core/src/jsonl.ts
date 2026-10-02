@@ -158,6 +158,19 @@ function pushLine(records: JsonlRecord[], buf: Buffer, offset: number, bytes: nu
   try {
     records.push({ type: 'record', offset, bytes, value: JSON.parse(text) });
   } catch (e) {
-    records.push({ type: 'malformed', offset, bytes, error: e instanceof Error ? e.message.slice(0, 200) : 'parse error' });
+    records.push({ type: 'malformed', offset, bytes, error: parseErrorText(e) });
   }
+}
+
+/**
+ * A parse error without the input it quotes. V8 messages embed a short slice of the line, e.g.
+ * `Unexpected token 's', "{"a": sk-ant-ab"... is not valid JSON`; that slice can be a secret's
+ * head too short for any redaction rule, so it never leaves this function.
+ */
+function parseErrorText(e: unknown): string {
+  if (!(e instanceof Error)) return 'parse error';
+  const m = e.message;
+  const i = m.indexOf('"');
+  const j = m.lastIndexOf('"');
+  return (i >= 0 && j > i ? `${m.slice(0, i)}<input omitted>${m.slice(j + 1)}` : m).slice(0, 200);
 }

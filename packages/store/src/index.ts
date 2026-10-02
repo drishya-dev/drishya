@@ -275,6 +275,13 @@ export class Store {
     return (this.db.prepare(`SELECT body FROM observations WHERE recording_id = ? AND kind IN (${marks}) ORDER BY seq`).all(recordingId, ...kinds) as { body: string }[]).map((r) => JSON.parse(r.body));
   }
 
+  /** Every distinct working directory a recording's observations captured, e.g. for export masking. */
+  workspaceRoots(recordingId: string): string[] {
+    const rows = this.q(`SELECT DISTINCT json_extract(body, '$.workspaceRoot') AS r FROM observations WHERE recording_id = ?
+                         UNION SELECT DISTINCT json_extract(body, '$.payload.cwd') FROM observations WHERE recording_id = ? AND kind = 'session.meta'`).all(recordingId, recordingId) as { r: unknown }[];
+    return rows.map((x) => x.r).filter((r): r is string => typeof r === 'string' && r.length > 0);
+  }
+
   countObservations(recordingId: string): number {
     return (this.q('SELECT COUNT(*) AS n FROM observations WHERE recording_id = ?').get(recordingId) as { n: number }).n;
   }

@@ -28,7 +28,7 @@ No real journal was newly persisted or exported in this audit. No new visual red
 
 ## Next bounded task
 
-Claim privacy/capture-core tests and code. Implement B0 from the roadmap: first fix retained base64 siblings and secret object keys, define collision behavior, then cover metadata, protected nested content, truncation and sinks. Add meaningful synthetic regression tests. Record privacy policy/store migration implications. Do not proceed straight to Pixi, new themes or model features.
+B0 is mostly done (2 Oct: A01 via PR #3; A02 sinks, A03 and A04 on `harsh/b0-complete`). Left: protected-file content in shapes outside the key allowlist, safe forget (cancel ingest, reference-safe blob reclamation), and flagging `p1` stores. Then B1. Do not proceed straight to Pixi, new themes or model features.
 
 After B0, prove real persisted baseline; then capture/reconnect lifecycle and stable live history. Bring the prototype's useful navigation into the integrated app. See roadmap B1–B4 for acceptance tests. The first premium feature is a useful return-to-work view, paired with the content-shaped visual system.
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Projection } from '@drishya/contracts';
 import { compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
-import type { Explanation, ModelPreview } from '../api.ts';
+import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { setMotion, useApp } from '../state.ts';
 import { Kbd, timeOf } from './common.tsx';
@@ -326,6 +326,8 @@ function Briefing({ projection }: { projection: Projection }) {
   const set = useApp((s) => s.set);
   const [range, setRange] = useState<'all' | 'since'>('all');
   const [preview, setPreview] = useState<ModelPreview>();
+  // The range the preview was built for; a send uses it, not wherever playback has moved since.
+  const [previewFrom, setPreviewFrom] = useState<number>();
   const [result, setResult] = useState<Explanation>();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>();
@@ -334,8 +336,9 @@ function Briefing({ projection }: { projection: Projection }) {
   useEffect(() => {
     if (!open || source?.kind !== 'daemon' || !recordingId) return;
     setErr(undefined);
-    source.briefing(recordingId, { from }, false).then((r) => {
+    source.briefing(recordingId, { from }).then((r) => {
       setPreview(r.preview);
+      setPreviewFrom(from);
       setResult(r.cached);
     }).catch((e) => setErr(e.message));
   }, [open, range, recordingId, source]);
@@ -375,9 +378,12 @@ function Briefing({ projection }: { projection: Projection }) {
                   disabled={busy}
                   onClick={async () => {
                     setBusy(true);
+                    setErr(undefined);
                     try {
-                      setResult((await source.briefing(recordingId!, { from }, true)).result);
+                      setResult((await source.briefing(recordingId!, { from: previewFrom }, preview.digest)).result);
                     } catch (e) {
+                      const fresh = changedPreview(e);
+                      if (fresh) setPreview(fresh);
                       setErr((e as Error).message);
                     } finally {
                       setBusy(false);

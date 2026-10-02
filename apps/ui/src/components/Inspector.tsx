@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EvidenceLink, Operation, Projection } from '@drishya/contracts';
 import { stepOfOperation } from '@drishya/scene';
-import type { Explanation, ModelPreview } from '../api.ts';
+import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { useApp } from '../state.ts';
 import { CodeView, DiffView, Output, ProvenanceBadge, timeOf, useArtifact } from './common.tsx';
@@ -288,7 +288,7 @@ function Explain({ op }: { op: Operation }) {
     setErr(undefined);
     if (source?.kind !== 'daemon') return;
     source
-      .explain(recordingId, op.id, false)
+      .explain(recordingId, op.id)
       .then((r) => {
         setPreview(r.preview);
         if (r.cached) setResult(r.cached);
@@ -298,11 +298,15 @@ function Explain({ op }: { op: Operation }) {
 
   if (source?.kind !== 'daemon') return <p className="muted">Explanations need the local app (<code>drishya serve</code>) with a Nebius Token Factory key. Replay bundles never call a model.</p>;
   const send = async () => {
+    if (!preview) return;
     setBusy(true);
     setErr(undefined);
     try {
-      setResult((await source.explain(recordingId, op.id, true)).result);
+      setResult((await source.explain(recordingId, op.id, preview.digest)).result);
     } catch (e) {
+      // Refused because the evidence changed after review: show what would be sent now.
+      const fresh = changedPreview(e);
+      if (fresh) setPreview(fresh);
       setErr((e as Error).message);
     } finally {
       setBusy(false);
