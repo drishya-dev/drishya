@@ -55,12 +55,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** H–L are proposals. Don't build on them until both of us agree and they're in the decisions log.
 
 ### Codex review
-- **When:** 2026-09-30
-- **Did:** Reviewed docs, major backend/UI paths and prototype; researched product/integration boundaries; persisted [product direction](PRODUCT_DIRECTION.md), [implementation roadmap](IMPLEMENTATION_ROADMAP.md), [baseline audit](review/06-baseline-audit.md) and [continuity brief](CONTINUITY.md) directly on `main`, which now contains the backend from PR #1. Aligned VISION, canvas contract, AGENTS, CODEBASE and README with the builder's clarification. Added `scripts/validate-baseline.ts`; production implementation is unchanged.
-- **Validation:** Fresh backend/UI typechecks, 96 tests and Vite 8 build passed. Synthetic persistence/restart/API/partial-line live checks passed. Read-only discovery found 603 sources; four real journals parsed/reduced/composed in memory with zero parser exceptions, visible Claude compaction/unsupported-record gaps and unchanged source hashes. Browser spot checks covered prototype/app, selection and narrower layout. See audit for exact scope.
-- **Found / next:** Two reproduced sanitizer bypasses (retained base64 siblings and object keys); additional source findings for metadata/exports/consent, reconnect, live cursor coupling, historical result exposure, worktree identity and scale. **Implement B0 first.** Real data was not newly persisted or exported. This is a plan/audit commit, not completed backend hardening or final UI.
-- **Prior CI repair:** `23c783f` was pushed; [Linux and Windows CI passed](https://github.com/drishya-dev/drishya/actions/runs/36318704791). This corrects the stale prior note. No new remote CI result is claimed for the current docs/audit work.
-- **Watch out for:** Use pinned pnpm 10.34.5 or direct local binaries; this machine's different pnpm wrapper previously attempted reconciliation. The diagnostic script's zero exit does not mean its known privacy probes passed. Contract/schema changes still require both builders.
+- **When:** 2026-10-02
+- **Did:** Reviewed and squash-merged [PR #2](https://github.com/drishya-dev/drishya/pull/2), Harsh's docs-only H–L proposals. Corrected attribution language on `main`: text matches are candidates, and missing matches do not prove an agent did not write a line. Updated the local checkout.
+- **Validation:** PR checks passed on Linux and Windows before merge; net diff was two docs only and `git diff --check` passed. The post-merge correction changes docs only.
+- **Left half-done:** H–L remain proposals; neither merge nor this wording correction records both builders' agreement or changes the roadmap. B0 privacy hardening is still the next implementation gate. Earlier baseline evidence remains in the [audit](review/06-baseline-audit.md).
+- **Watch out for:** Do not implement line attribution from text similarity or timestamp proximity alone. Show unknown unless captured edit, file identity and version lineage support a specific match.
 
 ---
 
