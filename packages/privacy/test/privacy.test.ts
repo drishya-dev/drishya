@@ -91,4 +91,43 @@ describe('sanitize', () => {
     expect(r.value.text.startsWith('a'.repeat(10))).toBe(true);
     expect(r.value.text).toContain('TRUNCATED');
   });
+
+  // Audit A01: the fields kept beside a dropped base64 payload were returned unsanitized.
+  it('sanitizes the fields kept beside a dropped base64 payload', () => {
+    const r = sanitize({ result: { base64: 'iVBORw0KGgo', note: `uploaded with ${GH}`, meta: { auth: [ANT] } } });
+    const out = JSON.stringify(r.value);
+    expect(out).not.toContain('iVBOR');
+    expect(out).not.toContain(GH);
+    expect(out).not.toContain(ANT);
+    expect(r.value.result.note).toContain('[REDACTED:github-token]');
+    expect(r.omitted).toBe(true);
+  });
+
+  // Audit A01: object keys were never scrubbed, and the original key also leaked into redaction notes.
+  it('redacts secrets used as object keys, including in redaction notes', () => {
+    const r = sanitize({ headers: { [GH]: true, [`x-${OAI}`]: { nested: NV } } });
+    const out = JSON.stringify(r);
+    for (const s of [GH, OAI, NV]) expect(out).not.toContain(s);
+    expect(Object.keys(r.value.headers)).toContain('[REDACTED:github-token]');
+    expect(r.redactions.some((n) => n.field.startsWith('headers.') && n.rule === 'github-token')).toBe(true);
+  });
+
+  it('never lets a redacted key overwrite another field', () => {
+    const a = 'gh' + 'p_' + rnd(36, 'Zy9Xw8Vu7Ts6Rq5Po4Nm3Lk2Ji1Hg0Fe');
+    const r = sanitize({ [GH]: 'first', [a]: 'second', '[REDACTED:github-token]': 'existing' });
+    const values = Object.values(r.value as Record<string, string>).sort();
+    expect(values).toEqual(['existing', 'first', 'second']);
+    expect(JSON.stringify(r)).not.toContain(GH);
+    expect(JSON.stringify(r)).not.toContain(a);
+  });
+
+  // Truncation used to happen before matching, so a secret straddling the cut kept its head.
+  it('redacts a secret that straddles the truncation boundary', () => {
+    // The cut leaves "sk-ant-" plus 15 characters: too short for any rule, yet most of the key.
+    const head = ANT.slice(0, 22);
+    const r = sanitize({ text: 'a'.repeat(95) + ' ' + ANT + ' tail' }, { maxStringBytes: 96 + head.length });
+    expect(r.value.text).not.toContain(head);
+    expect(r.value.text).toContain('TRUNCATED');
+    expect(r.omitted).toBe(true);
+  });
 });

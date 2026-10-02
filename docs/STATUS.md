@@ -51,7 +51,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### @harsh (Harsh-4210)
 - **When:** 2026-10-02
 - **Did:** Reviewed all docs and the 30 Sep audit with Claude Opus 5.5. Added proposals H–L to [`PRODUCT_DIRECTION.md` §7](PRODUCT_DIRECTION.md#proposed-additions--2-october-review-not-yet-agreed): "why is this line here?", session ↔ commit/PR linking, expanded review flags, a per-change Reviewed mark, and testing usefulness before B4/P1. Docs only; no code changed.
-- **Left half-done:** Proposals await @yash's review. Contracts freeze and `node:sqlite`/SSE (open decisions 6–7) still await my review.
+- **Also did (B0, first part, branch `harsh/b0-privacy`):** Fixed audit A01's two reproduced sanitizer bypasses (base64 siblings, object keys incl. redaction-note paths). Redaction now runs before truncation, and the envelope `branchRef` is sanitized (part of A02). Privacy policy bumped `p1` → `p2`; demo bundle regenerated (only the version label changed). Added 4 privacy tests and 1 store-bytes canary test. 101/101 tests, typecheck, and `validate-baseline.ts` probes `base64SiblingRedacted`/`objectKeyRedacted` now `true`.
+- **Left half-done:** Rest of B0: other envelope fields (ids, harness version), protected nested content shapes, every sink (FTS, graph labels, bookmarks, explain cache, export, logs, HTTP errors), multi-root export (A03), consent binding (A04), safe forget. Existing `p1` stores aren't migrated or flagged; re-import them.
 - **Watch out for:** H–L are proposals. Don't build on them until both of us agree and they're in the decisions log.
 
 ### Codex review
@@ -148,6 +149,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-09-30 | **Real baseline audit stays in memory until known privacy bypasses close** | Synthetic probes failed for retained base64 siblings and secret object keys; avoids new sensitive persistence while still checking local adapter/reducer behavior | `scripts/validate-baseline.ts`, audit |
 | 2026-09-30 | **Prioritize return-to-work comprehension and evidence-linked review** | Live spectacle attracts attention; since-last-visit/file history/verification freshness are testable repeat-use hypotheses, not established demand | Product direction §7–9 |
 | 2026-09-30 | **Consumer ChatGPT/Claude chats are separate from coding-harness journals** | Current local adapters and OpenAI conversation-state APIs do not establish generic live access to consumer chat archives | Roadmap §9, research ledger |
+| 2026-10-02 | **Privacy policy `p2`:** redact before truncating (window = 4× the string limit); redact object keys, giving colliding redacted keys a ` #n` suffix rather than overwriting; walk fields beside dropped base64 payloads; sanitize envelope `branchRef` (proposal, pending @yash) | Closes the audit's two reproduced bypasses plus the truncation-boundary leak; a collision must never silently drop a captured value | `packages/privacy`, `packages/capture-core` |
 | 2026-09-30 | **Small docs and low-risk changes go directly on `main`; branch major work** | Builder clarified the preferred workflow after the audit commit. Major code changes still receive the other builder's PR review | `AGENTS.md` |
 
 ---
