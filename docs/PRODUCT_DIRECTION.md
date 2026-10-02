@@ -141,6 +141,52 @@ Eventually export selected operations, minimal required artifacts, relevant outc
 
 Later deterministic cues can reveal a file edited by two agents in the same worktree, a failed command with no observed retry, or repeated identical reads of an unchanged captured artifact. Label these conditions literally. A repeated read is not automatically waste; two edits are not automatically a conflict. Provide “why shown” and a link to each observation.
 
+### Proposed additions — 2 October review (not yet agreed)
+
+*Added by @harsh with Claude Opus 5.5 after a review of all docs and the 30 Sep audit. These are proposals for both builders to accept, change or reject. Accepted items move into the decisions log in STATUS. Nothing below is implemented.*
+
+The 30 Sep direction already covers most of what that review suggested: return-to-work first, since-last-visit, verification freshness, a simpler stack, privacy before real data. What follows fills gaps the review found.
+
+#### H. Start from the changed line ("why is this line here?")
+
+Every feature above starts *inside* Drishya: you scroll the history or pick a file. Reviewers usually start from the **changed code**, in their editor or a pull request, and ask why a line exists. Let them select a changed line (in Drishya's diff view, or later `drishya why <path>:<line>`) and land on the captured edit that produced it. Show the reads and test runs around that edit and the agent's words, with the usual provenance.
+
+Matching works by comparing captured edit text (patch hunks, new strings, captured writes) with the current file in the approved worktree. Recent Claude Code often records `originalFile: null` (see CODEBASE), so exact reconstruction is often unavailable. The match must therefore be text-based and say how it was made. When no recorded agent edit explains a line, because the user typed it, a shell command or formatter changed it, or a later edit overwrote it, say so plainly: *"Not written by a recorded agent edit."* A wrong match is worse than "unknown". This builds on B (one file through the work) and uses the same as-of artifact rules as roadmap B2.
+
+#### I. Link sessions to commits and pull requests
+
+Real work is several sessions plus manual edits, ending in commits and a pull request. E groups sessions by worktree but doesn't connect them to git. Propose a read-only link: for a selected commit range or branch diff, find which recorded sessions in that worktree touched those files in that period, and attribute each changed line via H or mark it unknown. Read git, never write it; no remote calls. This is what makes "explain this PR" possible, and later it makes F (review packets) worth attaching to a PR.
+
+#### J. Review flags: expand G and bring it forward
+
+G's cues are good but soft, and scheduled late. The cues that best answer "where should I look first?" are missing. Propose adding these literal, rule-based flags, each with "why shown", its rule version and links to the observations:
+
+| Flag | Rule, stated literally |
+|---|---|
+| Edited without a recorded read | A file was edited, and no read of that file was captured earlier in the session |
+| Test files changed | A test file was edited or deleted, or a skip marker (`.skip`, `xit`, `@pytest.mark.skip`, etc.) was added |
+| Sensitive files changed | Config, `.env*`, CI workflows, lockfiles or dependency manifests were edited |
+| Risky command | A captured command matches a named list (`rm -rf`, `git push --force`, `git reset --hard`, `--no-verify`, …) |
+| Large deletion | An edit removed more than a configurable number of lines |
+
+Same honesty rules as G: a flag means "look here", not "this is wrong". **No flags does not mean safe**, only that no rule matched in the available capture. Ship these with A and C as one return-to-work view rather than after them.
+
+#### K. A "reviewed" mark per change
+
+A's "mark through here" records where reading stopped. Add an explicit, local **Reviewed** mark per edit or hunk, plus a simple list of what's still unreviewed. "Viewed" stays separate from "reviewed"; only the user's explicit action counts. This turns review into a finishable checklist and gives the pilot a concrete behavior to observe.
+
+#### L. Proposed sequencing change: test usefulness earlier
+
+The roadmap runs B0 → B4 → P1 → P2 → pilot, which means months of infrastructure and polish before anyone outside the team tries it. Proposed instead:
+
+1. B0 → B1 → B2 → B3 as written.
+2. **Then the usefulness features in plain form:** A, C, H, J and K, without the premium motion.
+3. **Then early testing:** the two builders on their own sessions first, then 5–10 developers running from a checkout. Use the existing pilot questions in §9.
+4. Then B4 and P1, guided by what testers struggled with.
+5. Then I, a VS Code entry point, F, and more harnesses.
+
+This keeps privacy and correctness first. It only moves the question "is this actually useful?" ahead of scale, packaging and visual polish.
+
 ### Deliberately defer or remove
 
 Defer dashboards of token spend without reliable captured accounting, comprehensive runtime/database graphs, every-harness promises, generated architecture narration, team surveillance, and theme marketplaces. Remove mandatory autoplay, idle animation, fake complete-file context, default model-generated titles as if captured, and giant history carousels. Never add prompting, approvals, rollback actions or agent launching: those break the observe-only product.

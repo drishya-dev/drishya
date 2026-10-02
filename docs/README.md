@@ -46,7 +46,6 @@ When two documents disagree, the one higher in its row wins. When a document her
 | [`BLUEPRINT.md`](BLUEPRINT.md) | The original end-to-end blueprint (v1.2). Still the fullest single account; partly superseded as mapped above |
 | [`STATUS.md`](STATUS.md) | Position, queue, decisions log |
 | [`CODEBASE.md`](CODEBASE.md) | The code as built: pipeline, packages, identity, privacy, API, tests |
-| [`OPUS-5.5-SUGGESTED-CHANGES.md`](OPUS-5.5-SUGGESTED-CHANGES.md) | **Proposal (2 Oct), not yet agreed:** shift focus from watching to reviewing, with a simpler stack and a revised build order, in plain language. Nothing in it overrides other docs until both builders log their decisions in `STATUS.md` |
 | [`HACKATHON.md`](HACKATHON.md) | Fit assessment for the Nebius × NVIDIA hackathon, against its official rules |
 | [`review/`](review/) | The 21 September external review: product, experience, engineering, research ledger, first storyboard |
 | [`reference/`](reference/) | Evidence pack, motion catalog, event schema (draft), continuous canvas |

@@ -49,10 +49,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
   - The repo must be public before any hackathon submission.
 
 ### @harsh (Harsh-4210)
-- **When:** —
-- **Did:** —
-- **Left half-done:** —
-- **Watch out for:** —
+- **When:** 2026-10-02
+- **Did:** Reviewed all docs and the 30 Sep audit with Claude Opus 5.5. Added proposals H–L to [`PRODUCT_DIRECTION.md` §7](PRODUCT_DIRECTION.md#proposed-additions--2-october-review-not-yet-agreed): "why is this line here?", session ↔ commit/PR linking, expanded review flags, a per-change Reviewed mark, and testing usefulness before B4/P1. Docs only; no code changed.
+- **Left half-done:** Proposals await @yash's review. Contracts freeze and `node:sqlite`/SSE (open decisions 6–7) still await my review.
+- **Watch out for:** H–L are proposals. Don't build on them until both of us agree and they're in the decisions log.
 
 ### Codex review
 - **When:** 2026-09-30
