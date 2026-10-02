@@ -55,7 +55,7 @@ TypeScript runs directly on Node 24 (type stripping), with no build step for the
 
 `seal()` applies a best-effort privacy policy before observation storage. Rules cover private keys, common provider tokens, JWTs, bearer tokens, URL credentials and high-entropy assignments. Protected-file content has omission rules; supported image shapes are dropped; model evidence is redacted again; bundle export masks configured paths and re-keys ids. `packages/ingest/test` checks database/blob bytes for selected planted secrets.
 
-**Known gaps, 30 Sep:** not every string is covered. The audit reproduced unsanitized retained siblings in a `base64` object and unsanitized object keys; envelope metadata, other sinks, truncation and combined exports need hardening. Do not describe the current policy as a guarantee or expand real-data persistence/sharing before B0. See [audit A01–A04](review/06-baseline-audit.md) and [roadmap B0](IMPLEMENTATION_ROADMAP.md#3-b0--privacy-and-trust-are-release-blockers).
+**Known gaps, 30 Sep → 2 Oct:** not every string is covered. Policy `p2` (2 Oct) fixed the audit's two reproduced bypasses: fields beside a `base64` payload and object keys are now redacted, with numbered suffixes when redacted keys collide. It also matches before truncating, and redacts the envelope `branchRef`. Data stored under `p1` may still hold secrets in those places; re-import it. Other envelope metadata, other sinks and combined exports still need hardening. Do not describe the current policy as a guarantee or expand real-data persistence/sharing before B0. See [audit A01–A04](review/06-baseline-audit.md) and [roadmap B0](IMPLEMENTATION_ROADMAP.md#3-b0--privacy-and-trust-are-release-blockers).
 
 ## Adapters — how to add a harness
 

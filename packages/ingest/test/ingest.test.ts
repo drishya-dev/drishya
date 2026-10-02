@@ -84,6 +84,24 @@ describe('import', () => {
     expect(JSON.stringify(store.search(r.recordingId, 'token'))).not.toContain(gh);
   });
 
+  // Audit A01–A02: secrets in object keys, beside a dropped base64 payload, or in envelope metadata.
+  it('never persists secrets hidden in keys, base64 siblings or the branch name', async () => {
+    const inKey = 'gh' + 'p_' + rnd(36);
+    const inSibling = `sk-${'ant-'}${rnd(40)}`;
+    const inBranch = `nv${'api-'}${rnd(40)}`;
+    const file = join(dir, 'hidden.jsonl');
+    writeFileSync(
+      file,
+      claudeLine({ type: 'assistant', uuid: 'h1', gitBranch: `feat/${inBranch}`, message: { content: [{ type: 'tool_use', id: 'c1', name: 'mcp__api__call', input: { headers: { [inKey]: 'yes' } } }] } }) +
+        claudeLine({ type: 'user', uuid: 'h2', gitBranch: `feat/${inBranch}`, toolUseResult: { base64: 'iVBORw0KGgo', caption: `signed ${inSibling}` }, message: { content: [{ type: 'tool_result', tool_use_id: 'c1', content: 'ok' }] } }),
+    );
+    const r = await ingest.importSource('claude-code', file);
+    ingest.projection(r.recordingId);
+    store.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    const bytes = allStoredBytes(join(dir, 'data'));
+    for (const secret of [inKey, inSibling, inBranch]) expect(bytes).not.toContain(secret);
+  });
+
   it('surfaces malformed lines as capture gaps and keeps going', async () => {
     const file = join(dir, 'bad.jsonl');
     writeFileSync(file, claudeLine({ type: 'user', uuid: 'u1', message: { role: 'user', content: 'hi' } }) + '{broken\n' + claudeLine({ type: 'assistant', uuid: 'u2', message: { content: [{ type: 'text', text: 'hello' }] } }));

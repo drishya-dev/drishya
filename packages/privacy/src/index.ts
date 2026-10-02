@@ -3,10 +3,18 @@
 
 import type { RedactionNote } from '@drishya/contracts';
 
-export const PRIVACY_POLICY_VERSION = 'p1';
+// p2: object keys, fields beside a dropped base64 payload and the branch name are redacted, and
+// matching runs before truncation. Data stored under p1 may hold secrets in those places.
+export const PRIVACY_POLICY_VERSION = 'p2';
 
 /** Longest single string kept verbatim; beyond this the tail is cut with a marker. */
 export const MAX_STRING_BYTES = 4 * 1024 * 1024;
+
+/**
+ * How much of an oversized string is matched before it is cut. Matching must see past the cut so
+ * a secret straddling it is caught whole; a multiple of the limit keeps work bounded on huge input.
+ */
+const REDACT_WINDOW_FACTOR = 4;
 
 interface Rule {
   id: string;
@@ -135,14 +143,12 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
         omitted = true;
         return '[OMITTED: content of a protected file]';
       }
-      let s = v;
-      if (s.length > max) {
-        s = s.slice(0, max) + `\n[TRUNCATED: ${v.length - max} more characters]`;
-        omitted = true;
-      }
-      const r = redactText(s);
+      // Redact first, then cut: cutting first can leave a secret's head too short for any rule.
+      const r = redactText(v.length > max ? v.slice(0, max * REDACT_WINDOW_FACTOR) : v);
       for (const h of r.hits) redactions.push({ field, rule: h.rule, count: h.count });
-      return r.text;
+      if (v.length <= max) return r.text;
+      omitted = true;
+      return r.text.slice(0, max) + `\n[TRUNCATED: ${v.length - max} more characters]`;
     }
     if (Array.isArray(v)) return v.map((x, i) => walk(x, `${field}[${i}]`, denied));
     if (v && typeof v === 'object') {
@@ -154,7 +160,9 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
       }
       if (typeof o.base64 === 'string') {
         omitted = true;
-        return { ...Object.fromEntries(Object.entries(o).filter(([k]) => k !== 'base64' && k !== 'data')), omitted: true };
+        // The payload goes; what is kept beside it is walked like anything else.
+        const kept = Object.fromEntries(Object.entries(o).filter(([k]) => k !== 'base64' && k !== 'data'));
+        return { ...(walk(kept, field, denied) as Record<string, unknown>), omitted: true };
       }
       let childDenied = denied;
       for (const k of PATH_KEYS) {
@@ -163,10 +171,12 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
       }
       const out: Record<string, unknown> = {};
       for (const [k, x] of Object.entries(o)) {
-        const f = field ? `${field}.${k}` : k;
+        const key = safeKey(k, out);
+        const f = field ? `${field}.${key}` : key;
+        if (key !== k) for (const h of redactText(k).hits) redactions.push({ field: f, rule: h.rule, count: h.count });
         // Path fields themselves are kept so the user can see *that* a protected file was touched.
         const deny = childDenied && CONTENT_KEYS.has(k);
-        out[k] = PATH_KEYS.has(k) ? walk(x, f, false) : walk(x, f, deny || (childDenied && typeof x === 'object'));
+        out[key] = PATH_KEYS.has(k) ? walk(x, f, false) : walk(x, f, deny || (childDenied && typeof x === 'object'));
       }
       return out;
     }
@@ -175,6 +185,18 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
 
   const out = walk(value, '', opts.denyContent ?? false) as T;
   return { value: out, redactions: mergeNotes(redactions), omitted };
+}
+
+/**
+ * An object key with secrets redacted. Two keys can redact to the same text, or collide with a
+ * key already present, so a numbered suffix keeps every value instead of silently overwriting one.
+ */
+function safeKey(key: string, taken: Record<string, unknown>): string {
+  const base = redactText(key).text;
+  if (base === key && !Object.hasOwn(taken, key)) return key;
+  let candidate = base;
+  for (let n = 2; Object.hasOwn(taken, candidate); n++) candidate = `${base} #${n}`;
+  return candidate;
 }
 
 function mergeNotes(notes: RedactionNote[]): RedactionNote[] {
