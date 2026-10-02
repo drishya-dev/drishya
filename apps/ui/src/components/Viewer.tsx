@@ -7,6 +7,7 @@ import { setMotion, useApp } from '../state.ts';
 import { Kbd, timeOf } from './common.tsx';
 import { History } from './History.tsx';
 import { ExplanationView, Inspector } from './Inspector.tsx';
+import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 
 export function Viewer() {
@@ -82,6 +83,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
       <div className="crown-title" title={projection.title}>
         {projection.title ?? recording?.title ?? 'Recording'}
         {source?.kind === 'bundle' && <span className="tag">replay</span>}
+        {recording && recording.health?.state !== 'following' && recording.health?.state !== 'idle' && <HealthTag r={recording} />}
         {recording?.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
       </div>
       <div className="agents" role="list">

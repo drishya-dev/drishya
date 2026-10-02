@@ -192,3 +192,40 @@ describe('other sinks', () => {
     expect(JSON.stringify(r.body)).not.toContain(GH);
   });
 });
+
+// B1 (audit A05): capture health and discovery errors are part of the API, not silent.
+describe('capture health over the API', () => {
+  it('lists sources with a per-adapter error list', async () => {
+    const r = await call('/v1/sources', { headers: auth() });
+    expect(Array.isArray(r.body.sources)).toBe(true);
+    expect(Array.isArray(r.body.errors)).toBe(true);
+  });
+
+  it("reports each recording's capture state", async () => {
+    const list = (await call('/v1/recordings', { headers: auth() })).body.recordings;
+    expect(list.find((x: { id: string }) => x.id === recId).health).toMatchObject({ state: 'stopped', live: false });
+    expect((await call(`/v1/recordings/${recId}`, { headers: auth() })).body.recording.health.state).toBe('stopped');
+  });
+
+  it('streams health changes as their own SSE event', async () => {
+    const u = new URL(s.url);
+    const got = await new Promise<string>((ok, fail) => {
+      const req = request({ host: '127.0.0.1', port: u.port, path: '/v1/changes', headers: { host: u.host, ...auth() } }, (res) => {
+        let data = '';
+        res.on('data', (c) => {
+          data += c;
+          if (data.includes('event: health')) {
+            req.destroy();
+            ok(data);
+          }
+        });
+      });
+      req.on('error', (e) => (e.message.includes('socket hang up') ? undefined : fail(e)));
+      req.end();
+      setTimeout(() => void post(`/v1/recordings/${recId}/live`, { on: true }), 100);
+      setTimeout(() => fail(new Error('no health event')), 4000);
+    });
+    await post(`/v1/recordings/${recId}/live`, { on: false });
+    expect(got).toMatch(/event: health\ndata: \{"type":"health","recordingId":"rec_[0-9a-f]+","health":\{"state":"following"/);
+  });
+});

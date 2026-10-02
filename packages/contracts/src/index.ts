@@ -406,6 +406,33 @@ export interface RecordingSummary {
   pinned: boolean;
   /** Set by the local API: some stored data was sealed under an older privacy policy. Re-import to apply the current one. */
   privacyOutdated?: boolean;
+  /** Set by the local API: the observer's current capture state for this recording. */
+  health?: RecordingHealth;
+}
+
+/**
+ * What the observer knows about collecting a recording. It describes Drishya's reading of the
+ * source files, never whether the agent itself is alive.
+ */
+export type CaptureState =
+  | 'importing' // reading for the first time or catching up, not following
+  | 'following' // tailing, and something new arrived recently
+  | 'idle' // tailing, nothing new for a while
+  | 'stopped' // imported, not following
+  | 'missing-source' // the main journal is gone
+  | 'unsupported' // no adapter can read this recording any more
+  | 'failed'; // the last read failed; `error` says why
+
+export interface RecordingHealth {
+  state: CaptureState;
+  live: boolean;
+  lastReadAt?: string;
+  lastChangeAt?: string;
+  /** More bytes remain than the last bounded turn read; the next turn continues. */
+  backlog: boolean;
+  /** Sanitized. `code` is stable for the UI: missing-source, permission-denied, unsupported, read-failed. */
+  error?: { code: string; message: string };
+  sources: { path: string; role: 'main' | 'companion'; state: 'ok' | 'missing' | 'unreadable'; bytes?: number }[];
 }
 
 export interface DiscoveredSource {

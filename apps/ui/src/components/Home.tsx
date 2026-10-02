@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DiscoveredSource, RecordingSummary } from '@drishya/contracts';
+import type { DiscoveryError } from '../api.ts';
 import { useApp } from '../state.ts';
 import { relTime } from './common.tsx';
 
@@ -11,6 +12,7 @@ export function Home({ openDemo }: { openDemo: () => void }) {
   const set = useApp((s) => s.set);
   const openRecording = useApp((s) => s.openRecording);
   const [sources, setSources] = useState<DiscoveredSource[]>();
+  const [sourceErrors, setSourceErrors] = useState<DiscoveryError[]>([]);
   const [busy, setBusy] = useState<string>();
   const [err, setErr] = useState<string>();
   const [picked, setPicked] = useState<string[]>([]);
@@ -19,7 +21,9 @@ export function Home({ openDemo }: { openDemo: () => void }) {
   const refresh = async () => {
     if (!source) return;
     set({ recordings: await source.recordings() });
-    setSources(await source.sources());
+    const found = await source.sources();
+    setSources(found.sources);
+    setSourceErrors(found.errors);
   };
   useEffect(() => {
     refresh().catch((e) => setErr(e.message));
@@ -90,6 +94,11 @@ export function Home({ openDemo }: { openDemo: () => void }) {
           </div>
           <p className="muted small">Read-only: Drishya copies what it needs into its own store and never changes these files. Secrets are redacted before anything is saved.</p>
           {err && <p className="bad">{err}</p>}
+          {sourceErrors.map((e) => (
+            <p key={e.adapterId} className="bad small">
+              Could not read {HARNESS_LABEL[e.adapterId] ?? e.adapterId} sessions ({e.code === 'permission-denied' ? 'permission denied' : e.code}): {e.message}
+            </p>
+          ))}
           {!sources && <div className="skeleton tall" />}
           <div className="rows">
             {filtered.map((s) => (
@@ -117,6 +126,17 @@ export function Home({ openDemo }: { openDemo: () => void }) {
   );
 }
 
+/** Capture state when it needs attention or is live; nothing for an ordinary stopped recording. */
+export function HealthTag({ r }: { r: RecordingSummary }) {
+  const h = r.health;
+  if (!h) return r.live ? <span className="tag live">live</span> : null;
+  const label: Partial<Record<typeof h.state, string>> = { following: 'live', idle: 'live · idle', importing: 'importing', 'missing-source': 'journal missing', unsupported: 'unsupported', failed: 'read failed' };
+  const text = label[h.state];
+  if (!text) return null;
+  const cls = h.state === 'following' || h.state === 'idle' ? 'live' : h.state === 'importing' ? '' : 'warn';
+  return <span className={`tag ${cls}`} title={h.error?.message ?? (h.backlog ? 'Catching up on a backlog' : undefined)}>{text}{h.backlog ? ' · catching up' : ''}</span>;
+}
+
 function RecordingRow({ r, picked, onPick }: { r: RecordingSummary; picked: boolean; onPick: () => void }) {
   const openRecording = useApp((s) => s.openRecording);
   return (
@@ -125,7 +145,7 @@ function RecordingRow({ r, picked, onPick }: { r: RecordingSummary; picked: bool
       <button className="row-main link" onClick={() => ((location.hash = `#/r/${r.id}`), openRecording(r.id))}>
         <div className="row-title">
           {r.title || 'Untitled'}
-          {r.live && <span className="tag live">live</span>}
+          <HealthTag r={r} />
           {r.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
         </div>
         <div className="row-sub">

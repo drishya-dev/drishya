@@ -28,7 +28,7 @@ No real journal was newly persisted or exported in this audit. No new visual red
 
 ## Next bounded task
 
-B0 is complete (2 Oct, policy `p3`): A01–A04, protected-file scopes, safe forget, outdated-policy flag. Next is B1: capture lifecycle states, coalesced live ticks, surfaced ingest errors, SSE revisions and reconnect, token/session lifetime, and the `import --live` CLI flag. Do not proceed straight to Pixi, new themes or model features.
+B0 is complete (2 Oct, policy `p3`). B1a is done: capture health states, discovery errors, coalesced bounded live turns, `import --live`. Next is **B1b**: recording revisions committed with derived changes, SSE events carrying revision, client reconnect that converges even when no new write arrives, bounded subscriber buffers, bootstrap-token and session lifetime, and UI requests that drop stale responses. Do not proceed straight to Pixi, new themes or model features.
 
 After B0, prove real persisted baseline; then capture/reconnect lifecycle and stable live history. Bring the prototype's useful navigation into the integrated app. See roadmap B1–B4 for acceptance tests. The first premium feature is a useful return-to-work view, paired with the content-shaped visual system.
 

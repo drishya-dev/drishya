@@ -1,7 +1,14 @@
 // Where the UI gets its data: the local daemon (live, importable) or a static replay bundle
 // (the hosted demo). Both expose the same surface, so every screen works in both.
 
-import type { DiscoveredSource, Projection, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
+import type { DiscoveredSource, Projection, RecordingHealth, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
+
+/** A session location discovery could not read, e.g. a permission failure. */
+export interface DiscoveryError {
+  adapterId: string;
+  code: string;
+  message: string;
+}
 
 export interface ExplainClaim {
   text: string;
@@ -38,7 +45,7 @@ export interface DataSource {
   kind: 'daemon' | 'bundle';
   config(): Promise<Config>;
   recordings(): Promise<RecordingSummary[]>;
-  sources(): Promise<DiscoveredSource[]>;
+  sources(): Promise<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>;
   importSource(path: string, adapterId: string, live: boolean): Promise<{ recordingId: string }>;
   projection(id: string): Promise<Projection>;
   graph(id: string): Promise<RepoGraph | undefined>;
@@ -50,7 +57,8 @@ export interface DataSource {
   briefing(id: string, range: { from?: number; to?: number }, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
   exportUrl(id: string): string | undefined;
   forget(id: string): Promise<void>;
-  subscribe(onChange: (e: { recordingId: string; added: number; live: boolean }) => void): () => void;
+  /** New data (`added` > 0) or a capture-state change (`health` set, nothing added). */
+  subscribe(onChange: (e: { recordingId: string; added: number; live: boolean; health?: RecordingHealth }) => void): () => void;
 }
 
 export class HttpError extends Error {
@@ -102,7 +110,7 @@ export const daemon: DataSource = {
   kind: 'daemon',
   config: () => req('/v1/config'),
   recordings: async () => (await req<{ recordings: RecordingSummary[] }>('/v1/recordings')).recordings,
-  sources: async () => (await req<{ sources: DiscoveredSource[] }>('/v1/sources')).sources,
+  sources: () => req<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>('/v1/sources'),
   importSource: (path, adapterId, live) => req('/v1/import', { method: 'POST', json: { path, adapterId, live } }),
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
   graph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph`),
@@ -118,6 +126,10 @@ export const daemon: DataSource = {
   subscribe(onChange) {
     const es = new EventSource('/v1/changes');
     es.addEventListener('change', (e) => onChange(JSON.parse((e as MessageEvent).data)));
+    es.addEventListener('health', (e) => {
+      const ev = JSON.parse((e as MessageEvent).data) as { recordingId: string; health: RecordingHealth };
+      onChange({ recordingId: ev.recordingId, added: 0, live: ev.health.live, health: ev.health });
+    });
     return () => es.close();
   },
 };
@@ -129,7 +141,7 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     kind: 'bundle',
     config: async () => ({ version: 'bundle', llm: { configured: false, baseUrl: '', models: { nano: '', super: '', ultra: '' } }, adapters: [] }),
     recordings: async () => [bundle.recording],
-    sources: async () => [],
+    sources: async () => ({ sources: [], errors: [] }),
     importSource: unsupported,
     projection: async () => bundle.projection,
     graph: async () => bundle.graph,
