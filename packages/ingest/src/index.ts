@@ -18,7 +18,7 @@ import {
   type RecordParser,
 } from '@drishya/capture-core';
 import type { AdapterDescriptor, DiscoveredSource, Projection } from '@drishya/contracts';
-import { sanitize } from '@drishya/privacy';
+import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { reduce, REDUCER_VERSION } from '@drishya/projection';
 import type { SourceRow, Store } from '@drishya/store';
 
@@ -282,12 +282,24 @@ export class Ingestor extends EventEmitter {
     await Promise.allSettled([...this.locks.values()]);
   }
 
-  forget(recordingId: string) {
+  /**
+   * Stops tailing, waits for any read in flight (audit A08: a queued ingest must not write into a
+   * recording being deleted), then deletes its rows and the blobs only it used.
+   */
+  async forget(recordingId: string): Promise<{ blobsRemoved: number }> {
     const t = this.live.get(recordingId);
     if (t) clearInterval(t);
     this.live.delete(recordingId);
-    this.projectionCache.delete(recordingId);
-    for (const s of this.store.getSources(recordingId)) this.parsers.delete(s.id);
+    return this.locked(recordingId, async () => {
+      for (const s of this.store.getSources(recordingId)) this.parsers.delete(s.id);
+      for (const key of this.projectionCache.keys()) if (key.split('+').includes(recordingId)) this.projectionCache.delete(key);
+      return this.store.deleteRecording(recordingId);
+    });
+  }
+
+  /** True when any stored observation was sealed under an older privacy policy; re-import to apply the current one. */
+  privacyOutdated(recordingId: string): boolean {
+    return this.store.policyVersions(recordingId).some((v) => v !== PRIVACY_POLICY_VERSION);
   }
 
   private locked<T>(key: string, fn: () => Promise<T>): Promise<T> {

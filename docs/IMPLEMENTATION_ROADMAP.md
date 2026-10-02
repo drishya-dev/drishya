@@ -42,7 +42,7 @@ Nemotron or another explanation service is optional and does not block B0–B4. 
 
 ## 3. B0 — privacy and trust are release blockers
 
-> **Progress, 2 Oct:** A01, the A02 sinks listed below, A03 multi-root export and A04 digest-bound consent are implemented with regression tests (policy `p2`). Open: protected-file content in unlisted shapes, safe forget, and handling stores written under `p1`. See STATUS.
+> **Progress, 2 Oct: B0 complete (policy `p3`).** A01, the A02 sinks, A03 multi-root export, A04 digest-bound consent, protected-file scopes (including shell/patch routes), safe forget and the outdated-policy flag are implemented with regression tests. See STATUS.
 
 The existing redactor handles ordinary supported token patterns and protected-file content, and tests verify selected store/search paths. The audit nevertheless reproduced a `base64`-object sibling bypass and unsanitized object keys. It also found metadata/sink coverage gaps in source review. This is a bounded hardening task, not a promise that regex detection can identify every secret.
 

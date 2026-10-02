@@ -16,8 +16,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
-| **Blocked on** | Nothing for B1. B0 leftovers (protected nested shapes, safe forget, `p1` stores) are small. Contract freeze needs both builders' review |
-| **Next gate** | **Finish B0 leftovers, then B1** lifecycle/recovery, historical identity, integrated live history and resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [audit](review/06-baseline-audit.md), [handoff](CONTINUITY.md). No model key is needed for the core |
+| **Blocked on** | Nothing. B0 is complete (PRs #3, #4 and this one). Contract freeze needs both builders' review |
+| **Next gate** | **B1** lifecycle/recovery, then historical identity, integrated live history and resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [audit](review/06-baseline-audit.md), [handoff](CONTINUITY.md). No model key is needed for the core |
 
 ### Claimed
 
@@ -53,7 +53,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Did:** Reviewed all docs and the 30 Sep audit with Claude Opus 5.5. Added proposals H–L to [`PRODUCT_DIRECTION.md` §7](PRODUCT_DIRECTION.md#proposed-additions--2-october-review-not-yet-agreed): "why is this line here?", session ↔ commit/PR linking, expanded review flags, a per-change Reviewed mark, and testing usefulness before B4/P1. Docs only; no code changed.
 - **Also did (B0, first part, branch `harsh/b0-privacy`):** Fixed audit A01's two reproduced sanitizer bypasses (base64 siblings, object keys incl. redaction-note paths). Redaction now runs before truncation, and the envelope `branchRef` is sanitized (part of A02). Privacy policy bumped `p1` → `p2`; demo bundle regenerated (only the version label changed). Added 4 privacy tests and 1 store-bytes canary test. 101/101 tests, typecheck, and `validate-baseline.ts` probes `base64SiblingRedacted`/`objectKeyRedacted` now `true`.
 - **Also did (B0 rest, branch `harsh/b0-complete`):** A02: envelope fields, parse-error text, titles (import and discovery), bookmark notes, map labels, generated output, HTTP error bodies and the error log are redacted. A03: export masks every root in the selection (recording, map and source dirs, plus every captured `workspaceRoot`/cwd, including the dash-joined project-dir form); bundle metadata sums the selection. A04: preview carries a request digest; send requires it; mismatch → 409 + fresh preview, nothing sent; cache keyed to digest; labels get a real preview; UI sends the reviewed digest and briefing range. 115/115 tests, both typechecks, UI build, demo bundle regenerated (selection count/time now cover both recordings). Checked the consent flow in the real app on a throwaway store.
-- **Left half-done:** B0 leftovers: protected-file content in unlisted shapes, safe forget, flagging `p1` stores. Existing `p1` stores aren't migrated; re-import them.
+- **Also did (B0 leftovers, branch `harsh/b0-leftovers`):** Protected-file scopes omit every string except paths and short labels. `touchesProtectedFile()` makes shell/patch output protected when it names a protected file (both adapters), plus Codex patch bodies. Safe forget: waits on the ingest lock, deletes rows, reclaims only unshared blobs (API and CLI). `privacyOutdated` on recordings with a UI tag. Policy `p3`. 129/129 tests, typechecks, UI build.
+- **Left half-done:** Nothing in B0. `privacyOutdated` adds an optional field to `RecordingSummary` (contract, needs @yash's OK).
 - **Watch out for:** H–L are proposals. Don't build on them until both of us agree and they're in the decisions log.
 
 ### Codex review
@@ -69,7 +70,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 **Now (30 Sep), backend-first clarification:**
 
-1. **B0: privacy hardening.** A01 (PR #3), A02 sinks, A03 and A04 are done (2 Oct). Left: protected-file nested shapes, safe forget, `p1` store flagging.
+1. ~~**B0: privacy hardening.**~~ Done 2 Oct: A01 (PR #3); A02 sinks, A03, A04 (PR #4); protected-file scopes, safe forget, outdated-policy flag (`harsh/b0-leftovers`). Policy now `p3`.
 2. **B1–B2: lifecycle, recovery and identity.** Bounded/coalesced ingest, surfaced errors, reconnect revisions, safe forget, exact historical evidence, stable history anchors and worktree isolation. Both builders review contract changes before freezing.
 3. **B3: integrated base history.** Existing session chooser and API; port prototype interactions into `apps/ui`; capture/history keep growing while the reader scrolls/selects. Playback optional. No final theme commitment yet.
 4. **B4: scale and installation.** Performance harness, worker boundaries, paged artifacts/history, packed-install matrix and end-to-end browser acceptance. Targets are in the roadmap and are not yet measured passes.
@@ -153,6 +154,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-10-02 | **Privacy policy `p2`:** redact before truncating (window = 4× the string limit); redact object keys, giving colliding redacted keys a ` #n` suffix rather than overwriting; walk fields beside dropped base64 payloads; sanitize envelope `branchRef` (proposal, pending @yash) | Closes the audit's two reproduced bypasses plus the truncation-boundary leak; a collision must never silently drop a captured value | `packages/privacy`, `packages/capture-core` |
 | 2026-10-02 | **Model consent binds to a request digest** (endpoint, model, max tokens, messages, privacy and explain versions). No digest → preview only; mismatch → 409 + fresh preview, nothing sent; cache reused only for the same digest (proposal, pending @yash) | Audit A04: the old confirm rebuilt evidence after preview, so live data could change what was sent | `packages/explain`, `apps/daemon/src/server.ts` |
 | 2026-10-02 | **Export masks every root in the selection**, including each observation's captured cwd and the dash-joined project-dir form; roots of ≤2 chars are skipped; `harness` stays the first recording's id, while count and times cover all (proposal) | Audit A03; a multi-value `harness` broke UI label/style lookups | `apps/daemon/src/app.ts` |
+| 2026-10-02 | **Privacy policy `p3`:** protected-file scope keeps only paths and short labels; shell commands/patches naming a protected file make their output protected; forget reclaims only unshared blobs after the ingest lock; `RecordingSummary.privacyOutdated?` flags older-policy data (proposal, pending @yash; contract field) | Closes the last B0 items; harness result shapes vary, so an allowlist of content keys leaked unexpected fields | `packages/privacy`, `packages/capture-core`, `packages/store`, `packages/ingest` |
 | 2026-09-30 | **Small docs and low-risk changes go directly on `main`; branch major work** | Builder clarified the preferred workflow after the audit commit. Major code changes still receive the other builder's PR review | `AGENTS.md` |
 
 ---

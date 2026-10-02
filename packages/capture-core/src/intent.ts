@@ -1,6 +1,8 @@
 // Harness-neutral descriptions of what a tool call meant to do and what it returned.
 // Adapters own the mapping from harness tool names to these; the projection never sees names.
 
+import { isDeniedPath, mentionsDeniedPath } from '@drishya/privacy';
+
 export type ToolIntent =
   | { kind: 'read'; path: string; offset?: number; limit?: number }
   | { kind: 'write'; path: string; content?: string }
@@ -29,6 +31,28 @@ export interface RawHunk {
   newStart: number;
   newLines: number;
   lines: string[];
+}
+
+/**
+ * Whether a call reaches a protected file (`.env`, keys, credentials) by any route: a structured
+ * path, a shell command that names it, or a patch that edits it. Its result is then treated as
+ * protected content, and so is a patch body, whatever shape the harness gives them.
+ */
+export function touchesProtectedFile(intent: ToolIntent): boolean {
+  switch (intent.kind) {
+    case 'read':
+    case 'write':
+    case 'edit':
+      return isDeniedPath(intent.path);
+    case 'search':
+      return !!intent.path && isDeniedPath(intent.path);
+    case 'shell':
+      return mentionsDeniedPath(intent.command);
+    case 'patch':
+      return mentionsDeniedPath(intent.patch);
+    default:
+      return false;
+  }
 }
 
 export function parseMcpName(name: string): { server: string; tool: string } | undefined {

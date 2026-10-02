@@ -82,6 +82,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
       <div className="crown-title" title={projection.title}>
         {projection.title ?? recording?.title ?? 'Recording'}
         {source?.kind === 'bundle' && <span className="tag">replay</span>}
+        {recording?.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
       </div>
       <div className="agents" role="list">
         {scene.agents.map((a) => {

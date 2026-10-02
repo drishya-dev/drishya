@@ -404,6 +404,8 @@ export interface RecordingSummary {
   observationCount: number;
   live: boolean;
   pinned: boolean;
+  /** Set by the local API: some stored data was sealed under an older privacy policy. Re-import to apply the current one. */
+  privacyOutdated?: boolean;
 }
 
 export interface DiscoveredSource {

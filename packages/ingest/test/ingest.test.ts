@@ -125,6 +125,33 @@ describe('import', () => {
     expect(store.getRecording(r.recordingId)!.title).toContain('[REDACTED:nvidia-key]');
   });
 
+  // B0 leftover: protected files reached through a shell or a patch, not just a Read tool.
+  it('never persists protected-file content read through a shell or written by a patch', async () => {
+    const plain = 'hunter3hunter3plain'; // matches no token rule: only the protected-path policy can stop it
+    const claude = join(dir, 'shell-env.jsonl');
+    writeFileSync(
+      claude,
+      claudeLine({ type: 'assistant', uuid: 'p1', message: { content: [{ type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'grep DB config/.env.production' } }] } }) +
+        claudeLine({ type: 'user', uuid: 'p2', toolUseResult: { stdout: `DB_PASS=${plain}`, stderr: '' }, message: { content: [{ type: 'tool_result', tool_use_id: 'b1', content: `DB_PASS=${plain}` }] } }),
+    );
+    const codex = join(dir, 'rollout-env.jsonl');
+    const cx = (type: string, payload: Record<string, unknown>) => JSON.stringify({ timestamp: '2026-09-21T10:20:00.000Z', type, payload }) + '\n';
+    writeFileSync(
+      codex,
+      cx('session_meta', { id: 'x', timestamp: '2026-09-21T10:20:00.000Z', cwd: '/w', originator: 'codex_cli_rs', cli_version: '0.50.0' }) +
+        cx('response_item', { type: 'function_call', name: 'shell_command', arguments: JSON.stringify({ command: 'cat .env' }), call_id: 'k1' }) +
+        cx('response_item', { type: 'function_call_output', call_id: 'k1', output: `Exit code: 0\nWall time: 0.1 seconds\nOutput:\nAPI=${plain}` }) +
+        cx('response_item', { type: 'custom_tool_call', name: 'apply_patch', input: `*** Begin Patch\n*** Add File: .env.local\n+API=${plain}\n*** End Patch`, call_id: 'k2' }) +
+        cx('response_item', { type: 'custom_tool_call_output', call_id: 'k2', output: 'Success. Updated the following files:\nA .env.local' }),
+    );
+    const a = await ingest.importSource('claude-code', claude);
+    const b = await ingest.importSource('codex', codex);
+    expect(ingest.projection(a.recordingId).operations).toHaveLength(1); // still visible, content omitted
+    ingest.projection(b.recordingId);
+    store.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    expect(allStoredBytes(join(dir, 'data'))).not.toContain(plain);
+  });
+
   it('sanitizes titles in the discovered-session list', async () => {
     const inTitle = 'gh' + 'p_' + rnd(36);
     const adapter = { ...defaultAdapters()[0]!, discover: async () => [{ adapterId: 'claude-code', harness: 'claude-code', path: join(dir, 'x.jsonl'), bytes: 1, modifiedAt: '2026-10-02T00:00:00Z', title: `fix ${inTitle}`, cwd: `/w/${inTitle}`, companions: [] }] };
@@ -162,6 +189,66 @@ describe('live tailing', () => {
     await ingest.stopLive(r.recordingId);
     expect(store.getRecording(r.recordingId)!.live).toBe(false);
     expect(statSync(file).size).toBeGreaterThan(0); // the harness file is untouched
+  });
+});
+
+// B0 leftover (audit A08): forgetting a recording must not race its ingest, and must reclaim the
+// blobs only it referenced while keeping blobs another recording still uses.
+describe('forget', () => {
+  const big = (tag: string) => `${tag}\n` + 'line of captured output\n'.repeat(1200); // over the inline limit
+  const journal = (name: string, outputs: string[]) => {
+    const file = join(dir, name);
+    writeFileSync(
+      file,
+      outputs
+        .map((out, i) =>
+          claudeLine({ type: 'assistant', uuid: `${name}-c${i}`, message: { content: [{ type: 'tool_use', id: `${name}-t${i}`, name: 'Bash', input: { command: `step ${i}` } }] } }) +
+          claudeLine({ type: 'user', uuid: `${name}-r${i}`, toolUseResult: { stdout: out, stderr: '' }, message: { content: [{ type: 'tool_result', tool_use_id: `${name}-t${i}`, content: out }] } }),
+        )
+        .join(''),
+    );
+    return file;
+  };
+  const blobCount = () => (readdirSync(join(dir, 'data', 'blobs'), { recursive: true, withFileTypes: true }) as { isFile(): boolean }[]).filter((e) => e.isFile()).length;
+
+  it('removes every row and reclaims only the blobs no other recording uses', async () => {
+    const shared = big('shared');
+    const a = await ingest.importSource('claude-code', journal('a.jsonl', [shared, big('only-a')]));
+    const b = await ingest.importSource('claude-code', journal('b.jsonl', [shared]));
+    ingest.projection(a.recordingId);
+    ingest.projection(b.recordingId);
+    const before = blobCount();
+    await ingest.forget(a.recordingId);
+    expect(store.getRecording(a.recordingId)).toBeUndefined();
+    expect(store.countObservations(a.recordingId)).toBe(0);
+    expect(store.getSources(a.recordingId)).toHaveLength(0);
+    expect(store.search(a.recordingId, 'step')).toHaveLength(0);
+    expect(blobCount()).toBeLessThan(before);
+    expect(allStoredBytes(join(dir, 'data', 'blobs'))).not.toContain('only-a');
+    expect(allStoredBytes(join(dir, 'data', 'blobs'))).toContain('shared'); // still referenced by b
+    expect(ingest.projection(b.recordingId).operations).toHaveLength(1);
+  });
+
+  it('waits for an ingest in flight instead of racing it', async () => {
+    const file = journal('race.jsonl', ['first']);
+    const r = await ingest.importSource('claude-code', file);
+    appendFileSync(file, readFileSync(journal('more.jsonl', [big('late')]), 'utf8').replaceAll('more.jsonl', 'race.jsonl'));
+    const syncing = ingest.sync(r.recordingId).catch(() => undefined);
+    await ingest.forget(r.recordingId);
+    await syncing;
+    expect(store.getRecording(r.recordingId)).toBeUndefined();
+    expect(store.countObservations(r.recordingId)).toBe(0);
+    expect(allStoredBytes(join(dir, 'data', 'blobs'))).not.toContain('late');
+  });
+});
+
+// B0 leftover: recordings stored under an older privacy policy are flagged, not silently trusted.
+describe('privacy policy of stored data', () => {
+  it('flags a recording whose observations predate the current policy', async () => {
+    const r = await ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
+    expect(ingest.privacyOutdated(r.recordingId)).toBe(false);
+    store.db.prepare(`UPDATE observations SET body = json_set(body, '$.privacyPolicyVersion', 'p1') WHERE recording_id = ? AND seq = 0`).run(r.recordingId);
+    expect(ingest.privacyOutdated(r.recordingId)).toBe(true);
   });
 });
 

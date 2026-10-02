@@ -66,6 +66,9 @@ export class BlobStore {
   has(sha: string): boolean {
     return /^[0-9a-f]{64}$/.test(sha) && existsSync(this.pathOf(sha));
   }
+  delete(sha: string) {
+    if (/^[0-9a-f]{64}$/.test(sha)) rmSync(this.pathOf(sha), { force: true });
+  }
 }
 
 export class Store {
@@ -201,11 +204,38 @@ export class Store {
     return r ? rowToRecording(r) : undefined;
   }
 
-  deleteRecording(id: string) {
+  /**
+   * Deletes a recording's rows, then the blob files only it referenced. Blobs are shared by
+   * content hash, so a file another recording still references stays. Rows go first, in one
+   * transaction: a crash before the file sweep leaves an unreferenced blob, never a dangling
+   * reference. This removes files; it does not promise forensic erasure of the disk.
+   */
+  deleteRecording(id: string): { blobsRemoved: number } {
+    const candidates = new Set<string>();
+    const bodies = [
+      ...(this.q('SELECT body FROM observations WHERE recording_id = ?').all(id) as { body: string }[]),
+      ...(this.q('SELECT body FROM projections WHERE recording_id = ?').all(id) as { body: string }[]),
+    ];
+    for (const { body } of bodies) for (const m of body.matchAll(/"(?:\$blob|blob)":"([0-9a-f]{64})"/g)) candidates.add(m[1]!);
     this.tx(() => {
       this.q('DELETE FROM search WHERE recording_id = ?').run(id);
       this.q('DELETE FROM recordings WHERE id = ?').run(id);
     });
+    const stillObs = this.q('SELECT 1 FROM observations WHERE instr(body, ?) > 0 LIMIT 1');
+    const stillProj = this.q('SELECT 1 FROM projections WHERE instr(body, ?) > 0 LIMIT 1');
+    let blobsRemoved = 0;
+    for (const sha of candidates) {
+      if (stillObs.get(sha) || stillProj.get(sha)) continue;
+      this.blobs.delete(sha);
+      blobsRemoved++;
+    }
+    return { blobsRemoved };
+  }
+
+  /** The privacy policy versions a recording's stored observations were sealed under. */
+  policyVersions(recordingId: string): string[] {
+    const rows = this.q(`SELECT DISTINCT json_extract(body, '$.privacyPolicyVersion') AS v FROM observations WHERE recording_id = ?`).all(recordingId) as { v: unknown }[];
+    return rows.map((r) => String(r.v ?? 'unknown'));
   }
 
   // ── sources and cursors ────────────────────────────────────────────────────

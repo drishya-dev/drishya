@@ -115,7 +115,8 @@ export async function main() {
     }
     case 'forget': {
       const app = new App();
-      app.store.deleteRecording(positionals[0] ?? '');
+      const r = await app.ingest.forget(positionals[0] ?? '');
+      console.log(`Forgot ${positionals[0] ?? ''}; removed ${r.blobsRemoved} unshared blob files.`);
       await app.close();
       return;
     }

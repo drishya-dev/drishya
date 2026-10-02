@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDeniedPath, redactText, sanitize } from '../src/index.ts';
+import { isDeniedPath, mentionsDeniedPath, redactText, sanitize } from '../src/index.ts';
 
 // Secrets are assembled at runtime so no token-shaped literal is ever committed.
 const rnd = (n: number, alphabet = 'aB3dE5fG7hJ9kL2mN4pQ6rS8tU0vW1xY') =>
@@ -119,6 +119,34 @@ describe('sanitize', () => {
     expect(values).toEqual(['existing', 'first', 'second']);
     expect(JSON.stringify(r)).not.toContain(GH);
     expect(JSON.stringify(r)).not.toContain(a);
+  });
+
+  // B0 leftover: inside a protected scope, only paths and short type labels may survive, whatever
+  // the field names; content under an unexpected key used to pass through.
+  it('omits every string in a protected file scope except paths and short type labels', () => {
+    const r = sanitize({ type: 'text', filePath: 'app/.env', data: 'PLAIN=hunter3hunter3', meta: { note: 'hunter3hunter3' }, lines: ['hunter3hunter3'] });
+    expect(JSON.stringify(r.value)).not.toContain('hunter3');
+    expect(r.value.filePath).toBe('app/.env');
+    expect(r.value.type).toBe('text');
+  });
+
+  it('denyContent omits strings under unexpected keys too, keeping the outcome kind', () => {
+    const r = sanitize({ outcome: { kind: 'shell', body: 'PLAIN=hunter3hunter3', extra: { blob: 'hunter3hunter3' } } }, { denyContent: true });
+    expect(JSON.stringify(r.value)).not.toContain('hunter3');
+    expect(r.value.outcome.kind).toBe('shell');
+  });
+
+  it.each([
+    ['cat .env', true],
+    ['grep TOKEN config/.env.production | head', true],
+    [`source "$HOME/.env" && run`, true],
+    ['cp ~/.ssh/id_ed25519 /tmp/k', true],
+    ['*** Begin Patch\n*** Update File: deploy/.env\n+X=1\n*** End Patch', true],
+    ['cat .env.example', false],
+    ['cat src/app.env.ts', false],
+    ['sed -n 1,20p src/checkout/guard.ts', false],
+  ])('recognises a protected file named in %j → %s', (text, expected) => {
+    expect(mentionsDeniedPath(text)).toBe(expected);
   });
 
   // Truncation used to happen before matching, so a secret straddling the cut kept its head.
