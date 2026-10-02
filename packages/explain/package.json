@@ -1,0 +1,12 @@
+{
+  "name": "@drishya/explain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@drishya/contracts": "workspace:*",
+    "@drishya/privacy": "workspace:*"
+  },
+  "devDependencies": { "@drishya/ingest": "workspace:*", "@drishya/store": "workspace:*" }
+}

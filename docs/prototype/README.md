@@ -46,6 +46,8 @@ A developer asks for free orders to reach checkout. **Claude** reads the guard, 
 
 ## What it proves — and what it does not
 
+**30 September direction:** this remains a synthetic interaction reference, not the final frontend. Its play/pause filmstrip is useful for testing and optional recorded playback. The final live app keeps accumulating history while the reader scrolls back; it does not require a timed playback cursor to reveal new work. Port useful interactions into `apps/ui`, keeping real API integration. See [PRODUCT_DIRECTION](../PRODUCT_DIRECTION.md) and [IMPLEMENTATION_ROADMAP](../IMPLEMENTATION_ROADMAP.md).
+
 It demonstrates the composition, the five signature moves, retention and overlap, evidence-linked hover, holding and following, filters, explore, scrubbing, reduced motion and phone width.
 
 It does **not** demonstrate real capture, history virtualization for long sessions, production pacing under overload, the Pixi renderer (the map here is Canvas 2D), CodeMirror, or any performance budget. Those are implementation work described in the [engineering plan](../review/03-engineering-plan.md).

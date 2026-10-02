@@ -1,0 +1,419 @@
+{
+  "composerVersion": "c1",
+  "step": 24,
+  "total": 45,
+  "atEnd": false,
+  "current": {
+    "type": "op-end",
+    "id": "e_rec#1.toolu_synthetic0009",
+    "operationId": "rec#1.toolu_synthetic0009",
+    "sequence": 18,
+    "agentId": "rec#1.agent:main",
+    "time": "2026-09-21T10:00:49.000Z"
+  },
+  "agents": [
+    {
+      "id": "rec#1.agent:main",
+      "label": "Claude Code",
+      "harness": "claude-code",
+      "state": "active",
+      "activeOperationIds": []
+    },
+    {
+      "id": "rec#1.agent:explore01",
+      "label": "Explore",
+      "harness": "claude-code",
+      "parentId": "rec#1.agent:main",
+      "agentType": "Explore",
+      "state": "stopped",
+      "activeOperationIds": []
+    },
+    {
+      "id": "rec#2.agent:main",
+      "label": "Codex",
+      "harness": "codex",
+      "state": "waiting",
+      "activeOperationIds": []
+    }
+  ],
+  "dock": {
+    "native": [
+      {
+        "key": "read",
+        "kind": "read",
+        "tools": [
+          "Read",
+          "shell_command"
+        ],
+        "uses": 4,
+        "active": false
+      },
+      {
+        "key": "search",
+        "kind": "search",
+        "tools": [
+          "Glob",
+          "Grep",
+          "shell_command"
+        ],
+        "uses": 2,
+        "active": false
+      },
+      {
+        "key": "edit",
+        "kind": "edit",
+        "tools": [
+          "Edit",
+          "apply_patch"
+        ],
+        "uses": 0,
+        "active": false
+      },
+      {
+        "key": "shell",
+        "kind": "shell",
+        "tools": [
+          "shell_command"
+        ],
+        "uses": 0,
+        "active": false
+      },
+      {
+        "key": "test",
+        "kind": "test",
+        "tools": [
+          "Bash",
+          "shell_command"
+        ],
+        "uses": 1,
+        "active": false
+      },
+      {
+        "key": "spawn",
+        "kind": "spawn",
+        "tools": [
+          "Task"
+        ],
+        "uses": 1,
+        "active": false
+      }
+    ],
+    "mcp": [
+      {
+        "server": "context7",
+        "open": false,
+        "tools": [
+          {
+            "tool": "get-library-docs",
+            "uses": 1,
+            "active": false
+          }
+        ]
+      },
+      {
+        "server": "github",
+        "open": false,
+        "tools": [
+          {
+            "tool": "search_code",
+            "uses": 0,
+            "active": false
+          }
+        ]
+      }
+    ]
+  },
+  "passages": [
+    {
+      "id": "psg_0",
+      "agentId": "rec#1.agent:main",
+      "ops": [],
+      "prose": [
+        {
+          "id": "prose_obs#3",
+          "role": "reasoning",
+          "exposure": "full",
+          "arriving": false
+        }
+      ],
+      "settled": true,
+      "matchesFilter": true,
+      "turnPrompt": "Free orders don't reach checkout — a cart with the LAUNCH100 code (100% off) is rejected with missing-total, and the free-order test in test/checkout.test.ts fails. Find out why and fix it."
+    },
+    {
+      "id": "psg_1",
+      "agentId": "rec#1.agent:main",
+      "ops": [
+        {
+          "id": "rec#1.toolu_synthetic0001",
+          "kind": "read",
+          "title": "Read src/checkout/guard.ts 1–14",
+          "tool": "Read",
+          "state": "ok",
+          "phase": "settled",
+          "resolving": false,
+          "origin": {
+            "type": "map",
+            "path": "src/checkout/guard.ts"
+          },
+          "paths": [
+            "src/checkout/guard.ts"
+          ],
+          "matchesFilter": true,
+          "selected": false
+        },
+        {
+          "id": "rec#1.toolu_synthetic0002",
+          "kind": "search",
+          "title": "Search “total” in src",
+          "tool": "Grep",
+          "state": "ok",
+          "phase": "settled",
+          "resolving": false,
+          "origin": {
+            "type": "dock",
+            "tool": "Grep",
+            "kind": "search",
+            "key": "search"
+          },
+          "paths": [],
+          "matchesFilter": true,
+          "selected": false
+        },
+        {
+          "id": "rec#1.toolu_synthetic0003",
+          "kind": "mcp",
+          "title": "context7 · get-library-docs",
+          "tool": "mcp__context7__get-library-docs",
+          "state": "ok",
+          "phase": "settled",
+          "resolving": false,
+          "origin": {
+            "type": "mcp",
+            "server": "context7",
+            "tool": "get-library-docs"
+          },
+          "paths": [],
+          "matchesFilter": true,
+          "selected": false
+        }
+      ],
+      "prose": [
+        {
+          "id": "prose_obs#4",
+          "role": "assistant",
+          "exposure": "full",
+          "arriving": false
+        }
+      ],
+      "settled": true,
+      "matchesFilter": true
+    },
+    {
+      "id": "psg_2",
+      "agentId": "rec#1.agent:main",
+      "ops": [
+        {
+          "id": "rec#1.toolu_synthetic0004",
+          "kind": "spawn",
+          "title": "Delegate to Explore: Find tests covering totals",
+          "tool": "Task",
+          "state": "ok",
+          "phase": "settled",
+          "resolving": false,
+          "origin": {
+            "type": "dock",
+            "tool": "Task",
+            "kind": "spawn",
+            "key": "spawn"
+          },
+          "paths": [],
+          "matchesFilter": true,
+          "selected": false
+        },
+        {
+          "id": "rec#1.toolu_synthetic0005",
+          "kind": "read",
+          "title": "Read src/cart/discount.ts 1–14",
+          "tool": "Read",
+          "state": "ok",
+          "phase": "settled",
+          "resolving": false,
+          "origin": {
+            "type": "map",
+            "path": "src/cart/discount.ts"
+          },
+          "paths": [
+            "src/cart/discount.ts"
+          ],
+          "matchesFilter": true,
+          "selected": false
+        }
+      ],
+      "prose": [
+        {
+          "id": "prose_obs#5",
+          "role": "reasoning",
+          "exposure": "full",
+          "arriving": false
+        }
+      ],
+      "settled": true,
+      "matchesFilter": true
+    },
+    {
+      "id": "psg_3",
+      "agentId": "rec#1.agent:explore01",
+      "ops": [
+        {
+          "id": "rec#1.toolu_synthetic0006",
+          "kind": "search",
+          "title": "Search “test/**/*.test.ts”",
+          "tool": "Glob",
+          "state": "ok",
+          "phase": "present",
+          "resolving": false,
+          "origin": {
+            "type": "dock",
+            "tool": "Glob",
+            "kind": "search",
+            "key": "search"
+          },
+          "paths": [],
+          "matchesFilter": true,
+          "selected": false
+        },
+        {
+          "id": "rec#1.toolu_synthetic0007",
+          "kind": "read",
+          "title": "Read test/checkout.test.ts 1–18",
+          "tool": "Read",
+          "state": "ok",
+          "phase": "present",
+          "resolving": false,
+          "origin": {
+            "type": "map",
+            "path": "test/checkout.test.ts"
+          },
+          "paths": [
+            "test/checkout.test.ts"
+          ],
+          "matchesFilter": true,
+          "selected": false
+        },
+        {
+          "id": "rec#1.toolu_synthetic0008",
+          "kind": "read",
+          "title": "Read test/cart.test.ts 1–16",
+          "tool": "Read",
+          "state": "ok",
+          "phase": "present",
+          "resolving": false,
+          "origin": {
+            "type": "map",
+            "path": "test/cart.test.ts"
+          },
+          "paths": [
+            "test/cart.test.ts"
+          ],
+          "matchesFilter": true,
+          "selected": false
+        }
+      ],
+      "prose": [
+        {
+          "id": "prose_obs#6",
+          "role": "assistant",
+          "exposure": "full",
+          "arriving": false
+        }
+      ],
+      "settled": false,
+      "matchesFilter": true
+    },
+    {
+      "id": "psg_4",
+      "agentId": "rec#1.agent:main",
+      "ops": [
+        {
+          "id": "rec#1.toolu_synthetic0009",
+          "kind": "test",
+          "title": "Test · npm test",
+          "tool": "Bash",
+          "state": "error",
+          "phase": "present",
+          "resolving": true,
+          "origin": {
+            "type": "dock",
+            "tool": "Bash",
+            "kind": "test",
+            "key": "test"
+          },
+          "paths": [
+            "test/checkout.test.ts"
+          ],
+          "matchesFilter": true,
+          "selected": false
+        }
+      ],
+      "prose": [],
+      "settled": false,
+      "matchesFilter": true
+    }
+  ],
+  "heat": [
+    {
+      "path": "src/cart/discount.ts",
+      "heat": 0.694,
+      "tone": "read",
+      "edited": false,
+      "active": false
+    },
+    {
+      "path": "src/cart/total.ts",
+      "heat": 0.226,
+      "tone": "search",
+      "edited": false,
+      "active": false
+    },
+    {
+      "path": "src/cart/types.ts",
+      "heat": 0.226,
+      "tone": "search",
+      "edited": false,
+      "active": false
+    },
+    {
+      "path": "src/checkout/guard.ts",
+      "heat": 0.394,
+      "tone": "search",
+      "edited": false,
+      "active": false
+    },
+    {
+      "path": "src/checkout/index.ts",
+      "heat": 0.226,
+      "tone": "search",
+      "edited": false,
+      "active": false
+    },
+    {
+      "path": "test/cart.test.ts",
+      "heat": 1,
+      "tone": "read",
+      "edited": false,
+      "active": false
+    },
+    {
+      "path": "test/checkout.test.ts",
+      "heat": 1,
+      "tone": "fail",
+      "edited": false,
+      "active": false
+    }
+  ],
+  "focus": {
+    "passageId": "psg_4",
+    "operationId": "rec#1.toolu_synthetic0009"
+  }
+}

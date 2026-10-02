@@ -77,3 +77,19 @@ Specific claims about compositor behavior, memory ceilings, graph accuracy, inst
 | Incremental map benchmark on diverse repos | Whether deeper static analysis is worth expanding | Precision and unresolved rates reported by edge type |
 
 Search coverage is not exhaustive. No “first”, “only” or market leadership claim follows from this ledger.
+
+## 30 September refresh — product and integration decisions
+
+Primary documentation/source descriptions were rechecked for the [current product plan](../PRODUCT_DIRECTION.md) and [implementation roadmap](../IMPLEMENTATION_ROADMAP.md). This is desk research, not a hands-on competitor benchmark. It adds no evidence of willingness to pay or market leadership.
+
+| Source | Verified scope | Implication / limit |
+|---|---|---|
+| [Agent Flow repository](https://github.com/patoles/agent-flow) | Documents Claude Code/Codex visualization, session views, timeline/transcript and log replay | These features alone do not establish differentiation; published capabilities were not benchmarked |
+| [Cursor Agent](https://cursor.com/docs/agent/overview) | Documents checkpoints and file preview/restoration | Native tools already address parts of change review; Drishya remains observe-only |
+| [Langfuse observability](https://langfuse.com/docs/observability/overview) | Tracing/observability is an existing adjacent category | Focus our utility on captured repository material and developer review |
+| [Stack Overflow 2025 AI survey](https://survey.stackoverflow.co/2025/ai) | Reports almost-correct answer and debugging frustrations | Motivation for a user study, not proof people want a visualizer |
+| [Claude local directory](https://code.claude.com/docs/en/claude-directory) | Describes local session/data storage | Versioned read-only adapters need fixtures and explicit capture limitations |
+| [Codex app-server](https://learn.chatgpt.com/docs/app-server) | `thread/read` reads stored history without resuming the thread | Does not alone establish passive live attachment to arbitrary other Codex processes |
+| [OpenAI conversation state](https://developers.openai.com/api/docs/guides/conversation-state) | Conversations API persists state used with Responses | Not evidence that a consumer ChatGPT archive is accessible through that API |
+
+No generic supported live connector to arbitrary consumer ChatGPT/Claude chat archives was verified. Treat those as separate future integrations, with export-format research and capability declarations. Do not confuse tools available to the coding assistant inside its host app with APIs available to Drishya's users.
