@@ -5,10 +5,12 @@
 // Nothing here runs automatically. A call is an explicit user action that transfers redacted
 // content to a remote model; `preview()` shows exactly what would be sent first.
 
+import { createHash } from 'node:crypto';
 import type { Operation, Projection, Prose } from '@drishya/contracts';
-import { redactText } from '@drishya/privacy';
+import { PRIVACY_POLICY_VERSION, redactText, sanitize } from '@drishya/privacy';
 
-export const EXPLAIN_VERSION = 'x1';
+// x2: consent binds to a digest of the exact request; generated output is sanitized.
+export const EXPLAIN_VERSION = 'x2';
 
 export interface ModelConfig {
   baseUrl: string;
@@ -293,7 +295,7 @@ export function validate(pack: EvidencePack, raw: string, generator: string): Ge
     claims.push({ text, evidence: unique });
   }
   const observationIds = [...new Set(claims.flatMap((c) => c.evidence.flatMap((e) => e.observationIds)))];
-  return {
+  const out: GeneratedExplanation = {
     provenance: { kind: 'generated', generator, version: EXPLAIN_VERSION, observationIds },
     task: pack.task,
     summary: String(j.summary ?? '').trim(),
@@ -302,46 +304,96 @@ export function validate(pack: EvidencePack, raw: string, generator: string): Ge
     droppedClaims: dropped,
     evidenceCount: pack.items.length,
   };
+  // A model can write a secret back (echoed, or shaped like one); it is captured text like any other.
+  return sanitize(out).value;
 }
 
-export async function explainOperation(p: Projection, operationId: string, art: ArtifactText, cfg: ModelConfig, complete: Complete = httpComplete(cfg)) {
+// ─── consent: prepare, preview, send exactly that ────────────────────────────────────────
+
+/** One model request, fixed before the person sees it. */
+export interface ModelRequest {
+  endpoint: string;
+  model: string;
+  messages: ChatMessage[];
+  maxTokens: number;
+}
+
+export type Prepared =
+  | { task: 'explain' | 'briefing'; request: ModelRequest; digest: string; pack: EvidencePack }
+  | { task: 'labels'; request: ModelRequest; digest: string; passageIds: string[] };
+
+/**
+ * Fingerprint of everything that decides what leaves the machine: destination, model, token
+ * budget, exact messages, and the privacy and explain policies that shaped them. Consent is given
+ * to this digest; a send whose digest no longer matches is refused (audit A04).
+ */
+export function requestDigest(r: ModelRequest): string {
+  const canonical = JSON.stringify([PRIVACY_POLICY_VERSION, EXPLAIN_VERSION, r.endpoint, r.model, r.maxTokens, r.messages.map((m) => [m.role, m.content])]);
+  return createHash('sha256').update(canonical).digest('hex');
+}
+
+function request(cfg: ModelConfig, model: string, messages: ChatMessage[], maxTokens: number): ModelRequest {
+  return { endpoint: cfg.baseUrl, model, messages, maxTokens };
+}
+
+export function prepareExplain(p: Projection, operationId: string, art: ArtifactText, cfg: ModelConfig): Prepared {
   const pack = evidenceForOperation(p, operationId, art);
-  const raw = await complete(cfg.ultraModel, explainMessages(pack), { maxTokens: 1800 });
-  return validate(pack, raw, cfg.ultraModel);
+  const req = request(cfg, cfg.ultraModel, explainMessages(pack), 1800);
+  return { task: 'explain', request: req, digest: requestDigest(req), pack };
 }
 
-export async function briefing(p: Projection, art: ArtifactText, cfg: ModelConfig, range: { from?: number; to?: number } = {}, complete: Complete = httpComplete(cfg)) {
+export function prepareBriefing(p: Projection, art: ArtifactText, cfg: ModelConfig, range: { from?: number; to?: number } = {}): Prepared {
   const pack = evidenceForBriefing(p, art, range.from, range.to);
-  const raw = await complete(cfg.superModel, briefingMessages(pack), { maxTokens: 2400 });
-  return validate(pack, raw, cfg.superModel);
+  const req = request(cfg, cfg.superModel, briefingMessages(pack), 2400);
+  return { task: 'briefing', request: req, digest: requestDigest(req), pack };
 }
 
 /** Short passage labels from the fast tier. Labels are generated and shown as such. */
-export async function labelPassages(p: Projection, cfg: ModelConfig, complete: Complete = httpComplete(cfg)): Promise<Record<string, { label: string; generator: string }>> {
+export function prepareLabels(p: Projection, cfg: ModelConfig): Prepared {
   const passages = p.passages.filter((ps) => ps.operationIds.length).slice(0, 60);
   const listing = passages
     .map((ps) => `${ps.id}: ${ps.operationIds.map((id) => p.operations.find((o) => o.id === id)?.title ?? '').slice(0, 8).join(' | ')}`)
     .map((l) => redactText(l).text.slice(0, 600))
     .join('\n');
-  const raw = await complete(
-    cfg.nanoModel,
-    [
-      { role: 'system', content: 'Label each group of agent actions with 2–5 plain words describing the activity (e.g. "Reading checkout guard"). Only describe the listed actions. Reply with one JSON object mapping id to label.' },
-      { role: 'user', content: listing },
-    ],
-    { maxTokens: 1200 },
-  );
+  const messages: ChatMessage[] = [
+    { role: 'system', content: 'Label each group of agent actions with 2–5 plain words describing the activity (e.g. "Reading checkout guard"). Only describe the listed actions. Reply with one JSON object mapping id to label.' },
+    { role: 'user', content: listing },
+  ];
+  const req = request(cfg, cfg.nanoModel, messages, 1200);
+  return { task: 'labels', request: req, digest: requestDigest(req), passageIds: passages.map((ps) => ps.id) };
+}
+
+/** Exactly what a send would transfer, and the digest the person consents to. */
+export function preview(prep: Prepared) {
+  const { endpoint, model, messages } = prep.request;
+  const items = prep.task === 'labels' ? prep.passageIds.length : prep.pack.items.length;
+  return { endpoint, model, messages, chars: messages.reduce((n, m) => n + m.content.length, 0), items, digest: prep.digest };
+}
+
+export type LabelResult = Record<string, { label: string; generator: string }>;
+
+/** Sends the prepared request unchanged. Callers check consent against `prep.digest` first. */
+export async function sendPrepared(prep: Prepared, complete: Complete): Promise<GeneratedExplanation | LabelResult> {
+  const { model, messages, maxTokens } = prep.request;
+  const raw = await complete(model, messages, { maxTokens });
+  if (prep.task !== 'labels') return validate(prep.pack, raw, model);
   const j = parseModelJson(raw) as Record<string, unknown>;
-  const out: Record<string, { label: string; generator: string }> = {};
-  for (const ps of passages) {
-    const l = j[ps.id];
-    if (typeof l === 'string' && l.trim()) out[ps.id] = { label: l.trim().slice(0, 60), generator: cfg.nanoModel };
+  const out: LabelResult = {};
+  for (const id of prep.passageIds) {
+    const l = j[id];
+    if (typeof l === 'string' && l.trim()) out[id] = { label: redactText(l.trim()).text.slice(0, 60), generator: model };
   }
   return out;
 }
 
-/** Exactly what an explain call would send, for the consent preview. */
-export function preview(pack: EvidencePack, cfg: ModelConfig, task: 'explain' | 'briefing') {
-  const messages = task === 'explain' ? explainMessages(pack) : briefingMessages(pack);
-  return { endpoint: cfg.baseUrl, model: task === 'explain' ? cfg.ultraModel : cfg.superModel, messages, chars: messages.reduce((s, m) => s + m.content.length, 0), items: pack.items.length };
+export async function explainOperation(p: Projection, operationId: string, art: ArtifactText, cfg: ModelConfig, complete: Complete = httpComplete(cfg)) {
+  return (await sendPrepared(prepareExplain(p, operationId, art, cfg), complete)) as GeneratedExplanation;
+}
+
+export async function briefing(p: Projection, art: ArtifactText, cfg: ModelConfig, range: { from?: number; to?: number } = {}, complete: Complete = httpComplete(cfg)) {
+  return (await sendPrepared(prepareBriefing(p, art, cfg, range), complete)) as GeneratedExplanation;
+}
+
+export async function labelPassages(p: Projection, cfg: ModelConfig, complete: Complete = httpComplete(cfg)): Promise<LabelResult> {
+  return (await sendPrepared(prepareLabels(p, cfg), complete)) as LabelResult;
 }

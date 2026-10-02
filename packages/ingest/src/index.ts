@@ -18,6 +18,7 @@ import {
   type RecordParser,
 } from '@drishya/capture-core';
 import type { AdapterDescriptor, DiscoveredSource, Projection } from '@drishya/contracts';
+import { sanitize } from '@drishya/privacy';
 import { reduce, REDUCER_VERSION } from '@drishya/projection';
 import type { SourceRow, Store } from '@drishya/store';
 
@@ -66,6 +67,10 @@ export class Ingestor extends EventEmitter {
   async discover(): Promise<DiscoveredSource[]> {
     const all = (await Promise.all(this.adapters.map((a) => a.discover().catch(() => [])))).flat();
     for (const s of all) {
+      // Shown in the session list before any import, so it gets the same policy. The path stays
+      // exact: it is the import key, and local paths are deliberately visible in the local UI.
+      if (s.title !== undefined) s.title = sanitize(s.title).value;
+      if (s.cwd !== undefined) s.cwd = sanitize(s.cwd).value;
       const id = recordingIdFor(s.adapterId, s.path);
       if (this.store.getRecording(id)) s.importedRecordingId = id;
     }
@@ -84,7 +89,8 @@ export class Ingestor extends EventEmitter {
     const path = resolve(mainPath);
     await stat(path); // fail early, before creating a recording
     const recordingId = recordingIdFor(adapterId, path);
-    this.store.upsertRecording({ id: recordingId, adapterId, harness: adapter.descriptor.harness, sourcePath: path, title: opts.title });
+    const title = opts.title === undefined ? undefined : sanitize(opts.title).value;
+    this.store.upsertRecording({ id: recordingId, adapterId, harness: adapter.descriptor.harness, sourcePath: path, title });
     this.store.upsertSource({ id: sourceIdFor(path), recordingId, path, role: 'main', cursor: initialCursor() });
     const r = await this.sync(recordingId);
     return { recordingId, ...r };

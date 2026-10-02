@@ -2,11 +2,11 @@
 
 import { existsSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import type { Artifact, Projection, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
 import { buildGraph, graphFromPaths } from '@drishya/indexer';
 import { Ingestor } from '@drishya/ingest';
-import { PRIVACY_POLICY_VERSION } from '@drishya/privacy';
+import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { Store } from '@drishya/store';
 
 export const VERSION = '0.1.0-draft';
@@ -66,7 +66,9 @@ export class App {
     let g = this.graphs.get(root);
     if (!g || refresh) {
       const stored = !refresh ? this.store.getGraph(root) : undefined;
-      g = stored ? (JSON.parse(stored) as RepoGraph) : await buildGraph(root);
+      // File and directory names are read from the workspace, so they get the capture policy too.
+      // The same deterministic redaction runs on captured paths, so node ids still line up.
+      g = stored ? (JSON.parse(stored) as RepoGraph) : sanitize(await buildGraph(root)).value;
       if (!stored) this.store.putGraph(root, g.generation, JSON.stringify(g));
       this.graphs.set(root, g);
     }
@@ -74,8 +76,8 @@ export class App {
   }
 
   async exportBundle(idOrIds: string): Promise<ReplayBundle> {
-    const ids = idOrIds.split('+');
-    const recording = this.recording(ids[0]!);
+    const ids = [...new Set(idOrIds.split('+').filter(Boolean))];
+    const recordings = ids.map((id) => this.recording(id));
     const projection = this.projection(idOrIds);
     const artifactText: Record<string, string> = {};
     for (const a of projection.artifacts) {
@@ -89,12 +91,19 @@ export class App {
       version: 1,
       exportedAt: new Date().toISOString(),
       privacyPolicyVersion: PRIVACY_POLICY_VERSION,
-      recording: { ...recording, sourcePath: undefined, graphRoot: undefined, id: idOrIds },
+      recording: selectionSummary(idOrIds, recordings),
       projection,
       graph: { ...graph, root: '' },
       artifactText,
     };
-    return rekeyIds(maskLocalPaths(bundle, [recording.workspaceRoot, recording.graphRoot]));
+    // Every root in the selection (audit A03): each recording's captured, map and source
+    // directories, plus every working directory its observations recorded, not just the first.
+    const roots = new Set<string>();
+    for (const r of recordings) {
+      for (const p of [r.workspaceRoot, r.graphRoot, r.sourcePath ? dirname(r.sourcePath) : undefined]) if (p) roots.add(p);
+      for (const p of this.store.workspaceRoots(r.id)) roots.add(p);
+    }
+    return rekeyIds(maskLocalPaths(bundle, [...roots]));
   }
 
   async close() {
@@ -103,19 +112,43 @@ export class App {
   }
 }
 
+/** One summary for the whole exported selection, so its metadata describes every recording in it. */
+function selectionSummary(id: string, recs: RecordingSummary[]): RecordingSummary {
+  const first = recs[0]!;
+  const times = (pick: (r: RecordingSummary) => string | undefined) => recs.map(pick).filter((t): t is string => !!t).sort();
+  return {
+    ...first,
+    id,
+    title: [...new Set(recs.map((r) => r.title).filter(Boolean))].join(' + '),
+    // `harness` stays one id (the UI keys labels and styles on it); projection.harnesses lists all.
+    sourcePath: undefined,
+    graphRoot: undefined,
+    createdAt: times((r) => r.createdAt)[0] ?? first.createdAt,
+    updatedAt: times((r) => r.updatedAt).at(-1) ?? first.updatedAt,
+    firstSourceTime: times((r) => r.firstSourceTime)[0],
+    lastSourceTime: times((r) => r.lastSourceTime).at(-1),
+    observationCount: recs.reduce((n, r) => n + r.observationCount, 0),
+    live: false,
+    pinned: false,
+  };
+}
+
 /**
- * Local absolute paths never leave the machine in a bundle: the workspace root becomes
- * "<workspace>" and the home directory "~", in every string, in both slash styles.
+ * Local absolute paths never leave the machine in a bundle: workspace roots become
+ * "<workspace>" and the home directory "~", in every string, in both slash styles and in the
+ * dash-joined form harnesses use for per-project directories (C--Users-me-repo).
  */
 export function maskLocalPaths<T>(value: T, roots: (string | undefined)[]): T {
   const pairs: [string, string][] = [];
-  for (const r of roots) if (r) pairs.push([r, '<workspace>']);
+  // A one- or two-character root ("/", "C:") would mangle every string without hiding anything.
+  for (const r of roots) if (r && r.replace(/[\\/]+$/, '').length > 2) pairs.push([r.replace(/[\\/]+$/, ''), '<workspace>']);
   pairs.push([homedir(), '~']);
   const variants: [string, string][] = [];
   for (const [p, to] of pairs) {
     const fwd = p.replace(/\\/g, '/');
     const back = p.replace(/\//g, '\\');
-    for (const v of new Set([p, fwd, back])) variants.push([v, to]);
+    const dashed = p.replace(/[^A-Za-z0-9]/g, '-');
+    for (const v of new Set([p, fwd, back, ...(dashed.length >= 8 ? [dashed] : [])])) variants.push([v, to]);
   }
   variants.sort((a, b) => b[0].length - a[0].length); // longest first: workspace before home
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Store } from '@drishya/store';
-import { Ingestor } from '../src/index.ts';
+import { defaultAdapters, Ingestor } from '../src/index.ts';
 
 const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.meta.url));
 let dir: string;
@@ -100,6 +100,37 @@ describe('import', () => {
     store.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
     const bytes = allStoredBytes(join(dir, 'data'));
     for (const secret of [inKey, inSibling, inBranch]) expect(bytes).not.toContain(secret);
+  });
+
+  // Audit A02: envelope ids, versions, titles and parser error text are captured text too.
+  it('never persists secrets in envelope fields, titles or parse-error text', async () => {
+    const inVersion = 'gh' + 'p_' + rnd(36);
+    const inCallId = `sk-${'ant-'}${rnd(40)}`;
+    const inTitle = `nv${'api-'}${rnd(40)}`;
+    const inBrokenLine = `sk-${'ant-'}${rnd(24)}Q${rnd(15)}`;
+    const file = join(dir, 'envelope.jsonl');
+    writeFileSync(
+      file,
+      claudeLine({ type: 'assistant', uuid: 'e1', version: inVersion, message: { content: [{ type: 'tool_use', id: inCallId, name: 'Bash', input: { command: 'ls' } }] } }) +
+        claudeLine({ type: 'user', uuid: 'e2', message: { content: [{ type: 'tool_result', tool_use_id: inCallId, content: 'ok' }] } }) +
+        `{"type": "user", "broken": ${inBrokenLine}}\n`,
+    );
+    const r = await ingest.importSource('claude-code', file, { title: `deploy with ${inTitle}` });
+    const p = ingest.projection(r.recordingId);
+    expect(p.operations.find((o) => o.kind === 'shell')?.status).toBe('ok'); // call and result still correlate
+    expect(r.gaps).toBe(1);
+    store.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    const bytes = allStoredBytes(join(dir, 'data'));
+    for (const secret of [inVersion, inCallId, inTitle, inBrokenLine.slice(0, 10)]) expect(bytes).not.toContain(secret);
+    expect(store.getRecording(r.recordingId)!.title).toContain('[REDACTED:nvidia-key]');
+  });
+
+  it('sanitizes titles in the discovered-session list', async () => {
+    const inTitle = 'gh' + 'p_' + rnd(36);
+    const adapter = { ...defaultAdapters()[0]!, discover: async () => [{ adapterId: 'claude-code', harness: 'claude-code', path: join(dir, 'x.jsonl'), bytes: 1, modifiedAt: '2026-10-02T00:00:00Z', title: `fix ${inTitle}`, cwd: `/w/${inTitle}`, companions: [] }] };
+    const listed = await new Ingestor(store, [adapter]).discover();
+    expect(JSON.stringify(listed)).not.toContain(inTitle);
+    expect(listed[0]!.path).toBe(join(dir, 'x.jsonl')); // the path is the import key, kept exact
   });
 
   it('surfaces malformed lines as capture gaps and keeps going', async () => {

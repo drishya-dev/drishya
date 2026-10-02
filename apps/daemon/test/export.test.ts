@@ -1,0 +1,60 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { App } from '../src/app.ts';
+
+// Audit A03: a combined export must mask every workspace root in the selection, not only the
+// first recording's, and its metadata must describe the whole selection.
+const ALPHA = 'C:\\work\\alpha-repo';
+const BETA = '/home/dev/beta-repo';
+const GAMMA = '/srv/gamma-repo'; // beta's session changes directory part-way through
+
+let dir: string;
+let app: App;
+let ids: string[];
+
+function journal(path: string, title: string, records: { cwd: string; file: string }[]) {
+  const lines = [
+    { type: 'custom-title', customTitle: title, sessionId: 's' },
+    ...records.flatMap((r, i) => [
+      { type: 'assistant', uuid: `a${i}`, sessionId: 's', cwd: r.cwd, version: '2.1.0', timestamp: `2026-09-21T10:0${i}:00Z`, message: { content: [{ type: 'tool_use', id: `c${i}`, name: 'Read', input: { file_path: r.file } }] } },
+      { type: 'user', uuid: `u${i}`, sessionId: 's', cwd: r.cwd, version: '2.1.0', timestamp: `2026-09-21T10:0${i}:30Z`, message: { content: [{ type: 'tool_result', tool_use_id: `c${i}`, content: `     1\t// lives in ${r.file}` }] } },
+    ]),
+  ];
+  writeFileSync(path, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
+}
+
+beforeAll(async () => {
+  dir = mkdtempSync(join(tmpdir(), 'drishya-export-'));
+  app = new App(join(dir, 'data'));
+  journal(join(dir, 'alpha.jsonl'), 'Alpha work', [{ cwd: ALPHA, file: `${ALPHA}\\src\\a.ts` }]);
+  journal(join(dir, 'beta.jsonl'), 'Beta work', [
+    { cwd: BETA, file: `${BETA}/src/b.ts` },
+    { cwd: GAMMA, file: `${GAMMA}/lib/c.ts` },
+  ]);
+  ids = [(await app.ingest.importSource('claude-code', join(dir, 'alpha.jsonl'))).recordingId, (await app.ingest.importSource('claude-code', join(dir, 'beta.jsonl'))).recordingId];
+});
+afterAll(async () => {
+  await app.close();
+  rmSync(dir, { recursive: true, force: true });
+});
+
+describe('combined export', () => {
+  it('masks every workspace root in the selection, in both slash styles', async () => {
+    const out = JSON.stringify(await app.exportBundle(ids.join('+')));
+    for (const root of [ALPHA, BETA, GAMMA]) {
+      expect(out).not.toContain(JSON.stringify(root).slice(1, -1));
+      expect(out).not.toContain(root.replace(/\\/g, '/'));
+    }
+    expect(out).toContain('<workspace>');
+  });
+
+  it('describes the whole selection, not just the first recording', async () => {
+    const b = await app.exportBundle(ids.join('+'));
+    const counts = ids.map((id) => app.store.getRecording(id)!.observationCount);
+    expect(b.recording.observationCount).toBe(counts[0]! + counts[1]!);
+    expect(b.recording.title).toContain('Alpha work');
+    expect(b.recording.title).toContain('Beta work');
+  });
+});

@@ -9,6 +9,7 @@
     "@drishya/adapter-codex": "workspace:*",
     "@drishya/capture-core": "workspace:*",
     "@drishya/contracts": "workspace:*",
+    "@drishya/privacy": "workspace:*",
     "@drishya/projection": "workspace:*",
     "@drishya/store": "workspace:*"
   }
