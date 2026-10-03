@@ -61,6 +61,7 @@ export class App {
     const ids = idOrIds.split('+');
     const rec = this.recording(ids[0]!);
     const projection = this.projection(idOrIds);
+    if (!projection.workspaceRoot) return graphFromPaths(projection.files.map((f) => f.path));
     const root = this.graphRoot(rec);
     if (!root) return graphFromPaths(projection.files.map((f) => f.path));
     let g = this.graphs.get(root);

@@ -3,7 +3,8 @@
 // only renders what this returns, so any paused frame can be rebuilt exactly and golden-tested.
 // Runs in both the daemon (tests, export) and the browser.
 
-import type { Agent, Operation, OperationKind, Projection, Prose, TimelineItem } from '@drishya/contracts';
+import { asOfProjection, type Agent, type Operation, type OperationKind, type Projection, type Prose, type TimelineItem } from '@drishya/contracts';
+export { asOfProjection } from '@drishya/contracts';
 
 export const COMPOSER_VERSION = 'c1';
 
@@ -116,6 +117,7 @@ export interface Scene {
 const HALF_LIFE = 14; // steps
 
 export function compose(p: Projection, input: ComposeInput): Scene {
+  p = asOfProjection(p, input.step);
   const total = p.timeline.length;
   const step = Math.max(0, Math.min(total, Math.floor(input.step)));
   const applied = p.timeline.slice(0, step);

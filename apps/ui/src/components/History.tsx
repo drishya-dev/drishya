@@ -16,9 +16,10 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const set = useApp((s) => s.set);
   const ref = useRef<HTMLDivElement>(null);
   const [extra, setExtra] = useState(0);
-  const [detachedStart, setDetachedStart] = useState<number | undefined>();
+  const [detachedStartId, setDetachedStartId] = useState<string | undefined>();
   const programmatic = useRef(false);
   const olderAnchor = useRef<{ height: number; top: number } | undefined>(undefined);
+  const readingAnchor = useRef<{ id: string; offset: number } | undefined>(undefined);
   const seenThrough = useRef(scene.total);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
@@ -28,15 +29,38 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   // Freeze the mounted starting point while reading earlier work. New passages append below;
   // they must not evict the passage under the reader as the recent-window edge advances.
   const recentStart = Math.max(0, scene.passages.length - WINDOW - extra);
-  const start = follow ? recentStart : Math.min(detachedStart ?? recentStart, recentStart);
+  const anchoredStart = detachedStartId ? scene.passages.findIndex((ps) => ps.id === detachedStartId) : -1;
+  const start = follow ? recentStart : Math.min(anchoredStart < 0 ? recentStart : anchoredStart, recentStart);
   const visible = scene.passages.slice(start);
+
+  const rememberReading = () => {
+    const el = ref.current;
+    if (!el) return;
+    const viewport = el.getBoundingClientRect();
+    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.getBoundingClientRect().bottom > viewport.top + 1);
+    if (node?.dataset.passageId) readingAnchor.current = { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top };
+  };
 
   useLayoutEffect(() => {
     if (follow) {
-      setDetachedStart(undefined);
+      setDetachedStartId(undefined);
       setExtra(0);
-    } else if (detachedStart === undefined) setDetachedStart(recentStart);
+      readingAnchor.current = undefined;
+    } else if (detachedStartId === undefined) setDetachedStartId(scene.passages[recentStart]?.id);
   }, [follow]);
+
+  // A late record can insert steps ahead of the reader. Restore the same captured passage
+  // and pixel offset after React updates it, instead of trusting an old array index.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const anchor = readingAnchor.current;
+    if (!el || follow || !anchor) return;
+    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
+    if (!node) return;
+    const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
+    if (delta) el.scrollTop += delta;
+    rememberReading();
+  }, [scene.passages, follow]);
 
   useLayoutEffect(() => {
     if (follow) seenThrough.current = scene.total;
@@ -84,6 +108,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const onScroll = () => {
     const el = ref.current;
     if (!el || programmatic.current) return;
+    rememberReading();
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     if (!atBottom && follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
     if (atBottom && !follow && !selectedOp) set({ follow: true });

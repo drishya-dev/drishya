@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | Nothing. B0 is complete (PRs #3, #4 and this one). Contract freeze needs both builders' review |
-| **Next gate** | **B2** stable history identity and historical correctness, then B3 integrated base UI and B4 resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [audit](review/06-baseline-audit.md), [handoff](CONTINUITY.md). No model key is needed for the core |
+| **Next gate** | Finish **B2** bounded artifact retrieval and graph freshness; B2 history anchors, worktree identity and as-of rendering are implemented. Then B3 long-history UI and B4 resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [handoff](CONTINUITY.md). No model key is needed for the core |
 
 ### Claimed
 
@@ -61,10 +61,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-03
-- **Did:** Merged reviewed B0/B1 corrections as PR #8. Compared the prototype with the integrated demo and moved the base UI to history-first reading: all captured work opens at once; live reload extends it even when reading earlier work; sequence replay is optional. File/search navigation stays in history; passages wrap without a horizontal strip; earlier mounted passages and scroll offset stay put while detached. No backend/schema changes. Prior B0/B1 review is in [`review/07-b0-b1-review.md`](review/07-b0-b1-review.md).
-- **Validation:** Backend/UI typechecks, 163/163 tests, Vite production build and synthetic baseline passed. Inspected the integrated demo in the browser at desktop, 820 px and 390 px; no passage-row horizontal overflow at phone width. No real journal was newly imported or exported.
-- **Left half-done:** B2 stable history identity, worktree isolation and exact historical as-of correctness; B3 proper virtualization and motion; real-data export and scale gates. Additive contract fields still need both builders' review before freeze. H–L remain proposals.
-- **Watch out for:** Known-root export masking is not a universal absolute-path scrubber. Older-policy recordings are flagged, not re-sanitized in place. Do not imply line authorship from text similarity or proximity.
+- **Did:** B0/B1 corrections merged in PR #8 and the history-first base UI in PR #9. B2 history correctness now gives passages event-based IDs; detached reading anchors use a stable passage ID plus pixel offset; combined worktrees have distinct, evidence-backed path namespaces and never share reconstruction bases. A pure as-of projection masks result fields/artifacts until their result step in scene, passage, inspector and evidence packs. The renderer has a late-result regression test. No event-schema shape changed.
+- **Validation:** Backend/UI typechecks, full synthetic suite, Vite production build; mixed-worktree export and map tests; as-of composer, renderer and evidence tests. No real journal was newly persisted or exported in this change.
+- **Left half-done:** B2 bounded artifact retrieval, graph cache freshness and full live anchor/browser acceptance; B3 measured virtualization, motion and broader navigation; B4 resource/install gates. Additive contract fields still need both builders' review before freeze. H–L remain proposals.
+- **Watch out for:** A combined view of distinct worktrees uses `worktree-<root hash>/path` labels and a captured-path map rather than pretending one checkout is authoritative. Known-root export masking remains best effort; older-policy recordings are flagged, not re-sanitized in place.
 
 ---
 
@@ -73,7 +73,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 **Now (30 Sep), backend-first clarification:**
 
 1. ~~**B0: privacy hardening.**~~ Done 2 Oct: A01 (PR #3); A02 sinks, A03, A04 (PR #4); protected-file scopes, safe forget, outdated-policy flag (`harsh/b0-leftovers`). Policy now `p3`.
-2. **B1 known findings done** (2 Oct–3 Oct): B1a capture lifecycle (PR #6); B1b recovery (`harsh/b1-recovery`): revisions, SSE `sync` on (re)connect, slow-subscriber cap, session lifetime/cap/sign-out, bounded query params, stale-response guards, artifact retry. The 3 Oct review corrected restart sign-out, strict buffer accounting and a stale health summary. **Next, B2:** stable anchors (not positional `psg_N`), exact as-of artifact/result boundaries in renderer and evidence packs, worktree-aware file identity and combined-view compatibility (audit A11–A13).
+2. **B1 done; B2 history correctness implemented** (3 Oct): stable passage/reader anchors, as-of result and artifact boundaries through renderer/evidence, worktree-aware combined paths, isolated reconstruction. **B2 remains open** for bounded artifact retrieval and graph freshness/approval semantics; audit A11–A13 have synthetic regression coverage, but browser/live acceptance is still pending.
 3. **B3: integrated base history.** History-first navigation and responsive action passages are started in `apps/ui`; capture/history grow while the reader scrolls/selects, and playback is optional. Still needed: stable virtualized long-history rendering, richer content-shaped expansion and the remaining prototype interactions. No final theme commitment yet.
 4. **B4: scale and installation.** Performance harness, worker boundaries, paged artifacts/history, packed-install matrix and end-to-end browser acceptance. Targets are in the roadmap and are not yet measured passes.
 5. **P1–P2: premium presentation and return-to-work utility.** Content-shaped renderers, five signature moves, since-last-visit, file history and verification freshness; test comprehension with users before feature expansion.
@@ -160,6 +160,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-10-02 | **Capture health is explicit** (`CaptureState`, `RecordingHealth`, `RecordingSummary.health?`, SSE `event: health`). Live tailing coalesces ticks and bounds each turn to one read per source (≤16 MiB, records must fit one read). A harness root that exists but can't be read is a discovery error, not an empty list (proposal, pending @yash; additive contract) | Audit A05/A06/A09: errors were swallowed, ticks queued without limit, and `import --live` was ignored | `packages/ingest`, `packages/contracts`, `apps/daemon` |
 | 2026-10-03 | **Recovery contract:** a per-recording revision committed with its data; every SSE connection opens with `sync` (all revisions); viewers compare and reload only if behind. Subscribers >1 MiB behind are dropped. The launch token is valid for the launch; sessions expire (12 h idle, 7 d max), are capped (32, LRU) and can be revoked (proposal, pending @yash; additive contract, schema v2) | Audit A07/A10: missed notices left views stale until the next write; sessions were unbounded and the docs called the token one-time | `packages/store`, `apps/daemon/src/server.ts`, `apps/ui` |
 | 2026-09-30 | **Small docs and low-risk changes go directly on `main`; branch major work** | Builder clarified the preferred workflow after the audit commit. Major code changes still receive the other builder's PR review | `AGENTS.md` |
+| 2026-10-03 | **Historical views use a pure as-of projection.** Invocation fields remain at call; result fields/artifacts appear at `op-end`; model evidence uses the same boundary. Passages anchor to captured event IDs, with reader offset preserved in the UI | Final projection data previously leaked into earlier replay frames and positional passage IDs moved when late records arrived | `packages/contracts/src/as-of.ts`, `packages/scene`, `apps/ui` |
+| 2026-10-03 | **Combined worktrees remain viewable, with path namespaces and per-recording reconstruction bases.** When no single root is valid, use a captured-path map instead of indexing the first checkout | Rejecting mixed roots broke valid combined export; merging same relative paths or captured bases would imply a false shared file state | `packages/projection`, `packages/ingest`, `apps/daemon/src/app.ts` |
 
 ---
 

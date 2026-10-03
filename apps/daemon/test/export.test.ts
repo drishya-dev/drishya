@@ -41,6 +41,16 @@ afterAll(async () => {
 });
 
 describe('combined export', () => {
+  it('keeps file identities and map nodes separate across captured worktrees', async () => {
+    const p = app.projection(ids.join('+'));
+    expect(p.workspaceRoot).toBeUndefined();
+    const paths = p.files.map((f) => f.path);
+    expect(paths).toHaveLength(3);
+    expect(new Set(paths.map((path) => path.split('/')[0])).size).toBe(3);
+    expect(paths.every((path) => path.startsWith('worktree-'))).toBe(true);
+    const graph = await app.graph(ids.join('+'));
+    expect(paths.every((path) => graph.nodes.some((node) => node.path === path))).toBe(true);
+  });
   it('masks every workspace root in the selection, in both slash styles', async () => {
     const out = JSON.stringify(await app.exportBundle(ids.join('+')));
     for (const root of [ALPHA, BETA, GAMMA]) {

@@ -378,14 +378,20 @@ export class Ingestor extends EventEmitter {
   combinedProjection(ids: string[]): Projection {
     const unique = [...new Set(ids)];
     if (unique.length === 1) return this.projection(unique[0]!);
+    const roots = unique.map((id) => this.store.getRecording(id)?.workspaceRoot?.replace(/\\/g, '/').replace(/\/+$/, ''));
+    const mixedRoots = roots.some((root) => !root) || new Set(roots.map((root) => /^[a-z]:\//i.test(root!) ? root!.toLowerCase() : root)).size !== 1;
     const key = unique.join('+');
+    const cacheKey = `${key}\u0000${roots.join('\u0000')}`;
     const count = unique.reduce((s, id) => s + this.store.countObservations(id), 0);
-    const cached = this.projectionCache.get(key);
+    const cached = this.projectionCache.get(cacheKey);
     if (cached && cached.count === count) return cached.projection;
     const live = unique.some((id) => this.store.getRecording(id)?.live);
     const obs = unique.flatMap((id) => this.store.observations(id));
     const projection = reduce(key, obs, this.store.blobs, { adapters: this.descriptors, live });
-    this.projectionCache.set(key, { count, projection });
+    // A combined view spanning worktrees has no single repository root. Its paths remain
+    // evidence-backed per source, and the map uses captured paths instead of one checkout.
+    if (mixedRoots) projection.workspaceRoot = undefined;
+    this.projectionCache.set(cacheKey, { count, projection });
     return projection;
   }
 

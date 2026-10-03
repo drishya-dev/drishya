@@ -46,7 +46,9 @@ export function Inspector({ projection }: { projection: Projection }) {
       <div className="insp-body">
         {tab === 'detail' && <Detail op={op} projection={projection} />}
         {tab === 'evidence' && <Evidence op={op} links={links} projection={projection} />}
-        {tab === 'explain' && <Explain op={op} />}
+        {tab === 'explain' && (op.endSequence === undefined
+          ? <p className="muted">The result is not available at this step. Move to the result to inspect its evidence.</p>
+          : <Explain op={op} />)}
       </div>
     </aside>
   );

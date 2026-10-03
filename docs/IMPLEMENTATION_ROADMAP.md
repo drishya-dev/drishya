@@ -80,6 +80,8 @@ Frontend requests carry selected-recording identity and revision; stale response
 
 ## 5. B2 — identity, artifacts and honest history
 
+**Implementation note (3 Oct):** A11–A13's core history corrections are implemented with synthetic tests: event-based passage IDs and reader offsets; per-recording reconstruction bases; worktree-qualified paths and captured-path maps for mixed roots; and a pure as-of projection through scene, renderer and model evidence. This does **not** close B2. The bounded artifact API, graph freshness/approval work and live/browser acceptance below remain gates.
+
 Agree stable keys for recording, source generation, native event, operation, passage and file identity. Separate **ingestion order** from **source time** and **display grouping**. A late record may refine a passage but cannot invalidate all later reading anchors. Store an anchor as a stable item id plus offset; resolve deleted/grouped items to a documented nearby fallback. Positional `psg_1` style grouping alone is insufficient for durable anchors.
 
 File identity must include repository/worktree context, not just a relative path. Validate combined-session compatibility before merging. Unrelated worktrees can be compared explicitly, but must never share snapshot reconstruction state. Agent identity is namespaced to its source/session, and delegation requires explicit evidence.
@@ -167,3 +169,18 @@ After B4, choose the next coding harness by pilot demand and passive source qual
 Read [CONTINUITY](CONTINUITY.md), [STATUS](STATUS.md), the audit and privacy code/tests. Claim the relevant files. Fix the two reproduced sanitizer bypasses with regression tests and cover observation metadata/protected nested content. Update privacy policy version/migration implications explicitly; do not just change a regex and keep old stores silently “certified.” Re-run targeted privacy + ingest tests, then typecheck/full suite because sanitation affects every package. Commit B0 as a scoped change with agent attribution. Continue the remaining B0 sinks before reopening real persistence or remote model use.
 
 The current audit intentionally does not implement all these changes. It provides a reproducible starting point and a plan that a smaller model can execute one gate at a time, without rediscovering the product intent.
+
+## 11. Delivery tags and planning ranges (3 October 2026)
+
+These are **planning ranges, not promises**. Assume two builders working consistently, existing Claude/Codex scope, synthetic and opted-in real acceptance, and no new harness or theme variants before the baseline release. The backend reaches a product-level candidate after B4; the frontend reaches a strong product-level candidate after P1/P2 validation.
+
+| Tag | One-line deliverable | Focused elapsed range |
+|---|---|---|
+| **B2-R** | Finish bounded historical artifact reads, graph freshness and live/browser anchor acceptance. | 1–2 weeks |
+| **B3** | Make long live history, selection, search and optional replay reliably readable across viewport sizes. | 2–4 weeks |
+| **B4** | Meet measured resource/capture gates and ship a tested local install on Windows, macOS and Linux. | 3–5 weeks |
+| **P1** | Replace the base visual system with content-shaped surfaces, true origins and the five restrained signature moves. | 4–6 weeks |
+| **P2** | Deliver since-last-visit, file history and verification freshness, then test comprehension with real users. | 3–5 weeks |
+| **R1** | Accessibility, privacy and release polish; public demo, packaging and launch readiness. | 2–3 weeks |
+
+With overlapping work, **roughly 12–18 calendar weeks for two full-time builders** from this baseline to a credible product beta is a working estimate; solo or part-time work takes longer. Re-estimate after B4 measured gates and the first user comprehension study. Additional harnesses, consumer-chat import, model enrichment and theme variants are separate later tracks.

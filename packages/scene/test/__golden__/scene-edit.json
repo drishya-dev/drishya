@@ -42,8 +42,7 @@
         "key": "read",
         "kind": "read",
         "tools": [
-          "Read",
-          "shell_command"
+          "Read"
         ],
         "uses": 4,
         "active": false
@@ -53,8 +52,7 @@
         "kind": "search",
         "tools": [
           "Glob",
-          "Grep",
-          "shell_command"
+          "Grep"
         ],
         "uses": 2,
         "active": false
@@ -63,27 +61,16 @@
         "key": "edit",
         "kind": "edit",
         "tools": [
-          "Edit",
-          "apply_patch"
+          "Edit"
         ],
         "uses": 1,
-        "active": false
-      },
-      {
-        "key": "shell",
-        "kind": "shell",
-        "tools": [
-          "shell_command"
-        ],
-        "uses": 0,
         "active": false
       },
       {
         "key": "test",
         "kind": "test",
         "tools": [
-          "Bash",
-          "shell_command"
+          "Bash"
         ],
         "uses": 1,
         "active": false
@@ -109,23 +96,12 @@
             "active": false
           }
         ]
-      },
-      {
-        "server": "github",
-        "open": false,
-        "tools": [
-          {
-            "tool": "search_code",
-            "uses": 0,
-            "active": false
-          }
-        ]
       }
     ]
   },
   "passages": [
     {
-      "id": "psg_0",
+      "id": "psg_t_prose_obs#3",
       "agentId": "rec#1.agent:main",
       "ops": [],
       "prose": [
@@ -141,7 +117,7 @@
       "turnPrompt": "Free orders don't reach checkout — a cart with the LAUNCH100 code (100% off) is rejected with missing-total, and the free-order test in test/checkout.test.ts fails. Find out why and fix it."
     },
     {
-      "id": "psg_1",
+      "id": "psg_s_rec#1.toolu_synthetic0001",
       "agentId": "rec#1.agent:main",
       "ops": [
         {
@@ -210,7 +186,7 @@
       "matchesFilter": true
     },
     {
-      "id": "psg_2",
+      "id": "psg_s_rec#1.toolu_synthetic0004",
       "agentId": "rec#1.agent:main",
       "ops": [
         {
@@ -262,7 +238,7 @@
       "matchesFilter": true
     },
     {
-      "id": "psg_3",
+      "id": "psg_s_rec#1.toolu_synthetic0006",
       "agentId": "rec#1.agent:explore01",
       "ops": [
         {
@@ -332,7 +308,7 @@
       "matchesFilter": true
     },
     {
-      "id": "psg_4",
+      "id": "psg_s_rec#1.toolu_synthetic0009",
       "agentId": "rec#1.agent:main",
       "ops": [
         {
@@ -431,7 +407,7 @@
     }
   ],
   "focus": {
-    "passageId": "psg_4",
+    "passageId": "psg_s_rec#1.toolu_synthetic0009",
     "operationId": "rec#1.toolu_synthetic0010"
   }
 }

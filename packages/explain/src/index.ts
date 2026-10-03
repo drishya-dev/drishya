@@ -6,7 +6,7 @@
 // content to a remote model; `preview()` shows exactly what would be sent first.
 
 import { createHash } from 'node:crypto';
-import type { Operation, Projection, Prose } from '@drishya/contracts';
+import { asOfProjection, type Operation, type Projection, type Prose } from '@drishya/contracts';
 import { PRIVACY_POLICY_VERSION, redactText, sanitize } from '@drishya/privacy';
 
 // x2: consent binds to a digest of the exact request; generated output is sanitized.
@@ -150,6 +150,10 @@ function stepOf(p: Projection, opId: string) {
  * Nothing from after the operation is included except its own result.
  */
 export function evidenceForOperation(p: Projection, operationId: string, art: ArtifactText, window = 14): EvidencePack {
+  // A completed operation may be explained from its result moment; later results from
+  // neighbouring calls cannot travel backward into this evidence pack.
+  const end = p.timeline.findIndex((t) => t.type === 'op-end' && t.operationId === operationId);
+  p = asOfProjection(p, end >= 0 ? end + 1 : stepOf(p, operationId));
   const op = p.operations.find((o) => o.id === operationId);
   if (!op) throw new Error('unknown operation');
   const at = stepOf(p, operationId);
@@ -177,6 +181,7 @@ export function evidenceForOperation(p: Projection, operationId: string, art: Ar
 
 /** Evidence for a return briefing over [fromStep, toStep): every operation and prose in it. */
 export function evidenceForBriefing(p: Projection, art: ArtifactText, fromStep = 0, toStep = p.timeline.length, budgetChars = 400_000): EvidencePack {
+  p = asOfProjection(p, toStep);
   const items: EvidenceItem[] = [];
   let n = 1;
   let chars = 0;

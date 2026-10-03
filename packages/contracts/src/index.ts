@@ -499,3 +499,4 @@ export interface ReplayBundle {
   /** Artifact text by artifact id. Only sanitized content. */
   artifactText: Record<string, string>;
 }
+export { asOfProjection } from './as-of.ts';
