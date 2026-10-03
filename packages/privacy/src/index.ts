@@ -187,7 +187,9 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
         const p = o[k];
         if (typeof p === 'string' && isDeniedPath(p)) childDenied = true;
       }
-      const out: Record<string, unknown> = {};
+      // A harness record can contain an own `__proto__` key. A plain object's setter would
+      // silently drop that captured value (or change the result's prototype).
+      const out: Record<string, unknown> = Object.create(null);
       for (const [k, x] of Object.entries(o)) {
         const key = safeKey(k, out);
         const f = field ? `${field}.${key}` : key;

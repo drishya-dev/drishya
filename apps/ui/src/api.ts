@@ -63,7 +63,7 @@ export interface DataSource {
     hooks?: {
       /** Sent on every (re)connect: the daemon's current revision of each recording. */
       onSync?: (revisions: Record<string, number>) => void;
-      onStatus?: (status: 'connected' | 'reconnecting') => void;
+      onStatus?: (status: 'connected' | 'reconnecting' | 'signed-out') => void;
     },
   ): () => void;
 }
@@ -135,18 +135,32 @@ export const daemon: DataSource = {
   },
   subscribe(onChange, hooks) {
     const es = new EventSource('/v1/changes');
+    let closed = false;
+    let checking = false;
     // EventSource reconnects by itself; each new connection opens with a `sync` of revisions.
     es.addEventListener('sync', (e) => {
       hooks?.onStatus?.('connected');
       hooks?.onSync?.((JSON.parse((e as MessageEvent).data) as { revisions: Record<string, number> }).revisions);
     });
-    es.addEventListener('error', () => hooks?.onStatus?.('reconnecting'));
+    es.addEventListener('error', () => {
+      hooks?.onStatus?.('reconnecting');
+      if (checking || closed) return;
+      checking = true;
+      // EventSource hides HTTP status codes. After a daemon restart its old cookie is invalid;
+      // distinguish that 401 from a temporarily unreachable daemon instead of retrying forever.
+      void fetch('/v1/revisions', { cache: 'no-store' }).then((res) => {
+        if (closed || res.status !== 401) return;
+        closed = true;
+        es.close();
+        hooks?.onStatus?.('signed-out');
+      }).catch(() => undefined).finally(() => { checking = false; });
+    });
     es.addEventListener('change', (e) => onChange(JSON.parse((e as MessageEvent).data)));
     es.addEventListener('health', (e) => {
       const ev = JSON.parse((e as MessageEvent).data) as { recordingId: string; health: RecordingHealth };
       onChange({ recordingId: ev.recordingId, added: 0, live: ev.health.live, health: ev.health });
     });
-    return () => es.close();
+    return () => { closed = true; es.close(); };
   },
 };
 
