@@ -60,11 +60,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** H–L are proposals. Don't build on them until both of us agree and they're in the decisions log.
 
 ### Codex review
-- **When:** 2026-10-02
-- **Did:** Reviewed and squash-merged [PR #2](https://github.com/drishya-dev/drishya/pull/2), Harsh's docs-only H–L proposals. Corrected attribution language on `main`: text matches are candidates, and missing matches do not prove an agent did not write a line. Updated the local checkout.
-- **Validation:** PR checks passed on Linux and Windows before merge; net diff was two docs only and `git diff --check` passed. The post-merge correction changes docs only.
-- **Left half-done:** H–L remain proposals; neither merge nor this wording correction records both builders' agreement or changes the roadmap. B0 privacy hardening is still the next implementation gate. Earlier baseline evidence remains in the [audit](review/06-baseline-audit.md).
-- **Watch out for:** Do not implement line attribution from text similarity or timestamp proximity alone. Show unknown unless captured edit, file identity and version lineage support a specific match.
+- **When:** 2026-10-03
+- **Did:** Reviewed PRs #3–#7 against product, privacy and reliability constraints. Corrected daemon-restart sign-out in the UI, strict SSE buffer accounting, an object-key sanitation edge case and a stale health-summary race. Recorded scope, verdict and residual risks in [`review/07-b0-b1-review.md`](review/07-b0-b1-review.md). Previous 2 Oct review merged PR #2 and corrected its attribution wording.
+- **Validation:** Pinned workspace install; backend/UI typechecks; 160/160 tests; Vite production build; synthetic baseline including three passing privacy probes. No real journal was newly imported, exported or sent to a model.
+- **Left half-done:** B2 history/worktree/as-of correctness; B3 continuous live reading; real-data export and scale gates. Additive contract fields still need both builders' review before freeze. H–L remain proposals.
+- **Watch out for:** Known-root export masking is not a universal absolute-path scrubber. Older-policy recordings are flagged, not re-sanitized in place. Do not imply line authorship from text similarity or proximity.
 
 ---
 
@@ -73,7 +73,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 **Now (30 Sep), backend-first clarification:**
 
 1. ~~**B0: privacy hardening.**~~ Done 2 Oct: A01 (PR #3); A02 sinks, A03, A04 (PR #4); protected-file scopes, safe forget, outdated-policy flag (`harsh/b0-leftovers`). Policy now `p3`.
-2. **B1 done** (2 Oct–3 Oct): B1a capture lifecycle (PR #6); B1b recovery (`harsh/b1-recovery`): revisions, SSE `sync` on (re)connect, slow-subscriber cap, session lifetime/cap/sign-out, bounded query params, stale-response guards, artifact retry. **Next, B2:** stable anchors (not positional `psg_N`), exact as-of artifact/result boundaries in renderer and evidence packs, worktree-aware file identity and combined-view compatibility (audit A11–A13). **Follow-up from B1b:** after a daemon *restart* the page's session is gone and it shows "reconnecting…" indefinitely; it should detect sign-out and point to the launch link.
+2. **B1 known findings done** (2 Oct–3 Oct): B1a capture lifecycle (PR #6); B1b recovery (`harsh/b1-recovery`): revisions, SSE `sync` on (re)connect, slow-subscriber cap, session lifetime/cap/sign-out, bounded query params, stale-response guards, artifact retry. The 3 Oct review corrected restart sign-out, strict buffer accounting and a stale health summary. **Next, B2:** stable anchors (not positional `psg_N`), exact as-of artifact/result boundaries in renderer and evidence packs, worktree-aware file identity and combined-view compatibility (audit A11–A13).
 3. **B3: integrated base history.** Existing session chooser and API; port prototype interactions into `apps/ui`; capture/history keep growing while the reader scrolls/selects. Playback optional. No final theme commitment yet.
 4. **B4: scale and installation.** Performance harness, worker boundaries, paged artifacts/history, packed-install matrix and end-to-end browser acceptance. Targets are in the roadmap and are not yet measured passes.
 5. **P1–P2: premium presentation and return-to-work utility.** Content-shaped renderers, five signature moves, since-last-visit, file history and verification freshness; test comprehension with users before feature expansion.

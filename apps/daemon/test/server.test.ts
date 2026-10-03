@@ -275,6 +275,7 @@ describe('revisions and reconnect', () => {
     expect(ended).toBe(true);
     const fine = { writableLength: 0, destroyed: false, write: () => true, end: () => (ended = true) };
     expect(writeEvent(fine as never, 'x', 1024 * 1024)).toBe(true);
+    expect(writeEvent(fine as never, 'long event', 5)).toBe(false);
   });
 });
 

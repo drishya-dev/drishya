@@ -56,7 +56,7 @@ const MAX_SSE_BUFFER = 1024 * 1024;
  */
 export function writeEvent(res: ServerResponse, data: string, maxBuffered = MAX_SSE_BUFFER): boolean {
   if (res.destroyed) return false;
-  if (res.writableLength > maxBuffered) {
+  if (res.writableLength + Buffer.byteLength(data) > maxBuffered) {
     res.end();
     return false;
   }

@@ -28,7 +28,7 @@ No real journal was newly persisted or exported in this audit. No new visual red
 
 ## Next bounded task
 
-B0 and B1 are complete (2–3 Oct): privacy policy `p3`; capture health, coalesced bounded live turns, `import --live`; revisions with SSE `sync`, slow-subscriber cap, session lifetime, stale-response guards. Next is **B2** (audit A11–A13): stable anchors instead of positional passage ids, as-of artifact/result boundaries in renderer and evidence packs, worktree-aware file identity. Small follow-up: after a daemon restart, show signed-out instead of an endless "reconnecting…". Do not proceed straight to Pixi, new themes or model features.
+B0 and B1 known findings are implemented (2–3 Oct): privacy policy `p3`; capture health, coalesced bounded live reads, `import --live`; revisions with SSE `sync`, slow-subscriber cap, session lifetime, stale-response guards. A [3 Oct review](review/07-b0-b1-review.md) fixed daemon-restart sign-out, a strict SSE buffer cap, a sanitation key edge case and a health-summary race; 160 tests pass. Next is **B2** (audit A11–A13): stable anchors instead of positional passage ids, as-of artifact/result boundaries in renderer and evidence packs, worktree-aware file identity. Do not proceed straight to Pixi, new themes or model features.
 
 After B0, prove real persisted baseline; then capture/reconnect lifecycle and stable live history. Bring the prototype's useful navigation into the integrated app. See roadmap B1–B4 for acceptance tests. The first premium feature is a useful return-to-work view, paired with the content-shaped visual system.
 

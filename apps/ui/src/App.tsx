@@ -77,7 +77,7 @@ export function App() {
     return (
       <div className="center notice">
         <h2>Open Drishya from its launch link</h2>
-        <p className="muted">This page needs the one-time link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p>
+        <p className="muted">This page needs the launch link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p>
       </div>
     );
   if (screen === 'no-daemon')
@@ -164,13 +164,20 @@ function useLiveUpdates() {
       if (!s.recordingId?.split('+').includes(e.recordingId)) return;
       if (e.health && !e.added) {
         // A capture-state change carries no new data: refresh the summary, not the projection.
-        void s.source?.recordings().then((recordings) => useApp.setState({ recordings, recording: recordings.find((r) => r.id === e.recordingId) ?? useApp.getState().recording }));
+        void s.source?.recordings().then((recordings) => {
+          const current = useApp.getState();
+          if (current.source !== s.source) return;
+          const openId = current.recordingId?.split('+')[0];
+          useApp.setState({ recordings, recording: recordings.find((r) => r.id === openId) ?? current.recording });
+        }).catch(() => undefined);
         return;
       }
       clearTimeout(pending);
       pending = setTimeout(() => void useApp.getState().reloadProjection(), 150);
     }, {
-      onStatus: (connection) => useApp.setState({ connection }),
+      onStatus: (connection) => connection === 'signed-out'
+        ? useApp.setState({ screen: 'signed-out', source: undefined, playing: false })
+        : useApp.setState({ connection }),
       // After a reconnect, notices sent while the stream was down are lost: compare revisions and
       // reload the open view if it fell behind, even if nothing new arrives later (audit A07).
       onSync: (revisions) => {

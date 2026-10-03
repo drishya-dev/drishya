@@ -55,6 +55,14 @@ describe('redactText', () => {
 });
 
 describe('sanitize', () => {
+  it('preserves own prototype-named keys without changing the result prototype', () => {
+    const input = JSON.parse('{"__proto__":"captured","constructor":"also captured"}');
+    const result = sanitize(input).value;
+    expect(JSON.stringify(result)).toContain('"__proto__":"captured"');
+    expect(JSON.stringify(result)).toContain('"constructor":"also captured"');
+    expect(Object.getPrototypeOf(result)).toBeNull();
+  });
+
   it('deep-redacts every string and reports where', () => {
     const r = sanitize({ input: { command: `curl -H "Authorization: Bearer ${rnd(32)}" x` }, list: [GH] });
     expect(JSON.stringify(r.value)).not.toContain(GH);
