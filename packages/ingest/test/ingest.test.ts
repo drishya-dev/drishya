@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Store } from '@drishya/store';
+import { reduce } from '@drishya/projection';
 import { defaultAdapters, Ingestor } from '../src/index.ts';
 
 const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.meta.url));
@@ -39,6 +40,30 @@ function claudeLine(rec: Record<string, unknown>) {
 }
 
 describe('import', () => {
+  it('keeps a combined view across worktrees without claiming one map root', async () => {
+    const a = await ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
+    const b = await ingest.importSource('codex', join(fixtures, 'codex/rollout-checkout-review.jsonl'));
+    expect(ingest.combinedProjection([a.recordingId, b.recordingId]).operations.length).toBeGreaterThan(0);
+    store.updateRecordingMeta(b.recordingId, { workspaceRoot: '/home/dev/other-worktree' });
+    const mixed = ingest.combinedProjection([a.recordingId, b.recordingId]);
+    expect(mixed.workspaceRoot).toBeUndefined();
+    expect(mixed.operations.length).toBeGreaterThan(0);
+  });
+
+  it('never reconstructs one recording from another recording’s captured file', async () => {
+    const imported = await ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
+    const observations = store.observations(imported.recordingId);
+    const base = observations.filter((o) => o.kind === 'session.meta' || (o.operationId === 'toolu_synthetic0001' && (o.kind === 'tool.call' || o.kind === 'tool.result')));
+    const edit = observations.filter((o) => o.operationId === 'toolu_synthetic0010' && (o.kind === 'tool.call' || o.kind === 'tool.result')).map((o) => structuredClone(o));
+    expect(edit).toHaveLength(2);
+    const result = edit.find((o) => o.kind === 'tool.result')!;
+    (result.payload as Record<string, any>).outcome.originalFile = null;
+    const descriptors = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.id, a.descriptor]));
+    const same = reduce('same', [...base, ...edit], store.blobs, { adapters: descriptors });
+    expect(same.operations.find((o) => o.detail.kind === 'edit')?.detail).toMatchObject({ reconstruction: 'complete' });
+    const split = reduce('split', [...base, ...edit.map((o) => ({ ...o, recordingId: 'another-recording' }))], store.blobs, { adapters: descriptors });
+    expect(split.operations.find((o) => o.detail.kind === 'edit')?.detail).toMatchObject({ reconstruction: 'unavailable' });
+  });
   it('imports the synthetic Claude session with its subagent', async () => {
     const r = await ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
     const p = ingest.projection(r.recordingId);

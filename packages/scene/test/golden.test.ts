@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Projection } from '@drishya/contracts';
 import { Ingestor } from '@drishya/ingest';
 import { Store } from '@drishya/store';
-import { compose, markers, nextMarker } from '../src/index.ts';
+import { asOfProjection, compose, markers, nextMarker } from '../src/index.ts';
 
 const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.meta.url));
 let dir: string;
@@ -41,6 +41,19 @@ function stable(v: unknown): unknown {
 }
 
 describe('scene composer', () => {
+  it('withholds a late result and its bytes until the result step', () => {
+    const op = p.operations.find((o) => o.detail.kind === 'read' && o.detail.excerptArtifactId)!;
+    const call = p.timeline.findIndex((it) => it.type === 'op-start' && it.operationId === op.id);
+    const result = p.timeline.findIndex((it) => it.type === 'op-end' && it.operationId === op.id);
+    expect(result).toBeGreaterThan(call);
+    const midway = asOfProjection(p, call + 1);
+    const pending = midway.operations.find((o) => o.id === op.id)!;
+    expect(pending.status).toBe('running');
+    expect(pending.artifactIds).toEqual([]);
+    expect(JSON.stringify(pending.detail)).not.toContain('excerptArtifactId');
+    expect(compose(p, { step: call + 1 }).passages.flatMap((ps) => ps.ops).find((o) => o.id === op.id)?.state).toBe('running');
+    expect(asOfProjection(p, result + 1).operations.find((o) => o.id === op.id)?.artifactIds).toContain((op.detail as { excerptArtifactId: string }).excerptArtifactId);
+  });
   it('is empty before the first step', () => {
     const s = compose(p, { step: 0 });
     expect(s.passages).toEqual([]);

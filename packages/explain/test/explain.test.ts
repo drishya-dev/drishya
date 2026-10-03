@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Projection } from '@drishya/contracts';
 import { Ingestor } from '@drishya/ingest';
 import { Store } from '@drishya/store';
-import { briefing, evidenceForOperation, explainOperation, prepareBriefing, prepareExplain, prepareLabels, preview, sendPrepared, validate, type Complete, type ModelConfig } from '../src/index.ts';
+import { briefing, evidenceForBriefing, evidenceForOperation, explainOperation, prepareBriefing, prepareExplain, prepareLabels, preview, sendPrepared, validate, type Complete, type ModelConfig } from '../src/index.ts';
 
 const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.meta.url));
 const cfg: ModelConfig = { baseUrl: 'http://model.invalid/v1', apiKey: 'test', nanoModel: 'nano', superModel: 'super', ultraModel: 'ultra' };
@@ -33,6 +33,21 @@ afterAll(() => {
 const editOp = () => p.operations.find((o) => o.kind === 'edit')!;
 
 describe('evidence for an explanation', () => {
+  it('does not send a neighbouring result that arrived after the focus result', () => {
+    const late = p.operations.find((o) => o.detail.kind === 'read' && o.detail.excerptArtifactId)!;
+    const focus = p.operations.find((o) => o.startSequence > late.startSequence && o.endSequence !== undefined)!;
+    const shifted = structuredClone(p);
+    const endIndex = shifted.timeline.findIndex((it) => it.type === 'op-end' && it.operationId === late.id);
+    const [end] = shifted.timeline.splice(endIndex, 1);
+    const focusEnd = shifted.timeline.findIndex((it) => it.type === 'op-end' && it.operationId === focus.id);
+    shifted.timeline.splice(focusEnd + 1, 0, end!);
+    const pack = evidenceForOperation(shifted, focus.id, art);
+    const previous = pack.items.find((item) => item.ref.type === 'operation' && item.ref.id === late.id)!;
+    expect(previous.text).toContain('[status: running]');
+    expect(previous.text).not.toContain('export type CheckoutBlock');
+    const briefing = evidenceForBriefing(shifted, art, 0, focusEnd + 1);
+    expect(JSON.stringify(briefing)).not.toContain('export type CheckoutBlock');
+  });
   it('contains the focus and what came before it, never what came after', () => {
     const pack = evidenceForOperation(p, editOp().id, art);
     const focusStep = pack.items.at(-1)!.step;

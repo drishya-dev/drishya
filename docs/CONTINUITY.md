@@ -1,6 +1,6 @@
 # Continue here — a compact handoff for the next agent
 
-**Last direction update: 30 September 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
+**Last implementation update: 3 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
 
 ## Read in this order
 
@@ -24,11 +24,11 @@
 
 On 30 Sep, typechecks, 96 tests and Vite 8 build passed. Synthetic persistence/restart/API/viewerless live checks passed. Discovery saw 603 local sources. Four real journals were parsed/reduced/composed **in memory only**, zero parser exceptions; Claude exposed compaction and unsupported-record gaps. Two new synthetic sanitation probes failed. These results are scoped, not production certification.
 
-No real journal was newly persisted or exported in this audit. No new visual redesign or backend hardening was implemented. The committed `scripts/validate-baseline.ts` reproduces diagnostics; zero exit does not imply its known privacy probes passed.
+The 30 Sep audit is historical evidence, not the current code status. B0/B1 fixes and the history-first integrated base UI were merged by 3 Oct. B2 history correctness now has synthetic tests for stable passage IDs, reader anchor logic, mixed-worktree paths and export, isolated reconstruction, late-result scene/renderer masking and explanation evidence. No new real journal was persisted or exported for this work.
 
 ## Next bounded task
 
-B0 and B1 known findings are implemented (2–3 Oct): privacy policy `p3`; capture health, coalesced bounded live reads, `import --live`; revisions with SSE `sync`, slow-subscriber cap, session lifetime, stale-response guards. A [3 Oct review](review/07-b0-b1-review.md) fixed daemon-restart sign-out, a strict SSE buffer cap, a sanitation key edge case and a health-summary race. The integrated base UI now opens in complete, accumulating history; replay is optional; passages wrap and earlier reading is held while new work arrives. This is a base, not B2/B3 completion: positional passage ids, exact historical as-of content, bounded virtualization and worktree identity remain. Next is **B2** (audit A11–A13). Do not proceed straight to Pixi, new themes or model features.
+B0 and B1 known findings are implemented (2–3 Oct): privacy policy `p3`; capture health, coalesced bounded live reads, `import --live`; revisions with SSE `sync`, slow-subscriber cap, session lifetime and stale-response guards. The integrated base UI opens in complete, accumulating history; replay is optional. B2 A11–A13 now have core fixes: event-ID passages, stable reader ID+offset, source-isolated reconstruction, named worktree paths in mixed views, and an as-of projection used by scene, renderer and evidence packs. **B2 remains open** for bounded artifact retrieval, graph freshness and an end-to-end live/browser anchor test. Then B3 virtualization and B4 scale/install. Do not proceed straight to Pixi, new themes or model features.
 
 After B0, prove real persisted baseline; then capture/reconnect lifecycle and stable live history. Bring the prototype's useful navigation into the integrated app. See roadmap B1–B4 for acceptance tests. The first premium feature is a useful return-to-work view, paired with the content-shaped visual system.
 

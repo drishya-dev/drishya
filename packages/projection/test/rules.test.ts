@@ -3,6 +3,20 @@ import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch } 
 import { relativize } from '../src/paths.ts';
 import { classifyShell, parseHitLines } from '../src/shell.ts';
 import { isTestCommand, parseTestOutput } from '../src/tests.ts';
+import { buildPassages } from '../src/reduce.ts';
+import type { Operation, TimelineItem } from '@drishya/contracts';
+
+describe('history identity', () => {
+  it('anchors passages to captured event IDs when earlier events arrive late', () => {
+    const op = (id: string) => ({ id, agentId: 'r.agent:main' }) as Operation;
+    const call = (id: string): TimelineItem => ({ type: 'op-start', id: `s_${id}`, operationId: id, agentId: 'r.agent:main', sequence: 0 });
+    const turn: TimelineItem = { type: 'turn', id: 'turn_late', agentId: 'r.agent:main', sequence: 0 };
+    const original = buildPassages([call('first'), { type: 'turn', id: 'turn_next', agentId: 'r.agent:main', sequence: 1 }, call('second')], [op('first'), op('second')], []);
+    const withLate = buildPassages([turn, call('first'), { type: 'turn', id: 'turn_next', agentId: 'r.agent:main', sequence: 1 }, call('second')], [op('first'), op('second')], []);
+    expect(withLate.map((p) => p.id)).toEqual(original.map((p) => p.id));
+    expect(withLate[0]!.firstStep).toBe(original[0]!.firstStep + 1);
+  });
+});
 
 describe('edit reconstruction', () => {
   it('applies an edit only when the old string occurs exactly once', () => {

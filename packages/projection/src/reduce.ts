@@ -2,6 +2,7 @@
 // Pure given its inputs (observations + blob reads); no clock, no filesystem, no network.
 // Every derived field says so; nothing here invents a location or a cause.
 
+import { createHash } from 'node:crypto';
 import type {
   AdapterDescriptor,
   Agent,
@@ -70,13 +71,40 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
   const links: EvidenceLink[] = [];
   const timeline: TimelineItem[] = [];
   const gaps: Projection['gaps'] = [];
-  const knownFull = new Map<string, string>(); // path → latest full text we hold, for later bases
+  // A recording's captured base cannot be used to reconstruct another recording's edit,
+  // even when both report the same workspace-relative path.
+  const knownFull = new Map<string, string>();
+  const fileKey = (recording: string, path: string) => `${recording}\u0000${path}`;
   const harnesses = new Set<string>();
   const capabilities: Record<string, CapabilityMatrix> = {};
   let workspaceRoot: string | undefined;
   let title: string | undefined;
   let titleRank = 0;
   let firstPrompt: string | undefined;
+  const rootsByRecording = new Map<string, string>();
+  for (const o of obs) {
+    const root = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof (o.payload as Rec).cwd === 'string' ? (o.payload as Rec).cwd : undefined);
+    if (root && !rootsByRecording.has(o.recordingId)) rootsByRecording.set(o.recordingId, root);
+  }
+  const normalizedRoot = (root: string) => {
+    const path = toPosix(root).replace(/\/+$/, '');
+    return /^[a-z]:\//i.test(path) ? path.toLowerCase() : path;
+  };
+  const insideRoot = (path: string, root: string) => {
+    const p = normalizedRoot(path);
+    const r = normalizedRoot(root);
+    return p === r || p.startsWith(r + '/');
+  };
+  const roots = new Set([...rootsByRecording.values()].map(normalizedRoot));
+  for (const o of obs) {
+    const cwd = (o.payload as Rec).cwd;
+    const primary = rootsByRecording.get(o.recordingId);
+    if (o.workspaceRoot && (!primary || !insideRoot(o.workspaceRoot, primary))) roots.add(normalizedRoot(o.workspaceRoot));
+    if (typeof cwd === 'string' && (!primary || !insideRoot(cwd, primary))) roots.add(normalizedRoot(cwd));
+  }
+  const multipleWorktrees = roots.size > 1;
+  const rootKey = (root: string) => createHash('sha256').update(normalizedRoot(root)).digest('hex').slice(0, 10);
+  let currentRecording = '';
 
   const text = (v: TextValue | undefined | null): string | undefined => {
     if (v === undefined || v === null) return undefined;
@@ -87,7 +115,17 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
   const rel = (p: string | undefined, cwd?: string): string => {
     if (!p) return '';
     let q = toPosix(p);
-    if (cwd && !/^([a-zA-Z]:)?\//.test(q)) q = toPosix(cwd).replace(/\/+$/, '') + '/' + q.replace(/^\.\//, '');
+    const base = cwd ?? rootsByRecording.get(currentRecording);
+    if (base && !/^([a-zA-Z]:)?\//.test(q)) q = toPosix(base).replace(/\/+$/, '') + '/' + q.replace(/^\.\//, '');
+    if (multipleWorktrees) {
+      const primary = rootsByRecording.get(currentRecording);
+      const root = primary && insideRoot(q, primary) ? primary : base && insideRoot(q, base) ? base : undefined;
+      if (root) {
+        const relative = relativize(q, root);
+        if (inWorkspace(relative)) return `worktree-${rootKey(root)}/${relative}`;
+      }
+      return q; // outside every evidenced worktree: leave the location unresolved
+    }
     return relativize(q, workspaceRoot);
   };
   const agentKey = (o: Observation) => `${o.recordingId}.${o.agentId}`;
@@ -163,6 +201,7 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
   };
 
   for (const o of obs) {
+    currentRecording = o.recordingId;
     if (o.source?.adapterId) {
       const d = opts.adapters[o.source.adapterId];
       if (d) {
@@ -235,14 +274,14 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
             const id = files.length === 1 ? baseId : `${baseId}#${i}`;
             const st = newOp(o, id, { kind: 'edit', path: f.path, edits: [] }, String(p.tool));
             const path = rel(f.moveTo ?? f.path, st.cwd);
-            const base = knownFull.get(path);
+            const base = knownFull.get(fileKey(o.recordingId, path));
             let hunks = f.hunks;
             let reconstruction: Availability = 'unavailable';
             if (f.op === 'add') {
               const content = f.hunks.flatMap((h) => h.lines.filter((l) => l.startsWith('+')).map((l) => l.slice(1))).join('\n');
               hunks = [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: content.split('\n').length, lines: content.split('\n').map((l) => '+' + l) }];
               st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content, note: 'content of a file created by the patch' }));
-              knownFull.set(path, content);
+              knownFull.set(fileKey(o.recordingId, path), content);
               reconstruction = 'complete';
             } else if (base !== undefined && f.op === 'update') {
               const applied = applyHunks(base, f.hunks);
@@ -250,7 +289,7 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
                 hunks = applied.hunks;
                 reconstruction = 'complete';
                 st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: derived('apply-hunks-verified-v1', [o.id]), redacted: o.redactions.length > 0, content: applied.text, note: 'reconstructed by applying the patch to content captured earlier in this recording' }));
-                knownFull.set(path, applied.text);
+                knownFull.set(fileKey(o.recordingId, path), applied.text);
               }
             }
             st.op.artifactIds.push(addArtifact({ id: `art_${id}_patch`, kind: 'patch', path, observedAtSequence: step(), availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: patchText }));
@@ -259,7 +298,7 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
               : f.op === 'delete' ? 'The file was deleted.'
               : base === undefined ? 'No complete earlier capture of this file to apply the patch to.'
               : 'The patch context does not match the captured base.';
-            if (reconstruction !== 'complete' && f.op !== 'add') knownFull.delete(path);
+            if (reconstruction !== 'complete' && f.op !== 'add') knownFull.delete(fileKey(o.recordingId, path));
             st.op.detail = { kind: 'edit', path, hunks, created: f.op === 'add', reconstruction, reconstructionNote };
             st.op.paths.push({ path, role: 'write', basis: 'captured' });
             st.op.title = f.op === 'add' ? `Create ${path}` : f.op === 'delete' ? `Delete ${path}` : `Edit ${path}`;
@@ -291,7 +330,7 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
           st.op.endSequence = step();
           st.op.endTime = o.sourceTime;
           st.op.status = p.isError ? 'error' : 'ok';
-          completeOp(st, o, p, { text, rel, addArtifact, knownFull, link });
+          completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
           link({ from: st.callObs?.id ?? o.id, to: o.id, relation: 'tool-result', basis: 'source-id', sourceObservationIds: [st.callObs?.id ?? o.id, o.id], explanation: 'The harness recorded this result for this call id.' });
           timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
           if (st.op.kind === 'spawn' && st.op.detail.kind === 'spawn' && st.op.detail.childAgentId) {
@@ -380,7 +419,7 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
     observationCount: input.length,
     lastSequence: input.reduce((m, o) => Math.max(m, o.receivedSequence), -1),
     harnesses: [...harnesses],
-    workspaceRoot,
+    workspaceRoot: multipleWorktrees ? undefined : workspaceRoot,
     title: title ?? (firstPrompt ? clip(firstPrompt.replace(/\s+/g, ' ').trim(), 120) : undefined),
     agents: [...agents.values()],
     operations,
@@ -517,6 +556,7 @@ interface Ctx {
   rel: (p: string | undefined, cwd?: string) => string;
   addArtifact: (a: Omit<Artifact, 'id' | 'bytes' | 'lineCount' | 'blob'> & { id: string; content?: string; blobRef?: TextValue }) => string;
   knownFull: Map<string, string>;
+  fileKey: (recording: string, path: string) => string;
   link: (l: Omit<EvidenceLink, 'id'>) => void;
 }
 
@@ -566,7 +606,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
           ...(blobRef !== undefined && isBlobText(blobRef) && !deny ? { blobRef } : { content: deny ? '' : content }),
         });
         op.artifactIds.push(d.excerptArtifactId);
-        if (full && !deny) c.knownFull.set(d.path, content);
+        if (full && !deny) c.knownFull.set(c.fileKey(o.recordingId, d.path), content);
       }
       if (d.lineCount && op.paths[0]) op.paths[0].lines = { start: d.startLine, end: d.startLine + d.lineCount - 1 };
       op.title = d.lineCount ? `Read ${d.path} ${d.startLine}–${d.startLine + d.lineCount - 1}` : `Read ${d.path}`;
@@ -577,7 +617,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       if (st.intent.kind !== 'edit' && st.intent.kind !== 'write') break; // patch ops were described at call time
       if (outcome.kind !== 'edit') break;
       const original = outcome.originalFile === null ? null : c.text(outcome.originalFile as TextValue);
-      const base = typeof original === 'string' ? original : c.knownFull.get(d.path);
+      const base = typeof original === 'string' ? original : c.knownFull.get(c.fileKey(o.recordingId, d.path));
       const hunks = Array.isArray(outcome.hunks) && outcome.hunks.length ? (outcome.hunks as Hunk[]) : undefined;
       if (typeof original === 'string' && !omitted(original)) {
         op.artifactIds.push(c.addArtifact({ id: `art_${op.id}_before`, kind: 'snapshot', path: d.path, observedAtSequence: op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, blobRef: outcome.originalFile as TextValue, note: 'file content before this edit, as the harness recorded it' }));
@@ -600,7 +640,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       }
       if (after !== undefined && afterProv && !omitted(after) && op.status === 'ok') {
         op.artifactIds.push(c.addArtifact({ id: `art_${op.id}_after`, kind: 'snapshot', path: d.path, observedAtSequence: seq, availability: 'complete', provenance: afterProv, redacted, content: after, note: afterProv.kind === 'derived' ? 'reconstructed: the captured edit applied exactly once to the captured base' : 'content the agent wrote' }));
-        c.knownFull.set(d.path, after);
+        c.knownFull.set(c.fileKey(o.recordingId, d.path), after);
         d.reconstruction = 'complete';
       } else {
         d.reconstruction = 'unavailable';
@@ -609,7 +649,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
           : (after !== undefined && omitted(after)) || (typeof original === 'string' && omitted(original)) ? 'Protected file: content is never stored.'
           : base === undefined ? 'The harness did not record the file before this edit, and no complete earlier capture of it exists.'
           : 'The captured edit does not apply exactly once to the captured base.';
-        if (op.status === 'ok') c.knownFull.delete(d.path); // the file changed in a way we cannot reproduce
+        if (op.status === 'ok') c.knownFull.delete(c.fileKey(o.recordingId, d.path)); // the file changed in a way we cannot reproduce
       }
       break;
     }
@@ -737,7 +777,7 @@ function crossLinks(operations: Operation[], prose: Prose[], link: Ctx['link']) 
  * Passages: an agent's operations between two pieces of its prose, left to right, with the
  * prose that follows them beneath. A user turn closes every open passage.
  */
-function buildPassages(timeline: TimelineItem[], operations: Operation[], prose: Prose[]): Projection['passages'] {
+export function buildPassages(timeline: TimelineItem[], operations: Operation[], prose: Prose[]): Projection['passages'] {
   const opAgent = new Map(operations.map((o) => [o.id, o.agentId]));
   const proseAgent = new Map(prose.map((p) => [p.id, p.agentId]));
   const out: Projection['passages'] = [];
@@ -751,7 +791,7 @@ function buildPassages(timeline: TimelineItem[], operations: Operation[], prose:
       const agent = opAgent.get(it.operationId)!;
       let p = open.get(agent);
       if (!p || p.proseIds.length) {
-        p = { id: `psg_${out.length}`, agentId: agent, operationIds: [], proseIds: [], firstStep: i, lastStep: i };
+        p = { id: `psg_${it.id}`, agentId: agent, operationIds: [], proseIds: [], firstStep: i, lastStep: i };
         out.push(p);
         open.set(agent, p);
       }
@@ -766,7 +806,7 @@ function buildPassages(timeline: TimelineItem[], operations: Operation[], prose:
       const agent = proseAgent.get(it.proseId)!;
       let p = open.get(agent);
       if (!p) {
-        p = { id: `psg_${out.length}`, agentId: agent, operationIds: [], proseIds: [], firstStep: i, lastStep: i };
+        p = { id: `psg_${it.id}`, agentId: agent, operationIds: [], proseIds: [], firstStep: i, lastStep: i };
         out.push(p);
         open.set(agent, p);
       }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Projection } from '@drishya/contracts';
-import { compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
+import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
 import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { setMotion, useApp } from '../state.ts';
@@ -22,6 +22,7 @@ export function Viewer() {
   const [reading, setReading] = useState<{ left: number; width: number }>();
 
   const scene = useMemo(() => (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [projection, step, filter, selectedOp]);
+  const historical = useMemo(() => projection ? asOfProjection(projection, step) : undefined, [projection, step]);
 
   useEffect(() => {
     const el = main.current;
@@ -39,7 +40,7 @@ export function Viewer() {
     return () => ro.disconnect();
   }, [projection]);
 
-  if (!projection || !scene) return <div className="center muted">Loading recording…</div>;
+  if (!projection || !scene || !historical) return <div className="center muted">Loading recording…</div>;
 
   const arriving = scene.passages.flatMap((p) => p.ops).find((o) => o.phase === 'arriving' && o.origin.type === 'map');
   return (
@@ -47,13 +48,13 @@ export function Viewer() {
       <Crown scene={scene} projection={projection} />
       <div className="main" ref={main}>
         <MapCanvas graph={graph} heat={scene.heat} arrivingPath={arriving?.origin.type === 'map' ? arriving.origin.path : undefined} readingRect={reading} />
-        <Spine scene={scene} projection={projection} />
-        <History scene={scene} projection={projection} />
-        <FilePanel projection={projection} />
+        <Spine scene={scene} projection={historical} />
+        <History scene={scene} projection={historical} />
+        <FilePanel projection={historical} />
       </div>
       <Dock scene={scene} />
       <Transport scene={scene} projection={projection} />
-      <Inspector projection={projection} />
+      <Inspector projection={historical} />
       <Briefing projection={projection} />
       <Search projection={projection} />
     </div>
