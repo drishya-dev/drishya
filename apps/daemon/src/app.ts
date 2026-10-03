@@ -130,6 +130,8 @@ function selectionSummary(id: string, recs: RecordingSummary[]): RecordingSummar
     observationCount: recs.reduce((n, r) => n + r.observationCount, 0),
     live: false,
     pinned: false,
+    // A revision counts commits in this local store; it means nothing to a bundle's reader.
+    revision: undefined,
   };
 }
 

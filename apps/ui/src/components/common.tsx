@@ -22,10 +22,16 @@ export function useArtifact(artifactId: string | undefined): { text?: string; er
         cache.clear();
         cachedBytes = 0;
       }
-      p = source.artifact(recordingId, artifactId).then((t) => {
-        cachedBytes += t.length;
-        return t;
-      });
+      p = source.artifact(recordingId, artifactId).then(
+        (t) => {
+          cachedBytes += t.length;
+          return t;
+        },
+        (e) => {
+          cache.delete(key); // a failure is not cached: opening it again retries
+          throw e;
+        },
+      );
       cache.set(key, p);
     }
     let live = true;

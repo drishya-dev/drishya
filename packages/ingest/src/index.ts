@@ -27,6 +27,8 @@ export const defaultAdapters = (): Adapter[] => [claudeAdapter, codexAdapter];
 export interface ChangeEvent {
   type: 'recording';
   recordingId: string;
+  /** The committed revision this notice describes. */
+  revision: number;
   observationCount: number;
   added: number;
   live: boolean;
@@ -223,7 +225,7 @@ export class Ingestor extends EventEmitter {
         const cur = this.store.getRecording(recordingId)!;
         if (!cur.title && p.title) this.store.updateRecordingMeta(recordingId, { title: p.title });
         if (!cur.workspaceRoot && p.workspaceRoot) this.store.updateRecordingMeta(recordingId, { workspaceRoot: p.workspaceRoot });
-        const ev: ChangeEvent = { type: 'recording', recordingId, observationCount: cur.observationCount, added, live: cur.live };
+        const ev: ChangeEvent = { type: 'recording', recordingId, revision: cur.revision ?? 0, observationCount: cur.observationCount, added, live: cur.live };
         this.emit('change', ev);
       }
       return { added, gaps, more };
@@ -439,7 +441,7 @@ export class Ingestor extends EventEmitter {
     run.timer.unref();
     this.live.set(recordingId, run);
     this.setHealth(recordingId, { followSince: this.now().toISOString() });
-    this.emit('change', { type: 'recording', recordingId, observationCount: this.store.countObservations(recordingId), added: 0, live: true } satisfies ChangeEvent);
+    this.emit('change', { type: 'recording', recordingId, revision: this.store.getRecording(recordingId)?.revision ?? 0, observationCount: this.store.countObservations(recordingId), added: 0, live: true } satisfies ChangeEvent);
   }
 
   async stopLive(recordingId: string) {
@@ -452,7 +454,7 @@ export class Ingestor extends EventEmitter {
     await this.sync(recordingId).catch(() => undefined); // a failure is recorded as health
     this.projectionCache.delete(recordingId);
     this.announceHealth(recordingId);
-    this.emit('change', { type: 'recording', recordingId, observationCount: this.store.countObservations(recordingId), added: 0, live: false } satisfies ChangeEvent);
+    this.emit('change', { type: 'recording', recordingId, revision: this.store.getRecording(recordingId)?.revision ?? 0, observationCount: this.store.countObservations(recordingId), added: 0, live: false } satisfies ChangeEvent);
   }
 
   isLive(recordingId: string) {
