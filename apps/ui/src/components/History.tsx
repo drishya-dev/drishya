@@ -9,55 +9,107 @@ import { CodeView, DiffView, Output, timeOf, useArtifact } from './common.tsx';
 const WINDOW = 50;
 
 export function History({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const mode = useApp((s) => s.mode);
   const follow = useApp((s) => s.follow);
-  const playing = useApp((s) => s.playing);
+  const selectedOp = useApp((s) => s.selectedOp);
+  const focusObservationId = useApp((s) => s.focusObservationId);
   const set = useApp((s) => s.set);
   const ref = useRef<HTMLDivElement>(null);
   const [extra, setExtra] = useState(0);
+  const [detachedStart, setDetachedStart] = useState<number | undefined>();
   const programmatic = useRef(false);
+  const olderAnchor = useRef<{ height: number; top: number } | undefined>(undefined);
+  const seenThrough = useRef(scene.total);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
   const agents = useMemo(() => new Map(projection.agents.map((a) => [a.id, a])), [projection]);
 
-  // Only a window of recent passages is mounted; earlier ones load on request.
-  const start = Math.max(0, scene.passages.length - WINDOW - extra);
+  // Freeze the mounted starting point while reading earlier work. New passages append below;
+  // they must not evict the passage under the reader as the recent-window edge advances.
+  const recentStart = Math.max(0, scene.passages.length - WINDOW - extra);
+  const start = follow ? recentStart : Math.min(detachedStart ?? recentStart, recentStart);
   const visible = scene.passages.slice(start);
+
+  useLayoutEffect(() => {
+    if (follow) {
+      setDetachedStart(undefined);
+      setExtra(0);
+    } else if (detachedStart === undefined) setDetachedStart(recentStart);
+  }, [follow]);
+
+  useLayoutEffect(() => {
+    if (follow) seenThrough.current = scene.total;
+  }, [follow, scene.total]);
+
+  // Prepending older passages must not move the line the reader was looking at.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const anchor = olderAnchor.current;
+    if (!el || !anchor) return;
+    el.scrollTop = anchor.top + el.scrollHeight - anchor.height;
+    olderAnchor.current = undefined;
+  }, [extra]);
+
+  const targetIndex = scene.passages.findIndex((ps) =>
+    selectedOp ? ps.ops.some((op) => op.id === selectedOp) : focusObservationId ?
+      ps.ops.some((op) => ops.get(op.id)?.observationIds.includes(focusObservationId)) ||
+      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : false,
+  );
+  useLayoutEffect(() => {
+    if (targetIndex >= 0 && targetIndex < start) setExtra(scene.passages.length - WINDOW - targetIndex);
+  }, [targetIndex, scene.passages.length, start]);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || targetIndex < 0) return;
+    const passageId = scene.passages[targetIndex]?.id;
+    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((n) => n.dataset.passageId === passageId);
+    if (!node) return;
+    const bounds = node.getBoundingClientRect();
+    const viewport = el.getBoundingClientRect();
+    if (bounds.top < viewport.top || bounds.bottom > viewport.bottom) node.scrollIntoView({ block: 'center', behavior: 'auto' });
+  }, [selectedOp, focusObservationId, targetIndex, extra]);
 
   // Follow: keep the newest work in view. A deliberate scroll away turns following off.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !follow) return;
     programmatic.current = true;
-    el.scrollTo({ top: el.scrollHeight, behavior: useApp.getState().motion && playing ? 'smooth' : 'auto' });
-    const t = setTimeout(() => (programmatic.current = false), 450);
-    return () => clearTimeout(t);
-  }, [scene.step, follow, playing, visible.length]);
+    el.scrollTop = el.scrollHeight;
+    const frame = requestAnimationFrame(() => (programmatic.current = false));
+    return () => cancelAnimationFrame(frame);
+  }, [scene.step, follow, visible.length]);
 
   const onScroll = () => {
     const el = ref.current;
     if (!el || programmatic.current) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    if (!atBottom && follow) set({ follow: false });
-    if (atBottom && !follow) set({ follow: true });
+    if (!atBottom && follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
+    if (atBottom && !follow && !selectedOp) set({ follow: true });
   };
 
   return (
     <div className="history" ref={ref} onScroll={onScroll}>
       <div className="history-inner">
         {start > 0 && (
-          <button className="load-earlier" onClick={() => setExtra((e) => e + WINDOW)}>
+          <button className="load-earlier" onClick={() => {
+            const el = ref.current;
+            if (el) olderAnchor.current = { height: el.scrollHeight, top: el.scrollTop };
+            set({ follow: false });
+            setExtra(Math.max(0, scene.passages.length - WINDOW - Math.max(0, start - WINDOW)));
+          }}>
             Show {Math.min(WINDOW, start)} earlier passages
           </button>
         )}
-        {scene.passages.length === 0 && <div className="history-empty">Press <kbd className="kbd">Space</kbd> to play the recording, or scrub the timeline.</div>}
+        {scene.passages.length === 0 && <div className="history-empty">No captured work in this view yet.</div>}
         {visible.map((ps) => (
           <PassageView key={ps.id} ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />
         ))}
       </div>
       {!follow && (
-        <button className="follow-pill" onClick={() => set({ follow: true })}>
-          {playing ? 'New activity below' : 'Back to latest'} ↓
+        <button className="follow-pill" onClick={() => set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false })}>
+          {mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest ↓
         </button>
       )}
     </div>
@@ -68,7 +120,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
-    <section className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
+    <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
       {ps.turnPrompt && (
         <div className="turn">
           <span className="turn-who">You</span>
@@ -128,6 +180,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   return (
     <article
+      data-op-id={op.id}
       className={`op op-${op.kind} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
       style={{ zIndex: selected ? 50 : 10 + index }}
       tabIndex={0}

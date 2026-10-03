@@ -61,9 +61,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-03
-- **Did:** Reviewed PRs #3–#7 against product, privacy and reliability constraints. Corrected daemon-restart sign-out in the UI, strict SSE buffer accounting, an object-key sanitation edge case and a stale health-summary race. Recorded scope, verdict and residual risks in [`review/07-b0-b1-review.md`](review/07-b0-b1-review.md). Previous 2 Oct review merged PR #2 and corrected its attribution wording.
-- **Validation:** Pinned workspace install; backend/UI typechecks; 160/160 tests; Vite production build; synthetic baseline including three passing privacy probes. No real journal was newly imported, exported or sent to a model.
-- **Left half-done:** B2 history/worktree/as-of correctness; B3 continuous live reading; real-data export and scale gates. Additive contract fields still need both builders' review before freeze. H–L remain proposals.
+- **Did:** Merged reviewed B0/B1 corrections as PR #8. Compared the prototype with the integrated demo and moved the base UI to history-first reading: all captured work opens at once; live reload extends it even when reading earlier work; sequence replay is optional. File/search navigation stays in history; passages wrap without a horizontal strip; earlier mounted passages and scroll offset stay put while detached. No backend/schema changes. Prior B0/B1 review is in [`review/07-b0-b1-review.md`](review/07-b0-b1-review.md).
+- **Validation:** Backend/UI typechecks, 163/163 tests, Vite production build and synthetic baseline passed. Inspected the integrated demo in the browser at desktop, 820 px and 390 px; no passage-row horizontal overflow at phone width. No real journal was newly imported or exported.
+- **Left half-done:** B2 stable history identity, worktree isolation and exact historical as-of correctness; B3 proper virtualization and motion; real-data export and scale gates. Additive contract fields still need both builders' review before freeze. H–L remain proposals.
 - **Watch out for:** Known-root export masking is not a universal absolute-path scrubber. Older-policy recordings are flagged, not re-sanitized in place. Do not imply line authorship from text similarity or proximity.
 
 ---
@@ -74,7 +74,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 1. ~~**B0: privacy hardening.**~~ Done 2 Oct: A01 (PR #3); A02 sinks, A03, A04 (PR #4); protected-file scopes, safe forget, outdated-policy flag (`harsh/b0-leftovers`). Policy now `p3`.
 2. **B1 known findings done** (2 Oct–3 Oct): B1a capture lifecycle (PR #6); B1b recovery (`harsh/b1-recovery`): revisions, SSE `sync` on (re)connect, slow-subscriber cap, session lifetime/cap/sign-out, bounded query params, stale-response guards, artifact retry. The 3 Oct review corrected restart sign-out, strict buffer accounting and a stale health summary. **Next, B2:** stable anchors (not positional `psg_N`), exact as-of artifact/result boundaries in renderer and evidence packs, worktree-aware file identity and combined-view compatibility (audit A11–A13).
-3. **B3: integrated base history.** Existing session chooser and API; port prototype interactions into `apps/ui`; capture/history keep growing while the reader scrolls/selects. Playback optional. No final theme commitment yet.
+3. **B3: integrated base history.** History-first navigation and responsive action passages are started in `apps/ui`; capture/history grow while the reader scrolls/selects, and playback is optional. Still needed: stable virtualized long-history rendering, richer content-shaped expansion and the remaining prototype interactions. No final theme commitment yet.
 4. **B4: scale and installation.** Performance harness, worker boundaries, paged artifacts/history, packed-install matrix and end-to-end browser acceptance. Targets are in the roadmap and are not yet measured passes.
 5. **P1–P2: premium presentation and return-to-work utility.** Content-shaped renderers, five signature moves, since-last-visit, file history and verification freshness; test comprehension with users before feature expansion.
 6. **Later:** additional harnesses, privacy-reviewed packets, theme variants. Optional model validation follows exact-payload consent hardening and is not a baseline dependency.
