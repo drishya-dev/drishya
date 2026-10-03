@@ -65,6 +65,7 @@ export function Viewer() {
 function Crown({ scene, projection }: { scene: Scene; projection: Projection }) {
   const recording = useApp((s) => s.recording);
   const recordingId = useApp((s) => s.recordingId);
+  const connection = useApp((s) => s.connection);
   const source = useApp((s) => s.source);
   const filter = useApp((s) => s.filter);
   const set = useApp((s) => s.set);
@@ -83,6 +84,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
       <div className="crown-title" title={projection.title}>
         {projection.title ?? recording?.title ?? 'Recording'}
         {source?.kind === 'bundle' && <span className="tag">replay</span>}
+        {connection === 'reconnecting' && <span className="tag warn" role="status">reconnecting…</span>}
         {recording && recording.health?.state !== 'following' && recording.health?.state !== 'idle' && <HealthTag r={recording} />}
         {recording?.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
       </div>

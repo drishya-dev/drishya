@@ -12,7 +12,8 @@ import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import type { BlobText, Observation, RecordingSummary } from '@drishya/contracts';
 
-export const SCHEMA_VERSION = 1;
+// 2: recordings.revision (B1b).
+export const SCHEMA_VERSION = 2;
 /** Strings longer than this move out of the observation into the blob store. */
 export const INLINE_LIMIT = 16 * 1024;
 const PREVIEW = 2048;
@@ -103,7 +104,8 @@ export class Store {
         last_source_time TEXT,
         observation_count INTEGER NOT NULL DEFAULT 0,
         live INTEGER NOT NULL DEFAULT 0,
-        pinned INTEGER NOT NULL DEFAULT 0
+        pinned INTEGER NOT NULL DEFAULT 0,
+        revision INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE IF NOT EXISTS sources (
         id TEXT PRIMARY KEY,
@@ -154,7 +156,11 @@ export class Store {
       );
       CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(text, recording_id UNINDEXED, observation_id UNINDEXED, tokenize = 'unicode61');
     `);
+    // Stores created before revisions existed (B1b) gain the column; existing rows start at 0.
+    const cols = (this.db.prepare('PRAGMA table_info(recordings)').all() as { name: string }[]).map((c) => c.name);
+    if (!cols.includes('revision')) this.db.exec('ALTER TABLE recordings ADD COLUMN revision INTEGER NOT NULL DEFAULT 0');
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('schema_version', String(SCHEMA_VERSION));
+    this.db.prepare('UPDATE meta SET value = ? WHERE key = ?').run(String(SCHEMA_VERSION), 'schema_version');
   }
 
   private q(sql: string): StatementSync {
@@ -197,6 +203,11 @@ export class Store {
 
   listRecordings(): RecordingSummary[] {
     return (this.q('SELECT * FROM recordings ORDER BY COALESCE(last_source_time, updated_at) DESC').all() as any[]).map(rowToRecording);
+  }
+
+  /** Current revision of every recording, for reconnecting viewers to compare with what they rendered. */
+  revisions(): Record<string, number> {
+    return Object.fromEntries((this.q('SELECT id, revision FROM recordings').all() as { id: string; revision: number }[]).map((r) => [r.id, r.revision]));
   }
 
   getRecording(id: string): RecordingSummary | undefined {
@@ -287,7 +298,9 @@ export class Store {
       this.q('UPDATE sources SET cursor = ? WHERE id = ?').run(JSON.stringify(cursor), sourceId);
       if (added.length) {
         const times = added.map((a) => a.sourceTime).filter(Boolean).sort() as string[];
-        this.q(`UPDATE recordings SET observation_count = observation_count + ?, updated_at = ?,
+        // The revision moves in the same transaction as the data, so a reader that sees revision N
+        // also sees every observation it counts (audit A07).
+        this.q(`UPDATE recordings SET observation_count = observation_count + ?, updated_at = ?, revision = revision + 1,
                 first_source_time = COALESCE(MIN(first_source_time, ?), first_source_time, ?),
                 last_source_time = CASE WHEN last_source_time IS NULL OR last_source_time < ? THEN ? ELSE last_source_time END
                 WHERE id = ?`).run(added.length, new Date().toISOString(), times[0] ?? null, times[0] ?? null, times.at(-1) ?? null, times.at(-1) ?? null, recordingId);
@@ -411,6 +424,7 @@ function rowToRecording(r: any): RecordingSummary {
     observationCount: r.observation_count,
     live: !!r.live,
     pinned: !!r.pinned,
+    revision: r.revision ?? 0,
   };
 }
 

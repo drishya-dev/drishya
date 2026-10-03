@@ -408,6 +408,8 @@ export interface RecordingSummary {
   privacyOutdated?: boolean;
   /** Set by the local API: the observer's current capture state for this recording. */
   health?: RecordingHealth;
+  /** Increments with every commit that adds observations; viewers compare it after a reconnect. */
+  revision?: number;
 }
 
 /**

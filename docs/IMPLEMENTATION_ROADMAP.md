@@ -58,7 +58,7 @@ Exports need a full multi-recording path/identity policy: all workspace roots, w
 
 ## 4. B1 — reliable collection and recovery
 
-> **Progress, 2 Oct:** the capture lifecycle half is implemented: explicit health states with codes, discovery errors, coalesced bounded live turns, `import --live`. The API and SSE recovery half (revisions, reconnect, buffers, token/session lifetime) is next.
+> **Progress, 3 Oct: B1 complete.** Capture lifecycle (health states with codes, discovery errors, coalesced bounded live turns, `import --live`) and recovery (revisions committed with data, SSE `sync` on every connection, slow-subscriber cap, session lifetime/cap/sign-out, bounded query params, UI stale-response guards). Open follow-up: signed-out detection after a daemon restart.
 
 ### Capture lifecycle
 

@@ -5,6 +5,15 @@ import { create } from 'zustand';
 import type { Projection, RecordingSummary, RepoGraph } from '@drishya/contracts';
 import { nextMarker, type ComposeInput, type Marker } from '@drishya/scene';
 import type { Config, DataSource } from './api.ts';
+import { latestOnly } from './lib/sync.ts';
+
+/** One guard for every projection load, so the newest open or reload is the only one that lands. */
+const newest = latestOnly();
+
+/** Revisions of each recording as they were when the shown projection was loaded. */
+function revisionsOf(recordings: RecordingSummary[]): Record<string, number> {
+  return Object.fromEntries(recordings.map((r) => [r.id, r.revision ?? 0]));
+}
 
 export type Screen = 'loading' | 'home' | 'viewer' | 'no-daemon' | 'signed-out' | 'error';
 
@@ -18,6 +27,10 @@ interface State {
   recording?: RecordingSummary;
   projection?: Projection;
   graph?: RepoGraph;
+  /** Revisions the shown projection is at; compared with the daemon's after a reconnect (B1b). */
+  renderedRevisions: Record<string, number>;
+  /** The daemon's change stream: 'reconnecting' while it is down. */
+  connection: 'connected' | 'reconnecting';
 
   step: number;
   playing: boolean;
@@ -62,6 +75,8 @@ const storedMotion = (() => {
 export const useApp = create<State>((set, get) => ({
   screen: 'loading',
   recordings: [],
+  renderedRevisions: {},
+  connection: 'connected',
   step: 0,
   playing: false,
   speed: 1,
@@ -79,20 +94,27 @@ export const useApp = create<State>((set, get) => ({
     const src = get().source;
     if (!src) return;
     set({ recordingId: id, projection: undefined, graph: undefined, selectedOp: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false });
-    const [projection, recordings] = await Promise.all([src.projection(id), src.recordings()]);
+    const current = newest('projection');
+    // Revisions first, then the projection: what is shown is at least as new as what is recorded.
+    const recordings = await src.recordings();
+    const projection = await src.projection(id);
+    if (!current() || get().recordingId !== id) return; // the user moved on; this response is stale
     const recording = recordings.find((r) => r.id === id.split('+')[0]) ?? recordings[0];
     const step = opts.at === 'end' ? projection.timeline.length : Math.min(opts.at ?? 0, projection.timeline.length);
-    set({ projection, recording, recordings, step, playing: !!opts.play && step < projection.timeline.length });
+    set({ projection, recording, recordings, renderedRevisions: revisionsOf(recordings), step, playing: !!opts.play && step < projection.timeline.length });
     src.graph(id).then((graph) => get().recordingId === id && set({ graph })).catch(() => undefined);
   },
 
   async reloadProjection() {
-    const { source, recordingId, step, projection: old } = get();
+    const { source, recordingId } = get();
     if (!source || !recordingId) return;
-    const projection = await source.projection(recordingId);
-    const wasAtEnd = !old || step >= old.timeline.length;
+    const current = newest('projection');
     const recordings = await source.recordings();
-    set({ projection, recordings, recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording });
+    const projection = await source.projection(recordingId);
+    if (!current() || get().recordingId !== recordingId) return; // superseded by a newer load
+    const { step, projection: old } = get();
+    const wasAtEnd = !old || step >= old.timeline.length;
+    set({ projection, recordings, renderedRevisions: revisionsOf(recordings), recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording });
     // Following live work: keep playing into the new steps rather than jumping to the end.
     if (wasAtEnd && get().follow && !get().held) set({ playing: true });
   },

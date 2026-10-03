@@ -58,7 +58,14 @@ export interface DataSource {
   exportUrl(id: string): string | undefined;
   forget(id: string): Promise<void>;
   /** New data (`added` > 0) or a capture-state change (`health` set, nothing added). */
-  subscribe(onChange: (e: { recordingId: string; added: number; live: boolean; health?: RecordingHealth }) => void): () => void;
+  subscribe(
+    onChange: (e: { recordingId: string; added: number; live: boolean; health?: RecordingHealth }) => void,
+    hooks?: {
+      /** Sent on every (re)connect: the daemon's current revision of each recording. */
+      onSync?: (revisions: Record<string, number>) => void;
+      onStatus?: (status: 'connected' | 'reconnecting') => void;
+    },
+  ): () => void;
 }
 
 export class HttpError extends Error {
@@ -90,7 +97,10 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
   return body as T;
 }
 
-/** Exchanges the one-time launch token in the URL fragment for a session cookie. */
+/**
+ * Exchanges the launch token in the URL fragment for a session cookie, then removes it from the
+ * address bar. The token stays valid for the daemon's lifetime; sessions expire and can be revoked.
+ */
 export async function signIn(): Promise<'ok' | 'no-daemon' | 'signed-out'> {
   const token = new URLSearchParams(location.hash.slice(1)).get('token');
   try {
@@ -123,8 +133,14 @@ export const daemon: DataSource = {
   forget: async (id) => {
     await req(`/v1/recordings/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
-  subscribe(onChange) {
+  subscribe(onChange, hooks) {
     const es = new EventSource('/v1/changes');
+    // EventSource reconnects by itself; each new connection opens with a `sync` of revisions.
+    es.addEventListener('sync', (e) => {
+      hooks?.onStatus?.('connected');
+      hooks?.onSync?.((JSON.parse((e as MessageEvent).data) as { revisions: Record<string, number> }).revisions);
+    });
+    es.addEventListener('error', () => hooks?.onStatus?.('reconnecting'));
     es.addEventListener('change', (e) => onChange(JSON.parse((e as MessageEvent).data)));
     es.addEventListener('health', (e) => {
       const ev = JSON.parse((e as MessageEvent).data) as { recordingId: string; health: RecordingHealth };

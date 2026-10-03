@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { App } from '../src/app.ts';
-import { errorBody, startServer, type RunningServer } from '../src/server.ts';
+import { errorBody, startServer, writeEvent, type RunningServer } from '../src/server.ts';
 
 const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.meta.url));
 let dir: string;
@@ -227,5 +227,120 @@ describe('capture health over the API', () => {
     });
     await post(`/v1/recordings/${recId}/live`, { on: false });
     expect(got).toMatch(/event: health\ndata: \{"type":"health","recordingId":"rec_[0-9a-f]+","health":\{"state":"following"/);
+  });
+});
+
+/** Reads SSE text until `until` matches, then disconnects. */
+function readEvents(until: RegExp, after?: () => void, ms = 4000): Promise<string> {
+  const u = new URL(s.url);
+  return new Promise<string>((ok, fail) => {
+    const req = request({ host: '127.0.0.1', port: u.port, path: '/v1/changes', headers: { host: u.host, ...auth() } }, (res) => {
+      let data = '';
+      res.on('data', (c) => {
+        data += c;
+        if (until.test(data)) {
+          req.destroy();
+          ok(data);
+        }
+      });
+    });
+    req.on('error', (e) => (e.message.includes('socket hang up') ? undefined : fail(e)));
+    req.end();
+    if (after) setTimeout(after, 100);
+    setTimeout(() => fail(new Error(`timed out waiting for ${until}`)), ms);
+  });
+}
+
+// B1b (audit A07): every (re)connect starts with the current revisions, so a viewer converges
+// even when nothing new is written after it reconnects.
+describe('revisions and reconnect', () => {
+  it('opens every SSE stream with the current revision of each recording', async () => {
+    const data = await readEvents(/event: sync\ndata: .*\n\n/);
+    const sync = JSON.parse(/event: sync\ndata: (.*)\n/.exec(data)![1]!);
+    expect(sync.revisions[recId]).toBe(s.app.store.getRecording(recId)!.revision);
+    expect(sync.revisions[recId]).toBeGreaterThan(0);
+  });
+
+  it('serves revisions on their own and on each recording', async () => {
+    const r = await call('/v1/revisions', { headers: auth() });
+    expect(r.body.revisions[recId]).toBeGreaterThan(0);
+    const list = (await call('/v1/recordings', { headers: auth() })).body.recordings;
+    expect(list.find((x: { id: string }) => x.id === recId).revision).toBe(r.body.revisions[recId]);
+  });
+
+  it('drops a subscriber that stops reading instead of buffering for it', () => {
+    let ended = false;
+    const slow = { writableLength: 2 * 1024 * 1024, destroyed: false, write: () => false, end: () => (ended = true) };
+    expect(writeEvent(slow as never, 'event: change\ndata: {}\n\n', 1024 * 1024)).toBe(false);
+    expect(ended).toBe(true);
+    const fine = { writableLength: 0, destroyed: false, write: () => true, end: () => (ended = true) };
+    expect(writeEvent(fine as never, 'x', 1024 * 1024)).toBe(true);
+  });
+});
+
+// B1b: query parameters are validated and bounded, never passed through as NaN.
+describe('request bounds', () => {
+  it('rejects non-numeric paging parameters', async () => {
+    expect((await call(`/v1/recordings/${recId}/observations?limit=abc`, { headers: auth() })).status).toBe(400);
+    expect((await call(`/v1/recordings/${recId}/observations?after=-1&limit=5`, { headers: auth() })).body.observations).toHaveLength(5);
+  });
+});
+
+// B1b (audit A10): sessions expire, are capped, and can be revoked. The launch token itself stays
+// valid for the launch: it is the credential printed to the person who started the server.
+describe('sessions', () => {
+  let clock = 0;
+  let t: RunningServer;
+  beforeAll(async () => {
+    t = await startServer({ app: s.app, port: 0, uiDir: join(dir, 'no-ui'), now: () => clock, sessionIdleMs: 1000, sessionMaxAgeMs: 10_000, maxSessions: 3 });
+  });
+  afterAll(() => t.close());
+  const req = (path: string, opts: { method?: string; headers?: Record<string, string> } = {}) =>
+    new Promise<{ status: number; headers: Record<string, unknown> }>((ok, fail) => {
+      const u = new URL(t.url);
+      const r = request({ host: '127.0.0.1', port: u.port, path, method: opts.method ?? 'GET', headers: { host: u.host, ...opts.headers } }, (res) => {
+        res.resume();
+        res.on('end', () => ok({ status: res.statusCode ?? 0, headers: res.headers }));
+      });
+      r.on('error', fail);
+      r.end();
+    });
+  const signIn = async () => {
+    const r = await req('/v1/session', { method: 'POST', headers: { authorization: `Bearer ${t.token}` } });
+    return String((r.headers['set-cookie'] as string[])[0]);
+  };
+  const cookie = (c: string) => ({ cookie: c.split(';')[0]! });
+
+  it('sets a bounded cookie lifetime', async () => {
+    expect(await signIn()).toMatch(/Max-Age=10;/);
+  });
+
+  it('expires a session left idle, and an old one regardless of use', async () => {
+    clock = 0;
+    const c = await signIn();
+    clock = 900;
+    expect((await req('/v1/recordings', { headers: cookie(c) })).status).toBe(200);
+    clock = 1800; // 900 ms since last use: still within the idle window
+    expect((await req('/v1/recordings', { headers: cookie(c) })).status).toBe(200);
+    clock = 3000; // idle for 1.2 s
+    expect((await req('/v1/recordings', { headers: cookie(c) })).status).toBe(401);
+    const d = await signIn();
+    for (clock = 3000; clock <= 12_600; clock += 800) expect((await req('/v1/recordings', { headers: cookie(d) })).status).toBe(200);
+    clock = 13_100; // used constantly (never idle), but past the 10 s maximum age
+    expect((await req('/v1/recordings', { headers: cookie(d) })).status).toBe(401);
+  });
+
+  it('caps the number of sessions, dropping the least recently used', async () => {
+    clock = 50_000;
+    const first = await signIn();
+    for (let i = 0; i < 3; i++) await signIn();
+    expect((await req('/v1/recordings', { headers: cookie(first) })).status).toBe(401);
+  });
+
+  it('revokes a session on sign-out', async () => {
+    clock = 60_000;
+    const c = await signIn();
+    expect((await req('/v1/session', { method: 'DELETE', headers: cookie(c) })).status).toBe(200);
+    expect((await req('/v1/recordings', { headers: cookie(c) })).status).toBe(401);
   });
 });

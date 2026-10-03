@@ -3,6 +3,7 @@ import { dwellFor } from '@drishya/scene';
 import { bundleSource, daemon, loadBundle, signIn } from './api.ts';
 import { Home } from './components/Home.tsx';
 import { Viewer } from './components/Viewer.tsx';
+import { needsReload } from './lib/sync.ts';
 import { setMotion, useApp } from './state.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
@@ -158,7 +159,7 @@ function useLiveUpdates() {
   useEffect(() => {
     if (!source) return;
     let pending: ReturnType<typeof setTimeout> | undefined;
-    return source.subscribe((e) => {
+    const unsubscribe = source.subscribe((e) => {
       const s = useApp.getState();
       if (!s.recordingId?.split('+').includes(e.recordingId)) return;
       if (e.health && !e.added) {
@@ -168,6 +169,18 @@ function useLiveUpdates() {
       }
       clearTimeout(pending);
       pending = setTimeout(() => void useApp.getState().reloadProjection(), 150);
+    }, {
+      onStatus: (connection) => useApp.setState({ connection }),
+      // After a reconnect, notices sent while the stream was down are lost: compare revisions and
+      // reload the open view if it fell behind, even if nothing new arrives later (audit A07).
+      onSync: (revisions) => {
+        const s = useApp.getState();
+        if (s.recordingId && s.projection && needsReload(s.recordingId, s.renderedRevisions, revisions)) void s.reloadProjection();
+      },
     });
+    return () => {
+      clearTimeout(pending);
+      unsubscribe();
+    };
   }, [source]);
 }

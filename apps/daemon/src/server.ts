@@ -37,6 +37,31 @@ export interface ServerOptions {
   model?: ModelConfig;
   /** The model transport. Tests inject one; the default speaks HTTP to `model.baseUrl`. */
   complete?: Complete;
+  /** Clock in ms, injectable for session-lifetime tests. */
+  now?: () => number;
+  /** A session unused for this long is signed out. Default 12 h. */
+  sessionIdleMs?: number;
+  /** A session older than this is signed out however active. Default 7 days. */
+  sessionMaxAgeMs?: number;
+  /** At most this many sessions; signing in beyond it drops the least recently used. Default 32. */
+  maxSessions?: number;
+}
+
+/** A subscriber this far behind is disconnected; on reconnect it resyncs from revisions (B1b). */
+const MAX_SSE_BUFFER = 1024 * 1024;
+
+/**
+ * Writes one SSE message, or disconnects a subscriber that has stopped reading, so a slow or
+ * frozen tab can never make capture hold memory for it. Returns whether the client is kept.
+ */
+export function writeEvent(res: ServerResponse, data: string, maxBuffered = MAX_SSE_BUFFER): boolean {
+  if (res.destroyed) return false;
+  if (res.writableLength > maxBuffered) {
+    res.end();
+    return false;
+  }
+  res.write(data);
+  return true;
 }
 
 export interface RunningServer {
@@ -71,26 +96,38 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const app = opts.app ?? new App(opts.dataDir);
   app.ingest.resetLiveFlags();
   const token = opts.token ?? randomBytes(24).toString('hex');
-  const sessions = new Set<string>();
+  // The launch token is valid for this server's lifetime: it is the credential printed to the
+  // person who started it, and scripts may use it as a bearer token. Browser sessions derived from
+  // it expire when idle or old, are capped in number, and can be revoked (audit A10).
+  const now = opts.now ?? (() => Date.now());
+  const idleMs = opts.sessionIdleMs ?? 12 * 60 * 60 * 1000;
+  const maxAgeMs = opts.sessionMaxAgeMs ?? 7 * 24 * 60 * 60 * 1000;
+  const maxSessions = opts.maxSessions ?? 32;
+  const sessions = new Map<string, { created: number; lastSeen: number }>();
+  const sessionValid = (sid: string): boolean => {
+    const s = sessions.get(sid);
+    if (!s) return false;
+    const t = now();
+    if (t - s.lastSeen > idleMs || t - s.created > maxAgeMs) {
+      sessions.delete(sid);
+      return false;
+    }
+    s.lastSeen = t;
+    return true;
+  };
   const model = opts.model ?? modelConfigFromEnv();
   const complete = opts.complete ?? httpComplete(model);
   const uiDir = opts.uiDir ?? defaultUiDir();
   const clients = new Set<ServerResponse>();
   let port = opts.port ?? 7878;
 
-  const onChange = (ev: ChangeEvent) => {
-    const data = `event: change\ndata: ${JSON.stringify(ev)}\n\n`;
-    for (const c of clients) c.write(data);
+  const broadcast = (data: string) => {
+    for (const c of clients) if (!writeEvent(c, data)) clients.delete(c);
   };
+  const onChange = (ev: ChangeEvent) => broadcast(`event: change\ndata: ${JSON.stringify(ev)}\n\n`);
   // Capture state changes travel on their own event name, so viewers that only reload data on
   // `change` are not disturbed (B1, audit A05).
-  const onHealth = (ev: HealthEvent) => {
-    const data = `event: health
-data: ${JSON.stringify(ev)}
-
-`;
-    for (const c of clients) c.write(data);
-  };
+  const onHealth = (ev: HealthEvent) => broadcast(`event: health\ndata: ${JSON.stringify(ev)}\n\n`);
   app.ingest.on('change', onChange);
   app.ingest.on('health', onHealth);
 
@@ -100,8 +137,8 @@ data: ${JSON.stringify(ev)}
   const authed = (req: IncomingMessage): boolean => {
     const bearer = /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? '')?.[1];
     if (bearer && safeEqual(bearer, token)) return true;
-    const cookie = /(?:^|;\s*)drishya_session=([a-f0-9]+)/.exec(req.headers.cookie ?? '')?.[1];
-    return !!cookie && sessions.has(cookie);
+    const sid = sessionOf(req);
+    return !!sid && sessionValid(sid);
   };
 
   const server = createServer(async (req, res) => {
@@ -118,12 +155,25 @@ data: ${JSON.stringify(ev)}
       if (url.pathname === '/v1/session' && req.method === 'POST') {
         const bearer = /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? '')?.[1];
         if (!bearer || !safeEqual(bearer, token)) throw new HttpError(401, 'invalid launch token');
+        const t = now();
+        for (const [k, v] of sessions) if (t - v.lastSeen > idleMs || t - v.created > maxAgeMs) sessions.delete(k);
+        while (sessions.size >= maxSessions) {
+          const oldest = [...sessions].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0]!;
+          sessions.delete(oldest[0]);
+        }
         const sid = randomBytes(24).toString('hex');
-        sessions.add(sid);
-        res.setHeader('set-cookie', `drishya_session=${sid}; HttpOnly; SameSite=Strict; Path=/`);
+        sessions.set(sid, { created: t, lastSeen: t });
+        res.setHeader('set-cookie', `drishya_session=${sid}; Max-Age=${Math.floor(maxAgeMs / 1000)}; HttpOnly; SameSite=Strict; Path=/`);
         return json(res, { ok: true });
       }
       if (!authed(req)) throw new HttpError(401, 'not signed in to this Drishya launch — open the link printed by `drishya serve`');
+      // Sign-out. A cross-site form cannot send DELETE, and Origin is already checked above.
+      if (url.pathname === '/v1/session' && req.method === 'DELETE') {
+        const sid = sessionOf(req);
+        if (sid) sessions.delete(sid);
+        res.setHeader('set-cookie', 'drishya_session=; Max-Age=0; HttpOnly; SameSite=Strict; Path=/');
+        return json(res, { ok: true });
+      }
       // State-changing requests need an explicit JSON content type: a CSRF form cannot send one.
       if (req.method !== 'GET' && req.method !== 'HEAD' && !(req.headers['content-type'] ?? '').startsWith('application/json')) throw new HttpError(415, 'JSON body required');
 
@@ -153,14 +203,18 @@ data: ${JSON.stringify(ev)}
     if (a === 'changes' && m === 'GET') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       res.write(': connected\n\n');
+      // Every (re)connect starts with the current revisions, so a viewer that missed notices
+      // converges even if nothing new is ever written (audit A07).
+      res.write(`event: sync\ndata: ${JSON.stringify({ revisions: app.store.revisions() })}\n\n`);
       clients.add(res);
-      const beat = setInterval(() => res.write(': beat\n\n'), 25_000);
+      const beat = setInterval(() => writeEvent(res, ': beat\n\n') || clients.delete(res), 25_000);
       req.on('close', () => {
         clearInterval(beat);
         clients.delete(res);
       });
       return;
     }
+    if (a === 'revisions' && m === 'GET') return json(res, { revisions: app.store.revisions() });
     if (a === 'sources' && m === 'GET') return json(res, await app.ingest.discoverReport());
     if (a === 'import' && m === 'POST') {
       const body = await readJson(req);
@@ -184,15 +238,15 @@ data: ${JSON.stringify(ev)}
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
       if (sub === 'observations' && m === 'GET') {
         app.recording(firstId);
-        const after = Number(url.searchParams.get('after') ?? -1);
-        const limit = Math.min(1000, Number(url.searchParams.get('limit') ?? 200));
+        const after = intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER);
+        const limit = intParam(url, 'limit', 200, 1, 1000);
         return json(res, { observations: app.store.observations(firstId, after, limit) });
       }
       if (sub === 'artifacts' && subId && m === 'GET') {
         const { artifact, text } = app.artifactText(app.projection(id), subId);
         const lines = text.split('\n');
-        const start = Math.max(0, Number(url.searchParams.get('start') ?? 0));
-        const count = Math.min(20_000, Number(url.searchParams.get('count') ?? 20_000));
+        const start = intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER);
+        const count = intParam(url, 'count', 20_000, 0, 20_000);
         return json(res, { artifact, totalLines: lines.length, start, text: lines.slice(start, start + count).join('\n') });
       }
       if (sub === 'graph' && m === 'GET') return json(res, await app.graph(id, url.searchParams.get('refresh') === '1'));
@@ -323,6 +377,18 @@ export function errorBody(e: unknown): { status: number; body: { error: string }
   const status = e instanceof HttpError ? e.status : 500;
   const message = e instanceof Error ? e.message : 'error';
   return { status, body: { error: redactText(message).text.slice(0, 2000) } };
+}
+
+function sessionOf(req: IncomingMessage): string | undefined {
+  return /(?:^|;\s*)drishya_session=([a-f0-9]+)/.exec(req.headers.cookie ?? '')?.[1];
+}
+
+/** An integer query parameter, clamped to [min, max]; anything non-numeric is a 400, never NaN. */
+function intParam(url: URL, name: string, fallback: number, min: number, max: number): number {
+  const raw = url.searchParams.get(name);
+  if (raw === null || raw === '') return fallback;
+  if (!/^-?\d+$/.test(raw)) throw new HttpError(400, `${name} must be an integer`);
+  return Math.min(max, Math.max(min, Number(raw)));
 }
 
 function json(res: ServerResponse, body: unknown, status = 200) {
