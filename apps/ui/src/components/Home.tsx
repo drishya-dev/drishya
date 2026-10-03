@@ -37,7 +37,7 @@ export function Home({ openDemo }: { openDemo: () => void }) {
     try {
       const r = await source.importSource(s.path, s.adapterId, live);
       location.hash = `#/r/${r.recordingId}`;
-      await openRecording(r.recordingId, { at: live ? 'end' : 0, play: false });
+      await openRecording(r.recordingId);
     } catch (e) {
       setErr((e as Error).message);
     } finally {

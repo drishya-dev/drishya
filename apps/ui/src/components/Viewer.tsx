@@ -186,7 +186,7 @@ function FilePanel({ projection }: { projection: Projection }) {
           className="file-op"
           onClick={() => {
             const s = stepOfOperation(projection, o.id);
-            if (s !== undefined) seek(s, { hold: true });
+            if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
             select(o.id);
             set({ filePanel: undefined, explore: false });
           }}
@@ -247,6 +247,7 @@ function Dock({ scene }: { scene: Scene }) {
 // ─── transport: play, step, scrub ────────────────────────────────────────────────────────
 
 function Transport({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const mode = useApp((s) => s.mode);
   const playing = useApp((s) => s.playing);
   const held = useApp((s) => s.held);
   const speed = useApp((s) => s.speed);
@@ -258,6 +259,7 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
   const stepBy = useApp((s) => s.stepBy);
   const jump = useApp((s) => s.jump);
   const resume = useApp((s) => s.resume);
+  const showHistory = useApp((s) => s.showHistory);
   const ms = useMemo(() => markers(projection).filter((m) => m.type !== 'prose'), [projection]);
   const strip = useRef<HTMLDivElement>(null);
   const total = Math.max(1, scene.total);
@@ -266,8 +268,19 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
     return Math.round(((clientX - r.left) / r.width) * total);
   };
   const cur = scene.current;
+  if (mode === 'history') return (
+    <footer className="transport history-transport">
+      <span className="reading-status"><span className="reading-dot" /> History · {scene.total} recorded steps</span>
+      <span className="muted small">Scroll to review. New work joins below.</span>
+      <div className="transport-spacer" />
+      <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} title="Explore the map (X)">Map</button>
+      <button className={`icon-btn txt${motion ? '' : ' on'}`} onClick={() => setMotion(!motion)} title="Motion (M)">{motion ? 'Motion' : 'Still'}</button>
+      <button className="btn ghost" onClick={togglePlay}>Replay sequence</button>
+    </footer>
+  );
   return (
     <footer className="transport">
+      <button className="btn ghost" onClick={showHistory} title="Show all recorded work">← History</button>
       <div className="t-controls">
         <button className="icon-btn" onClick={() => stepBy(-1)} aria-label="Step back" title="Step back (←)">‹</button>
         <button className="play" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'} title="Play / pause (Space)">
@@ -446,9 +459,11 @@ function Search({ projection }: { projection: Projection }) {
   if (!open) return null;
   const go = (obs: string) => {
     const s = stepOfObservation(projection, obs);
-    if (s !== undefined) seek(s, { hold: true });
+    if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
+    else set({ focusObservationId: obs, follow: false });
     const op = projection.operations.find((o) => o.observationIds.includes(obs));
     if (op) select(op.id);
+    else select(undefined);
     set({ searchOpen: false });
   };
   return (

@@ -73,13 +73,13 @@ Loopback only. `drishya serve` prints a per-launch token in the URL fragment. Th
 
 ## Base UI — what is placeholder
 
-The base UI exercises home/session import/watch, combined views, synthetic demo, agent crown, file spine, passages, unboxed prose, dock/MCP filters, filmstrip, inspector, search, map and optional explanations. This is integration scaffolding, not final behavior or complete acceptance coverage. Live updates currently depend on a timed playback cursor; selection holds that cursor. Native dock entries lack equivalent filter actions, and fixed action widths cause horizontal passage scrolling at medium widths. The 30 Sep direction requires independent accumulating history, stable reading anchors and content-shaped expansion. See the audit and roadmap B3.
+The base UI exercises home/session import/watch, combined views, synthetic demo, agent crown, file spine, passages, unboxed prose, dock/MCP filters, inspector, search, map and optional explanations. Recordings now open as complete scrollable history; new committed steps extend it whether the reader follows or is inspecting an earlier passage. The mounted starting passage stays fixed while detached, and loading older passages preserves scroll offset. File and search navigation can target captured work without entering replay. Sequence replay and its filmstrip are opt-in. Passage actions wrap at narrow widths instead of forcing a horizontal strip. This is still integration scaffolding: positional passage ids, as-of replay correctness, true bounded virtualization and measured long-session resource limits remain B2–B4 work. Native dock entries still lack equivalent filter actions. See the audit and roadmap.
 
 These parts are placeholders for the frontend pass: the Canvas 2D map (→ PixiJS), the regex highlighter and code views (→ CodeMirror 6), the simple CSS arrivals (→ the choreographed Lift/Emit/Settle/Surface/Resolve with origin tethers), and history windowing (→ proper virtualization). `compose()` output is the contract the frontend renders; change it deliberately and update the goldens.
 
 ## Tests
 
-`pnpm check` runs typecheck and 96 tests. The main groups:
+`pnpm check` runs typecheck and the test suite (163 tests after the base-history update). The main groups:
 
 - **JSONL**: partial lines, truncation, oversized and malformed records.
 - **Adapters**: intents, correlation, unknown records, encrypted reasoning never surfaced.

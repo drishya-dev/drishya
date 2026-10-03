@@ -25,7 +25,7 @@ async function openBundle(url: string) {
   const bundle = await loadBundle(url);
   const source = bundleSource(bundle);
   useApp.setState({ source, config: await source.config() });
-  await useApp.getState().openRecording(bundle.recording.id, { at: at ?? 0, play: at === undefined });
+  await useApp.getState().openRecording(bundle.recording.id, at === undefined ? undefined : { at });
 }
 
 export function App() {
@@ -42,7 +42,7 @@ export function App() {
         const auth = await signIn();
         if (auth === 'ok') {
           useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings: await daemon.recordings() });
-          if (p.recording) await useApp.getState().openRecording(decodeURIComponent(p.recording), { at: p.at ?? 0 });
+          if (p.recording) await useApp.getState().openRecording(decodeURIComponent(p.recording), p.at === undefined ? undefined : { at: p.at });
           return;
         }
         if (auth === 'signed-out') return useApp.setState({ screen: 'signed-out' });

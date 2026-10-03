@@ -32,6 +32,8 @@ interface State {
   /** The daemon's change stream: 'reconnecting' while it is down. */
   connection: 'connected' | 'reconnecting';
 
+  /** Normal reading shows every committed step; replay alone applies a visibility cursor. */
+  mode: 'history' | 'replay';
   step: number;
   playing: boolean;
   speed: number;
@@ -42,6 +44,8 @@ interface State {
   motion: boolean;
   explore: boolean;
   selectedOp?: string;
+  /** Stable captured observation to bring into view without switching normal history to replay. */
+  focusObservationId?: string;
   hoveredPath?: string;
   hoveredOp?: string;
   /** A file whose operations are listed (from the spine or the map). */
@@ -60,6 +64,7 @@ interface State {
   jump(type: Marker['type'] | Marker['type'][], dir?: 1 | -1): void;
   select(opId: string | undefined): void;
   resume(): void;
+  showHistory(): void;
   setFilter(f: ComposeInput['filter'] | undefined): void;
 }
 
@@ -77,6 +82,7 @@ export const useApp = create<State>((set, get) => ({
   recordings: [],
   renderedRevisions: {},
   connection: 'connected',
+  mode: 'history',
   step: 0,
   playing: false,
   speed: 1,
@@ -93,15 +99,16 @@ export const useApp = create<State>((set, get) => ({
   async openRecording(id, opts = {}) {
     const src = get().source;
     if (!src) return;
-    set({ recordingId: id, projection: undefined, graph: undefined, selectedOp: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false });
+    set({ recordingId: id, projection: undefined, graph: undefined, selectedOp: undefined, focusObservationId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     const recordings = await src.recordings();
     const projection = await src.projection(id);
     if (!current() || get().recordingId !== id) return; // the user moved on; this response is stale
     const recording = recordings.find((r) => r.id === id.split('+')[0]) ?? recordings[0];
-    const step = opts.at === 'end' ? projection.timeline.length : Math.min(opts.at ?? 0, projection.timeline.length);
-    set({ projection, recording, recordings, renderedRevisions: revisionsOf(recordings), step, playing: !!opts.play && step < projection.timeline.length });
+    const mode = opts.at === undefined && !opts.play ? 'history' : 'replay';
+    const step = mode === 'history' || opts.at === 'end' ? projection.timeline.length : Math.max(0, Math.min(opts.at ?? 0, projection.timeline.length));
+    set({ projection, recording, recordings, renderedRevisions: revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < projection.timeline.length });
     src.graph(id).then((graph) => get().recordingId === id && set({ graph })).catch(() => undefined);
   },
 
@@ -112,18 +119,17 @@ export const useApp = create<State>((set, get) => ({
     const recordings = await source.recordings();
     const projection = await source.projection(recordingId);
     if (!current() || get().recordingId !== recordingId) return; // superseded by a newer load
-    const { step, projection: old } = get();
-    const wasAtEnd = !old || step >= old.timeline.length;
-    set({ projection, recordings, renderedRevisions: revisionsOf(recordings), recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording });
-    // Following live work: keep playing into the new steps rather than jumping to the end.
-    if (wasAtEnd && get().follow && !get().held) set({ playing: true });
+    const { step, mode } = get();
+    set({ projection, recordings, renderedRevisions: revisionsOf(recordings), recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording,
+      step: mode === 'history' ? projection.timeline.length : Math.min(step, projection.timeline.length) });
+    // History grows regardless of the reader's scroll position; `follow` only controls the viewport.
   },
 
   seek(step, opts) {
     const p = get().projection;
     if (!p) return;
     const s = Math.max(0, Math.min(p.timeline.length, Math.round(step)));
-    set({ step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
+    set({ mode: 'replay', step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
   },
 
   stepBy(d) {
@@ -131,8 +137,9 @@ export const useApp = create<State>((set, get) => ({
   },
 
   togglePlay() {
-    const { playing, projection, step } = get();
+    const { playing, projection, step, mode } = get();
     if (!projection) return;
+    if (mode === 'history') return set({ mode: 'replay', step: 0, playing: true, held: false, follow: true });
     if (playing) set({ playing: false });
     else set({ playing: true, held: false, follow: true, step: step >= projection.timeline.length ? 0 : step });
   },
@@ -145,11 +152,16 @@ export const useApp = create<State>((set, get) => ({
   },
 
   select(opId) {
-    set({ selectedOp: opId, ...(opId ? { playing: false, held: true, inspectorTab: 'detail' } : {}) });
+    set({ selectedOp: opId, ...(opId ? { playing: false, held: true, follow: false, inspectorTab: 'detail' } : {}) });
   },
 
   resume() {
     set({ held: false, playing: true, follow: true, selectedOp: undefined });
+  },
+
+  showHistory() {
+    const projection = get().projection;
+    set({ mode: 'history', step: projection?.timeline.length ?? 0, playing: false, held: false, follow: true, selectedOp: undefined });
   },
 
   setFilter(f) {
