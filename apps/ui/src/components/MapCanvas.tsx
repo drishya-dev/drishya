@@ -21,6 +21,46 @@ interface Cam {
   k: number;
 }
 
+/**
+ * Map controls that change what the map reads (B2): approving a scan of the captured root, and
+ * refreshing a map that is out of date. Both are explicit; the map never redraws under a reader.
+ */
+function MapActions({ graph }: { graph: RepoGraph }) {
+  const source = useApp((s) => s.source);
+  const recordingId = useApp((s) => s.recordingId);
+  const set = useApp((s) => s.set);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string>();
+  if (source?.kind !== 'daemon' || !recordingId) return null;
+  const run = async (load: () => Promise<RepoGraph | undefined>) => {
+    setBusy(true);
+    setErr(undefined);
+    try {
+      const g = await load();
+      if (g && useApp.getState().recordingId === recordingId) set({ graph: g });
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      {graph.approvalNeeded && (
+        <button className="btn ghost" disabled={busy} title={`Reads file names and imports under ${graph.approvalNeeded.root}. File contents are not stored.`} onClick={() => run(() => source.approveGraph(recordingId))}>
+          {busy ? 'Scanning…' : 'Map the whole repository'}
+        </button>
+      )}
+      {graph.stale && (
+        <button className="btn ghost" disabled={busy} title="Files changed since this map was drawn" onClick={() => run(() => source.graph(recordingId, true))}>
+          {busy ? 'Refreshing…' : 'Out of date · Refresh'}
+        </button>
+      )}
+      {err && <span className="bad small">{err}</span>}
+    </>
+  );
+}
+
 export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: RepoGraph; heat: HeatCell[]; arrivingPath?: string; readingRect?: { left: number; width: number } }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
@@ -254,6 +294,7 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
         <div className="map-legend">
           <span>{graph.nodes.length} files · {graph.edges.length} imports</span>
           <span className="muted">{graph.temporal === 'current' ? 'Map of the workspace as it is now' : 'Only files this recording touched'}</span>
+          <MapActions graph={graph} />
         </div>
       )}
     </div>

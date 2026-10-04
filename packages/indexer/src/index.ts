@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import type { GraphEdge, GraphNode, RepoGraph } from '@drishya/contracts';
+import { isDeniedPath } from '@drishya/privacy';
 
 export const INDEXER_VERSION = 'imports-rules-v1';
 
@@ -39,8 +40,8 @@ interface FileEntry {
   mtimeMs: number;
 }
 
-export async function buildGraph(root: string, opts: IndexOptions = {}): Promise<RepoGraph> {
-  const t0 = performance.now();
+/** The files a map would include: the shared first step of building and of probing freshness. */
+async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntry[]; skipped: number; truncated: boolean }> {
   const maxFiles = opts.maxFiles ?? 5000;
   const maxBytes = opts.maxFileBytes ?? 512 * 1024;
   const ignore = readGitignore(root);
@@ -83,6 +84,25 @@ export async function buildGraph(root: string, opts: IndexOptions = {}): Promise
     }
   };
   await walk(root, '');
+  return { files, skipped, truncated };
+}
+
+/** Identity of a file set: changes when any file is added, removed, resized or touched. */
+function generationOf(files: FileEntry[]): string {
+  return createHash('sha256').update(INDEXER_VERSION + files.map((f) => `${f.path}:${f.bytes}:${Math.floor(f.mtimeMs)}`).join('\n')).digest('hex').slice(0, 16);
+}
+
+/**
+ * The generation a fresh build would have, from a walk and stat only (no file is opened). Lets a
+ * cached map say it is out of date without being rebuilt under a reader (B2).
+ */
+export async function probeGeneration(root: string, opts: IndexOptions = {}): Promise<string> {
+  return generationOf((await scan(root, opts)).files);
+}
+
+export async function buildGraph(root: string, opts: IndexOptions = {}): Promise<RepoGraph> {
+  const t0 = performance.now();
+  const { files, skipped, truncated } = await scan(root, opts);
 
   const known = new Set(files.map((f) => f.path));
   const aliases = readTsPaths(root);
@@ -94,6 +114,8 @@ export async function buildGraph(root: string, opts: IndexOptions = {}): Promise
   for (const f of files) {
     const lang = LANG[extname(f.path).toLowerCase()];
     if (lang !== 'typescript' && lang !== 'javascript' && lang !== 'python') continue;
+    // A protected file (`.env.js`, keys, credentials) stays a node by name only; it is never opened.
+    if (isDeniedPath(f.path)) continue;
     const src = await readFile(join(root, f.path), 'utf8').catch(() => undefined);
     if (src === undefined) continue;
     parsed++;
@@ -114,7 +136,7 @@ export async function buildGraph(root: string, opts: IndexOptions = {}): Promise
   }
 
   const nodes = layout(files, edges).map((n) => ({ ...n, language: LANG[extname(n.path).toLowerCase()], lines: lines.get(n.path) }));
-  const generation = createHash('sha256').update(INDEXER_VERSION + files.map((f) => `${f.path}:${f.bytes}:${Math.floor(f.mtimeMs)}`).join('\n')).digest('hex').slice(0, 16);
+  const generation = generationOf(files);
   return {
     generation,
     root,

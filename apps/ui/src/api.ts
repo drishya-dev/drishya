@@ -1,7 +1,7 @@
 // Where the UI gets its data: the local daemon (live, importable) or a static replay bundle
 // (the hosted demo). Both expose the same surface, so every screen works in both.
 
-import type { DiscoveredSource, Projection, RecordingHealth, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
+import type { ArtifactSlice, DiscoveredSource, Projection, RecordingHealth, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
 
 /** A session location discovery could not read, e.g. a permission failure. */
 export interface DiscoveryError {
@@ -48,8 +48,11 @@ export interface DataSource {
   sources(): Promise<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>;
   importSource(path: string, adapterId: string, live: boolean): Promise<{ recordingId: string }>;
   projection(id: string): Promise<Projection>;
-  graph(id: string): Promise<RepoGraph | undefined>;
-  artifact(id: string, artifactId: string): Promise<string>;
+  /** `refresh` rebuilds a stale map; otherwise the cached map is returned unchanged. */
+  graph(id: string, refresh?: boolean): Promise<RepoGraph | undefined>;
+  /** Approves scanning the recording's captured root for the map, and returns the full map. */
+  approveGraph(id: string): Promise<RepoGraph>;
+  artifact(id: string, artifactId: string): Promise<ArtifactSlice>;
   search(id: string, q: string): Promise<{ observationId: string; snippet: string }[]>;
   setLive(id: string, on: boolean): Promise<boolean>;
   /** Without `consent`, returns the preview. With the preview's digest as `consent`, sends exactly that request. */
@@ -123,8 +126,9 @@ export const daemon: DataSource = {
   sources: () => req<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>('/v1/sources'),
   importSource: (path, adapterId, live) => req('/v1/import', { method: 'POST', json: { path, adapterId, live } }),
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
-  graph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph`),
-  artifact: async (id, art) => (await req<{ text: string }>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}`)).text,
+  graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
+  approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
+  artifact: (id, art) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}`),
   search: async (id, q) => (await req<{ hits: { observationId: string; snippet: string }[] }>(`/v1/recordings/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`)).hits,
   setLive: async (id, on) => (await req<{ live: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/live`, { method: 'POST', json: { on } })).live,
   explain: (id, operationId, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/explain`, { method: 'POST', json: { operationId, consent } }),
@@ -175,7 +179,15 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     importSource: unsupported,
     projection: async () => bundle.projection,
     graph: async () => bundle.graph,
-    artifact: async (_id, art) => bundle.artifactText[art] ?? '',
+    approveGraph: unsupported,
+    artifact: async (_id, art) => {
+      // A bundle carries whole sanitized texts; one it omits was not exported, so it is unavailable.
+      const artifact = bundle.projection.artifacts.find((a) => a.id === art)!;
+      const text = bundle.artifactText[art];
+      if (text === undefined) return { artifact, available: false, reason: 'not-captured', start: 0, text: '', returnedLines: 0, totalLines: 0, totalBytes: 0, truncated: false, hasMore: false };
+      const lines = text.split('\n').length;
+      return { artifact, available: true, start: 0, text, returnedLines: lines, totalLines: lines, totalBytes: new TextEncoder().encode(text).length, truncated: false, hasMore: false };
+    },
     search: async (_id, q) => {
       const t = q.toLowerCase();
       const hits: { observationId: string; snippet: string }[] = [];

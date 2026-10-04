@@ -1,18 +1,35 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { Artifact, Hunk, Provenance } from '@drishya/contracts';
+import type { Artifact, ArtifactSlice, Hunk, Provenance } from '@drishya/contracts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
 import { useApp } from '../state.ts';
 
 // ─── artifacts: fetched lazily, cached by bytes ───────────────────────────────────────────
 
-const cache = new Map<string, Promise<string>>();
+const cache = new Map<string, Promise<ArtifactSlice>>();
 let cachedBytes = 0;
 const MAX_CACHE = 48 * 1024 * 1024;
 
-export function useArtifact(artifactId: string | undefined): { text?: string; error?: string } {
+export interface ArtifactView {
+  text?: string;
+  error?: string;
+  /** Why there is no content to show: never captured, or no longer stored. Never "empty". */
+  unavailable?: string;
+  /** Set when only part of the captured content is shown, e.g. "lines 1–20,000 of 54,321". */
+  partial?: string;
+}
+
+/** What a slice means to a reader: content, an honest unavailable reason, and any cut. */
+export function viewOf(s: ArtifactSlice): ArtifactView {
+  if (!s.available) return { unavailable: s.reason === 'no-longer-stored' ? 'Captured, but no longer stored (deleted or past retention).' : 'Not captured by the harness.' };
+  const end = s.start + s.returnedLines;
+  const partial = s.hasMore || s.truncated ? `Showing lines ${(s.start + 1).toLocaleString()}–${end.toLocaleString()} of ${s.totalLines.toLocaleString()}${s.truncated ? ' (cut at the response size limit)' : ''}` : undefined;
+  return { text: s.text, partial };
+}
+
+export function useArtifact(artifactId: string | undefined): ArtifactView {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
-  const [state, setState] = useState<{ text?: string; error?: string }>({});
+  const [state, setState] = useState<ArtifactView>({});
   useEffect(() => {
     if (!artifactId || !source || !recordingId) return;
     const key = `${recordingId}/${artifactId}`;
@@ -23,9 +40,9 @@ export function useArtifact(artifactId: string | undefined): { text?: string; er
         cachedBytes = 0;
       }
       p = source.artifact(recordingId, artifactId).then(
-        (t) => {
-          cachedBytes += t.length;
-          return t;
+        (s) => {
+          cachedBytes += s.text.length;
+          return s;
         },
         (e) => {
           cache.delete(key); // a failure is not cached: opening it again retries
@@ -35,7 +52,7 @@ export function useArtifact(artifactId: string | undefined): { text?: string; er
       cache.set(key, p);
     }
     let live = true;
-    p.then((text) => live && setState({ text })).catch((e) => live && setState({ error: String(e.message ?? e) }));
+    p.then((s) => live && setState(viewOf(s))).catch((e) => live && setState({ error: String(e.message ?? e) }));
     return () => {
       live = false;
     };

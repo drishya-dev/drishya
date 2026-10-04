@@ -3,8 +3,8 @@
 import { existsSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import type { Artifact, Projection, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
-import { buildGraph, graphFromPaths } from '@drishya/indexer';
+import type { Artifact, ArtifactSlice, Projection, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
+import { buildGraph, graphFromPaths, probeGeneration } from '@drishya/indexer';
 import { Ingestor } from '@drishya/ingest';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { Store } from '@drishya/store';
@@ -19,10 +19,14 @@ export class App {
   readonly store: Store;
   readonly ingest: Ingestor;
   private graphs = new Map<string, RepoGraph>();
+  private probes = new Map<string, { at: number; generation: string }>();
+  private readonly graphProbeMs: number;
 
-  constructor(dir = dataDir(), opts: { memory?: boolean } = {}) {
+  /** `graphProbeMs`: how long a freshness probe of a map root is reused (default 15 s). */
+  constructor(dir = dataDir(), opts: { memory?: boolean; graphProbeMs?: number } = {}) {
     this.store = new Store(dir, opts);
     this.ingest = new Ingestor(this.store);
+    this.graphProbeMs = opts.graphProbeMs ?? 15_000;
   }
 
   recording(id: string): RecordingSummary {
@@ -46,24 +50,50 @@ export class App {
     return { artifact, text };
   }
 
-  /** The map root for a recording: a user-approved override, else the captured workspace. */
-  graphRoot(rec: RecordingSummary): string | undefined {
-    const root = rec.graphRoot ?? rec.workspaceRoot;
-    if (!root) return undefined;
-    try {
-      return existsSync(root) && statSync(root).isDirectory() ? root : undefined;
-    } catch {
-      return undefined;
-    }
+  /**
+   * A bounded slice of an artifact's text (B2, audit A15): read by line range from the blob without
+   * loading it whole, with the totals, the cut and unavailability stated rather than implied.
+   */
+  artifactSlice(projection: Projection, artifactId: string, start: number, count: number): ArtifactSlice {
+    const artifact = projection.artifacts.find((a) => a.id === artifactId);
+    if (!artifact) throw new HttpError(404, 'artifact not found');
+    const none = { artifact, start, text: '', returnedLines: 0, totalLines: 0, totalBytes: 0, truncated: false, hasMore: false };
+    if (!artifact.blob) return { ...none, available: false, reason: 'not-captured' };
+    const slice = this.store.blobs.readLines(artifact.blob, start, count);
+    if (!slice) return { ...none, available: false, reason: 'no-longer-stored' };
+    return { artifact, available: true, start, ...slice };
   }
 
+  /** A directory the map may scan only with care: missing, not a directory, or a whole drive/home. */
+  private unscannable(root: string): string | undefined {
+    try {
+      if (!existsSync(root) || !statSync(root).isDirectory()) return 'is not a directory on this machine';
+    } catch {
+      return 'cannot be read';
+    }
+    const r = resolve(root);
+    if (dirname(r) === r || r.toLowerCase() === resolve(homedir()).toLowerCase()) return 'is too broad to scan (a drive root or the home folder)';
+    return undefined;
+  }
+
+  /**
+   * The repository map. A folder is scanned only once approved (B2): an explicit `graphRoot`, set by
+   * `--workspace` or by approving the captured root. Until then the map holds only the files the
+   * recording touched and offers the captured root for approval. A cached map is never rebuilt
+   * under a reader; it reports `stale` when a cheap probe sees the workspace changed, and
+   * `refresh` rebuilds it.
+   */
   async graph(idOrIds: string, refresh = false): Promise<RepoGraph> {
     const ids = idOrIds.split('+');
     const rec = this.recording(ids[0]!);
     const projection = this.projection(idOrIds);
-    if (!projection.workspaceRoot) return graphFromPaths(projection.files.map((f) => f.path));
-    const root = this.graphRoot(rec);
-    if (!root) return graphFromPaths(projection.files.map((f) => f.path));
+    const filesOnly = () => graphFromPaths(projection.files.map((f) => f.path));
+    if (!projection.workspaceRoot) return filesOnly();
+    const root = rec.graphRoot || undefined;
+    if (!root || this.unscannable(root)) {
+      const captured = rec.workspaceRoot;
+      return captured && !this.unscannable(captured) ? { ...filesOnly(), approvalNeeded: { root: captured } } : filesOnly();
+    }
     let g = this.graphs.get(root);
     if (!g || refresh) {
       const stored = !refresh ? this.store.getGraph(root) : undefined;
@@ -72,8 +102,33 @@ export class App {
       g = stored ? (JSON.parse(stored) as RepoGraph) : sanitize(await buildGraph(root)).value;
       if (!stored) this.store.putGraph(root, g.generation, JSON.stringify(g));
       this.graphs.set(root, g);
+      this.probes.set(root, { at: Date.now(), generation: g.generation });
     }
-    return g;
+    return { ...g, stale: (await this.probe(root)) !== g.generation };
+  }
+
+  /** The current generation of a root, reused for `graphProbeMs` so map requests stay cheap. */
+  private async probe(root: string): Promise<string> {
+    const cached = this.probes.get(root);
+    if (cached && Date.now() - cached.at < this.graphProbeMs) return cached.generation;
+    const generation = await probeGeneration(root);
+    this.probes.set(root, { at: Date.now(), generation });
+    return generation;
+  }
+
+  /**
+   * Approves scanning a recording's captured root for the map. Only that root can be approved over
+   * the API (no arbitrary folders), and never a drive root or the home folder.
+   */
+  async approveGraphRoot(id: string, root?: string): Promise<RepoGraph> {
+    const rec = this.recording(id);
+    const captured = rec.workspaceRoot;
+    if (!captured) throw new HttpError(400, 'this recording captured no workspace root');
+    if (root !== undefined && resolve(root) !== resolve(captured)) throw new HttpError(400, 'only the captured workspace root can be approved');
+    const why = this.unscannable(captured);
+    if (why) throw new HttpError(400, `the captured root ${why}`);
+    this.store.updateRecordingMeta(id, { graphRoot: captured });
+    return this.graph(id, true);
   }
 
   async exportBundle(idOrIds: string): Promise<ReplayBundle> {
@@ -86,7 +141,8 @@ export class App {
       const t = this.store.blobs.get(a.blob);
       if (t !== undefined) artifactText[a.id] = t;
     }
-    const graph = await this.graph(idOrIds);
+    // Staleness and approval describe this machine's workspace right now, not the exported recording.
+    const { stale: _stale, approvalNeeded: _approval, ...graph } = await this.graph(idOrIds);
     const bundle: ReplayBundle = {
       format: 'drishya-replay',
       version: 1,
