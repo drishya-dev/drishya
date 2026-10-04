@@ -16,7 +16,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
-| **Blocked on** | Nothing. B0 is complete (PRs #3, #4 and this one). Contract freeze needs both builders' review |
+| **Blocked on** | Nothing for synthetic B2 acceptance. Opted-in real recordings are required for the real-data portion; the full contract freeze still needs both builders' review |
 | **Next gate** | **B2 acceptance** (live/browser anchors with opted-in real data, map-off check), then **B3** long-history UI (virtualization, content-shaped expansion) and **B4** resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [handoff](CONTINUITY.md). No model key is needed for the core |
 
 ### Claimed
@@ -54,13 +54,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
   - **Bounded artifact reads (A15):** `BlobStore.readLines()` uses a sparse line index (one streaming pass, LRU of 128) and seeks near the requested start. Responses are capped at 2 MiB, and `GET …/artifacts/:id` returns an `ArtifactSlice` (`available`/`reason`, `start`, `returnedLines`, `totalLines`, `totalBytes`, `truncated`, `hasMore`). Missing or uncaptured content is an explicit unavailable state; the UI no longer mislabels empty text as "Protected file", and shows "Showing lines a–b of N" when cut.
   - **Graph approval and freshness:** the map scans only an approved root (explicit `graphRoot` via `--workspace`, or `POST …/graph/approve` for the captured root only; drive roots and the home folder are refused). Until then it is files-only with `approvalNeeded`. A cached map reports `stale` from a walk-and-stat `probeGeneration()` (reused 15 s) and is rebuilt only on `?refresh=1`, so the layout stays pinned while reading. The indexer never opens a protected file such as `.env.js`. Exports strip `stale`/`approvalNeeded`.
   - 182/182 tests (12 new, all confirmed failing first); typechecks, UI build, demo bundle unchanged. Checked in the real app: files-only map plus approve button, then the full map, then "Out of date · Refresh" after a file was added (no auto-redraw), then refreshed.
-- **Left half-done:** B2's live/browser anchor acceptance with opted-in real data, and the map-off freeze/truth check (Yash's PR #10 note). Pending @yash's OK: the additive contract fields from B0–B2 (`privacyOutdated`, `health`, `revision`, `RepoGraph.stale`/`approvalNeeded`, `ArtifactSlice`).
+- **Left half-done:** B2's live/browser anchor acceptance with opted-in real data, and the map-off freeze/truth check (Yash's PR #10 note). B2's additive graph and artifact fields were accepted in PR #11; the full draft contract still needs a joint freeze review.
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
 - **When:** 2026-10-04
 - **Did:** Reviewed Harsh's B2-R PR #11 and accepted its additive `ArtifactSlice` and graph fields for this gate. Fixed artifact switching so an earlier selection's content cannot briefly appear under the new selection; keyed the cache to recording revision and blob. The open viewer now checks map freshness every 30 seconds or on return to the tab, without redrawing until an explicit refresh. Graph approval rejects malformed roots and canonical drive/home aliases.
-- **Validation:** Backend/UI typechecks, 182-test synthetic suite, Vite production build, targeted graph approval test. No real journal was newly persisted or exported in this review.
+- **Validation:** Backend/UI typechecks, 183-test synthetic suite, Vite production build, Linux/Windows CI. No real journal was newly persisted or exported in this review.
 - **Left half-done:** B2 live/browser anchor acceptance with opted-in real data and map-off freeze/truth check; B3 measured virtualization, motion and broader navigation; B4 resource/install gates. The *whole* draft contract still needs a joint freeze review. H–L remain proposals.
 - **Watch out for:** A combined view of distinct worktrees uses `worktree-<root hash>/path` labels and a captured-path map rather than pretending one checkout is authoritative. Known-root export masking remains best effort; older-policy recordings are flagged, not re-sanitized in place.
 
@@ -68,10 +68,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Next up
 
-**Now (30 Sep), backend-first clarification:**
+**Current backend-first sequence:**
 
 1. ~~**B0: privacy hardening.**~~ Done 2 Oct: A01 (PR #3); A02 sinks, A03, A04 (PR #4); protected-file scopes, safe forget, outdated-policy flag (`harsh/b0-leftovers`). Policy now `p3`.
-2. **B1 done; B2 implemented** (3–4 Oct): stable anchors, as-of boundaries and worktree identity (Yash, PR #10); bounded artifact slices, graph root approval and staleness (`harsh/b2-artifacts-graph`). **B2 remains open only for** live/browser anchor acceptance with opted-in real data and the map-off freeze/truth check.
+2. **B1 done; B2 implemented** (3–4 Oct): stable anchors, as-of boundaries and worktree identity (Yash, PR #10); bounded artifact slices, graph root approval and staleness (Harsh, PR #11). **B2 remains open only for** live/browser anchor acceptance with opted-in real data and the map-off freeze/truth check.
 3. **B3: integrated base history.** History-first navigation and responsive action passages are started in `apps/ui`; capture/history grow while the reader scrolls/selects, and playback is optional. Still needed: stable virtualized long-history rendering, richer content-shaped expansion and the remaining prototype interactions. No final theme commitment yet.
 4. **B4: scale and installation.** Performance harness, worker boundaries, paged artifacts/history, packed-install matrix and end-to-end browser acceptance. Targets are in the roadmap and are not yet measured passes.
 5. **P1–P2: premium presentation and return-to-work utility.** Content-shaped renderers, five signature moves, since-last-visit, file history and verification freshness; test comprehension with users before feature expansion.
