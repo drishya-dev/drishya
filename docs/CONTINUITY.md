@@ -1,6 +1,6 @@
 # Continue here — a compact handoff for the next agent
 
-**Last implementation update: 3 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
+**Last implementation update: 4 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
 
 ## Read in this order
 
@@ -28,7 +28,7 @@ The 30 Sep audit is historical evidence, not the current code status. B0/B1 fixe
 
 ## Next bounded task
 
-B0 and B1 known findings are implemented (2–3 Oct): privacy policy `p3`; capture health, coalesced bounded live reads, `import --live`; revisions with SSE `sync`, slow-subscriber cap, session lifetime and stale-response guards. The integrated base UI opens in complete, accumulating history; replay is optional. B2 A11–A13 now have core fixes: event-ID passages, stable reader ID+offset, source-isolated reconstruction, named worktree paths in mixed views, and an as-of projection used by scene, renderer and evidence packs. **B2 remains open** for bounded artifact retrieval, graph freshness and an end-to-end live/browser anchor test. Then B3 virtualization and B4 scale/install. Do not proceed straight to Pixi, new themes or model features.
+B0 and B1 known findings are implemented (2–3 Oct): privacy policy `p3`; capture health, coalesced bounded live reads, `import --live`; revisions with SSE `sync`, slow-subscriber cap, session lifetime and stale-response guards. The integrated base UI opens in complete, accumulating history; replay is optional. B2 A11–A13 have event-ID passages, stable reader ID+offset, source-isolated reconstruction, named worktree paths in mixed views, and an as-of projection used by scene, renderer and evidence packs. On 4 Oct, B2's bounded artifact slices and graph root approval/staleness were added in PR #11: artifact responses state totals, cuts and unavailability; the map scans only an approved root and reports `stale` instead of redrawing. The review fixed transient wrong-artifact display, cache revision identity, live freshness checks in an open viewer, malformed approval and canonical root aliases. **B2 remains open** for end-to-end live/browser anchor acceptance with opted-in real data and the map-off freeze/truth check. Then B3 virtualization and B4 scale/install. Do not proceed straight to Pixi, new themes or model features.
 
 After B0, prove real persisted baseline; then capture/reconnect lifecycle and stable live history. Bring the prototype's useful navigation into the integrated app. See roadmap B1–B4 for acceptance tests. The first premium feature is a useful return-to-work view, paired with the content-shaped visual system.
 

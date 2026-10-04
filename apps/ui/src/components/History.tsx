@@ -323,11 +323,12 @@ function OpPreview({ op }: { op: Operation }) {
 }
 
 function ReadPreview({ artifactId, start, path }: { artifactId?: string; start: number; path: string }) {
-  const { text, error } = useArtifact(artifactId);
+  const { text, error, unavailable } = useArtifact(artifactId);
   if (!artifactId) return <div className="muted">Content not captured</div>;
   if (error) return <div className="muted">{error}</div>;
+  if (unavailable) return <div className="muted">{unavailable}</div>;
   if (text === undefined) return <div className="skeleton" />;
-  if (!text) return <div className="muted">Protected file — content never stored</div>;
+  if (!text) return <div className="muted">Empty</div>;
   return <CodeView text={text} startLine={start} path={path} maxLines={8} />;
 }
 

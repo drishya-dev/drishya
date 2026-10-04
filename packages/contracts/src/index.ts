@@ -484,6 +484,27 @@ export interface RepoGraph {
   unresolved: { from: string; specifier: string }[];
   truncated: boolean;
   stats: { files: number; parsed: number; edges: number; unresolved: number; skipped: number; ms: number };
+  /** Set by the local API: the workspace changed since this map was built. Refresh is explicit. */
+  stale?: boolean;
+  /** Set by the local API on a files-only map: this captured root can be scanned once approved. */
+  approvalNeeded?: { root: string };
+}
+
+/** A bounded range of an artifact's text, and what the reader needs to know about the whole. */
+export interface ArtifactSlice {
+  artifact: Artifact;
+  /** False when content was never captured or is no longer stored; `text` is then empty. */
+  available: boolean;
+  reason?: 'not-captured' | 'no-longer-stored';
+  start: number;
+  text: string;
+  returnedLines: number;
+  totalLines: number;
+  totalBytes: number;
+  /** The response stopped at its byte cap before the requested count. */
+  truncated: boolean;
+  /** More lines exist after the returned ones. */
+  hasMore: boolean;
 }
 
 // ─── Replay bundle (static export) ───────────────────────────────────────────────────────

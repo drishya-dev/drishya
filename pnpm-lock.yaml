@@ -138,6 +138,9 @@ importers:
       '@drishya/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@drishya/privacy':
+        specifier: workspace:*
+        version: link:../privacy
 
   packages/ingest:
     dependencies:

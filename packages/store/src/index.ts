@@ -7,7 +7,7 @@
 // dedicated worker is a tracked follow-up (engineering plan §1).
 
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import type { BlobText, Observation, RecordingSummary } from '@drishya/contracts';
@@ -34,7 +34,34 @@ export interface SourceRow {
   cursor: StoredCursor;
 }
 
+/** A slice of a blob's lines, with what a reader needs to know about the whole. */
+export interface LineSlice {
+  text: string;
+  /** Lines in the whole blob, counted as splitting the text on newlines would. */
+  totalLines: number;
+  totalBytes: number;
+  returnedLines: number;
+  /** This response was cut at the byte cap before the requested count. */
+  truncated: boolean;
+  /** Lines exist after the returned ones. */
+  hasMore: boolean;
+}
+
+interface LineIndex {
+  totalLines: number;
+  bytes: number;
+  /** Byte offset of line k × LINE_STRIDE. */
+  offsets: number[];
+}
+
+const LINE_STRIDE = 256;
+const READ_CHUNK = 64 * 1024;
+const MAX_LINE_INDEXES = 128;
+
 export class BlobStore {
+  /** Bytes read from blob files by line reads; tests use it to prove reads are bounded. */
+  readonly stats = { bytesRead: 0 };
+  private lineIndexes = new Map<string, LineIndex>();
   readonly dir: string;
   constructor(dir: string) {
     this.dir = dir;
@@ -67,7 +94,103 @@ export class BlobStore {
   has(sha: string): boolean {
     return /^[0-9a-f]{64}$/.test(sha) && existsSync(this.pathOf(sha));
   }
+  /**
+   * Lines [start, start + count) of a blob, capped at `maxBytes`, without loading the whole file
+   * (B2, audit A15). The first read of a blob builds a sparse line index in one streaming pass;
+   * later reads seek near their start. Returns undefined when the blob is not stored.
+   */
+  readLines(sha: string, start: number, count: number, maxBytes = 2 * 1024 * 1024): LineSlice | undefined {
+    if (!this.has(sha)) return undefined;
+    const index = this.lineIndex(sha);
+    const first = Math.min(start, index.totalLines);
+    const lines: Buffer[] = [];
+    let cur: Buffer[] = [];
+    let curLen = 0;
+    let taken = 0; // bytes in `lines`, counting the newlines that will join them
+    let truncated = false;
+    // Stops collecting: either the byte cap (a lone oversized line is cut and reported) or `count`.
+    const finishLine = (): boolean => {
+      const sep = lines.length ? 1 : 0;
+      if (taken + sep + curLen > maxBytes) {
+        truncated = true;
+        if (!lines.length) lines.push(Buffer.concat(cur).subarray(0, maxBytes));
+        return true;
+      }
+      lines.push(Buffer.concat(cur));
+      taken += sep + curLen;
+      cur = [];
+      curLen = 0;
+      return lines.length >= count;
+    };
+    let line = Math.floor(first / LINE_STRIDE) * LINE_STRIDE;
+    let pos = index.offsets[line / LINE_STRIDE] ?? index.bytes;
+    let done = count <= 0 || first >= index.totalLines;
+    const fd = openSync(this.pathOf(sha), 'r');
+    try {
+      const buf = Buffer.alloc(READ_CHUNK);
+      while (!done && pos < index.bytes) {
+        const n = readSync(fd, buf, 0, Math.min(READ_CHUNK, index.bytes - pos), pos);
+        this.stats.bytesRead += n;
+        if (n === 0) break;
+        let i = 0;
+        while (i < n && !done) {
+          const nl = buf.indexOf(0x0a, i);
+          const end = nl === -1 || nl >= n ? n : nl;
+          if (line >= first) {
+            cur.push(Buffer.from(buf.subarray(i, end)));
+            curLen += end - i;
+            if (curLen > maxBytes && finishLine()) done = true; // a line longer than the whole cap
+          }
+          if (done || end === n) break; // the line continues into the next chunk
+          if (line >= first && finishLine()) done = true;
+          line++;
+          i = end + 1;
+        }
+        pos += n;
+      }
+      // The blob's last line has no newline after it.
+      if (!done && line >= first && line < index.totalLines) finishLine();
+    } finally {
+      closeSync(fd);
+    }
+    const text = lines.map((l) => l.toString('utf8')).join('\n');
+    return { text, totalLines: index.totalLines, totalBytes: index.bytes, returnedLines: lines.length, truncated, hasMore: first + lines.length < index.totalLines };
+  }
+
+  private lineIndex(sha: string): LineIndex {
+    const cached = this.lineIndexes.get(sha);
+    if (cached) {
+      this.lineIndexes.delete(sha); // refresh LRU position
+      this.lineIndexes.set(sha, cached);
+      return cached;
+    }
+    const offsets = [0]; // offsets[k] = where line k × LINE_STRIDE starts
+    let lines = 1;
+    let pos = 0;
+    const fd = openSync(this.pathOf(sha), 'r');
+    try {
+      const buf = Buffer.alloc(READ_CHUNK);
+      for (;;) {
+        const n = readSync(fd, buf, 0, READ_CHUNK, pos);
+        this.stats.bytesRead += n;
+        if (n === 0) break;
+        for (let i = buf.indexOf(0x0a, 0); i !== -1 && i < n; i = buf.indexOf(0x0a, i + 1)) {
+          lines++; // a newline at byte i starts line `lines - 1` at i + 1
+          if ((lines - 1) % LINE_STRIDE === 0) offsets.push(pos + i + 1);
+        }
+        pos += n;
+      }
+    } finally {
+      closeSync(fd);
+    }
+    const index = { totalLines: lines, bytes: pos, offsets };
+    this.lineIndexes.set(sha, index);
+    if (this.lineIndexes.size > MAX_LINE_INDEXES) this.lineIndexes.delete(this.lineIndexes.keys().next().value!);
+    return index;
+  }
+
   delete(sha: string) {
+    this.lineIndexes.delete(sha);
     if (/^[0-9a-f]{64}$/.test(sha)) rmSync(this.pathOf(sha), { force: true });
   }
 }

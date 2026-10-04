@@ -1,6 +1,9 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { buildGraph, graphFromPaths, jsImports, layout, pythonImports, resolveJs, resolvePython } from '../src/index.ts';
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { buildGraph, graphFromPaths, jsImports, layout, probeGeneration, pythonImports, resolveJs, resolvePython } from '../src/index.ts';
 
 const shop = fileURLToPath(new URL('../../../fixtures/synthetic/workspace/shop', import.meta.url));
 
@@ -47,5 +50,37 @@ describe('graph', () => {
 
   it('labels a files-only map honestly', () => {
     expect(graphFromPaths(['a.ts']).temporal).toBe('recording-files-only');
+  });
+});
+
+// B2: graph freshness is checked cheaply (walk and stat only, no parsing) against the generation a
+// map was built at, and protected files are never opened while looking for imports.
+describe('graph freshness and scope', () => {
+  it('probes the same generation a full build produces, and notices an edit', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'drishya-graph-'));
+    try {
+      writeFileSync(join(dir, 'a.ts'), "import { b } from './b';\n");
+      writeFileSync(join(dir, 'b.ts'), 'export const b = 1;\n');
+      const g = await buildGraph(dir);
+      expect(await probeGeneration(dir)).toBe(g.generation);
+      writeFileSync(join(dir, 'b.ts'), 'export const b = 2; // changed\n');
+      utimesSync(join(dir, 'b.ts'), new Date(), new Date(Date.now() + 5000));
+      expect(await probeGeneration(dir)).not.toBe(g.generation);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('never reads a protected file for imports, even one with a source extension', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'drishya-graph-'));
+    try {
+      writeFileSync(join(dir, 'a.ts'), 'export const a = 1;\n');
+      writeFileSync(join(dir, '.env.js'), "import { a } from './a';\nexport const KEY = 'hunter3hunter3';\n");
+      const g = await buildGraph(dir);
+      expect(g.edges.filter((e) => e.from === '.env.js')).toHaveLength(0);
+      expect(g.nodes.find((n) => n.path === '.env.js')?.lines).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

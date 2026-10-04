@@ -345,3 +345,26 @@ describe('sessions', () => {
     expect((await req('/v1/recordings', { headers: cookie(c) })).status).toBe(401);
   });
 });
+
+// B2 (audit A15): an artifact response says what range it returned, how much exists, whether it
+// was cut, and when content is unavailable, instead of an empty string that reads as "protected".
+describe('artifact slices', () => {
+  it('describes the returned range and the whole', async () => {
+    const p = (await call(`/v1/recordings/${recId}/projection`, { headers: auth() })).body;
+    const art = p.artifacts.find((a: { blob?: string; lineCount: number }) => a.blob && a.lineCount > 3);
+    const r = (await call(`/v1/recordings/${recId}/artifacts/${art.id}?start=1&count=2`, { headers: auth() })).body;
+    expect(r).toMatchObject({ available: true, start: 1, returnedLines: 2, hasMore: true, truncated: false });
+    expect(r.totalLines).toBeGreaterThan(3);
+    expect(r.text.split('\n')).toHaveLength(2);
+  });
+
+  it('reports content that was never captured, or is no longer stored, as unavailable', async () => {
+    const p = structuredClone(s.app.projection(recId));
+    const a = p.artifacts.find((x) => x.blob)!;
+    expect(s.app.artifactSlice(p, a.id, 0, 10)).toMatchObject({ available: true });
+    a.blob = undefined;
+    expect(s.app.artifactSlice(p, a.id, 0, 10)).toMatchObject({ available: false, reason: 'not-captured', text: '' });
+    a.blob = '0'.repeat(64);
+    expect(s.app.artifactSlice(p, a.id, 0, 10)).toMatchObject({ available: false, reason: 'no-longer-stored' });
+  });
+});

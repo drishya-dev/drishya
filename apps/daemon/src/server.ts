@@ -243,13 +243,13 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         return json(res, { observations: app.store.observations(firstId, after, limit) });
       }
       if (sub === 'artifacts' && subId && m === 'GET') {
-        const { artifact, text } = app.artifactText(app.projection(id), subId);
-        const lines = text.split('\n');
         const start = intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER);
         const count = intParam(url, 'count', 20_000, 0, 20_000);
-        return json(res, { artifact, totalLines: lines.length, start, text: lines.slice(start, start + count).join('\n') });
+        return json(res, app.artifactSlice(app.projection(id), subId, start, count));
       }
-      if (sub === 'graph' && m === 'GET') return json(res, await app.graph(id, url.searchParams.get('refresh') === '1'));
+      if (sub === 'graph' && !subId && m === 'GET') return json(res, await app.graph(id, url.searchParams.get('refresh') === '1'));
+      // Scanning a folder for the map is an explicit approval of the captured root only (B2).
+      if (sub === 'graph' && subId === 'approve' && m === 'POST') return json(res, await app.approveGraphRoot(firstId, (await readJson(req)).root as string | undefined));
       if (sub === 'search' && m === 'GET') {
         const q = url.searchParams.get('q') ?? '';
         const ids = id.split('+');

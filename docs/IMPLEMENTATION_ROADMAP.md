@@ -82,6 +82,8 @@ Frontend requests carry selected-recording identity and revision; stale response
 
 **Implementation note (3 Oct):** A11–A13's core history corrections are implemented with synthetic tests: event-based passage IDs and reader offsets; per-recording reconstruction bases; worktree-qualified paths and captured-path maps for mixed roots; and a pure as-of projection through scene, renderer and model evidence. This does **not** close B2. The bounded artifact API, graph freshness/approval work and live/browser acceptance below remain gates.
 
+**Update (4 Oct):** bounded artifact slices (sparse line index, 2 MiB cap, explicit availability and cut) and graph freshness/approval (approved roots only, `stale` from a walk-and-stat probe, explicit refresh, protected files never opened) are implemented with tests and a real-app check. Remaining B2 gate: live/browser anchor acceptance with opted-in real data.
+
 Agree stable keys for recording, source generation, native event, operation, passage and file identity. Separate **ingestion order** from **source time** and **display grouping**. A late record may refine a passage but cannot invalidate all later reading anchors. Store an anchor as a stable item id plus offset; resolve deleted/grouped items to a documented nearby fallback. Positional `psg_1` style grouping alone is insufficient for durable anchors.
 
 File identity must include repository/worktree context, not just a relative path. Validate combined-session compatibility before merging. Unrelated worktrees can be compared explicitly, but must never share snapshot reconstruction state. Agent identity is namespaced to its source/session, and delegation requires explicit evidence.

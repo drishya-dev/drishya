@@ -214,18 +214,30 @@ function EditDetail({ op, before, after, afterProv }: { op: Operation; before?: 
 }
 
 function ArtifactCode({ id, start = 1, path }: { id?: string; start?: number; path?: string }) {
-  const { text, error } = useArtifact(id);
+  const { text, error, unavailable, partial } = useArtifact(id);
   if (!id) return <p className="muted">Not captured.</p>;
   if (error) return <p className="muted">{error}</p>;
+  if (unavailable) return <p className="muted">{unavailable}</p>;
   if (text === undefined) return <div className="skeleton tall" />;
-  if (!text) return <p className="muted">Protected file — content is never stored.</p>;
-  return <CodeView text={text} startLine={start} path={path} />;
+  if (!text) return <p className="muted">Empty.</p>;
+  return (
+    <>
+      <CodeView text={text} startLine={start} path={path} />
+      {partial && <p className="muted small">{partial}</p>}
+    </>
+  );
 }
 
 function OutputBlock({ artifactId, preview }: { artifactId?: string; preview?: string }) {
-  const { text } = useArtifact(artifactId);
+  const { text, unavailable, partial } = useArtifact(artifactId);
   const t = text ?? preview;
-  return t ? <Output text={t} /> : <p className="muted">No output captured.</p>;
+  if (!t) return <p className="muted">{unavailable ?? 'No output captured.'}</p>;
+  return (
+    <>
+      <Output text={t} />
+      {partial && <p className="muted small">{partial}</p>}
+    </>
+  );
 }
 
 // ─── evidence links ──────────────────────────────────────────────────────────────────────
