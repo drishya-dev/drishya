@@ -125,6 +125,7 @@ function useKeyboard() {
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) return;
       if (s.screen !== 'viewer') return;
       const k = e.key;
+      if (k === ' ' && t.closest('button, a, [role="slider"]')) return;
       if (k === ' ') {
         e.preventDefault();
         s.togglePlay();
@@ -132,7 +133,7 @@ function useKeyboard() {
       else if (k === 'ArrowLeft') s.stepBy(-1);
       else if (k === 'e' || k === 'E') s.jump('edit', e.shiftKey ? -1 : 1);
       else if (k === 'f' || k === 'F') s.jump('fail', e.shiftKey ? -1 : 1);
-      else if (k === 'x' || k === 'X') s.set({ explore: !s.explore });
+      else if ((k === 'x' || k === 'X') && s.mapVisible) s.set({ explore: !s.explore });
       else if (k === 'm' || k === 'M') setMotion(!s.motion);
       else if (k === '/') {
         e.preventDefault();

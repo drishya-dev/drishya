@@ -84,6 +84,8 @@ Frontend requests carry selected-recording identity and revision; stale response
 
 **Update (4 Oct):** bounded artifact slices (sparse line index, 2 MiB cap, explicit availability and cut) and graph freshness/approval (approved roots only, `stale` from a walk-and-stat probe, explicit refresh, protected files never opened) are implemented with tests and a real-app check. Remaining B2 gate: live/browser anchor acceptance with opted-in real data.
 
+**Synthetic browser gate (4 Oct):** an end-to-end Playwright test now appends 200 synthetic source records at each of 1440, 900 and 390 CSS px to a live daemon. It checks the same passage and pixel offset, new-work count, explicit return after scrolling to bottom, old captured content, map-off, reduced motion and browser reload. A manual five-burst run confirmed no duplicate re-import. The opted-in real-session repeat remains open; do not count synthetic coverage as real-data acceptance.
+
 Agree stable keys for recording, source generation, native event, operation, passage and file identity. Separate **ingestion order** from **source time** and **display grouping**. A late record may refine a passage but cannot invalidate all later reading anchors. Store an anchor as a stable item id plus offset; resolve deleted/grouped items to a documented nearby fallback. Positional `psg_1` style grouping alone is insufficient for durable anchors.
 
 File identity must include repository/worktree context, not just a relative path. Validate combined-session compatibility before merging. Unrelated worktrees can be compared explicitly, but must never share snapshot reconstruction state. Agent identity is namespaced to its source/session, and delegation requires explicit evidence.

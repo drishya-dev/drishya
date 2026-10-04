@@ -14,11 +14,13 @@
     "ui:build": "pnpm --filter @drishya/ui build",
     "demo:bundle": "node apps/daemon/src/cli.ts demo-bundle --out apps/ui/public/demo/bundle.json",
     "test": "vitest run",
+    "test:browser": "pnpm ui:build && playwright test",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @drishya/ui typecheck",
     "check": "pnpm typecheck && pnpm test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.3.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"

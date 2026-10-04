@@ -42,6 +42,7 @@ interface State {
   /** History follows the newest work; scrolling away turns it off. */
   follow: boolean;
   motion: boolean;
+  mapVisible: boolean;
   explore: boolean;
   selectedOp?: string;
   /** Stable captured observation to bring into view without switching normal history to replay. */
@@ -76,6 +77,13 @@ const storedMotion = (() => {
     return null;
   }
 })();
+const storedMapVisible = (() => {
+  try {
+    return localStorage.getItem('drishya.mapVisible');
+  } catch {
+    return null;
+  }
+})();
 
 export const useApp = create<State>((set, get) => ({
   screen: 'loading',
@@ -89,6 +97,7 @@ export const useApp = create<State>((set, get) => ({
   held: false,
   follow: true,
   motion: storedMotion ? storedMotion === '1' : !prefersReducedMotion,
+  mapVisible: storedMapVisible !== '0',
   explore: false,
   inspectorTab: 'detail',
   briefingOpen: false,
@@ -109,7 +118,6 @@ export const useApp = create<State>((set, get) => ({
     const mode = opts.at === undefined && !opts.play ? 'history' : 'replay';
     const step = mode === 'history' || opts.at === 'end' ? projection.timeline.length : Math.max(0, Math.min(opts.at ?? 0, projection.timeline.length));
     set({ projection, recording, recordings, renderedRevisions: revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < projection.timeline.length });
-    src.graph(id).then((graph) => get().recordingId === id && set({ graph })).catch(() => undefined);
   },
 
   async reloadProjection() {
@@ -175,5 +183,14 @@ export function setMotion(on: boolean) {
     localStorage.setItem('drishya.motion', on ? '1' : '0');
   } catch {
     // preference only
+  }
+}
+
+export function setMapVisible(on: boolean) {
+  useApp.setState({ mapVisible: on, ...(on ? {} : { explore: false, graph: undefined }) });
+  try {
+    localStorage.setItem('drishya.mapVisible', on ? '1' : '0');
+  } catch {
+    // The preference is optional when storage is unavailable.
   }
 }
