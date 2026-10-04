@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| @harsh | B2-R: bounded artifact reads, graph freshness and root approval | `packages/store`, `packages/indexer`, `apps/daemon/src/{app,server}.ts`, `apps/ui` artifact/map code |
 
 ---
 
