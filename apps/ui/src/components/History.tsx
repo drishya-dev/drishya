@@ -22,6 +22,8 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const lastScrollTop = useRef(0);
   const userScrollUntil = useRef(0);
   const scrollFrame = useRef<number | undefined>(undefined);
+  const navigationFrame = useRef<number | undefined>(undefined);
+  const navigating = useRef(false);
   const readingAnchor = useRef<{ id: string; offset: number } | undefined>(undefined);
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
@@ -68,7 +70,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const restoreReading = () => {
     const el = ref.current;
     const anchor = readingAnchor.current;
-    if (!el || follow || !anchor) return;
+    if (!el || follow || !anchor || navigating.current) return;
     const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
@@ -156,15 +158,27 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     setScrollTop(el.scrollHeight);
   }, [scene.step, follow, layout.total]);
 
-  useLayoutEffect(() => () => { if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current); }, []);
+  useLayoutEffect(() => () => {
+    if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
+    if (navigationFrame.current !== undefined) cancelAnimationFrame(navigationFrame.current);
+  }, []);
 
   const onScroll = () => {
     const el = ref.current;
     if (!el || programmatic.current) return;
+    navigating.current = true;
     rememberReading();
     const movedUp = el.scrollTop < lastScrollTop.current - 1;
     lastScrollTop.current = el.scrollTop;
     setViewport((old) => old.top === el.scrollTop && old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight });
+    if (navigationFrame.current !== undefined) cancelAnimationFrame(navigationFrame.current);
+    navigationFrame.current = requestAnimationFrame(() => {
+      navigationFrame.current = requestAnimationFrame(() => {
+        navigating.current = false;
+        rememberReading();
+        navigationFrame.current = undefined;
+      });
+    });
     if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
   };
 
@@ -177,7 +191,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   };
 
   return (
-    <div className="history" ref={ref} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY < 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) userScrollUntil.current = performance.now() + 750; }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => setFocusedPassageId((e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
+    <div className="history" ref={ref} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; navigating.current = true; if (follow && e.deltaY < 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; navigating.current = true; } }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => setFocusedPassageId((e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       <div className="history-inner">
         {scene.passages.length === 0 && <div className="history-empty">No captured work in this view yet.</div>}
         {layout.runs.flatMap((run) => [

@@ -136,7 +136,12 @@ test('long history mounts only nearby work while selected evidence and live upda
   const selectedId = await selected.getAttribute('data-op-id');
   await selected.click();
   await history.locator(`article[data-op-id="${selectedId}"]`).focus();
-  await history.evaluate((el) => { el.scrollTop = el.scrollHeight; });
+  await history.hover();
+  for (let i = 0; i < 10; i++) {
+    await page.mouse.wheel(0, 100_000);
+    const remaining = await history.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop);
+    if (remaining < 2) break;
+  }
   await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(2);
   await expect.poll(() => history.locator('[data-passage-id]').count()).toBeLessThan(80);
   await expect(history.locator(`article[data-op-id="${selectedId}"]`)).toHaveCount(1);
