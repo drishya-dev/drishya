@@ -1,5 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join, parse } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { App } from '../src/app.ts';
@@ -65,8 +65,20 @@ describe('repository map approval and freshness', () => {
 
   it('refuses to approve a root that is not the captured one, or a whole drive', async () => {
     await expect(app.approveGraphRoot(recId, dir)).rejects.toThrow(/captured/);
+    await expect(app.approveGraphRoot(recId, 42 as unknown as string)).rejects.toMatchObject({ status: 400 });
     const rootOfDrive = parse(ws).root;
     app.store.updateRecordingMeta(recId, { workspaceRoot: rootOfDrive, graphRoot: '' });
     await expect(app.approveGraphRoot(recId)).rejects.toThrow(/too broad/);
+  });
+
+  it('refuses a captured alias of the home folder', async () => {
+    const alias = join(dir, 'home-alias');
+    symlinkSync(homedir(), alias, process.platform === 'win32' ? 'junction' : 'dir');
+    try {
+      app.store.updateRecordingMeta(recId, { workspaceRoot: alias, graphRoot: '' });
+      await expect(app.approveGraphRoot(recId)).rejects.toThrow(/too broad/);
+    } finally {
+      unlinkSync(alias);
+    }
   });
 });

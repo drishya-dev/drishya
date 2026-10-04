@@ -1,6 +1,6 @@
 // Shared application wiring used by the server and the CLI.
 
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import type { Artifact, ArtifactSlice, Projection, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
@@ -66,13 +66,15 @@ export class App {
 
   /** A directory the map may scan only with care: missing, not a directory, or a whole drive/home. */
   private unscannable(root: string): string | undefined {
+    let r: string;
     try {
       if (!existsSync(root) || !statSync(root).isDirectory()) return 'is not a directory on this machine';
+      r = realpathSync(root);
     } catch {
       return 'cannot be read';
     }
-    const r = resolve(root);
-    if (dirname(r) === r || r.toLowerCase() === resolve(homedir()).toLowerCase()) return 'is too broad to scan (a drive root or the home folder)';
+    const home = realpathSync(homedir());
+    if (dirname(r) === r || r.toLowerCase() === home.toLowerCase()) return 'is too broad to scan (a drive root or the home folder)';
     return undefined;
   }
 
@@ -124,7 +126,7 @@ export class App {
     const rec = this.recording(id);
     const captured = rec.workspaceRoot;
     if (!captured) throw new HttpError(400, 'this recording captured no workspace root');
-    if (root !== undefined && resolve(root) !== resolve(captured)) throw new HttpError(400, 'only the captured workspace root can be approved');
+    if (root !== undefined && (typeof root !== 'string' || resolve(root) !== resolve(captured))) throw new HttpError(400, 'only the captured workspace root can be approved');
     const why = this.unscannable(captured);
     if (why) throw new HttpError(400, `the captured root ${why}`);
     this.store.updateRecordingMeta(id, { graphRoot: captured });

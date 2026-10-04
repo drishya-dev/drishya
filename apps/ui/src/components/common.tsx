@@ -29,10 +29,13 @@ export function viewOf(s: ArtifactSlice): ArtifactView {
 export function useArtifact(artifactId: string | undefined): ArtifactView {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
-  const [state, setState] = useState<ArtifactView>({});
+  const revisions = useApp((s) => s.renderedRevisions);
+  const blob = useApp((s) => s.projection?.artifacts.find((a) => a.id === artifactId)?.blob);
+  const revision = recordingId?.split('+').map((id) => revisions[id] ?? 0).join(':');
+  const key = artifactId && recordingId ? `${source?.kind}/${recordingId}/${revision}/${artifactId}/${blob ?? 'unavailable'}` : undefined;
+  const [state, setState] = useState<{ key: string; view: ArtifactView }>();
   useEffect(() => {
-    if (!artifactId || !source || !recordingId) return;
-    const key = `${recordingId}/${artifactId}`;
+    if (!key || !artifactId || !source || !recordingId) return;
     let p = cache.get(key);
     if (!p) {
       if (cachedBytes > MAX_CACHE) {
@@ -41,7 +44,7 @@ export function useArtifact(artifactId: string | undefined): ArtifactView {
       }
       p = source.artifact(recordingId, artifactId).then(
         (s) => {
-          cachedBytes += s.text.length;
+          cachedBytes += new TextEncoder().encode(s.text).byteLength;
           return s;
         },
         (e) => {
@@ -52,12 +55,12 @@ export function useArtifact(artifactId: string | undefined): ArtifactView {
       cache.set(key, p);
     }
     let live = true;
-    p.then((s) => live && setState(viewOf(s))).catch((e) => live && setState({ error: String(e.message ?? e) }));
+    p.then((s) => live && setState({ key, view: viewOf(s) })).catch((e) => live && setState({ key, view: { error: String(e.message ?? e) } }));
     return () => {
       live = false;
     };
-  }, [artifactId, source, recordingId]);
-  return artifactId ? state : {};
+  }, [key, artifactId, source, recordingId]);
+  return key === state?.key ? state?.view ?? {} : {};
 }
 
 // ─── code ────────────────────────────────────────────────────────────────────────────────

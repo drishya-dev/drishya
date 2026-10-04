@@ -13,6 +13,8 @@ import { MapCanvas } from './MapCanvas.tsx';
 export function Viewer() {
   const projection = useApp((s) => s.projection);
   const graph = useApp((s) => s.graph);
+  const recordingId = useApp((s) => s.recordingId);
+  const source = useApp((s) => s.source);
   const step = useApp((s) => s.step);
   const filter = useApp((s) => s.filter);
   const selectedOp = useApp((s) => s.selectedOp);
@@ -23,6 +25,37 @@ export function Viewer() {
 
   const scene = useMemo(() => (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [projection, step, filter, selectedOp]);
   const historical = useMemo(() => projection ? asOfProjection(projection, step) : undefined, [projection, step]);
+
+  useEffect(() => {
+    if (source?.kind !== 'daemon' || !recordingId || graph?.temporal !== 'current') return;
+    let disposed = false;
+    let inFlight = false;
+    const check = async () => {
+      if (disposed || inFlight || document.visibilityState === 'hidden') return;
+      const shown = useApp.getState().graph;
+      if (!shown || shown.temporal !== 'current') return;
+      inFlight = true;
+      try {
+        const latest = await source.graph(recordingId);
+        if (disposed || !latest || useApp.getState().recordingId !== recordingId) return;
+        const current = useApp.getState().graph;
+        if (current?.generation !== shown.generation) return; // an explicit refresh won the race
+        const stale = latest.generation !== shown.generation || !!latest.stale;
+        if (current.stale !== stale) useApp.setState({ graph: { ...current, stale } });
+      } catch {
+        // A disconnected daemon is reported by the connection indicator; keep the last map.
+      } finally {
+        inFlight = false;
+      }
+    };
+    const timer = window.setInterval(() => void check(), 30_000);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [source, recordingId, graph?.temporal]);
 
   useEffect(() => {
     const el = main.current;
