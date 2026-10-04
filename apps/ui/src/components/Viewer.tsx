@@ -92,7 +92,7 @@ export function Viewer() {
       <div className="main" ref={main}>
         {mapVisible && <MapCanvas graph={graph} heat={scene.heat} arrivingPath={arriving?.origin.type === 'map' ? arriving.origin.path : undefined} readingRect={reading} />}
         <Spine scene={scene} projection={historical} />
-        <History scene={scene} projection={historical} />
+        <History key={recordingId} scene={scene} projection={historical} />
         <FilePanel projection={historical} />
       </div>
       <Dock scene={scene} />

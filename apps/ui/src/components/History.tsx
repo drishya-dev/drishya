@@ -1,12 +1,11 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
+import { passageWindow } from '../lib/history-window.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
 import { useApp } from '../state.ts';
 import { CodeView, DiffView, Output, timeOf, useArtifact } from './common.tsx';
-
-const WINDOW = 50;
 
 export function History({ scene, projection }: { scene: Scene; projection: Projection }) {
   const mode = useApp((s) => s.mode);
@@ -15,33 +14,46 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const focusObservationId = useApp((s) => s.focusObservationId);
   const set = useApp((s) => s.set);
   const ref = useRef<HTMLDivElement>(null);
-  const [extra, setExtra] = useState(0);
-  const [detachedStartId, setDetachedStartId] = useState<string | undefined>();
+  const [viewport, setViewport] = useState({ top: 0, height: 900 });
+  const [measurementVersion, setMeasurementVersion] = useState(0);
+  const [focusedPassageId, setFocusedPassageId] = useState<string | undefined>();
+  const measurements = useRef(new Map<string, number>());
   const programmatic = useRef(false);
   const lastScrollTop = useRef(0);
   const userScrollUntil = useRef(0);
   const scrollFrame = useRef<number | undefined>(undefined);
-  const olderAnchor = useRef<{ height: number; top: number } | undefined>(undefined);
+  const navigationFrame = useRef<number | undefined>(undefined);
+  const navigating = useRef(false);
   const readingAnchor = useRef<{ id: string; offset: number } | undefined>(undefined);
+  const pendingNavigation = useRef<string | undefined>(undefined);
+  const lastNavigation = useRef<string | undefined>(undefined);
   const seenThrough = useRef(scene.total);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
   const agents = useMemo(() => new Map(projection.agents.map((a) => [a.id, a])), [projection]);
 
-  // Freeze the mounted starting point while reading earlier work. New passages append below;
-  // they must not evict the passage under the reader as the recent-window edge advances.
-  const recentStart = Math.max(0, scene.passages.length - WINDOW - extra);
-  const anchoredStart = detachedStartId ? scene.passages.findIndex((ps) => ps.id === detachedStartId) : -1;
-  const start = follow ? recentStart : Math.min(anchoredStart < 0 ? recentStart : anchoredStart, recentStart);
-  const visible = scene.passages.slice(start);
+  const targetIndex = scene.passages.findIndex((ps) =>
+    selectedOp ? ps.ops.some((op) => op.id === selectedOp) : focusObservationId ?
+      ps.ops.some((op) => ops.get(op.id)?.observationIds.includes(focusObservationId)) ||
+      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : false,
+  );
+  const targetId = scene.passages[targetIndex]?.id;
+  const ids = scene.passages.map((ps) => ps.id);
+  const pinned = new Set([readingAnchor.current?.id, targetId, focusedPassageId].filter((id): id is string => !!id));
+  const layout = useMemo(() => passageWindow(ids, measurements.current, viewport.top, viewport.height, pinned),
+    // IDs and pinning are recreated as scene and reader state change. Measurements need their own revision.
+    [scene.passages, viewport, measurementVersion, targetId, focusedPassageId, readingAnchor.current?.id]);
 
   const rememberReading = () => {
     const el = ref.current;
     if (!el) return;
     const viewport = el.getBoundingClientRect();
-    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.getBoundingClientRect().bottom > viewport.top + 1);
-    if (node?.dataset.passageId) readingAnchor.current = { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top };
+    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => {
+      const bounds = item.getBoundingClientRect();
+      return bounds.bottom > viewport.top + 1 && bounds.top < viewport.bottom;
+    });
+    readingAnchor.current = node?.dataset.passageId ? { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top } : undefined;
   };
 
   const setScrollTop = (top: number) => {
@@ -50,6 +62,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     programmatic.current = true;
     el.scrollTop = top;
     lastScrollTop.current = el.scrollTop;
+    setViewport((old) => old.top === el.scrollTop && old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight });
     if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
     scrollFrame.current = requestAnimationFrame(() => { programmatic.current = false; scrollFrame.current = undefined; });
   };
@@ -57,7 +70,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const restoreReading = () => {
     const el = ref.current;
     const anchor = readingAnchor.current;
-    if (!el || follow || !anchor) return;
+    if (!el || follow || !anchor || navigating.current) return;
     const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
@@ -66,13 +79,8 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
 
   useLayoutEffect(() => {
     if (follow) {
-      setDetachedStartId(undefined);
-      setExtra(0);
       readingAnchor.current = undefined;
-    } else {
-      if (!readingAnchor.current) rememberReading();
-      if (detachedStartId === undefined) setDetachedStartId(scene.passages[recentStart]?.id);
-    }
+    } else if (!readingAnchor.current) rememberReading();
   }, [follow]);
 
   // A late record can insert steps ahead of the reader. Restore the same captured passage
@@ -81,70 +89,96 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     restoreReading();
   }, [scene.passages, follow]);
 
-  // Artifact content is fetched after a passage first mounts. Its late height must not move the
-  // reader; while following, the same growth should keep the latest edge in view.
+  // A passage can grow after its artifact arrives or its width changes. Record the actual slot
+  // height, then reflow spacers; preserve the captured passage/pixel anchor while detached.
   useLayoutEffect(() => {
     const el = ref.current;
-    const inner = el?.querySelector('.history-inner');
-    if (!el || !inner) return;
-    const observer = new ResizeObserver(() => {
-      if (follow) setScrollTop(el.scrollHeight);
-      else restoreReading();
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      let changed = false;
+      for (const entry of entries) {
+        const id = (entry.target as HTMLElement).dataset.passageId;
+        if (!id) continue;
+        const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height;
+        if (Math.abs((measurements.current.get(id) ?? 0) - height) > 0.5) {
+          measurements.current.set(id, height);
+          changed = true;
+        }
+      }
+      if (changed) {
+        setMeasurementVersion((n) => n + 1);
+        if (follow) setScrollTop(el.scrollHeight);
+        else restoreReading();
+      }
     });
-    observer.observe(inner);
+    for (const node of el.querySelectorAll<HTMLElement>('[data-passage-id]')) observer.observe(node);
     return () => observer.disconnect();
-  }, [follow]);
+  }, [layout.runs, follow]);
+
+  useLayoutEffect(() => {
+    if (!follow && !readingAnchor.current) rememberReading();
+  }, [layout]);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setViewport((old) => old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight }));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useLayoutEffect(() => {
     if (follow) seenThrough.current = scene.total;
   }, [follow, scene.total]);
 
-  // Prepending older passages must not move the line the reader was looking at.
   useLayoutEffect(() => {
     const el = ref.current;
-    const anchor = olderAnchor.current;
-    if (!el || !anchor) return;
-    setScrollTop(anchor.top + el.scrollHeight - anchor.height);
-    olderAnchor.current = undefined;
-    rememberReading();
-  }, [extra]);
-
-  const targetIndex = scene.passages.findIndex((ps) =>
-    selectedOp ? ps.ops.some((op) => op.id === selectedOp) : focusObservationId ?
-      ps.ops.some((op) => ops.get(op.id)?.observationIds.includes(focusObservationId)) ||
-      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : false,
-  );
-  useLayoutEffect(() => {
-    if (targetIndex >= 0 && targetIndex < start) setExtra(scene.passages.length - WINDOW - targetIndex);
-  }, [targetIndex, scene.passages.length, start]);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || targetIndex < 0) return;
-    const passageId = scene.passages[targetIndex]?.id;
-    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((n) => n.dataset.passageId === passageId);
+    if (!el || !targetId) { lastNavigation.current = undefined; pendingNavigation.current = undefined; return; }
+    if (targetId !== lastNavigation.current) {
+      lastNavigation.current = targetId;
+      pendingNavigation.current = targetId;
+      set({ follow: false });
+      setScrollTop(layout.prefix[targetIndex]!);
+      return;
+    }
+    if (pendingNavigation.current !== targetId) return;
+    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((n) => n.dataset.passageId === targetId);
     if (!node) return;
     const bounds = node.getBoundingClientRect();
-    const viewport = el.getBoundingClientRect();
-    if (bounds.top < viewport.top || bounds.bottom > viewport.bottom) node.scrollIntoView({ block: 'center', behavior: 'auto' });
+    const viewportBounds = el.getBoundingClientRect();
+    if (bounds.top < viewportBounds.top || bounds.bottom > viewportBounds.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - (el.clientHeight - bounds.height) / 2);
     rememberReading();
-  }, [selectedOp, focusObservationId, targetIndex, extra]);
+    pendingNavigation.current = undefined;
+  }, [targetId, targetIndex, layout]);
 
   // Follow: keep the newest work in view. A deliberate scroll away turns following off.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !follow) return;
     setScrollTop(el.scrollHeight);
-  }, [scene.step, follow, visible.length]);
+  }, [scene.step, follow, layout.total]);
 
-  useLayoutEffect(() => () => { if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current); }, []);
+  useLayoutEffect(() => () => {
+    if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
+    if (navigationFrame.current !== undefined) cancelAnimationFrame(navigationFrame.current);
+  }, []);
 
   const onScroll = () => {
     const el = ref.current;
     if (!el || programmatic.current) return;
-    if (performance.now() < userScrollUntil.current) rememberReading();
+    navigating.current = true;
+    rememberReading();
     const movedUp = el.scrollTop < lastScrollTop.current - 1;
     lastScrollTop.current = el.scrollTop;
+    setViewport((old) => old.top === el.scrollTop && old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight });
+    if (navigationFrame.current !== undefined) cancelAnimationFrame(navigationFrame.current);
+    navigationFrame.current = requestAnimationFrame(() => {
+      navigationFrame.current = requestAnimationFrame(() => {
+        navigating.current = false;
+        rememberReading();
+        navigationFrame.current = undefined;
+      });
+    });
     if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
   };
 
@@ -157,22 +191,18 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   };
 
   return (
-    <div className="history" ref={ref} onScroll={onScroll} onWheel={() => { userScrollUntil.current = performance.now() + 750; }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) userScrollUntil.current = performance.now() + 750; }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection}>
+    <div className="history" ref={ref} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; navigating.current = true; if (follow && e.deltaY < 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; navigating.current = true; } }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => setFocusedPassageId((e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       <div className="history-inner">
-        {start > 0 && (
-          <button className="load-earlier" onClick={() => {
-            const el = ref.current;
-            if (el) olderAnchor.current = { height: el.scrollHeight, top: el.scrollTop };
-            set({ follow: false });
-            setExtra(Math.max(0, scene.passages.length - WINDOW - Math.max(0, start - WINDOW)));
-          }}>
-            Show {Math.min(WINDOW, start)} earlier passages
-          </button>
-        )}
         {scene.passages.length === 0 && <div className="history-empty">No captured work in this view yet.</div>}
-        {visible.map((ps) => (
-          <PassageView key={ps.id} ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />
-        ))}
+        {layout.runs.flatMap((run) => [
+          ...(run.before > 0 ? [<div key={`gap-${run.start}`} aria-hidden="true" style={{ height: run.before }} />] : []),
+          ...scene.passages.slice(run.start, run.end).map((ps) => (
+            <div className="passage-slot" data-passage-id={ps.id} key={ps.id}>
+              <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />
+            </div>
+          )),
+        ])}
+        {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
       {!follow && (
         <button className="follow-pill" onClick={() => { userScrollUntil.current = 0; set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false }); }}>

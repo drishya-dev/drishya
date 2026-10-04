@@ -112,3 +112,39 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   expect(app.store.getRecording(recordingId)?.observationCount).toBe(926);
   expect((await app.ingest.sync(recordingId)).added).toBe(0);
 });
+
+test('long history mounts only nearby work while selected evidence and live updates survive', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  const history = page.locator('.history');
+  const steps = page.locator('.reading-status');
+  const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
+  await history.hover();
+  await page.mouse.wheel(0, -100_000);
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+  await expect.poll(() => history.evaluate((el) => el.scrollTop)).toBe(0);
+  const anchor = await history.locator('[data-passage-id]').first().getAttribute('data-passage-id');
+  expect(anchor).toBeTruthy();
+
+  for (let i = 0; i < 8; i++) await appendSyntheticRecords();
+  await expect(steps).toContainText(`${before + 2_400} recorded steps`);
+  await expect.poll(() => history.locator('[data-passage-id]').count()).toBeLessThan(80);
+  expect(await history.locator('[data-passage-id]').first().getAttribute('data-passage-id')).toBe(anchor);
+  expect(await history.evaluate((el) => el.scrollTop)).toBe(0);
+
+  const selected = history.locator('article[data-op-id]').first();
+  const selectedId = await selected.getAttribute('data-op-id');
+  await selected.click();
+  await history.locator(`article[data-op-id="${selectedId}"]`).focus();
+  await history.hover();
+  for (let i = 0; i < 10; i++) {
+    await page.mouse.wheel(0, 100_000);
+    const remaining = await history.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop);
+    if (remaining < 2) break;
+  }
+  await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(2);
+  await expect.poll(() => history.locator('[data-passage-id]').count()).toBeLessThan(80);
+  await expect(history.locator(`article[data-op-id="${selectedId}"]`)).toHaveCount(1);
+  expect(await page.evaluate(() => document.activeElement?.getAttribute('data-op-id'))).toBe(selectedId);
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+});
