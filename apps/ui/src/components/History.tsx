@@ -18,6 +18,9 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const [extra, setExtra] = useState(0);
   const [detachedStartId, setDetachedStartId] = useState<string | undefined>();
   const programmatic = useRef(false);
+  const lastScrollTop = useRef(0);
+  const userScrollUntil = useRef(0);
+  const scrollFrame = useRef<number | undefined>(undefined);
   const olderAnchor = useRef<{ height: number; top: number } | undefined>(undefined);
   const readingAnchor = useRef<{ id: string; offset: number } | undefined>(undefined);
   const seenThrough = useRef(scene.total);
@@ -41,26 +44,56 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     if (node?.dataset.passageId) readingAnchor.current = { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top };
   };
 
-  useLayoutEffect(() => {
-    if (follow) {
-      setDetachedStartId(undefined);
-      setExtra(0);
-      readingAnchor.current = undefined;
-    } else if (detachedStartId === undefined) setDetachedStartId(scene.passages[recentStart]?.id);
-  }, [follow]);
+  const setScrollTop = (top: number) => {
+    const el = ref.current;
+    if (!el) return;
+    programmatic.current = true;
+    el.scrollTop = top;
+    lastScrollTop.current = el.scrollTop;
+    if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
+    scrollFrame.current = requestAnimationFrame(() => { programmatic.current = false; scrollFrame.current = undefined; });
+  };
 
-  // A late record can insert steps ahead of the reader. Restore the same captured passage
-  // and pixel offset after React updates it, instead of trusting an old array index.
-  useLayoutEffect(() => {
+  const restoreReading = () => {
     const el = ref.current;
     const anchor = readingAnchor.current;
     if (!el || follow || !anchor) return;
     const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
-    if (delta) el.scrollTop += delta;
-    rememberReading();
+    if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
+  };
+
+  useLayoutEffect(() => {
+    if (follow) {
+      setDetachedStartId(undefined);
+      setExtra(0);
+      readingAnchor.current = undefined;
+    } else {
+      if (!readingAnchor.current) rememberReading();
+      if (detachedStartId === undefined) setDetachedStartId(scene.passages[recentStart]?.id);
+    }
+  }, [follow]);
+
+  // A late record can insert steps ahead of the reader. Restore the same captured passage
+  // and pixel offset after React updates it, instead of trusting an old array index.
+  useLayoutEffect(() => {
+    restoreReading();
   }, [scene.passages, follow]);
+
+  // Artifact content is fetched after a passage first mounts. Its late height must not move the
+  // reader; while following, the same growth should keep the latest edge in view.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const inner = el?.querySelector('.history-inner');
+    if (!el || !inner) return;
+    const observer = new ResizeObserver(() => {
+      if (follow) setScrollTop(el.scrollHeight);
+      else restoreReading();
+    });
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, [follow]);
 
   useLayoutEffect(() => {
     if (follow) seenThrough.current = scene.total;
@@ -71,8 +104,9 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     const el = ref.current;
     const anchor = olderAnchor.current;
     if (!el || !anchor) return;
-    el.scrollTop = anchor.top + el.scrollHeight - anchor.height;
+    setScrollTop(anchor.top + el.scrollHeight - anchor.height);
     olderAnchor.current = undefined;
+    rememberReading();
   }, [extra]);
 
   const targetIndex = scene.passages.findIndex((ps) =>
@@ -93,29 +127,37 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     const bounds = node.getBoundingClientRect();
     const viewport = el.getBoundingClientRect();
     if (bounds.top < viewport.top || bounds.bottom > viewport.bottom) node.scrollIntoView({ block: 'center', behavior: 'auto' });
+    rememberReading();
   }, [selectedOp, focusObservationId, targetIndex, extra]);
 
   // Follow: keep the newest work in view. A deliberate scroll away turns following off.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !follow) return;
-    programmatic.current = true;
-    el.scrollTop = el.scrollHeight;
-    const frame = requestAnimationFrame(() => (programmatic.current = false));
-    return () => cancelAnimationFrame(frame);
+    setScrollTop(el.scrollHeight);
   }, [scene.step, follow, visible.length]);
+
+  useLayoutEffect(() => () => { if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current); }, []);
 
   const onScroll = () => {
     const el = ref.current;
     if (!el || programmatic.current) return;
+    if (performance.now() < userScrollUntil.current) rememberReading();
+    const movedUp = el.scrollTop < lastScrollTop.current - 1;
+    lastScrollTop.current = el.scrollTop;
+    if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
+  };
+
+  const holdForSelection = () => {
+    const selection = window.getSelection();
+    const el = ref.current;
+    if (!selection || selection.isCollapsed || !el?.contains(selection.anchorNode) || !el.contains(selection.focusNode)) return;
     rememberReading();
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    if (!atBottom && follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
-    if (atBottom && !follow && !selectedOp) set({ follow: true });
+    if (follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
   };
 
   return (
-    <div className="history" ref={ref} onScroll={onScroll}>
+    <div className="history" ref={ref} onScroll={onScroll} onWheel={() => { userScrollUntil.current = performance.now() + 750; }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) userScrollUntil.current = performance.now() + 750; }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection}>
       <div className="history-inner">
         {start > 0 && (
           <button className="load-earlier" onClick={() => {
@@ -133,7 +175,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
         ))}
       </div>
       {!follow && (
-        <button className="follow-pill" onClick={() => set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false })}>
+        <button className="follow-pill" onClick={() => { userScrollUntil.current = 0; set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false }); }}>
           {mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest ↓
         </button>
       )}
@@ -182,7 +224,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   return (
     <div className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
-        <button className="prose-label" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <button className="prose-label" onClick={() => { setOpen((o) => !o); set({ follow: false }); }} aria-expanded={open}>
           {label}
           {!open && ' · show'}
         </button>

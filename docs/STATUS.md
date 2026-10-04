@@ -16,8 +16,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
-| **Blocked on** | Nothing for synthetic B2 acceptance. Opted-in real recordings are required for the real-data portion; the full contract freeze still needs both builders' review |
-| **Next gate** | **B2 acceptance** (live/browser anchors with opted-in real data, map-off check), then **B3** long-history UI (virtualization, content-shaped expansion) and **B4** resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [handoff](CONTINUITY.md). No model key is needed for the core |
+| **Blocked on** | The real-data B2 acceptance needs a builder's explicit opt-in; the full contract freeze needs both builders' review |
+| **Next gate** | **B2 real-data acceptance** after the synthetic browser gate, then **B3** long-history UI (virtualization, content-shaped expansion) and **B4** resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [handoff](CONTINUITY.md). No model key is needed for the core |
 
 ### Claimed
 
@@ -59,10 +59,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-04
-- **Did:** Reviewed Harsh's B2-R PR #11 and accepted its additive `ArtifactSlice` and graph fields for this gate. Fixed artifact switching so an earlier selection's content cannot briefly appear under the new selection; keyed the cache to recording revision and blob. The open viewer now checks map freshness every 30 seconds or on return to the tab, without redrawing until an explicit refresh. Graph approval rejects malformed roots and canonical drive/home aliases.
-- **Validation:** Backend/UI typechecks, 183-test synthetic suite, Vite production build, Linux/Windows CI. No real journal was newly persisted or exported in this review.
-- **Left half-done:** B2 live/browser anchor acceptance with opted-in real data and map-off freeze/truth check; B3 measured virtualization, motion and broader navigation; B4 resource/install gates. The *whole* draft contract still needs a joint freeze review. H–L remain proposals.
-- **Watch out for:** A combined view of distinct worktrees uses `worktree-<root hash>/path` labels and a captured-path map rather than pretending one checkout is authoritative. Known-root export masking remains best effort; older-policy recordings are flagged, not re-sanitized in place.
+- **Did:** Reviewed and merged Harsh's B2-R PR #11, then exercised the remaining synthetic B2 browser scenario. Fixed implicit live-follow reattachment, reader movement after asynchronous artifact growth, a return-to-latest race when the recent window shrinks, and a covered return button. Map-off is now persistent and skips graph work; the 390 px history footer wraps rather than overflowing. Added a Playwright gate that appends 200 source records at each of 1440, 900 and 390 px, checks stable passage/pixel anchors, selection, explicit return, old captured content, reduced motion, map-off and reload. CI runs it on Linux and Windows.
+- **Validation:** 183/183 unit tests, typechecks, production build, and 1/1 Playwright browser test on Windows Chrome. A manual loopback run held the exact anchor after five 200-record bursts, found no duplicate re-import (`sync` added 0), and showed 1,526 committed observations. All browser data was synthetic; no real journal was imported or exported. PR #12 CI passes unit and browser jobs on Linux and Windows.
+- **Left half-done:** B2's opted-in real-session repeat; B3 measured virtualization, content-shaped expansion and broader navigation; B4 resource/install gates. The whole draft contract still needs joint freeze review. H–L remain proposals.
+- **Watch out for:** The browser test's synthetic source and store are confined to a temporary directory. The base history still mounts a 50-passage window and the file panel is not virtualized; B3 must measure and bound long-session DOM cost.
 
 ---
 
@@ -71,7 +71,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 **Current backend-first sequence:**
 
 1. ~~**B0: privacy hardening.**~~ Done 2 Oct: A01 (PR #3); A02 sinks, A03, A04 (PR #4); protected-file scopes, safe forget, outdated-policy flag (`harsh/b0-leftovers`). Policy now `p3`.
-2. **B1 done; B2 implemented** (3–4 Oct): stable anchors, as-of boundaries and worktree identity (Yash, PR #10); bounded artifact slices, graph root approval and staleness (Harsh, PR #11). **B2 remains open only for** live/browser anchor acceptance with opted-in real data and the map-off freeze/truth check.
+2. **B1 done; B2 synthetic acceptance implemented** (3–4 Oct): stable anchors, as-of boundaries and worktree identity (Yash, PR #10); bounded artifact slices, graph root approval and staleness (Harsh, PR #11); live/browser anchors, map-off and explicit follow in the new browser gate. **B2 remains open for** the same acceptance journey on opted-in real sessions.
 3. **B3: integrated base history.** History-first navigation and responsive action passages are started in `apps/ui`; capture/history grow while the reader scrolls/selects, and playback is optional. Still needed: stable virtualized long-history rendering, richer content-shaped expansion and the remaining prototype interactions. No final theme commitment yet.
 4. **B4: scale and installation.** Performance harness, worker boundaries, paged artifacts/history, packed-install matrix and end-to-end browser acceptance. Targets are in the roadmap and are not yet measured passes.
 5. **P1–P2: premium presentation and return-to-work utility.** Content-shaped renderers, five signature moves, since-last-visit, file history and verification freshness; test comprehension with users before feature expansion.

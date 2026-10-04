@@ -3,7 +3,7 @@ import type { Projection } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
 import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
-import { setMotion, useApp } from '../state.ts';
+import { setMapVisible, setMotion, useApp } from '../state.ts';
 import { Kbd, timeOf } from './common.tsx';
 import { History } from './History.tsx';
 import { ExplanationView, Inspector } from './Inspector.tsx';
@@ -13,6 +13,7 @@ import { MapCanvas } from './MapCanvas.tsx';
 export function Viewer() {
   const projection = useApp((s) => s.projection);
   const graph = useApp((s) => s.graph);
+  const mapVisible = useApp((s) => s.mapVisible);
   const recordingId = useApp((s) => s.recordingId);
   const source = useApp((s) => s.source);
   const step = useApp((s) => s.step);
@@ -27,7 +28,16 @@ export function Viewer() {
   const historical = useMemo(() => projection ? asOfProjection(projection, step) : undefined, [projection, step]);
 
   useEffect(() => {
-    if (source?.kind !== 'daemon' || !recordingId || graph?.temporal !== 'current') return;
+    if (!mapVisible || !projection || graph || !source || !recordingId) return;
+    let active = true;
+    source.graph(recordingId).then((loaded) => {
+      if (active && useApp.getState().recordingId === recordingId && useApp.getState().mapVisible) useApp.setState({ graph: loaded });
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [mapVisible, projection, graph, source, recordingId]);
+
+  useEffect(() => {
+    if (!mapVisible || source?.kind !== 'daemon' || !recordingId || graph?.temporal !== 'current') return;
     let disposed = false;
     let inFlight = false;
     const check = async () => {
@@ -55,7 +65,7 @@ export function Viewer() {
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', check);
     };
-  }, [source, recordingId, graph?.temporal]);
+  }, [mapVisible, source, recordingId, graph?.temporal]);
 
   useEffect(() => {
     const el = main.current;
@@ -80,7 +90,7 @@ export function Viewer() {
     <div className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${selectedOp ? ' inspecting' : ''}`}>
       <Crown scene={scene} projection={projection} />
       <div className="main" ref={main}>
-        <MapCanvas graph={graph} heat={scene.heat} arrivingPath={arriving?.origin.type === 'map' ? arriving.origin.path : undefined} readingRect={reading} />
+        {mapVisible && <MapCanvas graph={graph} heat={scene.heat} arrivingPath={arriving?.origin.type === 'map' ? arriving.origin.path : undefined} readingRect={reading} />}
         <Spine scene={scene} projection={historical} />
         <History scene={scene} projection={historical} />
         <FilePanel projection={historical} />
@@ -286,6 +296,7 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
   const held = useApp((s) => s.held);
   const speed = useApp((s) => s.speed);
   const motion = useApp((s) => s.motion);
+  const mapVisible = useApp((s) => s.mapVisible);
   const explore = useApp((s) => s.explore);
   const set = useApp((s) => s.set);
   const seek = useApp((s) => s.seek);
@@ -307,7 +318,8 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
       <span className="reading-status"><span className="reading-dot" /> History · {scene.total} recorded steps</span>
       <span className="muted small">Scroll to review. New work joins below.</span>
       <div className="transport-spacer" />
-      <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} title="Explore the map (X)">Map</button>
+      <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} disabled={!mapVisible} title={mapVisible ? 'Explore the map (X)' : 'Show the map to explore it'}>Explore</button>
+      <button className="icon-btn txt" onClick={() => setMapVisible(!mapVisible)} aria-pressed={mapVisible} title={mapVisible ? 'Hide repository map' : 'Show repository map'}>{mapVisible ? 'Map on' : 'Map off'}</button>
       <button className={`icon-btn txt${motion ? '' : ' on'}`} onClick={() => setMotion(!motion)} title="Motion (M)">{motion ? 'Motion' : 'Still'}</button>
       <button className="btn ghost" onClick={togglePlay}>Replay sequence</button>
     </footer>
@@ -360,7 +372,8 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
         )}
         <button className="icon-btn txt" onClick={() => jump(['edit'])} title="Next edit (E)">E</button>
         <button className="icon-btn txt" onClick={() => jump(['fail'])} title="Next failure (F)">F</button>
-        <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} title="Explore the map (X)">Map</button>
+        <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} disabled={!mapVisible} title={mapVisible ? 'Explore the map (X)' : 'Show the map to explore it'}>Explore</button>
+        <button className="icon-btn txt" onClick={() => setMapVisible(!mapVisible)} aria-pressed={mapVisible} title={mapVisible ? 'Hide repository map' : 'Show repository map'}>{mapVisible ? 'Map on' : 'Map off'}</button>
         <button className={`icon-btn txt${motion ? '' : ' on'}`} onClick={() => setMotion(!motion)} title="Motion (M)">{motion ? 'Motion' : 'Still'}</button>
       </div>
     </footer>
