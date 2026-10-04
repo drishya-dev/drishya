@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| @harsh | B2 real-session acceptance (opted-in local sessions, aggregate results only) | `tests/browser/` (new opt-in spec), STATUS/roadmap notes |
 
 ---
 
