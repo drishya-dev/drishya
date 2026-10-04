@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | The real-data B2 acceptance needs a builder's explicit opt-in; the full contract freeze needs both builders' review |
-| **Next gate** | **B2 real-data acceptance** after the synthetic browser gate, then **B3** long-history UI (virtualization, content-shaped expansion) and **B4** resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [handoff](CONTINUITY.md). No model key is needed for the core |
+| **Next gate** | **B3** long-history UI (virtualization started in PR #13; content-shaped expansion, bounded material caches, file-panel/navigation), then **B4** resource/install gates. [Roadmap](IMPLEMENTATION_ROADMAP.md), [handoff](CONTINUITY.md). No model key is needed for the core |
 
 ### Claimed
 
@@ -25,7 +25,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| @harsh | B2 real-session acceptance (opted-in local sessions, aggregate results only) | `tests/browser/` (new opt-in spec), STATUS/roadmap notes |
 
 ---
 
@@ -50,12 +49,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
   - The repo must be public before any hackathon submission.
 
 ### @harsh (Harsh-4210)
-- **When:** 2026-10-02 → 04 (with Claude Opus 5.5)
+- **When:** 2026-10-02 → 04 (with Claude Opus 5.5). Latest: B2 real-session acceptance.
 - **Did:** Docs review and proposals H–L (PR #2). B0 privacy (PRs #3–#5, policy `p3`). B1 capture lifecycle and recovery (PRs #6–#7). This session, B2-R on `harsh/b2-artifacts-graph`:
   - **Bounded artifact reads (A15):** `BlobStore.readLines()` uses a sparse line index (one streaming pass, LRU of 128) and seeks near the requested start. Responses are capped at 2 MiB, and `GET …/artifacts/:id` returns an `ArtifactSlice` (`available`/`reason`, `start`, `returnedLines`, `totalLines`, `totalBytes`, `truncated`, `hasMore`). Missing or uncaptured content is an explicit unavailable state; the UI no longer mislabels empty text as "Protected file", and shows "Showing lines a–b of N" when cut.
   - **Graph approval and freshness:** the map scans only an approved root (explicit `graphRoot` via `--workspace`, or `POST …/graph/approve` for the captured root only; drive roots and the home folder are refused). Until then it is files-only with `approvalNeeded`. A cached map reports `stale` from a walk-and-stat `probeGeneration()` (reused 15 s) and is rebuilt only on `?refresh=1`, so the layout stays pinned while reading. The indexer never opens a protected file such as `.env.js`. Exports strip `stale`/`approvalNeeded`.
   - 182/182 tests (12 new, all confirmed failing first); typechecks, UI build, demo bundle unchanged. Checked in the real app: files-only map plus approve button, then the full map, then "Out of date · Refresh" after a file was added (no auto-redraw), then refreshed.
-- **Left half-done:** B2's live/browser anchor acceptance with opted-in real data, and the map-off freeze/truth check (Yash's PR #10 note). B2's additive graph and artifact fields were accepted in PR #11; the full draft contract still needs a joint freeze review.
+- **Also did (B2 close-out, `harsh/b2-real-acceptance`):** added `tests/browser/b2-real.spec.ts`, an opt-in Playwright journey on real sessions (skipped unless `DRISHYA_REAL_SESSIONS` names a `{ adapterId: path }` JSON file; it copies journals, asserts only counts/ids/states). Real-session result (4 Oct, Harsh's machine, opt-in): one finished Claude Code session (1,172 journal lines → 556 observations, 480 steps, 189 operations) and one finished Codex session (704 lines → 234 observations, 211 steps, 80 operations). Each was copied to a temp folder and grown in two live bursts; the reader anchor held at 1440 and 390 px, map-off held, an operation opened, a reconnect reloaded the same history, and a resync added nothing. 0 visible gaps; 2/2 passed twice. Only counts were reported; the copies and stores were deleted.
+- **Left half-done:** nothing in B2. Pending @yash's OK: the additive contract fields from B0–B2.
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
@@ -72,7 +72,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 **Current backend-first sequence:**
 
 1. ~~**B0: privacy hardening.**~~ Done 2 Oct: A01 (PR #3); A02 sinks, A03, A04 (PR #4); protected-file scopes, safe forget, outdated-policy flag (`harsh/b0-leftovers`). Policy now `p3`.
-2. **B1 done; B2 synthetic acceptance implemented** (3–4 Oct): stable anchors, as-of boundaries and worktree identity (Yash, PR #10); bounded artifact slices, graph root approval and staleness (Harsh, PR #11); live/browser anchors, map-off and explicit follow in the new browser gate. **B2 remains open for** the same acceptance journey on opted-in real sessions.
+2. ~~**B2: identity, artifacts and honest history.**~~ Done 4 Oct: anchors, as-of boundaries, worktree identity (PR #10); bounded artifact slices, graph approval/staleness (PR #11); synthetic browser gate (PR #12); real-session acceptance on opted-in Claude Code and Codex sessions (`harsh/b2-real-acceptance`, `tests/browser/b2-real.spec.ts`). Real-session result (4 Oct, Harsh's machine, opt-in): one finished Claude Code session (1,172 journal lines → 556 observations, 480 steps, 189 operations) and one finished Codex session (704 lines → 234 observations, 211 steps, 80 operations). Each was copied to a temp folder and grown in two live bursts; the reader anchor held at 1440 and 390 px, map-off held, an operation opened, a reconnect reloaded the same history, and a resync added nothing. 0 visible gaps; 2/2 passed twice. Only counts were reported; the copies and stores were deleted.
 3. **B3: integrated base history.** History-first navigation and responsive action passages are started in `apps/ui`; capture/history grow while the reader scrolls/selects, and playback is optional. The first virtualized long-history rendering slice is in place. Still needed: richer content-shaped expansion, bounded material caches, file-panel/navigation work and the remaining prototype interactions. No final theme commitment yet.
 4. **B4: scale and installation.** Performance harness, worker boundaries, paged artifacts/history, packed-install matrix and end-to-end browser acceptance. Targets are in the roadmap and are not yet measured passes.
 5. **P1–P2: premium presentation and return-to-work utility.** Content-shaped renderers, five signature moves, since-last-visit, file history and verification freshness; test comprehension with users before feature expansion.
