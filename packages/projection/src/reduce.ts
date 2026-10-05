@@ -66,6 +66,9 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
   const agents = new Map<string, Agent>();
   const ops = new Map<string, OpState>();
   const opOrder: string[] = [];
+  // One source call may yield several per-file edit operations. Index the group once so each
+  // result does not scan every prior operation in a long session.
+  const opGroups = new Map<string, string[]>();
   const prose: Prose[] = [];
   const artifacts = new Map<string, Artifact>();
   const links: EvidenceLink[] = [];
@@ -197,6 +200,10 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
     const st: OpState = { op, intent, cwd, callObs: o };
     ops.set(id, st);
     opOrder.push(id);
+    const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
+    let group = opGroups.get(baseId);
+    if (!group) opGroups.set(baseId, group = []);
+    group.push(id);
     return st;
   };
 
@@ -314,7 +321,7 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
       case 'tool.result': {
         ensureAgent(o);
         const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
-        let targets = [baseId, ...[...ops.keys()].filter((k) => k.startsWith(baseId + '#'))].filter((k) => ops.has(k));
+        let targets = opGroups.get(baseId) ?? [];
         if (!targets.length) {
           // A result whose call we never saw (lost, or before a compaction): keep it, honestly generic.
           const st = newOp(o, baseId, { kind: 'other' }, String(p.tool ?? 'unknown tool'));
@@ -766,9 +773,23 @@ function crossLinks(operations: Operation[], prose: Prose[], link: Ctx['link']) 
 
   // Prose written right after operations is their temporal neighbour — nearby, not "because".
   const byAgent = new Map<string, Operation[]>();
-  for (const op of operations) byAgent.set(op.agentId, [...(byAgent.get(op.agentId) ?? []), op]);
+  for (const op of operations) {
+    let agentOps = byAgent.get(op.agentId);
+    if (!agentOps) byAgent.set(op.agentId, agentOps = []);
+    agentOps.push(op);
+  }
   for (const p of prose) {
-    const before = (byAgent.get(p.agentId) ?? []).filter((op) => op.startSequence < p.sequence).slice(-3);
+    const agentOps = byAgent.get(p.agentId) ?? [];
+    // Operations are ordered by their start sequence. Find the last eligible one without
+    // scanning the full history for every prose item in a long session.
+    let lo = 0;
+    let hi = agentOps.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (agentOps[mid]!.startSequence < p.sequence) lo = mid + 1;
+      else hi = mid;
+    }
+    const before = agentOps.slice(Math.max(0, lo - 3), lo);
     for (const op of before) link({ from: op.id, to: p.id, relation: 'temporal-neighbor', basis: 'deterministic-rule', sourceObservationIds: [...op.observationIds, ...p.observationIds], ruleVersion: 'neighbor-v1', explanation: 'Written shortly after this operation. Nearby activity, not a stated reason.' });
   }
 }
@@ -782,6 +803,7 @@ export function buildPassages(timeline: TimelineItem[], operations: Operation[],
   const proseAgent = new Map(prose.map((p) => [p.id, p.agentId]));
   const out: Projection['passages'] = [];
   const open = new Map<string, Projection['passages'][number]>();
+  const passageByOperation = new Map<string, Projection['passages'][number]>();
   timeline.forEach((it, i) => {
     if (it.type === 'turn') {
       open.clear();
@@ -796,12 +818,11 @@ export function buildPassages(timeline: TimelineItem[], operations: Operation[],
         open.set(agent, p);
       }
       p.operationIds.push(it.operationId);
+      passageByOperation.set(it.operationId, p);
       p.lastStep = i;
     } else if (it.type === 'op-end') {
-      const agent = opAgent.get(it.operationId)!;
-      const p = out.findLast((x) => x.operationIds.includes(it.operationId));
+      const p = passageByOperation.get(it.operationId);
       if (p) p.lastStep = Math.max(p.lastStep, i);
-      void agent;
     } else if (it.type === 'prose') {
       const agent = proseAgent.get(it.proseId)!;
       let p = open.get(agent);
