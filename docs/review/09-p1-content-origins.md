@@ -51,6 +51,8 @@ A tool's input is visible before its result. Capture never waits for animation. 
 
 Every deliberate wheel direction, text-selection start and keyboard focus inside a passage detaches follow. A wheel at the scroll boundary must not leave the navigation guard stuck. During a one-frame programmatic-scroll guard, only the exact commanded scroll position is ignored; a genuine intervening reader scroll must still update its viewport and anchor. The earlier Windows paged-reader CI failure and the sustained-reader exercise exposed related cases. The shared viewport fix was also included in Harsh's PR before merge.
 
+Post-merge Windows CI exposed intermittent selection/return behavior despite green PR CI. Clicking captured content now reads/selects it without opening an inspector or moving characters between pointer events; the heading and Enter still inspect the operation. The return-to-latest control is a sibling of the scrollport, so history scrolling cannot move it. The selection/live-burst/return journey passed five consecutive runs after this correction. The ten-minute result below predates this control-placement correction; the underlying anchor/capture algorithm was unchanged.
+
 ## Validation record
 
 - Typechecks, all 223 unit tests and production build passed. Scene goldens are unchanged; no event-schema modification.

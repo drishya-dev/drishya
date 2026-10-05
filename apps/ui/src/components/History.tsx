@@ -243,6 +243,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   };
 
   return (
+    <>
     <div className="history" ref={ref} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY !== 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; if (follow && (e.target === ref.current || (e.target as HTMLElement).closest('.op-body, .prose, .op-expanded'))) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } } }} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('[data-expand-op]')) rememberReading(); }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false, playing: false, held: true }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       <div className="history-inner">
         {scene.passages.length === 0 && <div className="history-empty">No captured work in this view yet.</div>}
@@ -257,12 +258,13 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
       <Origins scene={scene} projection={projection} />
+    </div>
       {!follow && (
         <button className="follow-pill" onClick={() => { userScrollUntil.current = 0; set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false }); }}>
           {mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest ↓
         </button>
       )}
-    </div>
+    </>
   );
 }
 
@@ -339,7 +341,12 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
       style={{ zIndex: selected ? 50 : 10 + index }}
       tabIndex={0}
-      onClick={() => select(selected ? undefined : op.id)}
+      onClick={(e) => {
+        // Reading or selecting captured content must not open an inspector and reflow
+        // the text between pointer events. The heading and Enter still inspect it.
+        if ((e.target as HTMLElement).closest('.op-body, .op-expanded')) return;
+        select(selected ? undefined : op.id);
+      }}
       onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && select(op.id)}
       onMouseEnter={() => set({ hoveredOp: op.id, hoveredPath: op.paths.find((p) => p.role !== 'search-hit')?.path })}
       onMouseLeave={() => set({ hoveredOp: undefined, hoveredPath: undefined })}

@@ -73,6 +73,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   const sourceId = await source.getAttribute('data-op-id');
   await page.locator(`article[data-op-id="${sourceId}"] .code .ln-tx`).filter({ hasText: /\S/ }).first().click({ clickCount: 3 });
   await expect.poll(() => page.evaluate(() => window.getSelection()?.toString().trim().length ?? 0)).toBeGreaterThan(0);
+  await expect(page.getByRole('complementary', { name: 'Operation detail' })).toHaveCount(0);
   await expect(latest).toBeVisible(); // selecting source holds the reader, not the capture.
   await latest.click();
   await expect(latest).toHaveCount(0);
@@ -100,13 +101,11 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
     await appendSyntheticRecords(); // 200 source records become 300 observations/steps.
     await expect(steps).toContainText(`${before + 300} recorded steps`);
     await expect(latest).toContainText('300 new steps');
-    const after: Anchor = await history.evaluate((el) => {
+    await expect.poll(() => history.evaluate((el) => {
       const viewport = el.getBoundingClientRect();
       const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.getBoundingClientRect().bottom > viewport.top + 1);
       return { id: node?.dataset.passageId, offset: node ? Math.round(node.getBoundingClientRect().top - viewport.top) : undefined };
-    });
-    expect(after.id).toBe(anchor.id);
-    expect(Math.abs((after.offset ?? Infinity) - (anchor.offset ?? 0))).toBeLessThanOrEqual(1);
+    })).toMatchObject({ id: anchor.id, offset: anchor.offset });
 
     // Reaching the bottom by scrolling is not consent to resume following.
     await history.hover();
@@ -151,7 +150,7 @@ test('long history mounts only nearby work while selected evidence and live upda
 
   const selected = history.locator('article[data-op-id]').first();
   const selectedId = await selected.getAttribute('data-op-id');
-  await selected.click();
+  await selected.locator('.op-head').click();
   await history.locator(`article[data-op-id="${selectedId}"]`).focus();
   await history.hover();
   for (let i = 0; i < 10; i++) {
