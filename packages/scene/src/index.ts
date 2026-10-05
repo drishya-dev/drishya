@@ -378,17 +378,21 @@ export function stepOfObservation(p: Projection, observationId: string): number 
  */
 export function dwellFor(p: Projection, step: number, speed = 1): number {
   const it = p.timeline[step - 1];
-  if (!it) return 600 / speed;
-  let ms = 450;
+  if (!it) return 350 / speed;
+  let ms = 550;
   if (it.type === 'prose') {
     const pr = p.prose.find((x) => x.id === it.proseId);
-    const words = pr ? pr.text.split(/\s+/).length : 20;
-    ms = Math.min(6000, 900 + words * (pr?.role === 'reasoning' ? 60 : 110));
-  } else if (it.type === 'turn') ms = 1800;
+    const words = pr?.text.trim().split(/\s+/).length ?? 20;
+    ms = Math.min(20_000, 1200 + words * (pr?.role === 'reasoning' ? 110 : 140));
+  } else if (it.type === 'turn') ms = 2000;
   else if (it.type === 'op-end') {
     const op = p.operations.find((o) => o.id === it.operationId);
-    ms = op?.kind === 'test' || op?.kind === 'edit' || op?.kind === 'write' ? 1800 : op?.status === 'error' ? 1600 : 700;
-  } else if (it.type === 'op-start') ms = 380;
+    const detail = op?.detail;
+    const preview = detail && 'outputPreview' in detail ? detail.outputPreview : detail && 'resultPreview' in detail ? detail.resultPreview : undefined;
+    const words = preview?.trim().split(/\s+/).length ?? 0;
+    ms = Math.max(op?.kind === 'test' || op?.kind === 'edit' || op?.kind === 'write' ? 1800 : op?.status === 'error' ? 1600 : 950,
+      Math.min(7000, 700 + words * 120));
+  } else if (it.type === 'op-start') ms = 650;
   return ms / speed;
 }
 

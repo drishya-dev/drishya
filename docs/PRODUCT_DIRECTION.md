@@ -18,6 +18,12 @@ The product must work for people who prompt and leave. Continuous watching is an
 
 This supersedes earlier language that made replay transport the default footer, or treated selection as a reason to stop the live timeline. Pure, time-addressable scenes and historical correctness remain necessary even when no play button is visible.
 
+### Live pace and tool input/output — 5 October 2026
+
+The call is an immediate receipt: show its actual command, path, query or MCP arguments as soon as observed, then show a waiting state in the same action surface. The captured result resolves beneath that input when available. Let a result update incrementally only when the harness actually records successive chunks. A single final journal result must never be displayed as invented token-by-token output. Its arrival can be animated briefly, while the full captured text remains selectable and accessible at once.
+
+The reader's *camera* sets the pace, not a queue that delays evidence. Small arrivals may follow naturally. For a burst of actions or a long prose/result arrival, retain the viewport at the start of new work, accumulate everything below, and show a quiet count with a return-to-latest action. Reasoning that the harness exposes should be readable by default and collapsible by choice; unavailable private thinking stays unavailable. In optional chronological replay, dwell belongs to the **currently visible** step and scales with its actual content. Reduced motion removes animation rather than speeding through steps. Long-session browser performance remains a separate B4 release gate.
+
 ## 2. Who adopts first, and for what job
 
 “Everyone using agents” is the eventual audience, not a useful first launch segment. Start with individual developers who use Claude Code or Codex for multi-file work and are responsible for reviewing the result. We can serve both builders' actual workflow before expanding.

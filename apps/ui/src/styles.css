@@ -209,6 +209,12 @@ code, kbd, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
 .op-head { display: flex; align-items: center; gap: 8px; padding: 9px 10px 5px; min-width: 0; }
 .op-title { flex: 1; min-width: 0; font: 12px var(--mono); color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .op-body { padding: 8px 10px; overflow: hidden; font-size: 12.5px; min-height: 0; flex: 1; -webkit-mask-image: linear-gradient(#000 80%, transparent); mask-image: linear-gradient(#000 80%, transparent); }
+.request-line { font: 11.5px/1.5 var(--mono); color: var(--t2); overflow-wrap: anywhere; margin-bottom: 5px; }
+.result-area { display: flex; gap: 7px; border-top: 1px solid var(--line); padding-top: 6px; min-width: 0; }
+.result-lead { color: var(--t4); font: 13px/1.4 var(--mono); flex: none; }
+.result-content { min-width: 0; flex: 1; }
+.result-arriving .result-content { animation: result-arrive 0.28s var(--ease) both; }
+@keyframes result-arrive { from { opacity: 0.35; transform: translateY(3px); } }
 .op-foot { padding: 4px 10px; font-size: 11px; color: var(--t4); border-top: 1px solid var(--line); }
 .op-kind { flex: none; font-size: 11px; line-height: 18px; padding: 0 2px; color: var(--t2); }
 .op-kind.k-mcp { color: var(--focus); }
