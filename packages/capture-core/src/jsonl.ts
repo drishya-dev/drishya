@@ -81,6 +81,7 @@ export async function readJsonl(path: string, from: SourceCursor, opts: ReadOpti
     let pendingBytes = 0;
     let lineStart = pos;
     let skipping = cursor.inOversized ?? false; // inside an oversized line: discard until its newline
+    let gapReported = skipping; // the prior bounded turn already persisted this line's gap
 
     while (pos < end) {
       const len = Math.min(CHUNK, end - pos);
@@ -105,11 +106,13 @@ export async function readJsonl(path: string, from: SourceCursor, opts: ReadOpti
         if (stop === bytesRead) break; // line continues into the next chunk
         const lineEnd = pos + stop + 1;
         const bytes = lineEnd - lineStart;
-        if (skipping) records.push({ type: 'oversized', offset: lineStart, bytes });
-        else pushLine(records, Buffer.concat(pending), lineStart, bytes);
+        if (skipping) {
+          if (!gapReported) records.push({ type: 'oversized', offset: lineStart, bytes });
+        } else pushLine(records, Buffer.concat(pending), lineStart, bytes);
         pending = [];
         pendingBytes = 0;
         skipping = false;
+        gapReported = false;
         cursor.inOversized = false;
         lineStart = lineEnd;
         cursor.offset = lineEnd;
@@ -121,7 +124,7 @@ export async function readJsonl(path: string, from: SourceCursor, opts: ReadOpti
     // An oversized line longer than this whole read: consume what was skipped so the next
     // call makes progress instead of re-reading the same bytes forever.
     if (skipping && lineStart < end && !(end === st.size && opts.acceptUnterminated)) {
-      records.push({ type: 'oversized', offset: lineStart, bytes: end - lineStart });
+      if (!gapReported) records.push({ type: 'oversized', offset: lineStart, bytes: end - lineStart });
       cursor.offset = end;
       cursor.inOversized = true;
       return { records, cursor, reset, size: st.size };
@@ -132,7 +135,7 @@ export async function readJsonl(path: string, from: SourceCursor, opts: ReadOpti
     if (lineStart < end && end === st.size && opts.acceptUnterminated) {
       const bytes = end - lineStart;
       if (skipping) {
-        records.push({ type: 'oversized', offset: lineStart, bytes });
+        if (!gapReported) records.push({ type: 'oversized', offset: lineStart, bytes });
         cursor.offset = end;
       } else {
         const text = Buffer.concat(pending).toString('utf8').trim();

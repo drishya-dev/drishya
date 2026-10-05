@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { App } from '../src/app.ts';
@@ -57,6 +57,39 @@ function call(path: string, opts: { method?: string; headers?: Record<string, st
   });
 }
 const auth = () => ({ authorization: `Bearer ${s.token}` });
+
+it('waits for an in-flight handler before its caller closes SQLite', async () => {
+  const isolated = mkdtempSync(join(tmpdir(), 'drishya-close-'));
+  const app = new App(join(isolated, 'data'));
+  let entered!: () => void;
+  let release!: () => void;
+  const started = new Promise<void>((done) => { entered = done; });
+  const gate = new Promise<void>((done) => { release = done; });
+  app.ingest.discoverReport = async () => {
+    entered();
+    await gate;
+    app.store.listRecordings(); // would fail if the store had already been closed
+    return { sources: [], errors: [] };
+  };
+  const running = await startServer({ app, port: 0 });
+  try {
+    const request = fetch(`${running.url}/v1/sources`, { headers: { authorization: `Bearer ${running.token}` } }).catch(() => undefined);
+    await started;
+    let finished = false;
+    const closing = running.close().then(() => { finished = true; });
+    await new Promise((done) => setTimeout(done, 20));
+    expect(finished).toBe(false);
+    release();
+    await closing;
+    await app.close();
+    await request;
+  } finally {
+    release();
+    const target = resolve(isolated);
+    if (!target.startsWith(resolve(tmpdir()) + sep)) throw new Error('test directory escaped system temp');
+    rmSync(target, { recursive: true, force: true });
+  }
+});
 
 describe('local API security', () => {
   it('refuses unexpected Host headers (DNS rebinding)', async () => {

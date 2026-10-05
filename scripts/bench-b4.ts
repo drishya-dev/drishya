@@ -18,6 +18,7 @@ function option(name: string, fallback: number): number {
 const count = option('observations', 10_000);
 const files = option('files', 5_000);
 const repeats = option('repeats', 5);
+const proseEvery = option('prose-every', 100);
 const results: { importMs: number; composeMs: number; graphMs: number; rssMiB: number; heapMiB: number; observations: number; files: number }[] = [];
 
 for (let run = 0; run < repeats; run++) {
@@ -40,6 +41,7 @@ for (let run = 0; run < repeats; run++) {
         ? { type: 'function_call', name: 'functions.exec_command', call_id: callId, arguments: JSON.stringify({ cmd: `cat part-${Math.floor(i / 100)}/file-${i % files}.ts` }) }
         : { type: 'function_call_output', call_id: callId, output: `export const value = ${i};` };
       lines.push(JSON.stringify({ timestamp, type: 'response_item', payload }));
+      if ((i + 1) % proseEvery === 0) lines.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: `Observed the result of operation ${i + 1}.` }] } }));
     }
     writeFileSync(source, lines.join('\n') + '\n');
     app = new App(join(dir, 'data'));
@@ -53,7 +55,7 @@ for (let run = 0; run < repeats; run++) {
     const t2 = performance.now();
     const graph = await buildGraph(workspace);
     const graphMs = performance.now() - t2;
-    assert.equal(imported.added, count + 1);
+    assert.equal(imported.added, count + Math.floor(count / proseEvery) + 1);
     assert.equal(projection.operations.length, Math.floor(count / 2));
     assert.equal(graph.stats.files, files);
     assert.ok(scene.passages.length > 0);
@@ -71,6 +73,6 @@ const percentile = (values: number[], p: number) => [...values].sort((a, b) => a
 const metrics = ['importMs', 'composeMs', 'graphMs', 'rssMiB', 'heapMiB'] as const;
 console.log(JSON.stringify({
   reference: { platform: process.platform, arch: process.arch, node: process.version, cpu: cpus()[0]?.model, logicalCpus: cpus().length, totalRamGiB: +(totalmem() / 1073741824).toFixed(1), freeRamGiBAtEnd: +(freemem() / 1073741824).toFixed(1), browser: 'not measured', powerMode: 'not recorded' },
-  workload: { observations: count, eligibleFiles: files, repeats, source: 'synthetic skinny call/result journal; backend/index only' },
+  workload: { callResultObservations: count, addedProse: Math.floor(count / proseEvery), eligibleFiles: files, repeats, source: 'synthetic skinny call/result journal; backend/index only' },
   summary: Object.fromEntries(metrics.map((m) => [m, { p50: percentile(results.map((r) => r[m]), 0.5), p95: percentile(results.map((r) => r[m]), 0.95) }])),
 }));

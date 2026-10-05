@@ -126,7 +126,7 @@ Session chooser: project/worktree grouping; harness, safe title, last source upd
 
 ## 7. B4 — provisional numeric gates
 
-**First measured slice (5 Oct, merged as PR #16):** see [B4 scale/install record](review/07-b4-scale-install.md). A clean packed CLI passes Windows, Linux and macOS CI with synthetic Claude/Codex imports and authenticated local serving. Five normal synthetic backend/index runs are recorded, but browser/burst/overhead are unmeasured. The 100k-observation probe improved after quadratic reducer paths were removed, yet uses ~764 MiB RSS and still depends on a full browser projection. B4 is not complete.
+**Measured slices (5 Oct):** see [B4 scale/install record](review/07-b4-scale-install.md). A clean packed CLI passed Windows, Linux and macOS CI with synthetic Claude/Codex imports and authenticated local serving; a restart persistence check passed locally. Five normal backend/index runs and a real-server/Chromium browser probe meet the provisional normal latency/resource budgets. One 2,000-record/30-second live burst passed in a single run. The 100k+200-record browser update took 4.35 seconds, and valid 1 GiB source import approached 2 GiB RSS. B4 is **not complete**; full projection rebuild/transfer requires paged history and a worker boundary before product-stage UI expansion.
 
 These are **targets to measure**, not current achievements. Use a named reference machine (OS, CPU, RAM, browser, Node, power mode), cold/warm runs, at least five repetitions and p50/p95 where enough samples exist. Separate ingestion throughput from rendering frame time and retained storage. Never market the audit's four small in-memory timings as performance benchmarks.
 

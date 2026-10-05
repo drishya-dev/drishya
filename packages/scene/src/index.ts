@@ -123,6 +123,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const applied = p.timeline.slice(0, step);
   const last = applied.at(-1);
   const ops = new Map(p.operations.map((o) => [o.id, o]));
+  const proseById = new Map(p.prose.map((item) => [item.id, item]));
 
   // Operation state as of this step: started? ended?
   const started = new Map<string, number>();
@@ -158,7 +159,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const latestByAgent = new Map<string, string>();
   for (const ps of visible) latestByAgent.set(ps.agentId, ps.id);
 
-  const passages: ScenePassage[] = visible.map((ps) => {
+  const passages: ScenePassage[] = visible.map((ps, passageIndex) => {
     const sceneOps: SceneOp[] = ps.operationIds
       .filter((id) => started.has(id))
       .map((id) => {
@@ -180,11 +181,18 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     const sceneProse: SceneProse[] = ps.proseIds
       .filter((id) => proseAt.has(id))
       .map((id) => {
-        const pr = p.prose.find((x) => x.id === id)!;
+        const pr = proseById.get(id)!;
         return { id, role: pr.role, exposure: pr.exposure, arriving: proseAt.get(id) === step - 1 };
       });
-    const turn = turnAt.filter((t) => t.step < ps.firstStep).at(-1);
-    const prevPassage = visible[visible.indexOf(ps) - 1];
+    let low = 0;
+    let high = turnAt.length;
+    while (low < high) {
+      const mid = (low + high) >>> 1;
+      if (turnAt[mid]!.step < ps.firstStep) low = mid + 1;
+      else high = mid;
+    }
+    const turn = turnAt[low - 1];
+    const prevPassage = visible[passageIndex - 1];
     const opensTurn = turn && (!prevPassage || prevPassage.lastStep < turn.step);
     return {
       id: ps.id,
