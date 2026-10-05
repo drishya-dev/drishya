@@ -2,6 +2,7 @@ import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { passageWindow } from '../lib/history-window.ts';
+import { stageIncomingWork } from '../lib/live-pacing.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
 import { useApp } from '../state.ts';
@@ -30,6 +31,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
   const seenThrough = useRef(scene.total);
+  const presented = useRef<{ step: number; height: number } | undefined>(undefined);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
@@ -131,10 +133,6 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   }, []);
 
   useLayoutEffect(() => {
-    if (follow) seenThrough.current = scene.total;
-  }, [follow, scene.total]);
-
-  useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !targetId) { lastNavigation.current = undefined; pendingNavigation.current = undefined; return; }
     if (targetId !== lastNavigation.current) {
@@ -154,12 +152,25 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     pendingNavigation.current = undefined;
   }, [targetId, targetIndex, layout]);
 
-  // Follow: keep the newest work in view. A deliberate scroll away turns following off.
+  // Small arrivals follow naturally. A burst or a long result is captured and rendered at once,
+  // but the camera stops at its beginning instead of fast-forwarding past what the user could read.
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || !follow) return;
-    setScrollTop(el.scrollHeight);
-  }, [scene.step, follow, layout.total]);
+    if (!el) return;
+    const previous = presented.current;
+    if (follow) {
+      if (mode === 'history' && previous && scene.total > previous.step && stageIncomingWork(projection, previous.step, scene.total)) {
+        seenThrough.current = previous.step;
+        setScrollTop(Math.max(0, previous.height - Math.min(120, el.clientHeight * 0.15)));
+        rememberReading();
+        set({ follow: false });
+      } else {
+        setScrollTop(el.scrollHeight);
+        seenThrough.current = scene.total;
+      }
+    }
+    presented.current = { step: scene.total, height: el.scrollHeight };
+  }, [scene.step, follow, layout.total, mode, projection]);
 
   useLayoutEffect(() => () => {
     if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
@@ -252,14 +263,14 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
 
 function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agent?: Agent }) {
   const set = useApp((s) => s.set);
-  const [open, setOpen] = useState(pr.role !== 'reasoning' || pr.text.length < 600);
+  const [open, setOpen] = useState(true);
   const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   return (
     <div className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
         <button className="prose-label" onClick={() => { setOpen((o) => !o); set({ follow: false }); }} aria-expanded={open}>
           {label}
-          {!open && ' · show'}
+          {open ? ' · collapse' : ' · show'}
         </button>
       )}
       {open && <Markdown text={pr.text} onPath={(p) => set({ hoveredPath: p })} />}
@@ -295,7 +306,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         <span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}</span>
         <span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span>
         <StateMark state={so.state} />
-        {['read', 'edit', 'search', 'test', 'shell'].includes(op.detail.kind) && (
+        {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {
             e.stopPropagation();
             set({ expandedOp: expanded ? undefined : op.id, selectedOp: undefined, follow: false, ...(expanded ? {} : { playing: false, held: true }) });
@@ -303,7 +314,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         )}
       </header>
       {!expanded && <div className="op-body">
-        <OpPreview op={op} />
+        <OpPreview op={op} resolving={so.resolving} />
       </div>}
       {expanded && <ExpandedOperation op={op} />}
       {op.classification.kind === 'derived' && <div className="op-foot" title={`Classified by rule ${op.classification.rule} from the command text`}>derived from {op.tool}</div>}
@@ -345,6 +356,26 @@ function ExpandedOperation({ op }: { op: Operation }) {
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
         <div className="muted small">Exit {d.exitCode ?? 'not captured'}</div>
       </div>;
+    case 'mcp':
+      return <div className="op-expanded mcp-material" onClick={(e) => e.stopPropagation()}>
+        <div className="material-context">{d.server} / {d.tool} · captured input</div>
+        <pre className="json">{JSON.stringify(d.input, null, 2) ?? String(d.input)}</pre>
+        <div className="material-context">Captured result preview</div>
+        <pre className="output">{d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}</pre>
+      </div>;
+    case 'web':
+      return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
+        <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
+        <div className="material-context">Captured result preview</div>
+        <pre className="output">{d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}</pre>
+      </div>;
+    case 'other':
+      return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
+        <div className="material-context">Captured input</div>
+        <pre className="json">{JSON.stringify(d.input, null, 2) ?? String(d.input)}</pre>
+        <div className="material-context">Captured result preview</div>
+        <pre className="output">{d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}</pre>
+      </div>;
     default:
       return null;
   }
@@ -357,25 +388,41 @@ function StateMark({ state }: { state: SceneOp['state'] }) {
   return <span className="state state-unknown" aria-label="outcome not captured">?</span>;
 }
 
-function OpPreview({ op }: { op: Operation }) {
+function ResultArea({ state, resolving, children }: { state: Operation['status']; resolving: boolean; children?: React.ReactNode }) {
+  return <div className={`result-area${resolving ? ' result-arriving' : ''}`}>
+    <span className="result-lead" aria-hidden="true">↳</span>
+    <div className="result-content">{children ?? <span className="muted">{state === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}</div>
+  </div>;
+}
+
+function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
   const d = op.detail;
   switch (d.kind) {
     case 'read':
-      return <ReadPreview artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />;
+      return <>
+        <div className="request-line">{d.path} · lines {d.startLine}–{d.startLine + Math.max(0, d.lineCount - 1)}</div>
+        <ResultArea state={op.status} resolving={resolving}><ReadPreview artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} /></ResultArea>
+      </>;
     case 'edit':
-      return d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={9} /> : <div className="muted">{d.reconstructionNote ?? 'No change captured.'}</div>;
+      return <>
+        <div className="request-line">{d.path}</div>
+        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={9} /> : <div className="muted">{d.reconstructionNote ?? 'No change captured.'}</div>}</ResultArea>
+      </>;
     case 'search':
       return (
         <div className="hits">
           <div className="query">{d.query}</div>
-          {d.hits.slice(0, 5).map((h, i) => (
-            <div key={i} className="hit">
-              <span className="hit-path">{h.path}</span>
-              {h.line !== undefined && <span className="hit-line">:{h.line}</span>}
-            </div>
-          ))}
-          {d.hits.length > 5 && <div className="muted">{d.hits.length - 5} more</div>}
-          {op.status !== 'running' && d.hits.length === 0 && <div className="muted">No matches</div>}
+          <ResultArea state={op.status} resolving={resolving}>
+            {d.hits.slice(0, 5).map((h, i) => (
+              <div key={i} className="hit">
+                <span className="hit-path">{h.path}</span>
+                {h.line !== undefined && <span className="hit-line">:{h.line}</span>}
+              </div>
+            ))}
+            {d.hits.length > 5 && <div className="muted">{d.hits.length - 5} more</div>}
+            {op.status !== 'running' && d.hits.length === 0 && <div className="muted">No matches</div>}
+            {op.status === 'running' && d.hits.length === 0 && <div className="muted">Waiting for results</div>}
+          </ResultArea>
         </div>
       );
     case 'test': {
@@ -383,7 +430,7 @@ function OpPreview({ op }: { op: Operation }) {
       return (
         <div className="test">
           <div className="cmd">$ {d.command}</div>
-          {s ? (
+          <ResultArea state={op.status} resolving={resolving}>{s ? (
             <div className="test-counts">
               {s.failed > 0 && <span className="bad">{s.failed} failed</span>}
               <span className="good">{s.passed} passed</span>
@@ -391,13 +438,14 @@ function OpPreview({ op }: { op: Operation }) {
             </div>
           ) : op.status !== 'running' ? (
             <div className="muted">exit {d.exitCode ?? '?'}</div>
-          ) : null}
+          ) : <div className="muted">Waiting for output</div>}
           {s?.failures[0] && (
             <div className="failure">
               <div className="failure-name">{s.failures[0].name}</div>
               {s.failures[0].message && <div className="failure-msg">{s.failures[0].message}</div>}
             </div>
           )}
+          </ResultArea>
         </div>
       );
     }
@@ -405,8 +453,10 @@ function OpPreview({ op }: { op: Operation }) {
       return (
         <div className="shell">
           <div className="cmd">$ {d.command.split('\n')[0]}{d.command.includes('\n') ? ' …' : ''}</div>
-          {d.outputPreview && <Output text={d.outputPreview} maxLines={4} />}
-          {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
+          <ResultArea state={op.status} resolving={resolving}>
+            {d.outputPreview ? <Output text={d.outputPreview} maxLines={4} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
+            {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
+          </ResultArea>
         </div>
       );
     case 'mcp':
@@ -414,14 +464,18 @@ function OpPreview({ op }: { op: Operation }) {
         <div className="mcp">
           <div className="mcp-tool">{d.tool}</div>
           <div className="mcp-input">{summarizeInput(d.input)}</div>
-          {d.resultPreview && <div className="mcp-result">{d.resultPreview.slice(0, 220)}</div>}
+          <ResultArea state={op.status} resolving={resolving}>
+            {d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 220)}</div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
+          </ResultArea>
         </div>
       );
     case 'web':
       return (
         <div className="web">
           <div className="query">{d.url ?? d.query}</div>
-          {d.resultPreview && <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div>}
+          <ResultArea state={op.status} resolving={resolving}>
+            {d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
+          </ResultArea>
         </div>
       );
     case 'spawn':
@@ -440,7 +494,10 @@ function OpPreview({ op }: { op: Operation }) {
         </ul>
       );
     default:
-      return <div className="mcp-input">{summarizeInput(d.input) || d.resultPreview?.slice(0, 200)}</div>;
+      return <>
+        <div className="mcp-input">{summarizeInput(d.input)}</div>
+        <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div> : undefined}</ResultArea>
+      </>;
   }
 }
 

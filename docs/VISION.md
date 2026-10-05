@@ -26,6 +26,12 @@ This section is the source. Everything below it is interpretation and must serve
 
 The frontend is not finalized. Keep the integrated app, learn from `docs/prototype/index.html`, and finish the trustworthy backend plus usable base UI before premium expansion. [PRODUCT_DIRECTION](PRODUCT_DIRECTION.md) specifies the content-shaped experience and utility; [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md) sets the gates. This clarification supersedes earlier transport-led live wording.
 
+### Builder clarification — 5 October 2026: the pace of actual work
+
+Show a tool's captured input as soon as its call is observed. Let its result resolve in the **same place** when the harness records it. A fast burst must not fling the reading position past the work; keep the material available immediately, stop the camera at the first newly arrived work, and let the reader move through it. Agent prose stays unboxed and open to read, including exposed reasoning or summaries. A recorded sequence may use content-aware dwell, but ordinary live history is never slowed by a presentation queue.
+
+The builder asked for output that seems to update gradually. Use real captured chunks when a harness provides them. When it records only a final result, reveal that result as one truthful arrival and give the reader space and time to read it. Never synthesize token streaming or withhold captured content just to imitate typing.
+
 > Set places for things, with animations, like a **$1M product** that looks clean. Something unique, not just boxes. **Clean and advanced animations for every single little thing.**
 
 > Like Jarvis — full of visualization, putting up its own working. The difference between a **$10 video edit and a $1,000 one**: the smoothness with which things come up and interact with you.

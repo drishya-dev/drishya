@@ -102,7 +102,6 @@ function usePlayback() {
   const playing = useApp((s) => s.playing);
   const step = useApp((s) => s.step);
   const speed = useApp((s) => s.speed);
-  const motion = useApp((s) => s.motion);
   const projection = useApp((s) => s.projection);
   useEffect(() => {
     if (!playing || !projection) return;
@@ -111,10 +110,12 @@ function usePlayback() {
       if (!live) useApp.setState({ playing: false });
       return;
     }
-    const ms = dwellFor(projection, step + 1, speed) * (motion ? 1 : 0.6);
+    // Hold the step currently on screen. Looking ahead charged a long explanation's reading
+    // time to the *previous* frame, then advanced past the explanation almost immediately.
+    const ms = dwellFor(projection, step, speed);
     const t = setTimeout(() => useApp.setState({ step: step + 1 }), ms);
     return () => clearTimeout(t);
-  }, [playing, step, speed, motion, projection]);
+  }, [playing, step, speed, projection]);
 }
 
 function useKeyboard() {
