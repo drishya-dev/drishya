@@ -302,6 +302,26 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         res.setHeader('content-disposition', `attachment; filename="drishya-${firstId}.json"`);
         return json(res, bundle);
       }
+      // The reader's "seen through here" mark for one recording (P2-A). It moves only on this
+      // explicit request; opening or scrolling a recording never advances it.
+      if (sub === 'since' && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');
+        return json(res, await app.history.since(id, intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER)));
+      }
+      if (sub === 'boundary' && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');
+        app.recording(firstId);
+        return json(res, { boundary: app.store.getBoundary(firstId) ?? null });
+      }
+      if (sub === 'boundary' && m === 'POST') {
+        const rec = app.recording(firstId);
+        if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');
+        const sequence = (await readJson(req)).sequence;
+        const last = app.store.countObservations(firstId) - 1;
+        if (typeof sequence !== 'number' || !Number.isInteger(sequence) || sequence < -1 || sequence > last) throw new HttpError(400, `sequence must be an integer from -1 to ${last}`);
+        app.store.setBoundary(firstId, sequence, rec.revision ?? 0);
+        return json(res, { boundary: app.store.getBoundary(firstId) });
+      }
       if (sub === 'bookmarks' && m === 'GET') return json(res, { bookmarks: app.store.bookmarks(firstId) });
       if (sub === 'bookmarks' && m === 'POST') {
         const body = await readJson(req);

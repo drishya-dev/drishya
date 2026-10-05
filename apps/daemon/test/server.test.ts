@@ -413,3 +413,19 @@ describe('artifact slices', () => {
     expect(s.app.artifactSlice(p, a.id, 0, 10)).toMatchObject({ available: false, reason: 'no-longer-stored' });
   });
 });
+
+// P2-A: the reading boundary over the API. It never moves on its own; only an explicit mark does.
+describe('reading boundary', () => {
+  it('starts unmarked, accepts a mark within the recording, and rejects anything else', async () => {
+    const id = recId;
+    expect((await call(`/v1/recordings/${id}/boundary`, { headers: auth() })).body.boundary).toBeNull();
+    const last = s.app.projection(id).lastSequence;
+    const r = await post(`/v1/recordings/${id}/boundary`, { sequence: last - 3 });
+    expect(r.status).toBe(200);
+    expect(r.body.boundary).toMatchObject({ sequence: last - 3 });
+    expect((await post(`/v1/recordings/${id}/boundary`, { sequence: last })).body.boundary).toMatchObject({ sequence: last, previousSequence: last - 3 });
+    expect((await post(`/v1/recordings/${id}/boundary`, { sequence: last + 1 })).status).toBe(400);
+    expect((await post(`/v1/recordings/${id}/boundary`, { sequence: 'x' })).status).toBe(400);
+    expect((await call(`/v1/recordings/${id}/boundary`, { headers: auth() })).body.boundary.sequence).toBe(last);
+  });
+});

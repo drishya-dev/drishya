@@ -1,4 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads';
+import { sinceSnapshot } from '../../../packages/scene/src/since.ts';
 import { mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -188,6 +189,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
+    else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after);
     else if (message.method === 'prepare') {
       const p = current(a.id).projection;
       const art = (id: string) => { const item = p.artifacts.find((art) => art.id === id); return item?.blob ? io.get(item.blob) : undefined; };

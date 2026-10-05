@@ -11,6 +11,26 @@ let dir: string;
 afterEach(async () => { await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 describe('worker-owned history pages', () => {
+  it('counts the whole session since a reading mark while bounding digest previews', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'drishya-since-'));
+    const journal = join(dir, 'rollout.jsonl');
+    const timestamp = '2026-10-05T00:00:00Z';
+    const rows = [JSON.stringify({ timestamp, type: 'session_meta', payload: { id: 'since-worker', cwd: '/home/dev/shop' } })];
+    for (let i = 0; i < 70; i++) {
+      rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'function_call', name: 'exec_command', call_id: `call-${i}`, arguments: JSON.stringify({ cmd: 'npm test' }) } }));
+      rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'function_call_output', call_id: `call-${i}`, output: '1 passed' } }));
+    }
+    (await import('node:fs')).writeFileSync(journal, rows.join('\n') + '\n');
+    app = new App(join(dir, 'data'));
+    const { recordingId } = await app.ingest.importSource('codex', journal);
+    const page = await app.history.page(recordingId, { count: 1 });
+    const digest = await app.history.since(recordingId, -1);
+    expect(digest.newSteps).toBe(page.scene.total);
+    expect(digest.counts.tests).toBe(70);
+    expect(digest.tests).toHaveLength(20);
+    expect(page.projection.operations.length).toBeLessThan(70);
+    expect((await app.history.since(recordingId, digest.through)).newSteps).toBe(0);
+  });
   it('bounds long prose passages and keeps complete text and command inputs readable', async () => {
     dir = mkdtempSync(join(tmpdir(), 'drishya-history-'));
     const journal = join(dir, 'rollout.jsonl');

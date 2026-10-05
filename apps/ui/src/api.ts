@@ -2,9 +2,18 @@
 // (the hosted demo). Both expose the same surface, so every screen works in both.
 
 import type { ArtifactSlice, DiscoveredSource, Projection, RecordingHealth, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
+import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { Marker } from '@drishya/scene';
 import type { Operation } from '@drishya/contracts';
+
+/** The reader's mark: the last observation sequence they marked as seen, and the one before it. */
+export interface ReadingBoundary {
+  sequence: number;
+  previousSequence?: number;
+  revision: number;
+  updatedAt: string;
+}
 
 /** A session location discovery could not read, e.g. a permission failure. */
 export interface DiscoveryError {
@@ -68,6 +77,11 @@ export interface DataSource {
   briefing(id: string, range: { from?: number; to?: number }, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
   exportUrl(id: string): string | undefined;
   forget(id: string): Promise<void>;
+  /** The reader's "seen through here" mark for one recording; null when never marked. */
+  boundary(id: string): Promise<ReadingBoundary | null>;
+  since?(id: string, after: number): Promise<SinceSnapshot>;
+  /** Moves the mark. Only explicit reader actions call this. */
+  setBoundary(id: string, sequence: number): Promise<ReadingBoundary>;
   /** New data (`added` > 0) or a capture-state change (`health` set, nothing added). */
   subscribe(
     onChange: (e: { recordingId: string; added: number; live: boolean; health?: RecordingHealth }) => void,
@@ -152,6 +166,9 @@ export const daemon: DataSource = {
   forget: async (id) => {
     await req(`/v1/recordings/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
+  boundary: async (id) => (await req<{ boundary: ReadingBoundary | null }>(`/v1/recordings/${encodeURIComponent(id)}/boundary`)).boundary,
+  since: (id, after) => req(`/v1/recordings/${encodeURIComponent(id)}/since?after=${after}`),
+  setBoundary: async (id, sequence) => (await req<{ boundary: ReadingBoundary }>(`/v1/recordings/${encodeURIComponent(id)}/boundary`, { method: 'POST', json: { sequence } })).boundary,
   subscribe(onChange, hooks) {
     const es = new EventSource('/v1/changes');
     let closed = false;
@@ -218,6 +235,8 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     briefing: unsupported,
     exportUrl: () => undefined,
     forget: unsupported,
+    boundary: async () => null,
+    setBoundary: unsupported,
     subscribe: () => () => undefined,
   };
 }
