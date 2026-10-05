@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
-| **Next gate** | **P1 presentation in progress.** B4 engineering merged via PR #22 after seven green CI jobs, at the builder's request. Physical/platform release validation remains open. The repository lens, material readers and all five semantic cues are implemented; acceptance is closing; [implementation and next steps](review/09-p1-content-origins.md) |
+| **Next gate** | **P2 utility and human comprehension pilot.** P1 merged via PR #23 (`5c487af`) after all seven CI jobs passed; [implementation and evidence](review/09-p1-content-origins.md). P2-A is merged; review P2-C PR #24 separately and complete P2-B file-centred history/comparison. Final visual identity and B4 physical/platform release acceptance remain open |
 
 ### Claimed
 
@@ -25,7 +25,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Codex | Complete and visually review P1 presentation and acceptance | UI presentation/readers, P1 browser tests, acceptance/handoff docs |
 | @harsh | P2-C verification freshness (tests recorded after a change; changed-after-last-check) | `packages/scene/src/verification.ts` (new), `apps/ui/src/components/Verification.tsx` (new), Inspector edit detail; one additive worker method + route (aware of open #23) |
 
 ---
@@ -65,9 +64,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-05
-- **PR/CI:** B4 PR #22 is merged as `445786f`. Harsh PR #21 is merged as `d190586`, after all seven exact-head jobs passed. P1 continues on PR #23; final acceptance/CI are closing before merge, under the builder's explicit merge authorization.
+- **PR/CI:** B4 PR #22 is merged as `445786f`. Harsh PR #21 is merged independently as `d190586`. P1 PR #23 is merged as `5c487af`, after all seven exact-head jobs passed ([run](https://github.com/drishya-dev/drishya/actions/runs/37347983404), `82f4725`). Local main was fast-forwarded; no shared history rewrite, and both builders' scopes/claims were preserved.
 - **Did:** Integrated Harsh's reading marks with B4's whole-session worker summaries and schema-4 migration from both old schema-3 layouts, without mixing P1 into his PR. Fixed the Windows paged-reader viewport race. P1 adds a real repository lens, measured visible world/overview origins, all five semantic finite cues, adaptive captured-patch columns, terminal folding, parsed outcome strips with assertion navigation, copy feedback and responsive reading hierarchy. Reading intent holds the camera; capture continues. [P1 implementation/evidence](review/09-p1-content-origins.md).
-- **Validation:** Typechecks, 223 unit tests, production build and all 14 synthetic browser checks passed (two opt-in journeys skipped in the ordinary suite). The live five-move journey passed five consecutive runs. The separate ten-minute synthetic reader passed 112 live rounds / 336 added steps, <2 px anchor/return error, peak 509 DOM nodes. Exact-head CI must pass before PR #23 merges. No real session import for this presentation work.
+- **Validation:** Typechecks, 223 unit tests, production build and all 14 synthetic browser checks passed (two opt-in journeys skipped in the ordinary suite). The live five-move journey passed five consecutive runs. The separate ten-minute synthetic reader passed 112 live rounds / 336 added steps, <2 px anchor/return error, peak 509 DOM nodes. Final isolated normal 5k-file probe: update p95 281 ms, peak daemon RSS 408.35 MiB. Offline CLI install/import/API/restart and all seven CI jobs passed. No real session import for this presentation work.
+- **Review follow-up:** Harsh's separate P2-C PR #24 is open with green CI. Before merge, verify two cases seen in code review: its panel effect depends on operation identity but not a new live revision (could retain stale facts), and its whole-session endpoint has no as-of step (could expose future runs in historical replay). Fix and validate on that PR's scope; preserve both builders' work. Do not duplicate his feature.
 - **Watch out for:** The visual candidate is not a final design or human preference claim. Next is P2 file-centred utility/verification freshness and the comprehension pilot. Preserve the worker/page boundary. B4 physical/platform release validation remains open. Pre-existing package-manager edits, model-planning notes and screenshots/traces remain local.
 ## Next up
 
