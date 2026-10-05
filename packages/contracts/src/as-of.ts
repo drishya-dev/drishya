@@ -10,6 +10,7 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
   const proseIds = new Set(applied.filter((item) => item.type === 'prose').map((item) => item.proseId));
   const operations = projection.operations.filter((op) => started.has(op.id)).map((op) => ended.has(op.id) ? op : pending(op));
   const visibleArtifacts = new Set(operations.flatMap((op) => op.artifactIds));
+  for (const id of proseIds) visibleArtifacts.add(`art_${id}_prose`);
   const visibleEvidence = new Set([...operations.flatMap((op) => op.observationIds), ...projection.prose.filter((p) => proseIds.has(p.id)).flatMap((p) => p.observationIds)]);
   return {
     ...projection,
@@ -23,7 +24,7 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
 
 function pending(op: Operation): Operation {
   const detail = pendingDetail(op.detail);
-  // A patch body is captured at invocation. All other artifacts are results, even if their
+    // Patch bodies and full command inputs are captured at invocation. Other artifacts are results, even if their
   // metadata mistakenly uses the call's sequence (for example originalFile on an edit).
   return {
     ...op,
@@ -34,7 +35,7 @@ function pending(op: Operation): Operation {
     endTime: undefined,
     paths: op.paths.filter((path) => path.role !== 'search-hit' && path.role !== 'test').map((path) => ({ ...path, lines: undefined })),
     detail,
-    artifactIds: op.artifactIds.filter((id) => id.endsWith('_patch')),
+    artifactIds: op.artifactIds.filter((id) => id.endsWith('_patch') || id.endsWith('_input')),
     observationIds: op.observationIds.slice(0, 1),
   };
 }

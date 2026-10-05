@@ -4,8 +4,10 @@
 import { create } from 'zustand';
 import type { Projection, RecordingSummary, RepoGraph } from '@drishya/contracts';
 import { nextMarker, type ComposeInput, type Marker } from '@drishya/scene';
-import type { Config, DataSource } from './api.ts';
+import type { Config, DataSource, ReaderRecording } from './api.ts';
 import { latestOnly } from './lib/sync.ts';
+import { materialCache } from './lib/artifact-cache.ts';
+import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
 
 /** One guard for every projection load, so the newest open or reload is the only one that lands. */
 const newest = latestOnly();
@@ -22,10 +24,11 @@ interface State {
   config?: Config;
   screen: Screen;
   error?: string;
-  recordings: RecordingSummary[];
+  recordings: ReaderRecording[];
   recordingId?: string;
   recording?: RecordingSummary;
   projection?: Projection;
+  historyPage?: HistoryPage;
   graph?: RepoGraph;
   /** Revisions the shown projection is at; compared with the daemon's after a reconnect (B1b). */
   renderedRevisions: Record<string, number>;
@@ -42,6 +45,7 @@ interface State {
   /** History follows the newest work; scrolling away turns it off. */
   follow: boolean;
   motion: boolean;
+  lowResource: boolean;
   mapVisible: boolean;
   explore: boolean;
   selectedOp?: string;
@@ -61,6 +65,7 @@ interface State {
   set(p: Partial<State>): void;
   openRecording(id: string, opts?: { at?: number | 'end'; play?: boolean }): Promise<void>;
   reloadProjection(): Promise<void>;
+  loadHistoryWindow(query: HistoryQuery): Promise<void>;
   seek(step: number, opts?: { hold?: boolean }): void;
   stepBy(d: number): void;
   togglePlay(): void;
@@ -72,6 +77,8 @@ interface State {
 }
 
 const prefersReducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const storedLowResource = (() => { try { return localStorage.getItem('drishya.lowResource') === '1'; } catch { return false; } })();
+materialCache.setLowResource(storedLowResource);
 const storedMotion = (() => {
   try {
     return localStorage.getItem('drishya.motion');
@@ -98,8 +105,9 @@ export const useApp = create<State>((set, get) => ({
   speed: 1,
   held: false,
   follow: true,
-  motion: storedMotion ? storedMotion === '1' : !prefersReducedMotion,
-  mapVisible: storedMapVisible !== '0',
+  lowResource: storedLowResource,
+  motion: !storedLowResource && (storedMotion ? storedMotion === '1' : !prefersReducedMotion),
+  mapVisible: !storedLowResource && storedMapVisible !== '0',
   explore: false,
   inspectorTab: 'detail',
   briefingOpen: false,
@@ -110,16 +118,24 @@ export const useApp = create<State>((set, get) => ({
   async openRecording(id, opts = {}) {
     const src = get().source;
     if (!src) return;
-    set({ recordingId: id, projection: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false });
+    set({ error: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
-    const recordings = await src.recordings();
-    const projection = await src.projection(id);
-    if (!current() || get().recordingId !== id) return; // the user moved on; this response is stale
-    const recording = recordings.find((r) => r.id === id.split('+')[0]) ?? recordings[0];
-    const mode = opts.at === undefined && !opts.play ? 'history' : 'replay';
-    const step = mode === 'history' || opts.at === 'end' ? projection.timeline.length : Math.max(0, Math.min(opts.at ?? 0, projection.timeline.length));
-    set({ projection, recording, recordings, renderedRevisions: revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < projection.timeline.length });
+    try {
+      const recordings = await src.recordings();
+      const count = recordings.filter((r) => id.split('+').includes(r.id)).reduce((n, r) => n + r.observationCount, 0);
+      const bytes = recordings.filter((r) => id.split('+').includes(r.id)).reduce((n, r) => n + (r.sourceBytes ?? 0), 0);
+      const page = (count > 10_000 || bytes > 32 * 1024 * 1024) && src.history ? await src.history(id, { step: typeof opts.at === 'number' ? opts.at : opts.play ? 0 : undefined }) : undefined;
+      const projection = page?.projection ?? await src.projection(id);
+      if (!current() || get().recordingId !== id) return; // the user moved on; this response is stale
+      const recording = recordings.find((r) => r.id === id.split('+')[0]) ?? recordings[0];
+      const mode = opts.at === undefined && !opts.play ? 'history' : 'replay';
+      const total = page?.scene.total ?? projection.timeline.length;
+      const step = mode === 'history' || opts.at === 'end' ? total : Math.max(0, Math.min(opts.at ?? 0, total));
+      set({ error: undefined, projection, historyPage: page, recording, recordings, renderedRevisions: page?.revisions ?? revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < total });
+    } catch (error) {
+      if (current() && get().recordingId === id) set({ error: (error as Error).message, playing: false });
+    }
   },
 
   async reloadProjection() {
@@ -127,19 +143,38 @@ export const useApp = create<State>((set, get) => ({
     if (!source || !recordingId) return;
     const current = newest('projection');
     const recordings = await source.recordings();
+    if (!current() || get().recordingId !== recordingId) return;
+    const count = recordings.filter((r) => recordingId.split('+').includes(r.id)).reduce((n, r) => n + r.observationCount, 0);
+    const bytes = recordings.filter((r) => recordingId.split('+').includes(r.id)).reduce((n, r) => n + (r.sourceBytes ?? 0), 0);
+    if (source.history && (get().historyPage || count > 10_000 || bytes > 32 * 1024 * 1024)) {
+      set({ recordings, recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording });
+      await get().loadHistoryWindow({ start: get().follow ? undefined : get().historyPage?.start });
+      return;
+    }
     const projection = await source.projection(recordingId);
     if (!current() || get().recordingId !== recordingId) return; // superseded by a newer load
     const { step, mode } = get();
-    set({ projection, recordings, renderedRevisions: revisionsOf(recordings), recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording,
+      set({ error: undefined, projection, recordings, renderedRevisions: revisionsOf(recordings), recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording,
       step: mode === 'history' ? projection.timeline.length : Math.min(step, projection.timeline.length) });
     // History grows regardless of the reader's scroll position; `follow` only controls the viewport.
+  },
+
+  async loadHistoryWindow(query) {
+    const { source, recordingId, mode, step, filter, selectedOp } = get();
+    if (!source?.history || !recordingId) return;
+    const current = newest('projection');
+    const page = await source.history(recordingId, { step: mode === 'replay' ? step : undefined, filter, selectedOperationId: selectedOp, ...query });
+    if (!current() || get().recordingId !== recordingId) return;
+      set({ error: undefined, historyPage: page, projection: page.projection, renderedRevisions: page.revisions,
+      step: mode === 'history' ? page.scene.total : page.scene.step });
   },
 
   seek(step, opts) {
     const p = get().projection;
     if (!p) return;
-    const s = Math.max(0, Math.min(p.timeline.length, Math.round(step)));
+    const s = Math.max(0, Math.min(get().historyPage?.scene.total ?? p.timeline.length, Math.round(step)));
     set({ mode: 'replay', step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
+    if (get().historyPage) void get().loadHistoryWindow({ step: s }).catch((error) => set({ error: error.message }));
   },
 
   stepBy(d) {
@@ -147,22 +182,28 @@ export const useApp = create<State>((set, get) => ({
   },
 
   togglePlay() {
-    const { playing, projection, step, mode } = get();
+    const { playing, projection, step, mode, historyPage } = get();
     if (!projection) return;
-    if (mode === 'history') return set({ mode: 'replay', step: 0, playing: true, held: false, follow: true });
+    const total = historyPage?.scene.total ?? projection.timeline.length;
+    if (mode === 'history') { set({ playing: true, held: false, follow: true }); get().seek(0); return; }
     if (playing) set({ playing: false });
-    else set({ playing: true, held: false, follow: true, step: step >= projection.timeline.length ? 0 : step });
+    else { set({ playing: true, held: false, follow: true }); get().seek(step >= total ? 0 : step); }
   },
 
   jump(type, dir = 1) {
-    const { projection, step } = get();
+    const { projection, step, historyPage, source, recordingId } = get();
     if (!projection) return;
+    if (historyPage && source?.historyMarker && recordingId) {
+      void source.historyMarker(recordingId, step, Array.isArray(type) ? type : [type], dir).then((to) => { if (to !== undefined && get().recordingId === recordingId && get().step === step) get().seek(to, { hold: true }); }).catch((error) => { if (get().recordingId === recordingId) set({ error: error.message, playing: false }); });
+      return;
+    }
     const to = nextMarker(projection, step, type, dir);
     if (to !== undefined) get().seek(to, { hold: true });
   },
 
   select(opId) {
     set({ selectedOp: opId, ...(opId ? { expandedOp: undefined, playing: false, held: true, follow: false, inspectorTab: 'detail' } : {}) });
+    if (opId && get().historyPage && !get().projection?.operations.some((op) => op.id === opId)) void get().loadHistoryWindow({ selectedOperationId: opId }).catch((error) => set({ error: error.message }));
   },
 
   resume() {
@@ -171,11 +212,13 @@ export const useApp = create<State>((set, get) => ({
 
   showHistory() {
     const projection = get().projection;
-    set({ mode: 'history', step: projection?.timeline.length ?? 0, playing: false, held: false, follow: true, selectedOp: undefined, expandedOp: undefined });
+    set({ mode: 'history', step: get().historyPage?.scene.total ?? projection?.timeline.length ?? 0, playing: false, held: false, follow: true, selectedOp: undefined, expandedOp: undefined });
+    if (get().historyPage) void get().loadHistoryWindow({}).catch((error) => set({ error: error.message }));
   },
 
   setFilter(f) {
     set({ filter: f, ...(f ? { follow: false } : {}) });
+    if (get().historyPage) void get().loadHistoryWindow({ start: get().historyPage?.start }).catch((error) => set({ error: error.message }));
   },
 }));
 
@@ -186,6 +229,12 @@ export function setMotion(on: boolean) {
   } catch {
     // preference only
   }
+}
+
+export function setLowResource(on: boolean) {
+  materialCache.setLowResource(on);
+  useApp.setState({ lowResource: on, ...(on ? { motion: false, mapVisible: false, explore: false, graph: undefined } : {}) });
+  try { localStorage.setItem('drishya.lowResource', on ? '1' : '0'); } catch { /* Optional local preference. */ }
 }
 
 export function setMapVisible(on: boolean) {

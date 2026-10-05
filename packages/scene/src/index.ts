@@ -46,6 +46,8 @@ export interface SceneProse {
 }
 
 export interface ScenePassage {
+  /** Paged readers retain the slot's identity while its content is fetched. */
+  unloaded?: boolean;
   id: string;
   agentId: string;
   ops: SceneOp[];

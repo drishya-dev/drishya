@@ -103,19 +103,21 @@ function usePlayback() {
   const step = useApp((s) => s.step);
   const speed = useApp((s) => s.speed);
   const projection = useApp((s) => s.projection);
+  const historyPage = useApp((s) => s.historyPage);
   useEffect(() => {
     if (!playing || !projection) return;
-    if (step >= projection.timeline.length) {
+    if (historyPage && historyPage.scene.step !== step) return;
+    if (step >= (historyPage?.scene.total ?? projection.timeline.length)) {
       const live = useApp.getState().recording?.live;
       if (!live) useApp.setState({ playing: false });
       return;
     }
     // Hold the step currently on screen. Looking ahead charged a long explanation's reading
     // time to the *previous* frame, then advanced past the explanation almost immediately.
-    const ms = dwellFor(projection, step, speed);
-    const t = setTimeout(() => useApp.setState({ step: step + 1 }), ms);
+    const ms = historyPage ? historyPage.dwell / speed : dwellFor(projection, step, speed);
+    const t = setTimeout(() => useApp.getState().seek(step + 1), ms);
     return () => clearTimeout(t);
-  }, [playing, step, speed, projection]);
+  }, [playing, step, speed, projection, historyPage]);
 }
 
 function useKeyboard() {
@@ -150,7 +152,7 @@ function useKeyboard() {
         e.preventDefault();
         s.set({ searchOpen: true });
       } else if (k === 'Home') s.seek(0, { hold: true });
-      else if (k === 'End') s.seek(s.projection?.timeline.length ?? 0, { hold: true });
+      else if (k === 'End') s.seek(s.historyPage?.scene.total ?? s.projection?.timeline.length ?? 0, { hold: true });
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -177,7 +179,7 @@ function useLiveUpdates() {
         return;
       }
       clearTimeout(pending);
-      pending = setTimeout(() => void useApp.getState().reloadProjection(), 150);
+      pending = setTimeout(() => void useApp.getState().reloadProjection().catch((error) => useApp.setState({ error: error.message, playing: false })), 150);
     }, {
       onStatus: (connection) => connection === 'signed-out'
         ? useApp.setState({ screen: 'signed-out', source: undefined, playing: false })
@@ -186,7 +188,7 @@ function useLiveUpdates() {
       // reload the open view if it fell behind, even if nothing new arrives later (audit A07).
       onSync: (revisions) => {
         const s = useApp.getState();
-        if (s.recordingId && s.projection && needsReload(s.recordingId, s.renderedRevisions, revisions)) void s.reloadProjection();
+        if (s.recordingId && s.projection && needsReload(s.recordingId, s.renderedRevisions, revisions)) void s.reloadProjection().catch((error) => useApp.setState({ error: error.message, playing: false }));
       },
     });
     return () => {

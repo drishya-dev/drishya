@@ -129,6 +129,7 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
       return (
         <>
           <pre className="cmd block">$ {d.command}</pre>
+          {op.artifactIds.find((id) => id.endsWith('_input')) && <ArtifactReader id={op.artifactIds.find((id) => id.endsWith('_input'))} kind="code" />}
           <p className="insp-note">Exit code {d.exitCode ?? 'unknown'}</p>
           <OutputBlock artifactId={d.outputArtifactId} preview={d.outputPreview} />
         </>
@@ -237,9 +238,17 @@ const RELATION: Record<string, string> = {
 };
 
 function Evidence({ op, links, projection }: { op: Operation; links: EvidenceLink[]; projection: Projection }) {
+  const historyPage = useApp((s) => s.historyPage);
   const seek = useApp((s) => s.seek);
   const select = useApp((s) => s.select);
   const go = (id: string) => {
+    const reference = historyPage?.references[id];
+    if (reference) {
+      const state = useApp.getState();
+      state.set({ mode: 'replay', step: reference.step, selectedOp: id, held: true, playing: false, follow: false });
+      void state.loadHistoryWindow({ selectedOperationId: id, step: reference.step }).catch((error) => state.set({ error: error.message }));
+      return;
+    }
     const other = projection.operations.find((o) => o.id === id);
     if (!other) return;
     const s = stepOfOperation(projection, id);
@@ -253,11 +262,12 @@ function Evidence({ op, links, projection }: { op: Operation; links: EvidenceLin
       {links.map((l) => {
         const otherId = l.from === op.id || op.observationIds.includes(l.from) ? l.to : l.from;
         const other = projection.operations.find((o) => o.id === otherId);
+        const reference = historyPage?.references[otherId];
         const prose = projection.prose.find((p) => p.id === otherId);
         return (
-          <button key={l.id} className="link-row" onClick={() => other && go(other.id)} disabled={!other}>
+          <button key={l.id} className="link-row" onClick={() => go(otherId)} disabled={!other && !reference}>
             <span className={`rel rel-${l.basis}`}>{RELATION[l.relation] ?? l.relation}</span>
-            <span className="link-target">{other ? other.title : prose ? `“${prose.text.slice(0, 80)}…”` : otherId.replace(/^file:/, '')}</span>
+            <span className="link-target">{other ? other.title : reference ? reference.title : prose ? `“${prose.text.slice(0, 80)}…”` : otherId.replace(/^file:/, '')}</span>
             <span className="link-why">{l.explanation}</span>
             <span className="link-basis">{l.basis.replace(/-/g, ' ')}{l.ruleVersion ? ` · ${l.ruleVersion}` : ''}</span>
           </button>

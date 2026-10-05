@@ -12,8 +12,9 @@ import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import type { BlobText, Observation, RecordingSummary } from '@drishya/contracts';
 
-// 2: recordings.revision (B1b). 3: reading_boundaries (P2-A).
-export const SCHEMA_VERSION = 3;
+// 2: revisions. 3: normalized observation clock. 4: local reading boundaries.
+export const SCHEMA_VERSION = 4;
+const clockTime = (time: string | null | undefined) => time && Number.isFinite(Date.parse(time)) ? new Date(time).toISOString() : null;
 /** Strings longer than this move out of the observation into the blob store. */
 export const INLINE_LIMIT = 16 * 1024;
 const PREVIEW = 2048;
@@ -201,13 +202,16 @@ export class Store {
   readonly dataDir: string;
   private stmts = new Map<string, StatementSync>();
 
-  constructor(dataDir: string, opts: { memory?: boolean } = {}) {
+  constructor(dataDir: string, opts: { memory?: boolean; readOnly?: boolean } = {}) {
     this.dataDir = dataDir;
     mkdirSync(dataDir, { recursive: true, mode: 0o700 });
-    this.db = new DatabaseSync(opts.memory ? ':memory:' : join(dataDir, 'drishya.db'));
+    this.db = new DatabaseSync(opts.memory ? ':memory:' : join(dataDir, 'drishya.db'), { readOnly: opts.readOnly });
     this.blobs = new BlobStore(join(dataDir, 'blobs'));
-    this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;');
-    this.migrate();
+    this.db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000; PRAGMA temp_store = FILE; PRAGMA cache_size = -8192;');
+    if (!opts.readOnly) {
+      this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;');
+      this.migrate();
+    }
   }
 
   private migrate() {
@@ -289,6 +293,14 @@ export class Store {
     // Stores created before revisions existed (B1b) gain the column; existing rows start at 0.
     const cols = (this.db.prepare('PRAGMA table_info(recordings)').all() as { name: string }[]).map((c) => c.name);
     if (!cols.includes('revision')) this.db.exec('ALTER TABLE recordings ADD COLUMN revision INTEGER NOT NULL DEFAULT 0');
+    const observationCols = (this.db.prepare('PRAGMA table_info(observations)').all() as { name: string }[]).map((column) => column.name);
+    if (!observationCols.includes('clock_time')) {
+      this.tx(() => {
+        this.db.exec('ALTER TABLE observations ADD COLUMN clock_time TEXT');
+        const update = this.db.prepare('UPDATE observations SET clock_time=? WHERE rowid=?');
+        for (const row of this.db.prepare('SELECT rowid,source_time FROM observations').iterate()) update.run(clockTime(row.source_time as string | null), row.rowid!);
+      });
+    }
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('schema_version', String(SCHEMA_VERSION));
     this.db.prepare('UPDATE meta SET value = ? WHERE key = ?').run(String(SCHEMA_VERSION), 'schema_version');
   }
@@ -353,20 +365,24 @@ export class Store {
    */
   deleteRecording(id: string): { blobsRemoved: number } {
     const candidates = new Set<string>();
-    const bodies = [
-      ...(this.q('SELECT body FROM observations WHERE recording_id = ?').all(id) as { body: string }[]),
-      ...(this.q('SELECT body FROM projections WHERE recording_id = ?').all(id) as { body: string }[]),
-    ];
-    for (const { body } of bodies) for (const m of body.matchAll(/"(?:\$blob|blob)":"([0-9a-f]{64})"/g)) candidates.add(m[1]!);
+    for (const table of ['observations', 'projections']) {
+      for (const row of this.db.prepare(`SELECT body FROM ${table} WHERE recording_id = ?`).iterate(id)) {
+        for (const m of String(row.body).matchAll(/"(?:\$blob|blob)":"([0-9a-f]{64})"/g)) candidates.add(m[1]!);
+      }
+    }
     this.tx(() => {
       this.q('DELETE FROM search WHERE recording_id = ?').run(id);
       this.q('DELETE FROM recordings WHERE id = ?').run(id);
     });
-    const stillObs = this.q('SELECT 1 FROM observations WHERE instr(body, ?) > 0 LIMIT 1');
-    const stillProj = this.q('SELECT 1 FROM projections WHERE instr(body, ?) > 0 LIMIT 1');
+    const shared = new Set<string>();
+    for (const table of ['observations', 'projections']) {
+      for (const row of this.db.prepare(`SELECT body FROM ${table}`).iterate()) {
+        for (const m of String(row.body).matchAll(/"(?:\$blob|blob)":"([0-9a-f]{64})"/g)) if (candidates.has(m[1]!)) shared.add(m[1]!);
+      }
+    }
     let blobsRemoved = 0;
     for (const sha of candidates) {
-      if (stillObs.get(sha) || stillProj.get(sha)) continue;
+      if (shared.has(sha)) continue;
       this.blobs.delete(sha);
       blobsRemoved++;
     }
@@ -421,6 +437,7 @@ export class Store {
         seq += 1;
         const full: Observation = { ...o, payload: this.externalize(o.payload) as Observation['payload'], receivedSequence: seq };
         ins.run(full.id, recordingId, seq, full.kind, full.agentId, full.operationId ?? null, full.sourceTime ?? null, JSON.stringify(full));
+        this.q('UPDATE observations SET clock_time=? WHERE id=?').run(clockTime(full.sourceTime), full.id);
         const text = searchableText(o);
         if (text) fts.run(text, recordingId, full.id);
         added.push(full);
@@ -443,6 +460,32 @@ export class Store {
     return (this.q('SELECT body FROM observations WHERE recording_id = ? AND seq > ? ORDER BY seq LIMIT ?').all(recordingId, after, limit) as { body: string }[]).map((r) => JSON.parse(r.body));
   }
 
+  /** Repeatable disk-backed ordering matching the reducer's source-clock carry-forward. */
+  orderedObservations(recordingId: string | string[]): Iterable<Observation> {
+    const store = this;
+    const ids = typeof recordingId === 'string' ? [recordingId] : [...new Set(recordingId)];
+    const marks = ids.map(() => '?').join(',');
+    const rank = ids.map((_, i) => `WHEN ? THEN ${i}`).join(' ');
+    return {
+      *[Symbol.iterator]() {
+        const rows = store.db.prepare(`
+          WITH timed AS (
+            SELECT body, seq, recording_id,
+              MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (
+                PARTITION BY recording_id, json_extract(body, '$.source.sourceId') ORDER BY seq
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+              ) AS clock_seq
+            FROM observations WHERE recording_id IN (${marks})
+          ) SELECT timed.body FROM timed LEFT JOIN observations clock
+            ON clock.recording_id = timed.recording_id AND clock.seq = timed.clock_seq
+          ORDER BY COALESCE(clock.clock_time, ''), timed.seq,
+            CASE timed.recording_id ${rank} END
+        `).iterate(...ids, ...ids) as Iterable<{ body: string }>;
+        for (const row of rows) yield JSON.parse(row.body) as Observation;
+      },
+    };
+  }
+
   observationsOfKinds(recordingId: string, kinds: string[]): Observation[] {
     const marks = kinds.map(() => '?').join(',');
     return (this.db.prepare(`SELECT body FROM observations WHERE recording_id = ? AND kind IN (${marks}) ORDER BY seq`).all(recordingId, ...kinds) as { body: string }[]).map((r) => JSON.parse(r.body));
@@ -457,6 +500,24 @@ export class Store {
 
   countObservations(recordingId: string): number {
     return (this.q('SELECT COUNT(*) AS n FROM observations WHERE recording_id = ?').get(recordingId) as { n: number }).n;
+  }
+  sourceBytes(recordingId: string): number {
+    return Number(this.q("SELECT COALESCE(SUM(json_extract(cursor, '$.offset')),0) AS bytes FROM sources WHERE recording_id=?").get(recordingId)?.bytes ?? 0);
+  }
+
+  captureMetadata(recordingId: string): { title?: string; workspaceRoot?: string } {
+    const meta = this.q("SELECT body FROM observations WHERE recording_id = ? AND kind = 'session.meta' ORDER BY seq LIMIT 1").get(recordingId) as { body: string } | undefined;
+    const user = this.q("SELECT body FROM observations WHERE recording_id = ? AND kind = 'message.user' AND agent_id = 'agent:main' ORDER BY seq LIMIT 1").get(recordingId) as { body: string } | undefined;
+    const observation = meta ? JSON.parse(meta.body) as Observation : undefined;
+    const payload = observation?.payload as { title?: string; cwd?: string } | undefined;
+    const titled = this.q(`SELECT body FROM observations WHERE recording_id=? AND kind='session.meta'
+      AND json_type(body,'$.payload.title')='text' AND json_extract(body,'$.payload.title')<>''
+      AND COALESCE(json_extract(body,'$.payload.titleRank'),1)>=0
+      ORDER BY COALESCE(json_extract(body,'$.payload.titleRank'),1) DESC, seq DESC LIMIT 1`).get(recordingId) as { body: string } | undefined;
+    const capturedTitle = titled ? ((JSON.parse(titled.body) as Observation).payload as { title: string }).title : undefined;
+    const prompt = user ? (JSON.parse(user.body) as Observation).payload as { text?: string | BlobText } : undefined;
+    const text = typeof prompt?.text === 'string' ? prompt.text : prompt?.text?.preview;
+    return { title: capturedTitle ?? text?.replace(/\s+/g, ' ').trim().slice(0, 120), workspaceRoot: observation?.workspaceRoot ?? payload?.cwd };
   }
 
   /** Moves long strings into blobs, leaving a small reference with a preview. */

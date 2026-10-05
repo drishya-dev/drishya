@@ -32,11 +32,13 @@ export function Home({ openDemo }: { openDemo: () => void }) {
   const [days, setDays] = useState(0);
   const [shownRecordings, setShownRecordings] = useState(60);
   const [shownSources, setShownSources] = useState(60);
+  const [usage, setUsage] = useState<{ bytes: number; budgetBytes: number; overBudget: boolean }>();
   const resetShown = () => { setShownRecordings(60); setShownSources(60); };
 
   const refresh = async () => {
     if (!source) return;
     set({ recordings: await source.recordings() });
+    if (source.storage) setUsage(await source.storage());
     const found = await source.sources();
     setSources(found.sources);
     setSourceErrors(found.errors);
@@ -81,6 +83,7 @@ export function Home({ openDemo }: { openDemo: () => void }) {
         </div>
         <span className="muted">See what your coding agents did — replayed on your own code. Observe only.</span>
       </header>
+      {usage && <p className={usage.overBudget ? 'bad small' : 'muted small'}>Local store · {(usage.bytes / 1024 ** 3).toFixed(2)} GiB of {(usage.budgetBytes / 1024 ** 3).toFixed(0)} GiB advisory budget{usage.overBudget ? ' · budget exceeded' : ''}. Nothing is deleted automatically. Remove selected recordings with <code>drishya forget &lt;recording&gt;</code>.</p>}
 
       <div className="home-filters">
         <input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => { setQ(e.target.value); resetShown(); }} />

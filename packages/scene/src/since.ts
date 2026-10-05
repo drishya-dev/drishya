@@ -30,6 +30,20 @@ export interface SinceDigest {
   editedFiles: string[];
 }
 
+export type SinceGroup = 'failures' | 'edits' | 'tests' | 'unfinished' | 'gaps';
+export interface SinceSnapshot extends SinceDigest {
+  counts: Record<SinceGroup, number>;
+  editedFileCount: number;
+}
+
+/** Whole-session facts with bounded previews for the reader; never count just a page. */
+export function sinceSnapshot(p: Projection, after: number): SinceSnapshot {
+  const digest = sinceBoundary(p, after);
+  const groups: SinceGroup[] = ['failures', 'edits', 'tests', 'unfinished', 'gaps'];
+  const counts = Object.fromEntries(groups.map((key) => [key, digest[key].length])) as Record<SinceGroup, number>;
+  return { ...digest, ...Object.fromEntries(groups.map((key) => [key, digest[key].slice(0, 20)])), counts, editedFiles: digest.editedFiles.slice(0, 50), editedFileCount: digest.editedFiles.length };
+}
+
 /** Where an operation's outcome landed: its result if it has one, else where it started. */
 const outcomeAt = (o: Operation) => o.endSequence ?? o.startSequence;
 

@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Projection } from '@drishya/contracts';
+import type { Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
 import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
-import { setMapVisible, setMotion, useApp } from '../state.ts';
+import { setLowResource, setMapVisible, setMotion, useApp } from '../state.ts';
 import { Kbd, timeOf } from './common.tsx';
 import { History } from './History.tsx';
 import { ExplanationView, Inspector } from './Inspector.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
+import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 
 export function Viewer() {
   const projection = useApp((s) => s.projection);
+  const error = useApp((s) => s.error);
+  const historyPage = useApp((s) => s.historyPage);
+  const loadHistoryWindow = useApp((s) => s.loadHistoryWindow);
   const graph = useApp((s) => s.graph);
   const mapVisible = useApp((s) => s.mapVisible);
   const recordingId = useApp((s) => s.recordingId);
@@ -25,8 +29,8 @@ export function Viewer() {
   const main = useRef<HTMLDivElement>(null);
   const [reading, setReading] = useState<{ left: number; width: number }>();
 
-  const scene = useMemo(() => (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [projection, step, filter, selectedOp]);
-  const historical = useMemo(() => projection ? asOfProjection(projection, step) : undefined, [projection, step]);
+  const scene = useMemo(() => historyPage?.scene ?? (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [historyPage, projection, step, filter, selectedOp]);
+  const historical = useMemo(() => historyPage?.projection ?? (projection ? asOfProjection(projection, step) : undefined), [historyPage, projection, step]);
 
   useEffect(() => {
     if (!mapVisible || !projection || graph || !source || !recordingId) return;
@@ -84,16 +88,17 @@ export function Viewer() {
     return () => ro.disconnect();
   }, [projection]);
 
-  if (!projection || !scene || !historical) return <div className="center muted">Loading recording…</div>;
+  if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
   const arriving = scene.passages.flatMap((p) => p.ops).find((o) => o.phase === 'arriving' && o.origin.type === 'map');
   return (
     <div className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${selectedOp ? ' inspecting' : ''}`}>
       <Crown scene={scene} projection={projection} />
+      {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
         {mapVisible && <MapCanvas graph={graph} heat={scene.heat} arrivingPath={arriving?.origin.type === 'map' ? arriving.origin.path : undefined} readingRect={reading} />}
         <Spine scene={scene} projection={historical} />
-        <History key={recordingId} scene={scene} projection={historical} />
+        <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
         <FilePanel projection={historical} />
       </div>
       <Dock scene={scene} />
@@ -182,21 +187,43 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
 function Spine({ scene, projection }: { scene: Scene; projection: Projection }) {
   const hovered = useApp((s) => s.hoveredPath);
   const set = useApp((s) => s.set);
+  const ref = useRef<HTMLElement>(null);
+  const [top, setTop] = useState(0);
+  const [height, setHeight] = useState(600);
+  const [focusedPath, setFocusedPath] = useState<string>();
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setHeight(el.clientHeight));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const heat = useMemo(() => new Map(scene.heat.map((h) => [h.path, h])), [scene.heat]);
   const files = projection.files.filter((f) => f.firstStep < scene.step);
+  const rowHeight = 24;
+  const first = Math.max(0, Math.floor((top - 32) / rowHeight) - 8);
+  const last = Math.min(files.length, Math.ceil((top + height) / rowHeight) + 8);
+  const visible = new Set<number>();
+  for (let i = first; i < last; i++) visible.add(i);
+  const focused = files.findIndex((file) => file.path === focusedPath);
+  if (focused >= 0) visible.add(focused);
+  let previous = 0;
   return (
-    <nav className="spine" aria-label="Files in this run">
+    <nav className="spine" ref={ref} aria-label="Files in this run" onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedPath((e.target as HTMLElement).closest<HTMLElement>('[data-spine-path]')?.dataset.spinePath)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-spine-path]')) setFocusedPath(undefined); }}>
       <div className="spine-head">Files in this run</div>
       {files.length === 0 && <div className="muted small">None yet</div>}
-      {files.map((f) => {
+      {[...visible].sort((a, b) => a - b).map((i) => {
+        const f = files[i]!;
+        const gap = (i - previous) * rowHeight;
+        previous = i + 1;
         const h = heat.get(f.path);
         const name = f.path.split('/').pop();
         const dir = f.path.slice(0, f.path.length - (name?.length ?? 0));
         return (
-          <button
-            key={f.path}
+          <div key={f.path}>{gap > 0 && <div aria-hidden="true" style={{ height: gap }} />}<button
+            data-spine-path={f.path}
             className={`spine-file tone-${h?.tone ?? 'none'}${h?.edited ? ' edited' : ''}${hovered === f.path ? ' hover' : ''}`}
-            style={{ '--heat': String(h?.heat ?? 0) } as React.CSSProperties}
+            style={{ '--heat': String(h?.heat ?? 0), height: rowHeight } as React.CSSProperties}
             onMouseEnter={() => set({ hoveredPath: f.path })}
             onMouseLeave={() => set({ hoveredPath: undefined })}
             onClick={() => set({ filePanel: f.path })}
@@ -205,14 +232,58 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
             <span className="spine-dot" />
             <span className="spine-dir">{dir}</span>
             <span className="spine-name">{name}</span>
-          </button>
+          </button></div>
         );
       })}
+      <div aria-hidden="true" style={{ height: (files.length - previous) * rowHeight }} />
     </nav>
   );
 }
 
 function FilePanel({ projection }: { projection: Projection }) {
+  const paged = useApp((s) => !!s.historyPage);
+  return paged ? <PagedFilePanel /> : <LocalFilePanel projection={projection} />;
+}
+
+function PagedFilePanel() {
+  const path = useApp((s) => s.filePanel);
+  const source = useApp((s) => s.source);
+  const recordingId = useApp((s) => s.recordingId);
+  const mode = useApp((s) => s.mode);
+  const step = useApp((s) => s.step);
+  const revisions = useApp((s) => s.renderedRevisions);
+  const [query, setQuery] = useState('');
+  const [start, setStart] = useState(0);
+  const [page, setPage] = useState<{ operations: Operation[]; total: number }>();
+  const [error, setError] = useState<string>();
+  useEffect(() => { setStart(0); setQuery(''); }, [path]);
+  useEffect(() => {
+    let active = true;
+    setPage(undefined); setError(undefined);
+    if (!path || !recordingId || !source?.fileOperations) return;
+    const timer = setTimeout(() => source.fileOperations!(recordingId, path, start, 100, mode === 'replay' ? step : undefined, query)
+      .then((data) => { if (active) setPage(data); }).catch((e) => { if (active) setError(e.message); }), 120);
+    return () => { active = false; clearTimeout(timer); };
+  }, [source, recordingId, path, start, query, mode, step, revisions]);
+  if (!path) return null;
+  return <div className="file-panel" role="dialog" aria-label={`Work on ${path}`}>
+    <header><code>{path}{page ? ` · ${page.total} actions` : ''}</code><button className="icon-btn" aria-label="Close" onClick={() => useApp.setState({ filePanel: undefined })}>✕</button></header>
+    <input className="file-filter" aria-label="Filter actions on this file" placeholder="Filter actions on this file" value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); }} />
+    <div className="file-list">
+      {error && <p className="bad">{error}</p>}
+      {!page && !error && <p className="muted">Loading captured actions…</p>}
+      {page?.operations.map((op) => <button key={op.id} className="file-op" onClick={() => {
+        const state = useApp.getState();
+        state.select(op.id);
+        state.set({ filePanel: undefined, explore: false });
+      }}><span className={`op-kind k-${op.kind}`}>{KIND_LABEL[op.kind]}</span><span className="file-op-title">{op.title}</span></button>)}
+      {page?.total === 0 && <p className="muted">No matching captured actions.</p>}
+    </div>
+    {page && <footer><button className="btn" disabled={start === 0} onClick={() => setStart(Math.max(0, start - 100))}>Previous</button><span className="muted">{page.total ? start + 1 : 0}–{Math.min(start + 100, page.total)} of {page.total}</span><button className="btn" disabled={start + 100 >= page.total} onClick={() => setStart(start + 100)}>Next</button></footer>}
+  </div>;
+}
+
+function LocalFilePanel({ projection }: { projection: Projection }) {
   const path = useApp((s) => s.filePanel);
   const set = useApp((s) => s.set);
   const seek = useApp((s) => s.seek);
@@ -320,6 +391,7 @@ function Dock({ scene }: { scene: Scene }) {
 // ─── transport: play, step, scrub ────────────────────────────────────────────────────────
 
 function Transport({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const lowResource = useApp((s) => s.lowResource);
   const mode = useApp((s) => s.mode);
   const playing = useApp((s) => s.playing);
   const held = useApp((s) => s.held);
@@ -334,7 +406,8 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
   const jump = useApp((s) => s.jump);
   const resume = useApp((s) => s.resume);
   const showHistory = useApp((s) => s.showHistory);
-  const ms = useMemo(() => markers(projection).filter((m) => m.type !== 'prose'), [projection]);
+  const historyPage = useApp((s) => s.historyPage);
+  const ms = useMemo(() => (historyPage?.markers ?? markers(projection)).filter((m) => m.type !== 'prose'), [projection, historyPage]);
   const strip = useRef<HTMLDivElement>(null);
   const total = Math.max(1, scene.total);
   const at = (clientX: number) => {
@@ -351,11 +424,13 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
       <button className="icon-btn txt" onClick={() => setMapVisible(!mapVisible)} aria-pressed={mapVisible} title={mapVisible ? 'Hide repository map' : 'Show repository map'}>{mapVisible ? 'Map on' : 'Map off'}</button>
       <button className={`icon-btn txt${motion ? '' : ' on'}`} onClick={() => setMotion(!motion)} title="Motion (M)">{motion ? 'Motion' : 'Still'}</button>
       <button className="btn ghost" onClick={togglePlay}>Replay sequence</button>
+      <button className="icon-btn txt" aria-pressed={lowResource} onClick={() => setLowResource(!lowResource)} title="Hide map, stop motion, and reduce material cache and overscan">{lowResource ? 'Low resource' : 'Standard'}</button>
     </footer>
   );
   return (
     <footer className="transport">
       <button className="btn ghost" onClick={showHistory} title="Show all recorded work">← History</button>
+      <button className="icon-btn txt" aria-pressed={lowResource} onClick={() => setLowResource(!lowResource)}>{lowResource ? 'Low resource' : 'Standard'}</button>
       <div className="t-controls">
         <button className="icon-btn" onClick={() => stepBy(-1)} aria-label="Step back" title="Step back (←)">‹</button>
         <button className="play" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'} title="Play / pause (Space)">
@@ -412,6 +487,7 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
 // ─── briefing: "while you were away" ─────────────────────────────────────────────────────
 
 function Briefing({ projection }: { projection: Projection }) {
+  const paged = useApp((s) => !!s.historyPage);
   const open = useApp((s) => s.briefingOpen);
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
@@ -425,7 +501,14 @@ function Briefing({ projection }: { projection: Projection }) {
   const [result, setResult] = useState<Explanation>();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>();
+  const [facts, setFacts] = useState<HistorySummary>();
   const from = range === 'since' ? step : undefined;
+  useEffect(() => {
+    let active = true;
+    setFacts(undefined);
+    if (open && paged && source?.summary && recordingId) void source.summary(recordingId, from).then((data) => { if (active) setFacts(data); }).catch((e) => { if (active) setErr(e.message); });
+    return () => { active = false; };
+  }, [open, paged, source, recordingId, from, projection]);
 
   useEffect(() => {
     if (!open || source?.kind !== 'daemon' || !recordingId) return;
@@ -438,7 +521,7 @@ function Briefing({ projection }: { projection: Projection }) {
   }, [open, range, recordingId, source]);
 
   if (!open) return null;
-  const counts = summarize(projection, from ?? 0);
+  const counts = paged ? facts : summarize(projection, from ?? 0);
   return (
     <div className="sheet" role="dialog" aria-label="Briefing">
       <header>
@@ -453,10 +536,10 @@ function Briefing({ projection }: { projection: Projection }) {
       <div className="facts">
         <p className="muted small">Captured facts — counted directly from the recording.</p>
         <ul>
-          <li>{counts.edits} file{counts.edits === 1 ? '' : 's'} changed: {counts.editedFiles.slice(0, 6).join(', ')}{counts.editedFiles.length > 6 ? '…' : ''}</li>
+          {counts ? <><li>{counts.edits} file{counts.edits === 1 ? '' : 's'} changed: {counts.editedFiles.slice(0, 6).join(', ')}{counts.editedFiles.length > 6 ? '…' : ''}</li>
           <li>{counts.tests} test run{counts.tests === 1 ? '' : 's'} — last: {counts.lastTest ?? 'none'}</li>
           <li>{counts.errors} failed operation{counts.errors === 1 ? '' : 's'}</li>
-          <li>{counts.agents} agent{counts.agents === 1 ? '' : 's'} active</li>
+          <li>{counts.agents} agent{counts.agents === 1 ? '' : 's'} active</li></> : <li>Loading recorded facts…</li>}
         </ul>
       </div>
       {source?.kind === 'daemon' ? (
@@ -538,6 +621,11 @@ function Search({ projection }: { projection: Projection }) {
   }, [q, open, source, recordingId]);
   if (!open) return null;
   const go = (obs: string) => {
+    if (useApp.getState().historyPage) {
+      set({ focusObservationId: obs, follow: false, playing: false, held: true, selectedOp: undefined, searchOpen: false });
+      void useApp.getState().loadHistoryWindow({ observationId: obs }).catch((error) => set({ error: error.message }));
+      return;
+    }
     const s = stepOfObservation(projection, obs);
     if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
     else set({ focusObservationId: obs, follow: false });

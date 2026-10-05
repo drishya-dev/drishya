@@ -91,7 +91,7 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 **Rules of the codebase**
 - **The event schema changes only by agreement between both builders.** It is the seam between capture and rendering.
 - **Golden tests from the first composer commit.**
-- **No new feature while a performance gate is red, unless the builder explicitly narrows the supported range and records the decision.** Current exception: the builder deferred the 100k-observation/1 GiB B4 scale target while product experience work proceeds. Preserve a replaceable projection/data-source boundary; do not claim long-session readiness or broad release until that gate passes. See [`docs/STATUS.md`](docs/STATUS.md) and [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §7.
+- **No new feature while a performance gate is red, unless the builder explicitly narrows the supported range and records the decision.** Current status: the builder resumed B4 and reference-machine long-session probes now pass their measured gates. Physical low-resource/lower-core and platform acceptance remain release checks. Preserve the paged projection/data-source boundary; do not claim broad release or unmeasured workload readiness. See `docs/review/08-b4-history-reader.md`, [`docs/STATUS.md`](docs/STATUS.md) and [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §7.
 - **Fixtures decouple the work.** If rendering is blocked on capture, the fixture corpus is too small — grow it. Only synthetic or redacted fixtures are committed; `.gitignore` refuses `*.jsonl` outside `fixtures/redacted/`.
 
 **Commits by agents** end with a `Co-Authored-By:` trailer naming the agent, so the history shows who wrote what.

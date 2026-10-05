@@ -1,5 +1,8 @@
 # B4 measurement and packed-install record
 
+> **5 Oct implementation amendment:** [08: bounded history reader](08-b4-history-reader.md) is current for worker ownership, streaming/indexed history, internal reader APIs and measured release limits. Earlier full-projection and deferral statements below are historical.
+
+
 **5 October 2026.** This is a bounded B4 slice, not a scale certification or public release. The repeatable probe is `node scripts/bench-b4.ts --observations 10000 --files 5000 --repeats 5`. It creates only invented Codex-format call/result records and a 5,000-file TypeScript tree in a temporary directory, then measures one-time import (including projection), final scene composition, current-repo graph indexing and process memory after those phases. It removes the temporary source/store. This *skinny synthetic* journal has much less content than a typical 1 GiB real journal; these numbers cannot stand in for burst, browser, passive-overhead or real-session measurements.
 
 Reference machine: Windows x64, Node 24.14.0, Intel Core i9-14900HX (32 logical CPUs), 31.6 GiB RAM. Power mode was not recorded; Chrome/JS heap was not measured. The following five-run result was taken **before** the reducer's long-session quadratic paths were fixed, so it remains a baseline rather than a post-fix claim:

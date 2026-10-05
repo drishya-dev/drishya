@@ -1,10 +1,11 @@
 // P2-A "Since your last visit": what happened after the reader's own mark, as captured facts
 // with direct links. The mark moves only when the reader says so; opening a recording does not.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import type { Projection } from '@drishya/contracts';
-import { sinceBoundary, stepOfOperation, type SinceItem } from '@drishya/scene';
+import { type SinceItem } from '@drishya/scene';
+import type { SinceSnapshot } from '../../../../packages/scene/src/since.ts';
 import type { DataSource, ReadingBoundary } from '../api.ts';
 import { useApp } from '../state.ts';
 
@@ -32,7 +33,7 @@ export const useMark = create<MarkState>((set, get) => ({
       const boundary = await source.setBoundary(recordingId, sequence);
       if (get().recordingId === recordingId) set({ boundary, error: undefined });
     } catch (e) {
-      set({ error: (e as Error).message });
+      if (get().recordingId === recordingId) set({ error: (e as Error).message });
     }
   },
 }));
@@ -49,12 +50,28 @@ export function useRecordingMark() {
   return { supported, source, recordingId };
 }
 
+function useSinceDigest(projection: Projection, boundary: ReadingBoundary | null | undefined) {
+  const source = useApp((s) => s.source);
+  const recordingId = useApp((s) => s.recordingId);
+  const revisions = useApp((s) => s.renderedRevisions);
+  const key = `${recordingId}:${revisions[recordingId ?? ''] ?? 0}:${projection.lastSequence}:${boundary?.sequence ?? -1}`;
+  const [state, setState] = useState<{ key: string; digest?: SinceSnapshot; error?: string }>();
+  useEffect(() => {
+    if (!source?.since || !recordingId || recordingId.includes('+') || boundary === undefined) return;
+    let active = true;
+    source.since(recordingId, boundary?.sequence ?? -1).then((digest) => { if (active) setState({ key, digest }); }).catch((e) => { if (active) setState({ key, error: (e as Error).message }); });
+    return () => { active = false; };
+  }, [source, recordingId, key, boundary === undefined]);
+  return state?.key === key ? state : undefined;
+}
+
 /** A quiet button in the crown when something happened after the mark. */
 export function SinceMarkPill({ projection }: { projection: Projection }) {
   const { supported } = useRecordingMark();
   const boundary = useMark((s) => s.boundary);
   const set = useApp((s) => s.set);
-  const n = useMemo(() => (boundary ? sinceBoundary(projection, boundary.sequence).newSteps : 0), [projection, boundary]);
+  const snapshot = useSinceDigest(projection, boundary);
+  const n = boundary ? snapshot?.digest?.newSteps ?? 0 : 0;
   if (!supported || !boundary || n === 0) return null;
   return (
     <button className="btn ghost since-pill" onClick={() => set({ briefingOpen: true })} title="What happened after the point you marked as seen">
@@ -77,13 +94,14 @@ export function SinceMarkSection({ projection }: { projection: Projection }) {
   const boundary = useMark((s) => s.boundary);
   const error = useMark((s) => s.error);
   const mark = useMark((s) => s.mark);
-  const seek = useApp((s) => s.seek);
   const select = useApp((s) => s.select);
   const set = useApp((s) => s.set);
   const [busy, setBusy] = useState(false);
-  const digest = useMemo(() => sinceBoundary(projection, boundary?.sequence ?? -1), [projection, boundary]);
+  const snapshot = useSinceDigest(projection, boundary);
+  const digest = snapshot?.digest;
   if (!supported) return null;
   if (boundary === undefined) return <div className="since"><div className="skeleton" /></div>;
+  if (!digest) return <div className="since" role="status">{snapshot?.error ?? 'Loading recording facts…'}</div>;
 
   const markAt = async (sequence: number) => {
     setBusy(true);
@@ -92,8 +110,7 @@ export function SinceMarkSection({ projection }: { projection: Projection }) {
   };
   const open = (it: SinceItem) => {
     if (!it.operationId) return;
-    const s = stepOfOperation(projection, it.operationId);
-    if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
+    // Global selection loads the operation's page; the digest may refer to unloaded work.
     select(it.operationId);
     set({ briefingOpen: false });
   };
@@ -104,14 +121,14 @@ export function SinceMarkSection({ projection }: { projection: Projection }) {
       <h4>{boundary ? 'Since your mark' : 'Not marked yet'}</h4>
       <p className="muted small">
         {boundary
-          ? `${digest.newSteps} step${digest.newSteps === 1 ? '' : 's'} after the point you marked as seen${digest.editedFiles.length ? ` · ${digest.editedFiles.length} file${digest.editedFiles.length === 1 ? '' : 's'} changed` : ''}. Facts counted from the recording; opening it never moves your mark.`
+          ? `${digest.newSteps} step${digest.newSteps === 1 ? '' : 's'} after the point you marked as seen${digest.editedFileCount ? ` · ${digest.editedFileCount} file${digest.editedFileCount === 1 ? '' : 's'} changed` : ''}. Facts counted from the recording; opening it never moves your mark.`
           : 'Mark what you have seen, and next time this lists only what happened after it.'}
       </p>
       {boundary && !any && <p className="muted small">Nothing new since your mark.</p>}
       {boundary &&
         GROUPS.filter((g) => digest[g.key].length).map((g) => (
           <div key={g.key} className={`since-group since-${g.key}`}>
-            <div className="since-label">{g.label} · {digest[g.key].length}</div>
+            <div className="since-label">{g.label} · {digest.counts[g.key]}</div>
             <ul>
               {digest[g.key].slice(0, 20).map((it) => (
                 <li key={`${g.key}-${it.operationId ?? it.sequence}`}>
@@ -126,12 +143,12 @@ export function SinceMarkSection({ projection }: { projection: Projection }) {
                   </button>
                 </li>
               ))}
-              {digest[g.key].length > 20 && <li className="muted small">…and {digest[g.key].length - 20} more in the history</li>}
+              {digest.counts[g.key] > 20 && <li className="muted small">…and {digest.counts[g.key] - 20} more in the history</li>}
             </ul>
           </div>
         ))}
       <div className="since-actions">
-        <button className="btn" disabled={busy || (boundary?.sequence ?? -1) >= projection.lastSequence} onClick={() => markAt(projection.lastSequence)}>
+        <button className="btn" disabled={busy || (boundary?.sequence ?? -1) >= digest.through} onClick={() => markAt(digest.through)}>
           Mark all as seen
         </button>
         {boundary?.previousSequence !== undefined && (
