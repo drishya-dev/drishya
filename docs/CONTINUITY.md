@@ -22,7 +22,7 @@
 
 ## Current evidence
 
-B3 integrated reader/navigation work is implemented on `codex/b3-reader-navigation` pending CI and merge: independent live history and reading, inline content-shaped read/edit/output expansion, paged artifact/diff readers, separate bounded preview/full-material caches, session chooser search/harness/date/project grouping, file/tool navigation, virtualized file rows, and a synthetic browser journey. Local checks: 191 unit tests, backend/UI typechecks, Vite build, four synthetic browser scenarios. The opt-in real-session B2 journey remains Harsh's recorded evidence; it was not rerun with this B3 change. B4 performance and packed-install gates are next; none are yet certified.
+B3 integrated reader/navigation work merged as PR #15 (`6346339`) after Windows/Linux CI. B4 is underway on `codex/b4-scale-install`. The isolated CLI tarball passes a clean offline Windows install and synthetic imports/launch/API; CI package checks on Windows, Linux and macOS are pending. The repeatable normal synthetic backend/index probe is recorded in [B4 findings](review/07-b4-scale-install.md). A 100k-observation probe exposed quadratic reducer work, now fixed, but still uses ~764 MiB RSS and the browser still loads full projection. **B4 remains red/incomplete**; prioritize bounded history/worker/browser measurement over new visuals.
 
 On 30 Sep, typechecks, 96 tests and Vite 8 build passed. Synthetic persistence/restart/API/viewerless live checks passed. Discovery saw 603 local sources. Four real journals were parsed/reduced/composed **in memory only**, zero parser exceptions; Claude exposed compaction and unsupported-record gaps. Two new synthetic sanitation probes failed. These results are scoped, not production certification.
 

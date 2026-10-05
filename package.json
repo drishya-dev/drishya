@@ -12,6 +12,8 @@
     "drishya": "node apps/daemon/src/cli.ts",
     "ui:dev": "pnpm --filter @drishya/ui dev",
     "ui:build": "pnpm --filter @drishya/ui build",
+    "package:build": "pnpm ui:build && node scripts/build-package.ts",
+    "package:verify": "pnpm package:build && node scripts/verify-package.ts",
     "demo:bundle": "node apps/daemon/src/cli.ts demo-bundle --out apps/ui/public/demo/bundle.json",
     "test": "vitest run",
     "test:browser": "pnpm ui:build && playwright test",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.3.0",
+    "esbuild": "0.28.2",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

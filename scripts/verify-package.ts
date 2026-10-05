@@ -1,0 +1,67 @@
+// Exercise the actual tarball away from the workspace. Only invented fixture data enters it.
+import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve, sep } from 'node:path';
+
+const root = resolve(import.meta.dirname, '..');
+const scratch = mkdtempSync(join(tmpdir(), 'drishya-package-'));
+const installed = join(scratch, 'installed');
+const entry = join(installed, 'node_modules', '@drishya-dev', 'cli', 'apps', 'daemon', 'src', 'cli.mjs');
+const env = { ...process.env, DRISHYA_HOME: join(scratch, 'data') };
+const nodeDir = dirname(process.execPath);
+const npmCli = [
+  join(nodeDir, 'node_modules/npm/bin/npm-cli.js'),
+  join(nodeDir, '../lib/node_modules/npm/bin/npm-cli.js'),
+].find(existsSync);
+assert.ok(npmCli, 'npm bundled with Node is required for packed-install verification');
+function command(executable: string, args: string[], cwd = root): string {
+  const result = spawnSync(executable, args, { cwd, env, encoding: 'utf8', timeout: 90_000 });
+  if (result.status !== 0) throw new Error(`${executable} ${args.join(' ')} failed: ${result.stderr}\n${result.stdout}`);
+  return result.stdout;
+}
+
+let server: ReturnType<typeof spawn> | undefined;
+try {
+  const packed = JSON.parse(command(process.execPath, [npmCli, 'pack', '--json', '--pack-destination', scratch], join(root, 'dist/package'))) as { filename: string }[];
+  const tarball = join(scratch, packed[0]!.filename);
+  command(process.execPath, [npmCli, 'install', '--prefix', installed, tarball, '--ignore-scripts', '--offline', '--no-audit', '--no-fund']);
+  const help = command(process.execPath, [entry]);
+  assert.match(help, /drishya serve/);
+  const fixture = join(installed, 'node_modules', '@drishya-dev', 'cli', 'fixtures', 'synthetic');
+  const claude = command(process.execPath, [entry, 'import', join(fixture, 'claude/checkout-fix.jsonl')]);
+  const codex = command(process.execPath, [entry, 'import', join(fixture, 'codex/rollout-checkout-review.jsonl')]);
+  assert.match(claude, /\+34 observations, 0 capture gaps/);
+  assert.match(codex, /\+17 observations, 0 capture gaps/);
+  assert.match(command(process.execPath, [entry, 'list']), /claude-code[\s\S]*codex|codex[\s\S]*claude-code/);
+  const demo = join(scratch, 'demo.json');
+  command(process.execPath, [entry, 'demo-bundle', '--out', demo]);
+  assert.equal(JSON.parse(readFileSync(demo, 'utf8')).recording.title, 'Free orders reach checkout');
+  server = spawn(process.execPath, [entry, 'serve', '--port', '0', '--no-open'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+  let output = '';
+  server.stdout!.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+  server.stderr!.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+  const deadline = Date.now() + 10_000;
+  while (!output.includes('Open:') && Date.now() < deadline && server.exitCode === null) await new Promise((r) => setTimeout(r, 50));
+  const launch = /Open:\s+(http:\/\/127\.0\.0\.1:\d+\/#token=([a-f0-9]+))/.exec(output);
+  assert.ok(launch, `packed server did not start: ${output}`);
+  const base = launch[1]!.split('/#')[0]!;
+  const page = await fetch(base);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /<div id="root"><\/div>/);
+  const session = await fetch(`${base}/v1/session`, { method: 'POST', headers: { authorization: `Bearer ${launch[2]}` } });
+  assert.equal(session.status, 200);
+  const cookie = session.headers.get('set-cookie')?.split(';')[0];
+  assert.ok(cookie);
+  const recordings = await fetch(`${base}/v1/recordings`, { headers: { cookie } });
+  assert.equal(recordings.status, 200);
+  const body = await recordings.text();
+  assert.match(body, /claude-code/);
+  assert.match(body, /codex/);
+  console.log('Packed CLI: isolated offline install, Claude/Codex import, demo bundle, local UI and authenticated API passed.');
+} finally {
+  if (server && server.exitCode === null) server.kill();
+  if (!resolve(scratch).startsWith(resolve(tmpdir()) + sep)) throw new Error('test directory escaped system temp');
+  rmSync(scratch, { recursive: true, force: true });
+}
