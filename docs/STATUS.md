@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| @harsh | P2-A "Since your last visit": local reading boundary + deterministic digest | `packages/scene/src/since.ts` (new), `packages/store` (boundary table), daemon boundary route, `apps/ui` Briefing sheet + crown pill only (not History/live-pace code) |
 
 ---
 
