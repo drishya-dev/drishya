@@ -61,7 +61,13 @@ try {
   assert.match(body, /codex/);
   console.log('Packed CLI: isolated offline install, Claude/Codex import, demo bundle, local UI and authenticated API passed.');
 } finally {
-  if (server && server.exitCode === null) server.kill();
+  if (server && server.exitCode === null) {
+    await new Promise<void>((done) => {
+      server!.once('close', () => done());
+      server!.kill();
+      setTimeout(done, 5_000).unref();
+    });
+  }
   if (!resolve(scratch).startsWith(resolve(tmpdir()) + sep)) throw new Error('test directory escaped system temp');
-  rmSync(scratch, { recursive: true, force: true });
+  rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }
