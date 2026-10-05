@@ -174,13 +174,23 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await appendLongRead();
   await expect(steps).toContainText(`${before + 2} recorded steps`);
 
-  const read = history.locator('article.op-read').last();
+  // Pin the read by its operation id: `.last()` is re-resolved on every step, and in a long
+  // virtualized history the last mounted read can change while the expanded one re-measures.
+  const readId = await history.locator('article.op-read').last().getAttribute('data-op-id');
+  expect(readId).toBeTruthy();
+  const read = history.locator(`article.op-read[data-op-id="${readId}"]`);
+  const content = read.getByRole('region', { name: 'Content of src/checkout/guard.ts' });
   await read.getByRole('button', { name: /Expand .* in history/ }).click();
   await expect(read).toHaveClass(/expanded/);
-  await expect(read.getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText('bounded reader line 1');
-  await read.getByRole('button', { name: 'Next lines' }).click();
-  await expect(read.getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText('bounded reader line 201');
-  await expect(read.getByRole('region', { name: 'Content of src/checkout/guard.ts' })).not.toContainText('bounded reader line 1');
+  await expect(content).toContainText('bounded reader line 200');
+  // Page only once the first page has fully settled and the control is live.
+  const next = read.getByRole('button', { name: 'Next lines' });
+  await expect(next).toBeEnabled();
+  await next.click();
+  await expect(read.getByRole('button', { name: 'Previous lines' })).toBeEnabled(); // the page index moved
+  await expect(content).toContainText('bounded reader line 201');
+  await expect(content).not.toContainText('bounded reader line 1');
+  await expect(content.locator('.ln-no').first()).toHaveText('201');
   await page.keyboard.press('Escape');
   await expect(read).not.toHaveClass(/expanded/);
 

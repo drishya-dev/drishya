@@ -50,6 +50,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install chromium
       - run: pnpm test:browser
+      # Keep Playwright's page snapshot when a browser test fails, so a CI-only failure can be
+      # diagnosed. The browser tests use synthetic data only.
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ matrix.os }}
+          path: test-results/
+          retention-days: 7
 
   package:
     strategy:
