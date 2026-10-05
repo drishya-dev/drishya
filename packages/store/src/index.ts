@@ -12,8 +12,8 @@ import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import type { BlobText, Observation, RecordingSummary } from '@drishya/contracts';
 
-// 2: recordings.revision (B1b).
-export const SCHEMA_VERSION = 2;
+// 2: recordings.revision (B1b). 3: reading_boundaries (P2-A).
+export const SCHEMA_VERSION = 3;
 /** Strings longer than this move out of the observation into the blob store. */
 export const INLINE_LIMIT = 16 * 1024;
 const PREVIEW = 2048;
@@ -270,6 +270,13 @@ export class Store {
         body TEXT NOT NULL,
         PRIMARY KEY (recording_id, key)
       );
+      CREATE TABLE IF NOT EXISTS reading_boundaries (
+        recording_id TEXT PRIMARY KEY REFERENCES recordings(id) ON DELETE CASCADE,
+        sequence INTEGER NOT NULL,
+        previous_sequence INTEGER,
+        revision INTEGER NOT NULL,
+        updated_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS bookmarks (
         id TEXT PRIMARY KEY,
         recording_id TEXT NOT NULL REFERENCES recordings(id) ON DELETE CASCADE,
@@ -516,6 +523,26 @@ export class Store {
     const id = randomUUID();
     this.q('INSERT INTO bookmarks(id, recording_id, step, note, created_at) VALUES (?, ?, ?, ?, ?)').run(id, recordingId, step, note, new Date().toISOString());
     return id;
+  }
+
+  // ── reading boundary (P2-A) ────────────────────────────────────────────────
+
+  /**
+   * The local reader's mark: the last observation sequence they marked as seen. It moves only on
+   * an explicit mark (opening a recording is not proof of reading it), and keeps the previous mark
+   * for undo.
+   */
+  getBoundary(recordingId: string): { sequence: number; previousSequence?: number; revision: number; updatedAt: string } | undefined {
+    const r = this.q('SELECT sequence, previous_sequence, revision, updated_at FROM reading_boundaries WHERE recording_id = ?').get(recordingId) as
+      | { sequence: number; previous_sequence: number | null; revision: number; updated_at: string }
+      | undefined;
+    return r ? { sequence: r.sequence, previousSequence: r.previous_sequence ?? undefined, revision: r.revision, updatedAt: r.updated_at } : undefined;
+  }
+
+  setBoundary(recordingId: string, sequence: number, revision: number) {
+    this.q(`INSERT INTO reading_boundaries(recording_id, sequence, previous_sequence, revision, updated_at) VALUES (?, ?, NULL, ?, ?)
+            ON CONFLICT(recording_id) DO UPDATE SET previous_sequence = sequence, sequence = excluded.sequence, revision = excluded.revision, updated_at = excluded.updated_at`)
+      .run(recordingId, sequence, revision, new Date().toISOString());
   }
 
   bookmarks(recordingId: string) {

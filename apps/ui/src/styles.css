@@ -392,6 +392,19 @@ code, kbd, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
 .sheet { z-index: 31; padding: 0 16px 16px; overflow: auto; }
 .sheet header { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 6px; }
 .sheet h3 { margin: 0; font-size: 15px; font-weight: 600; }
+/* P2-A: since your mark */
+.since { border-bottom: 1px solid var(--line-2); padding: 8px 0 12px; margin-bottom: 8px; }
+.since h4 { margin: 4px 0; font-size: 13px; font-weight: 600; }
+.since-group { margin-top: 10px; }
+.since-label { font-size: 12px; color: var(--t2); margin-bottom: 4px; }
+.since-failures .since-label { color: var(--fail); }
+.since ul { list-style: none; margin: 0; padding: 0; }
+.since li { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; font-size: 13px; }
+.since-open { background: none; border: 0; padding: 0; color: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+.since-open:hover, .since-open:focus-visible { text-decoration-color: currentColor; }
+.since-through { margin-left: auto; font-size: 11px; opacity: 0.7; }
+.since li:hover .since-through, .since-through:focus-visible { opacity: 1; }
+.since-actions { display: flex; gap: 8px; margin-top: 10px; }
 .facts ul { margin: 6px 0 12px; padding-left: 18px; }
 
 .search { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); width: min(620px, calc(100vw - 32px)); z-index: 40; background: var(--s1); border: 1px solid var(--line-3); border-radius: var(--r); box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6); overflow: hidden; }
