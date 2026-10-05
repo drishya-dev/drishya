@@ -17,14 +17,14 @@ function passageAt(prefix: number[], position: number): number {
 }
 
 /** Return only viewport passages plus disjoint selected/focused/anchor passages. */
-export function passageWindow(ids: string[], measured: ReadonlyMap<string, number>, top: number, viewportHeight: number, pinned: ReadonlySet<string>): PassageWindow {
+export function passageWindow(ids: string[], measured: ReadonlyMap<string, number>, top: number, viewportHeight: number, pinned: ReadonlySet<string>, overscan = PASSAGE_OVERSCAN): PassageWindow {
   const prefix = new Array<number>(ids.length + 1);
   prefix[0] = 0;
   for (let i = 0; i < ids.length; i++) prefix[i + 1] = prefix[i]! + (measured.get(ids[i]!) ?? ESTIMATED_PASSAGE_HEIGHT);
   const total = prefix[ids.length]!;
   if (!ids.length) return { prefix, total, runs: [] };
-  const first = passageAt(prefix, Math.max(0, top - PASSAGE_OVERSCAN));
-  const last = passageAt(prefix, Math.min(total, top + viewportHeight + PASSAGE_OVERSCAN));
+  const first = passageAt(prefix, Math.max(0, top - overscan));
+  const last = passageAt(prefix, Math.min(total, top + viewportHeight + overscan));
   const wanted = new Set<number>();
   for (let i = first; i <= last; i++) wanted.add(i);
   for (let i = 0; i < ids.length; i++) if (pinned.has(ids[i]!)) wanted.add(i);

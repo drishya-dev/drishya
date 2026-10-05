@@ -99,6 +99,8 @@ export function intentOf(name: string, args: Rec, namespace?: string): ToolInten
       return { kind: 'spawn', agentType: typeof args.task_name === 'string' ? args.task_name : undefined, description: typeof args.message === 'string' ? args.message : undefined };
     case 'shell':
     case 'shell_command':
+    case 'exec_command':
+    case 'functions.exec_command':
     case 'container.exec':
     case 'local_shell':
       return { kind: 'shell', command: commandText(args.command ?? args.cmd), cwd: typeof args.workdir === 'string' ? args.workdir : undefined };

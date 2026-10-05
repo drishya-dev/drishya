@@ -7,6 +7,15 @@ function slice(text: string): ArtifactSlice {
 }
 
 describe('bounded artifact material', () => {
+  it('evicts existing material when the low-resource budget is selected', async () => {
+    const cache = new ArtifactCache();
+    await cache.get('large', 'reader', async () => slice('x'.repeat(6 * 1024 * 1024)));
+    cache.setLowResource(true);
+    expect(cache.sizes().reader).toBeLessThanOrEqual(10 * 1024 * 1024);
+    let fetched = false;
+    await cache.get('large', 'reader', async () => { fetched = true; return slice('small'); });
+    expect(fetched).toBe(true);
+  });
   it('deduplicates a request and retries a rejected fetch', async () => {
     const cache = new ArtifactCache();
     let calls = 0;

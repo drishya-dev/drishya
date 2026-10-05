@@ -15,6 +15,7 @@ interface Entry {
 
 /** LRU by settled decoded text, with one shared request queue and failure retry. */
 export class ArtifactCache {
+  private budget = { ...BUDGET };
   private entries = new Map<string, Entry>();
   private used = { preview: 0, reader: 0 };
   private active = 0;
@@ -35,7 +36,7 @@ export class ArtifactCache {
           const entry = this.entries.get(key);
           if (entry?.promise === promise) {
             const bytes = slice.text.length * 2;
-            if (bytes <= BUDGET[scope]) {
+            if (bytes <= this.budget[scope]) {
               entry.bytes = bytes;
               this.used[scope] += bytes;
               this.evict(scope);
@@ -59,7 +60,7 @@ export class ArtifactCache {
 
   private evict(scope: MaterialScope) {
     for (const [key, entry] of this.entries) {
-      if (this.used[scope] <= BUDGET[scope]) break;
+      if (this.used[scope] <= this.budget[scope]) break;
       if (entry.scope !== scope || !entry.bytes) continue;
       this.entries.delete(key);
       this.used[scope] -= entry.bytes;
@@ -68,6 +69,10 @@ export class ArtifactCache {
 
   /** Exposed for deterministic budget checks, not UI telemetry. */
   sizes() { return { ...this.used, inFlight: this.active, queued: this.pending.length }; }
+  setLowResource(low: boolean) {
+    this.budget = low ? { preview: 2 * 1024 * 1024, reader: 10 * 1024 * 1024 } : { ...BUDGET };
+    this.evict('preview'); this.evict('reader');
+  }
 }
 
 export const materialCache = new ArtifactCache();

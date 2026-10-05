@@ -22,6 +22,10 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 ---
 
+## Current B4 amendment
+
+[08: bounded history reader](review/08-b4-history-reader.md) supersedes earlier B4 full-projection/deferral statements for architecture, measurements and limits. STATUS and CONTINUITY carry current execution state; [07](review/07-b4-scale-install.md) retains historical probes. The non-negotiable privacy/evidence/observe-only constraints still win.
+
 ## Reading order
 
 **New chat / model switch / compaction** — [`CONTINUITY.md`](CONTINUITY.md) → [`STATUS.md`](STATUS.md) → [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) → [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md). Read VISION before any UI work and CODEBASE before code. This is the durable handoff; chat memory is not required.

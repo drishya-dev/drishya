@@ -11,6 +11,7 @@ describe('Codex adapter', () => {
 
   it('unwraps shell argv arrays', () => {
     expect(intentOf('shell', { command: ['bash', '-lc', 'npm test'] })).toMatchObject({ kind: 'shell', command: 'npm test' });
+    for (const name of ['exec_command', 'functions.exec_command']) expect(intentOf(name, { cmd: 'echo captured' })).toEqual({ kind: 'shell', command: 'echo captured', cwd: undefined });
   });
 
   it('never surfaces encrypted reasoning, only summaries', () => {

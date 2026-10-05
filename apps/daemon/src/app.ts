@@ -8,6 +8,7 @@ import { buildGraph, graphFromPaths, probeGeneration } from '@drishya/indexer';
 import { Ingestor } from '@drishya/ingest';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { Store } from '@drishya/store';
+import { HistoryService } from './history.ts';
 
 export const VERSION = '0.1.0-draft';
 
@@ -18,21 +19,35 @@ export function dataDir(): string {
 export class App {
   readonly store: Store;
   readonly ingest: Ingestor;
+  readonly history: HistoryService;
   private graphs = new Map<string, RepoGraph>();
   private probes = new Map<string, { at: number; generation: string }>();
   private readonly graphProbeMs: number;
+  private deleting = new Set<string>();
 
   /** `graphProbeMs`: how long a freshness probe of a map root is reused (default 15 s). */
   constructor(dir = dataDir(), opts: { memory?: boolean; graphProbeMs?: number } = {}) {
     this.store = new Store(dir, opts);
     this.ingest = new Ingestor(this.store);
+    this.history = new HistoryService(dir);
     this.graphProbeMs = opts.graphProbeMs ?? 15_000;
   }
 
   recording(id: string): RecordingSummary {
+    if (this.deleting.has(id)) throw new HttpError(409, 'recording is being removed');
     const r = this.store.getRecording(id);
     if (!r) throw new HttpError(404, 'recording not found');
     return r;
+  }
+
+  async forget(id: string) {
+    this.recording(id);
+    this.deleting.add(id);
+    try {
+      await this.ingest.stopLive(id);
+      await this.history.forget(id);
+      return await this.ingest.forget(id);
+    } finally { this.deleting.delete(id); }
   }
 
   /** A projection for one recording, or several joined with "+" (combined view). */
@@ -40,6 +55,11 @@ export class App {
     const ids = idOrIds.split('+').filter(Boolean);
     for (const id of ids) this.recording(id);
     return this.ingest.combinedProjection(ids);
+  }
+  paged(idOrIds: string): boolean {
+    const ids = idOrIds.split('+');
+    return ids.reduce((count, id) => count + this.recording(id).observationCount, 0) > 10_000 ||
+      ids.reduce((bytes, id) => bytes + this.store.sourceBytes(id), 0) > 32 * 1024 * 1024;
   }
 
   artifactText(projection: Projection, artifactId: string): { artifact: Artifact; text: string } {
@@ -88,7 +108,8 @@ export class App {
   async graph(idOrIds: string, refresh = false): Promise<RepoGraph> {
     const ids = idOrIds.split('+');
     const rec = this.recording(ids[0]!);
-    const projection = this.projection(idOrIds);
+    const large = this.paged(idOrIds);
+    const projection = large ? (await this.history.page(idOrIds, { count: 1 })).projection : this.projection(idOrIds);
     const filesOnly = () => graphFromPaths(projection.files.map((f) => f.path));
     if (!projection.workspaceRoot) return filesOnly();
     const root = rec.graphRoot || undefined;
@@ -167,6 +188,7 @@ export class App {
 
   async close() {
     await this.ingest.close();
+    await this.history.close();
     this.store.close();
   }
 }

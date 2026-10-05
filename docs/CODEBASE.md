@@ -2,6 +2,19 @@
 
 **Draft built 22–25 Sep; audited 30 Sep 2026.** This maps the code that exists. The [baseline audit](review/06-baseline-audit.md) qualifies verified behavior and known gaps; the [roadmap](IMPLEMENTATION_ROADMAP.md) governs current execution. For architecture rationale see the engineering plan; for creative intent see VISION. [`packages/contracts`](../packages/contracts/src/index.ts) remains `0.1.0-draft`, and freezing it needs both builders ([`AGENTS.md`](../AGENTS.md)).
 
+## B4 reader amendment — 5 October 2026
+
+The current architecture and validation limits are in [08: bounded history reader](review/08-b4-history-reader.md). This section supersedes older full-projection descriptions for large interactive histories.
+
+- Captured SQLite remains ingestor-owned; schema 3 adds a derived normalized source clock without changing observation JSON. Streaming SQL ordering matches reducer order. Session labels update through bounded metadata SQL.
+- `apps/daemon/src/history.ts` starts a capped worker, whose read-only captured connection and separate `history/index.db`/blobs own versioned projections (`r2`, `h1-4096`). One metadata workspace is resident. Valid single-recording append is incremental; late/context-changing and combined updates rebuild through streaming reads.
+- `packages/scene/src/history.ts` defines the internal page/summary contracts. `/history`, `/history-marker`, `/summary` and `/file-operations` serve global navigation with bounded nearby content. Above 10k observations or 32 MiB committed source offsets the integrated app uses these routes, including worker-backed material/map/model lookup. Small sessions and offline bundles retain complete projection compatibility.
+- Worker command/prose previews are 4,096 characters; complete captured input/prose remains in bounded artifact readers, with as-of provenance intact. Passage boundaries cap operation/prose density. The browser virtualizes both history and file spine; global summaries never count just a page.
+- Low-resource mode persists map/motion off plus reduced overscan/text cache budgets. `/storage` and `drishya storage` report own-store categories and the 10 GiB advisory budget. Forget invalidates derived combinations and preserves shared blobs; there is no automatic deletion or secure-erase promise.
+- Packaged builds bundle the worker separately and verify `BUILD.json`/`SHA256SUMS`, offline install, authenticated history and restart. Development remains direct TypeScript on Node 24; daemon runtime dependencies remain zero.
+
+Full projection/export and arbitrarily heavy edit metadata remain explicit memory limitations. See the report before making scale claims or adding features that assume the current browser page is the whole recording.
+
 ## The pipeline
 
 ```text

@@ -84,6 +84,9 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
     await history.hover();
     await page.mouse.wheel(0, -900);
     await expect(latest).toBeVisible();
+    // Wheel dispatch can return before the browser applies the scroll. Measure a stationary
+    // reader anchor, rather than comparing two positions during the same user gesture.
+    await history.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const anchor: Anchor = await history.evaluate((el) => {
       const viewport = el.getBoundingClientRect();
       const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.getBoundingClientRect().bottom > viewport.top + 1);
