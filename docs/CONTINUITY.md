@@ -37,7 +37,7 @@ The 30 Sep audit is historical evidence, not the current code status. B0/B1 fixe
 
 ## Next bounded task
 
-Finish exact-change CI and builder review for B4, then perform the remaining physical/platform release validation. Preserve the reader boundary when reviewing PR #21. P1 premium content-shaped presentation/origin motion and P2 return-to-work utility are the next product stages after the backend engineering candidate; they still need readability and comprehension validation. Follow [08](review/08-b4-history-reader.md) rather than repeating the old deferral or rebuilding the architecture from chat memory.
+Implementation `8e55907` in [PR #22](https://github.com/drishya-dev/drishya/pull/22) passed all seven CI jobs (Windows/Linux checks and browser; Windows/Linux/macOS offline package). Finish the other builder's review, then perform the remaining physical/platform release validation. Preserve the reader boundary when reviewing PR #21. P1 premium content-shaped presentation/origin motion and P2 return-to-work utility are the next product stages after the backend engineering candidate; they still need readability and comprehension validation. Follow [08](review/08-b4-history-reader.md) rather than repeating the old deferral or rebuilding the architecture from chat memory.
 
 ## End each session
 
