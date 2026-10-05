@@ -200,7 +200,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   const onScroll = () => {
     const el = ref.current;
-    if (!el || programmatic.current) return;
+    if (!el) return;
+    // Even a programmatic scroll changes the required data window. A reader can scroll
+    // again before its one-frame guard clears; skipping the viewport leaves unloaded work.
+    setViewport((old) => old.top === el.scrollTop && old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight });
+    if (programmatic.current) { lastScrollTop.current = el.scrollTop; return; }
     navigating.current = true;
     rememberReading();
     const movedUp = el.scrollTop < lastScrollTop.current - 1;
