@@ -26,6 +26,24 @@ Two separate source probes clarify the read boundary. `node scripts/bench-advers
 
 The next scale work must separate capture from projection CPU with a single writer/shutdown owner, persist a disk-backed history index with paged projection reads, and compose only bounded windows away from the browser main thread. Preserve full-history search and evidence links while paging. Repeat the 100k burst and 1 GiB valid-source probes, peak memory, interaction p95, passive overhead and release matrix before calling B4 complete. Do not add premium visual features while these gates remain red.
 
+## Passive capture overhead (5 October)
+
+`node scripts/bench-overhead.ts` runs a synthetic agent in its own process: steady CPU work, plus Codex-format journal appends after each record pair. It times the agent alone, with Drishya tailing live (750 ms passive polling, the shipped default), and with Drishya plus a browser viewing the recording (`--browser`). Conditions rotate order every run. Every observed run must capture exactly what a fresh import of the finished journal yields. The same reference machine was used; the browser was installed Chrome at 1440×900.
+
+| Workload | Condition | Median agent time (min–max) | Median slowdown | Lost / duplicate |
+|---|---|---|---|---|
+| 8,000 records, 2 ms work per pair, 5 runs | baseline | 10,279 ms (10,068–10,759) | — | — |
+| | observer | 10,251 ms (10,133–10,506) | −0.3% | 0 |
+| | observer + browser | 10,508 ms (10,407–10,690) | +2.2% | 0 |
+| 20,000 records, write-bound (0 ms work), 5 runs | baseline | 1,857 ms (1,827–1,948) | — | — |
+| | observer | 1,842 ms (1,811–1,864) | −0.8% | 0 |
+
+**Within the proposed budget** (<5% median slowdown, no lost events). The baseline's own run-to-run spread (about 7% in the first workload) exceeds the observer-only difference, so that result means "not measurable here", not "negative cost". **Limits:**
+- This is a 32-logical-CPU machine. Contention on a 4–8 core laptop is untested and could be higher; the observer's projection rebuild competes for the same cores.
+- Session sizes are normal (8k–20k records). Long-session live cost is the separate red 100k gate above.
+- Cold and warm cache were not separated beyond the rotation.
+- `apps/daemon/test/overhead.test.ts` keeps the probe working (a tiny workload, no lost events); it does not assert timing.
+
 ## Local package probe
 
 `pnpm package:verify` builds the UI, bundles the backend's workspace imports to ordinary JavaScript, packs `dist/package` as an **unpublished** `@drishya-dev/cli` tarball, installs it offline in a clean temporary directory, and checks both synthetic harness imports, a synthetic demo bundle, first launch, served UI, authenticated local API and a second launch with recordings still present. The package contains no runtime dependencies or workspace symlinks. The Node 24 requirement and Apache-2.0 license are in its manifest. The initial probe passed CI on Windows, Linux and macOS in PR #16; the restart extension passed those three package jobs in merged PR #17. Windows/Linux browser and check jobs also passed.
