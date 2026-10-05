@@ -100,7 +100,7 @@ Graph caches key by approved root and generation; show staleness, refresh delibe
 
 ## 6. B3 — one integrated base UI
 
-**Implementation update (5 Oct, pending CI/merge):** The integrated UI now exposes content-shaped expansion inside accumulating passages, paged source/output/diff reading, bounded separate preview and full-material caches, chooser search and grouping, file/tool navigation and virtualized file rows. Synthetic browser tests cover long history, old material while new events arrive, responsive widths and reader controls. The B2 real-session acceptance evidence predates this change, so the B3 change is not a new real-session certification. See `docs/STATUS.md` for merge state.
+**Implementation update (5 Oct, merged as PR #15):** The integrated UI now exposes content-shaped expansion inside accumulating passages, paged source/output/diff reading, bounded separate preview and full-material caches, chooser search and grouping, file/tool navigation and virtualized file rows. Synthetic browser tests cover long history, old material while new events arrive, responsive widths and reader controls. The B2 real-session acceptance evidence predates this change, so the B3 change is not a new real-session certification.
 
 Use the existing app and API. Port the prototype's **behaviors**, not its synthetic timing implementation. No new frontend framework or second production UI is needed.
 
@@ -126,7 +126,7 @@ Session chooser: project/worktree grouping; harness, safe title, last source upd
 
 ## 7. B4 — provisional numeric gates
 
-**First measured slice (5 Oct):** see [B4 scale/install record](review/07-b4-scale-install.md). A clean packed CLI works on Windows with synthetic Claude/Codex imports and authenticated local serving; three-platform CI is pending. Five normal synthetic backend/index runs are recorded, but browser/burst/overhead are unmeasured. The 100k-observation probe improved after quadratic reducer paths were removed, yet uses ~764 MiB RSS and still depends on a full browser projection. B4 is not complete.
+**First measured slice (5 Oct, merged as PR #16):** see [B4 scale/install record](review/07-b4-scale-install.md). A clean packed CLI passes Windows, Linux and macOS CI with synthetic Claude/Codex imports and authenticated local serving. Five normal synthetic backend/index runs are recorded, but browser/burst/overhead are unmeasured. The 100k-observation probe improved after quadratic reducer paths were removed, yet uses ~764 MiB RSS and still depends on a full browser projection. B4 is not complete.
 
 These are **targets to measure**, not current achievements. Use a named reference machine (OS, CPU, RAM, browser, Node, power mode), cold/warm runs, at least five repetitions and p50/p95 where enough samples exist. Separate ingestion throughput from rendering frame time and retained storage. Never market the audit's four small in-memory timings as performance benchmarks.
 

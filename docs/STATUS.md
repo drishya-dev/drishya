@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
-| **Next gate** | **B4** bounded long-session history and browser/resource measurements; packaged-install CI is in progress. [Roadmap](IMPLEMENTATION_ROADMAP.md), [B4 findings](review/07-b4-scale-install.md). No model key is needed for the core |
+| **Next gate** | **B4** bounded long-session history and browser/resource measurements; isolated-package CI passed on Windows, Linux and macOS. [Roadmap](IMPLEMENTATION_ROADMAP.md), [B4 findings](review/07-b4-scale-install.md). No model key is needed for the core |
 
 ### Claimed
 
@@ -60,8 +60,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-05
-- **Did:** B3 base merged as PR #15, commit `6346339`, with all Windows/Linux checks passing. Began B4 on `codex/b4-scale-install`: a repeatable synthetic backend/index benchmark, isolated bundled CLI with UI and fixtures, clean offline tarball install verification, and a three-platform CI package job. CPU profiling exposed quadratic reducer paths in result lookup, per-agent operation assembly and passage-end lookup; these are indexed now without changing schema or meaning. Full findings: [B4 record](review/07-b4-scale-install.md).
-- **Validation:** 191/191 tests, backend/UI typechecks and packed-install probe on Windows. Five normal 10k-observation/5k-file pre-fix runs: p95 import 3.19 s, graph 6.76 s, RSS 265 MiB after work. One skinny 100k-observation run improved from 91.1 s to 23.2 s import after reducer fixes but remained ~764 MiB RSS; it is not a 1 GiB-source test. Cross-platform package CI is pending this PR.
+- **Did:** B3 base merged as PR #15, commit `6346339`, with all Windows/Linux checks passing. B4 first slice merged as PR #16, commit `8df0a5d`: a repeatable synthetic backend/index benchmark, isolated bundled CLI with UI and fixtures, clean offline tarball install verification, and a three-platform CI package job. CPU profiling exposed quadratic reducer paths in result lookup, per-agent operation assembly and passage-end lookup; these are indexed now without changing schema or meaning. Full findings: [B4 record](review/07-b4-scale-install.md).
+- **Validation:** 191/191 tests, backend/UI typechecks and packed-install CI on Windows, Linux and macOS. Five normal 10k-observation/5k-file pre-fix runs: p95 import 3.19 s, graph 6.76 s, RSS 265 MiB after work. One skinny 100k-observation run improved from 91.1 s to 23.2 s import after reducer fixes but remained ~764 MiB RSS; it is not a 1 GiB-source test.
 - **Left half-done:** B4 is **not complete**: long-session memory, paged projection/browser heap, worker boundary, burst/latency/overhead, 1 GiB/2 GiB source probes and full release matrix. The draft-contract freeze still needs both builders. Premium choreography remains later.
 - **Watch out for:** Current 100k history still loads a full projection and blocks the main thread. The benchmark's skinny fixture and end-of-work RSS are scoped observations, not a product-level resource claim. Do not expand features while the long-session gate is red.
 

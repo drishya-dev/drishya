@@ -22,7 +22,7 @@
 
 ## Current evidence
 
-B3 integrated reader/navigation work merged as PR #15 (`6346339`) after Windows/Linux CI. B4 is underway on `codex/b4-scale-install`. The isolated CLI tarball passes a clean offline Windows install and synthetic imports/launch/API; CI package checks on Windows, Linux and macOS are pending. The repeatable normal synthetic backend/index probe is recorded in [B4 findings](review/07-b4-scale-install.md). A 100k-observation probe exposed quadratic reducer work, now fixed, but still uses ~764 MiB RSS and the browser still loads full projection. **B4 remains red/incomplete**; prioritize bounded history/worker/browser measurement over new visuals.
+B3 integrated reader/navigation work merged as PR #15 (`6346339`) after Windows/Linux CI. B4's first slice merged as PR #16 (`8df0a5d`). Its isolated CLI tarball passed clean offline install, synthetic imports/launch/API and CI on Windows, Linux and macOS. The repeatable normal synthetic backend/index probe is recorded in [B4 findings](review/07-b4-scale-install.md). A 100k-observation probe exposed quadratic reducer work, now fixed, but still uses ~764 MiB RSS and the browser still loads full projection. **B4 remains red/incomplete**; prioritize bounded history/worker/browser measurement over new visuals.
 
 On 30 Sep, typechecks, 96 tests and Vite 8 build passed. Synthetic persistence/restart/API/viewerless live checks passed. Discovery saw 603 local sources. Four real journals were parsed/reduced/composed **in memory only**, zero parser exceptions; Claude exposed compaction and unsupported-record gaps. Two new synthetic sanitation probes failed. These results are scoped, not production certification.
 
