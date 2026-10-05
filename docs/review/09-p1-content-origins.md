@@ -1,38 +1,78 @@
-# P1 — content first, visible origins
+# P1 — a working world, readable evidence
 
-5 October 2026. This is the first premium presentation slice, not the completed P1 experience. B4 engineering merged as PR #22 (`445786f`) after seven green CI jobs, at the builder's explicit request. Physical low-resource/lower-core and real platform release checks in [08](08-b4-history-reader.md) remain open. The builder authorized proceeding to P1 on this engineering baseline.
+5 October 2026. P1 presentation implementation is complete; final acceptance and exact-head CI are being closed on PR #23. This is an engineering candidate, not a claim that the visual identity is final or that users already prefer it to their terminal. B4 physical/platform release checks remain open. Harsh's P2-A reading marks are merged separately through PR #21 (`d190586`).
 
-## Older prototype audit
+## The creative bar
 
-Reviewed `docs/prototype/index.html` as source. Browser policy refused its file URL; no claim of visual or interaction validation of that prototype is made. The integrated React app was inspected visually instead.
+The builder's latest direction is explicit: **a different background, attractive boxes and tool-call labels are not the product.** Presentation must make the actual work intelligible while it happens. Theme, colour, motion, pacing and content composition all matter. The desired effect is a world with stable origins and readable consequences, not a decorated transcript. Do not declare the ambition satisfied merely because the five animation names exist in code.
 
-Keep the prototype's composition: top agents, repository backdrop, a right instrument dock, left-to-right operations, unboxed prose below, retained downward history and reversible expansion. Its explicit synthetic-only notice and DOM-owned text are correct. Origin tethers and dock drawers are useful ideas to carry into the product.
+Keep the older prototype's spatial grammar: agents above, repository behind, instruments to the right, actions progressing left to right, agent prose underneath and history continuing down. Improve it through real evidence, responsive reading space and interruption, rather than transplanting hard-coded events. `docs/prototype/index.html` was reviewed as source; browser policy refused its file URL. The production React UI was reviewed in the browser repeatedly, including expanded changes and older history. No visual validation of the blocked prototype is claimed.
 
-Do not transplant its implementation wholesale. Hard-coded events and geometry cannot establish real evidence locations. A busy spinning ring is continuous attention motion. Fixed transport pacing is insufficient for live bursts. Production needs measured origins, content-dependent reading space, keyboard access, bounded history/artifacts and stable selection during capture. Neither prototype nor current base is the final product.
+## What now exists
 
-## Implemented composition
+### A repository that participates
 
-`presentationOf` chooses source, wide, medium or compact reading space from captured material. Reads get source width; large/long-line changes and multiline/long commands get full width. Short commands and passing tests remain compact. Container queries adapt to the actual remaining reading column, including when the inspector opens. At narrow widths actions stack, preserving readable text rather than scaling it down.
+`RepositoryLens` exposes the same graph geometry in the left gutter while the larger world recedes behind the reading column. It renders actual nodes and static imports, with activity/edited-file marks. Hovering a file emphasizes its real structural relationships and its visible source material; selecting a node opens recorded work. The Repository control opens keyboard-searchable exploration, with at most 30 matching file buttons. No current workspace content is silently substituted for an old captured excerpt.
 
-Read previews carry captured range labels and up to twelve lines. Diffs show up to fourteen lines with reconstruction qualification. Searches expose captured excerpts as links to recorded file work. Passing tests use a static outcome mark. JSON MCP previews can become small field lists or tables, with bounded row/column display and original captured preview access; nested/invalid JSON remains text. These are presentation decisions, never agent-authored summaries.
+Both renderers publish bounded, invisible DOM geometry anchors: at most 64 active/hovered locations each. These anchors do not paint a second set of dots over prose. Lift uses the actual visible background node, or the visible node in the repository lens when the world node is covered. If neither is available, it uses a labelled **File reference** fallback. Hidden/unknown origins never get guessed coordinates. The lens does not scan a workspace, bypass map approval, infer runtime flow or fabricate import edges. The combined synthetic demo currently contains recorded file locations without import edges; that limitation is labelled, not disguised with invented links.
 
-The SVG origin layer draws only paths and empty contours. It measures the actual visible tool instrument, observed MCP server or file-reference row. Current map nodes have no exposed DOM anchors, so file arrivals use an explicit **File reference** fallback; they must not be described as lifting from a repository node. Missing/offscreen/hidden origins produce no invented tether. Hover/selection shows a quiet relationship; arrivals use a finite contour. Initial history and virtualization remounts do not replay arrivals. At most three relationships are drawn and the recent arrival ledger is bounded to 512 IDs.
+### Material instead of uniform cards
 
-Captured characters arrive complete, selectable and available immediately. No typing effect, text scaling, delayed output queue or fake token stream. Deliberate reading, scroll and resize cancel contour animation. Map/motion settings remain independent of capture. There is no continuous animation loop in this layer.
+`presentationOf` allocates compact, medium, source or wide reading space from the captured content. The remaining column—not the outer browser width—controls packing. Reads and substantial edits have priority; short commands/tests remain smaller. At narrow widths the materials stack without reducing source text size. Inspector space is reserved so it cannot cover expansion controls.
 
-## Interaction fixes and acceptance
+- Reads show twelve captured preview lines and open bounded 200-line pages. Range captions distinguish a read range from the excerpt actually returned; an oversized requested range is not proof that all those lines were received.
+- Changes offer Adaptive, Unified and Side by side layouts. Adaptive switches at 880 px of actual reading width. Split columns align **captured patch order**, preserve known old/new numbers and leave unknown or missing states blank. They are not reconstructed whole files or a semantic line-matching claim. Soft wrapping avoids one horizontal scrollbar per source line; a deliberately selected split layout remains horizontally navigable on a small screen. Both layouts cap a page at 120 original patch lines.
+- Terminal previews keep the command and result together. Long captured previews fold their middle behind an explicit count; head and tail remain. Expansion restores the captured text, and full output uses the paged reader. This is not synthetic streaming.
+- Searches display captured matching excerpts linked to recorded file work. MCP results use bounded field lists/tables when the captured JSON supports them, with access to the original preview. Invalid/nested JSON stays text; no returned HTML runs.
+- Tests have a grouped outcome strip: individual marks up to 60 reported outcomes, then proportional aggregate segments. A red failure notch is taller than a pass mark, and its action opens the captured assertion in place. Counts are explicitly parsed from captured output. Grouping does not imply execution order, individual test identity, source coverage or verification freshness.
+- Agent prose is unboxed, readable and selectable. Its identity rule and exposed-reasoning qualification remain. Copying a captured reader page gives inline confirmation without moving the text.
 
-The inspector reserves reading space on desktop, so it cannot cover a passage's expand control. A burst holds the previous passage/pixel anchor rather than relying on a stale document-height estimate; the measurement observer reads current follow state to avoid racing detachment. Height-only window resizing now resizes the map backing canvas. MCP drawers clip the entire list when closed, rather than only one grid row.
+### The five moves are semantic
 
-Checks: typechecks, 208 unit tests, browser input-before-output, full MCP input/result reading, burst camera hold, responsive width, DOM-measured instrument origin, existing live anchor/reconnect/map-off and paged history navigation. Real harness recordings were not imported for this UI slice. Browser visuals use synthetic content. Ten-minute comprehension, dropped-frame behavior and physical hardware acceptance are not certified by these tests.
+`choreographyBetween` is a pure function of the previous scene, the new scene and available timeline. It emits bounded plans for actual tool starts, tool outcomes, exposed prose and a known passage becoming settled. Combined recordings can repeat source sequence numbers: **global timeline position is the presentation clock**. Large-history projections carry a trailing 128-step window; its global offset is explicit. Initial loads, rewinds and same-step page mounts never replay arrivals.
 
-Final browser result: nine synthetic tests passed; one real-session test skipped intentionally. Normal benchmark (`bench-browser.ts --observations 10000 --files 5000 --map --repetitions 5`, Edge, 1440×900): open 3.47 s, update p50/p95 255/351 ms, browser heap 33.25 MiB, 929 DOM nodes, sampled peak daemon RSS 429.87 MiB, viewport-next-frame p95 6.3 ms. This retests the normal workload, not 100k/1 GiB or physical laptop certification.
+`Origins` measures the DOM after history following has placed the new material. Only an empty contour, relationship path or margin rule moves; the captured characters remain at their final size and immediately available.
 
-## Next P1 slices, in order
+| Move | Implemented meaning |
+|---|---|
+| Lift | File material connects to an evidence-matched, visible renderer node; otherwise a labelled file reference |
+| Emit | The observed native instrument or named MCP server connects to its invocation; its result stays in that invocation |
+| Settle | A prior known passage receives a finite margin-only rule when it becomes earlier work; its text is retained |
+| Surface | Actual exposed prose connects to its actual agent presence and resolves its identity rule; never a rectangular prose frame |
+| Resolve | A captured outcome resolves once, with success/failure/unknown tone; the renderer does not infer a result from elapsed time |
 
-1. **Expose real map origins:** publish bounded node anchors from the actual renderer; use measured clipping/occlusion, never approximate coordinates. Lift from a visible graph node only when the node and evidence path agree. Keep the labelled file-reference fallback when hidden.
-2. **Craft material readers:** responsive code/diff split layouts when enough space exists, captured search navigation, long terminal output folding and structured result paging. CodeMirror and richer GPU map work need measured benefits before dependencies are introduced.
-3. **Complete signature choreography:** agent prose Surface, margin-only Settle, and a single Resolve arrival. Coordinate several operations within a passage without animating captured text or hiding it behind earlier surfaces. Cancel instantly on reading; new capture continues below.
-4. **Validate the product:** freeze/truth/ten-minute tests with actual readers, motion off and small screens; compare time to locate a changed line and verification gap against a text transcript. Visual novelty alone does not prove developer value.
+At most three starts, three outcomes, two prose arrivals and two settles are considered in one update; only visible targets animate. Contours finish within 560 ms and are removed. Scroll, selection, keyboard intent, focus and resize interrupt them. The old separate map arrival loop was removed so motion has one owner. Hovering alone does not stop capture or viewport following. Motion off and OS reduced motion remove choreography without shortening reading time or hiding evidence.
 
-P2 since-last-visit remains separately claimed by Harsh (PR #21). Review that proposal against whole-session worker summary facts; do not infer totals from a loaded page. No schema change or harness control is introduced here.
+A render-frame race was fixed: synchronous layout/hover updates could cancel an effect after it consumed its semantic change but before its first frame. The change is now consumed only when measured, so the actual arrival is not lost.
+
+## Camera and capture
+
+A tool's input is visible before its result. Capture never waits for animation. Short arrivals may follow naturally; bursts and substantial prose/output keep the reading camera at the earlier anchor while all new work accumulates below. Returning to latest is explicit. Normal history has no mandatory movie transport; recorded sequence replay remains optional and content-aware.
+
+Every deliberate wheel direction, text-selection start and keyboard focus inside a passage detaches follow. A wheel at the scroll boundary must not leave the navigation guard stuck. During a one-frame programmatic-scroll guard, only the exact commanded scroll position is ignored; a genuine intervening reader scroll must still update its viewport and anchor. The earlier Windows paged-reader CI failure and the sustained-reader exercise exposed related cases. The shared viewport fix was also included in Harsh's PR before merge.
+
+## Validation record
+
+- Typechecks, all 223 unit tests and production build passed. Scene goldens are unchanged; no event-schema modification.
+- Synthetic browser checks cover live input before output, all five observed cues, bounded finite animation, burst hold/return, MCP input/result, adaptive patch reading, terminal folding, keyboard map search, reduced motion, measured renderer coordinates, occlusion/overview fallback, map-off fallback and actual failed-assertion inspection. Existing live/reconnect, long mounted-DOM and global paged search/replay checks remain.
+- The opt-in ten-minute exercise repeatedly scrolls back, records a tool call/result/explanation, checks the same captured passage and pixel offset, returns to latest and bounds DOM/active motion. Its first run found an anchor race after several minutes; the final rerun result is recorded below when complete. This is automated synthetic reading acceptance, **not a human comprehension study**.
+- Normal-workload probe: 10,101 initial observations, five 200-record additions, 5,000 files, map on, Edge at 1440×900. With a simultaneous traced reader exercise, open 5.59 s; update p50/p95 505/843 ms; heap 31.58 MiB; 920 DOM nodes; sampled peak daemon RSS 413.75 MiB; viewport-next-frame p95 4.4 ms. This meets the roadmap's 1.5 s visible-update and normal-workload resource bounds on this reference machine, but is not a dropped-frame/whole-browser-RSS certificate. A preceding pre-lens run was 256/397 ms and 413.77 MiB. Do not present these distinct runs as a controlled improvement comparison.
+
+Reproduce:
+
+```powershell
+pnpm check
+pnpm test:browser
+$env:DRISHYA_P1_SOAK='1'
+pnpm exec playwright test tests/browser/p1-pacing.spec.ts --grep 'sustained live'
+Remove-Item Env:DRISHYA_P1_SOAK
+node scripts/bench-browser.ts --observations 10000 --files 5000 --map --repetitions 5
+```
+
+On this machine the optional `DRISHYA_BROWSER_CHANNEL=msedge` used the installed browser. CI uses its installed Chromium. Real sessions were not imported for this presentation work. Screenshots, trace artifacts, source selections and model-planning notes stay local.
+
+## What the next builder must preserve
+
+This renderer retains Canvas 2D, DOM code and the existing highlighter: the measured bounded working set does not yet justify introducing PixiJS/CodeMirror just to attach their names to a milestone. Those remain replaceable options for large interactive maps and deeper source reading. The pure scene/data-source boundary and bounded readers are preserved. No new runtime dependency, harness control, telemetry or remote model call was added.
+
+P1 is not the final visual identity or proof of a market moat. Keep iterating against real reading tasks. P2 should make the spatial account useful: complete file-centred comparison/history and evidence-backed verification freshness, building on the already merged reading mark. Match real source identity across reads/edits, keep chronology separate from reason, and test time to locate a change and an unresolved issue against the harness transcript. Human preference and ten-minute comprehension belong to that pilot; they cannot be inferred from green browser tests. Theme exploration must improve hierarchy and semantic motion rather than add wallpaper or ungrounded activity.

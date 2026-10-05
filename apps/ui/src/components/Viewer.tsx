@@ -9,6 +9,7 @@ import { History } from './History.tsx';
 import { ExplanationView, Inspector } from './Inspector.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
+import { RepositoryLens } from './RepositoryLens.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
 import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 
@@ -90,13 +91,12 @@ export function Viewer() {
 
   if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
-  const arriving = scene.passages.flatMap((p) => p.ops).find((o) => o.phase === 'arriving' && o.origin.type === 'map');
   return (
     <div className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${selectedOp ? ' inspecting' : ''}`}>
       <Crown scene={scene} projection={projection} />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
-        {mapVisible && <MapCanvas graph={graph} heat={scene.heat} arrivingPath={arriving?.origin.type === 'map' ? arriving.origin.path : undefined} readingRect={reading} />}
+        {mapVisible && <MapCanvas graph={graph} heat={scene.heat} readingRect={reading} />}
         <Spine scene={scene} projection={historical} />
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
         <FilePanel projection={historical} />
@@ -145,6 +145,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
           return (
             <button
               key={a.id}
+              data-agent-id={a.id}
               role="listitem"
               className={`agent st-${a.state}${on ? ' on' : ''}${a.parentId ? ' child' : ''}`}
               style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties}
@@ -185,6 +186,8 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
 // ─── spine: this run's files, in the left gutter ─────────────────────────────────────────
 
 function Spine({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const graph = useApp((s) => s.graph);
+  const mapVisible = useApp((s) => s.mapVisible);
   const hovered = useApp((s) => s.hoveredPath);
   const set = useApp((s) => s.set);
   const ref = useRef<HTMLElement>(null);
@@ -201,8 +204,17 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   const heat = useMemo(() => new Map(scene.heat.map((h) => [h.path, h])), [scene.heat]);
   const files = projection.files.filter((f) => f.firstStep < scene.step);
   const rowHeight = 24;
-  const first = Math.max(0, Math.floor((top - 32) / rowHeight) - 8);
-  const last = Math.min(files.length, Math.ceil((top + height) / rowHeight) + 8);
+  const rowStart = useRef<HTMLDivElement>(null);
+  const [rowOffset, setRowOffset] = useState(32);
+  useEffect(() => {
+    const marker = rowStart.current;
+    if (!marker) return;
+    const observer = new ResizeObserver(() => setRowOffset(marker.offsetTop));
+    observer.observe(marker.parentElement!);
+    return () => observer.disconnect();
+  }, [graph, mapVisible]);
+  const first = Math.max(0, Math.floor((top - rowOffset) / rowHeight) - 8);
+  const last = Math.min(files.length, Math.max(0, Math.ceil((top + height - rowOffset) / rowHeight) + 8));
   const visible = new Set<number>();
   for (let i = first; i < last; i++) visible.add(i);
   const focused = files.findIndex((file) => file.path === focusedPath);
@@ -211,6 +223,8 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   return (
     <nav className="spine" ref={ref} aria-label="Files in this run" onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedPath((e.target as HTMLElement).closest<HTMLElement>('[data-spine-path]')?.dataset.spinePath)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-spine-path]')) setFocusedPath(undefined); }}>
       <div className="spine-head">Files in this run</div>
+      {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} />}
+      <div ref={rowStart} aria-hidden="true" />
       {files.length === 0 && <div className="muted small">None yet</div>}
       {[...visible].sort((a, b) => a - b).map((i) => {
         const f = files[i]!;

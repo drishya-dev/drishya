@@ -61,17 +61,16 @@ function MapActions({ graph }: { graph: RepoGraph }) {
   );
 }
 
-export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: RepoGraph; heat: HeatCell[]; arrivingPath?: string; readingRect?: { left: number; width: number } }) {
+export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; heat: HeatCell[]; readingRect?: { left: number; width: number } }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const explore = useApp((s) => s.explore);
   const hoveredPath = useApp((s) => s.hoveredPath);
-  const motion = useApp((s) => s.motion);
   const set = useApp((s) => s.set);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [cam, setCam] = useState<Cam>({ x: 0, y: 0, k: 1 });
   const [tip, setTip] = useState<{ node: GraphNode; x: number; y: number }>();
-  const pulse = useRef<{ path: string; t0: number } | undefined>(undefined);
+  const [query, setQuery] = useState('');
   const heatMap = useMemo(() => new Map(heat.map((h) => [h.path, h])), [heat]);
   const byId = useMemo(() => new Map(graph?.nodes.map((n) => [n.id, n]) ?? []), [graph]);
 
@@ -95,7 +94,7 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
   }, [size]);
   const project = (n: { x: number; y: number }) => ({ x: (fit.ox + n.x * fit.s) * cam.k + cam.x, y: (fit.oy + n.y * fit.s) * cam.k + cam.y });
 
-  const draw = (now = performance.now()) => {
+  const draw = () => {
     const c = canvas.current;
     if (!c || !graph) return false;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -120,6 +119,18 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
       g.lineTo(pb.x, pb.y);
     }
     g.stroke();
+
+    if (hoveredPath) {
+      g.beginPath();
+      for (const edge of graph.edges) {
+        if (edge.from !== hoveredPath && edge.to !== hoveredPath) continue;
+        const a = byId.get(edge.from); const b = byId.get(edge.to);
+        if (!a || !b) continue;
+        const pa = project(a); const pb = project(b);
+        g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y);
+      }
+      g.strokeStyle = 'rgba(139,155,255,.55)'; g.stroke();
+    }
 
     const r0 = Math.max(1.6, Math.min(3.2, 1.2 * Math.sqrt(cam.k) * (explore ? 1.6 : 1.2)));
     for (const n of graph.nodes) {
@@ -158,22 +169,6 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
       }
     }
 
-    // One-shot arrival ring: the content left from here (Lift). Never loops.
-    let animating = false;
-    const pl = pulse.current;
-    if (pl && motion) {
-      const n = byId.get(pl.path);
-      const t = (now - pl.t0) / 700;
-      if (n && t < 1) {
-        const p = project(n);
-        g.beginPath();
-        g.arc(p.x, p.y, r0 + 4 + t * 18, 0, Math.PI * 2);
-        g.strokeStyle = `rgba(237,237,239,${0.6 * (1 - t)})`;
-        g.stroke();
-        animating = true;
-      }
-    }
-
     // Keep the reading column clear: the map recedes behind text, never crosses it.
     if (!explore && readingRect) {
       const grad = g.createLinearGradient(readingRect.left - 32, 0, readingRect.left + readingRect.width + 32, 0);
@@ -184,19 +179,11 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
       g.fillStyle = grad;
       g.fillRect(readingRect.left - 32, 0, readingRect.width + 64, size.h);
     }
-    return animating;
   };
 
   useEffect(() => {
-    if (arrivingPath) pulse.current = { path: arrivingPath, t0: performance.now() };
-  }, [arrivingPath]);
-
-  useEffect(() => {
-    let raf = 0;
-    const loop = (t: number) => {
-      if (draw(t)) raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
+    // Origins owns finite arrival choreography and its cancellation.
+    const raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   });
 
@@ -230,11 +217,17 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
     return [...dirs].filter(([, d]) => d.n >= 2).map(([dir, d]) => ({ dir, x: d.x / d.n, y: d.y / d.n }));
   }, [graph, explore]);
 
+  // Share exact renderer coordinates for a bounded working set, never a guessed graph origin.
+  const anchors = [...heat].sort((a, b) => b.heat - a.heat).slice(0, 63).map((h) => h.path);
+  if (hoveredPath && !anchors.includes(hoveredPath)) anchors.push(hoveredPath);
+  const matches = query.trim() && graph ? graph.nodes.filter((node) => node.path.toLowerCase().includes(query.trim().toLowerCase())) : [];
+
   return (
     <div
       ref={wrap}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
+        if ((e.target as HTMLElement).closest('.map-tools, .map-legend')) return;
         if (!explore) return;
         const r = wrap.current!.getBoundingClientRect();
         const mx = e.clientX - r.left;
@@ -244,10 +237,12 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
       }}
       onPointerDown={(e) => {
         if (!explore) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-legend')) return;
         drag.current = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false };
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
+        if ((e.target as HTMLElement).closest('.map-tools, .map-legend')) return;
         const r = wrap.current!.getBoundingClientRect();
         if (drag.current && explore) {
           const dx = e.clientX - drag.current.x;
@@ -262,6 +257,7 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
         set({ hoveredPath: n?.id });
       }}
       onPointerUp={(e) => {
+        if ((e.target as HTMLElement).closest('.map-tools, .map-legend')) return;
         const d = drag.current;
         drag.current = undefined;
         if (!explore || (d && d.moved)) return;
@@ -273,6 +269,26 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
       aria-hidden={!explore}
     >
       <canvas ref={canvas} style={{ width: size.w, height: size.h }} />
+      {explore && <div className="map-tools">
+        <input aria-label="Find a file on the map" placeholder="Find a file on the map…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        {query && <div className="map-matches" aria-label="Map file matches">
+          {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
+            const x = fit.ox + node.x * fit.s; const y = fit.oy + node.y * fit.s;
+            setCam({ k: 2, x: size.w / 2 - x * 2, y: size.h / 2 - y * 2 });
+            setTip({ node, x: size.w / 2, y: size.h / 2 });
+            set({ hoveredPath: node.id, follow: false, playing: false, held: true });
+          }}>{node.path}</button>)}
+          <span className="muted small">{matches.length} matched files{matches.length > 30 ? ' · first 30 shown; refine the query' : ''}</span>
+          {tip && <button className="btn" onClick={() => { set({ filePanel: tip.node.id, explore: false }); }}>Open recorded work on this file</button>}
+        </div>}
+      </div>}
+      {anchors.map((path) => {
+        const node = byId.get(path);
+        if (!node) return null;
+        const p = project(node);
+        const visible = size.w > 0 && p.x >= 6 && p.y >= 6 && p.x < size.w - 6 && p.y < size.h - 6;
+        return <span key={path} className="map-origin-point" data-origin-file={path} data-origin-visible={visible} style={{ left: p.x - 3, top: p.y - 3 }} aria-hidden="true" />;
+      })}
       {labels.map((l) => {
         const p = project(l);
         return (

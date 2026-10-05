@@ -40,6 +40,8 @@ Each row should become a small reviewable PR or closely related sequence. Do not
 
 Nemotron or another explanation service is optional and does not block B0–B4. A model key is not required to build or validate the core product. The live remote explain integration remains unverified. Harden consent before sending real evidence, then validate separately with an explicitly configured service.
 
+**P1 implementation amendment (5 Oct):** the [P1 record](review/09-p1-content-origins.md) describes the implemented repository lens, evidence-matched origins, material readers and five semantic cues. Engineering acceptance does not freeze the art direction. The builder's latest standard rejects a decorated transcript; retain useful spatial relationships, capture honesty and reader agency while refining theme/colour/composition. P2-A reading marks are already merged via PR #21, with whole-recording worker facts. Remaining P2 work is file-centred comparison/history, qualified verification freshness and a human comprehension/preference pilot.
+
 ## 3. B0 — privacy and trust are release blockers
 
 > **Progress, 2 Oct: B0 complete (policy `p3`).** A01, the A02 sinks, A03 multi-root export, A04 digest-bound consent, protected-file scopes (including shell/patch routes), safe forget and the outdated-policy flag are implemented with regression tests. See STATUS.

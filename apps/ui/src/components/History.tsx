@@ -12,6 +12,8 @@ import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf } from '../lib/presentation.ts';
 import { Origins } from './Origins.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
+import { TerminalPreview } from './TerminalPreview.tsx';
+import { VerificationStrip } from './VerificationStrip.tsx';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
@@ -213,7 +215,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // Even a programmatic scroll changes the required data window. A reader can scroll
     // again before its one-frame guard clears; skipping the viewport leaves unloaded work.
     setViewport((old) => old.top === el.scrollTop && old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight });
-    if (programmatic.current) { lastScrollTop.current = el.scrollTop; return; }
+    if (programmatic.current && Math.abs(el.scrollTop - lastScrollTop.current) < 0.5) return;
     navigating.current = true;
     rememberReading();
     const movedUp = el.scrollTop < lastScrollTop.current - 1;
@@ -241,7 +243,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   };
 
   return (
-    <div className="history" ref={ref} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; navigating.current = true; if (follow && e.deltaY < 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; navigating.current = true; } }} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('[data-expand-op]')) rememberReading(); }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => setFocusedPassageId((e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
+    <div className="history" ref={ref} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY !== 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; if (follow && (e.target === ref.current || (e.target as HTMLElement).closest('.op-body, .prose, .op-expanded'))) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } } }} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('[data-expand-op]')) rememberReading(); }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false, playing: false, held: true }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       <div className="history-inner">
         {scene.passages.length === 0 && <div className="history-empty">No captured work in this view yet.</div>}
         {layout.runs.flatMap((run) => [
@@ -254,7 +256,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         ])}
         {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
-      <Origins scene={scene} />
+      <Origins scene={scene} projection={projection} />
       {!follow && (
         <button className="follow-pill" onClick={() => { userScrollUntil.current = 0; set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false }); }}>
           {mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest ↓
@@ -304,7 +306,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   const [full, setFull] = useState(false);
   const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   return (
-    <div className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
+    <div data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
         <button className="prose-label" onClick={() => { setOpen((o) => !o); set({ follow: false }); }} aria-expanded={open}>
           {label}
@@ -371,7 +373,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
   switch (d.kind) {
     case 'read':
       return <div className="op-expanded read-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.path} · captured lines {d.startLine}–{d.startLine + Math.max(0, d.lineCount - 1)}{d.totalLines ? ` of ${d.totalLines}` : ''}</div>
+        <div className="material-context">{d.path} · read range from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · captured excerpt below</div>
         <ArtifactReader key={d.excerptArtifactId} id={d.excerptArtifactId} kind="code" startLine={d.startLine} path={d.path} />
       </div>;
     case 'edit':
@@ -446,7 +448,7 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
   switch (d.kind) {
     case 'read':
       return <>
-        <div className="request-line excerpt-range">Captured lines {d.startLine}–{d.startLine + Math.max(0, d.lineCount - 1)}{d.totalLines ? ` of ${d.totalLines}` : ''}</div>
+        <div className="request-line excerpt-range">Read from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · captured excerpt</div>
         <ResultArea state={op.status} resolving={resolving}><ReadPreview artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} /></ResultArea>
       </>;
     case 'edit':
@@ -478,12 +480,7 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
         <div className="test">
           <div className="cmd">$ {d.command}</div>
           <ResultArea state={op.status} resolving={resolving}>{s ? (
-            <div className="test-counts">
-              <span className="verification-mark" aria-hidden="true">{s.failed > 0 ? '×' : '✓'}</span>
-              {s.failed > 0 && <span className="bad">{s.failed} failed</span>}
-              <span className="good">{s.passed} passed</span>
-              {s.skipped > 0 && <span className="muted">{s.skipped} skipped</span>}
-            </div>
+            <VerificationStrip summary={s} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined, follow: false, playing: false, held: true })} />
           ) : op.status !== 'running' ? (
             <div className="muted">exit {d.exitCode ?? '?'}</div>
           ) : <div className="muted">Waiting for output</div>}
@@ -502,7 +499,7 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
         <div className="shell">
           <div className="cmd">$ {d.command.split('\n')[0]}{d.command.includes('\n') ? ' …' : ''}</div>
           <ResultArea state={op.status} resolving={resolving}>
-            {d.outputPreview ? <Output text={d.outputPreview} maxLines={4} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
+            {d.outputPreview ? <TerminalPreview text={d.outputPreview} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
             {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
           </ResultArea>
         </div>

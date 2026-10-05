@@ -42,6 +42,8 @@ The builder asked for output that seems to update gradually. Use real captured c
 
 ## 1. The doctrine: quiet at rest, articulate in motion
 
+**5 October builder emphasis:** a transcript on a different background, attractive boxes, or animations around tool-call labels do not satisfy this vision. Theme, colour and choreography are part of the product, but their purpose is to make the real work understandable side by side with the running agent. The repository must participate as an intelligible place; source, changes and outcomes must have visible relationships and distinct useful compositions. A miniature map or five named transitions alone is not proof of this standard. Review the rendered application after each substantial visual change; technical acceptance does not freeze the design or establish a market-first claim.
+
 Two forces must both win:
 
 - **Truth.** Drishya shows *captured evidence*. It never fakes activity, never implies causality it cannot prove, never types out text that was already recorded, never invents a location. (Engineering constraints 4 and 5; [review §3](review/01-product-review.md#3-findings-that-change-the-plan).)

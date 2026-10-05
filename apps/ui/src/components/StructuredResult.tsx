@@ -7,7 +7,7 @@ export function StructuredResult({ text }: { text: string }) {
   const rows = Array.isArray(value) ? value : record(value) && Array.isArray(value.items) ? value.items : undefined;
   if (rows?.length && rows.every(record)) {
     const keys = Object.keys(rows[0]!).filter((key) => rows.every((row) => scalar(row[key]))).slice(0, 4);
-    if (keys.length) return <div className="structured-result"><table><thead><tr>{keys.map((key) => <th key={key}>{key}</th>)}</tr></thead><tbody>{rows.slice(0, 8).map((row, i) => <tr key={i}>{keys.map((key) => <td key={key}>{String(row[key] ?? '')}</td>)}</tr>)}</tbody></table><div className="material-context">{rows.length} records in captured preview · up to 8 rows and 4 fields shown</div><details><summary>Original captured preview</summary><pre className="output">{text}</pre></details></div>;
+    if (keys.length) return <div className="structured-result" onClick={(e) => e.stopPropagation()}><table><thead><tr>{keys.map((key) => <th key={key}>{key}</th>)}</tr></thead><tbody>{rows.slice(0, 8).map((row, i) => <tr key={i}>{keys.map((key) => <td key={key}>{String(row[key] ?? '')}</td>)}</tr>)}</tbody></table><div className="material-context">{rows.length} records in captured preview · up to 8 rows and 4 fields shown</div><details><summary>Original captured preview</summary><pre className="output">{text}</pre></details></div>;
   }
   if (record(value) && Object.keys(value).length <= 6 && Object.values(value).every(scalar)) return <dl className="result-fields">{Object.entries(value).map(([key, v]) => <div key={key}><dt>{key}</dt><dd>{String(v ?? '')}</dd></div>)}</dl>;
   return <pre className="output">{text}</pre>;

@@ -65,7 +65,7 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
       return (
         <>
           <p className="insp-note">
-            Lines {d.startLine}–{d.startLine + Math.max(0, d.lineCount - 1)}{d.totalLines ? ` of ${d.totalLines}` : ''} of <code className="md-path" onClick={() => set({ filePanel: d.path })}>{d.path}</code>, as the agent received them.
+            {art?.range ? `Captured lines ${art.range.start}–${art.range.end}` : `Read range from line ${d.startLine}${d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''}`} of <code className="md-path" onClick={() => set({ filePanel: d.path })}>{d.path}</code>.
             {art?.kind === 'excerpt' && ' Nothing outside this range is known for this moment.'}
           </p>
           {art && <ProvenanceBadge artifact={art} />}

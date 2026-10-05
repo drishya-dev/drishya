@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
-| **Next gate** | **P1 presentation in progress.** B4 engineering merged via PR #22 after seven green CI jobs, at the builder's request. Physical/platform release validation remains open. Content-shaped readers and measured origin contours are the first P1 slice; [implementation and next steps](review/09-p1-content-origins.md) |
+| **Next gate** | **P1 presentation in progress.** B4 engineering merged via PR #22 after seven green CI jobs, at the builder's request. Physical/platform release validation remains open. The repository lens, material readers and all five semantic cues are implemented; acceptance is closing; [implementation and next steps](review/09-p1-content-origins.md) |
 
 ### Claimed
 
@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Codex | Complete and visually review P1 presentation and acceptance | UI presentation/readers, P1 browser tests, acceptance/handoff docs |
 
 ---
 
@@ -63,12 +64,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-05
-- **PR/CI:** B4 PR #22 squash-merged as `445786f` after seven green jobs, with the builder's explicit merge authorization. P1 uses `codex/p1-content-and-origins`.
-- **Did:** Reviewed the older prototype source (file URL blocked by browser policy). Added content-shaped reading widths, captured search excerpts, structured MCP previews, finite DOM-measured origin contours with file-reference fallback, and responsive inspector space. Fixed burst-camera measurement races, height-only map resize and MCP drawer clipping. [P1 record](review/09-p1-content-origins.md).
-- **Validation:** Typechecks, 208 unit tests, UI build; browser and performance evidence recorded in the P1 record. Synthetic content only for this UI slice.
-- **Left half-done:** P1 actual graph-node origins, richer readers, complete signature choreography and ten-minute comprehension validation. B4 physical low-resource/lower-core and real platform release checks remain open. PR #21 stays separate; use whole-session summary facts.
-- **Watch out for:** Keep capture independent, preserve paged history and provenance, never animate captured characters to simulate reading. Pre-existing pnpm manifest/lock edits and model-planning notes remain local and excluded.
-
+- **PR/CI:** B4 PR #22 is merged as `445786f`. Harsh PR #21 is merged as `d190586`, after all seven exact-head jobs passed. P1 continues on PR #23; final acceptance/CI are closing before merge, under the builder's explicit merge authorization.
+- **Did:** Integrated Harsh's reading marks with B4's whole-session worker summaries and schema-4 migration from both old schema-3 layouts, without mixing P1 into his PR. Fixed the Windows paged-reader viewport race. P1 adds a real repository lens, measured visible world/overview origins, all five semantic finite cues, adaptive captured-patch columns, terminal folding, parsed outcome strips with assertion navigation, copy feedback and responsive reading hierarchy. Reading intent holds the camera; capture continues. [P1 implementation/evidence](review/09-p1-content-origins.md).
+- **Validation:** Typechecks, 223 unit tests and production build passed. Synthetic browser checks cover all five cues, measured origins/occlusion, live input/output, reader pacing, reduced motion, source layouts and existing paged/live journeys. Final long-reader result and CI are recorded after completion. No real session import for this presentation work.
+- **Watch out for:** The visual candidate is not a final design or human preference claim. Next is P2 file-centred utility/verification freshness and the comprehension pilot. Preserve the worker/page boundary. B4 physical/platform release validation remains open. Pre-existing package-manager edits, model-planning notes and screenshots/traces remain local.
 ## Next up
 
 **Current backend-first sequence:**
@@ -198,3 +197,12 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 3. **Tick "Next up" only when merged.** A ticked box means the other person can build on it.
 4. **Append to "Decisions made" whenever something is settled** that a future agent would otherwise re-litigate. One line, with the why. This is the highest-value part of the file.
 5. **If a decision contradicts the blueprint, update the blueprint too** and say so in the decisions row. The blueprint is the source of truth, so it must not go stale — a stale source of truth is worse than none.
+
+### 5 October integration and presentation decisions
+
+| Date | Decision | Reason | Record |
+|---|---|---|---|
+| 2026-10-05 | **Reading marks use whole-recording worker facts; store schema 4 combines both prior schema-3 layouts** | P2 could otherwise count only a B4 browser page or omit the normalized clock during integration. Harsh's scope was merged separately after seven green CI jobs. | PR #21; CODEBASE |
+| 2026-10-05 | **Timeline position drives semantic motion; consume an arrival only after its measured frame** | Combined views repeat source sequences, and synchronous layout could otherwise lose an arrival before paint. Same-step page loads and rewinds are not new work. | `lib/choreography.ts`, P1 record |
+| 2026-10-05 | **Visible repository lens plus background world; qualified fallback when neither node is visible** | A mostly obscured map felt like wallpaper. A second view of the same real geometry makes file origins usable without guessing locations or import/runtime links. Map-off still removes both renderers. | P1 record |
+| 2026-10-05 | **P1 is a presentation engineering candidate, not a frozen design or proof of a market moat** | Builder explicitly rejected decorative transcripts and emphasized creativity in theme, colour, motion and comprehension. Human comparison with raw logs remains P2 validation. | VISION; P1 record |

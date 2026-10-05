@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Hunk } from '@drishya/contracts';
 import { CodeView, DiffView, Output, useArtifact } from './common.tsx';
+import { ChangeColumns } from './ChangeColumns.tsx';
 
 /** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
 export function ArtifactReader({ id, kind, path, startLine = 1, fallback }: {
@@ -13,9 +14,11 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback }: {
   const [pages, setPages] = useState([0]);
   const [index, setIndex] = useState(0);
   const [retry, setRetry] = useState(0);
+  const [copied, setCopied] = useState<string>();
   useEffect(() => { setPages([0]); setIndex(0); }, [id]);
   const pageStart = pages[index] ?? 0;
   const view = useArtifact(id, { scope: 'reader', start: pageStart, count: 200, retry });
+  useEffect(() => setCopied(undefined), [id, pageStart]);
   if (!id) return fallback ? <Output text={fallback} /> : <p className="muted">Not captured.</p>;
   if (view.error) return <div className="muted">Could not load captured content. <button className="btn" onClick={() => setRetry((n) => n + 1)}>Retry</button></div>;
   if (view.unavailable) return <p className="muted">{view.unavailable}{fallback ? <> Available preview: <Output text={fallback} /></> : null}</p>;
@@ -23,6 +26,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback }: {
   const next = view.hasMore && view.nextStart !== undefined && view.nextStart > pageStart;
   return (
     <div className="artifact-reader">
+      <div className="reader-tools"><span className="material-context">Captured page{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span><button className="btn ghost small" onClick={() => { void navigator.clipboard.writeText(view.text!).then(() => setCopied('Copied captured page'), () => setCopied('Copy unavailable · select text to copy')); }}>Copy captured page</button><span role="status" className="muted small">{copied}</span></div>
       {kind === 'code' ? <CodeView text={view.text} startLine={startLine + pageStart} path={path} /> : <Output text={view.text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(index > 0 || next) && (
@@ -41,10 +45,13 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback }: {
 
 export function DiffReader({ hunks, path }: { hunks: Hunk[]; path?: string }) {
   const [page, setPage] = useState(0);
+  const [layout, setLayout] = useState<'auto' | 'unified' | 'split'>('auto');
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
-  return <div className="artifact-reader">
-    <DiffView hunks={hunks} path={path} skipLines={page * pageSize} maxLines={pageSize} />
+  return <div className={`artifact-reader diff-reader diff-${layout}`}>
+    <div className="reader-tools" aria-label="Change layout">{(['auto', 'unified', 'split'] as const).map((mode) => <button key={mode} className="btn ghost small" aria-pressed={layout === mode} onClick={() => setLayout(mode)}>{mode === 'auto' ? 'Adaptive' : mode === 'split' ? 'Side by side' : 'Unified'}</button>)}</div>
+    <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={page * pageSize} maxLines={pageSize} /></div>
+    <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={page * pageSize} maxLines={pageSize} /></div>
     {total > pageSize && <nav className="reader-pages" aria-label="Captured change pages">
       <button className="btn" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous change lines</button>
       <span className="muted small">{page * pageSize + 1}–{Math.min(total, (page + 1) * pageSize)} of {total} captured lines</span>
