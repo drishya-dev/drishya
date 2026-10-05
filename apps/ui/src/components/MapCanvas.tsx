@@ -99,7 +99,7 @@ export function MapCanvas({ graph, heat, arrivingPath, readingRect }: { graph?: 
     const c = canvas.current;
     if (!c || !graph) return false;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    if (c.width !== size.w * dpr) {
+    if (c.width !== Math.round(size.w * dpr) || c.height !== Math.round(size.h * dpr)) {
       c.width = size.w * dpr;
       c.height = size.h * dpr;
     }

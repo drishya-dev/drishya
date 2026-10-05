@@ -9,6 +9,9 @@ import { Markdown } from '../lib/markdown.tsx';
 import { useApp } from '../state.ts';
 import { CodeView, DiffView, Output, timeOf, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
+import { presentationOf } from '../lib/presentation.ts';
+import { Origins } from './Origins.tsx';
+import { StructuredResult } from './StructuredResult.tsx';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
@@ -33,7 +36,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
   const seenThrough = useRef(scene.total);
-  const presented = useRef<{ step: number; height: number } | undefined>(undefined);
+  const presented = useRef<{ step: number; top: number; anchor?: { id: string; offset: number } } | undefined>(undefined);
   const requestedWindow = useRef('');
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
@@ -131,7 +134,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       }
       if (changed) {
         setMeasurementVersion((n) => n + 1);
-        if (follow) setScrollTop(el.scrollHeight);
+        // A burst can detach follow before this observer's closure is replaced.
+        if (useApp.getState().follow) setScrollTop(el.scrollHeight);
         else restoreReading();
       }
     });
@@ -182,15 +186,20 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (follow) {
       if (mode === 'history' && previous && scene.total > previous.step && stageIncomingWork(projection, previous.step, scene.total)) {
         seenThrough.current = previous.step;
-        setScrollTop(Math.max(0, previous.height - Math.min(120, el.clientHeight * 0.15)));
-        rememberReading();
+        // Preserve the last reading viewport; old estimated document heights can exceed
+        // the new measured height after content-shaped packing and artifact resolution.
+        setScrollTop(previous.top);
+        readingAnchor.current = previous.anchor;
+        if (!readingAnchor.current) rememberReading();
         set({ follow: false });
       } else {
         setScrollTop(el.scrollHeight);
         seenThrough.current = scene.total;
       }
     }
-    presented.current = { step: scene.total, height: el.scrollHeight };
+    const bounds = el.getBoundingClientRect();
+    const first = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((node) => node.getBoundingClientRect().bottom > bounds.top + 1);
+    presented.current = { step: scene.total, top: el.scrollTop, anchor: first?.dataset.passageId ? { id: first.dataset.passageId, offset: first.getBoundingClientRect().top - bounds.top } : undefined };
   }, [scene.step, follow, layout.total, mode, projection]);
 
   useLayoutEffect(() => () => {
@@ -241,6 +250,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         ])}
         {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
+      <Origins scene={scene} />
       {!follow && (
         <button className="follow-pill" onClick={() => { userScrollUntil.current = 0; set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false }); }}>
           {mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest ↓
@@ -268,7 +278,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
             <span className="passage-agent">{agentName(agent)}</span>
             {first?.startTime && <span className="passage-time">{timeOf(first.startTime)}</span>}
           </div>
-          <div className="ops-row">
+          <div className={`ops-row${ps.ops.filter((o) => { const op = ops.get(o.id); return op && presentationOf(op).shape === 'source'; }).length > 1 ? ' multiple-source' : ''}`}>
             {ps.ops.map((o, i) => {
               const op = ops.get(o.id);
               return op ? <OpCard key={o.id} so={o} op={op} index={i} /> : null;
@@ -313,11 +323,14 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const set = useApp((s) => s.set);
   const lit = !!hoveredPath && op.paths.some((p) => p.path === hoveredPath);
   const from = so.origin.type === 'map' ? 'from-map' : 'from-dock';
+  const presentation = presentationOf(op);
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   return (
     <article
       data-op-id={op.id}
-      className={`op op-${op.kind} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
+      data-material={presentation.material}
+      data-origin={so.origin.type}
+      className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
       style={{ zIndex: selected ? 50 : 10 + index }}
       tabIndex={0}
       onClick={() => select(selected ? undefined : op.id)}
@@ -327,7 +340,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       aria-label={op.title}
     >
       <header className="op-head">
-        <span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}</span>
+        <span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span>
         <span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span>
         <StateMark state={so.state} />
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
@@ -389,7 +402,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
         <div className="material-context">{d.server} / {d.tool} · captured input</div>
         <pre className="json">{JSON.stringify(d.input, null, 2) ?? String(d.input)}</pre>
         <div className="material-context">Captured result preview</div>
-        <pre className="output">{d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}</pre>
+        <StructuredResult text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')} />
       </div>;
     case 'web':
       return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
@@ -425,16 +438,17 @@ function ResultArea({ state, resolving, children }: { state: Operation['status']
 
 function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
   const d = op.detail;
+  const set = useApp((s) => s.set);
   switch (d.kind) {
     case 'read':
       return <>
-        <div className="request-line">{d.path} · lines {d.startLine}–{d.startLine + Math.max(0, d.lineCount - 1)}</div>
+        <div className="request-line excerpt-range">Captured lines {d.startLine}–{d.startLine + Math.max(0, d.lineCount - 1)}{d.totalLines ? ` of ${d.totalLines}` : ''}</div>
         <ResultArea state={op.status} resolving={resolving}><ReadPreview artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} /></ResultArea>
       </>;
     case 'edit':
       return <>
-        <div className="request-line">{d.path}</div>
-        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={9} /> : <div className="muted">{d.reconstructionNote ?? 'No change captured.'}</div>}</ResultArea>
+        <div className="request-line">Captured patch{d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}</div>
+        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={14} /> : <div className="muted">{d.reconstructionNote ?? 'No change captured.'}</div>}</ResultArea>
       </>;
     case 'search':
       return (
@@ -442,10 +456,11 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
           <div className="query">{d.query}</div>
           <ResultArea state={op.status} resolving={resolving}>
             {d.hits.slice(0, 5).map((h, i) => (
-              <div key={i} className="hit">
+              <button key={i} className="hit search-bead" title={`Open recorded work on ${h.path}`} onClick={(e) => { e.stopPropagation(); set({ filePanel: h.path, follow: false, playing: false, held: true }); }} onMouseEnter={() => set({ hoveredPath: h.path })}>
                 <span className="hit-path">{h.path}</span>
                 {h.line !== undefined && <span className="hit-line">:{h.line}</span>}
-              </div>
+                {h.text && <span className="hit-excerpt">{h.text.slice(0, 180)}</span>}
+              </button>
             ))}
             {d.hits.length > 5 && <div className="muted">{d.hits.length - 5} more</div>}
             {op.status !== 'running' && d.hits.length === 0 && <div className="muted">No matches</div>}
@@ -460,6 +475,7 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
           <div className="cmd">$ {d.command}</div>
           <ResultArea state={op.status} resolving={resolving}>{s ? (
             <div className="test-counts">
+              <span className="verification-mark" aria-hidden="true">{s.failed > 0 ? '×' : '✓'}</span>
               {s.failed > 0 && <span className="bad">{s.failed} failed</span>}
               <span className="good">{s.passed} passed</span>
               {s.skipped > 0 && <span className="muted">{s.skipped} skipped</span>}
@@ -493,7 +509,7 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
           <div className="mcp-tool">{d.tool}</div>
           <div className="mcp-input">{summarizeInput(d.input)}</div>
           <ResultArea state={op.status} resolving={resolving}>
-            {d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 220)}</div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
+            {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview.slice(0, 1400)} /></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
           </ResultArea>
         </div>
       );
@@ -536,7 +552,7 @@ function ReadPreview({ artifactId, start, path }: { artifactId?: string; start: 
   if (unavailable) return <div className="muted">{unavailable}</div>;
   if (text === undefined) return <div className="skeleton" />;
   if (!text) return <div className="muted">Empty</div>;
-  return <CodeView text={text} startLine={start} path={path} maxLines={8} />;
+  return <CodeView text={text} startLine={start} path={path} maxLines={12} />;
 }
 
 export function summarizeInput(input: unknown): string {

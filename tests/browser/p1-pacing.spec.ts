@@ -80,3 +80,28 @@ test('a burst is captured immediately without fast-forwarding the reading camera
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
 });
+
+test('content gets reading width and origin tethers use the visible instrument', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
+  await page.goto(demo.href);
+  const edit = page.locator('article.op-edit').last();
+  const verification = page.locator('article.op-test').last();
+  await expect(edit).toBeVisible();
+  const sourceWidth = (await edit.boundingBox())!.width;
+  expect(sourceWidth).toBeGreaterThan(420);
+  expect(sourceWidth).toBeGreaterThan((await verification.boundingBox())!.width);
+  await verification.hover();
+  const tether = page.locator('.origin-thread[data-origin-type="Tool instrument"]');
+  await expect(tether).toHaveCount(1);
+  const instrument = (await page.locator('.instrument.k-test').boundingBox())!;
+  const coordinates = (await tether.getAttribute('d'))!.match(/^M([\d.-]+),([\d.-]+)/)!;
+  expect(Number(coordinates[1])).toBeCloseTo(instrument.x, 0);
+  expect(Number(coordinates[2])).toBeCloseTo(instrument.y + instrument.height / 2, 0);
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: '.local/p1-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(edit).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(page.locator('.origin-thread')).toHaveCount(0);
+});

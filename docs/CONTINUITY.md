@@ -23,7 +23,7 @@
 
 ## Current evidence
 
-B0–B3 are accepted baseline work; P1's initial input/result and camera pacing slice is merged. **Latest builder direction: resume and finish B4 before further premium work.** The old long-session deferral is superseded. See [B4 reader evidence](review/08-b4-history-reader.md) for the implementation, APIs, limits, measurements and reproduction commands.
+B0–B3 are accepted baseline work; P1's initial input/result and camera pacing slice is merged. **Latest builder direction: merge B4 engineering and proceed to P1, preserving the outstanding physical release checks.** The old long-session deferral is superseded. See [B4 reader evidence](review/08-b4-history-reader.md) for the implementation, APIs, limits, measurements and reproduction commands.
 
 B4 now has a read-only captured-store worker, a separate derived disk index, bounded browser pages and artifact readers, conservative incremental reduction, global search/file/evidence/replay navigation, low-resource settings, explicit store usage/shared cleanup and checksummed offline package verification. Source schema 3 adds an internal normalized clock; observation JSON/schema is unchanged. Reducer `r2` copies preview strings and snapshots mutable metadata without duplicating immutable text. Large sessions (>10k observations or >32 MiB committed source offsets) avoid the full-projection browser path.
 
@@ -37,7 +37,7 @@ The 30 Sep audit is historical evidence, not the current code status. B0/B1 fixe
 
 ## Next bounded task
 
-Implementation `8e55907` in [PR #22](https://github.com/drishya-dev/drishya/pull/22) passed all seven CI jobs (Windows/Linux checks and browser; Windows/Linux/macOS offline package). Finish the other builder's review, then perform the remaining physical/platform release validation. Preserve the reader boundary when reviewing PR #21. P1 premium content-shaped presentation/origin motion and P2 return-to-work utility are the next product stages after the backend engineering candidate; they still need readability and comprehension validation. Follow [08](review/08-b4-history-reader.md) rather than repeating the old deferral or rebuilding the architecture from chat memory.
+B4 PR #22 is merged as `445786f`, with seven green CI jobs and explicit builder merge authorization. P1 first slice is content-shaped history, actual visible dock/server/file-reference contours and responsive readers; see [09](review/09-p1-content-origins.md) for the prototype source audit, implementation, limits and next slices. Actual map-node anchors, richer readers and full signature choreography remain. Preserve the paged worker boundary and Harsh's separate P2 claim. Do not mistake reference-machine evidence for physical release certification.
 
 ## End each session
 

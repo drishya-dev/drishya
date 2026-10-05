@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
-| **Next gate** | **B4 engineering candidate, release validation pending.** The builder resumed scaling before premium expansion. Worker/paged history, resource settings, retention and offline package checks are implemented; reference-machine 100k updates and valid 1 GiB imports now pass their measured gates. Exact-change CI and physical low-resource/lower-core/platform checks remain. [Current B4 evidence](review/08-b4-history-reader.md). No model key is needed for the core |
+| **Next gate** | **P1 presentation in progress.** B4 engineering merged via PR #22 after seven green CI jobs, at the builder's request. Physical/platform release validation remains open. Content-shaped readers and measured origin contours are the first P1 slice; [implementation and next steps](review/09-p1-content-origins.md) |
 
 ### Claimed
 
@@ -63,12 +63,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-05
-- **PR/CI:** [PR #22](https://github.com/drishya-dev/drishya/pull/22), implementation `8e55907`: all seven CI jobs passed ([run](https://github.com/drishya-dev/drishya/actions/runs/37328879714)): checks/browser on Windows and Linux; offline package on Windows, Linux and macOS. Open for @harsh's required review.
-- **Did:** Resumed B4 at the builder's request. Added read-only source/derived-history worker ownership, streaming SQL ordering and schema migration, incremental reducer snapshots with conservative late-record rebuilds, paged global history/search/file/evidence/replay navigation, full captured prose/input artifact readers, low-resource budgets, virtualized file spine, explicit storage/forget behavior and checksummed offline packaging. Capture no longer rebuilds the full projection to update session labels. Fixed two real reader measurement/anchor bugs and recognized Codex `exec_command` shell aliases.
-- **Validation:** Typechecks and 206 unit tests; eight synthetic browser checks; two opted-in real Claude/Codex checks with operation detail and live anchors; five repeated scroll-anchor checks; isolated offline package/checksum/worker restart verification. Normal 5k-file map p95 update 278 ms / peak RSS 403 MiB. Long-session and five-run 1 GiB results, exact workloads and limitations are in [B4 reader evidence](review/08-b4-history-reader.md).
-- **Left half-done:** Physical 8 GiB/integrated-GPU and lower-core checks, real macOS/Linux harness acceptance and final release certification remain. Full projection/export compatibility paths and extreme unique-edit workloads have no bounded-memory guarantee. Exact-change CI/review must pass before merge. PR #21 is separate and must use whole-session summary facts rather than counting a page.
-- **Watch out for:** The earlier B4 deferral is superseded. Large UI history uses the worker; do not restore full projection calls from new features. Pre-existing package-manager manifest/lock edits are excluded from this B4 change. Nothing from selected real journals is committed.
-
+- **PR/CI:** B4 PR #22 squash-merged as `445786f` after seven green jobs, with the builder's explicit merge authorization. P1 uses `codex/p1-content-and-origins`.
+- **Did:** Reviewed the older prototype source (file URL blocked by browser policy). Added content-shaped reading widths, captured search excerpts, structured MCP previews, finite DOM-measured origin contours with file-reference fallback, and responsive inspector space. Fixed burst-camera measurement races, height-only map resize and MCP drawer clipping. [P1 record](review/09-p1-content-origins.md).
+- **Validation:** Typechecks, 208 unit tests, UI build; browser and performance evidence recorded in the P1 record. Synthetic content only for this UI slice.
+- **Left half-done:** P1 actual graph-node origins, richer readers, complete signature choreography and ten-minute comprehension validation. B4 physical low-resource/lower-core and real platform release checks remain open. PR #21 stays separate; use whole-session summary facts.
+- **Watch out for:** Keep capture independent, preserve paged history and provenance, never animate captured characters to simulate reading. Pre-existing pnpm manifest/lock edits and model-planning notes remain local and excluded.
 ## Next up
 
 **Current backend-first sequence:**
@@ -171,6 +170,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-10-05 | **Resume B4 now; separate captured writer, derived worker and paged reader** | Builder explicitly requested finishing B4. Full projection rebuilds and browser transfer caused the red scale gates. Keep deterministic fallback rebuilds and truthful global navigation; reference results do not replace physical release validation. | `review/08-b4-history-reader.md`, `IMPLEMENTATION_ROADMAP.md` §7 |
 
 ---
+
+| 2026-10-05 | **Proceed to P1 on merged B4 engineering baseline** | Builder requested merging our B4 work and proceeding to P1. Physical release certification remains open. Content shapes and finite origin contours must preserve reader anchors and immediate captured text. | `review/09-p1-content-origins.md` |
 
 ## Open decisions
 
