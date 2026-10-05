@@ -26,8 +26,6 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 **New chat / model switch / compaction** — [`CONTINUITY.md`](CONTINUITY.md) → [`STATUS.md`](STATUS.md) → [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) → [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md). Read VISION before any UI work and CODEBASE before code. This is the durable handoff; chat memory is not required.
 
-**Choosing Sol or Terra for the next task** — [`MODEL_WORK_PLAN.md`](MODEL_WORK_PLAN.md) divides the remaining roadmap into bounded phases, explains the work and exit gates, and recommends task-level model routing. It is execution guidance, not an override of product scope, schema agreement or the B4 deferral.
-
 **Before UI work** — [`VISION.md`](VISION.md) → [`prototype/`](prototype/) → [`reference/04-continuous-canvas.md`](reference/04-continuous-canvas.md) → [`review/02-experience-spec.md`](review/02-experience-spec.md).
 
 **Before capture, store or daemon work** — [`CODEBASE.md`](CODEBASE.md) → [`review/06-baseline-audit.md`](review/06-baseline-audit.md) → [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md) → [`review/03-engineering-plan.md`](review/03-engineering-plan.md). Read the research ledger for harness facts.
@@ -44,7 +42,6 @@ When two documents disagree, the one higher in its row wins. When a document her
 | [`CONTINUITY.md`](CONTINUITY.md) | Short restart guide for the next model/chat |
 | [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) | Current product thesis, users, differentiation, detailed visual interaction and pilot criteria |
 | [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md) | Ordered backend/base-UI gates, resource targets, session integrations and distribution |
-| [`MODEL_WORK_PLAN.md`](MODEL_WORK_PLAN.md) | Remaining phases in detail, Sol/Terra task routing and durable switching rules |
 | [`review/06-baseline-audit.md`](review/06-baseline-audit.md) | Executed baseline, real read-only sample, source findings and reproduction commands |
 | [`BLUEPRINT.md`](BLUEPRINT.md) | The original end-to-end blueprint (v1.2). Still the fullest single account; partly superseded as mapped above |
 | [`STATUS.md`](STATUS.md) | Position, queue, decisions log |
