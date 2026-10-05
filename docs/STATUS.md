@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| @harsh | P2-C verification freshness (tests recorded after a change; changed-after-last-check) | `packages/scene/src/verification.ts` (new), `apps/ui/src/components/Verification.tsx` (new), Inspector edit detail; one additive worker method + route (aware of open #23) |
 
 ---
 
