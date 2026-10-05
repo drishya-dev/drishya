@@ -119,6 +119,8 @@ These are prioritized hypotheses. Every feature needs a cheaper raw-transcript c
 
 ### A. Since your last visit — first differentiation feature
 
+**Implemented 5 Oct (P2-A):** per-recording local mark, explicit marking only (all / through here / undo), and a deterministic digest of failures, edits, test runs, still-running operations and gaps after the mark, with direct links. Not yet: a separate "last visited" timestamp, and marks for combined views.
+
 Persist a **local per-user reading boundary** by recording revision and stable item identity. On return, show edits, outcomes, still-unfinished operations and capture gaps since that boundary. First implementation is deterministic facts with direct links; no model call. “Last visited” is not proof the person read or understood every item. Allow “mark through here,” preserve the previous boundary until acknowledged, and offer the complete history beside the digest.
 
 The useful moment: someone returns after lunch and goes straight to two edits and a failed verification rather than watching a replay. This is likely a stronger retention mechanism than live animation alone.

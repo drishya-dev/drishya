@@ -9,6 +9,7 @@ import { History } from './History.tsx';
 import { ExplanationView, Inspector } from './Inspector.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
+import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
 import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 
 export function Viewer() {
@@ -160,6 +161,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
       <div className="crown-actions">
         <button className="btn ghost" onClick={() => set({ searchOpen: true })} title="Search (/)">Search</button>
         <button className="btn ghost" onClick={() => set({ briefingOpen: true })}>Briefing</button>
+        <SinceMarkPill projection={projection} />
         {source?.kind === 'daemon' && single && (
           <button
             className={`btn ghost live${live ? ' on' : ''}`}
@@ -526,6 +528,7 @@ function Briefing({ projection }: { projection: Projection }) {
         <h3>Briefing</h3>
         <button className="icon-btn" onClick={() => set({ briefingOpen: false })} aria-label="Close">✕</button>
       </header>
+      <SinceMarkSection projection={projection} />
       <div className="seg">
         <button className={range === 'all' ? 'on' : ''} onClick={() => setRange('all')}>Whole recording</button>
         <button className={range === 'since' ? 'on' : ''} onClick={() => setRange('since')}>Since step {step}</button>
@@ -582,7 +585,10 @@ function Briefing({ projection }: { projection: Projection }) {
 }
 
 function summarize(p: Projection, from: number) {
-  const inRange = (s: number) => s >= from;
+  // `from` is a timeline step; operations carry observation sequences. Compare like with like:
+  // "since step N" means after the observation that step N showed.
+  const after = from > 0 ? (p.timeline[from - 1]?.sequence ?? -1) : -1;
+  const inRange = (s: number) => s > after;
   const edits = p.operations.filter((o) => (o.kind === 'edit' || o.kind === 'write') && o.status === 'ok' && inRange(o.startSequence));
   const tests = p.operations.filter((o) => o.kind === 'test' && inRange(o.startSequence));
   const last = tests.at(-1);

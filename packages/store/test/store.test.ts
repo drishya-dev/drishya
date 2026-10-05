@@ -154,3 +154,29 @@ describe('bounded blob reads', () => {
     expect(store.blobs.readLines('0'.repeat(64), 0, 10)).toBeUndefined();
   });
 });
+
+// P2-A: the reading boundary is local, moves only on an explicit mark, keeps the previous mark
+// for undo, and goes with the recording when it is forgotten.
+describe('reading boundaries', () => {
+  it('migrates either prior version-3 layout without losing the other feature', () => {
+    store.db.exec("DROP TABLE reading_boundaries; UPDATE meta SET value='3' WHERE key='schema_version'");
+    store.close();
+    store = new Store(dir);
+    expect(store.db.prepare("SELECT name FROM sqlite_master WHERE name='reading_boundaries'").get()).toBeDefined();
+    store.db.exec("ALTER TABLE observations DROP COLUMN clock_time; UPDATE meta SET value='3' WHERE key='schema_version'");
+    store.close();
+    store = new Store(dir);
+    expect(store.db.prepare('PRAGMA table_info(observations)').all().some((row) => row.name === 'clock_time')).toBe(true);
+    expect(store.db.prepare("SELECT value FROM meta WHERE key='schema_version'").get()?.value).toBe('4');
+  });
+  it('stores a mark with its previous value and removes it with the recording', () => {
+    seed();
+    expect(store.getBoundary('rec_a')).toBeUndefined();
+    store.setBoundary('rec_a', 4, 1);
+    expect(store.getBoundary('rec_a')).toMatchObject({ sequence: 4, previousSequence: undefined, revision: 1 });
+    store.setBoundary('rec_a', 9, 2);
+    expect(store.getBoundary('rec_a')).toMatchObject({ sequence: 9, previousSequence: 4, revision: 2 });
+    store.deleteRecording('rec_a');
+    expect(store.getBoundary('rec_a')).toBeUndefined();
+  });
+});
