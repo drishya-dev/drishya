@@ -4,7 +4,8 @@ import { stepOfOperation } from '@drishya/scene';
 import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { useApp } from '../state.ts';
-import { CodeView, DiffView, Output, ProvenanceBadge, timeOf, useArtifact } from './common.tsx';
+import { Output, ProvenanceBadge, timeOf } from './common.tsx';
+import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { summarizeInput } from './History.tsx';
 
 export function Inspector({ projection }: { projection: Projection }) {
@@ -199,7 +200,7 @@ function EditDetail({ op, before, after, afterProv }: { op: Operation; before?: 
         <button className={view === 'before' ? 'on' : ''} disabled={!before} onClick={() => setView('before')} title={before ? '' : 'The harness did not record the file before this edit'}>Before</button>
         <button className={view === 'after' ? 'on' : ''} disabled={!after} onClick={() => setView('after')} title={after ? '' : d.reconstructionNote}>After</button>
       </div>
-      {view === 'diff' && (d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} /> : <p className="muted">No hunks captured.</p>)}
+      {view === 'diff' && (d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : <p className="muted">No hunks captured.</p>)}
       {view === 'before' && <ArtifactCode id={before} path={d.path} />}
       {view === 'after' && (
         <>
@@ -214,30 +215,12 @@ function EditDetail({ op, before, after, afterProv }: { op: Operation; before?: 
 }
 
 function ArtifactCode({ id, start = 1, path }: { id?: string; start?: number; path?: string }) {
-  const { text, error, unavailable, partial } = useArtifact(id);
-  if (!id) return <p className="muted">Not captured.</p>;
-  if (error) return <p className="muted">{error}</p>;
-  if (unavailable) return <p className="muted">{unavailable}</p>;
-  if (text === undefined) return <div className="skeleton tall" />;
-  if (!text) return <p className="muted">Empty.</p>;
-  return (
-    <>
-      <CodeView text={text} startLine={start} path={path} />
-      {partial && <p className="muted small">{partial}</p>}
-    </>
-  );
+  return <ArtifactReader key={id} id={id} kind="code" startLine={start} path={path} />;
 }
 
 function OutputBlock({ artifactId, preview }: { artifactId?: string; preview?: string }) {
-  const { text, unavailable, partial } = useArtifact(artifactId);
-  const t = text ?? preview;
-  if (!t) return <p className="muted">{unavailable ?? 'No output captured.'}</p>;
-  return (
-    <>
-      <Output text={t} />
-      {partial && <p className="muted small">{partial}</p>}
-    </>
-  );
+  if (!artifactId && !preview) return <p className="muted">No output captured.</p>;
+  return <ArtifactReader key={artifactId} id={artifactId} kind="output" fallback={preview} />;
 }
 
 // ─── evidence links ──────────────────────────────────────────────────────────────────────

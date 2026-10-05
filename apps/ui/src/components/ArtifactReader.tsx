@@ -1,0 +1,54 @@
+import { useEffect, useState } from 'react';
+import type { Hunk } from '@drishya/contracts';
+import { CodeView, DiffView, Output, useArtifact } from './common.tsx';
+
+/** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
+export function ArtifactReader({ id, kind, path, startLine = 1, fallback }: {
+  id?: string;
+  kind: 'code' | 'output';
+  path?: string;
+  startLine?: number;
+  fallback?: string;
+}) {
+  const [pages, setPages] = useState([0]);
+  const [index, setIndex] = useState(0);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => { setPages([0]); setIndex(0); }, [id]);
+  const pageStart = pages[index] ?? 0;
+  const view = useArtifact(id, { scope: 'reader', start: pageStart, count: 200, retry });
+  if (!id) return fallback ? <Output text={fallback} /> : <p className="muted">Not captured.</p>;
+  if (view.error) return <div className="muted">Could not load captured content. <button className="btn" onClick={() => setRetry((n) => n + 1)}>Retry</button></div>;
+  if (view.unavailable) return <p className="muted">{view.unavailable}{fallback ? <> Available preview: <Output text={fallback} /></> : null}</p>;
+  if (view.text === undefined) return <div className="skeleton tall" />;
+  const next = view.hasMore && view.nextStart !== undefined && view.nextStart > pageStart;
+  return (
+    <div className="artifact-reader">
+      {kind === 'code' ? <CodeView text={view.text} startLine={startLine + pageStart} path={path} /> : <Output text={view.text} />}
+      {view.partial && <div className="muted small reader-range">{view.partial}</div>}
+      {(index > 0 || next) && (
+        <nav className="reader-pages" aria-label="Captured content pages">
+          <button className="btn" disabled={index === 0} onClick={() => setIndex(index - 1)}>Previous lines</button>
+          <button className="btn" disabled={!next} onClick={() => {
+            if (!next) return;
+            if (pages[index + 1] !== view.nextStart) setPages([...pages.slice(0, index + 1), view.nextStart!]);
+            setIndex(index + 1);
+          }}>Next lines</button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+export function DiffReader({ hunks, path }: { hunks: Hunk[]; path?: string }) {
+  const [page, setPage] = useState(0);
+  const total = hunks.reduce((n, h) => n + h.lines.length, 0);
+  const pageSize = 120;
+  return <div className="artifact-reader">
+    <DiffView hunks={hunks} path={path} skipLines={page * pageSize} maxLines={pageSize} />
+    {total > pageSize && <nav className="reader-pages" aria-label="Captured change pages">
+      <button className="btn" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous change lines</button>
+      <span className="muted small">{page * pageSize + 1}–{Math.min(total, (page + 1) * pageSize)} of {total} captured lines</span>
+      <button className="btn" disabled={(page + 1) * pageSize >= total} onClick={() => setPage(page + 1)}>Next change lines</button>
+    </nav>}
+  </div>;
+}

@@ -1,6 +1,6 @@
 # Continue here — a compact handoff for the next agent
 
-**Last implementation update: 4 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
+**Last implementation update: 5 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
 
 ## Read in this order
 
@@ -22,13 +22,15 @@
 
 ## Current evidence
 
+B3 integrated reader/navigation work is implemented on `codex/b3-reader-navigation` pending CI and merge: independent live history and reading, inline content-shaped read/edit/output expansion, paged artifact/diff readers, separate bounded preview/full-material caches, session chooser search/harness/date/project grouping, file/tool navigation, virtualized file rows, and a synthetic browser journey. Local checks: 191 unit tests, backend/UI typechecks, Vite build, four synthetic browser scenarios. The opt-in real-session B2 journey remains Harsh's recorded evidence; it was not rerun with this B3 change. B4 performance and packed-install gates are next; none are yet certified.
+
 On 30 Sep, typechecks, 96 tests and Vite 8 build passed. Synthetic persistence/restart/API/viewerless live checks passed. Discovery saw 603 local sources. Four real journals were parsed/reduced/composed **in memory only**, zero parser exceptions; Claude exposed compaction and unsupported-record gaps. Two new synthetic sanitation probes failed. These results are scoped, not production certification.
 
 The 30 Sep audit is historical evidence, not the current code status. B0/B1 fixes and the history-first integrated base UI were merged by 3 Oct. B2 history correctness now has synthetic tests for stable passage IDs, reader anchor logic, mixed-worktree paths and export, isolated reconstruction, late-result scene/renderer masking and explanation evidence. No new real journal was persisted or exported for this work.
 
 ## Next bounded task
 
-B0 and B1 known findings are implemented (2–3 Oct): privacy policy `p3`; capture health, coalesced bounded live reads, `import --live`; revisions with SSE `sync`, slow-subscriber cap, session lifetime and stale-response guards. The integrated base UI opens in complete, accumulating history; replay is optional. B2 A11–A13 have event-ID passages, stable reader ID+offset, source-isolated reconstruction, named worktree paths in mixed views, and an as-of projection used by scene, renderer and evidence packs. PR #11 added bounded artifact slices and approved, freshness-marked maps. The next B2 browser pass fixed implicit follow, asynchronous anchor movement and a return-button race; map-off persists and avoids graph work. A Playwright test covers synthetic live bursts, anchors, three widths, old content, reduced motion and reload. **B2's opted-in real-session repeat belongs to Harsh per the builder's latest direction.** The first B3 slice replaces the 50-passage gate with measured viewport virtualization, 900 px overscan, stable selected/focused/anchor passage mounting, and a synthetic long-history browser check. B3 still needs content-shaped expansion, bounded full-material caches, file-panel navigation and performance measurement; B4 scale/install follows. Do not proceed straight to Pixi, new themes or model features. **B2 is complete (4 Oct):** the browser acceptance journey also passed on opted-in real Claude Code and Codex sessions (`tests/browser/b2-real.spec.ts`, counts-only reporting). Next is B3.
+B0–B2 are complete in the accepted baseline. B2 includes opted-in real Claude Code and Codex browser acceptance (`tests/browser/b2-real.spec.ts`, counts-only reporting). B3's integrated base UI is in the current branch with independent reader position, content-shaped expansion, paged material and bounded browser caches, session choice, file/tool navigation, and synthetic browser coverage. Merge B3 after CI; then measure and address B4 scale/install gates. Do not proceed straight to Pixi, new themes or model features.
 
 After B0, prove real persisted baseline; then capture/reconnect lifecycle and stable live history. Bring the prototype's useful navigation into the integrated app. See roadmap B1–B4 for acceptance tests. The first premium feature is a useful return-to-work view, paired with the content-shaped visual system.
 

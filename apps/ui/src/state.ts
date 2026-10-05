@@ -45,6 +45,8 @@ interface State {
   mapVisible: boolean;
   explore: boolean;
   selectedOp?: string;
+  /** One content-shaped reader expanded inside its original passage. */
+  expandedOp?: string;
   /** Stable captured observation to bring into view without switching normal history to replay. */
   focusObservationId?: string;
   hoveredPath?: string;
@@ -108,7 +110,7 @@ export const useApp = create<State>((set, get) => ({
   async openRecording(id, opts = {}) {
     const src = get().source;
     if (!src) return;
-    set({ recordingId: id, projection: undefined, graph: undefined, selectedOp: undefined, focusObservationId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false });
+    set({ recordingId: id, projection: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     const recordings = await src.recordings();
@@ -160,7 +162,7 @@ export const useApp = create<State>((set, get) => ({
   },
 
   select(opId) {
-    set({ selectedOp: opId, ...(opId ? { playing: false, held: true, follow: false, inspectorTab: 'detail' } : {}) });
+    set({ selectedOp: opId, ...(opId ? { expandedOp: undefined, playing: false, held: true, follow: false, inspectorTab: 'detail' } : {}) });
   },
 
   resume() {
@@ -169,11 +171,11 @@ export const useApp = create<State>((set, get) => ({
 
   showHistory() {
     const projection = get().projection;
-    set({ mode: 'history', step: projection?.timeline.length ?? 0, playing: false, held: false, follow: true, selectedOp: undefined });
+    set({ mode: 'history', step: projection?.timeline.length ?? 0, playing: false, held: false, follow: true, selectedOp: undefined, expandedOp: undefined });
   },
 
   setFilter(f) {
-    set({ filter: f });
+    set({ filter: f, ...(f ? { follow: false } : {}) });
   },
 }));
 

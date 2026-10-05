@@ -1,13 +1,19 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Artifact, ArtifactSlice, Hunk, Provenance } from '@drishya/contracts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
+import { materialCache, type MaterialScope } from '../lib/artifact-cache.ts';
 import { useApp } from '../state.ts';
+import type { DataSource } from '../api.ts';
 
 // ─── artifacts: fetched lazily, cached by bytes ───────────────────────────────────────────
 
-const cache = new Map<string, Promise<ArtifactSlice>>();
-let cachedBytes = 0;
-const MAX_CACHE = 48 * 1024 * 1024;
+const sources = new WeakMap<DataSource, number>();
+let nextSource = 0;
+function sourceId(source: DataSource): number {
+  let id = sources.get(source);
+  if (!id) { id = ++nextSource; sources.set(source, id); }
+  return id;
+}
 
 export interface ArtifactView {
   text?: string;
@@ -16,6 +22,9 @@ export interface ArtifactView {
   unavailable?: string;
   /** Set when only part of the captured content is shown, e.g. "lines 1–20,000 of 54,321". */
   partial?: string;
+  start?: number;
+  nextStart?: number;
+  hasMore?: boolean;
 }
 
 /** What a slice means to a reader: content, an honest unavailable reason, and any cut. */
@@ -23,43 +32,29 @@ export function viewOf(s: ArtifactSlice): ArtifactView {
   if (!s.available) return { unavailable: s.reason === 'no-longer-stored' ? 'Captured, but no longer stored (deleted or past retention).' : 'Not captured by the harness.' };
   const end = s.start + s.returnedLines;
   const partial = s.hasMore || s.truncated ? `Showing lines ${(s.start + 1).toLocaleString()}–${end.toLocaleString()} of ${s.totalLines.toLocaleString()}${s.truncated ? ' (cut at the response size limit)' : ''}` : undefined;
-  return { text: s.text, partial };
+  return { text: s.text, partial, start: s.start, nextStart: end, hasMore: s.hasMore };
 }
 
-export function useArtifact(artifactId: string | undefined): ArtifactView {
+export function useArtifact(artifactId: string | undefined, opts: { scope?: MaterialScope; start?: number; count?: number; retry?: number } = {}): ArtifactView {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
   const revisions = useApp((s) => s.renderedRevisions);
   const blob = useApp((s) => s.projection?.artifacts.find((a) => a.id === artifactId)?.blob);
   const revision = recordingId?.split('+').map((id) => revisions[id] ?? 0).join(':');
-  const key = artifactId && recordingId ? `${source?.kind}/${recordingId}/${revision}/${artifactId}/${blob ?? 'unavailable'}` : undefined;
+  const scope = opts.scope ?? 'reader';
+  const start = opts.start ?? 0;
+  const count = opts.count ?? (scope === 'preview' ? 12 : 200);
+  const key = artifactId && recordingId && source ? `${sourceId(source)}/${recordingId}/${revision}/${artifactId}/${blob ?? 'unavailable'}/${scope}/${start}/${count}` : undefined;
   const [state, setState] = useState<{ key: string; view: ArtifactView }>();
   useEffect(() => {
     if (!key || !artifactId || !source || !recordingId) return;
-    let p = cache.get(key);
-    if (!p) {
-      if (cachedBytes > MAX_CACHE) {
-        cache.clear();
-        cachedBytes = 0;
-      }
-      p = source.artifact(recordingId, artifactId).then(
-        (s) => {
-          cachedBytes += new TextEncoder().encode(s.text).byteLength;
-          return s;
-        },
-        (e) => {
-          cache.delete(key); // a failure is not cached: opening it again retries
-          throw e;
-        },
-      );
-      cache.set(key, p);
-    }
+    const p = materialCache.get(key, scope, () => source.artifact(recordingId, artifactId, { start, count }));
     let live = true;
     p.then((s) => live && setState({ key, view: viewOf(s) })).catch((e) => live && setState({ key, view: { error: String(e.message ?? e) } }));
     return () => {
       live = false;
     };
-  }, [key, artifactId, source, recordingId]);
+  }, [key, artifactId, source, recordingId, scope, start, count, opts.retry]);
   return key === state?.key ? state?.view ?? {} : {};
 }
 
@@ -84,25 +79,33 @@ export function CodeView({ text, startLine = 1, path, maxLines, highlightLines }
   );
 }
 
-export function DiffView({ hunks, path, maxLines }: { hunks: Hunk[]; path?: string; maxLines?: number }) {
+export function DiffView({ hunks, path, maxLines, skipLines = 0 }: { hunks: Hunk[]; path?: string; maxLines?: number; skipLines?: number }) {
   const lang = langOf(path);
-  let shown = 0;
-  const hidden = hunks.reduce((s, h) => s + h.lines.length, 0) - (maxLines ?? Infinity);
+  let lineIndex = 0;
+  const total = hunks.reduce((s, h) => s + h.lines.length, 0);
+  const end = skipLines + (maxLines ?? Infinity);
   return (
     <div className="code diff" role="region" aria-label={path ? `Changes to ${path}` : 'Changes'}>
       {hunks.map((h, hi) => {
         let o = h.oldStart;
         let n = h.newStart;
+        const hunkStart = lineIndex;
+        const hunkVisible = hunkStart < end && hunkStart + h.lines.length > skipLines;
+        if (!hunkVisible) {
+          lineIndex += h.lines.length;
+          return null;
+        }
         return (
           <div key={hi} className="hunk">
-            {h.oldStart > 0 && <div className="hunk-head">@@ −{h.oldStart},{h.oldLines} +{h.newStart},{h.newLines} @@</div>}
+            {hunkVisible && h.oldStart > 0 && <div className="hunk-head">@@ −{h.oldStart},{h.oldLines} +{h.newStart},{h.newLines} @@</div>}
             {h.lines.map((l, i) => {
-              if (maxLines && shown >= maxLines) return null;
-              shown++;
               const t = l[0];
               const cls = t === '+' ? 'add' : t === '-' ? 'del' : 'ctx';
               const oldNo = t === '+' ? '' : h.oldStart ? o++ : '';
               const newNo = t === '-' ? '' : h.newStart ? n++ : '';
+              const visible = lineIndex >= skipLines && lineIndex < end;
+              lineIndex++;
+              if (!visible) return null;
               return (
                 <div key={i} className={`ln ${cls}`}>
                   <span className="ln-no">{oldNo}</span>
@@ -117,7 +120,7 @@ export function DiffView({ hunks, path, maxLines }: { hunks: Hunk[]; path?: stri
           </div>
         );
       })}
-      {maxLines && hidden > 0 && <div className="ln-more">{hidden} more lines</div>}
+      {maxLines && total > end && <div className="ln-more">{total - end} more lines</div>}
     </div>
   );
 }

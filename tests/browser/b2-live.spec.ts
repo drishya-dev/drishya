@@ -45,6 +45,17 @@ function appendSyntheticRecords() {
   return app.ingest.sync(recordingId);
 }
 
+function appendLongRead() {
+  const id = `b3-long-${callNumber++}`;
+  const base = { cwd: '/home/dev/shop', sessionId: 'c0ffee00-0000-4000-8000-000000000001', version: '2.1.0', timestamp: new Date().toISOString() };
+  const content = Array.from({ length: 250 }, (_, i) => `  ${String(i + 1).padStart(3)}\t// bounded reader line ${i + 1}`).join('\n');
+  appendFileSync(journal, [
+    JSON.stringify({ ...base, uuid: randomUUID(), type: 'assistant', message: { id: `msg-${id}`, role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: '/home/dev/shop/src/checkout/guard.ts' } }] } }),
+    JSON.stringify({ ...base, uuid: randomUUID(), type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content }] } }),
+  ].join('\n') + '\n');
+  return app.ingest.sync(recordingId);
+}
+
 type Anchor = { id?: string; offset?: number };
 
 test('live history keeps the reader anchored across bursts, sizes, reconnect and map-off', async ({ page }) => {
@@ -142,9 +153,60 @@ test('long history mounts only nearby work while selected evidence and live upda
     const remaining = await history.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop);
     if (remaining < 2) break;
   }
-  await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(2);
+  // A final 22 px passage margin can settle after the wheel; detached reading stays detached.
+  await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(32);
   await expect.poll(() => history.locator('[data-passage-id]').count()).toBeLessThan(80);
   await expect(history.locator(`article[data-op-id="${selectedId}"]`)).toHaveCount(1);
   expect(await page.evaluate(() => document.activeElement?.getAttribute('data-op-id'))).toBe(selectedId);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+});
+
+test('B3 expands captured content in place, pages it, and bounds file navigation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(server.launchUrl);
+  await page.getByRole('combobox', { name: 'Harness' }).selectOption('codex');
+  await expect(page.getByRole('button', { name: /Free orders reach checkout/ })).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Harness' }).selectOption('claude-code');
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  const history = page.locator('.history');
+  const steps = page.locator('.reading-status');
+  const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
+  await appendLongRead();
+  await expect(steps).toContainText(`${before + 2} recorded steps`);
+
+  const read = history.locator('article.op-read').last();
+  await read.getByRole('button', { name: /Expand .* in history/ }).click();
+  await expect(read).toHaveClass(/expanded/);
+  await expect(read.getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText('bounded reader line 1');
+  await read.getByRole('button', { name: 'Next lines' }).click();
+  await expect(read.getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText('bounded reader line 201');
+  await expect(read.getByRole('region', { name: 'Content of src/checkout/guard.ts' })).not.toContainText('bounded reader line 1');
+  await page.keyboard.press('Escape');
+  await expect(read).not.toHaveClass(/expanded/);
+
+  await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
+  const panel = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  await expect(panel).toBeVisible();
+  await expect.poll(() => panel.locator('[data-file-op]').count()).toBeLessThan(40);
+  await panel.getByRole('textbox', { name: 'Filter actions on this file' }).fill('b3-long');
+  await expect(panel.locator('[data-file-op]')).toHaveCount(0);
+  await panel.getByRole('textbox', { name: 'Filter actions on this file' }).fill('Read');
+  await expect.poll(() => panel.locator('[data-file-op]').count()).toBeGreaterThan(0);
+  await panel.locator('[data-file-op]').first().click();
+  await expect(page.getByRole('complementary', { name: 'Operation detail' })).toBeVisible();
+});
+
+test('B3 navigation keeps the combined synthetic story while filtering tools', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: 'Open demo' }).click();
+  await expect(page.locator('.viewer')).toBeVisible();
+  await expect(page.locator('.agents .agent')).toHaveCount(3);
+  const steps = await page.locator('.reading-status').innerText();
+  const read = page.locator('.dock .instrument.k-read');
+  await read.click();
+  await expect(read).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.passage.filtered-out').first()).toBeVisible();
+  expect(await page.locator('.reading-status').innerText()).toBe(steps);
+  await page.getByRole('button', { name: /Show everything/ }).click();
+  await expect(read).toHaveAttribute('aria-pressed', 'false');
 });

@@ -100,6 +100,8 @@ Graph caches key by approved root and generation; show staleness, refresh delibe
 
 ## 6. B3 — one integrated base UI
 
+**Implementation update (5 Oct, pending CI/merge):** The integrated UI now exposes content-shaped expansion inside accumulating passages, paged source/output/diff reading, bounded separate preview and full-material caches, chooser search and grouping, file/tool navigation and virtualized file rows. Synthetic browser tests cover long history, old material while new events arrive, responsive widths and reader controls. The B2 real-session acceptance evidence predates this change, so the B3 change is not a new real-session certification. See `docs/STATUS.md` for merge state.
+
 Use the existing app and API. Port the prototype's **behaviors**, not its synthetic timing implementation. No new frontend framework or second production UI is needed.
 
 ### State model, independent responsibilities

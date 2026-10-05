@@ -12,7 +12,7 @@ export interface ComposeInput {
   /** Number of timeline items applied. 0 = before anything; timeline.length = the end. */
   step: number;
   /** Follow only this agent, tool or MCP server. Others remain, receded. */
-  filter?: { agentId?: string; tool?: string; server?: string };
+  filter?: { agentId?: string; kind?: OperationKind; tool?: string; server?: string };
   /** Selected operation: it rises; playback holding is the caller's business. */
   selectedOperationId?: string;
 }
@@ -147,8 +147,9 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const opMatches = (op: Operation) => {
     if (!f) return true;
     if (f.agentId && op.agentId !== f.agentId) return false;
+    if (f.kind && op.kind !== f.kind) return false;
     if (f.server && !(op.origin.type === 'mcp' && op.origin.server === f.server)) return false;
-    if (f.tool && !(op.origin.type === 'native' && op.origin.tool === f.tool)) return false;
+    if (f.tool && op.origin.tool !== f.tool) return false;
     return true;
   };
 
