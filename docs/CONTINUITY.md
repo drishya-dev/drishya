@@ -19,6 +19,7 @@
 - Visualization is central: agents top, interactive repo map behind, left-to-right content-shaped actions in the middle, actual agent prose beneath unboxed, native tools/MCP right, history downward. Quiet at rest; precise, interruptible relationship motion.
 - Need is earned through faster comprehension/review: since-last-visit, one-file history, verification freshness, and accessible evidence. No fabricated causes, full-file content, internal reasoning or certainty from incomplete capture.
 - Observe only; source files read-only; sanitize before every durable/output sink; DOM text; no telemetry. No prompts, approvals, agent launch or rollback controls.
+- **Merge discipline (5 Oct):** keep each builder's feature scope in its own PR, integrate latest main and review conflicts semantically. Preserve both builders' work; never force-push/rewrite shared main or fold unrelated changes into another builder's PR. The builder explicitly authorizes reviewed green PR merges by Codex.
 - Keep current stack unless a measured gate justifies a scoped change. Schema changes require both builders. No automatic cloud model use or real-data sharing.
 
 ## Current evidence

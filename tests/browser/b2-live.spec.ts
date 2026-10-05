@@ -68,7 +68,10 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await expect(steps).toContainText('24 recorded steps');
   await expect(page.locator('.viewer')).toHaveClass(/still/);
 
-  await page.locator('.code .ln-tx').first().click({ clickCount: 3 });
+  const source = page.locator('article.op-read').last();
+  await expect(source).toBeVisible();
+  const sourceId = await source.getAttribute('data-op-id');
+  await page.locator(`article[data-op-id="${sourceId}"] .code .ln-tx`).filter({ hasText: /\S/ }).first().click({ clickCount: 3 });
   await expect.poll(() => page.evaluate(() => window.getSelection()?.toString().trim().length ?? 0)).toBeGreaterThan(0);
   await expect(latest).toBeVisible(); // selecting source holds the reader, not the capture.
   await latest.click();
@@ -153,6 +156,7 @@ test('long history mounts only nearby work while selected evidence and live upda
   await history.hover();
   for (let i = 0; i < 10; i++) {
     await page.mouse.wheel(0, 100_000);
+    await history.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const remaining = await history.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop);
     if (remaining < 2) break;
   }

@@ -36,6 +36,7 @@ test.afterAll(async () => {
 test('the tool request is visible before its result and remains beside it', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await expect(page.locator('.origins')).toBeAttached();
   await page.evaluate(() => {
     const observed: string[] = [];
     (window as unknown as { p1Moves: string[] }).p1Moves = observed;
@@ -144,7 +145,7 @@ test('file relationships start at measured renderer nodes and fall back when the
   // Occlusion must switch to another real view of the node, not draw through the reader.
   await page.evaluate((point) => {
     const cover = document.createElement('div'); cover.className = 'inspector'; cover.id = 'synthetic-origin-cover';
-    Object.assign(cover.style, { position: 'fixed', zIndex: '1000', left: `${point.x - 4}px`, top: `${point.y - 4}px`, width: '16px', height: '16px' });
+    Object.assign(cover.style, { position: 'fixed', animation: 'none', transform: 'none', zIndex: '1000', left: `${point.x - 4}px`, top: `${point.y - 4}px`, width: '16px', height: '16px' });
     document.body.append(cover);
   }, point);
   await page.mouse.move(0, 0); await edit.hover();

@@ -27,6 +27,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
     const plan = choreographyBetween(previous.current, scene, projection, paged ? Math.max(0, scene.step - projection.timeline.length) : 0);
     if (!root || !viewer || !history || explore) { previous.current = frameOf(scene); return; }
     const animations: Animation[] = [];
+    const emitted = new Set<string>();
     let raf = 0;
     const animate = motion && follow && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const visible = (el: Element) => {
@@ -114,26 +115,35 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
         const r = origin.getBoundingClientRect();
         const pane = origin.closest('.dock, .spine')?.getBoundingClientRect();
         if (r.width <= 0 || r.height <= 0 || r.top < 0 || r.bottom > innerHeight || (pane && (r.bottom <= pane.top || r.top >= pane.bottom))) continue;
-        const move = arrivals && animate && plan.arrivals.includes(op.id) ? op.origin.type === 'map' ? 'Lift' : 'Emit' : undefined;
+        const move = arrivals && animate && plan.arrivals.includes(op.id) && !emitted.has(`start:${op.id}`) ? op.origin.type === 'map' ? 'Lift' : 'Emit' : undefined;
+        if (move) emitted.add(`start:${op.id}`);
         tether(origin, target, label, move, op.origin.type !== 'map');
       }
       if (!arrivals || !animate) return;
       for (const id of plan.outcomes) {
+        if (emitted.has(`outcome:${id}`)) continue;
         const target = articles.get(id)?.querySelector('.result-area, .op-head');
         const op = projection.operations.find((op) => op.id === id);
         if (!target || !op || !visible(target)) continue;
+        emitted.add(`outcome:${id}`);
         const rect = contour(target, 'Resolve', op.status === 'error' ? '#f2706a' : op.status === 'ok' ? '#4fc38a' : '#a1a1aa');
         play(rect, [{ opacity: .7 }, { opacity: 0 }], 420);
       }
       for (const id of plan.prose) {
+        if (emitted.has(`prose:${id}`)) continue;
         const target = [...history.querySelectorAll<HTMLElement>('[data-prose-id]')].find((el) => el.dataset.proseId === id);
         const origin = [...viewer.querySelectorAll<HTMLElement>('.crown [data-agent-id]')].find((el) => el.dataset.agentId === target?.dataset.agentId);
         const r = origin?.getBoundingClientRect();
-        if (target && origin && visible(target) && r && r.width > 0 && r.left >= 0 && r.right <= innerWidth) tether(origin, target, 'Agent presence', 'Surface');
+        if (target && origin && visible(target) && r && r.width > 0 && r.left >= 0 && r.right <= innerWidth) {
+          emitted.add(`prose:${id}`);
+          tether(origin, target, 'Agent presence', 'Surface');
+        }
       }
       for (const id of plan.settle) {
+        if (emitted.has(`settle:${id}`)) continue;
         const target = [...history.querySelectorAll<HTMLElement>('.passage[data-passage-id]')].find((el) => el.dataset.passageId === id);
         if (!target || !visible(target)) continue;
+        emitted.add(`settle:${id}`);
         const r = target.getBoundingClientRect();
         const line = node('path', 'origin-thread', 'Settle');
         line.setAttribute('d', `M${r.left},${r.top} H${Math.min(r.right, r.left + 80)}`);
@@ -148,15 +158,24 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
     // The parent's layout effects can follow newly mounted work. Measure after that scroll,
     // without delaying a single captured character or replaying historical mounts.
     raf = requestAnimationFrame(() => {
-      raf = 0;
-      draw(useApp.getState().follow);
-      // A synchronous hover/layout update can replace this effect before its first frame.
-      // Consume the semantic change only after measuring it, rather than losing its arrival.
-      previous.current = frameOf(scene);
+      // ResizeObserver measures new material in the first rendering opportunity.
+      // Its follow adjustment must land before testing an arrival's visibility.
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        draw(useApp.getState().follow);
+        // A synchronous hover/layout update can replace this effect before its first frame.
+        // Consume the semantic change only after measuring it, rather than losing its arrival.
+        previous.current = frameOf(scene);
+      });
     });
     const scroll = () => {
       if (!useApp.getState().follow) interrupt();
-      else if (!raf) { animations.forEach((a) => a.cancel()); raf = requestAnimationFrame(() => { raf = 0; draw(); }); }
+      else if (!raf) {
+        animations.forEach((a) => a.cancel());
+        // The follow scroll can land after measurement. Retry only this update's
+        // unshown cues; emitted identities prevent repeating an already visible arrival.
+        raf = requestAnimationFrame(() => { raf = 0; draw(true); });
+      }
     };
     let measured = false;
     const resize = new ResizeObserver(() => { if (measured) interrupt(); measured = true; });
