@@ -122,10 +122,20 @@ function useKeyboard() {
     const onKey = (e: KeyboardEvent) => {
       const s = useApp.getState();
       const t = e.target as HTMLElement;
-      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) return;
       if (s.screen !== 'viewer') return;
       const k = e.key;
-      if (k === ' ' && t.closest('button, a, [role="slider"]')) return;
+      if (k === 'Escape') {
+        if (s.searchOpen) s.set({ searchOpen: false });
+        else if (s.filePanel) s.set({ filePanel: undefined });
+        else if (s.expandedOp) s.set({ expandedOp: undefined });
+        else if (s.selectedOp) s.select(undefined);
+        else if (s.briefingOpen) s.set({ briefingOpen: false });
+        else if (s.explore) s.set({ explore: false });
+        else if (s.filter) s.setFilter(undefined);
+        return;
+      }
+      if (t.closest('input, textarea, select, button, a, [role="slider"], [role="dialog"], .op-expanded') || t.isContentEditable) return;
+      if (s.mode === 'history' && [' ', 'ArrowRight', 'ArrowLeft', 'Home', 'End', 'e', 'E', 'f', 'F'].includes(k)) return;
       if (k === ' ') {
         e.preventDefault();
         s.togglePlay();
@@ -140,14 +150,6 @@ function useKeyboard() {
         s.set({ searchOpen: true });
       } else if (k === 'Home') s.seek(0, { hold: true });
       else if (k === 'End') s.seek(s.projection?.timeline.length ?? 0, { hold: true });
-      else if (k === 'Escape') {
-        if (s.searchOpen) s.set({ searchOpen: false });
-        else if (s.filePanel) s.set({ filePanel: undefined });
-        else if (s.selectedOp) s.select(undefined);
-        else if (s.briefingOpen) s.set({ briefingOpen: false });
-        else if (s.explore) s.set({ explore: false });
-        else if (s.filter) s.setFilter(undefined);
-      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

@@ -1,10 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { DiscoveredSource, RecordingSummary } from '@drishya/contracts';
 import type { DiscoveryError } from '../api.ts';
 import { useApp } from '../state.ts';
 import { relTime } from './common.tsx';
 
 const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
+
+function byProject<T>(items: T[], rootOf: (item: T) => string | undefined): [string, T[]][] {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const root = rootOf(item) || 'Unknown project';
+    const group = groups.get(root) ?? [];
+    group.push(item);
+    groups.set(root, group);
+  }
+  return [...groups];
+}
 
 export function Home({ openDemo }: { openDemo: () => void }) {
   const source = useApp((s) => s.source);
@@ -17,6 +28,11 @@ export function Home({ openDemo }: { openDemo: () => void }) {
   const [err, setErr] = useState<string>();
   const [picked, setPicked] = useState<string[]>([]);
   const [q, setQ] = useState('');
+  const [harness, setHarness] = useState('all');
+  const [days, setDays] = useState(0);
+  const [shownRecordings, setShownRecordings] = useState(60);
+  const [shownSources, setShownSources] = useState(60);
+  const resetShown = () => { setShownRecordings(60); setShownSources(60); };
 
   const refresh = async () => {
     if (!source) return;
@@ -45,10 +61,14 @@ export function Home({ openDemo }: { openDemo: () => void }) {
     }
   };
 
-  const filtered = useMemo(() => {
+  const matches = (title: string | undefined, root: string | undefined, adapter: string, time: string | undefined) => {
     const t = q.toLowerCase();
-    return (sources ?? []).filter((s) => !t || (s.title ?? '').toLowerCase().includes(t) || (s.cwd ?? '').toLowerCase().includes(t)).slice(0, 60);
-  }, [sources, q]);
+    return (harness === 'all' || adapter === harness) &&
+      (!t || `${title ?? ''} ${root ?? ''}`.toLowerCase().includes(t)) &&
+      (!days || (time && Date.parse(time) >= Date.now() - days * 86_400_000));
+  };
+  const filteredRecordings = recordings.filter((r) => matches(r.title, r.workspaceRoot, r.harness, r.lastSourceTime ?? r.updatedAt));
+  const filteredSources = (sources ?? []).filter((s) => matches(s.title, s.cwd, s.harness, s.modifiedAt));
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
@@ -62,6 +82,12 @@ export function Home({ openDemo }: { openDemo: () => void }) {
         <span className="muted">See what your coding agents did — replayed on your own code. Observe only.</span>
       </header>
 
+      <div className="home-filters">
+        <input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => { setQ(e.target.value); resetShown(); }} />
+        <select aria-label="Harness" value={harness} onChange={(e) => { setHarness(e.target.value); resetShown(); }}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>
+        <select aria-label="Session age" value={days} onChange={(e) => { setDays(Number(e.target.value)); resetShown(); }}><option value={0}>Any date</option><option value={1}>Past day</option><option value={7}>Past week</option><option value={30}>Past month</option></select>
+      </div>
+
       <div className="home-grid">
         <section>
           <div className="sec-head">
@@ -73,11 +99,16 @@ export function Home({ openDemo }: { openDemo: () => void }) {
             )}
           </div>
           {recordings.length === 0 && <p className="muted">Nothing imported yet. Open a session from this machine, or try the demo.</p>}
+          {recordings.length > 0 && filteredRecordings.length === 0 && <p className="muted">No imported recordings match these filters.</p>}
           <div className="rows">
-            {recordings.map((r) => (
-              <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />
+            {byProject(filteredRecordings.slice(0, shownRecordings), (r) => r.workspaceRoot).map(([root, group]) => (
+              <div className="project-group" key={root}>
+                <div className="project-heading" title={root}>{root}</div>
+                {group.map((r) => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />)}
+              </div>
             ))}
           </div>
+          {filteredRecordings.length > shownRecordings && <button className="btn" onClick={() => setShownRecordings((n) => n + 60)}>Show more recordings · {filteredRecordings.length - shownRecordings} remaining</button>}
           <div className="demo-card">
             <div>
               <strong>Synthetic demo</strong>
@@ -90,7 +121,7 @@ export function Home({ openDemo }: { openDemo: () => void }) {
         <section>
           <div className="sec-head">
             <h2>Sessions on this machine</h2>
-            <input className="filter" placeholder="Filter by title or folder" value={q} onChange={(e) => setQ(e.target.value)} />
+            <span className="muted small">{filteredSources.length} matching</span>
           </div>
           <p className="muted small">Read-only: Drishya copies what it needs into its own store and never changes these files. Secrets are redacted before anything is saved.</p>
           {err && <p className="bad">{err}</p>}
@@ -101,7 +132,9 @@ export function Home({ openDemo }: { openDemo: () => void }) {
           ))}
           {!sources && <div className="skeleton tall" />}
           <div className="rows">
-            {filtered.map((s) => (
+            {byProject(filteredSources.slice(0, shownSources), (s) => s.cwd).map(([root, group]) => <div className="project-group" key={root}>
+              <div className="project-heading" title={root}>{root}</div>
+              {group.map((s) => (
               <div key={s.path} className="row source">
                 <div className="row-main">
                   <div className="row-title">{s.title?.replace(/\s+/g, ' ') || 'Untitled session'}</div>
@@ -118,8 +151,10 @@ export function Home({ openDemo }: { openDemo: () => void }) {
                   <button className="btn ghost" disabled={!!busy} onClick={() => open(s, true)} title="Follow new activity as the agent works">Watch live</button>
                 </div>
               </div>
-            ))}
+              ))}
+            </div>)}
           </div>
+          {filteredSources.length > shownSources && <button className="btn" onClick={() => setShownSources((n) => n + 60)}>Show more sessions · {filteredSources.length - shownSources} remaining</button>}
         </section>
       </div>
     </div>

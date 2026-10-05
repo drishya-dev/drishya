@@ -90,6 +90,17 @@ describe('scene composer', () => {
     expect(s.passages.filter((x) => x.matchesFilter).every((x) => x.agentId === codex.id)).toBe(true);
   });
 
+  it('filters native kinds and one MCP tool while keeping chronology', () => {
+    const all = compose(p, { step: p.timeline.length });
+    const reads = compose(p, { step: p.timeline.length, filter: { kind: 'read' } });
+    expect(reads.passages.length).toBe(all.passages.length);
+    expect(reads.passages.flatMap((ps) => ps.ops).filter((op) => op.matchesFilter).every((op) => op.kind === 'read')).toBe(true);
+    const mcp = all.passages.flatMap((ps) => ps.ops).find((op) => op.origin.type === 'mcp')!;
+    if (mcp.origin.type !== 'mcp') throw Error('missing MCP fixture');
+    const oneTool = compose(p, { step: p.timeline.length, filter: { server: mcp.origin.server, tool: mcp.origin.tool } });
+    expect(oneTool.passages.flatMap((ps) => ps.ops).filter((op) => op.matchesFilter).map((op) => op.id)).toContain(mcp.id);
+  });
+
   it.each(['fail', 'edit', 'pass', 'end'] as const)('matches the golden scene at %s', async (moment) => {
     const step = moment === 'end' ? p.timeline.length : nextMarker(p, 0, moment)!;
     await expect(JSON.stringify(stable(compose(p, { step })), null, 2) + '\n').toMatchFileSnapshot(`./__golden__/scene-${moment}.json`);

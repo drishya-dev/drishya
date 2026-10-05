@@ -52,7 +52,7 @@ export interface DataSource {
   graph(id: string, refresh?: boolean): Promise<RepoGraph | undefined>;
   /** Approves scanning the recording's captured root for the map, and returns the full map. */
   approveGraph(id: string): Promise<RepoGraph>;
-  artifact(id: string, artifactId: string): Promise<ArtifactSlice>;
+  artifact(id: string, artifactId: string, range?: { start: number; count: number }): Promise<ArtifactSlice>;
   search(id: string, q: string): Promise<{ observationId: string; snippet: string }[]>;
   setLive(id: string, on: boolean): Promise<boolean>;
   /** Without `consent`, returns the preview. With the preview's digest as `consent`, sends exactly that request. */
@@ -128,7 +128,7 @@ export const daemon: DataSource = {
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
   graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
   approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
-  artifact: (id, art) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}`),
+  artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
   search: async (id, q) => (await req<{ hits: { observationId: string; snippet: string }[] }>(`/v1/recordings/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`)).hits,
   setLive: async (id, on) => (await req<{ live: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/live`, { method: 'POST', json: { on } })).live,
   explain: (id, operationId, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/explain`, { method: 'POST', json: { operationId, consent } }),
@@ -180,13 +180,16 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     projection: async () => bundle.projection,
     graph: async () => bundle.graph,
     approveGraph: unsupported,
-    artifact: async (_id, art) => {
+    artifact: async (_id, art, range) => {
       // A bundle carries whole sanitized texts; one it omits was not exported, so it is unavailable.
       const artifact = bundle.projection.artifacts.find((a) => a.id === art)!;
       const text = bundle.artifactText[art];
       if (text === undefined) return { artifact, available: false, reason: 'not-captured', start: 0, text: '', returnedLines: 0, totalLines: 0, totalBytes: 0, truncated: false, hasMore: false };
-      const lines = text.split('\n').length;
-      return { artifact, available: true, start: 0, text, returnedLines: lines, totalLines: lines, totalBytes: new TextEncoder().encode(text).length, truncated: false, hasMore: false };
+      const all = text.split('\n');
+      const start = range?.start ?? 0;
+      const count = range?.count ?? 20_000;
+      const selected = all.slice(start, start + count);
+      return { artifact, available: true, start, text: selected.join('\n'), returnedLines: selected.length, totalLines: all.length, totalBytes: new TextEncoder().encode(text).length, truncated: false, hasMore: start + selected.length < all.length };
     },
     search: async (_id, q) => {
       const t = q.toLowerCase();

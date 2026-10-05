@@ -215,31 +215,58 @@ function FilePanel({ projection }: { projection: Projection }) {
   const set = useApp((s) => s.set);
   const seek = useApp((s) => s.seek);
   const select = useApp((s) => s.select);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
+  const [top, setTop] = useState(0);
+  const [height, setHeight] = useState(600);
+  const [focusedId, setFocusedId] = useState<string>();
+  useEffect(() => { setQuery(''); setTop(0); listRef.current?.scrollTo(0, 0); }, [path]);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setHeight(el.clientHeight));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [path]);
   if (!path) return null;
-  const ops = projection.operations.filter((o) => o.paths.some((p) => p.path === path));
+  const ops = projection.operations.filter((o) => o.paths.some((p) => p.path === path) && (!query || `${o.title} ${o.kind}`.toLowerCase().includes(query.toLowerCase())));
+  const rowHeight = 52;
+  const first = Math.max(0, Math.floor(top / rowHeight) - 6);
+  const last = Math.min(ops.length, Math.ceil((top + height) / rowHeight) + 6);
+  const focusedIndex = ops.findIndex((o) => o.id === focusedId);
+  const visible = new Set<number>();
+  for (let i = first; i < last; i++) visible.add(i);
+  if (focusedIndex >= 0) visible.add(focusedIndex);
+  let previous = 0;
   return (
     <div className="file-panel" role="dialog" aria-label={`Work on ${path}`}>
       <header>
-        <code>{path}</code>
+        <code>{path} · {ops.length} actions</code>
         <button className="icon-btn" onClick={() => set({ filePanel: undefined })} aria-label="Close">✕</button>
       </header>
-      {ops.length === 0 && <p className="muted">This recording never touched this file.</p>}
-      {ops.map((o) => (
-        <button
-          key={o.id}
-          className="file-op"
-          onClick={() => {
-            const s = stepOfOperation(projection, o.id);
-            if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
-            select(o.id);
-            set({ filePanel: undefined, explore: false });
-          }}
-        >
-          <span className={`op-kind k-${o.origin.type === 'mcp' ? 'mcp' : o.kind}`}>{KIND_LABEL[o.kind]}</span>
-          <span>{o.title}</span>
-          <span className="muted">{o.paths.find((p) => p.path === path)?.role.replace('-', ' ')}</span>
-        </button>
-      ))}
+      <input className="file-filter" value={query} placeholder="Filter actions on this file" aria-label="Filter actions on this file" onChange={(e) => { setQuery(e.target.value); setTop(0); listRef.current?.scrollTo(0, 0); }} />
+      <div className="file-list" ref={listRef} onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedId((e.target as HTMLElement).closest<HTMLElement>('[data-file-op]')?.dataset.fileOp)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-file-op]')) setFocusedId(undefined); }}>
+        {ops.length === 0 && <p className="muted">{query ? 'No matching actions on this file.' : 'This recording never touched this file.'}</p>}
+        {[...visible].sort((a, b) => a - b).map((i) => {
+          const o = ops[i]!;
+          const gap = (i - previous) * rowHeight;
+          previous = i + 1;
+          return <div key={o.id}>
+            {gap > 0 && <div aria-hidden="true" style={{ height: gap }} />}
+            <button data-file-op={o.id} className="file-op" onClick={() => {
+              const s = stepOfOperation(projection, o.id);
+              if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
+              select(o.id);
+              set({ filePanel: undefined, explore: false });
+            }}>
+              <span className={`op-kind k-${o.origin.type === 'mcp' ? 'mcp' : o.kind}`}>{KIND_LABEL[o.kind]}</span>
+              <span className="file-op-title">{o.title}</span>
+              <span className="muted">{o.paths.find((p) => p.path === path)?.role.replace('-', ' ')}</span>
+            </button>
+          </div>;
+        })}
+        <div aria-hidden="true" style={{ height: (ops.length - previous) * rowHeight }} />
+      </div>
     </div>
   );
 }
@@ -253,11 +280,11 @@ function Dock({ scene }: { scene: Scene }) {
     <aside className="dock" aria-label="Tools">
       <div className="dock-head">Tools</div>
       {scene.dock.native.map((d) => (
-        <div key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}`} title={`Harness tools: ${d.tools.join(', ')}`}>
+        <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
           <span className={`op-kind k-${d.kind}`}>{KIND_LABEL[d.kind]}</span>
           <span className="inst-tools">{d.tools.join(' · ')}</span>
           <span className="inst-uses">{d.uses || ''}</span>
-        </div>
+        </button>
       ))}
       {scene.dock.mcp.length > 0 && <div className="dock-head">MCP servers</div>}
       {scene.dock.mcp.map((s) => {
@@ -270,10 +297,10 @@ function Dock({ scene }: { scene: Scene }) {
             </button>
             <div className="drawer">
               {s.tools.map((t) => (
-                <div key={t.tool} className={`server-tool${t.active ? ' active' : ''}${t.uses ? '' : ' unused'}`}>
+                <button key={t.tool} className={`server-tool${t.active ? ' active' : ''}${t.uses ? '' : ' unused'}`} disabled={!t.uses} aria-pressed={filter?.server === s.server && filter?.tool === t.tool} onClick={() => setFilter(filter?.server === s.server && filter?.tool === t.tool ? undefined : { server: s.server, tool: t.tool })}>
                   <span>{t.tool}</span>
                   <span className="inst-uses">{t.uses || ''}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -515,7 +542,7 @@ function Search({ projection }: { projection: Projection }) {
   };
   return (
     <div className="search" role="dialog" aria-label="Search this recording">
-      <input autoFocus placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && set({ searchOpen: false })} />
+      <input autoFocus placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); set({ searchOpen: false }); } }} />
       <div className="search-results">
         {hits.map((h, i) => (
           <button key={i} onClick={() => go(h.observationId)}>
