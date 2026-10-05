@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Observation } from '@drishya/contracts';
 import { Store } from '../src/index.ts';
+import { orderObservations } from '../../projection/src/reduce.ts';
 
 let dir: string;
 let store: Store;
@@ -39,6 +40,36 @@ function seed() {
 // B1b (audit A07): a monotonic revision, committed with the data it describes, lets a viewer that
 // missed notifications tell exactly which recordings changed.
 describe('recording revisions', () => {
+  it('keeps late captured titles without reducing the whole recording', () => {
+    seed();
+    store.appendObservations('rec_a', 'src_a', cursor, [obs('prompt'),
+      { ...obs('m1'), kind: 'session.meta', payload: { title: 'Initial', titleRank: 1, cwd: '/repo' } },
+      { ...obs('m2'), kind: 'session.meta', payload: { title: 'Named session', titleRank: 2 } },
+      { ...obs('m3'), kind: 'session.meta', payload: { title: 'Lower priority', titleRank: 1 } }]);
+    expect(store.captureMetadata('rec_a')).toEqual({ title: 'Named session', workspaceRoot: '/repo' });
+  });
+  it('streams repeatable source-clock order, including missing and backwards timestamps', () => {
+    seed();
+    const records = [
+      { ...obs('o1'), sourceTime: '2026-10-05T12:00:02Z' },
+      { ...obs('o2'), sourceTime: '2026-10-05T12:00:01Z' },
+      obs('o3'),
+      { ...obs('o4'), sourceTime: 'invalid' },
+      { ...obs('o5'), source: { ...obs('o5').source, sourceId: 'src_b' } },
+      { ...obs('o6'), sourceTime: '2026-10-05T12:00:01.123999Z' },
+      { ...obs('o7'), sourceTime: '2026-10-05T12:00:01.123001Z' },
+      { ...obs('o8'), sourceTime: '2026-10-05T12:00:01.999999Z' },
+    ];
+    store.appendObservations('rec_a', 'src_a', cursor, records);
+    const expected = orderObservations(store.observations('rec_a'));
+    const reader = store.orderedObservations('rec_a');
+    expect([...reader]).toEqual(expected);
+    store.upsertRecording({ id: 'rec_b', adapterId: 'codex', harness: 'codex', sourcePath: join(dir, 'b.jsonl') });
+    store.upsertSource({ id: 'src_b', recordingId: 'rec_b', path: join(dir, 'b.jsonl'), role: 'main', cursor });
+    store.appendObservations('rec_b', 'src_b', cursor, [{ ...obs('b1'), recordingId: 'rec_b', sourceTime: '2026-10-05T12:00:01Z' }]);
+    expect([...store.orderedObservations(['rec_a', 'rec_b'])]).toEqual(orderObservations([...store.observations('rec_a'), ...store.observations('rec_b')]));
+    expect([...reader]).toEqual(expected);
+  });
   it('increments once per commit that adds observations, and not for duplicates', () => {
     seed();
     expect(store.getRecording('rec_a')!.revision).toBe(0);
@@ -56,6 +87,15 @@ describe('recording revisions', () => {
     store.close();
     store = new Store(dir);
     expect(store.getRecording('rec_a')!.revision).toBe(1);
+  });
+  it('backfills the reader clock without changing original source timestamps', () => {
+    seed();
+    store.appendObservations('rec_a', 'src_a', cursor, [{ ...obs('migration'), sourceTime: '2026-10-05T12:00:01.123999Z' }]);
+    const captured = store.observations('rec_a');
+    store.db.exec('ALTER TABLE observations DROP COLUMN clock_time');
+    store.close(); store = new Store(dir);
+    expect([...store.orderedObservations('rec_a')]).toEqual(captured);
+    expect(store.db.prepare('SELECT clock_time FROM observations').get()?.clock_time).toBe('2026-10-05T12:00:01.123Z');
   });
 
   it('adds the column to a store created before revisions existed', () => {

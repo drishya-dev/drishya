@@ -98,6 +98,14 @@ export class Ingestor extends EventEmitter {
   private projectionCache = new Map<string, { count: number; projection: Projection }>();
   private healthRecords = new Map<string, HealthRecord>();
   private lastEmitted = new Map<string, string>();
+  private cacheProjection(key: string, count: number, projection: Projection) {
+    // Legacy callers may request a complete view; keep only a normal-sized shared workspace.
+    // The paged history worker owns long-session reader state, not this capture cache.
+    if (count > 10_000) return;
+    this.projectionCache.delete(key);
+    this.projectionCache.set(key, { count, projection });
+    while (this.projectionCache.size > 2 || [...this.projectionCache.values()].reduce((sum, entry) => sum + entry.count, 0) > 20_000) this.projectionCache.delete(this.projectionCache.keys().next().value!);
+  }
   private closed = false;
   private readonly now: () => Date;
   private readonly idleMs: number;
@@ -221,10 +229,16 @@ export class Ingestor extends EventEmitter {
         sources,
       });
       if (added) {
-        const p = this.projection(recordingId);
         const cur = this.store.getRecording(recordingId)!;
-        if (!cur.title && p.title) this.store.updateRecordingMeta(recordingId, { title: p.title });
-        if (!cur.workspaceRoot && p.workspaceRoot) this.store.updateRecordingMeta(recordingId, { workspaceRoot: p.workspaceRoot });
+        // Collection must not rebuild/render all prior work just to obtain a list label.
+        // These fields are sanitized captured metadata; full reduction is a reader concern.
+        {
+          const meta = this.store.captureMetadata(recordingId);
+          this.store.updateRecordingMeta(recordingId, {
+            ...(meta.title && meta.title !== cur.title ? { title: meta.title } : {}),
+            ...(!cur.workspaceRoot && meta.workspaceRoot ? { workspaceRoot: meta.workspaceRoot } : {}),
+          });
+        }
         const ev: ChangeEvent = { type: 'recording', recordingId, revision: cur.revision ?? 0, observationCount: cur.observationCount, added, live: cur.live };
         this.emit('change', ev);
       }
@@ -364,10 +378,10 @@ export class Ingestor extends EventEmitter {
     if (stored && stored.observationCount === count && stored.reducerVersion === REDUCER_VERSION && !live) {
       projection = JSON.parse(stored.body);
     } else {
-      projection = reduce(recordingId, this.store.observations(recordingId), this.store.blobs, { adapters: this.descriptors, live });
-      this.store.putProjection(recordingId, REDUCER_VERSION, count, JSON.stringify(projection));
+      projection = reduce(recordingId, this.store.orderedObservations(recordingId), this.store.blobs, { adapters: this.descriptors, live, ordered: true });
+      if (count <= 10_000) this.store.putProjection(recordingId, REDUCER_VERSION, count, JSON.stringify(projection));
     }
-    this.projectionCache.set(recordingId, { count, projection });
+    this.cacheProjection(recordingId, count, projection);
     return projection;
   }
 
@@ -386,12 +400,11 @@ export class Ingestor extends EventEmitter {
     const cached = this.projectionCache.get(cacheKey);
     if (cached && cached.count === count) return cached.projection;
     const live = unique.some((id) => this.store.getRecording(id)?.live);
-    const obs = unique.flatMap((id) => this.store.observations(id));
-    const projection = reduce(key, obs, this.store.blobs, { adapters: this.descriptors, live });
+    const projection = reduce(key, this.store.orderedObservations(unique), this.store.blobs, { adapters: this.descriptors, live, ordered: true });
     // A combined view spanning worktrees has no single repository root. Its paths remain
     // evidence-backed per source, and the map uses captured paths instead of one checkout.
     if (mixedRoots) projection.workspaceRoot = undefined;
-    this.projectionCache.set(cacheKey, { count, projection });
+    this.cacheProjection(cacheKey, count, projection);
     return projection;
   }
 

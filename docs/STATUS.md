@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
-| **Next gate** | **B4 release checks alongside product experience work.** The builder deferred the long-session scale target until before broad release; normal synthetic workloads and package CI pass first probes. [Roadmap](IMPLEMENTATION_ROADMAP.md), [B4 findings](review/07-b4-scale-install.md). No model key is needed for the core |
+| **Next gate** | **B4 engineering candidate, release validation pending.** The builder resumed scaling before premium expansion. Worker/paged history, resource settings, retention and offline package checks are implemented; reference-machine 100k updates and valid 1 GiB imports now pass their measured gates. Exact-change CI and physical low-resource/lower-core/platform checks remain. [Current B4 evidence](review/08-b4-history-reader.md). No model key is needed for the core |
 
 ### Claimed
 
@@ -63,12 +63,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-05
-- **Did:** Reviewed and merged Harsh's CI deflake PR #19 before this work. Implemented a first P1 live/replay pacing slice: calls display input before results, results resolve in the same passage, MCP/web/other tools expand in place, exposed reasoning is readable by default, and bursts/long text stop live camera follow at the start of new material while capture/history continue. Fixed replay dwell to apply to the visible step and kept reduced motion from shortening reading time. The final implementation is intentionally a truthful arrival, not fabricated token streaming; actual incremental result text requires chunked harness evidence. Creative and product docs now spell this out.
-- **Validation:** `corepack pnpm check` passed (196/196 tests plus typechecks); `DRISHYA_BROWSER_CHANNEL=chrome corepack pnpm test:browser` passed (7 synthetic browser tests, one opt-in real-session test skipped), including input-before-result, MCP expansion and fast-burst anchoring. Visual QA used the synthetic demo in the integrated app.
-- **Left half-done:** B4 remains deferred per builder direction: a 100k+200-record browser update took 4.35 s and valid 1 GiB import reached ~1.97 GiB RSS. Paged projection/worker ownership, low-resource/peak-memory, retention and real release verification remain before broad release. Premium origin motion and deeper content-specific rendering are subsequent P1 work; this slice establishes a calmer readable baseline.
-- **Watch out for:** The current Claude/Codex journals mostly report final tool results, not output chunks. Do not animate characters as if the source streamed them. The app currently receives/recomposes whole projections; this is an API/performance seam for the eventual B4 migration. A local unrelated package-manager update is uncommitted and intentionally excluded from this work.
-
----
+- **PR/CI:** [PR #22](https://github.com/drishya-dev/drishya/pull/22), implementation `8e55907`: all seven CI jobs passed ([run](https://github.com/drishya-dev/drishya/actions/runs/37328879714)): checks/browser on Windows and Linux; offline package on Windows, Linux and macOS. Open for @harsh's required review.
+- **Did:** Resumed B4 at the builder's request. Added read-only source/derived-history worker ownership, streaming SQL ordering and schema migration, incremental reducer snapshots with conservative late-record rebuilds, paged global history/search/file/evidence/replay navigation, full captured prose/input artifact readers, low-resource budgets, virtualized file spine, explicit storage/forget behavior and checksummed offline packaging. Capture no longer rebuilds the full projection to update session labels. Fixed two real reader measurement/anchor bugs and recognized Codex `exec_command` shell aliases.
+- **Validation:** Typechecks and 206 unit tests; eight synthetic browser checks; two opted-in real Claude/Codex checks with operation detail and live anchors; five repeated scroll-anchor checks; isolated offline package/checksum/worker restart verification. Normal 5k-file map p95 update 278 ms / peak RSS 403 MiB. Long-session and five-run 1 GiB results, exact workloads and limitations are in [B4 reader evidence](review/08-b4-history-reader.md).
+- **Left half-done:** Physical 8 GiB/integrated-GPU and lower-core checks, real macOS/Linux harness acceptance and final release certification remain. Full projection/export compatibility paths and extreme unique-edit workloads have no bounded-memory guarantee. Exact-change CI/review must pass before merge. PR #21 is separate and must use whole-session summary facts rather than counting a page.
+- **Watch out for:** The earlier B4 deferral is superseded. Large UI history uses the worker; do not restore full projection calls from new features. Pre-existing package-manager manifest/lock edits are excluded from this B4 change. Nothing from selected real journals is committed.
 
 ## Next up
 
@@ -77,7 +76,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 1. ~~**B0: privacy hardening.**~~ Done 2 Oct: A01 (PR #3); A02 sinks, A03, A04 (PR #4); protected-file scopes, safe forget, outdated-policy flag (`harsh/b0-leftovers`). Policy now `p3`.
 2. ~~**B2: identity, artifacts and honest history.**~~ Done 4 Oct: anchors, as-of boundaries, worktree identity (PR #10); bounded artifact slices, graph approval/staleness (PR #11); synthetic browser gate (PR #12); real-session acceptance on opted-in Claude Code and Codex sessions (`harsh/b2-real-acceptance`, `tests/browser/b2-real.spec.ts`). Real-session result (4 Oct, Harsh's machine, opt-in): one finished Claude Code session (1,172 journal lines → 556 observations, 480 steps, 189 operations) and one finished Codex session (704 lines → 234 observations, 211 steps, 80 operations). Each was copied to a temp folder and grown in two live bursts; the reader anchor held at 1440 and 390 px, map-off held, an operation opened, a reconnect reloaded the same history, and a resync added nothing. 0 visible gaps; 2/2 passed twice. Only counts were reported; the copies and stores were deleted.
 3. ~~**B3: integrated base history.**~~ Merged 5 Oct as PR #15 with accumulating history, virtualized/in-passage reading, bounded material caches, session/file/tool navigation and synthetic browser acceptance on Windows and Linux. Premium animation remains P1.
-4. **B4: scale and installation.** Normal browser latency/resources and packed-install CI have first passes. Passive capture overhead measured (5 Oct, Harsh): observer −0.3%, observer+browser +2.2% median agent slowdown; write-bound −0.8%, 0 lost/duplicate events on a 32-CPU reference machine. The builder has deferred 100k/1 GiB scaling until before broad release; those gates remain red. Still open: interaction/peak-memory and low-resource measurements, explicit store-usage/retention behavior, real-harness and release verification. See the [B4 record](review/07-b4-scale-install.md). **Do not mark B4 complete.**
+4. **B4: scale and installation.** Engineering candidate implemented: bounded worker history, low-resource mode, explicit storage/cleanup and verified offline packaging. Reference-machine normal/long latency and physical valid 1 GiB probes improved substantially; passive overhead retest is +2.7% with browser, no lost/duplicate events. Physical low-resource/lower-core and real macOS/Linux validation remain release gates. See [current evidence](review/08-b4-history-reader.md); historical measurements stay in [07](review/07-b4-scale-install.md). **Do not claim broad-release B4 certification.**
 5. **P1–P2: premium presentation and return-to-work utility.** Content-shaped renderers, five signature moves, since-last-visit, file history and verification freshness; test comprehension with users before feature expansion.
 6. **Later:** additional harnesses, privacy-reviewed packets, theme variants. Optional model validation follows exact-payload consent hardening and is not a baseline dependency.
 
@@ -113,6 +112,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ## Decisions made
 
 *Append only. Never delete a row — supersede it with a new one.*
+
+**5 Oct amendment:** the builder resumed B4 before further premium experience work. This supersedes the earlier deferral row below; its historical record remains intact.
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
@@ -167,6 +168,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-09-30 | **Small docs and low-risk changes go directly on `main`; branch major work** | Builder clarified the preferred workflow after the audit commit. Major code changes still receive the other builder's PR review | `AGENTS.md` |
 | 2026-10-03 | **Historical views use a pure as-of projection.** Invocation fields remain at call; result fields/artifacts appear at `op-end`; model evidence uses the same boundary. Passages anchor to captured event IDs, with reader offset preserved in the UI | Final projection data previously leaked into earlier replay frames and positional passage IDs moved when late records arrived | `packages/contracts/src/as-of.ts`, `packages/scene`, `apps/ui` |
 | 2026-10-03 | **Combined worktrees remain viewable, with path namespaces and per-recording reconstruction bases.** When no single root is valid, use a captured-path map instead of indexing the first checkout | Rejecting mixed roots broke valid combined export; merging same relative paths or captured bases would imply a false shared file state | `packages/projection`, `packages/ingest`, `apps/daemon/src/app.ts` |
+| 2026-10-05 | **Resume B4 now; separate captured writer, derived worker and paged reader** | Builder explicitly requested finishing B4. Full projection rebuilds and browser transfer caused the red scale gates. Keep deterministic fallback rebuilds and truthful global navigation; reference results do not replace physical release validation. | `review/08-b4-history-reader.md`, `IMPLEMENTATION_ROADMAP.md` §7 |
 
 ---
 

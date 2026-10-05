@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { App, dataDir, VERSION } from './app.ts';
 import { startServer } from './server.ts';
+import { storageUsage } from './storage.ts';
 
 const repoRoot = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
@@ -21,6 +22,7 @@ const HELP = `drishya ${VERSION} — see what your coding agents did. Observe on
   drishya export <recording[+recording]> --out F     write a sanitized replay bundle
   drishya demo-bundle --out F                        build the synthetic demo bundle from fixtures/
   drishya forget <recording>                         delete a recording from the local store
+  drishya storage [--json]                          show local disk usage and the 10 GiB advisory budget
 
 Data lives in ${dataDir()} (override with DRISHYA_HOME).
 Model features are off unless NEBIUS_API_KEY is set, and each call is an explicit action.`;
@@ -135,9 +137,14 @@ export async function main() {
       await app.close();
       return;
     }
+    case 'storage': {
+      const usage = await storageUsage(dataDir());
+      console.log(values.json ? JSON.stringify(usage) : `${(usage.bytes / 1024 ** 3).toFixed(2)} GiB / 10 GiB advisory budget · ${usage.files} files${usage.overBudget ? ' · budget exceeded' : ''}. Nothing is deleted automatically. Use drishya forget <recording> to remove selected recordings; SQLite free pages are reused.`);
+      return;
+    }
     case 'forget': {
       const app = new App();
-      const r = await app.ingest.forget(positionals[0] ?? '');
+      const r = await app.forget(positionals[0] ?? '');
       console.log(`Forgot ${positionals[0] ?? ''}; removed ${r.blobsRemoved} unshared blob files.`);
       await app.close();
       return;

@@ -58,6 +58,18 @@ function call(path: string, opts: { method?: string; headers?: Record<string, st
 }
 const auth = () => ({ authorization: `Bearer ${s.token}` });
 
+it('bounds and validates paged history requests before reduction', async () => {
+  for (const body of [{ count: -1 }, { step: 'ten' }, { start: 0.5 }, { pinnedPassageIds: [1] }, { filter: { tool: {} } }]) {
+    expect((await call(`/v1/recordings/${recId}/history`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body })).status).toBe(400);
+  }
+  const result = await call(`/v1/recordings/${recId}/history`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body: { count: 1, start: 0 } });
+  expect(result.status).toBe(200);
+  expect(result.body.loadedPassageIds).toHaveLength(1);
+  const usage = await call('/v1/storage', { headers: auth() });
+  expect(usage.body.bytes).toBeGreaterThan(0);
+  expect(usage.body.automaticDeletion).toBe(false);
+});
+
 it('waits for an in-flight handler before its caller closes SQLite', async () => {
   const isolated = mkdtempSync(join(tmpdir(), 'drishya-close-'));
   const app = new App(join(isolated, 'data'));

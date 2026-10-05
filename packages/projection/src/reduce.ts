@@ -31,7 +31,7 @@ import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
 
-export const REDUCER_VERSION = 'r1';
+export const REDUCER_VERSION = 'r2';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -44,6 +44,10 @@ export interface ReduceOptions {
   live?: boolean;
   /** Longest prose kept inline in the projection. */
   maxProseChars?: number;
+  /** Reader previews; full command inputs remain captured artifacts. */
+  maxInputChars?: number;
+  /** Internal store readers supply a repeatable, source-time-ordered iterable. */
+  ordered?: boolean;
 }
 
 const PREVIEW = 4000;
@@ -55,16 +59,26 @@ interface OpState {
   op: Operation;
   intent: ToolIntent;
   cwd?: string;
-  callObs?: Observation;
-  resultObs?: Observation;
+  callObservationId?: string;
+  completed?: boolean;
 }
 
-export function reduce(recordingId: string, input: Observation[], io: BlobIO, opts: ReduceOptions): Projection {
+export function reduce(recordingId: string, input: Iterable<Observation>, io: BlobIO, opts: ReduceOptions): Projection {
+  return createReducer(recordingId, input, io, opts).snapshot(opts.live);
+}
+
+/** Retains reduction state for append-only, already ordered observations. The caller must
+ * rebuild when ordering or workspace identity changes; snapshots never mutate this state. */
+export function createReducer(recordingId: string, input: Iterable<Observation>, io: BlobIO, opts: ReduceOptions) {
   const maxProse = opts.maxProseChars ?? 64_000;
-  const obs = orderObservations(input);
+  const obs = opts.ordered ? input : orderObservations([...input]);
+  let observationCount = 0;
+  let lastSequence = -1;
 
   const agents = new Map<string, Agent>();
   const ops = new Map<string, OpState>();
+  const snapshots = new Map<string, Operation>();
+  const dirtyOperations = new Set<string>();
   const opOrder: string[] = [];
   // One source call may yield several per-file edit operations. Index the group once so each
   // result does not scan every prior operation in a long session.
@@ -76,7 +90,14 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
   const gaps: Projection['gaps'] = [];
   // A recording's captured base cannot be used to reconstruct another recording's edit,
   // even when both report the same workspace-relative path.
-  const knownFull = new Map<string, string>();
+  // Keep captured bases by content hash, not every file's complete text in process memory.
+  // Reads remain exact; a missing blob makes reconstruction unavailable rather than guessed.
+  const bases = new Map<string, string>();
+  const knownFull = {
+    get: (key: string) => { const sha = bases.get(key); return sha ? io.get(sha) : undefined; },
+    set: (key: string, value: string) => { bases.set(key, io.put(value).sha); },
+    delete: (key: string) => bases.delete(key),
+  };
   const fileKey = (recording: string, path: string) => `${recording}\u0000${path}`;
   const harnesses = new Set<string>();
   const capabilities: Record<string, CapabilityMatrix> = {};
@@ -197,8 +218,9 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
       observationIds: [o.id],
       classification: { kind: 'captured', observationIds: [o.id] },
     };
-    const st: OpState = { op, intent, cwd, callObs: o };
+    const st: OpState = { op, intent, cwd, callObservationId: o.id };
     ops.set(id, st);
+    dirtyOperations.add(id);
     opOrder.push(id);
     const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
     let group = opGroups.get(baseId);
@@ -207,241 +229,276 @@ export function reduce(recordingId: string, input: Observation[], io: BlobIO, op
     return st;
   };
 
-  for (const o of obs) {
-    currentRecording = o.recordingId;
-    if (o.source?.adapterId) {
-      const d = opts.adapters[o.source.adapterId];
-      if (d) {
-        harnesses.add(d.harness);
-        capabilities[d.id] = d.capabilities;
-      }
-    }
-    const p = o.payload as Rec;
-    switch (o.kind) {
-      case 'session.meta': {
-        if (typeof p.cwd === 'string' && !workspaceRoot) workspaceRoot = p.cwd;
-        const rank = typeof p.titleRank === 'number' ? p.titleRank : 1;
-        if (typeof p.title === 'string' && p.title && rank >= titleRank) {
-          title = p.title;
-          titleRank = rank;
+  function append(batch: Iterable<Observation>) {
+    for (const o of batch) {
+      observationCount++;
+      lastSequence = Math.max(lastSequence, o.receivedSequence);
+      currentRecording = o.recordingId;
+      if (o.source?.adapterId) {
+        const d = opts.adapters[o.source.adapterId];
+        if (d) {
+          harnesses.add(d.harness);
+          capabilities[d.id] = d.capabilities;
         }
-        const a = ensureAgent(o);
-        if (typeof p.model === 'string') a.model = p.model;
-        break;
       }
-      case 'message.user': {
-        const t = text(p.text) ?? '';
-        if (!t.trim()) break;
-        ensureAgent(o);
-        // A subagent's first "user" message is its delegation prompt, already shown on the
-        // delegating call. It is not a new turn from the person.
-        if (o.agentId !== 'agent:main') break;
-        if (!firstPrompt) firstPrompt = t;
-        const id = `turn_${o.id}`;
-        timeline.push({ type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime });
-        break;
-      }
-      case 'message.assistant':
-      case 'reasoning': {
-        const t = text(p.text) ?? '';
-        if (!t.trim()) break;
-        const a = ensureAgent(o);
-        if (typeof p.model === 'string') a.model = p.model;
-        const pr: Prose = {
-          id: `prose_${o.id}`,
-          agentId: a.id,
-          role: o.kind === 'reasoning' ? 'reasoning' : 'assistant',
-          text: clip(t, maxProse),
-          truncated: t.length > maxProse,
-          exposure: p.exposure === 'summary' ? 'summary' : 'full',
-          sequence: step(),
-          time: o.sourceTime,
-          observationIds: [o.id],
-        };
-        prose.push(pr);
-        timeline.push({ type: 'prose', id: `t_${pr.id}`, proseId: pr.id, sequence: o.receivedSequence, agentId: a.id, time: o.sourceTime });
-        break;
-      }
-      case 'tool.call': {
-        ensureAgent(o);
-        // Long strings (heredoc commands, big edits) were moved to the blob store at ingest.
-        const intent = resolveBlobs((p.intent ?? { kind: 'other' }) as ToolIntent, text);
-        const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
-        if (ops.has(baseId)) break; // duplicate call record
-        if (intent.kind === 'patch') {
-          const patchText = text(intent.patch as TextValue) ?? '';
-          const files = parseApplyPatch(patchText);
-          if (!files.length) {
-            const st = newOp(o, baseId, { kind: 'other' }, String(p.tool));
-            st.op.detail = { kind: 'other', input: previewValue(p.input) };
-            st.op.title = String(p.tool);
-            timeline.push({ type: 'op-start', id: `s_${baseId}`, operationId: baseId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+      const p = o.payload as Rec;
+      switch (o.kind) {
+        case 'session.meta': {
+          if (typeof p.cwd === 'string' && !workspaceRoot) workspaceRoot = p.cwd;
+          const rank = typeof p.titleRank === 'number' ? p.titleRank : 1;
+          if (typeof p.title === 'string' && p.title && rank >= titleRank) {
+            title = p.title;
+            titleRank = rank;
           }
-          files.forEach((f, i) => {
-            const id = files.length === 1 ? baseId : `${baseId}#${i}`;
-            const st = newOp(o, id, { kind: 'edit', path: f.path, edits: [] }, String(p.tool));
-            const path = rel(f.moveTo ?? f.path, st.cwd);
-            const base = knownFull.get(fileKey(o.recordingId, path));
-            let hunks = f.hunks;
-            let reconstruction: Availability = 'unavailable';
-            if (f.op === 'add') {
-              const content = f.hunks.flatMap((h) => h.lines.filter((l) => l.startsWith('+')).map((l) => l.slice(1))).join('\n');
-              hunks = [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: content.split('\n').length, lines: content.split('\n').map((l) => '+' + l) }];
-              st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content, note: 'content of a file created by the patch' }));
-              knownFull.set(fileKey(o.recordingId, path), content);
-              reconstruction = 'complete';
-            } else if (base !== undefined && f.op === 'update') {
-              const applied = applyHunks(base, f.hunks);
-              if (applied) {
-                hunks = applied.hunks;
-                reconstruction = 'complete';
-                st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: derived('apply-hunks-verified-v1', [o.id]), redacted: o.redactions.length > 0, content: applied.text, note: 'reconstructed by applying the patch to content captured earlier in this recording' }));
-                knownFull.set(fileKey(o.recordingId, path), applied.text);
-              }
-            }
-            st.op.artifactIds.push(addArtifact({ id: `art_${id}_patch`, kind: 'patch', path, observedAtSequence: step(), availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: patchText }));
-            st.op.kind = f.op === 'add' ? 'write' : 'edit';
-            const reconstructionNote = reconstruction === 'complete' ? undefined
-              : f.op === 'delete' ? 'The file was deleted.'
-              : base === undefined ? 'No complete earlier capture of this file to apply the patch to.'
-              : 'The patch context does not match the captured base.';
-            if (reconstruction !== 'complete' && f.op !== 'add') knownFull.delete(fileKey(o.recordingId, path));
-            st.op.detail = { kind: 'edit', path, hunks, created: f.op === 'add', reconstruction, reconstructionNote };
-            st.op.paths.push({ path, role: 'write', basis: 'captured' });
-            st.op.title = f.op === 'add' ? `Create ${path}` : f.op === 'delete' ? `Delete ${path}` : `Edit ${path}`;
-            timeline.push({ type: 'op-start', id: `s_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
-          });
+          const a = ensureAgent(o);
+          if (typeof p.model === 'string') a.model = p.model;
           break;
         }
-        const st = newOp(o, baseId, intent, String(p.tool));
-        describeCall(st, p, rel);
-        timeline.push({ type: 'op-start', id: `s_${baseId}`, operationId: baseId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
-        break;
-      }
-      case 'tool.result': {
-        ensureAgent(o);
-        const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
-        let targets = opGroups.get(baseId) ?? [];
-        if (!targets.length) {
-          // A result whose call we never saw (lost, or before a compaction): keep it, honestly generic.
-          const st = newOp(o, baseId, { kind: 'other' }, String(p.tool ?? 'unknown tool'));
-          st.op.title = `${p.tool ?? 'Tool'} result (call not captured)`;
-          timeline.push({ type: 'op-start', id: `s_${baseId}`, operationId: baseId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
-          targets = [baseId];
+        case 'message.user': {
+          const t = text(p.text) ?? '';
+          if (!t.trim()) break;
+          ensureAgent(o);
+          // A subagent's first "user" message is its delegation prompt, already shown on the
+          // delegating call. It is not a new turn from the person.
+          if (o.agentId !== 'agent:main') break;
+          if (!firstPrompt) firstPrompt = clip(t.replace(/\s+/g, ' ').trim(), 120);
+          const id = `turn_${o.id}`;
+          timeline.push({ type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime });
+          break;
         }
-        for (const id of targets) {
-          const st = ops.get(id)!;
-          if (st.resultObs) continue; // duplicate result record
-          st.resultObs = o;
-          st.op.observationIds.push(o.id);
-          st.op.endSequence = step();
-          st.op.endTime = o.sourceTime;
-          st.op.status = p.isError ? 'error' : 'ok';
-          completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
-          link({ from: st.callObs?.id ?? o.id, to: o.id, relation: 'tool-result', basis: 'source-id', sourceObservationIds: [st.callObs?.id ?? o.id, o.id], explanation: 'The harness recorded this result for this call id.' });
-          timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
-          if (st.op.kind === 'spawn' && st.op.detail.kind === 'spawn' && st.op.detail.childAgentId) {
-            timeline.push({ type: 'agent-stop', id: `x_${id}`, sequence: o.receivedSequence, agentId: st.op.detail.childAgentId, time: o.sourceTime });
-            const child = agents.get(st.op.detail.childAgentId);
-            if (child) child.stoppedSequence = step() - 1;
+        case 'message.assistant':
+        case 'reasoning': {
+          const t = text(p.text) ?? '';
+          if (!t.trim()) break;
+          const a = ensureAgent(o);
+          if (typeof p.model === 'string') a.model = p.model;
+          const pr: Prose = {
+            id: `prose_${o.id}`,
+            agentId: a.id,
+            role: o.kind === 'reasoning' ? 'reasoning' : 'assistant',
+            text: clip(t, maxProse),
+            truncated: t.length > maxProse,
+            exposure: p.exposure === 'summary' ? 'summary' : 'full',
+            sequence: step(),
+            time: o.sourceTime,
+            observationIds: [o.id],
+          };
+          prose.push(pr);
+          if (pr.truncated) addArtifact({ id: `art_${pr.id}_prose`, kind: 'excerpt', observedAtSequence: pr.sequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, ...(isBlobText(p.text) ? { blobRef: p.text } : { content: t }) });
+          timeline.push({ type: 'prose', id: `t_${pr.id}`, proseId: pr.id, sequence: o.receivedSequence, agentId: a.id, time: o.sourceTime });
+          break;
+        }
+        case 'tool.call': {
+          ensureAgent(o);
+          // Long strings (heredoc commands, big edits) were moved to the blob store at ingest.
+          const intent = resolveBlobs((p.intent ?? { kind: 'other' }) as ToolIntent, text);
+          const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
+          if (ops.has(baseId)) break; // duplicate call record
+          if (intent.kind === 'patch') {
+            const patchText = text(intent.patch as TextValue) ?? '';
+            const files = parseApplyPatch(patchText);
+            if (!files.length) {
+              const st = newOp(o, baseId, { kind: 'other' }, String(p.tool));
+              st.op.detail = { kind: 'other', input: previewValue(p.input) };
+              st.op.title = String(p.tool);
+              timeline.push({ type: 'op-start', id: `s_${baseId}`, operationId: baseId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            }
+            files.forEach((f, i) => {
+              const id = files.length === 1 ? baseId : `${baseId}#${i}`;
+              const st = newOp(o, id, { kind: 'edit', path: f.path, edits: [] }, String(p.tool));
+              const path = rel(f.moveTo ?? f.path, st.cwd);
+              const base = knownFull.get(fileKey(o.recordingId, path));
+              let hunks = f.hunks;
+              let reconstruction: Availability = 'unavailable';
+              if (f.op === 'add') {
+                const content = f.hunks.flatMap((h) => h.lines.filter((l) => l.startsWith('+')).map((l) => l.slice(1))).join('\n');
+                hunks = [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: content.split('\n').length, lines: content.split('\n').map((l) => '+' + l) }];
+                st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content, note: 'content of a file created by the patch' }));
+                knownFull.set(fileKey(o.recordingId, path), content);
+                reconstruction = 'complete';
+              } else if (base !== undefined && f.op === 'update') {
+                const applied = applyHunks(base, f.hunks);
+                if (applied) {
+                  hunks = applied.hunks;
+                  reconstruction = 'complete';
+                  st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: derived('apply-hunks-verified-v1', [o.id]), redacted: o.redactions.length > 0, content: applied.text, note: 'reconstructed by applying the patch to content captured earlier in this recording' }));
+                  knownFull.set(fileKey(o.recordingId, path), applied.text);
+                }
+              }
+              st.op.artifactIds.push(addArtifact({ id: `art_${id}_patch`, kind: 'patch', path, observedAtSequence: step(), availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: patchText }));
+              st.op.kind = f.op === 'add' ? 'write' : 'edit';
+              const reconstructionNote = reconstruction === 'complete' ? undefined
+                : f.op === 'delete' ? 'The file was deleted.'
+                : base === undefined ? 'No complete earlier capture of this file to apply the patch to.'
+                : 'The patch context does not match the captured base.';
+              if (reconstruction !== 'complete' && f.op !== 'add') knownFull.delete(fileKey(o.recordingId, path));
+              st.op.detail = { kind: 'edit', path, hunks, created: f.op === 'add', reconstruction, reconstructionNote };
+              st.op.paths.push({ path, role: 'write', basis: 'captured' });
+              st.op.title = f.op === 'add' ? `Create ${path}` : f.op === 'delete' ? `Delete ${path}` : `Edit ${path}`;
+              timeline.push({ type: 'op-start', id: `s_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            });
+            break;
           }
+          const st = newOp(o, baseId, intent, String(p.tool));
+          describeCall(st, p, rel);
+          if ((st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.command.length > (opts.maxInputChars ?? Infinity)) {
+            const command = st.op.detail.command;
+            st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_input`, kind: 'excerpt', observedAtSequence: st.op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: command }));
+            st.op.detail.command = clip(command, opts.maxInputChars!);
+            if (st.intent.kind === 'shell') st.intent = { ...st.intent, command: st.op.detail.command };
+          }
+          timeline.push({ type: 'op-start', id: `s_${baseId}`, operationId: baseId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+          break;
         }
-        break;
-      }
-      case 'agent.spawn': {
-        const child = `${o.recordingId}.${String(p.childAgentId)}`;
-        const opId = `${o.recordingId}.${o.operationId}`;
-        const st = ops.get(opId);
-        if (st && st.op.detail.kind === 'spawn') st.op.detail.childAgentId = child;
-        const a = agents.get(child);
-        if (a) {
-          a.parentId = agentKey(o);
-          a.agentType = p.agentType;
-          a.label = p.agentType ?? 'subagent';
+        case 'tool.result': {
+          ensureAgent(o);
+          const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
+          let targets = opGroups.get(baseId) ?? [];
+          if (!targets.length) {
+            // A result whose call we never saw (lost, or before a compaction): keep it, honestly generic.
+            const st = newOp(o, baseId, { kind: 'other' }, String(p.tool ?? 'unknown tool'));
+            st.op.title = `${p.tool ?? 'Tool'} result (call not captured)`;
+            timeline.push({ type: 'op-start', id: `s_${baseId}`, operationId: baseId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            targets = [baseId];
+          }
+          for (const id of targets) {
+            const st = ops.get(id)!;
+            if (st.completed) continue; // duplicate result record
+            st.completed = true;
+            dirtyOperations.add(id);
+            st.op.observationIds.push(o.id);
+            st.op.endSequence = step();
+            st.op.endTime = o.sourceTime;
+            st.op.status = p.isError ? 'error' : 'ok';
+            completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
+            link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: 'source-id', sourceObservationIds: [st.callObservationId ?? o.id, o.id], explanation: 'The harness recorded this result for this call id.' });
+            // Completed calls no longer need their potentially large edit/command input.
+            st.intent = { kind: 'other' };
+            timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            if (st.op.kind === 'spawn' && st.op.detail.kind === 'spawn' && st.op.detail.childAgentId) {
+              timeline.push({ type: 'agent-stop', id: `x_${id}`, sequence: o.receivedSequence, agentId: st.op.detail.childAgentId, time: o.sourceTime });
+              const child = agents.get(st.op.detail.childAgentId);
+              if (child) child.stoppedSequence = step() - 1;
+            }
+          }
+          break;
         }
-        link({ from: opId, to: child, relation: 'spawned', basis: p.basis === 'source-id' ? 'source-id' : 'heuristic', sourceObservationIds: [o.id], explanation: 'The harness recorded this subagent as started by this call.' });
-        break;
+        case 'agent.spawn': {
+          const child = `${o.recordingId}.${String(p.childAgentId)}`;
+          const opId = `${o.recordingId}.${o.operationId}`;
+          const st = ops.get(opId);
+          if (st && st.op.detail.kind === 'spawn') { st.op.detail.childAgentId = child; dirtyOperations.add(opId); }
+          const a = agents.get(child);
+          if (a) {
+            a.parentId = agentKey(o);
+            a.agentType = p.agentType;
+            a.label = p.agentType ?? 'subagent';
+          }
+          link({ from: opId, to: child, relation: 'spawned', basis: p.basis === 'source-id' ? 'source-id' : 'heuristic', sourceObservationIds: [o.id], explanation: 'The harness recorded this subagent as started by this call.' });
+          break;
+        }
+        case 'compaction':
+          ensureAgent(o);
+          timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: 'compaction', time: o.sourceTime });
+          gaps.push({ sequence: step() - 1, reason: 'compaction', detail: 'The harness summarised earlier context here.' });
+          break;
+        case 'capture.gap':
+          ensureAgent(o);
+          timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: String(p.reason ?? 'gap'), time: o.sourceTime });
+          gaps.push({ sequence: step() - 1, reason: String(p.reason ?? 'gap'), detail: typeof p.detail === 'string' ? p.detail : undefined });
+          break;
+        case 'unknown':
+          gaps.push({ sequence: step(), reason: 'unsupported-record', detail: String(p.recordType ?? 'unknown') });
+          break;
+        default:
+          break;
       }
-      case 'compaction':
-        ensureAgent(o);
-        timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: 'compaction', time: o.sourceTime });
-        gaps.push({ sequence: step() - 1, reason: 'compaction', detail: 'The harness summarised earlier context here.' });
-        break;
-      case 'capture.gap':
-        ensureAgent(o);
-        timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: String(p.reason ?? 'gap'), time: o.sourceTime });
-        gaps.push({ sequence: step() - 1, reason: String(p.reason ?? 'gap'), detail: typeof p.detail === 'string' ? p.detail : undefined });
-        break;
-      case 'unknown':
-        gaps.push({ sequence: step(), reason: 'unsupported-record', detail: String(p.recordType ?? 'unknown') });
-        break;
-      default:
-        break;
     }
-  }
 
-  // Subagents we saw but whose spawn the harness did not tie to a call: attach to the latest
-  // spawn operation that started before them. Heuristic, and labelled so.
-  for (const a of agents.values()) {
-    if (a.id.endsWith('.agent:main') || a.parentId) continue;
-    const candidates = opOrder.map((id) => ops.get(id)!.op).filter((op) => op.kind === 'spawn' && op.startSequence <= a.firstSequence && op.detail.kind === 'spawn' && !op.detail.childAgentId);
-    const spawn = candidates.at(-1);
-    if (!spawn || spawn.detail.kind !== 'spawn') continue;
-    spawn.detail.childAgentId = a.id;
-    a.parentId = spawn.agentId;
-    a.agentType = spawn.detail.agentType;
-    a.label = spawn.detail.agentType ?? 'subagent';
-    if (spawn.endSequence !== undefined) {
-      a.stoppedSequence = spawn.endSequence;
+  }
+  append(obs);
+
+  function snapshot(live = opts.live): Projection {
+    // Finalization works on copies: an unfinished call may complete on the next append.
+    const finalAgents = new Map([...agents].map(([id, agent]) => [id, structuredClone(agent)]));
+    const operations = opOrder.map((id) => {
+      const op = ops.get(id)!.op;
+      if (dirtyOperations.has(id) || !snapshots.has(id) || op.status === 'running' || op.kind === 'spawn') snapshots.set(id, copyValue(op));
+      return snapshots.get(id)!;
+    });
+    dirtyOperations.clear();
+    const finalLinks = [...links];
+    const finalLink = (item: Omit<EvidenceLink, 'id'>) => finalLinks.push({ ...item, id: `lnk_${finalLinks.length}` });
+    // Subagents we saw but whose spawn the harness did not tie to a call: attach to the latest
+    // spawn operation that started before them. Heuristic, and labelled so.
+    for (const a of finalAgents.values()) {
+      if (a.id.endsWith('.agent:main') || a.parentId) continue;
+      const candidates = operations.filter((op) => op.kind === 'spawn' && op.startSequence <= a.firstSequence && op.detail.kind === 'spawn' && !op.detail.childAgentId);
+      const spawn = candidates.at(-1);
+      if (!spawn || spawn.detail.kind !== 'spawn') continue;
+      spawn.detail.childAgentId = a.id;
+      a.parentId = spawn.agentId;
+      a.agentType = spawn.detail.agentType;
+      a.label = spawn.detail.agentType ?? 'subagent';
+      if (spawn.endSequence !== undefined) {
+        a.stoppedSequence = spawn.endSequence;
+      }
+      finalLink({ from: spawn.id, to: a.id, relation: 'spawned', basis: 'heuristic', sourceObservationIds: spawn.observationIds, explanation: 'Linked to the latest delegation call that started before this subagent; the harness did not record the id.' });
     }
-    link({ from: spawn.id, to: a.id, relation: 'spawned', basis: 'heuristic', sourceObservationIds: spawn.observationIds, explanation: 'Linked to the latest delegation call that started before this subagent; the harness did not record the id.' });
-  }
 
-  const operations = opOrder.map((id) => ops.get(id)!.op);
-  for (const op of operations) {
-    if (op.status === 'running' && !opts.live) op.status = 'unknown';
-  }
-  if (!opts.live) {
-    for (const a of agents.values()) if (a.stoppedSequence === undefined && a.id.endsWith('.agent:main')) a.stoppedSequence = Math.max(0, timeline.length - 1);
-  }
-
-  crossLinks(operations, prose, link);
-  const passages = buildPassages(timeline, operations, prose);
-
-  const files = new Map<string, { path: string; firstStep: number; lastStep: number; roles: Set<PathRef['role']> }>();
-  for (const op of operations) {
-    for (const pr of op.paths) {
-      if (!inWorkspace(pr.path)) continue;
-      const f = files.get(pr.path) ?? { path: pr.path, firstStep: op.startSequence, lastStep: op.startSequence, roles: new Set() };
-      f.firstStep = Math.min(f.firstStep, op.startSequence);
-      f.lastStep = Math.max(f.lastStep, op.endSequence ?? op.startSequence);
-      f.roles.add(pr.role);
-      files.set(pr.path, f);
+    for (const op of operations) {
+      if (op.status === 'running' && !live) op.status = 'unknown';
     }
-  }
+    if (!live) {
+      for (const a of finalAgents.values()) if (a.stoppedSequence === undefined && a.id.endsWith('.agent:main')) a.stoppedSequence = Math.max(0, timeline.length - 1);
+    }
 
-  return {
-    reducerVersion: REDUCER_VERSION,
-    recordingId,
-    observationCount: input.length,
-    lastSequence: input.reduce((m, o) => Math.max(m, o.receivedSequence), -1),
-    harnesses: [...harnesses],
-    workspaceRoot: multipleWorktrees ? undefined : workspaceRoot,
-    title: title ?? (firstPrompt ? clip(firstPrompt.replace(/\s+/g, ' ').trim(), 120) : undefined),
-    agents: [...agents.values()],
-    operations,
-    prose,
-    artifacts: [...artifacts.values()],
-    links,
-    timeline,
-    passages,
-    files: [...files.values()].map((f) => ({ ...f, roles: [...f.roles] })).sort((a, b) => a.firstStep - b.firstStep || a.path.localeCompare(b.path)),
-    gaps,
-    capabilities,
-  };
+    crossLinks(operations, prose, finalLink);
+    const passages = buildPassages(timeline, operations, prose);
+
+    const files = new Map<string, { path: string; firstStep: number; lastStep: number; roles: Set<PathRef['role']> }>();
+    for (const op of operations) {
+      for (const pr of op.paths) {
+        if (!inWorkspace(pr.path)) continue;
+        const f = files.get(pr.path) ?? { path: pr.path, firstStep: op.startSequence, lastStep: op.startSequence, roles: new Set() };
+        f.firstStep = Math.min(f.firstStep, op.startSequence);
+        f.lastStep = Math.max(f.lastStep, op.endSequence ?? op.startSequence);
+        f.roles.add(pr.role);
+        files.set(pr.path, f);
+      }
+    }
+
+    return {
+      reducerVersion: REDUCER_VERSION,
+      recordingId,
+      observationCount,
+      lastSequence,
+      harnesses: [...harnesses],
+      workspaceRoot: multipleWorktrees ? undefined : workspaceRoot,
+      title: title ?? (firstPrompt ? clip(firstPrompt.replace(/\s+/g, ' ').trim(), 120) : undefined),
+      agents: [...finalAgents.values()],
+      operations,
+      prose: [...prose],
+      artifacts: [...artifacts.values()],
+      links: finalLinks,
+      timeline: [...timeline],
+      passages,
+      files: [...files.values()].map((f) => ({ ...f, roles: [...f.roles] })).sort((a, b) => a.firstStep - b.firstStep || a.path.localeCompare(b.path)),
+      gaps: [...gaps],
+      capabilities: { ...capabilities },
+    };
+  }
+  return { append, snapshot };
 }
 
 // ─── ordering ────────────────────────────────────────────────────────────────────────────
+
+/** Strings are immutable; preserve their storage while isolating mutable snapshot objects. */
+function copyValue<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(copyValue) as T;
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, copyValue(item)])) as T;
+  return value;
+}
 
 /**
  * Orders observations across sources (a session and its subagent files) by source time,
@@ -562,7 +619,7 @@ interface Ctx {
   text: (v: TextValue | undefined | null) => string | undefined;
   rel: (p: string | undefined, cwd?: string) => string;
   addArtifact: (a: Omit<Artifact, 'id' | 'bytes' | 'lineCount' | 'blob'> & { id: string; content?: string; blobRef?: TextValue }) => string;
-  knownFull: Map<string, string>;
+  knownFull: { get(key: string): string | undefined; set(key: string, value: string): void; delete(key: string): boolean };
   fileKey: (recording: string, path: string) => string;
   link: (l: Omit<EvidenceLink, 'id'>) => void;
 }
@@ -633,7 +690,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       let afterProv: Provenance | undefined;
       if (st.intent.kind === 'write') {
         after = c.text(outcome.content as TextValue) ?? st.intent.content;
-        afterProv = { kind: 'captured', observationIds: [st.callObs?.id ?? o.id] };
+        afterProv = { kind: 'captured', observationIds: [st.callObservationId ?? o.id] };
         d.created = !!outcome.created;
         d.hunks = hunks ?? (base !== undefined && after !== undefined ? diffTexts(base, after) ?? [] : after !== undefined ? addHunk(after) : []);
         op.kind = d.created ? 'write' : 'edit';
@@ -812,7 +869,7 @@ export function buildPassages(timeline: TimelineItem[], operations: Operation[],
     if (it.type === 'op-start') {
       const agent = opAgent.get(it.operationId)!;
       let p = open.get(agent);
-      if (!p || p.proseIds.length) {
+      if (!p || p.proseIds.length || p.operationIds.length >= 32) {
         p = { id: `psg_${it.id}`, agentId: agent, operationIds: [], proseIds: [], firstStep: i, lastStep: i };
         out.push(p);
         open.set(agent, p);
@@ -826,7 +883,7 @@ export function buildPassages(timeline: TimelineItem[], operations: Operation[],
     } else if (it.type === 'prose') {
       const agent = proseAgent.get(it.proseId)!;
       let p = open.get(agent);
-      if (!p) {
+      if (!p || p.proseIds.length >= 16) {
         p = { id: `psg_${it.id}`, agentId: agent, operationIds: [], proseIds: [], firstStep: i, lastStep: i };
         out.push(p);
         open.set(agent, p);
@@ -849,10 +906,11 @@ function resolveBlobs<T>(v: T, text: (v: TextValue) => string | undefined): T {
 }
 
 function clip(s: string, n: number): string {
-  return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  return s.length > n ? Buffer.from(s.slice(0, n - 1), 'utf8').toString('utf8') + '…' : s;
 }
 function tail(s: string, n: number): string {
-  return s.length > n ? '…' + s.slice(s.length - n + 1) : s;
+  // V8 substrings can retain the complete captured output behind a tiny preview.
+  return s.length > n ? '…' + Buffer.from(s.slice(s.length - n + 1), 'utf8').toString('utf8') : s;
 }
 function oneLine(s: string): string {
   return s.replace(/\s+/g, ' ').trim();

@@ -1,7 +1,8 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
-import { passageWindow } from '../lib/history-window.ts';
+import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
+import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
 import { stageIncomingWork } from '../lib/live-pacing.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
@@ -9,8 +10,9 @@ import { useApp } from '../state.ts';
 import { CodeView, DiffView, Output, timeOf, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 
-export function History({ scene, projection }: { scene: Scene; projection: Projection }) {
+export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
+  const lowResource = useApp((s) => s.lowResource);
   const follow = useApp((s) => s.follow);
   const selectedOp = useApp((s) => s.selectedOp);
   const expandedOp = useApp((s) => s.expandedOp);
@@ -32,6 +34,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const lastNavigation = useRef<string | undefined>(undefined);
   const seenThrough = useRef(scene.total);
   const presented = useRef<{ step: number; height: number } | undefined>(undefined);
+  const requestedWindow = useRef('');
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
@@ -46,15 +49,31 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
   const expandedId = scene.passages.find((ps) => ps.ops.some((op) => op.id === expandedOp))?.id;
   const ids = scene.passages.map((ps) => ps.id);
   const pinned = new Set([readingAnchor.current?.id, targetId, expandedId, focusedPassageId].filter((id): id is string => !!id));
-  const layout = useMemo(() => passageWindow(ids, measurements.current, viewport.top, viewport.height, pinned),
+  const layout = useMemo(() => passageWindow(ids, measurements.current, viewport.top, viewport.height, pinned, lowResource ? 300 : 900),
     // IDs and pinning are recreated as scene and reader state change. Measurements need their own revision.
-    [scene.passages, viewport, measurementVersion, targetId, expandedId, focusedPassageId, readingAnchor.current?.id]);
+    [scene.passages, viewport, measurementVersion, targetId, expandedId, focusedPassageId, readingAnchor.current?.id, lowResource]);
+
+  useLayoutEffect(() => {
+    if (!onWindow) return;
+    const visible = passageWindow(ids, measurements.current, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
+    const missing = visible.runs.flatMap((run) => Array.from({ length: run.end - run.start }, (_, i) => run.start + i))
+      .find((i) => scene.passages[i]?.unloaded);
+    if (missing === undefined) { requestedWindow.current = ''; return; }
+    const start = Math.max(0, missing - 8);
+    const key = `${scene.step}:${start}`;
+    if (requestedWindow.current === key) return;
+    requestedWindow.current = key;
+    void onWindow({ start, count: 32, pinnedPassageIds: [...pinned].slice(0, 3) }).catch((error) => {
+      requestedWindow.current = '';
+      set({ error: error.message });
+    });
+  }, [scene.passages, scene.step, viewport, measurementVersion, onWindow]);
 
   const rememberReading = () => {
     const el = ref.current;
     if (!el) return;
     const viewport = el.getBoundingClientRect();
-    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => {
+    const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => {
       const bounds = item.getBoundingClientRect();
       return bounds.bottom > viewport.top + 1 && bounds.top < viewport.bottom;
     });
@@ -76,7 +95,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     const el = ref.current;
     const anchor = readingAnchor.current;
     if (!el || follow || !anchor || navigating.current) return;
-    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
+    const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
     if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
@@ -116,7 +135,9 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
         else restoreReading();
       }
     });
-    for (const node of el.querySelectorAll<HTMLElement>('[data-passage-id]')) observer.observe(node);
+    // The inner section repeats the same identity but has a different height. Measuring both
+    // alternates the stored height and can create an endless scroll/resize feedback loop.
+    for (const node of el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')) observer.observe(node);
     return () => observer.disconnect();
   }, [layout.runs, follow]);
 
@@ -143,7 +164,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
       return;
     }
     if (pendingNavigation.current !== targetId) return;
-    const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((n) => n.dataset.passageId === targetId);
+    const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((n) => n.dataset.passageId === targetId);
     if (!node) return;
     const bounds = node.getBoundingClientRect();
     const viewportBounds = el.getBoundingClientRect();
@@ -189,7 +210,9 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
     navigationFrame.current = requestAnimationFrame(() => {
       navigationFrame.current = requestAnimationFrame(() => {
         navigating.current = false;
-        rememberReading();
+        // Capture can finish while a user scroll is settling. Restore the anchor recorded
+        // by that scroll; adopting the reflowed position here would silently lose it.
+        restoreReading();
         navigationFrame.current = undefined;
       });
     });
@@ -212,7 +235,7 @@ export function History({ scene, projection }: { scene: Scene; projection: Proje
           ...(run.before > 0 ? [<div key={`gap-${run.start}`} aria-hidden="true" style={{ height: run.before }} />] : []),
           ...scene.passages.slice(run.start, run.end).map((ps) => (
             <div className="passage-slot" data-passage-id={ps.id} key={ps.id}>
-              <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />
+              {ps.unloaded ? <div className="muted" style={{ minHeight: ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />}
             </div>
           )),
         ])}
@@ -264,6 +287,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
 function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agent?: Agent }) {
   const set = useApp((s) => s.set);
   const [open, setOpen] = useState(true);
+  const [full, setFull] = useState(false);
   const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   return (
     <div className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
@@ -274,7 +298,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
         </button>
       )}
       {open && <Markdown text={pr.text} onPath={(p) => set({ hoveredPath: p })} />}
-      {pr.truncated && <div className="prose-trunc">Shortened for display — the full text is in the recording.</div>}
+      {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); set({ follow: false, playing: false, held: true }); }}>{full ? 'Close full captured text' : 'Preview · read full captured text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
     </div>
   );
 }
@@ -317,6 +341,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         <OpPreview op={op} resolving={so.resolving} />
       </div>}
       {expanded && <ExpandedOperation op={op} />}
+      {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
       {op.classification.kind === 'derived' && <div className="op-foot" title={`Classified by rule ${op.classification.rule} from the command text`}>derived from {op.tool}</div>}
     </article>
   );
@@ -325,6 +350,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
 function ExpandedOperation({ op }: { op: Operation }) {
   const d = op.detail;
   const select = useApp((s) => s.select);
+  const input = op.artifactIds.find((id) => id.endsWith('_input'));
   switch (d.kind) {
     case 'read':
       return <div className="op-expanded read-material" onClick={(e) => e.stopPropagation()}>
@@ -346,6 +372,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'test':
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
         <div className="cmd">$ {d.command}</div>
+        {input && <ArtifactReader id={input} kind="code" />}
         {d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>}
         {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
@@ -353,6 +380,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'shell':
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
         <div className="cmd">$ {d.command}</div>
+        {input && <ArtifactReader id={input} kind="code" />}
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
         <div className="muted small">Exit {d.exitCode ?? 'not captured'}</div>
       </div>;

@@ -54,6 +54,9 @@ test('the tool request is visible before its result and remains beside it', asyn
 test('MCP input and captured result can be read in the history passage', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill('get-library-docs');
+  await page.locator('.search-results button').first().click();
   const operation = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
   await operation.getByRole('button', { name: /Expand/ }).click();
   await expect(operation).toContainText('context7CompatibleLibraryID');

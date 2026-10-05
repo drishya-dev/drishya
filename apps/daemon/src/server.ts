@@ -24,6 +24,7 @@ import {
 import type { ChangeEvent, HealthEvent } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
+import { storageUsage } from './storage.ts';
 
 export interface ServerOptions {
   port?: number;
@@ -196,6 +197,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     const m = req.method ?? 'GET';
     const parts = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent); // drop "v1"
     const [a, id, sub, subId] = parts;
+    if (a === 'storage' && m === 'GET') return json(res, await storageUsage(app.store.dataDir));
 
     if (a === 'config' && m === 'GET') {
       return json(res, {
@@ -232,14 +234,39 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (body.live) app.ingest.startLive(r.recordingId);
       return json(res, { ...r, recording: app.store.getRecording(r.recordingId) });
     }
-    if (a === 'recordings' && !id && m === 'GET') return json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
+    if (a === 'recordings' && !id && m === 'GET') return json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, sourceBytes: app.store.sourceBytes(r.id), live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
 
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
       if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId), health: app.ingest.health(firstId) } });
       if (!sub && m === 'DELETE') {
         app.recording(firstId);
-        return json(res, { ok: true, ...(await app.ingest.forget(firstId)) });
+        const removed = await app.forget(firstId);
+        return json(res, { ok: true, ...removed });
+      }
+      if (sub === 'history' && m === 'POST') {
+        for (const key of id.split('+')) app.recording(key);
+        const body = await readJson(req);
+        for (const field of ['start', 'count', 'step']) if (body[field] !== undefined && (!Number.isSafeInteger(body[field]) || Number(body[field]) < 0)) throw new HttpError(400, `invalid ${field}`);
+        for (const field of ['selectedOperationId', 'observationId']) if (body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 512)) throw new HttpError(400, `invalid ${field}`);
+        if (body.pinnedPassageIds !== undefined && (!Array.isArray(body.pinnedPassageIds) || body.pinnedPassageIds.length > 3 || body.pinnedPassageIds.some((pin: unknown) => typeof pin !== 'string' || pin.length > 512))) throw new HttpError(400, 'invalid passage pins');
+        if (body.filter !== undefined && (!body.filter || typeof body.filter !== 'object' || Array.isArray(body.filter))) throw new HttpError(400, 'invalid filter');
+        if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');
+        return json(res, await app.history.page(id, body));
+      }
+      if (sub === 'summary' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key);
+        return json(res, await app.history.summary(id, intParam(url, 'from', 0, 0, Number.MAX_SAFE_INTEGER)));
+      }
+      if (sub === 'history-marker' && m === 'POST') {
+        for (const key of id.split('+')) app.recording(key);
+        const body = await readJson(req);
+        const types = Array.isArray(body.types) ? body.types.filter((type: unknown) => ['turn', 'edit', 'fail', 'pass', 'prose', 'gap', 'spawn'].includes(String(type))) : [];
+        return json(res, { step: await app.history.marker(id, Number(body.step) || 0, types, body.direction === -1 ? -1 : 1) });
+      }
+      if (sub === 'file-operations' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key);
+        return json(res, await app.history.file(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000)));
       }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
       if (sub === 'observations' && m === 'GET') {
@@ -251,6 +278,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'artifacts' && subId && m === 'GET') {
         const start = intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER);
         const count = intParam(url, 'count', 20_000, 0, 20_000);
+        if (app.paged(id)) return json(res, await app.history.artifact(id, subId, start, count));
         return json(res, app.artifactSlice(app.projection(id), subId, start, count));
       }
       if (sub === 'graph' && !subId && m === 'GET') return json(res, await app.graph(id, url.searchParams.get('refresh') === '1'));
@@ -290,10 +318,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       // otherwise nothing is sent and the new preview comes back with 409.
       if ((sub === 'explain' || sub === 'briefing' || sub === 'labels') && m === 'POST') {
         const body = await readJson(req);
-        const p = app.projection(id);
+        const large = app.paged(id);
+        const p = large ? undefined : app.projection(id);
         const art = (artId: string) => {
           try {
-            return app.artifactText(p, artId).text;
+            return p ? app.artifactText(p, artId).text : undefined;
           } catch {
             return undefined;
           }
@@ -302,16 +331,16 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         let key: string;
         if (sub === 'explain') {
           const opId = String(body.operationId ?? '');
-          if (!p.operations.some((o) => o.id === opId)) throw new HttpError(404, 'operation not found');
-          prep = prepareExplain(p, opId, art, model);
+          if (p && !p.operations.some((o) => o.id === opId)) throw new HttpError(404, 'operation not found');
+          prep = p ? prepareExplain(p, opId, art, model) : await app.history.prepare(id, sub, model, body);
           key = `explain:${opId}`;
         } else if (sub === 'briefing') {
           const from = body.from === undefined ? undefined : Number(body.from);
           const to = body.to === undefined ? undefined : Number(body.to);
-          prep = prepareBriefing(p, art, model, { from, to });
+          prep = p ? prepareBriefing(p, art, model, { from, to }) : await app.history.prepare(id, sub, model, body);
           key = `briefing:${from ?? 0}-${to ?? 'end'}`;
         } else {
-          prep = prepareLabels(p, model);
+          prep = p ? prepareLabels(p, model) : await app.history.prepare(id, sub, model, body);
           key = 'labels';
         }
         const shown = preview(prep);

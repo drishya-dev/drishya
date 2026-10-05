@@ -1,6 +1,7 @@
 // Exercise the actual tarball away from the workspace. Only invented fixture data enters it.
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -60,12 +61,21 @@ async function verifyRecordings(base: string, cookie: string) {
   const body = await recordings.text();
   assert.match(body, /claude-code/);
   assert.match(body, /codex/);
+  const id = JSON.parse(body).recordings[0].id;
+  const history = await fetch(`${base}/v1/recordings/${id}/history`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ count: 1 }) });
+  assert.equal(history.status, 200, await history.clone().text());
+  assert.equal((await history.json()).loadedPassageIds.length, 1);
 }
 
 try {
   const packed = JSON.parse(command(process.execPath, [npmCli, 'pack', '--json', '--pack-destination', scratch], join(root, 'dist/package'))) as { filename: string }[];
   const tarball = join(scratch, packed[0]!.filename);
   command(process.execPath, [npmCli, 'install', '--prefix', installed, tarball, '--ignore-scripts', '--offline', '--no-audit', '--no-fund']);
+  const packageRoot = join(installed, 'node_modules/@drishya-dev/cli');
+  for (const line of readFileSync(join(packageRoot, 'SHA256SUMS'), 'utf8').trim().split('\n')) {
+    const [, hash, name] = /^([0-9a-f]{64})  (.+)$/.exec(line)!;
+    assert.equal(createHash('sha256').update(readFileSync(join(packageRoot, name!))).digest('hex'), hash, `installed checksum: ${name}`);
+  }
   const help = command(process.execPath, [entry]);
   assert.match(help, /drishya serve/);
   const fixture = join(installed, 'node_modules', '@drishya-dev', 'cli', 'fixtures', 'synthetic');

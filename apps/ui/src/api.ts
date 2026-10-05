@@ -2,6 +2,9 @@
 // (the hosted demo). Both expose the same surface, so every screen works in both.
 
 import type { ArtifactSlice, DiscoveredSource, Projection, RecordingHealth, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
+import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
+import type { Marker } from '@drishya/scene';
+import type { Operation } from '@drishya/contracts';
 
 /** A session location discovery could not read, e.g. a permission failure. */
 export interface DiscoveryError {
@@ -43,11 +46,16 @@ export interface Config {
 
 export interface DataSource {
   kind: 'daemon' | 'bundle';
+  storage?(): Promise<{ bytes: number; budgetBytes: number; overBudget: boolean }>;
   config(): Promise<Config>;
-  recordings(): Promise<RecordingSummary[]>;
+  recordings(): Promise<ReaderRecording[]>;
   sources(): Promise<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>;
   importSource(path: string, adapterId: string, live: boolean): Promise<{ recordingId: string }>;
   projection(id: string): Promise<Projection>;
+  history?(id: string, query?: HistoryQuery): Promise<HistoryPage>;
+  summary?(id: string, from?: number): Promise<HistorySummary>;
+  historyMarker?(id: string, step: number, types: Marker['type'][], direction: 1 | -1): Promise<number | undefined>;
+  fileOperations?(id: string, path: string, start: number, count: number, step?: number, query?: string): Promise<{ operations: Operation[]; total: number }>;
   /** `refresh` rebuilds a stale map; otherwise the cached map is returned unchanged. */
   graph(id: string, refresh?: boolean): Promise<RepoGraph | undefined>;
   /** Approves scanning the recording's captured root for the map, and returns the full map. */
@@ -70,6 +78,8 @@ export interface DataSource {
     },
   ): () => void;
 }
+/** Presentation hints do not change the immutable captured event contract. */
+export interface ReaderRecording extends RecordingSummary { sourceBytes?: number }
 
 export class HttpError extends Error {
   status: number;
@@ -120,12 +130,17 @@ export async function signIn(): Promise<'ok' | 'no-daemon' | 'signed-out'> {
 }
 
 export const daemon: DataSource = {
+  storage: () => req('/v1/storage'),
+  summary: (id, from = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/summary?from=${from}`),
   kind: 'daemon',
   config: () => req('/v1/config'),
-  recordings: async () => (await req<{ recordings: RecordingSummary[] }>('/v1/recordings')).recordings,
+  recordings: async () => (await req<{ recordings: ReaderRecording[] }>('/v1/recordings')).recordings,
   sources: () => req<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>('/v1/sources'),
   importSource: (path, adapterId, live) => req('/v1/import', { method: 'POST', json: { path, adapterId, live } }),
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
+  history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
+  historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,
+  fileOperations: (id, path, start, count, step, query = '') => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query })}`),
   graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
   approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),

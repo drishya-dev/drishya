@@ -1,5 +1,8 @@
 # Drishya: engineering, integration and delivery plan
 
+> **5 Oct implementation amendment:** [08: bounded history reader](08-b4-history-reader.md) is current for worker ownership, streaming/indexed history, internal reader APIs and measured release limits. Earlier full-projection and deferral statements below are historical.
+
+
 21 September 2026 · Proposed architecture amendments and build gates
 
 > **30 September amendment:** [IMPLEMENTATION_ROADMAP](../IMPLEMENTATION_ROADMAP.md) governs current execution order and reliability/live-history/deployment amendments. [Baseline audit](06-baseline-audit.md) distinguishes built behavior from verified results and open defects. The built stack uses `node:sqlite` and `node:http` + SSE; see CODEBASE/STATUS for the recorded deviations from the proposal below. Live history accumulates independently of reading position; playback is optional. Schema proposals still require both builders' agreement.
