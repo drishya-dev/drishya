@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| @harsh | B4 passive capture overhead probe (agent workload with vs without the observer, browser closed/open) | `scripts/bench-overhead.ts` (new), its test, B4 record notes. Not touching ingest/projection/worker code |
 
 ---
 
