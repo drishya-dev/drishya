@@ -3,6 +3,7 @@ import type { ArtifactSlice, Operation } from '@drishya/contracts';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { Marker } from '@drishya/scene';
 import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
+import type { VerificationTrail } from '../../../packages/scene/src/verification.ts';
 import type { ModelConfig, Prepared } from '@drishya/explain';
 
 /** One worker owns the derived history index. Capture's SQLite writer remains the ingestor. */
@@ -47,6 +48,7 @@ export class HistoryService {
   page(id: string, query: HistoryQuery = {}) { return this.request<HistoryPage>('page', { id, query }); }
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   since(id: string, after: number) { return this.request<SinceSnapshot>('since', { id, after }); }
+  verification(id: string, operationId: string) { return this.request<VerificationTrail | null>('verification', { id, operationId }); }
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }
   file(id: string, path: string, start = 0, count = 100, step?: number, query = '') { return this.request<{ operations: Operation[]; total: number }>('file', { id, path, start, count, step, query }); }
   prepare(id: string, task: string, model: ModelConfig, body: Record<string, unknown>) { return this.request<Prepared>('prepare', { id, task, model: { ...model, apiKey: undefined }, body }); }

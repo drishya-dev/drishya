@@ -3,6 +3,7 @@
 
 import type { ArtifactSlice, DiscoveredSource, Projection, RecordingHealth, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
 import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
+import { verificationFor, type VerificationTrail } from '../../../packages/scene/src/verification.ts';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { Marker } from '@drishya/scene';
 import type { Operation } from '@drishya/contracts';
@@ -80,6 +81,8 @@ export interface DataSource {
   /** The reader's "seen through here" mark for one recording; null when never marked. */
   boundary(id: string): Promise<ReadingBoundary | null>;
   since?(id: string, after: number): Promise<SinceSnapshot>;
+  /** P2-C: test runs recorded after one change, over the whole session; null if not a change. */
+  verification?(id: string, operationId: string): Promise<VerificationTrail | null>;
   /** Moves the mark. Only explicit reader actions call this. */
   setBoundary(id: string, sequence: number): Promise<ReadingBoundary>;
   /** New data (`added` > 0) or a capture-state change (`health` set, nothing added). */
@@ -168,6 +171,14 @@ export const daemon: DataSource = {
   },
   boundary: async (id) => (await req<{ boundary: ReadingBoundary | null }>(`/v1/recordings/${encodeURIComponent(id)}/boundary`)).boundary,
   since: (id, after) => req(`/v1/recordings/${encodeURIComponent(id)}/since?after=${after}`),
+  verification: async (id, operationId) => {
+    try {
+      return await req<VerificationTrail>(`/v1/recordings/${encodeURIComponent(id)}/verification/${encodeURIComponent(operationId)}`);
+    } catch (e) {
+      if (e instanceof HttpError && e.status === 404) return null;
+      throw e;
+    }
+  },
   setBoundary: async (id, sequence) => (await req<{ boundary: ReadingBoundary }>(`/v1/recordings/${encodeURIComponent(id)}/boundary`, { method: 'POST', json: { sequence } })).boundary,
   subscribe(onChange, hooks) {
     const es = new EventSource('/v1/changes');
@@ -208,6 +219,8 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     config: async () => ({ version: 'bundle', llm: { configured: false, baseUrl: '', models: { nano: '', super: '', ultra: '' } }, adapters: [] }),
     recordings: async () => [bundle.recording],
     sources: async () => ({ sources: [], errors: [] }),
+    // A bundle carries the whole projection, so freshness is computed here exactly as the worker would.
+    verification: async (_id, operationId) => verificationFor(bundle.projection, operationId) ?? null,
     importSource: unsupported,
     projection: async () => bundle.projection,
     graph: async () => bundle.graph,

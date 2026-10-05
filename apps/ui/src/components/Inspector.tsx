@@ -7,6 +7,7 @@ import { useApp } from '../state.ts';
 import { Output, ProvenanceBadge, timeOf } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { summarizeInput } from './History.tsx';
+import { VerificationPanel } from './Verification.tsx';
 
 export function Inspector({ projection }: { projection: Projection }) {
   const selected = useApp((s) => s.selectedOp);
@@ -45,7 +46,7 @@ export function Inspector({ projection }: { projection: Projection }) {
         ))}
       </nav>
       <div className="insp-body">
-        {tab === 'detail' && <Detail op={op} projection={projection} />}
+        {tab === 'detail' && <><Detail op={op} projection={projection} /><VerificationPanel op={op} /></>}
         {tab === 'evidence' && <Evidence op={op} links={links} projection={projection} />}
         {tab === 'explain' && (op.endSequence === undefined
           ? <p className="muted">The result is not available at this step. Move to the result to inspect its evidence.</p>

@@ -131,6 +131,8 @@ Select a file from any excerpt to see its reads, intended edits, available befor
 
 ### C. Verification freshness, with honest limits
 
+**Implemented 5 Oct (P2-C):** per change, the test runs recorded after it, later changes to the same files, and a verdict (none recorded after / recorded after / last run predates a later change). A captured failure naming the changed file is labelled as a reference, and a run by another agent is labelled. Order only: no coverage, score or "safe" badge. Combined views on the daemon are not supported yet (bundles are).
+
 Place test executions relative to relevant edits. If a test ran before a later edit, say “last recorded run predates this edit.” When exact test scope or workspace revision is unknown, say so. A later passing command is not automatically proof it covers the change. Use captured command, root, timestamps/order, observed revision and declared test scope where present. No invented coverage score, “safe to merge,” or green badge inferred solely from proximity.
 
 ### D. Review trail from a claim to its evidence

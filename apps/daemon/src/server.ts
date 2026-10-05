@@ -304,6 +304,15 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       // The reader's "seen through here" mark for one recording (P2-A). It moves only on this
       // explicit request; opening or scrolling a recording never advances it.
+      // P2-C: test runs recorded after one change, computed on the whole session in the worker.
+      // Order only, never coverage; see packages/scene/src/verification.ts.
+      if (sub === 'verification' && subId && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'verification is computed per recording, not for a combined view');
+        app.recording(firstId);
+        const trail = await app.history.verification(id, subId);
+        if (!trail) throw new HttpError(404, 'not a captured change in this recording');
+        return json(res, trail);
+      }
       if (sub === 'since' && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');
         return json(res, await app.history.since(id, intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER)));
