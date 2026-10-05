@@ -17,7 +17,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | **Milestone** | **M0 → M1.** Working backend draft and base UI; baseline hardening precedes premium frontend expansion |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
-| **Next gate** | **B4 engineering candidate, release validation pending.** The builder resumed scaling before premium expansion. Worker/paged history, resource settings, retention and offline package checks are implemented; reference-machine 100k updates and valid 1 GiB imports now pass their measured gates. Exact-change CI and physical low-resource/lower-core/platform checks remain. [Current B4 evidence](review/08-b4-history-reader.md). No model key is needed for the core |
+| **Next gate** | **P1 presentation in progress.** B4 engineering merged via PR #22 after seven green CI jobs, at the builder's request. Physical/platform release validation remains open. The repository lens, material readers and all five semantic cues are implemented; acceptance is closing; [implementation and next steps](review/09-p1-content-origins.md) |
 
 ### Claimed
 
@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Codex | Complete and visually review P1 presentation and acceptance | UI presentation/readers, P1 browser tests, acceptance/handoff docs |
 | @harsh | P2-C verification freshness (tests recorded after a change; changed-after-last-check) | `packages/scene/src/verification.ts` (new), `apps/ui/src/components/Verification.tsx` (new), Inspector edit detail; one additive worker method + route (aware of open #23) |
 
 ---
@@ -64,13 +65,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Codex review
 - **When:** 2026-10-05
-- **P2 integration:** PR #21 reviewed against merged B4: schema v4 preserves normalized clock and reading boundaries; worker-owned whole-session digests return bounded previews and global counts. Migration and paged digest regression tests added. Only Harsh's scope plus compatibility fixes is included.
-- **PR/CI:** [PR #22](https://github.com/drishya-dev/drishya/pull/22), implementation `8e55907`: all seven CI jobs passed ([run](https://github.com/drishya-dev/drishya/actions/runs/37328879714)): checks/browser on Windows and Linux; offline package on Windows, Linux and macOS. Open for @harsh's required review.
-- **Did:** Resumed B4 at the builder's request. Added read-only source/derived-history worker ownership, streaming SQL ordering and schema migration, incremental reducer snapshots with conservative late-record rebuilds, paged global history/search/file/evidence/replay navigation, full captured prose/input artifact readers, low-resource budgets, virtualized file spine, explicit storage/forget behavior and checksummed offline packaging. Capture no longer rebuilds the full projection to update session labels. Fixed two real reader measurement/anchor bugs and recognized Codex `exec_command` shell aliases.
-- **Validation:** Typechecks and 206 unit tests; eight synthetic browser checks; two opted-in real Claude/Codex checks with operation detail and live anchors; five repeated scroll-anchor checks; isolated offline package/checksum/worker restart verification. Normal 5k-file map p95 update 278 ms / peak RSS 403 MiB. Long-session and five-run 1 GiB results, exact workloads and limitations are in [B4 reader evidence](review/08-b4-history-reader.md).
-- **Left half-done:** Physical 8 GiB/integrated-GPU and lower-core checks, real macOS/Linux harness acceptance and final release certification remain. Full projection/export compatibility paths and extreme unique-edit workloads have no bounded-memory guarantee. Exact-change CI/review must pass before merge. PR #21 is separate and must use whole-session summary facts rather than counting a page.
-- **Watch out for:** The earlier B4 deferral is superseded. Large UI history uses the worker; do not restore full projection calls from new features. Pre-existing package-manager manifest/lock edits are excluded from this B4 change. Nothing from selected real journals is committed.
-
+- **PR/CI:** B4 PR #22 is merged as `445786f`. Harsh PR #21 is merged as `d190586`, after all seven exact-head jobs passed. P1 continues on PR #23; final acceptance/CI are closing before merge, under the builder's explicit merge authorization.
+- **Did:** Integrated Harsh's reading marks with B4's whole-session worker summaries and schema-4 migration from both old schema-3 layouts, without mixing P1 into his PR. Fixed the Windows paged-reader viewport race. P1 adds a real repository lens, measured visible world/overview origins, all five semantic finite cues, adaptive captured-patch columns, terminal folding, parsed outcome strips with assertion navigation, copy feedback and responsive reading hierarchy. Reading intent holds the camera; capture continues. [P1 implementation/evidence](review/09-p1-content-origins.md).
+- **Validation:** Typechecks, 223 unit tests, production build and all 14 synthetic browser checks passed (two opt-in journeys skipped in the ordinary suite). The live five-move journey passed five consecutive runs. The separate ten-minute synthetic reader passed 112 live rounds / 336 added steps, <2 px anchor/return error, peak 509 DOM nodes. Exact-head CI must pass before PR #23 merges. No real session import for this presentation work.
+- **Watch out for:** The visual candidate is not a final design or human preference claim. Next is P2 file-centred utility/verification freshness and the comprehension pilot. Preserve the worker/page boundary. B4 physical/platform release validation remains open. Pre-existing package-manager edits, model-planning notes and screenshots/traces remain local.
 ## Next up
 
 **Current backend-first sequence:**
@@ -175,6 +173,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 ---
 
+| 2026-10-05 | **Proceed to P1 on merged B4 engineering baseline** | Builder requested merging our B4 work and proceeding to P1. Physical release certification remains open. Content shapes and finite origin contours must preserve reader anchors and immediate captured text. | `review/09-p1-content-origins.md` |
+
 ## Open decisions
 
 | # | Question | Blocks | Blueprint |
@@ -198,3 +198,12 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 3. **Tick "Next up" only when merged.** A ticked box means the other person can build on it.
 4. **Append to "Decisions made" whenever something is settled** that a future agent would otherwise re-litigate. One line, with the why. This is the highest-value part of the file.
 5. **If a decision contradicts the blueprint, update the blueprint too** and say so in the decisions row. The blueprint is the source of truth, so it must not go stale — a stale source of truth is worse than none.
+
+### 5 October integration and presentation decisions
+
+| Date | Decision | Reason | Record |
+|---|---|---|---|
+| 2026-10-05 | **Reading marks use whole-recording worker facts; store schema 4 combines both prior schema-3 layouts** | P2 could otherwise count only a B4 browser page or omit the normalized clock during integration. Harsh's scope was merged separately after seven green CI jobs. | PR #21; CODEBASE |
+| 2026-10-05 | **Timeline position drives semantic motion; consume an arrival only after its measured frame** | Combined views repeat source sequences, and synchronous layout could otherwise lose an arrival before paint. Same-step page loads and rewinds are not new work. | `lib/choreography.ts`, P1 record |
+| 2026-10-05 | **Visible repository lens plus background world; qualified fallback when neither node is visible** | A mostly obscured map felt like wallpaper. A second view of the same real geometry makes file origins usable without guessing locations or import/runtime links. Map-off still removes both renderers. | P1 record |
+| 2026-10-05 | **P1 is a presentation engineering candidate, not a frozen design or proof of a market moat** | Builder explicitly rejected decorative transcripts and emphasized creativity in theme, colour, motion and comprehension. Human comparison with raw logs remains P2 validation. | VISION; P1 record |
