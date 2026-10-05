@@ -33,6 +33,8 @@ The 30 Sep audit is historical evidence, not the current code status. B0/B1 fixe
 
 ## Next bounded task
 
+For task/model selection, read [MODEL_WORK_PLAN](MODEL_WORK_PLAN.md). Use Sol for premium UI, evidence/graph semantics, paging/worker migration and cleanup design; Terra for bounded follow-up implementation, fixtures, routine CI and docs after the relevant contracts are settled. P1-A and the first P1-B vertical slice are the recommended next Sol tasks. This is guidance, not an app model-setting change or acceptance of proposed product features; B4 remains deferred.
+
 B0–B3 are complete in the accepted baseline. B2 includes opted-in real Claude Code and Codex browser acceptance (`tests/browser/b2-real.spec.ts`, counts-only reporting). Continue P1 content-shaped visualization and origin motion on the integrated app, testing readability on actual long/fast sessions. Product experience work may proceed while B4 long-session scaling is deferred by the builder. New UI code should use the existing source/API boundary and avoid treating a full in-memory projection as a permanent contract. B4 still needs interaction/peak-memory and low-resource checks, explicit store-usage/retention behavior, real-harness/release verification, and eventually a disk-backed paged history plus worker boundary. Repeat the 100k browser burst and valid 1 GiB import before any broad release or large-session promise.
 
 After B0, prove real persisted baseline; then capture/reconnect lifecycle and stable live history. Bring the prototype's useful navigation into the integrated app. See roadmap B1–B4 for acceptance tests. The first premium feature is a useful return-to-work view, paired with the content-shaped visual system.
