@@ -46,7 +46,20 @@ describe('readJsonl', () => {
       cursor = r.cursor;
     }
     expect(types.filter((t) => t === 'record')).toHaveLength(1);
-    expect(types).toContain('oversized');
+    expect(types.filter((t) => t === 'oversized')).toHaveLength(1);
+  });
+
+  it('reports one gap for each oversized line across bounded turns', async () => {
+    writeFileSync(file, `{"big":"${'x'.repeat(5000)}"}\n{"big":"${'y'.repeat(5000)}"}\n`);
+    let cursor = initialCursor();
+    let gaps = 0;
+    for (let i = 0; i < 20; i++) {
+      const r = await readJsonl(file, cursor, { maxRecordBytes: 1000, maxReadBytes: 1500 });
+      gaps += r.records.filter((x) => x.type === 'oversized').length;
+      if (r.cursor.offset === cursor.offset) break;
+      cursor = r.cursor;
+    }
+    expect(gaps).toBe(2);
   });
 
   it('starts a new generation when the file is truncated', async () => {

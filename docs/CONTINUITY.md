@@ -22,7 +22,7 @@
 
 ## Current evidence
 
-B3 integrated reader/navigation work merged as PR #15 (`6346339`) after Windows/Linux CI. B4's first slice merged as PR #16 (`8df0a5d`). Its isolated CLI tarball passed clean offline install, synthetic imports/launch/API and CI on Windows, Linux and macOS. The repeatable normal synthetic backend/index probe is recorded in [B4 findings](review/07-b4-scale-install.md). A 100k-observation probe exposed quadratic reducer work, now fixed, but still uses ~764 MiB RSS and the browser still loads full projection. **B4 remains red/incomplete**; prioritize bounded history/worker/browser measurement over new visuals.
+B3 integrated reader/navigation work merged as PR #15 (`6346339`) after Windows/Linux CI. B4's first slice merged as PR #16 (`8df0a5d`). Its isolated CLI tarball passed clean offline install, synthetic imports/launch/API and CI on Windows, Linux and macOS. The repeatable synthetic probes and second B4 measurement are in [B4 findings](review/07-b4-scale-install.md). Normal 10k capture-to-DOM passes the proposed latency and memory budgets; a 100k live update took 4.35 seconds and valid 1 GiB import reached ~2 GiB RSS. **B4 remains red/incomplete**: full projection transfer and main-thread composition require a disk-backed paged design and worker boundary before product-stage visuals.
 
 On 30 Sep, typechecks, 96 tests and Vite 8 build passed. Synthetic persistence/restart/API/viewerless live checks passed. Discovery saw 603 local sources. Four real journals were parsed/reduced/composed **in memory only**, zero parser exceptions; Claude exposed compaction and unsupported-record gaps. Two new synthetic sanitation probes failed. These results are scoped, not production certification.
 
@@ -30,7 +30,7 @@ The 30 Sep audit is historical evidence, not the current code status. B0/B1 fixe
 
 ## Next bounded task
 
-B0–B2 are complete in the accepted baseline. B2 includes opted-in real Claude Code and Codex browser acceptance (`tests/browser/b2-real.spec.ts`, counts-only reporting). B3's integrated base UI is in the current branch with independent reader position, content-shaped expansion, paged material and bounded browser caches, session choice, file/tool navigation, and synthetic browser coverage. Merge B3 after CI; then measure and address B4 scale/install gates. Do not proceed straight to Pixi, new themes or model features.
+B0–B3 are complete in the accepted baseline. B2 includes opted-in real Claude Code and Codex browser acceptance (`tests/browser/b2-real.spec.ts`, counts-only reporting). B4 is next. The immediate engineering slice is a disk-backed, paged projection/history API and bounded browser composition, with capture and projection CPU separated so appending to a long journal does not stall the API. Keep the current full API for small recordings during migration. Repeat the 100k browser burst and valid 1 GiB import before moving to Pixi, new themes or model features.
 
 After B0, prove real persisted baseline; then capture/reconnect lifecycle and stable live history. Bring the prototype's useful navigation into the integrated app. See roadmap B1–B4 for acceptance tests. The first premium feature is a useful return-to-work view, paired with the content-shaped visual system.
 

@@ -23,21 +23,18 @@ function command(executable: string, args: string[], cwd = root): string {
 }
 
 let server: ReturnType<typeof spawn> | undefined;
-try {
-  const packed = JSON.parse(command(process.execPath, [npmCli, 'pack', '--json', '--pack-destination', scratch], join(root, 'dist/package'))) as { filename: string }[];
-  const tarball = join(scratch, packed[0]!.filename);
-  command(process.execPath, [npmCli, 'install', '--prefix', installed, tarball, '--ignore-scripts', '--offline', '--no-audit', '--no-fund']);
-  const help = command(process.execPath, [entry]);
-  assert.match(help, /drishya serve/);
-  const fixture = join(installed, 'node_modules', '@drishya-dev', 'cli', 'fixtures', 'synthetic');
-  const claude = command(process.execPath, [entry, 'import', join(fixture, 'claude/checkout-fix.jsonl')]);
-  const codex = command(process.execPath, [entry, 'import', join(fixture, 'codex/rollout-checkout-review.jsonl')]);
-  assert.match(claude, /\+34 observations, 0 capture gaps/);
-  assert.match(codex, /\+17 observations, 0 capture gaps/);
-  assert.match(command(process.execPath, [entry, 'list']), /claude-code[\s\S]*codex|codex[\s\S]*claude-code/);
-  const demo = join(scratch, 'demo.json');
-  command(process.execPath, [entry, 'demo-bundle', '--out', demo]);
-  assert.equal(JSON.parse(readFileSync(demo, 'utf8')).recording.title, 'Free orders reach checkout');
+async function stopServer() {
+  if (!server || server.exitCode !== null) return;
+  const stopping = server;
+  await new Promise<void>((done) => {
+    stopping.once('close', () => done());
+    stopping.kill();
+    setTimeout(done, 5_000).unref();
+  });
+  server = undefined;
+}
+
+async function launchServer(): Promise<{ base: string; cookie: string }> {
   server = spawn(process.execPath, [entry, 'serve', '--port', '0', '--no-open'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = '';
   server.stdout!.on('data', (chunk: Buffer) => { output += chunk.toString(); });
@@ -54,20 +51,40 @@ try {
   assert.equal(session.status, 200);
   const cookie = session.headers.get('set-cookie')?.split(';')[0];
   assert.ok(cookie);
+  return { base, cookie };
+}
+
+async function verifyRecordings(base: string, cookie: string) {
   const recordings = await fetch(`${base}/v1/recordings`, { headers: { cookie } });
   assert.equal(recordings.status, 200);
   const body = await recordings.text();
   assert.match(body, /claude-code/);
   assert.match(body, /codex/);
-  console.log('Packed CLI: isolated offline install, Claude/Codex import, demo bundle, local UI and authenticated API passed.');
+}
+
+try {
+  const packed = JSON.parse(command(process.execPath, [npmCli, 'pack', '--json', '--pack-destination', scratch], join(root, 'dist/package'))) as { filename: string }[];
+  const tarball = join(scratch, packed[0]!.filename);
+  command(process.execPath, [npmCli, 'install', '--prefix', installed, tarball, '--ignore-scripts', '--offline', '--no-audit', '--no-fund']);
+  const help = command(process.execPath, [entry]);
+  assert.match(help, /drishya serve/);
+  const fixture = join(installed, 'node_modules', '@drishya-dev', 'cli', 'fixtures', 'synthetic');
+  const claude = command(process.execPath, [entry, 'import', join(fixture, 'claude/checkout-fix.jsonl')]);
+  const codex = command(process.execPath, [entry, 'import', join(fixture, 'codex/rollout-checkout-review.jsonl')]);
+  assert.match(claude, /\+34 observations, 0 capture gaps/);
+  assert.match(codex, /\+17 observations, 0 capture gaps/);
+  assert.match(command(process.execPath, [entry, 'list']), /claude-code[\s\S]*codex|codex[\s\S]*claude-code/);
+  const demo = join(scratch, 'demo.json');
+  command(process.execPath, [entry, 'demo-bundle', '--out', demo]);
+  assert.equal(JSON.parse(readFileSync(demo, 'utf8')).recording.title, 'Free orders reach checkout');
+  const first = await launchServer();
+  await verifyRecordings(first.base, first.cookie);
+  await stopServer();
+  const second = await launchServer();
+  await verifyRecordings(second.base, second.cookie);
+  console.log('Packed CLI: isolated offline install, Claude/Codex import, demo bundle, authenticated API and persisted restart passed.');
 } finally {
-  if (server && server.exitCode === null) {
-    await new Promise<void>((done) => {
-      server!.once('close', () => done());
-      server!.kill();
-      setTimeout(done, 5_000).unref();
-    });
-  }
+  await stopServer();
   if (!resolve(scratch).startsWith(resolve(tmpdir()) + sep)) throw new Error('test directory escaped system temp');
   rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }

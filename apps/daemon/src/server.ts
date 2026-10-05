@@ -141,7 +141,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     return !!sid && sessionValid(sid);
   };
 
-  const server = createServer(async (req, res) => {
+  const inFlight = new Set<Promise<void>>();
+  const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
     try {
       // DNS-rebinding and cross-site defences: the Host must be us, and so must any Origin.
@@ -184,6 +185,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (!res.headersSent) json(res, body, status);
       else res.end();
     }
+  };
+  const server = createServer((req, res) => {
+    const request = handleRequest(req, res);
+    inFlight.add(request);
+    void request.finally(() => inFlight.delete(request));
   });
 
   const route = async (req: IncomingMessage, res: ServerResponse, url: URL) => {
@@ -340,14 +346,18 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     launchUrl: `${url}/#token=${token}`,
     app,
     server,
-    close: () =>
-      new Promise<void>((ok) => {
+    close: async () => {
+      await new Promise<void>((ok) => {
         for (const c of clients) c.end();
         app.ingest.off('change', onChange);
         app.ingest.off('health', onHealth);
         server.close(() => ok());
         server.closeAllConnections();
-      }),
+      });
+      // Aborting a socket does not cancel discovery/import already awaiting disk I/O. Let
+      // handlers finish before the caller closes SQLite, or they race a finalized statement.
+      await Promise.allSettled([...inFlight]);
+    },
   };
 }
 
