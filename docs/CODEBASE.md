@@ -4,6 +4,8 @@
 
 ## Material presentation amendment — 6 October 2026
 
+`ArtifactReader` adds deliberate matching-line navigation and validated go-to-line within actual stored source, retaining at most 64 page offsets and one bounded page. Controls stay mounted during loading. `common.useArtifact` now keys immutable blob-backed pages by complete artifact descriptor plus source/recording/scope/range, avoiding focus/selection loss on unrelated appends; non-blob/unlisted material remains revision-keyed. Metadata changes still invalidate. `ArtifactView.totalLines` comes from the existing slice response. See [source navigation](review/17-source-navigation.md).
+
 `History.ReadPreview` opens its exact read artifact through existing in-place expansion, using returned artifact coordinates for preview numbering. Read expansion now shows provenance/ranges and reserves the full passage width. `ArtifactReader` supports literal case-insensitive find within its loaded 200-line code page; query persists across pages, highlights source-coordinate lines and resets on artifact change. This is not whole-file/session search or current-file access. See [captured-range reading](review/16-captured-range-reader.md).
 
 `Origins.toolTransfer` adds a finite instrument-silhouette transfer from a hit-tested visible dock glyph to its measured action-header glyph. It copies only app-owned SVG paths; DOM text stays stationary. Native/MCP resting marks remain named and filtering-compatible. It reuses the existing three-arrival budget, ownership/cancellation and reduced-motion/follow gates. See [toolbox emission](review/15-toolbox-emission.md).

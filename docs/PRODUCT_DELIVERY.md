@@ -4,6 +4,8 @@ The builder's latest instruction is to **finish the working product in `apps/ui`
 
 ## What you can use
 
+**Source navigation:** cycle matching lines with buttons or Enter/Shift+Enter and go to a validated stored source line, fetching a bounded page when needed. Unrelated live work preserves an unchanged source reader's focus/query/page/scroll. See [17](review/17-source-navigation.md); this does not search an entire file or read today's workspace.
+
 **Source reading refinement:** open the exact read excerpt directly from its preview range; deliberate expansion uses the full passage width and exposes historical provenance/ranges. Find highlights matching lines only in the loaded source page. Hover/focus clarifies the visible excerpt without moving the reader. [16](review/16-captured-range-reader.md) records implementation, tests and remaining source-navigation work.
 
 1. Start the local daemon and open its authenticated launch link. The workspace groups imported recordings and discovered Claude Code/Codex journals by project. Search title/project, filter harness or date, import an existing session, or watch its journal. Discovery does not import everything automatically. Select several imported recordings to open one combined chronology.

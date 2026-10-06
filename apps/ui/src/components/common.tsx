@@ -26,6 +26,7 @@ export interface ArtifactView {
   start?: number;
   nextStart?: number;
   hasMore?: boolean;
+  totalLines?: number;
 }
 
 /** What a slice means to a reader: content, an honest unavailable reason, and any cut. */
@@ -33,19 +34,23 @@ export function viewOf(s: ArtifactSlice): ArtifactView {
   if (!s.available) return { artifact: s.artifact, unavailable: s.reason === 'no-longer-stored' ? 'Captured, but no longer stored (deleted or past retention).' : 'Not captured by the harness.' };
   const end = s.start + s.returnedLines;
   const partial = s.hasMore || s.truncated ? `Showing lines ${(s.start + 1).toLocaleString()}–${end.toLocaleString()} of ${s.totalLines.toLocaleString()}${s.truncated ? ' (cut at the response size limit)' : ''}` : undefined;
-  return { artifact: s.artifact, text: s.text, partial, start: s.start, nextStart: end, hasMore: s.hasMore };
+  return { artifact: s.artifact, text: s.text, partial, start: s.start, nextStart: end, hasMore: s.hasMore, totalLines: s.totalLines };
 }
 
 export function useArtifact(artifactId: string | undefined, opts: { scope?: MaterialScope; start?: number; count?: number; retry?: number } = {}): ArtifactView {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
   const revisions = useApp((s) => s.renderedRevisions);
-  const blob = useApp((s) => s.projection?.artifacts.find((a) => a.id === artifactId)?.blob);
+  const descriptor = useApp((s) => s.projection?.artifacts.find((a) => a.id === artifactId));
   const revision = recordingId?.split('+').map((id) => revisions[id] ?? 0).join(':');
   const scope = opts.scope ?? 'reader';
   const start = opts.start ?? 0;
   const count = opts.count ?? (scope === 'preview' ? 12 : 200);
-  const key = artifactId && recordingId && source ? `${sourceId(source)}/${recordingId}/${revision}/${artifactId}/${blob ?? 'unavailable'}/${scope}/${start}/${count}` : undefined;
+  // Stored blobs are immutable. Unrelated journal appends must not replace a reader
+  // with a skeleton and destroy selection/focus. Metadata changes still invalidate;
+  // unavailable or unlisted artifacts stay revision-keyed so late content can arrive.
+  const materialVersion = descriptor?.blob ? JSON.stringify(descriptor) : revision;
+  const key = artifactId && recordingId && source ? `${sourceId(source)}/${recordingId}/${materialVersion}/${artifactId}/${scope}/${start}/${count}` : undefined;
   const [state, setState] = useState<{ key: string; view: ArtifactView }>();
   useEffect(() => {
     if (!key || !artifactId || !source || !recordingId) return;
@@ -61,14 +66,14 @@ export function useArtifact(artifactId: string | undefined, opts: { scope?: Mate
 
 // ─── code ────────────────────────────────────────────────────────────────────────────────
 
-export function CodeView({ text, startLine = 1, path, maxLines, highlightLines }: { text: string; startLine?: number; path?: string; maxLines?: number; highlightLines?: Set<number> }) {
+export function CodeView({ text, startLine = 1, path, maxLines, highlightLines, activeLine }: { text: string; startLine?: number; path?: string; maxLines?: number; highlightLines?: Set<number>; activeLine?: number }) {
   const lang = langOf(path);
   const all = text.replace(/\n$/, '').split('\n');
   const lines = maxLines ? all.slice(0, maxLines) : all;
   return (
     <div className="code" role="region" aria-label={path ? `Content of ${path}` : 'Code'}>
       {lines.map((l, i) => (
-        <div key={i} className={`ln${highlightLines?.has(startLine + i) ? ' ln-hi' : ''}`}>
+        <div key={i} data-source-line={startLine + i} aria-current={activeLine === startLine + i ? 'location' : undefined} className={`ln${highlightLines?.has(startLine + i) ? ' ln-hi' : ''}${activeLine === startLine + i ? ' ln-current' : ''}`}>
           <span className="ln-no">{startLine + i}</span>
           <span className="ln-tx">
             <Highlighted line={l} lang={lang} />
