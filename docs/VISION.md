@@ -44,6 +44,10 @@ The centre remains the agent and its accumulated work; native tools and MCP inst
 
 **6 October follow-up:** the builder proposed all three directions as different ways to explore the same product. Keep Studio as the default follow-work view, Relay as optional agent comparison, and Atlas as optional repository exploration. They share one recording and evidence model. Switching must preserve selection, reading position and replay cutoff; it must never restart capture or force return to latest. This is a product direction for staged integration, not a claim that the synthetic prototypes already implement production view switching. The contract is detailed in [the design studies](review/10-p1-design-directions.md).
 
+**6 October visual follow-up:** the builder explicitly rejected a dull treatment and asked that theme, boundaries, animation and especially colours create a recognizable product impression. The Claude orange/grey example describes recognizability, not a request to copy its palette. The current candidate uses petrol ink and jade with copper edits and lilac external-tool identity; Relay and Atlas retain distinct compositions and tonal families. Treat §5's updated palette as the current candidate. Preserve readability, provenance and finite motion; technical checks do not prove aesthetic preference.
+
+**Latest visual feedback, same day, takes precedence:** the builder prefers the boxes/content surfaces, their colours and aspects of the presentation in `docs/prototype/index.html` over the current studies. The new themes are “not that great”; no palette or rail-only treatment is approved as the final direction. The earlier request against boxes does **not** prohibit well-crafted bounded source, diff, tool and result surfaces. Use the older prototype as the primary material/presentation reference; combine its strengths with the three task views and improve the palette through comparison. Retain the new colour studies as experiments. Keep the integrated neutral base while that comparison is unresolved. Agent prose remains unboxed, and capture/reader correctness still wins over copying simulated prototype behaviour.
+
 > Like Jarvis — full of visualization, putting up its own working. The difference between a **$10 video edit and a $1,000 one**: the smoothness with which things come up and interact with you.
 
 > People prompt and leave, read the final text, and don't know the code, the decisions, the edits, the rules. That is what makes vibe coding a threat. Show them the agent's work turning from raw text into actual visuals — so they understand it, and never want to go back.
@@ -162,21 +166,22 @@ The rule from your vision — *not boxes* — means **no generic card template**
 
 *Revised 21 Sep after review of the first prototype: the functionality and what it shows were right; the look was too busy. Glow pools, blur, grain, a serif voice and five accents read as messy. The standard is now the tools developers already trust — Linear, Vercel, GitHub.*
 
-**Neutral, flat, precise.** A graphite base, flat surfaces with a 1 px hairline border and a small radius, and a solid app frame — crown, dock and filmstrip — separated by hairlines. No glow pools, no frosted blur, no grain, no vignettes. Precision in alignment and spacing does the work that effects used to.
+**Precise, content-shaped, recognizable.** The integrated base retains its neutral palette while the builder's preferred older prototype surfaces guide the next pass. Tinted studies explore petrol ink/jade, copper changes and lilac external tools, but are not the chosen visual identity. Bounded surfaces with a small radius, a distinct material backing, restrained border/shadow and useful header are welcome when they aid reading. Agent prose stays on the world. Keep the app frame clear; no decorative glow pools, frosted blur, grain or vignettes.
 
 **"No boxes" means no *labelled* boxes.** What the builder rejected is the `model thinking:` / `tool call:` / `output:` stack. A clean, content-shaped surface for a file read or a diff is the right developer idiom. The agent's prose stays unboxed: plain text with a single agent-coloured rule at its left edge.
 
-**Colour only where it means something.** Neutral greys for everything structural. Colour is reserved for:
+**Colour keeps a role.** Structure uses coordinated ink tints; brighter colours identify navigation/material/agent roles. Colour is reserved for:
 
 | Meaning | Colour |
 |---|---|
-| Agent identity | Claude `#E0896A` · Codex `#6FC3B3` · one hue per agent |
-| Pass / added | `#4FC38A`, with a `rgba(46,160,67,.14)` line wash |
-| Fail / removed | `#F2706A`, with a `rgba(248,81,73,.13)` line wash |
-| Edited file | `#E6B98A` |
-| Interactive focus, MCP | `#8B9BFF` |
+| Agent identity | One distinct stable hue per agent; prototype Claude copper, Explore lilac, Codex jade. Existing integrated identity assignments remain stable |
+| Pass / added | `#86D8AD`, with a restrained green line wash |
+| Fail / removed | `#F09B99`, with a restrained red line wash |
+| Edited file / change material | Copper `#EDB783` |
+| Interactive focus / source reading rail | Jade `#7DE0C5` |
+| MCP / external material | Lilac `#C0A9ED` |
 
-Base `#0A0A0C`, surfaces `#111216` / `#16171C`, borders `rgba(255,255,255,.07–.18)`, text `#EDEDEF` / `#A1A1AA` / `#71717A` / `#52525B`. Syntax colours follow GitHub Dark (keywords `#FF7B72`, strings `#A5D6FF`, functions `#D2A8FF`, numbers `#79C0FF`, comments `#8B949E`). Colour never carries meaning alone; shape and label always back it up.
+**Study tokens, not the selected production palette:** dark base `#0B1B1E`, chrome `#0E2326`, source `#10282B`, surfaces `#173337` / `#204146`, hairline `#294345`, text `#E6F2EC` / `#A1BBB6` / `#829F99`. Relay uses blue ink `#101F31` / `#14283D`; Atlas uses sage paper `#EEEEDE` / `#E4E9D8` and darker role colours for light-background contrast. Prototype primary/secondary/caption tokens are checked at ≥4.5:1 against the base, source and chrome. This token check is not a whole-app accessibility certificate. Integrated neutral tokens remain in `styles.css`. Existing code syntax remains distinct from UI role colours. Colour never carries meaning alone; shape and label always back it up. The original `docs/prototype/index.html` remains untouched and is the stronger builder-preferred presentation reference.
 
 **Type** — one sans (Inter / Geist, system fallback) for UI and prose, one mono (Geist Mono / JetBrains Mono / Cascadia) for code and paths. No serif, no italics, no letter-spaced uppercase labels. Sentence case everywhere.
 
