@@ -442,3 +442,12 @@ code, kbd, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
   .history-transport .reading-status { flex-basis: 100%; }
   .history-transport .transport-spacer { display: none; }
 }
+/* P2-C: test runs after a change (order only, never a coverage badge) */
+.verify { border-top: 1px solid var(--line-2); margin-top: 12px; padding-top: 10px; }
+.verify h4 { margin: 0 0 4px; font-size: 13px; font-weight: 600; }
+.verify-verdict { margin: 0 0 2px; font-size: 13px; }
+.verify-changed-after-last-check .verify-verdict, .verify-no-check-recorded .verify-verdict { color: var(--edited); }
+.verify ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.verify li { padding: 2px 0; }
+.verify-open { background: none; border: 0; padding: 0; color: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+.verify-open:hover, .verify-open:focus-visible { text-decoration-color: currentColor; }

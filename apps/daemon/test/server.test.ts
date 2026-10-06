@@ -429,3 +429,17 @@ describe('reading boundary', () => {
     expect((await call(`/v1/recordings/${id}/boundary`, { headers: auth() })).body.boundary.sequence).toBe(last);
   });
 });
+
+// P2-C: verification freshness over the API, computed by the history worker on the whole session.
+describe('verification freshness', () => {
+  it('reports the test runs recorded after a change, and 404s for anything that is not a change', async () => {
+    const p = (await call(`/v1/recordings/${recId}/projection`, { headers: auth() })).body;
+    const edit = p.operations.find((o: { kind: string }) => o.kind === 'edit');
+    const r = await call(`/v1/recordings/${recId}/verification/${encodeURIComponent(edit.id)}`, { headers: auth() });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ operationId: edit.id, verdict: 'checked-after' });
+    expect(r.body.lastCheck.status).toBe('ok');
+    const test = p.operations.find((o: { kind: string }) => o.kind === 'test');
+    expect((await call(`/v1/recordings/${recId}/verification/${encodeURIComponent(test.id)}`, { headers: auth() })).status).toBe(404);
+  });
+});

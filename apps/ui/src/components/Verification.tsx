@@ -1,0 +1,80 @@
+// P2-C verification freshness, shown for one change in the operation detail. Wording states order
+// only: which runs were recorded after the change, and whether the file changed after the last.
+// It never says a run covers the change, and never shows a "safe" badge.
+
+import { useEffect, useState } from 'react';
+import type { Operation } from '@drishya/contracts';
+import type { VerificationTrail } from '@drishya/scene';
+import { useApp } from '../state.ts';
+
+const VERDICT: Record<VerificationTrail['verdict'], string> = {
+  'no-check-recorded': 'No test run was recorded after this change.',
+  'checked-after': 'A test run was recorded after this change.',
+  'changed-after-last-check': 'The last recorded test run predates a later change to this file.',
+};
+
+const CAVEAT: Record<VerificationTrail['verdict'], string> = {
+  'no-check-recorded': 'That means none in this capture, not that none was run.',
+  'checked-after': 'Running later does not show that the run exercises this change.',
+  'changed-after-last-check': 'The latest version of the file has no recorded run after it.',
+};
+
+export function VerificationPanel({ op }: { op: Operation }) {
+  const source = useApp((s) => s.source);
+  const recordingId = useApp((s) => s.recordingId);
+  const select = useApp((s) => s.select);
+  const [trail, setTrail] = useState<VerificationTrail | null>();
+  const [error, setError] = useState<string>();
+  // The daemon computes this per recording; a bundle computes it locally on its whole (possibly
+  // combined) projection, so a combined bundle view is fine.
+  const supported = (op.kind === 'edit' || op.kind === 'write') && !!source?.verification && !!recordingId && (source.kind === 'bundle' || !recordingId.includes('+'));
+
+  useEffect(() => {
+    setTrail(undefined);
+    setError(undefined);
+    if (!supported) return;
+    let live = true;
+    source!.verification!(recordingId!, op.id).then((t) => live && setTrail(t)).catch((e) => live && setError((e as Error).message));
+    return () => {
+      live = false;
+    };
+  }, [supported, source, recordingId, op.id]);
+
+  if (!supported) return null;
+  if (error) return <section className="verify"><p className="muted small">Could not load test runs after this change: {error}</p></section>;
+  if (trail === undefined) return <section className="verify"><div className="skeleton" /></section>;
+  if (trail === null) return null;
+
+  const last = trail.lastCheck;
+  return (
+    <section className={`verify verify-${trail.verdict}`} aria-label="Test runs after this change">
+      <h4>Test runs after this change</h4>
+      <p className="verify-verdict">{VERDICT[trail.verdict]}</p>
+      <p className="muted small">{CAVEAT[trail.verdict]}</p>
+      {last && (
+        <p className="small">
+          Last recorded run:{' '}
+          <button className="link verify-open" onClick={() => select(last.operationId)}>{last.title}</button>
+          {last.detail && <span className="muted"> · {last.detail}</span>}
+          {last.status === 'error' && <span className="bad"> · failed</span>}
+          {last.namesChangedFile && <span className="muted"> · a captured failure names this file</span>}
+          {!last.sameAgent && <span className="muted"> · run by another agent</span>}
+        </p>
+      )}
+      {trail.totalChecks > 1 && <p className="muted small">{trail.totalChecks} runs were recorded after this change in total.</p>}
+      {trail.laterChanges.length > 0 && (
+        <div className="small">
+          Later changes to {trail.paths.length === 1 ? 'this file' : 'these files'}:
+          <ul>
+            {trail.laterChanges.map((c) => (
+              <li key={c.operationId}>
+                <button className="link verify-open" onClick={() => select(c.operationId)}>{c.title}</button>
+                {last && c.sequence > last.sequence && <span className="muted"> · after the last recorded run</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}

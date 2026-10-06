@@ -6,6 +6,7 @@
 import { asOfProjection, type Agent, type Operation, type OperationKind, type Projection, type Prose, type TimelineItem } from '@drishya/contracts';
 export { asOfProjection } from '@drishya/contracts';
 export { sinceBoundary, type SinceDigest, type SinceItem } from './since.ts';
+export { verificationFor, type VerificationCheck, type VerificationTrail } from './verification.ts';
 
 export const COMPOSER_VERSION = 'c1';
 
