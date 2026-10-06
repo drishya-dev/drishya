@@ -9,10 +9,10 @@ import { useApp } from '../state.ts';
 
 const TONE: Record<HeatCell['tone'], string> = {
   read: '#C8C8D0',
-  search: '#7DE0C5',
-  write: '#EDB783',
-  fail: '#F09B99',
-  pass: '#86D8AD',
+  search: '#8B9BFF',
+  write: '#E6B98A',
+  fail: '#F2706A',
+  pass: '#4FC38A',
 };
 
 interface Cam {
