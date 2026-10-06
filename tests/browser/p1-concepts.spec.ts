@@ -22,7 +22,7 @@ test.afterAll(async () => {
   }
 });
 
-for (const direction of ['studio', 'relay', 'atlas']) {
+for (const direction of ['studio', 'relay', 'atlas', 'canvas']) {
   test(`${direction} preserves captured reading, file filtering, passage arrivals and narrow-screen access`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -61,7 +61,7 @@ for (const direction of ['studio', 'relay', 'atlas']) {
     await page.mouse.wheel(0, 100);
     await expect(page.locator('.relationships path')).toHaveCount(0);
     await expect(page.locator('.history')).toContainText("if (!cart.total) return 'missing-total';");
-    if (direction === 'atlas') await page.locator('.world [data-file="src/checkout/guard.ts"]').click();
+    if (direction === 'atlas' || direction === 'canvas') await page.locator('.world [data-file="src/checkout/guard.ts"]').click();
     else await page.locator('.file-index [data-file="src/checkout/guard.ts"]').click();
     await expect(page.locator('.selection-note')).toHaveText('src/checkout/guard.ts');
     expect(await page.locator('.history .operation').evaluateAll((els) => els.every((el) => el.textContent?.includes('guard.ts')))).toBe(true);
@@ -88,3 +88,38 @@ for (const direction of ['studio', 'relay', 'atlas']) {
     expect(errors).toEqual([]);
   });
 }
+
+
+test('canvas keeps theme and selected evidence across exploration views, adapts its crown and cancels arrival shells', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(new URL('/concepts/canvas.html', server.launchUrl).href);
+  await expect(page.locator('.agent-crown button')).toHaveCount(1);
+  await expect(page.locator('.agent-crown')).toHaveAttribute('aria-label', 'Recorded session context');
+  await page.getByRole('button', { name: 'Switch to light theme', exact: true }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'light');
+  await page.locator('.world [data-file="src/checkout/guard.ts"]').click();
+  await expect(page.locator('.selection-note')).toHaveText('src/checkout/guard.ts');
+  await expect(page.locator('.agent-crown button')).toHaveCount(3);
+  for (const view of ['Compare', 'Repository', 'Follow']) {
+    await page.locator('.view-switch button').filter({ hasText: new RegExp(`^${view}$`) }).click();
+    await expect(page.locator('body')).toHaveAttribute('data-view', view.toLowerCase());
+    await expect(page.locator('body')).toHaveAttribute('data-theme', 'light');
+    await expect(page.locator('.selection-note')).toHaveText('src/checkout/guard.ts');
+    expect(await page.locator('.history .operation').evaluateAll((els) => els.every((el) => el.textContent?.includes('guard.ts')))).toBe(true);
+  }
+  await page.getByRole('button', { name: 'Switch to charcoal theme', exact: true }).click();
+  await page.getByRole('button', { name: 'Clear selection ↗' }).click();
+  await page.screenshot({ path: '.local/p1-unified-canvas.png' });
+  await page.reload();
+  await page.getByRole('button', { name: 'Reveal next captured passage ↗' }).click();
+  await expect(page.locator('.relationships path').first()).toBeAttached();
+  await page.getByRole('button', { name: 'Switch to light theme', exact: true }).click();
+  await expect(page.locator('.relationships path')).toHaveCount(0);
+  await expect(page.locator('.arrival-shell')).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('.view-switch')).toBeVisible();
+  await page.getByRole('button', { name: 'Tools', exact: true }).click();
+  await expect(page.locator('.tools')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: '.local/p1-unified-canvas-mobile.png' });
+});

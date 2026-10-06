@@ -54,3 +54,10 @@ Next bounded implementation: carry Studio's hierarchy into the existing React re
 ## End each session
 
 Remove your claim; update your last-session block and relevant docs. Record decisions with reasons. Commit with the agent Co-Authored-By trailer. State exactly which checks ran and which remain unverified. The builder explicitly authorizes Codex to verify and merge green PRs; retain each builder's original attribution and separate scope. Do not repeat the old claim that the next step is only a cosmetic frontend pass.
+
+
+## Latest correction — unified canvas, 6 October
+
+This supersedes the Studio-default/per-view palette recommendation above. The builder rejected the three studies as worse than the original `docs/prototype/index.html`: material boundaries and actual content must be more distinct; the left must not become a generic file sidebar; the workspace must feel continuous. Use only shared charcoal/light themes, independent of Follow / Compare / Repository. Top becomes session context for one agent and named, evidence-backed agent context for several. The original is preserved. Browser security blocked its `file://` URL; this session inspected source, not a fresh browser rendering, and did not work around that block.
+
+New `/concepts/canvas.html` is a synthetic-only candidate with bounded material surfaces, unboxed prose, a files-only working set, persistent observed instruments, reversible deep reading, shared filters/theme and per-view scroll positions. Whole-passage preview controls are **not live event pacing or a production as-of engine**. See [11](review/11-p1-unified-canvas.md). Do not replace the React reader with this eager fixture renderer. Next: evaluate this material/space direction with the builder, then translate approved elements into the paged production history with genuine operation-start input and late-result resolution, stable anchors, and measured origin choreography. Retain all old prototypes. Model switches must preserve these requirements; visual preference remains unvalidated.
