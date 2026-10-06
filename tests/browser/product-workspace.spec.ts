@@ -42,8 +42,12 @@ test('substantial external results retain structured evidence and adapt to narro
   await page.route('**/demo/bundle.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
   await page.goto(demoUrl());
   const external = page.locator(`article[data-op-id="${op.id}"]`);
+  const history = page.locator('.history');
+  await expect(history).toBeVisible();
+  await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   await page.mouse.move(1000, 350);
   await page.mouse.wheel(0, -100_000);
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   await expect(external).toBeAttached();
   await external.scrollIntoViewIfNeeded();
   await expect(external).toHaveClass(/shape-reading/);
