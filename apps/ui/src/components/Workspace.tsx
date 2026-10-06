@@ -17,7 +17,7 @@ export function WorkspaceBar() {
     <span className="workspace-recording-title" title={title}>{title}</span>
     <div className="workspace-context"><span>{source?.sample === 'growing' ? 'Synthetic live demonstration' : source?.sample === 'recorded' ? 'Synthetic recording' : source?.kind === 'bundle' ? 'Offline evidence' : recording?.live ? 'Observing local journal' : 'Local recording'}</span><span> / {mode === 'replay' ? 'Sequence replay' : source?.sample === 'growing' ? recording?.live ? 'Publishing sample events' : 'Sample complete' : 'Scrollable history'}</span></div>
     {source?.sample === 'growing' && recording?.live && <button className="btn ghost sample-complete" onClick={() => source.completeSample?.()}>Show complete sample</button>}
-    {source?.sample === 'recorded' && <button className="btn ghost sample-watch" onClick={() => location.assign(`${location.pathname}?demo=live`)}>Watch live demo</button>}
+    {(source?.sample === 'recorded' || source?.sample === 'growing' && !recording?.live) && <button className="btn ghost sample-watch" onClick={() => location.assign(`${location.pathname}?demo=live`)}>{source.sample === 'growing' ? 'Watch demo again' : 'Watch live demo'}</button>}
     {filter && <button className="btn ghost clear-workspace-filter" onClick={() => useApp.getState().setFilter(undefined)}>Clear focus</button>}
   </nav>;
 }

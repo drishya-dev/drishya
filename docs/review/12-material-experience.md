@@ -18,6 +18,8 @@ Source, search, artifact and verification routes use only the published prefix. 
 
 The demonstration exposed two integration mistakes: exact combined-recording notices did not pass the component-id subscription guard; record refresh did not select an exact combined summary. Both now prefer exact identity while preserving component matching for daemon sessions. Agent visibility follows actual applied timeline identities and captured spawn references across harness clocks, rather than comparing unrelated sequence numbers. Complete fixture agent metadata is preserved.
 
+After the synthetic sample completes, **Watch demo again** starts a fresh published prefix. This is explicitly sample navigation, never an instruction to a real harness. Narrow-screen acceptance covers completion and restart.
+
 ## Acceptance and limits
 
 The pure composer, immutable event contract, worker/page boundary, artifact cache limits, redaction, observe-only behavior and zero daemon dependencies are preserved. Arrival shells are bounded to three operations per semantic update, disappear after finite transitions, and cancel on deliberate reading, resize, view/dialog changes, motion-off or reduced motion. Historical mounts and rewinds do not replay arrivals. No continuous animation loop or text on Canvas/WebGL.

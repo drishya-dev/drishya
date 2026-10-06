@@ -59,6 +59,9 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('.crown-sample')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.getByRole('button', { name: 'Watch demo again' }).click();
+  await expect(page.locator('.workspace-context')).toContainText('Publishing sample events');
+  await expect.poll(async () => Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0])).toBeLessThan(45);
 });
 
 test('workspace settings persist, respect the OS, restore focus and work on a narrow screen', async ({ page }) => {
