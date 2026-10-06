@@ -102,6 +102,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       return bounds.bottom > viewport.top + 1 && bounds.top < viewport.bottom;
     });
     readingAnchor.current = node?.dataset.passageId ? { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top } : undefined;
+    if (useApp.getState().readingPassageId !== readingAnchor.current?.id) set({ readingPassageId: readingAnchor.current?.id });
   };
 
   const setScrollTop = (top: number) => {
@@ -217,6 +218,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         setScrollTop(previous.top);
         readingAnchor.current = previous.anchor;
         if (!readingAnchor.current) rememberReading();
+        if (useApp.getState().readingPassageId !== readingAnchor.current?.id) set({ readingPassageId: readingAnchor.current?.id });
         set({ follow: false });
       } else {
         setScrollTop(el.scrollHeight);

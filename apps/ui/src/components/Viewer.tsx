@@ -10,6 +10,8 @@ import { ExplanationView, Inspector } from './Inspector.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 import { RepositoryLens } from './RepositoryLens.tsx';
+import { RepositoryContext } from './RepositoryContext.tsx';
+import { repositoryContext } from '../lib/repository-context.ts';
 import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { FileHistory } from './FileHistory.tsx';
 import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
@@ -196,6 +198,8 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
 // ─── spine: this run's files, in the left gutter ─────────────────────────────────────────
 
 function Spine({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const readingPassageId = useApp((s) => s.readingPassageId);
+  const follow = useApp((s) => s.follow);
   const graph = useApp((s) => s.graph);
   const mapVisible = useApp((s) => s.mapVisible);
   const hovered = useApp((s) => s.hoveredPath);
@@ -213,17 +217,7 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   }, []);
   const heat = useMemo(() => new Map(scene.heat.map((h) => [h.path, h])), [scene.heat]);
   const files = projection.files.filter((f) => f.firstStep < scene.step);
-  const recentPath = useMemo(() => {
-    const operations = new Map(projection.operations.map((op) => [op.id, op]));
-    const pathOf = (id?: string) => id ? operations.get(id)?.paths.find((ref) => ref.role !== 'search-hit')?.path : undefined;
-    const focused = pathOf(scene.focus?.operationId);
-    if (focused) return focused;
-    for (let p = scene.passages.length - 1; p >= 0; p--) {
-      const ops = scene.passages[p]!.ops;
-      for (let i = ops.length - 1; i >= 0; i--) { const path = pathOf(ops[i]!.id); if (path) return path; }
-    }
-    return undefined;
-  }, [projection, scene.passages, scene.focus?.operationId]);
+  const context = useMemo(() => repositoryContext(projection, scene, follow ? undefined : readingPassageId), [projection, scene, follow, readingPassageId]);
   const rowHeight = 48;
   const rowStart = useRef<HTMLDivElement>(null);
   const [rowOffset, setRowOffset] = useState(32);
@@ -233,7 +227,7 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
     const observer = new ResizeObserver(() => setRowOffset(marker.offsetTop));
     observer.observe(marker.parentElement!);
     return () => observer.disconnect();
-  }, [graph, mapVisible]);
+  }, [graph, mapVisible, context.path, context.scope, context.actions.length]);
   const first = Math.max(0, Math.floor((top - rowOffset) / rowHeight) - 8);
   const last = Math.min(files.length, Math.max(0, Math.ceil((top + height - rowOffset) / rowHeight) + 8));
   const visible = new Set<number>();
@@ -244,7 +238,8 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   return (
     <nav className="spine" ref={ref} aria-label="Files in this run" onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedPath((e.target as HTMLElement).closest<HTMLElement>('[data-spine-path]')?.dataset.spinePath)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-spine-path]')) setFocusedPath(undefined); }}>
       <div className="spine-head">Recorded working set</div>
-      {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} focusPath={recentPath} />}
+      {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} focusPath={context.path} />}
+      <RepositoryContext context={context} graph={graph} />
       <div ref={rowStart} aria-hidden="true" />
       {files.length === 0 && <div className="muted small">None yet</div>}
       {[...visible].sort((a, b) => a - b).map((i) => {
