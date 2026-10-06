@@ -42,6 +42,8 @@ The centre remains the agent and its accumulated work; native tools and MCP inst
 
 > Set places for things, with animations, like a **$1M product** that looks clean. Something unique, not just boxes. **Clean and advanced animations for every single little thing.**
 
+**6 October follow-up:** the builder proposed all three directions as different ways to explore the same product. Keep Studio as the default follow-work view, Relay as optional agent comparison, and Atlas as optional repository exploration. They share one recording and evidence model. Switching must preserve selection, reading position and replay cutoff; it must never restart capture or force return to latest. This is a product direction for staged integration, not a claim that the synthetic prototypes already implement production view switching. The contract is detailed in [the design studies](review/10-p1-design-directions.md).
+
 > Like Jarvis — full of visualization, putting up its own working. The difference between a **$10 video edit and a $1,000 one**: the smoothness with which things come up and interact with you.
 
 > People prompt and leave, read the final text, and don't know the code, the decisions, the edits, the rules. That is what makes vibe coding a threat. Show them the agent's work turning from raw text into actual visuals — so they understand it, and never want to go back.
