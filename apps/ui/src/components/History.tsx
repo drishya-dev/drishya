@@ -31,6 +31,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const programmatic = useRef(false);
   const lastScrollTop = useRef(0);
   const userScrollUntil = useRef(0);
+  const pointerFocus = useRef(false);
   const scrollFrame = useRef<number | undefined>(undefined);
   const navigationFrame = useRef<number | undefined>(undefined);
   const navigating = useRef(false);
@@ -87,7 +88,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   const setScrollTop = (top: number) => {
     const el = ref.current;
-    if (!el) return;
+    // Focus can pin a passage and trigger measurements during a pointer press.
+    // Never move its control before release has delivered the activation.
+    if (!el || pointerFocus.current) return;
     programmatic.current = true;
     el.scrollTop = top;
     lastScrollTop.current = el.scrollTop;
@@ -135,6 +138,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         }
       }
       if (changed) {
+        // Measurements may resolve while a button is pressed. Keep the current spacer
+        // layout until activation; rebuilding it now can put another passage under it.
+        if (pointerFocus.current) return;
         setMeasurementVersion((n) => n + 1);
         // A burst can detach follow before this observer's closure is replaced.
         if (useApp.getState().follow) setScrollTop(el.scrollHeight);
@@ -234,17 +240,28 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
   };
 
-  const holdForSelection = () => {
+  const holdForSelection = (event: React.SyntheticEvent) => {
+    if ((event.target as HTMLElement).closest('button, input, select, a')) return;
     const selection = window.getSelection();
     const el = ref.current;
     if (!selection || selection.isCollapsed || !el?.contains(selection.anchorNode) || !el.contains(selection.focusNode)) return;
+    setMeasurementVersion((n) => n + 1);
     rememberReading();
     if (follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
   };
 
   return (
     <>
-    <div className="history" ref={ref} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY !== 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; if (follow && (e.target === ref.current || (e.target as HTMLElement).closest('.op-body, .prose, .op-expanded'))) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onKeyDown={(e) => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } } }} onClickCapture={(e) => { if ((e.target as HTMLElement).closest('[data-expand-op]')) rememberReading(); }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false, playing: false, held: true }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
+    <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY !== 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; if (follow && !(e.target as HTMLElement).closest('button, input, select, a') && (e.target === ref.current || (e.target as HTMLElement).closest('.op-body, .prose, .op-expanded'))) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onKeyDown={(e) => { pointerFocus.current = false; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } } }} onClickCapture={(e) => {
+      // Pointer focus must not reflow the button between press and release. Hold at
+      // activation instead; keyboard focus and text selection still hold immediately.
+      if ((e.target as HTMLElement).closest('button, input, select, a')) {
+        setFocusedPassageId((e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId);
+        setMeasurementVersion((n) => n + 1);
+        rememberReading();
+        if (follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
+      }
+    }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { if (pointerFocus.current && (e.target as HTMLElement).closest('button, input, select, a')) return; const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false, playing: false, held: true }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       <div className="history-inner">
         {scene.passages.length === 0 && <div className="history-empty">No captured work in this view yet.</div>}
         {layout.runs.flatMap((run) => [
@@ -286,7 +303,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
             <span className="passage-agent">{agentName(agent)}</span>
             {first?.startTime && <span className="passage-time">{timeOf(first.startTime)}</span>}
           </div>
-          <div className={`ops-row${ps.ops.filter((o) => { const op = ops.get(o.id); return op && presentationOf(op).shape === 'source'; }).length > 1 ? ' multiple-source' : ''}`}>
+          <div className="ops-row">
             {ps.ops.map((o, i) => {
               const op = ops.get(o.id);
               return op ? <OpCard key={o.id} so={o} op={op} index={i} /> : null;

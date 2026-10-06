@@ -50,6 +50,7 @@ When two documents disagree, the one higher in its row wins. When a document her
 | [`BLUEPRINT.md`](BLUEPRINT.md) | The original end-to-end blueprint (v1.2). Still the fullest single account; partly superseded as mapped above |
 | [`STATUS.md`](STATUS.md) | Position, queue, decisions log |
 | [`review/09-p1-content-origins.md`](review/09-p1-content-origins.md) | Prototype source audit, first P1 presentation slice, evidence and remaining choreography |
+| [`review/10-p1-design-directions.md`](review/10-p1-design-directions.md) | Fresh Studio/Relay/Atlas prototypes, recommendation, persistent essentials, integrated safeguards and next design task |
 | [`CODEBASE.md`](CODEBASE.md) | The code as built: pipeline, packages, identity, privacy, API, tests |
 | [`HACKATHON.md`](HACKATHON.md) | Fit assessment for the Nebius × NVIDIA hackathon, against its official rules |
 | [`review/`](review/) | The 21 September external review: product, experience, engineering, research ledger, first storyboard |

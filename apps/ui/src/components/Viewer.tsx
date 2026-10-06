@@ -29,6 +29,7 @@ export function Viewer() {
   const motion = useApp((s) => s.motion);
   const main = useRef<HTMLDivElement>(null);
   const [reading, setReading] = useState<{ left: number; width: number }>();
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const scene = useMemo(() => historyPage?.scene ?? (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [historyPage, projection, step, filter, selectedOp]);
   const historical = useMemo(() => historyPage?.projection ?? (projection ? asOfProjection(projection, step) : undefined), [historyPage, projection, step]);
@@ -92,7 +93,7 @@ export function Viewer() {
   if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
   return (
-    <div className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${selectedOp ? ' inspecting' : ''}`}>
+    <div className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <Crown scene={scene} projection={projection} />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
@@ -102,6 +103,7 @@ export function Viewer() {
         <FilePanel projection={historical} />
       </div>
       <Dock scene={scene} />
+      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); useApp.setState({ follow: false, playing: false, held: true }); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
       <Inspector projection={historical} />
       <Briefing projection={projection} />
@@ -203,7 +205,7 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   }, []);
   const heat = useMemo(() => new Map(scene.heat.map((h) => [h.path, h])), [scene.heat]);
   const files = projection.files.filter((f) => f.firstStep < scene.step);
-  const rowHeight = 24;
+  const rowHeight = 48;
   const rowStart = useRef<HTMLDivElement>(null);
   const [rowOffset, setRowOffset] = useState(32);
   useEffect(() => {
@@ -364,8 +366,9 @@ function Dock({ scene }: { scene: Scene }) {
   const filter = useApp((s) => s.filter);
   const setFilter = useApp((s) => s.setFilter);
   return (
-    <aside className="dock" aria-label="Tools">
+    <aside id="observed-tools" className="dock" aria-label="Tools">
       <div className="dock-head">Tools</div>
+      <div className="dock-basis">Observed in this recording</div>
       {scene.dock.native.map((d) => (
         <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
           <span className={`op-kind k-${d.kind}`}>{KIND_LABEL[d.kind]}</span>
@@ -377,14 +380,14 @@ function Dock({ scene }: { scene: Scene }) {
       {scene.dock.mcp.map((s) => {
         const on = filter?.server === s.server;
         return (
-          <div key={s.server} className={`server${s.open ? ' open' : ''}${on ? ' on' : ''}`}>
+          <div key={s.server} className={`server catalogued${s.open ? ' open' : ''}${on ? ' on' : ''}`}>
             <button className="server-name" onClick={() => setFilter(on ? undefined : { server: s.server })} title="Follow only this server's calls">
               <span className="server-dot" />
               {s.server}
             </button>
             <div className="drawer">
               {s.tools.map((t) => (
-                <button key={t.tool} className={`server-tool${t.active ? ' active' : ''}${t.uses ? '' : ' unused'}`} disabled={!t.uses} aria-pressed={filter?.server === s.server && filter?.tool === t.tool} onClick={() => setFilter(filter?.server === s.server && filter?.tool === t.tool ? undefined : { server: s.server, tool: t.tool })}>
+                <button key={t.tool} data-mcp-server={s.server} data-mcp-tool={t.tool} className={`server-tool${t.active ? ' active' : ''}${t.uses ? '' : ' unused'}`} disabled={!t.uses} aria-pressed={filter?.server === s.server && filter?.tool === t.tool} onClick={() => setFilter(filter?.server === s.server && filter?.tool === t.tool ? undefined : { server: s.server, tool: t.tool })}>
                   <span>{t.tool}</span>
                   <span className="inst-uses">{t.uses || ''}</span>
                 </button>

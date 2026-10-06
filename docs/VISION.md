@@ -32,6 +32,14 @@ Show a tool's captured input as soon as its call is observed. Let its result res
 
 The builder asked for output that seems to update gradually. Use real captured chunks when a harness provides them. When it records only a final result, reveal that result as one truthful arrival and give the reader space and time to read it. Never synthesize token streaming or withhold captured content just to imitate typing.
 
+### Builder clarification — 6 October 2026: essentials stay visible; explore afresh
+
+Minimalism applies to framing and secondary controls, **not to information a developer needs throughout the work**. Keep actual tool identities and named MCP tools readable at rest; do not hide them until activity or hover. Keep useful file context available. Long names must wrap or have an explicit reading affordance rather than silently disappear. Capture often tells us only which tools were observed; label that scope and never invent an available-tool catalog.
+
+The centre remains the agent and its accumulated work; native tools and MCP instruments remain on the right. A call should visibly travel from its real instrument into the work. For a read, distinguish the calling Read instrument from the requested file's repository location: the call emits from the right, the excerpt lifts from the file. Both are observed identities, not a causal interpretation. Keep agent ownership explicit without drawing a fictitious decision pipeline.
+
+**The left panel is not fixed.** Its current file list/overview is a candidate, not a requirement. It can become a contextual file index, an expanded repository exploration space, or another useful composition, provided the reading stage remains dominant. The builder explicitly requested a fresh design exploration, multiple interactive prototypes, a recommended best direction, and retention of the alternatives for future inspiration. See [the three design studies](review/10-p1-design-directions.md): Studio, Relay and Atlas. Studio is the current design recommendation, not a final user-validated visual identity.
+
 > Set places for things, with animations, like a **$1M product** that looks clean. Something unique, not just boxes. **Clean and advanced animations for every single little thing.**
 
 > Like Jarvis — full of visualization, putting up its own working. The difference between a **$10 video edit and a $1,000 one**: the smoothness with which things come up and interact with you.
@@ -113,7 +121,7 @@ The file's node on the map brightens and **draws a hairline filament** toward th
 
 ### 3.2 Emit — a tool call leaves its instrument
 
-The tool's mark in the right dock ignites. For an MCP call, **the named server opens like a drawer**, revealing the specific tool, and a thin light ribbon **unfurls inward** to the surface's allocated place in the passage. The surface starts as a narrow shell holding the arguments; when the result returns, **the same surface grows** to its measured reading size. No second card flies in from nowhere. The ribbon fades to a faint filament that stays linked to its server.
+The tool's mark in the right dock resolves into focus. The named MCP server and its observed tools remain readable at rest; the active instrument emits a thin ribbon **inward** to its allocated place in the passage. The earlier drawer metaphor describes focus and arrival, not permission to hide the tool list (6 October clarification). The surface starts holding captured arguments; when the result returns, **the same surface grows** to its measured reading size. No second card flies in from nowhere. The ribbon fades to a faint filament linked to the actual visible tool, with a qualified server fallback when that tool is outside the dock viewport.
 
 ### 3.3 Settle — work accumulates like pages on a desk
 

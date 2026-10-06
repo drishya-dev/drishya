@@ -1,6 +1,6 @@
 # Continue here — a compact handoff for the next agent
 
-**Last implementation update: 5 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
+**Last implementation update: 6 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
 
 ## Read in this order
 
@@ -42,7 +42,11 @@ B4 PR #22 is merged as `445786f`. P1 PR #23 is merged as `5c487af`: content-shap
 
 Latest builder emphasis: a transcript on another background and animated cards are insufficient. Presentation is the core product, including palette, hierarchy, useful spatial relationships and semantic motion. The P1 candidate does not freeze the design. Review the actual UI after substantial changes; do not claim it is market-first or that users prefer it from technical tests.
 
-Next: P2-B file-centred comparison/history, review Harsh's P2-C PR #24 and then a human comprehension/preference pilot against the terminal transcript. Before #24 merges, verify/fix live revision refresh and historical replay's as-of limit; STATUS records the two code-review concerns. His explicit reading mark is already merged; do not rebuild it or count a current page as the full recording. Preserve captured-versus-derived and history/as-of identity. Further renderer libraries/theme variants need demonstrated benefit rather than cosmetic milestone churn. Physical B4 release validation stays open.
+**6 October supersedes the earlier next-task queue:** P2-C PR #24 merged as `b6ac8b4`, credited only to its original authors Harsh/Claude; all seven main CI jobs passed. The separate P1 follow-up refreshes verification on live revisions and hides its whole-recording facts during optional replay. Do not rewrite Harsh's merge or add our attribution to it.
+
+The builder requested a fresh visual exploration and explicitly clarified that developer essentials should stay visible. Native/MCP identities are persistent, the working agent/content is central, and **the left panel is not fixed**. Three interactive prototypes are retained under `apps/ui/public/concepts/`; serve `/concepts/index.html`. Read [10](review/10-p1-design-directions.md) before more UI work. Studio is the recommended default (combined chronology and reading width); Relay is an optional agent-comparison idea; Atlas is an expanded repository/light-theme study. These use the committed synthetic bundle, not live capture, and their passage sampler is not an as-of engine.
+
+Next bounded implementation: carry Studio's hierarchy into the existing React reader, keeping its worker/pages, immediate input/late result, provenance and as-of semantics. Preserve all prototypes. Do not freeze the present left list or replace the history with prototype DOM code. Follow with matched comprehension/preference tasks against the terminal transcript; P2-B file-centred comparison and physical B4 release acceptance remain separate work. No human preference or market-moat claim follows from technical tests.
 ## End each session
 
-Remove your claim; update your last-session block and relevant docs. Record decisions with reasons. Commit with the agent Co-Authored-By trailer. State exactly which checks ran and which remain unverified. Do not merge without the other builder's review. Do not repeat the old claim that the next step is only a cosmetic frontend pass.
+Remove your claim; update your last-session block and relevant docs. Record decisions with reasons. Commit with the agent Co-Authored-By trailer. State exactly which checks ran and which remain unverified. The builder explicitly authorizes Codex to verify and merge green PRs; retain each builder's original attribution and separate scope. Do not repeat the old claim that the next step is only a cosmetic frontend pass.

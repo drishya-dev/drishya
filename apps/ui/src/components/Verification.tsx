@@ -22,6 +22,8 @@ const CAVEAT: Record<VerificationTrail['verdict'], string> = {
 export function VerificationPanel({ op }: { op: Operation }) {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
+  const mode = useApp((s) => s.mode);
+  const revision = useApp((s) => s.renderedRevisions[recordingId ?? '']);
   const select = useApp((s) => s.select);
   const [trail, setTrail] = useState<VerificationTrail | null>();
   const [error, setError] = useState<string>();
@@ -32,15 +34,16 @@ export function VerificationPanel({ op }: { op: Operation }) {
   useEffect(() => {
     setTrail(undefined);
     setError(undefined);
-    if (!supported) return;
+    if (!supported || mode === 'replay') return;
     let live = true;
     source!.verification!(recordingId!, op.id).then((t) => live && setTrail(t)).catch((e) => live && setError((e as Error).message));
     return () => {
       live = false;
     };
-  }, [supported, source, recordingId, op.id]);
+  }, [supported, source, recordingId, op.id, mode, revision]);
 
   if (!supported) return null;
+  if (mode === 'replay') return <section className="verify" aria-label="Test runs after this change"><h4>Test runs after this change</h4><p className="muted small">This view uses the full recording. Return to history to inspect its test runs; future results are hidden during sequence replay.</p></section>;
   if (error) return <section className="verify"><p className="muted small">Could not load test runs after this change: {error}</p></section>;
   if (trail === undefined) return <section className="verify"><div className="skeleton" /></section>;
   if (trail === null) return null;
@@ -49,6 +52,7 @@ export function VerificationPanel({ op }: { op: Operation }) {
   return (
     <section className={`verify verify-${trail.verdict}`} aria-label="Test runs after this change">
       <h4>Test runs after this change</h4>
+      <p className="muted small">Full recording · recorded order, not coverage</p>
       <p className="verify-verdict">{VERDICT[trail.verdict]}</p>
       <p className="muted small">{CAVEAT[trail.verdict]}</p>
       {last && (

@@ -433,7 +433,10 @@ function serveStatic(uiDir: string, pathname: string, res: ServerResponse) {
     file = join(uiDir, rel);
   }
   const ext = extname(file);
-  res.writeHead(200, { 'content-type': MIME[ext] ?? 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-store' : 'public, max-age=31536000, immutable' });
+  // Only content-hashed build assets are immutable. Public fixture/design files keep
+  // their names across builds; a year-long cache otherwise shows obsolete recordings/UI.
+  const hashedAsset = rel.startsWith(`assets${sep}`) && /-[\w-]{8,}\.[a-z0-9]+$/i.test(rel);
+  res.writeHead(200, { 'content-type': MIME[ext] ?? 'application/octet-stream', 'cache-control': hashedAsset ? 'public, max-age=31536000, immutable' : 'no-store' });
   createReadStream(file).pipe(res);
 }
 
