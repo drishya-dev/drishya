@@ -201,6 +201,12 @@ test('a burst is captured immediately without fast-forwarding the reading camera
   await expect(page.getByRole('button', { name: /8 new steps · Back to latest/ })).toBeVisible();
   const history = page.locator('.history');
   await expect.poll(() => history.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight)).toBeGreaterThan(2);
+  // End a reading gesture outside history; an explicit return must still work.
+  const bounds = (await history.boundingBox())!;
+  await page.mouse.move(bounds.x + 20, bounds.y + bounds.height - 20);
+  await page.mouse.down();
+  await page.mouse.move(10, 10);
+  await page.mouse.up();
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
 });
@@ -228,6 +234,63 @@ test('content gets reading width and origin tethers use the visible instrument',
   await expect(edit).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await expect(page.locator('.origin-thread')).toHaveCount(0);
+});
+
+test('the dock keeps observed identities readable at rest and remains accessible on narrow screens', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
+  await page.goto(demo.href);
+  const dock = page.getByRole('complementary', { name: 'Tools' });
+  await expect(dock).toContainText('Observed in this recording');
+  await expect(dock.getByRole('button', { name: 'get-library-docs 1', exact: true })).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'search_code 1', exact: true })).toBeVisible();
+  expect(await dock.locator('.inst-tools').evaluateAll((els) => els.every((el) => el.scrollWidth <= el.clientWidth + 1))).toBe(true);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill('get-library-docs');
+  await page.locator('.search-results button').first().click();
+  await page.locator('.inspector').getByRole('button', { name: 'Close', exact: true }).click();
+  const call = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
+  await call.hover();
+  const tether = page.locator('.origin-thread[data-origin-type="MCP tool"]');
+  await expect(tether).toHaveCount(1);
+  const tool = (await dock.locator('[data-mcp-tool="get-library-docs"]').boundingBox())!;
+  const coordinates = (await tether.getAttribute('d'))!.match(/^M([\d.-]+),([\d.-]+)/)!;
+  expect(Number(coordinates[1])).toBeCloseTo(tool.x, 0);
+  expect(Number(coordinates[2])).toBeCloseTo(tool.y + tool.height / 2, 0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Tools', exact: true }).click();
+  await expect(dock).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'get-library-docs 1', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close tools', exact: true }).click();
+  await expect(dock).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test('verification refreshes while reading and hides whole-recording facts during sequence replay', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
+  await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
+  const panel = page.getByRole('region', { name: 'Test runs after this change' });
+  await expect(panel).toContainText('Full recording');
+  const id = 'p1-live-verification';
+  append({ type: 'assistant', message: { id, role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'npm test -- p1-live-verification' } }] } });
+  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Tests  1 passed (1)' }] } });
+  await app.ingest.sync(recordingId);
+  await expect(panel).toContainText('npm test -- p1-live-verification');
+  await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
+  await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
+  await expect(panel).toContainText('future results are hidden');
+  await expect(panel).not.toContainText('npm test -- p1-live-verification');
+  await page.getByRole('button', { name: '← History', exact: true }).click();
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
+  await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
+  await expect(panel).toContainText('npm test -- p1-live-verification');
 });
 
 test('sustained live reading keeps evidence, anchors and presentation bounded', async ({ page }) => {

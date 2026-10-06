@@ -48,11 +48,17 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       void animation.finished.then(() => el.remove(), () => el.remove());
     };
     const contour = (el: Element, move: string, tone = '#8b9bff') => {
-      const r = el.getBoundingClientRect();
-      const rect = node('rect', 'origin-shell', move);
-      for (const [key, value] of Object.entries({ x: r.left, y: r.top, width: r.width, height: Math.min(r.height, 420), rx: 3 })) rect.setAttribute(key, String(value));
-      rect.style.stroke = tone;
-      return rect;
+      const material = el.closest<HTMLElement>('[data-material]')?.dataset.material;
+      // Animate the material's own reading edge, rather than flying the same empty
+      // rectangle around every action. Every character stays at its final position.
+      const content = el.matches('.op') ? el.querySelector('.verification-track, .cmd, .query, .code, .diff, .mcp-tool') ?? el : el;
+      const r = content.getBoundingClientRect();
+      const end = Math.min(r.bottom, r.top + 420);
+      const edge = node('path', 'origin-shell', move);
+      const rail = material === 'source' || material === 'change' || material === 'external';
+      edge.setAttribute('d', rail ? `M${r.left + 10},${r.top} H${r.left} V${end} H${r.left + 10}` : `M${r.left},${end} H${r.right}`);
+      edge.style.stroke = tone;
+      return edge;
     };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false) => {
       const a = origin.getBoundingClientRect();
@@ -105,8 +111,13 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
           origin ??= [...viewer.querySelectorAll<HTMLElement>('[data-spine-path]')].find((el) => el.dataset.spinePath === path);
         } else if (op.origin.type === 'mcp') {
           const server = op.origin.server;
-          origin = [...viewer.querySelectorAll<HTMLElement>('.server-name')].find((el) => el.textContent?.trim() === server);
-          label = 'MCP server';
+          const operation = projection.operations.find((item) => item.id === op.id);
+          origin = [...viewer.querySelectorAll<HTMLElement>('[data-mcp-tool]')].find((el) => el.dataset.mcpServer === server && el.dataset.mcpTool === (operation?.origin.type === 'mcp' ? operation.origin.tool : undefined));
+          const bounds = origin?.getBoundingClientRect();
+          const dock = origin?.closest('.dock')?.getBoundingClientRect();
+          if (!bounds || !dock || bounds.top < dock.top || bounds.bottom > dock.bottom) origin = undefined;
+          label = origin ? 'MCP tool' : 'MCP server';
+          origin ??= [...viewer.querySelectorAll<HTMLElement>('.server-name')].find((el) => el.textContent?.trim() === server);
         } else {
           origin = viewer.querySelector<HTMLElement>(`.instrument.k-${op.kind}`) ?? undefined;
           label = 'Tool instrument';
@@ -117,12 +128,21 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
         if (r.width <= 0 || r.height <= 0 || r.top < 0 || r.bottom > innerHeight || (pane && (r.bottom <= pane.top || r.top >= pane.bottom))) continue;
         const move = arrivals && animate && plan.arrivals.includes(op.id) && !emitted.has(`start:${op.id}`) ? op.origin.type === 'map' ? 'Lift' : 'Emit' : undefined;
         if (move) emitted.add(`start:${op.id}`);
+        // A captured read has two real identities: its calling instrument and the file
+        // it requested. Show the call leaving Read as well as the excerpt lifting from
+        // the repository; neither thread claims that this file caused another action.
+        if (move === 'Lift' && op.kind === 'read') {
+          const instrument = viewer.querySelector<HTMLElement>('.instrument.k-read');
+          const bounds = instrument?.getBoundingClientRect();
+          const dock = instrument?.closest('.dock')?.getBoundingClientRect();
+          if (instrument && bounds && dock && bounds.width > 0 && bounds.top >= dock.top && bounds.bottom <= dock.bottom) tether(instrument, target, 'Read instrument', 'Emit', true);
+        }
         tether(origin, target, label, move, op.origin.type !== 'map');
       }
       if (!arrivals || !animate) return;
       for (const id of plan.outcomes) {
         if (emitted.has(`outcome:${id}`)) continue;
-        const target = articles.get(id)?.querySelector('.result-area, .op-head');
+        const target = articles.get(id)?.querySelector('.verification-track, .result-area, .op-head');
         const op = projection.operations.find((op) => op.id === id);
         if (!target || !op || !visible(target)) continue;
         emitted.add(`outcome:${id}`);

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -17,6 +17,10 @@ const MODEL_REPLY = '{"summary":"s [E1]","claims":[{"text":"t","evidence":["E1"]
 
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-server-'));
+  mkdirSync(join(dir, 'no-ui', 'assets'), { recursive: true });
+  writeFileSync(join(dir, 'no-ui', 'index.html'), '<!doctype html><title>Synthetic UI</title>');
+  writeFileSync(join(dir, 'no-ui', 'concept.js'), '/* synthetic unversioned design */');
+  writeFileSync(join(dir, 'no-ui', 'assets', 'index-abcd1234.js'), '/* synthetic content-hashed build */');
   const app = new App(join(dir, 'data'));
   const r = await app.ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
   app.store.updateRecordingMeta(r.recordingId, { graphRoot: join(fixtures, 'workspace/shop') });
@@ -101,6 +105,15 @@ it('waits for an in-flight handler before its caller closes SQLite', async () =>
     if (!target.startsWith(resolve(tmpdir()) + sep)) throw new Error('test directory escaped system temp');
     rmSync(target, { recursive: true, force: true });
   }
+});
+
+describe('static UI freshness', () => {
+  it('reserves immutable caching for content-hashed build assets', async () => {
+    for (const path of ['/', '/concept.js']) {
+      expect((await call(path)).headers['cache-control']).toBe('no-store');
+    }
+    expect((await call('/assets/index-abcd1234.js')).headers['cache-control']).toBe('public, max-age=31536000, immutable');
+  });
 });
 
 describe('local API security', () => {
