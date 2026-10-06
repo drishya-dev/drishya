@@ -276,7 +276,7 @@ A small indicator per session: share of operations with captured results, visibl
 - **Keyboard-first everywhere**, with a `?` cheat-sheet overlay.
 - **Density setting:** comfortable / compact. Senior devs want compact.
 - **Activity timeline** at the bottom (edits, failures, passes as ticks; click to jump). *This pass adds a first version.*
-- **Theme set:** Charcoal (signature), Midnight, Light. Each tuned for syntax contrast, not just background colour. *This pass adds Midnight and redesigns Charcoal.*
+- **Theme set:** Jet (matte black and champagne gold, signature), Midnight, Light. Each tuned for syntax contrast, not just background colour. *This pass adds Jet and Midnight.*
 - **Instant open:** the last session opens straight to where you stopped.
 - **Quiet notifications:** one sound or OS toast only for the events you chose (failure, stuck, tripwire, turn finished).
 

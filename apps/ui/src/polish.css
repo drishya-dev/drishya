@@ -2,8 +2,9 @@
    the history activity timeline. Loaded after product.css; it changes presentation only. */
 
 /* ── palettes ─────────────────────────────────────────────────────────────────────────────
-   data-theme is the light/dark scheme; data-palette names the look within it. Charcoal is
-   product.css's own :root. Midnight follows the original prototype's near-black world. */
+   data-theme is the light/dark scheme; data-palette names the look within it. product.css's
+   :root tokens are the base; Jet (default) is matte black and champagne gold, Midnight follows
+   the original prototype's near-black world, Paper is the light look. */
 :root {
   --sans: 'Inter', 'Geist', 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --mono: 'Geist Mono', 'JetBrains Mono', 'Cascadia Code', 'Cascadia Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
@@ -29,64 +30,64 @@
   --lift: 0 1px 0 #ffffff inset, 0 8px 24px -16px #3a35262e;
   --lift-strong: 0 1px 0 #ffffff inset, 0 16px 40px -18px #3a352640;
 }
-/* ── Charcoal: the signature palette ──────────────────────────────────────────────────────
-   Warm graphite rather than flat grey, ivory type, champagne used sparingly, and a real
-   material texture: fine film grain, a soft vignette and one faint warm light. The texture
-   layers are static, pointer-transparent and dropped in low resource mode. */
-:root[data-palette="charcoal"] {
-  --bg: #121110; --s1: #1a1918; --s2: #211f1d; --s3: #2a2825;
-  --line: #262422; --line-2: #33302c; --line-3: #4b4741;
-  --t1: #ede8e0; --t2: #bdb6aa; --t3: #9e978b; --t4: #958e83;
-  --focus: #d9bf8c; --external: #b9a8e2; --pass: #92d0a8; --fail: #ef8b80; --edited: #e39b72;
-  --pass-wash: #4f9a6a26; --fail-wash: #c25d4f2b;
-  --champagne: #d9bf8c;
-  --surface-edge: #fff3e00f;
-  --lift: 0 1px 0 var(--surface-edge) inset, 0 0 0 1px #00000040, 0 14px 34px -20px #000000e6;
-  --lift-strong: 0 1px 0 #fff3e014 inset, 0 0 0 1px #00000052, 0 24px 52px -22px #000000f2;
-  --chrome: #141312d9;
-  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 .96 0 0 0 0 .9 0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>");
+/* ── Jet: the signature palette ───────────────────────────────────────────────────────────
+   Matte jet black and champagne gold. Neutral blacks with no warm or blue cast, flat
+   surfaces with no gloss, separation by hairline and depth rather than sheen, and gold as
+   the one accent. A fine static grain gives the matte finish; low resource mode drops it. */
+:root[data-palette="jet"] {
+  --bg: #0b0b0b; --s1: #121212; --s2: #171717; --s3: #1e1e1e;
+  --line: #1f1f1f; --line-2: #2a2a2a; --line-3: #424242;
+  --t1: #f1eee8; --t2: #b9b5ad; --t3: #9a968e; --t4: #918d86;
+  --focus: #d4b98a; --external: #b8a9d9; --pass: #8fcaa2; --fail: #ec8378; --edited: #e0a07a;
+  --pass-wash: #4f9a6a24; --fail-wash: #c25d4f29;
+  --gold: #d4b98a; --gold-soft: #d4b98a33;
+  --surface-edge: transparent;
+  --lift: 0 0 0 1px #00000066, 0 16px 36px -22px #000000f2;
+  --lift-strong: 0 0 0 1px #00000080, 0 26px 56px -24px #000000;
+  --chrome: #0b0b0be0;
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>");
 }
-:root[data-palette="charcoal"] body {
-  background:
-    radial-gradient(1100px 620px at 8% -8%, #2a251f 0%, #2a251f00 62%),
-    radial-gradient(900px 640px at 104% 108%, #1e1b18 0%, #1e1b1800 60%),
-    var(--bg);
-}
-/* Grain sits over everything at a whisper; the vignette darkens only the far edges. */
-:root[data-palette="charcoal"]:not([data-low-resource]) body::before,
-:root[data-palette="charcoal"]:not([data-low-resource]) body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; }
-:root[data-palette="charcoal"]:not([data-low-resource]) body::before { background: radial-gradient(130% 120% at 50% 40%, #0000 62%, #00000059 100%); }
-:root[data-palette="charcoal"]:not([data-low-resource]) body::after { background-image: var(--grain); background-size: 180px 180px; opacity: .55; }
-:root[data-palette="charcoal"] .crown { border-bottom: 0; box-shadow: 0 1px 0 #00000080; }
-:root[data-palette="charcoal"] .crown::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, #d9bf8c00 4%, #d9bf8c5c 32%, #d9bf8c26 68%, #d9bf8c00 96%); pointer-events: none; }
-:root[data-palette="charcoal"] .crown { position: relative; }
-:root[data-palette="charcoal"] .brand-mark { border-color: var(--champagne); }
-:root[data-palette="charcoal"] .brand { color: #f3eee6; }
-:root[data-palette="charcoal"] .history .op {
-  background: linear-gradient(180deg, #1d1c1a 0%, #181716 100%);
-  border-color: #302d29;
-}
-:root[data-palette="charcoal"] .history .op-head,
-:root[data-palette="charcoal"] .history .material-terminal .op-head,
-:root[data-palette="charcoal"] .history .material-verification .op-head {
-  background: linear-gradient(180deg, #25231f 0%, #1f1d1b 100%);
-  border-bottom-color: #2c2926;
-}
-:root[data-palette="charcoal"] .history .op-foot { background: #171615; }
-:root[data-palette="charcoal"] .history .cmd { background: #121110; border-color: #2b2825; }
-:root[data-palette="charcoal"] .history .op.selected { outline-color: var(--champagne); }
-:root[data-palette="charcoal"] .workspace-views [aria-pressed="true"] { background: #2a2825; box-shadow: inset 0 -2px var(--champagne); color: #f3eee6; }
-:root[data-palette="charcoal"] .dock { background: linear-gradient(180deg, #161514, #131211); }
-:root[data-palette="charcoal"] .repo-lens { background: linear-gradient(180deg, #1c1b19, #171615); }
-:root[data-palette="charcoal"] .inspector, :root[data-palette="charcoal"] .sheet, :root[data-palette="charcoal"] .product-dialog { background: linear-gradient(180deg, #1c1b19, #171615 40%); border-color: #35322d; }
-:root[data-palette="charcoal"] .activity-mark.current { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--champagne); }
-:root[data-palette="charcoal"] ::selection { background: #d9bf8c40; }
-:root[data-palette="charcoal"] * { scrollbar-color: #4b4741 transparent; }
-:root[data-palette="charcoal"] .tk-kw { color: #dba8c9; }
-:root[data-palette="charcoal"] .tk-str { color: #b8d39c; }
-:root[data-palette="charcoal"] .tk-num { color: #e8c584; }
-:root[data-palette="charcoal"] .tk-fn { color: #9fc6e6; }
-:root[data-palette="charcoal"] .tk-com { color: #8f887d; font-style: italic; }
+:root[data-palette="jet"] body { background: var(--bg); }
+/* Matte finish: a whisper of grain everywhere, and a vignette that only deepens the edges. */
+:root[data-palette="jet"]:not([data-low-resource]) body::before,
+:root[data-palette="jet"]:not([data-low-resource]) body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; }
+:root[data-palette="jet"]:not([data-low-resource]) body::before { background: radial-gradient(140% 120% at 50% 45%, #0000 60%, #00000066 100%); }
+:root[data-palette="jet"]:not([data-low-resource]) body::after { background-image: var(--grain); background-size: 160px 160px; opacity: .5; }
+:root[data-palette="jet"] .crown { position: relative; border-bottom: 0; }
+:root[data-palette="jet"] .crown::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, #d4b98a00 2%, #d4b98a66 30%, #d4b98a2e 70%, #d4b98a00 98%); pointer-events: none; }
+:root[data-palette="jet"] .transport { border-top-color: #1c1c1c; }
+:root[data-palette="jet"] .brand { color: #f4f1eb; letter-spacing: .01em; }
+:root[data-palette="jet"] .brand-mark { border-color: var(--gold); }
+:root[data-palette="jet"] .brand-mark::after { background: var(--gold); }
+:root[data-palette="jet"] .crown .agent { background: transparent; border-color: #2a2a2a; }
+:root[data-palette="jet"] .crown .agent:hover { background: #151515; border-color: #3a3a3a; }
+:root[data-palette="jet"] .history .op { background: #111111; border-color: #262626; }
+:root[data-palette="jet"] .history .op:hover:not(.selected):not(.lit) { border-color: #383838; }
+:root[data-palette="jet"] .history .op-head,
+:root[data-palette="jet"] .history .material-terminal .op-head,
+:root[data-palette="jet"] .history .material-verification .op-head { background: #161616; border-bottom-color: #222222; }
+:root[data-palette="jet"] .history .op-foot { background: #0f0f0f; border-top-color: #1e1e1e; }
+:root[data-palette="jet"] .history .cmd { background: #0b0b0b; border-color: #242424; }
+:root[data-palette="jet"] .history .op.selected { outline-color: var(--gold); }
+:root[data-palette="jet"] .history .op.selected, :root[data-palette="jet"] .history .op.lit { box-shadow: var(--lift-strong); border-color: #3a3a3a; }
+:root[data-palette="jet"] .workspace-views { background: #101010; border-color: #1f1f1f; }
+:root[data-palette="jet"] .workspace-views [aria-pressed="true"] { background: #1a1a1a; box-shadow: inset 0 -2px var(--gold); color: #f4f1eb; }
+:root[data-palette="jet"] .dock { background: #0d0d0d; }
+:root[data-palette="jet"] .dock .instrument.on, :root[data-palette="jet"] .dock .instrument:hover { background: #161616; }
+:root[data-palette="jet"] .repo-lens { background: #101010; }
+:root[data-palette="jet"] .inspector, :root[data-palette="jet"] .sheet, :root[data-palette="jet"] .product-dialog { background: #111111; border-color: #2a2a2a; }
+:root[data-palette="jet"] .product-dialog > header { background: #111111; }
+:root[data-palette="jet"] .theme-option[aria-pressed="true"] { box-shadow: inset 0 -2px var(--gold); border-color: #d4b98a99; }
+:root[data-palette="jet"] .follow-pill { background: var(--gold); color: #0b0b0b; }
+:root[data-palette="jet"] .activity-mark.current { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--gold); }
+:root[data-palette="jet"] .activity-jump button:hover:not(:disabled) { color: var(--gold); background: #151515; }
+:root[data-palette="jet"] ::selection { background: #d4b98a3d; }
+:root[data-palette="jet"] * { scrollbar-color: #343434 transparent; }
+:root[data-palette="jet"] .tk-kw { color: #d4b98a; }
+:root[data-palette="jet"] .tk-fn { color: #ece4d4; }
+:root[data-palette="jet"] .tk-str { color: #a9c6a1; }
+:root[data-palette="jet"] .tk-num { color: #d7a9a4; }
+:root[data-palette="jet"] .tk-com { color: #85817a; font-style: italic; }
 :root[data-theme="light"] { --surface-edge: #ffffff; }
 
 body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering: optimizeLegibility; }
@@ -206,9 +207,9 @@ body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering:
 .theme-option i b:first-child { grid-row: 1 / 3; }
 .theme-option i b:last-child { background: var(--sw-accent); border-color: transparent; height: 5px; align-self: end; }
 .theme-midnight { --sw-bg: #0a0a0c; --sw-s: #16171c; --sw-line: #26272e; --sw-accent: #8b9bff; }
-.theme-dark { --sw-bg: radial-gradient(120% 120% at 10% 0%, #2a251f, #121110 60%); --sw-s: #211f1d; --sw-line: #3a3631; --sw-accent: #d9bf8c; }
+.theme-dark { --sw-bg: #0b0b0b; --sw-s: #161616; --sw-line: #2e2e2e; --sw-accent: #d4b98a; }
 .theme-light { --sw-bg: #f1f0ea; --sw-s: #fbfaf6; --sw-line: #c8c4b8; --sw-accent: #326e60; }
-.theme-option.theme-system i { background: linear-gradient(90deg, #121110 50%, #f1f0ea 50%); --sw-s: #8888; --sw-line: #8886; --sw-accent: #d9bf8c; }
+.theme-option.theme-system i { background: linear-gradient(90deg, #0b0b0b 50%, #f1f0ea 50%); --sw-s: #8888; --sw-line: #8886; --sw-accent: #d4b98a; }
 
 /* ── motion: a file lifts from its real origin and travels into the action ─────────────── */
 .origin-file-transfer > path { fill: var(--s1); stroke: currentColor; stroke-width: 1.2; stroke-linejoin: round; }

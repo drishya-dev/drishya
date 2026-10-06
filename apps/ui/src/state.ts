@@ -254,7 +254,7 @@ export function setMapVisible(on: boolean) {
   }
 }
 
-/** Charcoal (stored as 'dark') is the signature default; Midnight is the cooler near-black option. */
+/** Jet (stored as 'dark') is the signature default: matte black and champagne gold. Midnight is the cooler option. */
 export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system';
 
 function storedTheme(): ThemePreference {

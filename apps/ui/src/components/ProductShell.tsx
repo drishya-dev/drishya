@@ -28,7 +28,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
       const scheme = theme === 'system' ? media.matches ? 'light' : 'dark' : theme === 'light' ? 'light' : 'dark';
       document.documentElement.dataset.theme = scheme;
-      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'midnight' ? 'midnight' : 'charcoal';
+      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'midnight' ? 'midnight' : 'jet';
     };
     apply(); media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
@@ -37,10 +37,10 @@ export function ProductShell({ children }: { children: ReactNode }) {
 }
 
 const THEMES = [
-  ['dark', 'Charcoal', 'Graphite, grain and champagne'],
+  ['dark', 'Jet', 'Matte black, champagne gold'],
   ['midnight', 'Midnight', 'Near-black, cool contrast'],
   ['light', 'Light', 'Paper and stone'],
-  ['system', 'System', 'Charcoal or Light'],
+  ['system', 'System', 'Jet or Light'],
 ] as const;
 
 function Settings() {
