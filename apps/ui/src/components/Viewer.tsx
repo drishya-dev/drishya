@@ -17,8 +17,13 @@ import { FileHistory } from './FileHistory.tsx';
 import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
 import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
+import { ReadingReferenceProvider } from './ReadingReference.tsx';
 
 export function Viewer() {
+  return <ReadingReferenceProvider><WorkspaceViewer /></ReadingReferenceProvider>;
+}
+
+function WorkspaceViewer() {
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
   const historyPage = useApp((s) => s.historyPage);

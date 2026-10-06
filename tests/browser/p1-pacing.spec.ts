@@ -404,6 +404,18 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   await expect(history).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
+  await page.mouse.move(800, 350);
+  await page.mouse.wheel(0, -100_000);
+  const read = history.locator('article.op-read').first();
+  await read.scrollIntoViewIfNeeded();
+  await read.getByRole('button', { name: /Read excerpt of/ }).click();
+  await read.getByRole('button', { name: 'Pin range', exact: true }).click();
+  const pinned = page.getByRole('complementary', { name: 'Pinned source reference' });
+  await expect(pinned).toBeVisible();
+  const pinnedLabel = (await pinned.textContent())!;
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /Back to latest/ }).click();
+  await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   const started = Date.now();
   let rounds = 0;
   let peakNodes = 0;
@@ -426,6 +438,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', model: 'synthetic', content: [{ type: 'text', text: `Captured explanation for synthetic round ${rounds}.` }] } });
     await app.ingest.sync(recordingId);
     await expect(steps).toContainText(`${before + 3} recorded steps`);
+    await expect(pinned).toHaveText(pinnedLabel);
     await expect(context).toContainText('Reading here');
     expect(await context.locator('.repo-context-file').allTextContents()).toEqual(contextPath);
     await expect.poll(() => history.evaluate((el, anchor) => {

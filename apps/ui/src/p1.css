@@ -90,6 +90,16 @@
 .source-go { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; }
 .source-go input { min-width: 0; width: 110px; padding: 7px 9px; border: 1px solid var(--line-3); border-radius: 4px; background: var(--bg); color: var(--t1); font: inherit; }
 .artifact-reader .ln-current { box-shadow: inset 2px 0 var(--focus); background: color-mix(in srgb, var(--focus) 10%, transparent); }
+.source-range { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.source-range input { min-width: 0; width: 76px; padding: 7px 9px; border: 1px solid var(--line-3); border-radius: 4px; background: var(--bg); color: var(--t1); font: inherit; }
+.source-range [role="status"] { flex-basis: 100%; }
+.pinned-reference { position: fixed; z-index: 35; left: 16px; bottom: 140px; width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 180px); overflow: auto; padding: 10px 12px; background: var(--s1); border: 1px solid var(--line-3); border-left: 2px solid var(--focus); }
+.reference-heading { display: flex; align-items: center; gap: 8px; }
+.reference-toggle { min-width: 0; flex: 1; display: flex; flex-direction: column; align-items: flex-start; text-align: left; white-space: normal; height: auto; min-height: 48px; padding: 4px 8px; }
+.reference-path { font: 12px/1.6 var(--mono); overflow-wrap: anywhere; }
+.pinned-reference.open { width: min(560px, calc(100vw - 32px)); }
+.pinned-reference .reader-tools { margin-top: 10px; margin-bottom: 0; }
+.reference-content { max-height: min(40vh, 360px); overflow: auto; margin-top: 12px; overscroll-behavior: contain; }
 .split-change { display: none; }
 .diff-split .split-change { display: block; }
 .diff-split .unified-change { display: none; }

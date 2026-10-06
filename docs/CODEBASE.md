@@ -4,6 +4,8 @@
 
 ## Material presentation amendment — 6 October 2026
 
+`ArtifactReader` can copy a validated loaded source interval and pin one temporary historical range. `ReadingReferenceProvider` owns one snapshot of at most 200 lines/64 KiB decoded text outside virtualized passages; no artifact fetch or persistence. Source/session/load and replay mode/cutoff scope checks hide it synchronously and release it on cleanup; normal history growth preserves it. Descriptor provenance remains visible, including derived/generated and redacted content. See [source reference](review/18-source-reference.md).
+
 `ArtifactReader` adds deliberate matching-line navigation and validated go-to-line within actual stored source, retaining at most 64 page offsets and one bounded page. Controls stay mounted during loading. `common.useArtifact` now keys immutable blob-backed pages by complete artifact descriptor plus source/recording/scope/range, avoiding focus/selection loss on unrelated appends; non-blob/unlisted material remains revision-keyed. Metadata changes still invalidate. `ArtifactView.totalLines` comes from the existing slice response. See [source navigation](review/17-source-navigation.md).
 
 `History.ReadPreview` opens its exact read artifact through existing in-place expansion, using returned artifact coordinates for preview numbering. Read expansion now shows provenance/ranges and reserves the full passage width. `ArtifactReader` supports literal case-insensitive find within its loaded 200-line code page; query persists across pages, highlights source-coordinate lines and resets on artifact change. This is not whole-file/session search or current-file access. See [captured-range reading](review/16-captured-range-reader.md).
@@ -127,7 +129,7 @@ Canvas 2D and DOM syntax rendering remain replaceable implementations; PixiJS an
 
 ## Tests
 
-`pnpm check` runs typecheck and 233 unit tests. `pnpm test:browser` builds the UI and runs synthetic live-history Playwright acceptance, including long-session mounted-DOM/focus, paged reading/file navigation and combined-demo tool filters; CI installs Chromium and runs it on Linux and Windows. The opt-in real-session journey stays skipped without its local manifest. The main groups:
+`pnpm check` runs typecheck and 245 unit tests. `pnpm test:browser` builds the UI and runs synthetic live-history Playwright acceptance, including long-session mounted-DOM/focus, paged reading/file navigation and combined-demo tool filters; CI installs Chromium and runs it on Linux and Windows. The opt-in real-session journey stays skipped without its local manifest. The main groups:
 
 - **JSONL**: partial lines, truncation, oversized and malformed records.
 - **Adapters**: intents, correlation, unknown records, encrypted reasoning never surfaced.

@@ -174,6 +174,9 @@ test('long history mounts only nearby work while selected evidence and live upda
 });
 
 test('B3 expands captured content in place, pages it, and bounds file navigation', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text: string) => { (window as unknown as { copiedSource: string }).copiedSource = text; } } });
+  });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(server.launchUrl);
   await page.getByRole('combobox', { name: 'Harness' }).selectOption('codex');
@@ -217,6 +220,15 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await find.fill('LINE 249');
   await expect(content.locator('.ln-hi .ln-no')).toHaveText('249');
   await find.press('Enter');
+  const rangeActions = read.getByRole('group', { name: 'Loaded source range actions' });
+  await rangeActions.getByRole('textbox', { name: 'Source range start' }).fill('201');
+  await rangeActions.getByRole('textbox', { name: 'Source range end' }).fill('203');
+  await rangeActions.getByRole('button', { name: 'Copy range', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { copiedSource: string }).copiedSource)).toBe('// bounded reader line 201\n// bounded reader line 202\n// bounded reader line 203');
+  await rangeActions.getByRole('button', { name: 'Pin range', exact: true }).click();
+  const pinned = page.getByRole('complementary', { name: 'Pinned source reference' });
+  await expect(pinned).toContainText('Pinned source · 201–203');
+  await find.focus();
   const sourceScroll = await read.locator('.op-expanded').evaluate((el) => el.scrollTop);
   const readSteps = Number((await steps.innerText()).match(/\d+/)?.[0]);
   await appendLongRead();
@@ -225,6 +237,7 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await expect(find).toHaveValue('LINE 249');
   await expect(content.locator('.ln-no').first()).toHaveText('201');
   expect(await read.locator('.op-expanded').evaluate((el) => el.scrollTop)).toBe(sourceScroll);
+  await expect(pinned).toContainText('Pinned source · 201–203');
   await find.fill('');
   await expect(content.locator('.ln-hi')).toHaveCount(0);
   await find.fill('bounded reader line 24');
@@ -250,6 +263,20 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await expect(content.locator('.ln-no').first()).toHaveText('1');
   await page.keyboard.press('Escape');
   await expect(read).not.toHaveClass(/expanded/);
+  await pinned.getByRole('button', { name: /Pinned source/ }).click();
+  await expect(pinned.getByRole('button', { name: 'Minimize reference' })).toBeFocused();
+  await expect(pinned.getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toHaveText('201// bounded reader line 201202// bounded reader line 202203// bounded reader line 203');
+  await page.getByRole('button', { name: /Back to latest/ }).click();
+  await pinned.getByRole('region', { name: 'Content of src/checkout/guard.ts' }).click();
+  const heldAt = await history.evaluate((el) => el.scrollTop);
+  const pinnedSteps = Number((await steps.innerText()).match(/\d+/)?.[0]);
+  await appendLongRead();
+  await expect(steps).toContainText(`${pinnedSteps + 2} recorded steps`);
+  expect(await history.evaluate((el) => el.scrollTop)).toBe(heldAt);
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(pinned.getByRole('button', { name: /Pinned source/ })).toBeFocused();
+  await expect(pinned.locator('.reference-content')).toHaveCount(0);
 
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   const panel = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
@@ -261,6 +288,8 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await expect.poll(() => panel.locator('[data-file-op]').count()).toBeGreaterThan(0);
   await panel.locator('[data-file-op]').first().click();
   await expect(page.getByRole('complementary', { name: 'Operation detail' })).toBeVisible();
+  await page.getByTitle('All recordings').click();
+  await expect(pinned).toHaveCount(0);
 });
 
 test('B3 navigation keeps the combined synthetic story while filtering tools', async ({ page }) => {

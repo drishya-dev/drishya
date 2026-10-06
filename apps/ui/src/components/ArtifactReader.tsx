@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Hunk } from '@drishya/contracts';
 import { CodeView, DiffView, Output, ProvenanceBadge, useArtifact } from './common.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
+import { useReadingReference } from './ReadingReference.tsx';
 
 /** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
 export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false }: {
@@ -20,9 +21,14 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const [activeLine, setActiveLine] = useState<number>();
   const [lineInput, setLineInput] = useState('');
   const [lineError, setLineError] = useState<string>();
+  const [rangeFrom, setRangeFrom] = useState('');
+  const [rangeTo, setRangeTo] = useState('');
+  const [rangeStatus, setRangeStatus] = useState('');
+  const reference = useReadingReference();
   const reader = useRef<HTMLDivElement>(null);
   useEffect(() => { setPages([0]); setIndex(0); setQuery(''); setActiveLine(undefined); setLineInput(''); setLineError(undefined); }, [id]);
   const pageStart = pages[index] ?? 0;
+  useEffect(() => { setRangeFrom(''); setRangeTo(''); setRangeStatus(''); }, [id, pageStart]);
   const view = useArtifact(id, { scope: 'reader', start: pageStart, count: 200, retry });
   useEffect(() => setCopied(undefined), [id, pageStart]);
   const reveal = (line: number) => reader.current?.querySelector<HTMLElement>(`[data-source-line="${line}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
@@ -37,6 +43,23 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const sourceStart = (view.artifact?.range?.start ?? startLine) + pageStart;
   const sourceBase = view.artifact?.range?.start ?? startLine;
   const sourceEnd = view.totalLines === undefined ? undefined : Math.min(sourceBase + view.totalLines - 1, view.artifact?.range?.end ?? Infinity);
+  const sourceLines = text ? text.replace(/\n$/, '').split('\n') : [];
+  const loadedEnd = Math.min(sourceStart + sourceLines.length - 1, sourceEnd ?? Infinity);
+  const selectedRange = () => {
+    const from = rangeFrom ? Number(rangeFrom) : sourceStart;
+    const to = rangeTo ? Number(rangeTo) : loadedEnd;
+    if ((rangeFrom && !/^\d+$/.test(rangeFrom)) || (rangeTo && !/^\d+$/.test(rangeTo)) || !Number.isSafeInteger(from) || !Number.isSafeInteger(to) || from < sourceStart || to > loadedEnd || to < from) {
+      setRangeStatus(`Loaded page only · choose lines ${sourceStart}–${loadedEnd} in order`);
+      return;
+    }
+    return { start: from, end: to, text: sourceLines.slice(from - sourceStart, to - sourceStart + 1).join('\n') };
+  };
+  const copyRange = async () => {
+    const range = selectedRange();
+    if (!range) return;
+    try { await navigator.clipboard.writeText(range.text); setRangeStatus(`Copied source lines ${range.start}–${range.end}`); }
+    catch { setRangeStatus('Copy unavailable · select source text to copy'); }
+  };
   // Search only the bounded page already in memory, never today's file or other moments.
   const matchingLines = new Set<number>();
   const needle = query.toLowerCase();
@@ -78,6 +101,21 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
         <button className="btn ghost small" disabled={!view.totalLines}>Go to line</button>
         <span className="muted small" role="status">{lineError ?? (sourceEnd !== undefined && sourceEnd >= sourceBase ? `Stored range ${sourceBase}–${sourceEnd}` : 'No stored source lines')}</span>
       </form>}
+      {kind === 'code' && !loading && sourceLines.length > 0 && <div className="source-range" role="group" aria-label="Loaded source range actions">
+        <span className="material-context">Range</span>
+        <input inputMode="numeric" aria-label="Source range start" placeholder={String(sourceStart)} maxLength={16} value={rangeFrom} onChange={(e) => { setRangeFrom(e.target.value); setRangeStatus(''); }} />
+        <span className="muted">–</span>
+        <input inputMode="numeric" aria-label="Source range end" placeholder={String(loadedEnd)} maxLength={16} value={rangeTo} onChange={(e) => { setRangeTo(e.target.value); setRangeStatus(''); }} />
+        <button className="btn ghost small" onClick={() => { void copyRange(); }}>Copy range</button>
+        {reference && view.artifact && <button className="btn ghost small" onClick={() => {
+          const range = selectedRange();
+          if (!range || !view.artifact) return;
+          if (range.text.length * 2 > 64 * 1024) { setRangeStatus('Reference limit · choose a smaller range (64 KiB of text)'); return; }
+          reference.pin({ ...range, path: view.artifact.path ?? path, artifact: view.artifact, note: range.end === loadedEnd && view.partial?.includes('cut at the response size limit') ? 'Response size limit · the final shown line may be incomplete.' : undefined });
+          setRangeStatus(`Pinned source lines ${range.start}–${range.end} · replaces the previous reference`);
+        }}>Pin range</button>}
+        <span className="muted small" role="status">{rangeStatus || 'Loaded page only · one temporary reference'}</span>
+      </div>}
       {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <Output text={text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(pageStart > 0 || next) && (

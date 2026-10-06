@@ -28,6 +28,8 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 ## Current B4 amendment
 
+[18: temporary source reference](review/18-source-reference.md) records loaded-range copy, the one-reference memory boundary and session/replay resets. STATUS/CONTINUITY carry local acceptance and the publishing-only hosted verification policy.
+
 [17: stored source navigation](review/17-source-navigation.md) adds bounded line/match navigation and stable historical readers during live append. CONTINUITY/STATUS carry current acceptance; CODEBASE describes descriptor-keyed cache invalidation. Larger workspace capabilities remain staged.
 
 **Latest source-reading amendment:** [16](review/16-captured-range-reader.md) records direct exact-range opening, full-width reading, provenance and bounded page find. CONTINUITY/STATUS carry the shared handoff for both builders; DEVELOPER_WORKSPACE separates implemented slices from proposed W1–W6 capabilities.

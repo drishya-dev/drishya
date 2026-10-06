@@ -23,9 +23,11 @@ These refine the existing integrated baseline. They should not wait behind a lar
 
 ## Later capability groups, in priority order
 
-**W1 navigation increment:** [17](review/17-source-navigation.md) implements loaded-page matching-line navigation, stored-range go-to-line across bounded slices, persistent controls during loading and stable historical material during unrelated live append. Find remains page-local. Range copying, one pinned reference and subsequent folder/current-file/symbol capabilities remain proposed.
+**W1 range/reference increment:** [18](review/18-source-reference.md) adds exact loaded-range copy and one temporary historical reference (up to 200 lines / 64 KiB decoded text). The reference survives live append and reader close, but clears at session/source/replay boundaries. Provenance remains visible; no persistence or current-file access. Folder/current-file/symbol capabilities and durable bookmarks remain staged.
 
-**Implemented baseline slice, 6 October:** toolbox emission is in [15](review/15-toolbox-emission.md). Exact read activation, artifact coordinates, hover/focus edge, full-width in-place reading, provenance and loaded-page find are in [16](review/16-captured-range-reader.md). W1 is partial: match navigation, go-to-line, range copy and pins remain proposed. No folder/current-file/symbol explorer has been added. Harsh's agent should read CONTINUITY and STATUS before choosing its next slice and claim files first.
+**W1 navigation increment:** [17](review/17-source-navigation.md) implements loaded-page matching-line navigation, stored-range go-to-line across bounded slices, persistent controls during loading and stable historical material during unrelated live append. Find remains page-local.
+
+**Implemented baseline slice, 6 October:** toolbox emission is in [15](review/15-toolbox-emission.md). Exact read activation, artifact coordinates, hover/focus edge, full-width in-place reading, provenance and loaded-page find are in [16](review/16-captured-range-reader.md). W1 navigation/range/reference now have bounded implementation slices; reversible tabs/breadcrumbs remain proposed. No folder/current-file/symbol explorer has been added. Harsh's agent should read CONTINUITY and STATUS before choosing its next slice and claim files first.
 
 | Stage | Developer job | Concrete experience | Evidence / exit check |
 |---|---|---|---|

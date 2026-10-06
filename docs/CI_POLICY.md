@@ -1,6 +1,6 @@
 # CI usage policy — 6 October 2026
 
-The builder requested **local checks during development and hosted checks only for an explicitly selected final candidate** after the organization reached 90% of its included Actions allowance. This supersedes the earlier automatic push/PR policy. Do not restore automatic triggers without discussing the quota impact with the builder.
+The builder requested **local checks and commits during development; hosted checks only at the completed-product publishing stage or immediately before it** after the organization reached 90% of its included Actions allowance. This supersedes the earlier automatic push/PR policy and the initial intermediate-final-candidate wording. Do not dispatch hosted CI for each completed feature or restore automatic triggers without the builder's direction.
 
 ## Development and final verification
 
@@ -18,7 +18,20 @@ git diff --exit-code -- apps/ui/public/demo/bundle.json
 
 Install Chromium once if needed: `corepack pnpm exec playwright install chromium`. The normal browser suite uses synthetic data; private real-session and ten-minute probes remain opt-in and local. Do not enable real imports merely for CI verification. If dependencies change, first install using the repository's tracked package-manager/lock configuration; exclude unrelated local package-manager edits from commits.
 
-When the builder asks for **final verification**, dispatch once on the selected branch after local checks pass:
+For substantial live-history/motion/reading changes, run the ten-minute synthetic check locally too (not on each documentation commit):
+
+```powershell
+$env:DRISHYA_P1_SOAK = '1'
+try {
+  corepack pnpm exec playwright test tests/browser/p1-pacing.spec.ts --grep 'sustained live reading'
+} finally {
+  Remove-Item Env:DRISHYA_P1_SOAK
+}
+```
+
+It now retains one historical source reference while repeatedly appending captured work, holding the reader and returning to latest. Report its measured rounds/DOM results, not merely that the process launched. Core local checks require no GitHub Actions allowance.
+
+When the builder asks for **pre-publication verification of the finished product**, dispatch once on the selected branch after local checks pass:
 
 ```powershell
 gh workflow run ci.yml --ref <candidate-branch>
