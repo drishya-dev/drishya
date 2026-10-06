@@ -153,14 +153,14 @@ test('long history mounts only nearby work while selected evidence and live upda
   await selected.locator('.op-head').click();
   await history.locator(`article[data-op-id="${selectedId}"]`).focus();
   await history.hover();
-  for (let i = 0; i < 10; i++) {
+  // Wheel through the measured end, rather than assuming ten events exhaust a
+  // virtual document whose last passages are still resolving their heights.
+  // Detached reading must not auto-follow those late measurements.
+  await expect.poll(async () => {
     await page.mouse.wheel(0, 100_000);
     await history.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    const remaining = await history.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop);
-    if (remaining < 2) break;
-  }
-  // A final 22 px passage margin can settle after the wheel; detached reading stays detached.
-  await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(32);
+    return history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop));
+  }, { message: 'Deliberate wheel navigation reaches the measured history end' }).toBeLessThan(2);
   await expect.poll(() => history.locator('[data-passage-id]').count()).toBeLessThan(80);
   await expect(history.locator(`article[data-op-id="${selectedId}"]`)).toHaveCount(1);
   expect(await page.evaluate(() => document.activeElement?.getAttribute('data-op-id'))).toBe(selectedId);

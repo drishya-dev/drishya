@@ -12,15 +12,19 @@ try {
   const p = bundle.projection;
   const operations = new Map(p.operations.map((op) => [op.id, op]));
   const prose = new Map(p.prose.map((item) => [item.id, item]));
-  const agents = new Map(p.agents.map((agent, i) => [agent.id, { ...agent, color: ['#ddb878', '#91a9e8', '#83c5ad'][i % 3] }]));
+  const agentColors = direction === 'atlas' ? ['#965522', '#695197', '#166c5d'] : ['#edb783', '#c0a9ed', '#7de0c5'];
+  const agents = new Map(p.agents.map((agent, i) => [agent.id, { ...agent, color: agentColors[i % 3] }]));
   let count = Math.min(2, p.passages.length);
   let path;
   let tool;
   let agentId;
   let follow = true;
   let motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.body.dataset.motion = String(motion);
   let map = true;
-  let activeAnimation;
+  let activeAnimations = [];
+  let motionEpoch = 0;
+  let arrivalScroll = false;
   let lastTrigger;
   const native = new Map();
   const servers = new Map();
@@ -94,11 +98,14 @@ try {
     root.querySelector('.return').hidden = follow;
   };
   const stopMotion = () => {
-    activeAnimation?.cancel();
+    motionEpoch++;
+    arrivalScroll = false;
+    for (const animation of activeAnimations) animation.cancel();
+    activeAnimations = [];
     root.querySelector('.relationships').replaceChildren();
   };
-  const relation = (origin, target, animate = false) => {
-    stopMotion();
+  const relation = (origin, target, animate = false, append = false) => {
+    if (!append) stopMotion();
     if (!origin || !target) return;
     const a = origin.getBoundingClientRect();
     const b = target.getBoundingClientRect();
@@ -113,18 +120,33 @@ try {
     svg.append(line);
     if (animate && motion && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const length = line.getTotalLength();
-      activeAnimation = line.animate([{ strokeDasharray: length, strokeDashoffset: length, opacity: .9 }, { strokeDasharray: length, strokeDashoffset: 0, opacity: .35 }], { duration: 620, easing: 'cubic-bezier(.16,1,.3,1)' });
+      activeAnimations.push(line.animate([{ strokeDasharray: length, strokeDashoffset: length, opacity: .9 }, { strokeDasharray: length, strokeDashoffset: 0, opacity: .35 }], { duration: 620, easing: 'cubic-bezier(.16,1,.3,1)' }));
+      // Highlight the real instrument boundary once; characters never travel or type.
+      activeAnimations.push(origin.animate([{ borderLeftColor: line.style.stroke }, { borderLeftColor: getComputedStyle(origin).borderLeftColor }], { duration: 700, easing: 'ease-out' }));
     }
   };
   const originFor = (op) => op.origin.type === 'mcp' ? [...root.querySelectorAll('[data-tool]')].find((el) => el.dataset.tool === `${op.origin.server}:${op.origin.tool}`) : root.querySelector(`[data-kind="${op.kind}"]`);
   const reveal = () => {
+    stopMotion();
+    arrivalScroll = true;
     follow = false;
     const ps = p.passages[count++];
     update();
     const target = [...history.querySelectorAll('[data-passage]')].find((el) => el.dataset.passage === ps?.id);
     target?.scrollIntoView({ block: 'start', behavior: 'instant' });
     const op = ps?.operationIds.map((id) => operations.get(id)).find(Boolean);
-    if (op) requestAnimationFrame(() => relation(originFor(op), [...history.querySelectorAll('[data-op]')].find((el) => el.dataset.op === op.id), true));
+    const epoch = motionEpoch;
+    if (op) requestAnimationFrame(() => {
+      arrivalScroll = false;
+      if (epoch !== motionEpoch) return;
+      const material = [...history.querySelectorAll('[data-op]')].find((el) => el.dataset.op === op.id);
+      relation(originFor(op), material, true, true);
+      if (map && op.kind === 'read') {
+        const file = op.paths.find((item) => item.role !== 'search-hit')?.path;
+        const node = [...root.querySelectorAll('.map-file')].find((el) => el.dataset.file === file);
+        relation(node, material, true, true);
+      }
+    });
   };
   const openReading = (op, trigger) => {
     stopMotion();
@@ -157,7 +179,7 @@ try {
     if (button.classList.contains('show-all')) { follow = false; count = p.passages.length; update(); return; }
     if (button.classList.contains('clear')) { path = tool = agentId = undefined; update(); stopMotion(); return; }
     if (button.classList.contains('return')) { count = p.passages.length; path = tool = agentId = undefined; follow = true; update(); stage.scrollTop = stage.scrollHeight; return; }
-    if (button.classList.contains('motion-toggle')) { motion = !motion; button.textContent = motion ? 'Motion on' : 'Motion off'; button.setAttribute('aria-pressed', String(motion)); stopMotion(); return; }
+    if (button.classList.contains('motion-toggle')) { motion = !motion; document.body.dataset.motion = String(motion); button.textContent = motion ? 'Motion on' : 'Motion off'; button.setAttribute('aria-pressed', String(motion)); stopMotion(); return; }
     if (button.classList.contains('map-toggle')) { map = !map; root.querySelector('.world').hidden = !map; button.textContent = map ? 'Map on' : 'Map off'; button.setAttribute('aria-pressed', String(map)); stopMotion(); return; }
     if (button.classList.contains('mobile-tools')) { const open = root.querySelector('.experience').classList.toggle('tools-open'); button.textContent = open ? 'Close tools' : 'Tools'; return; }
     if (button.dataset.file) { path = path === button.dataset.file ? undefined : button.dataset.file; tool = agentId = undefined; }
@@ -178,12 +200,12 @@ try {
   });
   history.addEventListener('pointerout', (event) => { if (!event.target.closest('[data-op]')?.contains(event.relatedTarget)) stopMotion(); });
   stage.addEventListener('wheel', () => { follow = false; root.querySelector('.return').hidden = false; stopMotion(); }, { passive: true });
-  history.addEventListener('pointerdown', () => { follow = false; stopMotion(); });
+  stage.addEventListener('pointerdown', () => { follow = false; stopMotion(); });
   document.addEventListener('keydown', (event) => {
     if (['Tab', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', ' '].includes(event.key)) { follow = false; stopMotion(); }
     if (event.key === 'Escape') { root.querySelector('.experience').classList.remove('tools-open'); root.querySelector('.mobile-tools').textContent = 'Tools'; }
   });
-  stage.addEventListener('scroll', stopMotion, { passive: true });
+  stage.addEventListener('scroll', () => { if (!arrivalScroll) stopMotion(); }, { passive: true });
   window.addEventListener('resize', stopMotion);
   root.querySelector('.reading').addEventListener('close', () => { if (lastTrigger?.isConnected) lastTrigger.focus({ preventScroll: true }); });
   const svg = root.querySelector('.world-map');

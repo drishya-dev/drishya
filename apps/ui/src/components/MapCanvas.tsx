@@ -9,10 +9,10 @@ import { useApp } from '../state.ts';
 
 const TONE: Record<HeatCell['tone'], string> = {
   read: '#C8C8D0',
-  search: '#8B9BFF',
-  write: '#E6B98A',
-  fail: '#F2706A',
-  pass: '#4FC38A',
+  search: '#7DE0C5',
+  write: '#EDB783',
+  fail: '#F09B99',
+  pass: '#86D8AD',
 };
 
 interface Cam {
@@ -172,10 +172,13 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     // Keep the reading column clear: the map recedes behind text, never crosses it.
     if (!explore && readingRect) {
       const grad = g.createLinearGradient(readingRect.left - 32, 0, readingRect.left + readingRect.width + 32, 0);
-      grad.addColorStop(0, 'rgba(10,10,12,0)');
-      grad.addColorStop(0.04, 'rgba(10,10,12,0.9)');
-      grad.addColorStop(0.96, 'rgba(10,10,12,0.9)');
-      grad.addColorStop(1, 'rgba(10,10,12,0)');
+      // Match the DOM theme; the reading mask must not become an old black slab.
+      const theme = getComputedStyle(c).getPropertyValue('--bg').trim();
+      const base = /^#[0-9a-f]{6}$/i.test(theme) ? theme : '#0b1b1e';
+      grad.addColorStop(0, `${base}00`);
+      grad.addColorStop(0.04, `${base}e6`);
+      grad.addColorStop(0.96, `${base}e6`);
+      grad.addColorStop(1, `${base}00`);
       g.fillStyle = grad;
       g.fillRect(readingRect.left - 32, 0, readingRect.width + 64, size.h);
     }

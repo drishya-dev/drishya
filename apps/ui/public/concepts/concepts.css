@@ -1,5 +1,5 @@
 * { box-sizing: border-box; }
-:root { color-scheme: dark; --bg:#101216; --surface:#16191f; --ink:#e2e6ee; --muted:#949cab; --faint:#657080; --line:#2a2f39; --accent:#ddb878; --source:#12151b; --green:#83c5ad; --red:#ec969b; --mono:Consolas,'SFMono-Regular',monospace; }
+:root { color-scheme: dark; --bg:#0b1b1e; --surface:#132e31; --chrome:#0e2326; --ink:#e6f2ec; --muted:#a1bbb6; --faint:#829f99; --line:#294345; --accent:#7de0c5; --copper:#edb783; --external:#c0a9ed; --source:#10282b; --green:#86d8ad; --red:#f09b99; --mono:Consolas,'SFMono-Regular',monospace; }
 body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.6 Inter,'Segoe UI',sans-serif; }
 button,a { color:inherit; font:inherit; }
 button { background:none; border:0; cursor:pointer; }
@@ -145,7 +145,7 @@ footer .next { color:var(--accent); border-left:1px solid var(--line); padding-l
 [data-direction=studio] .map-file,[data-direction=relay] .map-file { color:transparent; width:6px; height:6px; padding:0; background:var(--muted); border-radius:50%; opacity:.18; }
 [data-direction=studio] .map-file:hover,[data-direction=relay] .map-file:hover { color:var(--muted); width:auto; height:auto; background:var(--bg); border-radius:0; padding:7px; opacity:1; }
 /* Relay trades combined chronology for simultaneous, explicitly agent-owned lanes. */
-body[data-direction=relay] { --bg:#10151c; --source:#111b28; --surface:#192332; --line:#2c3949; --accent:#91b6e8; }
+body[data-direction=relay] { --bg:#101f31; --chrome:#14283d; --source:#132a40; --surface:#1b354b; --line:#314b61; --accent:#9fc7ed; --muted:#b1c4d3; --faint:#8ba8bc; }
 [data-direction=relay] .experience { grid-template-columns:180px minmax(0,1fr) 238px; }
 [data-direction=relay] .stage { padding:32px 26px 120px; }
 [data-direction=relay] .intro h1 { font-size:28px; }
@@ -161,7 +161,7 @@ body[data-direction=relay] { --bg:#10151c; --source:#111b28; --surface:#192332; 
 [data-direction=relay] .prose p { font-size:12px; }
 [data-direction=relay] .context h2 { font-size:19px; }
 /* Atlas is a distinct map-first/light direction, not a colour swap of Studio. */
-body[data-direction=atlas] { color-scheme:light; --bg:#efede7; --source:#f7f5f0; --surface:#e8e5dd; --ink:#242e32; --muted:#576568; --faint:#737c7c; --line:#cccfc8; --accent:#506f68; --green:#3d7a64; --red:#a74844; }
+body[data-direction=atlas] { color-scheme:light; --bg:#eeeede; --chrome:#e4e9d8; --source:#f7f8ea; --surface:#dce7d9; --ink:#203e37; --muted:#4d6860; --faint:#4f665c; --line:#c1cdbb; --accent:#166c5d; --copper:#965522; --external:#695197; --green:#287354; --red:#a23f3e; }
 [data-direction=atlas] .experience { grid-template-columns:34vw minmax(0,1fr) 238px; }
 [data-direction=atlas] .context { border:0; pointer-events:none; padding:38px 32px; }
 [data-direction=atlas] .context h2 { font-size:34px; letter-spacing:-1.2px; }
@@ -177,6 +177,57 @@ body[data-direction=atlas] { color-scheme:light; --bg:#efede7; --source:#f7f5f0;
 [data-direction=atlas] .added { color:#38674f; background:#83c5ad22; }
 [data-direction=atlas] .removed { color:#9d4c51; background:#ec969b18; }
 [data-direction=atlas] .reading::backdrop { background:#242e3277; }
+/* Jade instrument metal, copper edits and ink reading space form one identity.
+   Different material boundaries carry meaning; prose keeps no enclosing surface. */
+.crown,.tools,footer { background:var(--chrome); }
+.crown { border-bottom:1px solid var(--line); }
+.brand i { border-color:var(--accent); box-shadow:inset 0 0 0 4px var(--chrome); }
+.brand { letter-spacing:-.3px; }
+.agent-crown button { border-bottom:2px solid transparent; transition:border-color 140ms; }
+.agent-crown button:hover,.agent-crown button[aria-pressed=true] { border-bottom-color:var(--agent); color:var(--ink); }
+.context { background:var(--chrome); }
+.context .eyebrow,.tools>.eyebrow { color:var(--accent); }
+.context h2 { color:var(--ink); }
+.intro .eyebrow { color:var(--accent); }
+.intro h1 { font-weight:500; letter-spacing:-1.2px; }
+.passage-owner strong { color:var(--agent); }
+.operation { border-top-color:var(--line); }
+.operation>header { padding:15px 0; }
+.operation-kind { color:var(--accent); }
+.kind-edit .operation-kind,.kind-edit .material-meta { color:var(--copper); }
+.kind-mcp .operation-kind,.mcp-identity { color:var(--external); }
+.kind-read .material { border-left:2px solid var(--accent); border-bottom:1px solid var(--line); }
+.kind-edit .material { border-left:2px solid var(--copper); }
+.material-meta { color:var(--muted); }
+.kind-read .material-meta { border-bottom:1px solid var(--line); }
+.kind-search .query { color:var(--accent); }
+.kind-search .search-results button { border-left-color:var(--accent); }
+.search-results span { color:var(--copper); }
+.kind-test .command,.kind-shell .command { border-bottom:1px solid var(--line); color:var(--muted); }
+.instrument { position:relative; padding-left:7px; border-left:2px solid transparent; transition:border-color 140ms,background-color 140ms; }
+.instrument:hover,.instrument[aria-pressed=true] { border-left-color:var(--accent); background:var(--surface); color:var(--ink); }
+.instrument-mark { color:var(--accent); }
+.server h3,.server h3::before { color:var(--external); }
+.server button:hover,.server button[aria-pressed=true] { color:var(--external); background:var(--surface); }
+.file-index button { border-left:2px solid transparent; padding-left:8px; transition:border-color 140ms,background-color 140ms; }
+.file-index button:hover,.file-index [aria-pressed=true] { border-left-color:var(--accent); background:var(--surface); }
+.file-index [aria-pressed=true] i { width:5px; height:5px; }
+.return { background:var(--accent); color:var(--bg); box-shadow:none; font-weight:600; }
+footer .next { color:var(--accent); font-weight:600; }
+.reading { border:0; border-top:2px solid var(--accent); background:var(--bg); }
+.reader-states button[aria-pressed=true] { border-bottom-color:var(--copper); color:var(--copper); }
+.prose { border-left:2px solid var(--agent); padding-left:18px; }
+.prose small { color:var(--agent); }
+.prose p { color:var(--ink); }
+.added { background:#65bf9324; color:#b1edc9; }
+.removed { background:#d9828220; color:#f1bfbd; }
+[data-direction=atlas] .context { background:transparent; }
+[data-direction=atlas] .brand i { box-shadow:inset 0 0 0 4px var(--chrome); }
+[data-direction=atlas] .added { color:#286244; background:#70bd9826; }
+[data-direction=atlas] .removed { color:#943f40; background:#db92921c; }
+[data-direction=atlas] .map-file { border-left:2px solid var(--accent); background:var(--source); }
+[data-direction=atlas] .map-file[aria-pressed=true] { background:var(--surface); color:var(--accent); }
+[data-direction=atlas] .world-map circle { fill:var(--accent); }
 @media(max-width:1150px) {
   .experience,[data-direction=relay] .experience { grid-template-columns:180px minmax(0,1fr) 220px; }
   [data-direction=atlas] .experience { grid-template-columns:28vw minmax(0,1fr) 220px; }
@@ -207,3 +258,4 @@ body[data-direction=atlas] { color-scheme:light; --bg:#efede7; --source:#f7f5f0;
   .reading .code-lines { font-size:12px; }
 }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+[data-motion=false] *,[data-motion=false] *::before,[data-motion=false] *::after { animation:none !important; transition:none !important; }

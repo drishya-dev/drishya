@@ -3,7 +3,7 @@ import type { RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
 
-const TONE = { read: '#c8c8d0', search: '#8b9bff', write: '#e6b98a', fail: '#f2706a', pass: '#4fc38a' };
+const TONE = { read: '#c8c8d0', search: '#7de0c5', write: '#edb783', fail: '#f09b99', pass: '#86d8ad' };
 
 /** A second view of the actual repository geometry, never a diagram of inferred reasoning. */
 export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCell[] }) {

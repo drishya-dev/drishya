@@ -30,6 +30,21 @@ for (const direction of ['studio', 'relay', 'atlas']) {
     await page.goto(new URL(`/concepts/${direction}.html`, server.launchUrl).href);
     await expect(page.getByRole('heading', { name: 'Free orders reach checkout', exact: true })).toBeVisible();
     await expect(page.locator('.tools [data-tool]')).toHaveCount(2);
+    const contrast = await page.evaluate(() => {
+      const root = getComputedStyle(document.body);
+      const luminance = (hex: string) => {
+        const value = hex.trim().slice(1);
+        const channels = [0, 2, 4].map((i) => parseInt(value.slice(i, i + 2), 16) / 255)
+          .map((v) => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+        return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+      };
+      const backgrounds = ['--bg', '--source', '--chrome'].map((token) => luminance(root.getPropertyValue(token)));
+      return ['--ink', '--muted', '--faint'].flatMap((token) => {
+        const text = luminance(root.getPropertyValue(token));
+        return backgrounds.map((background) => (Math.max(text, background) + .05) / (Math.min(text, background) + .05));
+      });
+    });
+    expect(Math.min(...contrast)).toBeGreaterThanOrEqual(4.5);
     const read = page.locator('.op-title').filter({ hasText: 'Read src/checkout/guard.ts 1–14' });
     await read.click();
     const reader = page.getByRole('dialog');
@@ -41,6 +56,10 @@ for (const direction of ['studio', 'relay', 'atlas']) {
     const before = await page.locator('.position').innerText();
     await page.getByRole('button', { name: 'Reveal next captured passage ↗' }).click();
     await expect(page.locator('.position')).not.toHaveText(before);
+    await expect(page.locator('.relationships path').first()).toBeAttached();
+    await page.locator('.stage').hover();
+    await page.mouse.wheel(0, 100);
+    await expect(page.locator('.relationships path')).toHaveCount(0);
     await expect(page.locator('.history')).toContainText("if (!cart.total) return 'missing-total';");
     if (direction === 'atlas') await page.locator('.world [data-file="src/checkout/guard.ts"]').click();
     else await page.locator('.file-index [data-file="src/checkout/guard.ts"]').click();
