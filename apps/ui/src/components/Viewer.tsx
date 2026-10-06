@@ -10,6 +10,7 @@ import { ExplanationView, Inspector } from './Inspector.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 import { RepositoryLens } from './RepositoryLens.tsx';
+import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { FileHistory } from './FileHistory.tsx';
 import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
@@ -285,7 +286,7 @@ function Dock({ scene }: { scene: Scene }) {
       <div className="dock-basis">Observed in this recording</div>
       {scene.dock.native.map((d) => (
         <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
-          <span className={`op-kind k-${d.kind}`}>{KIND_LABEL[d.kind]}</span>
+          <span className={`op-kind k-${d.kind}`}><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} />{KIND_LABEL[d.kind]}</span>
           <span className="inst-tools">{d.tools.join(' · ')}</span>
           <span className="inst-uses">{d.uses || ''}</span>
         </button>

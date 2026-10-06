@@ -254,6 +254,8 @@ input:not([type="checkbox"]), select { background-color: var(--s2); border-color
 }
 .repo-lens-label { position: absolute; max-width: calc(100% - 16px); font: 10px/1.6 var(--mono); background: var(--s1); color: var(--t1); padding: 1px 5px; border: 1px solid var(--line-2); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 .repo-lens-focus { font-size: 11px; color: var(--t2); }
+.dock .instrument .op-kind { display: flex; align-items: center; gap: 7px; }
+.dock .instrument .material-glyph { width: 14px; height: 14px; }
 .pending-result { display: flex; align-items: center; gap: 10px; min-height: 60px; color: var(--t3); font-size: 11px; }
 .pending-result > span:first-child { font: 22px var(--mono); color: var(--material, var(--t2)); }
 .patch-request { margin-top: 12px; }

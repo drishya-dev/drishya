@@ -38,7 +38,7 @@ export function RepositoryLens({ graph, heat, focusPath }: { graph: RepoGraph; h
     for (const focused of [false, true]) {
       g.beginPath();
       for (const edge of graph.edges) {
-        if ((!!hovered && (edge.from === hovered || edge.to === hovered)) !== focused) continue;
+        if ((!!labelPath && (edge.from === labelPath || edge.to === labelPath)) !== focused) continue;
         const from = byId.get(edge.from); const to = byId.get(edge.to);
         if (!from || !to) continue;
         const a = points(from); const b = points(to);
@@ -48,14 +48,14 @@ export function RepositoryLens({ graph, heat, focusPath }: { graph: RepoGraph; h
     }
     for (const node of graph.nodes) {
       const p = points(node); const h = activity.get(node.id);
-      g.beginPath(); g.arc(p.x, p.y, hovered === node.id ? 3.5 : h ? 2.3 : 1.2, 0, Math.PI * 2);
+      g.beginPath(); g.arc(p.x, p.y, labelPath === node.id ? 3.5 : h ? 2.3 : 1.2, 0, Math.PI * 2);
       g.fillStyle = h ? colours.tones[h.tone] : colours.node; g.fill();
-      if (h?.edited || hovered === node.id) {
+      if (h?.edited || labelPath === node.id) {
         g.beginPath(); g.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
-        g.strokeStyle = hovered === node.id ? colours.text : colours.tones.write; g.stroke();
+        g.strokeStyle = labelPath === node.id ? colours.text : colours.tones.write; g.stroke();
       }
     }
-  }, [graph, heat, hovered, width, theme]);
+  }, [graph, heat, labelPath, width, theme]);
   const nearest = (x: number, y: number) => {
     let found: RepoGraph['nodes'][number] | undefined;
     let distance = 12 ** 2;
