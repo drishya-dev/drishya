@@ -11,6 +11,7 @@ import { CodeView, DiffView, Output, timeOf, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf } from '../lib/presentation.ts';
 import { Origins } from './Origins.tsx';
+import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
@@ -393,6 +394,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       aria-label={op.title}
     >
       <header className="op-head">
+        <MaterialGlyph material={presentation.material} />
         <span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span>
         <span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span>
         <StateMark state={so.state} />
@@ -495,13 +497,14 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
   switch (d.kind) {
     case 'read':
       return <>
-        <div className="request-line excerpt-range">Read from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · captured excerpt</div>
-        <ResultArea state={op.status} resolving={resolving}><ReadPreview artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} /></ResultArea>
+        <div className="request-line excerpt-range">{op.status === 'running' ? 'Requested from line' : 'Read from line'} {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · {op.status === 'running' ? 'awaiting excerpt' : 'captured excerpt'}</div>
+        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : <ReadPreview artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
       </>;
     case 'edit':
       return <>
-        <div className="request-line">Captured patch{d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}</div>
-        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={14} /> : <div className="muted">{d.reconstructionNote ?? 'No change captured.'}</div>}</ResultArea>
+        <div className="request-line">{op.status === 'running' ? 'Patch request · awaiting recorded outcome' : `Captured patch${d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}`}</div>
+        {op.status === 'running' && <PatchRequest op={op} path={d.path} />}
+        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={14} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No change captured.'}</div>}</ResultArea>
       </>;
     case 'search':
       return (
@@ -544,7 +547,8 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
     case 'shell':
       return (
         <div className="shell">
-          <div className="cmd">$ {d.command.split('\n')[0]}{d.command.includes('\n') ? ' …' : ''}</div>
+          <div className="cmd">$ {d.command.slice(0, 1200)}</div>
+          {d.command.length > 1200 && <div className="material-context">First 1,200 captured characters · expand for full input</div>}
           <ResultArea state={op.status} resolving={resolving}>
             {d.outputPreview ? <TerminalPreview text={d.outputPreview} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
             {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
@@ -555,7 +559,8 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
       return (
         <div className="mcp">
           <div className="mcp-tool">{d.tool}</div>
-          <div className="mcp-input">{summarizeInput(d.input)}</div>
+          <div className="material-context">Captured arguments · bounded preview</div>
+          <RequestFields input={d.input} />
           <ResultArea state={op.status} resolving={resolving}>
             {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview.slice(0, 1400)} /></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
           </ResultArea>
@@ -591,6 +596,23 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
         <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div> : undefined}</ResultArea>
       </>;
   }
+}
+
+function RequestFields({ input }: { input: unknown }) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return <div className="mcp-input">{summarizeInput(input)}</div>;
+  const keys = Object.keys(input);
+  return <><dl className="request-fields">{keys.slice(0, 6).map((key) => <div key={key}><dt>{key}</dt><dd>{summarizeInput((input as Record<string, unknown>)[key])}</dd></div>)}</dl>{keys.length > 6 && <p className="muted">{keys.length - 6} more arguments · expand for full captured input</p>}</>;
+}
+
+function PendingResult() {
+  return <div className="pending-result"><span aria-hidden="true">···</span><span>Request observed. Result has not arrived.</span></div>;
+}
+
+function PatchRequest({ op, path }: { op: Operation; path: string }) {
+  const id = op.artifactIds.find((artifact) => artifact.endsWith('_patch'));
+  const view = useArtifact(id, { scope: 'preview', count: 12 });
+  if (!id) return null;
+  return <div className="patch-request">{view.text !== undefined ? <CodeView text={view.text} path={path} maxLines={12} /> : <span className="muted">{view.error ?? view.unavailable ?? 'Opening captured patch input…'}</span>}</div>;
 }
 
 function ReadPreview({ artifactId, start, path }: { artifactId?: string; start: number; path: string }) {

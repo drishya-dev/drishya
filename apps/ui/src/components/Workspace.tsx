@@ -15,7 +15,9 @@ export function WorkspaceBar() {
   return <nav className="workspace-bar" aria-label="Workspace views">
     <div className="workspace-views">{(['Follow', 'Agents', 'Repository'] as const).map((view) => <button key={view} aria-pressed={view === 'Repository' ? explore : view === 'Agents' ? compare && !explore : !compare && !explore} disabled={view === 'Repository' && !map} onClick={() => useApp.setState({ explore: view === 'Repository', compareAgents: view === 'Agents', follow: false, playing: false, held: true })}>{view}</button>)}</div>
     <span className="workspace-recording-title" title={title}>{title}</span>
-    <div className="workspace-context"><span>{source?.kind === 'bundle' ? 'Offline evidence' : recording?.live ? 'Observing local journal' : 'Local recording'}</span><span> / {mode === 'replay' ? 'Sequence replay' : 'Scrollable history'}</span></div>
+    <div className="workspace-context"><span>{source?.sample === 'growing' ? 'Synthetic live demonstration' : source?.sample === 'recorded' ? 'Synthetic recording' : source?.kind === 'bundle' ? 'Offline evidence' : recording?.live ? 'Observing local journal' : 'Local recording'}</span><span> / {mode === 'replay' ? 'Sequence replay' : source?.sample === 'growing' ? recording?.live ? 'Publishing sample events' : 'Sample complete' : 'Scrollable history'}</span></div>
+    {source?.sample === 'growing' && recording?.live && <button className="btn ghost sample-complete" onClick={() => source.completeSample?.()}>Show complete sample</button>}
+    {source?.sample === 'recorded' && <button className="btn ghost sample-watch" onClick={() => location.assign(`${location.pathname}?demo=live`)}>Watch live demo</button>}
     {filter && <button className="btn ghost clear-workspace-filter" onClick={() => useApp.getState().setFilter(undefined)}>Clear focus</button>}
   </nav>;
 }

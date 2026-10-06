@@ -5,19 +5,21 @@ import { useApp } from '../state.ts';
 import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
 
 /** A second view of the actual repository geometry, never a diagram of inferred reasoning. */
-export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCell[] }) {
+export function RepositoryLens({ graph, heat, focusPath }: { graph: RepoGraph; heat: HeatCell[]; focusPath?: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const hovered = useApp((s) => s.hoveredPath);
   const theme = useResolvedTheme();
   const set = useApp((s) => s.set);
   const [width, setWidth] = useState(0);
-  const height = 142;
+  const height = 170;
   const byId = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph]);
   const activity = useMemo(() => new Map(heat.map((h) => [h.path, h])), [heat]);
+  const labelPath = hovered ?? focusPath ?? heat.find((cell) => cell.active)?.path;
+  const labelled = labelPath ? byId.get(labelPath) : undefined;
   const points = (node: { x: number; y: number }) => ({ x: 12 + node.x * Math.max(0, width - 24), y: 12 + node.y * (height - 24) });
   const anchors = heat.slice(0, 63).map((h) => h.path);
-  if (hovered && !anchors.includes(hovered)) anchors.push(hovered);
+  if (labelPath && !anchors.includes(labelPath)) anchors.push(labelPath);
   useEffect(() => {
     const el = wrap.current;
     if (!el) return;
@@ -36,7 +38,7 @@ export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCe
     for (const focused of [false, true]) {
       g.beginPath();
       for (const edge of graph.edges) {
-        if ((!!hovered && (edge.from === hovered || edge.to === hovered)) !== focused) continue;
+        if ((!!labelPath && (edge.from === labelPath || edge.to === labelPath)) !== focused) continue;
         const from = byId.get(edge.from); const to = byId.get(edge.to);
         if (!from || !to) continue;
         const a = points(from); const b = points(to);
@@ -46,14 +48,14 @@ export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCe
     }
     for (const node of graph.nodes) {
       const p = points(node); const h = activity.get(node.id);
-      g.beginPath(); g.arc(p.x, p.y, hovered === node.id ? 3.5 : h ? 2.3 : 1.2, 0, Math.PI * 2);
+      g.beginPath(); g.arc(p.x, p.y, labelPath === node.id ? 3.5 : h ? 2.3 : 1.2, 0, Math.PI * 2);
       g.fillStyle = h ? colours.tones[h.tone] : colours.node; g.fill();
-      if (h?.edited || hovered === node.id) {
+      if (h?.edited || labelPath === node.id) {
         g.beginPath(); g.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
-        g.strokeStyle = hovered === node.id ? colours.text : colours.tones.write; g.stroke();
+        g.strokeStyle = labelPath === node.id ? colours.text : colours.tones.write; g.stroke();
       }
     }
-  }, [graph, heat, hovered, width, theme]);
+  }, [graph, heat, labelPath, width, theme]);
   const nearest = (x: number, y: number) => {
     let found: RepoGraph['nodes'][number] | undefined;
     let distance = 12 ** 2;
@@ -75,6 +77,7 @@ export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCe
       if (node) set({ filePanel: node.path, follow: false, playing: false, held: true });
     }}>
       <canvas ref={canvas} style={{ width, height }} aria-hidden="true" />
+      {labelled && width > 0 && <span className="repo-lens-label" style={{ left: Math.max(8, Math.min(points(labelled).x + 6, width - 110)), top: Math.max(4, points(labelled).y - 22) }} title={labelled.path}>{labelled.path.split('/').at(-1)}</span>}
       {anchors.map((path) => {
         const node = byId.get(path); if (!node) return null;
         const p = points(node);
@@ -82,6 +85,6 @@ export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCe
       })}
     </div>
     <div className="repo-lens-caption">{graph.nodes.length.toLocaleString()} files · {graph.temporal === 'current' ? `${graph.edges.length.toLocaleString()} static imports` : 'recorded locations'}</div>
-    <div className="repo-lens-focus" title={hovered}>{hovered ?? (graph.temporal === 'current' ? 'Hover a file to trace its imports' : 'Explore files touched in this run')}</div>
+    <div className="repo-lens-focus" title={labelPath}>{labelPath ?? (graph.temporal === 'current' ? 'Hover a file to trace its imports' : 'Explore files touched in this run')}</div>
   </div>;
 }

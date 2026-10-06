@@ -40,9 +40,11 @@ test('the tool request is visible before its result and remains beside it', asyn
   await page.evaluate(() => {
     const observed: string[] = [];
     (window as unknown as { p1Moves: string[] }).p1Moves = observed;
+    (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials = [];
     new MutationObserver((changes) => {
       for (const change of changes) for (const node of change.addedNodes) {
         if (node instanceof Element && node.getAttribute('data-move')) observed.push(node.getAttribute('data-move')!);
+        if (node instanceof Element && node.classList.contains('origin-material')) (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.push({ move: node.getAttribute('data-move')!, width: Number(node.getAttribute('width')), height: Number(node.getAttribute('height')) });
       }
     }).observe(document.querySelector('.origins')!, { childList: true });
   });
@@ -54,6 +56,8 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(operation).toContainText('Waiting for output');
   await expect(operation.locator('.state-running')).toHaveCount(1);
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Emit');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.some((material) => material.move === 'Emit' && material.width > 150 && material.height > 60))).toBe(true);
+  expect(await operation.evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
 
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'drishya-live-output' }] } });
   await app.ingest.sync(recordingId);
@@ -67,7 +71,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Surface');
   append({ type: 'assistant', message: { id: 'p1-next-read', role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id: 'p1-next-read', name: 'Read', input: { file_path: '/home/dev/shop/src/checkout/guard.ts', offset: 1, limit: 3 } }] } });
   await app.ingest.sync(recordingId);
-  await expect(page.locator('article.op-read').last()).toContainText('captured excerpt');
+  await expect(page.locator('article.op-read').last()).toContainText('awaiting excerpt');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Lift');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Settle');
   await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);

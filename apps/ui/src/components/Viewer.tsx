@@ -10,6 +10,7 @@ import { ExplanationView, Inspector } from './Inspector.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 import { RepositoryLens } from './RepositoryLens.tsx';
+import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { FileHistory } from './FileHistory.tsx';
 import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
@@ -138,9 +139,10 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
         <span className="brand-mark" />
         Drishya
       </button>
+      {source?.sample && <span className="crown-sample">Synthetic demo</span>}
       <div className="crown-title" title={projection.title}>
         {projection.title ?? recording?.title ?? 'Recording'}
-        {source?.kind === 'bundle' && <span className="tag">offline bundle</span>}
+        {source?.kind === 'bundle' && !source.sample && <span className="tag">offline bundle</span>}
         {connection === 'reconnecting' && <span className="tag warn" role="status">reconnecting…</span>}
         {recording && recording.health?.state !== 'following' && recording.health?.state !== 'idle' && <HealthTag r={recording} />}
         {recording?.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
@@ -211,6 +213,17 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   }, []);
   const heat = useMemo(() => new Map(scene.heat.map((h) => [h.path, h])), [scene.heat]);
   const files = projection.files.filter((f) => f.firstStep < scene.step);
+  const recentPath = useMemo(() => {
+    const operations = new Map(projection.operations.map((op) => [op.id, op]));
+    const pathOf = (id?: string) => id ? operations.get(id)?.paths.find((ref) => ref.role !== 'search-hit')?.path : undefined;
+    const focused = pathOf(scene.focus?.operationId);
+    if (focused) return focused;
+    for (let p = scene.passages.length - 1; p >= 0; p--) {
+      const ops = scene.passages[p]!.ops;
+      for (let i = ops.length - 1; i >= 0; i--) { const path = pathOf(ops[i]!.id); if (path) return path; }
+    }
+    return undefined;
+  }, [projection, scene.passages, scene.focus?.operationId]);
   const rowHeight = 48;
   const rowStart = useRef<HTMLDivElement>(null);
   const [rowOffset, setRowOffset] = useState(32);
@@ -231,7 +244,7 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   return (
     <nav className="spine" ref={ref} aria-label="Files in this run" onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedPath((e.target as HTMLElement).closest<HTMLElement>('[data-spine-path]')?.dataset.spinePath)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-spine-path]')) setFocusedPath(undefined); }}>
       <div className="spine-head">Recorded working set</div>
-      {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} />}
+      {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} focusPath={recentPath} />}
       <div ref={rowStart} aria-hidden="true" />
       {files.length === 0 && <div className="muted small">None yet</div>}
       {[...visible].sort((a, b) => a - b).map((i) => {
@@ -273,7 +286,7 @@ function Dock({ scene }: { scene: Scene }) {
       <div className="dock-basis">Observed in this recording</div>
       {scene.dock.native.map((d) => (
         <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
-          <span className={`op-kind k-${d.kind}`}>{KIND_LABEL[d.kind]}</span>
+          <span className={`op-kind k-${d.kind}`}><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} />{KIND_LABEL[d.kind]}</span>
           <span className="inst-tools">{d.tools.join(' · ')}</span>
           <span className="inst-uses">{d.uses || ''}</span>
         </button>

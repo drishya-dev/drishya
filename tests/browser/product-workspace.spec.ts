@@ -33,6 +33,34 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('synthetic live demo publishes pending requests, resolves in place and keeps capture going while reading', async ({ page }) => {
+  await page.goto(new URL('/?demo=live', server.launchUrl).href);
+  await expect(page.locator('.workspace-context')).toContainText('Synthetic live demonstration');
+  const operation = page.locator('article.op-read').first();
+  await expect(operation).toContainText('awaiting excerpt', { timeout: 15_000 });
+  const id = await operation.getAttribute('data-op-id');
+  await expect(operation).toContainText('Request observed. Result has not arrived.');
+  await expect(operation).not.toContainText('export function');
+  await expect(operation).toContainText('export function', { timeout: 10_000 });
+  expect(await operation.getAttribute('data-op-id')).toBe(id);
+  const settings = page.getByRole('button', { name: 'Workspace settings', exact: true });
+  await settings.click();
+  const before = Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]);
+  await expect.poll(async () => Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]), { timeout: 10_000 }).toBeGreaterThan(before);
+  await page.getByRole('button', { name: 'Close Workspace settings' }).click();
+  await page.getByRole('button', { name: 'Show complete sample' }).click();
+  await expect(page.locator('.reading-status')).toContainText('45 recorded steps');
+  await expect(page.locator('.workspace-context')).toContainText('Sample complete');
+  await expect(page.locator('.transport')).not.toContainText('Pause');
+  await page.getByRole('button', { name: /Back to latest/ }).click();
+  await expect(page.locator('article.op-test').last()).toContainText('7 passed');
+  await expect(page.getByRole('button', { name: 'Filter by Codex agent' })).toBeVisible();
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/material-live-complete.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('.crown-sample')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
 test('workspace settings persist, respect the OS, restore focus and work on a narrow screen', async ({ page }) => {
   await page.goto(demoUrl());
   const settings = page.getByRole('button', { name: 'Workspace settings', exact: true });

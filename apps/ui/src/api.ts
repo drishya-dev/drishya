@@ -56,6 +56,9 @@ export interface Config {
 
 export interface DataSource {
   kind: 'daemon' | 'bundle';
+  /** Built-in synthetic fixture only; never used to classify a user's replay bundle. */
+  sample?: 'recorded' | 'growing';
+  completeSample?(): void;
   storage?(): Promise<{ bytes: number; budgetBytes: number; overBudget: boolean }>;
   config(): Promise<Config>;
   recordings(): Promise<ReaderRecording[]>;
