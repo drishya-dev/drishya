@@ -12,7 +12,7 @@
   color-scheme: light;
   --bg: #edeee8; --s1: #fafaf6; --s2: #e2e5de; --s3: #d6dbd3;
   --line: #c7ccc4; --line-2: #b4bdb3; --line-3: #899786;
-  --t1: #272d30; --t2: #50595c; --t3: #60696b; --t4: #60696b;
+  --t1: #272d30; --t2: #50595c; --t3: #596365; --t4: #596365;
   --focus: #326e60; --external: #70518f; --pass: #286b48; --fail: #a33e36; --edited: #91512f;
   --pass-wash: #79b99124; --fail-wash: #d7948629;
 }
