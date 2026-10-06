@@ -87,6 +87,9 @@
 .read-preview:has(.captured-range:hover) .code, .read-preview:has(.captured-range:focus-visible) .code { box-shadow: inset 2px 0 var(--focus); }
 .source-find { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; }
 .source-find input { min-width: 0; width: min(260px, 100%); padding: 7px 9px; border: 1px solid var(--line-3); border-radius: 4px; background: var(--bg); color: var(--t1); font: inherit; }
+.source-go { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; }
+.source-go input { min-width: 0; width: 110px; padding: 7px 9px; border: 1px solid var(--line-3); border-radius: 4px; background: var(--bg); color: var(--t1); font: inherit; }
+.artifact-reader .ln-current { box-shadow: inset 2px 0 var(--focus); background: color-mix(in srgb, var(--focus) 10%, transparent); }
 .split-change { display: none; }
 .diff-split .split-change { display: block; }
 .diff-split .unified-change { display: none; }

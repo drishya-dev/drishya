@@ -59,6 +59,12 @@ test('source preview opens the exact stored range and keeps pending replay evide
   await expect(read.locator('.snapshot-provenance')).toContainText('Excerpt · lines 81–94');
   await read.getByRole('searchbox', { name: 'Find in loaded source page' }).fill('cart.total');
   await expect(read.locator('.ln-hi .ln-no')).toHaveText('88');
+  await read.getByRole('textbox', { name: 'Go to stored source line' }).fill('94');
+  await read.getByRole('button', { name: 'Go to line', exact: true }).click();
+  await expect(read.locator('[aria-current="location"] .ln-no')).toHaveText('94');
+  await read.getByRole('textbox', { name: 'Go to stored source line' }).fill('95');
+  await read.getByRole('button', { name: 'Go to line', exact: true }).click();
+  await expect(read.locator('.source-go')).toContainText('enter line 81–94');
   await expect(page.getByRole('complementary', { name: 'Operation detail' })).toHaveCount(0);
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/captured-range-reader.png') });
   await page.setViewportSize({ width: 390, height: 844 });

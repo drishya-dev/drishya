@@ -24,6 +24,8 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 ## Current B4 amendment
 
+[17: stored source navigation](review/17-source-navigation.md) adds bounded line/match navigation and stable historical readers during live append. CONTINUITY/STATUS carry current acceptance; CODEBASE describes descriptor-keyed cache invalidation. Larger workspace capabilities remain staged.
+
 **Latest source-reading amendment:** [16](review/16-captured-range-reader.md) records direct exact-range opening, full-width reading, provenance and bounded page find. CONTINUITY/STATUS carry the shared handoff for both builders; DEVELOPER_WORKSPACE separates implemented slices from proposed W1–W6 capabilities.
 
 **Current product delivery:** [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) supersedes older base-UI/prototype-only descriptions for implemented workspace behavior, P2-B evidence comparison and local run/package instructions. The 30 September audit remains historical; current evidence comes from STATUS, CODEBASE and the B4/P1 delivery records. VISION governs creative intent. Further UI changes belong in the integrated app.

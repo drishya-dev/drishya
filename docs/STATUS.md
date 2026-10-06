@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Codex / Yash | Stored source match/line navigation and held-reader live append | ArtifactReader.tsx, common.tsx, reader styles, browser tests, shared docs |
 
 ---
 
@@ -63,6 +64,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
+- **Current continuation:** matching-line navigation, stored-range go-to-line and persistent controls during page fetch. Failing-first live append test reproduced reader focus loss; complete descriptor-keyed immutable material now preserves query/page/focus/inner scroll on unrelated work while invalidating changed metadata. Typechecks/245 units, UI build and 33 ordinary browser cases pass (two opt-in skips). Fresh ten-minute reader and CI/merge remain pending; see [17](review/17-source-navigation.md). Shared docs updated; original package-manager edits excluded.
 - **When:** 6 October 2026. PR #34 merged as `3ad7336`; local main fast-forwarded. All seven exact-head CI jobs passed on `9b25ec8` (run `37449558192`). Yash author/Codex coauthor; Harsh's work remains intact. Final main CI is monitored separately after this docs handoff.
 - **Delivered:** exact operation-to-artifact read opening, artifact-authoritative preview coordinates, hover/focus excerpt edge, historical provenance/ranges, full-width deliberate expansion and literal find within the loaded 200-line source page. Query stays across pages and highlights matching source lines; it is not whole-file/current-source search. The width fix was found during manual integrated UI review.
 - **Verification:** typechecks/245 units, UI build and 33 ordinary browser cases pass (two opt-in skips). Fresh final-build ten-minute reader passed: 600,148 ms, 114 append/hold/return rounds, peak 664 DOM nodes. The first isolated probe failed at round zero because its wheel preceded asynchronous history readiness; the test now waits for visible/scrollable history at latest, preserving every acceptance assertion. No failed probe is counted as acceptance.
