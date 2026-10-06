@@ -3,11 +3,12 @@ import { useSyncExternalStore } from 'react';
 // The effective theme can change through the OS without changing the saved preference.
 function subscribe(change: () => void) {
   const observer = new MutationObserver(change);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-palette'] });
   return () => observer.disconnect();
 }
+/** A redraw key: the light/dark scheme plus the named palette (Midnight and Charcoal are both dark). */
 export function useResolvedTheme() {
-  return useSyncExternalStore(subscribe, () => document.documentElement.dataset.theme ?? 'dark', () => 'dark');
+  return useSyncExternalStore(subscribe, () => `${document.documentElement.dataset.theme ?? 'dark'}:${document.documentElement.dataset.palette ?? ''}`, () => 'dark:');
 }
 
 /** Read tokens once per paint, rather than querying CSS for every node in a large map. */

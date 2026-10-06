@@ -402,8 +402,42 @@ test('view and appearance changes keep the same captured passage under the reade
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') {
     await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-    await page.getByRole('button', { name: 'Charcoal', exact: true }).click();
+    await page.getByRole('button', { name: 'Jet', exact: true }).click();
     await page.getByRole('button', { name: 'Close Workspace settings' }).click();
     await page.screenshot({ path: resolve('.local/product-workspace.png') });
   }
+});
+
+test('history activity timeline opens recorded failures and edits; named palettes switch', async ({ page }) => {
+  await page.goto(demoUrl());
+  const timeline = page.getByRole('group', { name: 'Recorded activity' });
+  await expect(timeline).toContainText('2 edits · 1 failed · 2 passed');
+  await timeline.getByRole('button', { name: 'Next failure' }).click();
+  const failing = page.locator('article.op.selected');
+  await expect(failing).toHaveClass(/st-error/);
+  await expect(failing).toHaveAttribute('aria-label', /npm test/);
+  await expect(failing).toBeInViewport({ ratio: 0.01 });
+  await timeline.getByRole('button', { name: 'Next edit' }).click();
+  await expect(page.locator('article.op.selected')).toHaveAttribute('aria-label', /Edit src\/checkout\/guard\.ts/);
+  await timeline.getByRole('button', { name: 'Previous failure' }).click();
+  await expect(page.locator('article.op.selected')).toHaveClass(/st-error/);
+  // Ticks are a pointer shortcut and never enter the accessibility tree.
+  await expect(timeline.locator('.activity-strip')).toHaveAttribute('aria-hidden', 'true');
+
+  // Jet is the signature default, with its matte grain layer; low resource mode drops it.
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(11, 11, 11)');
+  expect(await page.evaluate(() => getComputedStyle(document.body, '::after').backgroundImage)).toContain('data:image/svg+xml');
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
+  await dialog.getByRole('button', { name: 'Midnight', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(10, 10, 12)');
+  await dialog.getByRole('button', { name: 'Light', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'paper');
+  await dialog.getByRole('button', { name: 'Jet', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
+  await dialog.getByRole('checkbox', { name: /^Low resource mode/ }).check();
+  expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
 });

@@ -17,7 +17,8 @@
   {
     "step": 10,
     "type": "spawn",
-    "label": "Delegate to Explore: Find tests covering totals"
+    "label": "Delegate to Explore: Find tests covering totals",
+    "operationId": "rec#1.toolu_synthetic0004"
   },
   {
     "step": 19,
@@ -32,17 +33,20 @@
   {
     "step": 24,
     "type": "fail",
-    "label": "Test · npm test"
+    "label": "Test · npm test",
+    "operationId": "rec#1.toolu_synthetic0009"
   },
   {
     "step": 26,
     "type": "edit",
-    "label": "Edit src/checkout/guard.ts"
+    "label": "Edit src/checkout/guard.ts",
+    "operationId": "rec#1.toolu_synthetic0010"
   },
   {
     "step": 28,
     "type": "pass",
-    "label": "Test · npm test"
+    "label": "Test · npm test",
+    "operationId": "rec#1.toolu_synthetic0011"
   },
   {
     "step": 31,
@@ -67,12 +71,14 @@
   {
     "step": 42,
     "type": "edit",
-    "label": "Edit test/checkout.test.ts"
+    "label": "Edit test/checkout.test.ts",
+    "operationId": "rec#2.call_synthetic_patch"
   },
   {
     "step": 44,
     "type": "pass",
-    "label": "Test · npm test"
+    "label": "Test · npm test",
+    "operationId": "rec#2.call_synthetic4"
   },
   {
     "step": 45,

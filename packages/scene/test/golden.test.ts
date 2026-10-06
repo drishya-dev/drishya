@@ -107,6 +107,6 @@ describe('scene composer', () => {
   });
 
   it('matches the golden marker strip', async () => {
-    await expect(JSON.stringify(markers(p), null, 2) + '\n').toMatchFileSnapshot('./__golden__/markers.json');
+    await expect(JSON.stringify(stable(markers(p)), null, 2) + '\n').toMatchFileSnapshot('./__golden__/markers.json');
   });
 });

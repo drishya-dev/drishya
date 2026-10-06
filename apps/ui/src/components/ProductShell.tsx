@@ -19,14 +19,29 @@ export function ReadingDialog({ title, close, children, className = '' }: { titl
 export function ProductShell({ children }: { children: ReactNode }) {
   const theme = useApp((s) => s.theme);
   const open = useApp((s) => s.settingsOpen);
+  const lowResource = useApp((s) => s.lowResource);
+  // Low resource mode also drops the decorative grain/vignette layers.
+  useEffect(() => { document.documentElement.toggleAttribute('data-low-resource', lowResource); }, [lowResource]);
   useEffect(() => {
     const media = matchMedia('(prefers-color-scheme: light)');
-    const apply = () => { document.documentElement.dataset.theme = theme === 'system' ? media.matches ? 'light' : 'dark' : theme; };
+    const apply = () => {
+      // data-theme stays the light/dark scheme; data-palette names the look within it.
+      const scheme = theme === 'system' ? media.matches ? 'light' : 'dark' : theme === 'light' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = scheme;
+      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'midnight' ? 'midnight' : 'jet';
+    };
     apply(); media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
   }, [theme]);
   return <>{children}{open && <Settings />}</>;
 }
+
+const THEMES = [
+  ['dark', 'Jet', 'Matte black, champagne gold'],
+  ['midnight', 'Midnight', 'Near-black, cool contrast'],
+  ['light', 'Light', 'Paper and stone'],
+  ['system', 'System', 'Jet or Light'],
+] as const;
 
 function Settings() {
   const theme = useApp((s) => s.theme);
@@ -37,7 +52,7 @@ function Settings() {
   const config = useApp((s) => s.config);
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
-      <div className="theme-options" aria-label="Colour theme">{(['dark', 'light', 'system'] as const).map((value) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} onClick={() => setTheme(value)}><i aria-hidden="true" />{value === 'dark' ? 'Charcoal' : value === 'light' ? 'Light' : 'System'}</button>)}</div>
+      <div className="theme-options" aria-label="Colour theme">{THEMES.map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
     </section>
     <section><h3>Reading and resources</h3>
       <label className="setting-row"><span>Low resource mode<small>Smaller material cache and history overscan. Turns map and motion off.</small></span><input type="checkbox" checked={low} onChange={(e) => setLowResource(e.target.checked)} /></label>

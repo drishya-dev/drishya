@@ -125,6 +125,39 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       });
       play(mark, frames, 620);
     };
+    // A read's file lifts out of its measured origin (map node or working-set row) as a plain
+    // document silhouette, rises, then travels into the action's header glyph. No path text or
+    // captured content travels; the excerpt is already stationary in its final DOM.
+    const fileTransfer = (origin: Element, target: Element, label: string, tone: string) => {
+      const destination = target.querySelector<SVGSVGElement>('.op-head > .material-glyph');
+      if (!destination || !visible(destination)) return;
+      const a = origin.getBoundingClientRect();
+      const b = destination.getBoundingClientRect();
+      if (!a.width || !a.height || !b.width || !b.height) return;
+      const x1 = a.left + Math.min(a.width / 2, 14); const y1 = a.top + a.height / 2;
+      const x2 = b.left + b.width / 2; const y2 = b.top + b.height / 2;
+      const rise = Math.min(28, Math.max(12, a.height));
+      const route = document.createElementNS(NS, 'path');
+      route.setAttribute('d', `M${x1},${y1 - rise} C${x1 + Math.abs(x2 - x1) / 2},${y1 - rise} ${x2 - 60},${y2} ${x2},${y2}`);
+      const mark = node('g', 'origin-file-transfer', 'Lift');
+      mark.setAttribute('data-origin-type', label);
+      mark.style.color = tone;
+      const sheet = document.createElementNS(NS, 'path');
+      sheet.setAttribute('d', 'M-7,-9 H3 L8,-4 V9 H-7 Z');
+      const fold = document.createElementNS(NS, 'path');
+      fold.setAttribute('d', 'M3,-9 V-4 H8 M-4,0 H5 M-4,4 H3');
+      mark.append(sheet, fold);
+      const length = route.getTotalLength();
+      const frames: Keyframe[] = [
+        { transform: `translate(${x1}px,${y1}px) scale(.55)`, opacity: 0, offset: 0 },
+        { transform: `translate(${x1}px,${y1 - rise}px) scale(1.15)`, opacity: 1, offset: .22 },
+        ...Array.from({ length: 6 }, (_, i): Keyframe => {
+          const point = route.getPointAtLength(length * (i + 1) / 6);
+          return { transform: `translate(${point.x}px,${point.y}px) scale(${1.15 - (i + 1) * .05})`, opacity: i === 5 ? 0 : .95, offset: .22 + (i + 1) * .13 };
+        }),
+      ];
+      play(mark, frames, 700);
+    };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false) => {
       const a = origin.getBoundingClientRect();
       const b = target.getBoundingClientRect();
@@ -141,6 +174,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       path.setAttribute('data-origin-renderer', origin instanceof HTMLElement ? origin.dataset.originRenderer ?? (label === 'Repository node' ? 'world' : 'reference') : 'reference');
       if (move) {
         if (move === 'Emit') toolTransfer(origin, target, label, path.style.stroke);
+        if (move === 'Lift' && label !== 'Read instrument') fileTransfer(origin, target, label, path.style.stroke);
         const ignition = node('rect', 'origin-instrument', move);
         ignition.setAttribute('x', String(a.left - 2)); ignition.setAttribute('y', String(a.top - 2));
         ignition.setAttribute('width', String(a.width + 4)); ignition.setAttribute('height', String(a.height + 4)); ignition.setAttribute('rx', '5');

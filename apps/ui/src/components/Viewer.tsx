@@ -352,7 +352,7 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
     <footer className="transport history-transport">
       <span className="reading-status"><span className="reading-dot" /> History · {scene.total} recorded steps</span>
       <span className="muted small">Scroll to review. New work joins below.</span>
-      <div className="transport-spacer" />
+      <ActivityTimeline scene={scene} projection={projection} />
       <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} disabled={!mapVisible} title={mapVisible ? 'Explore the map (X)' : 'Show the map to explore it'}>Explore</button>
       <button className="icon-btn txt" onClick={() => setMapVisible(!mapVisible)} aria-pressed={mapVisible} title={mapVisible ? 'Hide repository map' : 'Show repository map'}>{mapVisible ? 'Map on' : 'Map off'}</button>
       <button className={`icon-btn txt${motion ? '' : ' on'}`} onClick={() => setMotion(!motion)} title="Motion (M)">{motion ? 'Motion' : 'Still'}</button>
@@ -414,6 +414,59 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
         <button className={`icon-btn txt${motion ? '' : ' on'}`} onClick={() => setMotion(!motion)} title="Motion (M)">{motion ? 'Motion' : 'Still'}</button>
       </div>
     </footer>
+  );
+}
+
+// ─── activity timeline: the whole recording at a glance, in history mode ─────────────────
+
+const MARK_LABEL: Record<string, string> = { edit: 'Edit', fail: 'Failure', pass: 'Passed test', spawn: 'Subagent', turn: 'Prompt', gap: 'Capture gap' };
+const MAX_MARKS = 400;
+
+/** Recorded edits, failures and test outcomes as ticks; a tick opens its operation in history.
+ * Positions are recorded order (timeline steps), not wall-clock time. */
+function ActivityTimeline({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const historyPage = useApp((s) => s.historyPage);
+  const selectedOp = useApp((s) => s.selectedOp);
+  const select = useApp((s) => s.select);
+  const all = useMemo(() => (historyPage?.markers ?? markers(projection)).filter((m) => m.type !== 'prose'), [projection, historyPage]);
+  const shown = useMemo(() => {
+    if (all.length <= MAX_MARKS) return all;
+    // Thin quiet marks first; failures stay visible in a very long recording.
+    const stride = Math.ceil(all.length / MAX_MARKS);
+    return all.filter((m, i) => m.type === 'fail' || i % stride === 0);
+  }, [all]);
+  const total = Math.max(1, scene.total);
+  const openable = all.filter((m) => m.operationId);
+  const current = openable.find((m) => m.operationId === selectedOp);
+  const go = (types: string[], dir: 1 | -1) => {
+    const list = openable.filter((m) => types.includes(m.type));
+    const next = current ? (dir > 0 ? list.find((m) => m.step > current.step) : [...list].reverse().find((m) => m.step < current.step)) : dir > 0 ? list[0] : list[list.length - 1];
+    if (next?.operationId) select(next.operationId);
+  };
+  const count = (type: string) => all.filter((m) => m.type === type).length;
+  const failures = count('fail');
+  const edits = count('edit');
+  if (!all.length) return <div className="transport-spacer" />;
+  return (
+    <div className="activity" role="group" aria-label="Recorded activity">
+      <div className="activity-jump">
+        <button onClick={() => go(['fail'], -1)} disabled={!failures} aria-label="Previous failure" title="Previous recorded failure">‹</button>
+        <button onClick={() => go(['fail'], 1)} disabled={!failures} title="Next recorded failure"><span className="k-fail-dot" />Next failure</button>
+        <button onClick={() => go(['edit'], 1)} disabled={!edits} title="Next recorded edit"><span className="k-edit-dot" />Next edit</button>
+      </div>
+      {/* Pointer shortcut only: keyboard and screen-reader users have the jump buttons, so the
+          ticks stay out of the accessibility tree rather than adding hundreds of unnamed stops. */}
+      <div className="activity-strip" aria-hidden="true" title={historyPage ? 'Recorded order. Long recordings show a sample of marks.' : 'Recorded order, not wall-clock time.'}>
+        {shown.map((m, i) => {
+          const style = { left: `${Math.min(100, (m.step / total) * 100)}%` };
+          const label = `${MARK_LABEL[m.type] ?? m.type}: ${m.label}`;
+          return m.operationId
+            ? <button key={i} tabIndex={-1} className={`activity-mark k-${m.type}${m.operationId === selectedOp ? ' current' : ''}`} style={style} title={label} onClick={() => select(m.operationId)} />
+            : <span key={i} className={`activity-mark k-${m.type}`} style={style} title={label} />;
+        })}
+      </div>
+      {!historyPage && <span className="activity-count">{edits} edits · {failures} failed · {count('pass')} passed</span>}
+    </div>
   );
 }
 

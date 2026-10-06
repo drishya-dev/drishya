@@ -102,6 +102,8 @@ export interface Marker {
   step: number;
   type: 'turn' | 'edit' | 'fail' | 'pass' | 'prose' | 'gap' | 'spawn';
   label: string;
+  /** The operation this marker belongs to, so a timeline can open it in history. */
+  operationId?: string;
 }
 
 export interface Scene {
@@ -345,12 +347,12 @@ export function markers(p: Projection): Marker[] {
     else if (it.type === 'gap') out.push({ step, type: 'gap', label: it.reason });
     else if (it.type === 'op-start') {
       const op = ops.get(it.operationId)!;
-      if (op.kind === 'spawn') out.push({ step, type: 'spawn', label: op.title });
+      if (op.kind === 'spawn') out.push({ step, type: 'spawn', label: op.title, operationId: op.id });
     } else if (it.type === 'op-end') {
       const op = ops.get(it.operationId)!;
-      if ((op.kind === 'edit' || op.kind === 'write') && op.status === 'ok') out.push({ step, type: 'edit', label: op.title });
-      if (op.kind === 'test') out.push({ step, type: op.status === 'error' ? 'fail' : 'pass', label: op.title });
-      else if (op.status === 'error') out.push({ step, type: 'fail', label: op.title });
+      if ((op.kind === 'edit' || op.kind === 'write') && op.status === 'ok') out.push({ step, type: 'edit', label: op.title, operationId: op.id });
+      if (op.kind === 'test') out.push({ step, type: op.status === 'error' ? 'fail' : 'pass', label: op.title, operationId: op.id });
+      else if (op.status === 'error') out.push({ step, type: 'fail', label: op.title, operationId: op.id });
     } else if (it.type === 'prose') out.push({ step, type: 'prose', label: '' });
   });
   return out;

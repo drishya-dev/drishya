@@ -49,7 +49,7 @@ interface State {
   mapVisible: boolean;
   explore: boolean;
   compareAgents: boolean;
-  theme: 'dark' | 'light' | 'system';
+  theme: ThemePreference;
   settingsOpen: boolean;
   selectedOp?: string;
   /** One content-shaped reader expanded inside its original passage. */
@@ -254,16 +254,19 @@ export function setMapVisible(on: boolean) {
   }
 }
 
-function storedTheme(): 'dark' | 'light' | 'system' {
+/** Jet (stored as 'dark') is the signature default: matte black and champagne gold. Midnight is the cooler option. */
+export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system';
+
+function storedTheme(): ThemePreference {
   try {
     const value = localStorage.getItem('drishya.theme');
-    return value === 'light' || value === 'system' ? value : 'dark';
+    return value === 'midnight' || value === 'light' || value === 'system' ? value : 'dark';
   } catch {
     return 'dark';
   }
 }
 
-export function setTheme(theme: 'dark' | 'light' | 'system') {
+export function setTheme(theme: ThemePreference) {
   useApp.setState({ theme });
   try { localStorage.setItem('drishya.theme', theme); } catch { /* Optional local preference. */ }
 }

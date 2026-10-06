@@ -23,6 +23,8 @@ These refine the existing integrated baseline. They should not wait behind a lar
 
 ## Later capability groups, in priority order
 
+**Proposed paid-grade features (6 Oct, Harsh):** [19](review/19-developer-feature-proposals.md) lists what a senior developer would pay for — agent blame, tripwires, review packet, stuck detector, mission control, and the detailed VS Code-like reader/explorer/flow graph. Proposals only; build after the baseline, in the stage order below.
+
 **W1 range/reference increment:** [18](review/18-source-reference.md) adds exact loaded-range copy and one temporary historical reference (up to 200 lines / 64 KiB decoded text). The reference survives live append and reader close, but clears at session/source/replay boundaries. Provenance remains visible; no persistence or current-file access. Folder/current-file/symbol capabilities and durable bookmarks remain staged.
 
 **W1 navigation increment:** [17](review/17-source-navigation.md) implements loaded-page matching-line navigation, stored-range go-to-line across bounded slices, persistent controls during loading and stable historical material during unrelated live append. Find remains page-local.
