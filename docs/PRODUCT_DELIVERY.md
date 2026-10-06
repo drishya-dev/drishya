@@ -4,6 +4,8 @@ The builder's latest instruction is to **finish the working product in `apps/ui`
 
 ## What you can use
 
+**Source reading refinement:** open the exact read excerpt directly from its preview range; deliberate expansion uses the full passage width and exposes historical provenance/ranges. Find highlights matching lines only in the loaded source page. Hover/focus clarifies the visible excerpt without moving the reader. [16](review/16-captured-range-reader.md) records implementation, tests and remaining source-navigation work.
+
 1. Start the local daemon and open its authenticated launch link. The workspace groups imported recordings and discovered Claude Code/Codex journals by project. Search title/project, filter harness or date, import an existing session, or watch its journal. Discovery does not import everything automatically. Select several imported recordings to open one combined chronology.
 2. Follow captured actions in the centre. A tool's request is visible before its result. When the result is captured it resolves beside the request. Reads show the captured source region; searches show file/line hits; edits show actual patches; shell/MCP activity has input and captured output; tests expose parsed outcomes with their derivation qualified. Agent prose is unboxed. Missing content and capture gaps remain explicit.
 3. Scroll back, select or expand material without stopping capture. History keeps accumulating below; Back to latest is explicit. Large histories use the existing worker/page boundary and DOM virtualization. Captured text is never typed, artificially streamed or delayed behind animation.

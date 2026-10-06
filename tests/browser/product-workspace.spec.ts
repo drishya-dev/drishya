@@ -33,6 +33,44 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('source preview opens the exact stored range and keeps pending replay evidence hidden', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const op = sample.projection.operations.find((item: { kind: string }) => item.kind === 'read');
+  const artifact = sample.projection.artifacts.find((item: { id: string }) => item.id === op.detail.excerptArtifactId);
+  artifact.kind = 'excerpt';
+  artifact.range = { start: 81, end: 94 };
+  await page.route('**/demo/bundle.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.goto(demoUrl());
+  const history = page.locator('.history');
+  await expect(history).toBeVisible();
+  await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+  await page.mouse.move(1000, 350);
+  await page.mouse.wheel(0, -100_000);
+  const read = history.locator(`article[data-op-id="${op.id}"]`);
+  await read.scrollIntoViewIfNeeded();
+  const range = read.getByRole('button', { name: `Read excerpt of ${op.detail.path}` });
+  await expect(range).toContainText('Preview · lines 81–92');
+  await expect(read.locator('.code .ln-no').first()).toHaveText('81');
+  await range.focus();
+  await range.press('Enter');
+  await expect(read).toHaveClass(/expanded/);
+  expect((await read.boundingBox())!.width).toBeGreaterThan(600);
+  await expect(read.getByRole('button', { name: /Close .* in history/ })).toBeFocused();
+  await expect(read.locator('.snapshot-provenance')).toContainText('Excerpt · lines 81–94');
+  await read.getByRole('searchbox', { name: 'Find in loaded source page' }).fill('cart.total');
+  await expect(read.locator('.ln-hi .ln-no')).toHaveText('88');
+  await expect(page.getByRole('complementary', { name: 'Operation detail' })).toHaveCount(0);
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/captured-range-reader.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await read.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(read.getByRole('searchbox', { name: 'Find in loaded source page' })).toBeVisible();
+  // The result exists in the offline bundle, but has not landed at this replay boundary.
+  await page.goto(new URL('/?demo&at=3', server.launchUrl).href);
+  await expect(history.locator(`article[data-op-id="${op.id}"]`)).toContainText('awaiting excerpt');
+  await expect(page.getByRole('button', { name: `Read excerpt of ${op.detail.path}` })).toHaveCount(0);
+});
+
 test('substantial external results retain structured evidence and adapt to narrow reading', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));

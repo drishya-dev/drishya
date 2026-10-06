@@ -399,6 +399,11 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const history = page.locator('.history');
   const steps = page.locator('.reading-status');
+  // Session opening is asynchronous. Do not spend the first wheel gesture on the
+  // home/loading screen or before initial following has positioned the history.
+  await expect(history).toBeVisible();
+  await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+  await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   const started = Date.now();
   let rounds = 0;
   let peakNodes = 0;

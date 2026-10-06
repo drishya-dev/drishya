@@ -192,9 +192,18 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   expect(readId).toBeTruthy();
   const read = history.locator(`article.op-read[data-op-id="${readId}"]`);
   const content = read.getByRole('region', { name: 'Content of src/checkout/guard.ts' });
-  await read.getByRole('button', { name: /Expand .* in history/ }).click();
+  const range = read.getByRole('button', { name: 'Read excerpt of src/checkout/guard.ts' });
+  await expect(range).toContainText('Preview · lines 1–12');
+  await range.click();
   await expect(read).toHaveClass(/expanded/);
+  await expect(read.getByRole('button', { name: /Close .* in history/ })).toBeFocused();
   await expect(content).toContainText('bounded reader line 200');
+  await expect(read.locator('.snapshot-provenance')).toContainText('Captured');
+  await expect(read.locator('.snapshot-provenance')).toContainText('Excerpt · lines 1–250');
+  const find = read.getByRole('searchbox', { name: 'Find in loaded source page' });
+  await find.fill('line 250');
+  await expect(read.locator('.source-find')).toContainText('0 matching lines in this page');
+  await expect(content.locator('.ln-hi')).toHaveCount(0);
   // Page only once the first page has fully settled and the control is live.
   const next = read.getByRole('button', { name: 'Next lines' });
   await expect(next).toBeEnabled();
@@ -203,6 +212,12 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await expect(content).toContainText('bounded reader line 201');
   await expect(content).not.toContainText('bounded reader line 1');
   await expect(content.locator('.ln-no').first()).toHaveText('201');
+  await expect(read.locator('.source-find')).toContainText('1 matching line in this page');
+  await expect(content.locator('.ln-hi .ln-no')).toHaveText('250');
+  await find.fill('LINE 249');
+  await expect(content.locator('.ln-hi .ln-no')).toHaveText('249');
+  await find.fill('');
+  await expect(content.locator('.ln-hi')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(read).not.toHaveClass(/expanded/);
 

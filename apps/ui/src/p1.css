@@ -81,6 +81,12 @@
 .map-matches > button:hover, .map-matches > button:focus-visible { background: var(--s2); color: var(--focus); }
 .reader-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
 .reader-tools [aria-pressed="true"] { color: var(--t1); border-color: var(--line-3); }
+.captured-range { width: 100%; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding: 7px 0; margin-bottom: 4px; border: 0; border-bottom: 1px solid var(--line-3); background: transparent; color: var(--t2); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
+.captured-range span:last-child { color: var(--focus); }
+.captured-range:hover, .captured-range:focus-visible { color: var(--t1); border-bottom-color: var(--focus); }
+.read-preview:has(.captured-range:hover) .code, .read-preview:has(.captured-range:focus-visible) .code { box-shadow: inset 2px 0 var(--focus); }
+.source-find { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; }
+.source-find input { min-width: 0; width: min(260px, 100%); padding: 7px 9px; border: 1px solid var(--line-3); border-radius: 4px; background: var(--bg); color: var(--t1); font: inherit; }
 .split-change { display: none; }
 .diff-split .split-change { display: block; }
 .diff-split .unified-change { display: none; }
