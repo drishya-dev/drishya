@@ -52,7 +52,7 @@
 .history .op.shape-reading { flex: 0 1 560px; }
 .history .op.shape-medium { flex: 0 1 300px; }
 .history .op.shape-compact { flex: 0 1 270px; }
-.history .op.expanded { background: var(--s1); }
+.history .op.expanded { flex: 1 1 100%; background: var(--s1); }
 .history .op:hover, .history .op.lit, .history .op.selected { border-color: var(--focus); box-shadow: 0 5px 16px #00000012; }
 .history .op-head, .history .material-terminal .op-head, .history .material-verification .op-head { background: var(--s2); padding: 10px 12px; border-bottom: 1px solid var(--line); gap: 8px; }
 .history .op-title { font-size: 11px; white-space: normal; overflow-wrap: anywhere; }

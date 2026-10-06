@@ -23,6 +23,8 @@ These refine the existing integrated baseline. They should not wait behind a lar
 
 ## Later capability groups, in priority order
 
+**Implemented baseline slice, 6 October:** toolbox emission is in [15](review/15-toolbox-emission.md). Exact read activation, artifact coordinates, hover/focus edge, full-width in-place reading, provenance and loaded-page find are in [16](review/16-captured-range-reader.md). W1 is partial: match navigation, go-to-line, range copy and pins remain proposed. No folder/current-file/symbol explorer has been added. Harsh's agent should read CONTINUITY and STATUS before choosing its next slice and claim files first.
+
 | Stage | Developer job | Concrete experience | Evidence / exit check |
 |---|---|---|---|
 | W1: deeper source reading | Understand the exact material the agent saw | Range-preserving peek/open, find within loaded source, go to line, copy a range, pin one reading reference, reversible tabs/breadcrumbs | Exact captured lines/provenance; unavailable parts explicit; keyboard/focus and held anchors survive live append |

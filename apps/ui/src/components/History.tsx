@@ -424,8 +424,8 @@ function ExpandedOperation({ op }: { op: Operation }) {
   switch (d.kind) {
     case 'read':
       return <div className="op-expanded read-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.path} · read range from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · captured excerpt below</div>
-        <ArtifactReader key={d.excerptArtifactId} id={d.excerptArtifactId} kind="code" startLine={d.startLine} path={d.path} />
+        <div className="material-context">{d.path} · historical source at this action</div>
+        <ArtifactReader key={d.excerptArtifactId} id={d.excerptArtifactId} kind="code" startLine={d.startLine} path={d.path} provenance />
       </div>;
     case 'edit':
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
@@ -499,8 +499,8 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
   switch (d.kind) {
     case 'read':
       return <>
-        <div className="request-line excerpt-range">{op.status === 'running' ? 'Requested from line' : 'Read from line'} {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · {op.status === 'running' ? 'awaiting excerpt' : 'captured excerpt'}</div>
-        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : <ReadPreview artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
+        <div className="request-line excerpt-range">{op.status === 'running' ? <>Requested from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · awaiting excerpt</> : 'Historical source · recorded result'}</div>
+        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : <ReadPreview opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
       </>;
     case 'edit':
       return <>
@@ -617,14 +617,27 @@ function PatchRequest({ op, path }: { op: Operation; path: string }) {
   return <div className="patch-request">{view.text !== undefined ? <CodeView text={view.text} path={path} maxLines={12} /> : <span className="muted">{view.error ?? view.unavailable ?? 'Opening captured patch input…'}</span>}</div>;
 }
 
-function ReadPreview({ artifactId, start, path }: { artifactId?: string; start: number; path: string }) {
-  const { text, error, unavailable } = useArtifact(artifactId, { scope: 'preview' });
+function ReadPreview({ opId, artifactId, start, path }: { opId: string; artifactId?: string; start: number; path: string }) {
+  const { text, artifact, error, unavailable } = useArtifact(artifactId, { scope: 'preview' });
+  const set = useApp((s) => s.set);
   if (!artifactId) return <div className="muted">Content not captured</div>;
   if (error) return <div className="muted">{error}</div>;
   if (unavailable) return <div className="muted">{unavailable}</div>;
   if (text === undefined) return <div className="skeleton" />;
   if (!text) return <div className="muted">Empty</div>;
-  return <CodeView text={text} startLine={start} path={path} maxLines={12} />;
+  const sourceStart = artifact?.range?.start ?? start;
+  const shownLines = Math.min(12, text.replace(/\n$/, '').split('\n').length);
+  return <div className="read-preview">
+    <button className="captured-range" onClick={(e) => {
+      e.stopPropagation();
+      // Keep keyboard focus on a control that survives this preview's replacement.
+      e.currentTarget.closest('article')?.querySelector<HTMLButtonElement>('[data-expand-op]')?.focus({ preventScroll: true });
+      set({ expandedOp: opId, selectedOp: undefined, follow: false, playing: false, held: true });
+    }} aria-label={`Read excerpt of ${path}`}>
+      <span>Preview · lines {sourceStart}–{sourceStart + shownLines - 1}</span><span>Read excerpt ↗</span>
+    </button>
+    <CodeView text={text} startLine={sourceStart} path={path} maxLines={12} />
+  </div>;
 }
 
 export function summarizeInput(input: unknown): string {

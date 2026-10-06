@@ -4,6 +4,8 @@
 
 ## Material presentation amendment — 6 October 2026
 
+`History.ReadPreview` opens its exact read artifact through existing in-place expansion, using returned artifact coordinates for preview numbering. Read expansion now shows provenance/ranges and reserves the full passage width. `ArtifactReader` supports literal case-insensitive find within its loaded 200-line code page; query persists across pages, highlights source-coordinate lines and resets on artifact change. This is not whole-file/session search or current-file access. See [captured-range reading](review/16-captured-range-reader.md).
+
 `Origins.toolTransfer` adds a finite instrument-silhouette transfer from a hit-tested visible dock glyph to its measured action-header glyph. It copies only app-owned SVG paths; DOM text stays stationary. Native/MCP resting marks remain named and filtering-compatible. It reuses the existing three-arrival budget, ownership/cancellation and reduced-motion/follow gates. See [toolbox emission](review/15-toolbox-emission.md).
 
 External previews choose a stable 300 px receipt or 560 px reading surface from the currently available captured content. `StructuredResult` parses the existing bounded result preview without a second 1,400-character cut, preserves the original representation, and distinguishes absent/null scalar fields. No artifact payload, observation contract or worker preview limit changes. Repository context keeps bounded display labels beside action IDs, masking completed ranges while a replay action is pending. See [external reading](review/14-external-reading.md).

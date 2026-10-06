@@ -16,7 +16,8 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const [index, setIndex] = useState(0);
   const [retry, setRetry] = useState(0);
   const [copied, setCopied] = useState<string>();
-  useEffect(() => { setPages([0]); setIndex(0); }, [id]);
+  const [query, setQuery] = useState('');
+  useEffect(() => { setPages([0]); setIndex(0); setQuery(''); }, [id]);
   const pageStart = pages[index] ?? 0;
   const view = useArtifact(id, { scope: 'reader', start: pageStart, count: 200, retry });
   useEffect(() => setCopied(undefined), [id, pageStart]);
@@ -26,11 +27,22 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   if (view.text === undefined) return <div className="skeleton tall" />;
   const next = view.hasMore && view.nextStart !== undefined && view.nextStart > pageStart;
   const pageLabel = view.artifact?.provenance.kind === 'derived' ? 'Derived page' : view.artifact?.provenance.kind === 'generated' ? 'Generated page' : 'Captured page';
+  const sourceStart = (view.artifact?.range?.start ?? startLine) + pageStart;
+  // Search only the bounded page already in memory, never today's file or other moments.
+  const matchingLines = new Set<number>();
+  const needle = query.toLowerCase();
+  if (kind === 'code' && query) view.text.replace(/\n$/, '').split('\n').forEach((line, offset) => {
+    if (line.toLowerCase().includes(needle)) matchingLines.add(sourceStart + offset);
+  });
   return (
     <div className="artifact-reader">
-      {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.kind === 'excerpt' ? `Excerpt · lines ${view.artifact.range?.start ?? startLine}–${view.artifact.range?.end ?? "unknown"}` : 'Historical artifact'}</span></div>}
+      {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.range ? `${view.artifact.kind === 'excerpt' ? 'Excerpt' : 'Historical source'} · lines ${view.artifact.range.start}–${view.artifact.range.end}` : 'Historical artifact'}</span></div>}
       <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span><button className="btn ghost small" onClick={() => { void navigator.clipboard.writeText(view.text!).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>
-      {kind === 'code' ? <CodeView text={view.text} startLine={(view.artifact?.range?.start ?? startLine) + pageStart} path={path} /> : <Output text={view.text} />}
+      {kind === 'code' && <div className="source-find">
+        <input type="search" aria-label="Find in loaded source page" placeholder="Find in this page" maxLength={200} value={query} onChange={(e) => setQuery(e.target.value)} />
+        <span className="muted small" role="status">{query ? `${matchingLines.size} matching ${matchingLines.size === 1 ? 'line' : 'lines'} in this page` : `Source lines ${sourceStart}–${sourceStart + view.text.replace(/\n$/, '').split('\n').length - 1} · loaded page only`}</span>
+      </div>}
+      {kind === 'code' ? <CodeView text={view.text} startLine={sourceStart} path={path} highlightLines={matchingLines} /> : <Output text={view.text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(index > 0 || next) && (
         <nav className="reader-pages" aria-label="Captured content pages">
