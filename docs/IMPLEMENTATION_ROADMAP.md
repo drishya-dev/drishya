@@ -182,6 +182,8 @@ After B4, choose the next coding harness by pilot demand and passive source qual
 
 The original 30 September starting task was B0 privacy hardening. That work is completed; do not reopen it from this historical audit wording. Read [CONTINUITY](CONTINUITY.md), [STATUS](STATUS.md) and [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) for the current integrated baseline. Preserve its privacy regressions and bounded worker/data-source boundary while refining the real UI, then execute the remaining human/physical/platform acceptance. New capture formats or remote-provider validation remain separate scoped work.
 
+**6 October P1 implementation amendment:** [23](review/23-p1-material-pacing.md) completes the integrated material/pacing scope on codex/ink-presentation: five slower finite moves, real origins, actual source-ready unfolding, content-shaped bounded readers, stable rows/prose, and a camera hold for delayed large results. STATUS carries local acceptance. This does not claim human visual approval or replace physical/platform/publishing gates. Proposed folder/symbol/tab features remain separate workspace phases; do not keep relabelling them as missing P1 animation work.
+
 ## 11. Delivery tags and planning ranges (3 October 2026)
 
 These are **planning ranges, not promises**. Assume two builders working consistently, existing Claude/Codex scope, synthetic and opted-in real acceptance, and no new harness or theme variants before the baseline release. The backend reaches a product-level candidate after B4; the frontend reaches a strong product-level candidate after P1/P2 validation.

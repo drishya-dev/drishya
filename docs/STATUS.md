@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Integrated local product candidate; P1 visual completion reopened by the builder.** B0-B4 engineering and P1/P2 reading utility are implemented; visual acceptance and public release acceptance remain separate |
+| **Milestone** | **Integrated P1 implementation completed on `codex/ink-presentation` (PR #38).** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -25,7 +25,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| — | No active claims | — |
 
 ---
 
@@ -65,13 +64,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 6 October 2026; continued integrated P1 completion on `codex/ink-presentation`, with the builder explicitly rejecting the popup-like result as final.
-- **Fixed:** finite origin cues now survive ordinary scene/capture/hover updates, retain measured destinations, clean up on completion and cap at 36 animations. Navigation/reading, geometry changes, session/view/theme changes, hidden documents and system reduced-motion changes cancel immediately. File/tool travel has its own readable curve; captured characters remain whole and stationary. See [22](review/22-p1-motion-lifecycle.md).
-- **Preserved:** the ink material/graph/reading improvements in [21], Claude PR #37's palettes/activity strip/file lift, both builder prototype references, independent capture/history, held reading, provenance, bounded workers and existing utility features. No capture/store/API/schema/dependency change.
-- **Retired:** redundant app concept HTML/CSS/JS pages and their five study tests, plus the obsolete single-panel storyboard. `docs/prototype/index.html`, `docs/prototype/vantage-ink.html` and the required app HTML entry remain. Written study records are marked historical; current handoff points to the integrated app.
-- **Local final checks:** typechecks, 247 unit tests, 31 integrated browser journeys plus the added dynamic reduced-motion regression (real-session/soak are separate opt-ins), and isolated offline package install/import/API/restart pass. The new frozen-arrival regression proves that passive hover preserves the real transfer and deliberate reading removes it. Desktop, mobile and mid-flight synthetic frames were inspected; screenshots stay local. Sustained lifecycle reader passed: **604,783 ms, 113 rounds, peak 709 DOM nodes**. It ran before the final travel-curve/boundary/media-listener refinements; the final code/browser/package checks and both frozen-arrival interruption cases passed after those refinements. No new physical/platform or real-session certificate is implied.
-- **Scope:** this branch remains a reviewable product candidate, not a claim that the builder has accepted the visual finish. Human comprehension/preference and physical/platform release checks remain separate. Do not replace further integrated refinement with another HTML study.
-- **Handoff:** CONTINUITY → [22](review/22-p1-motion-lifecycle.md) → CODEBASE → [21] → staged DEVELOPER_WORKSPACE / [19]. Rebuild UI assets before reviewing `pnpm serve`; use Watch live demo for ongoing synthetic arrivals, not a completed recording. Hosted CI stays publishing-only; no runs dispatched. Original package-manager edits and model-planning notes remain excluded.
+- **When:** 6–7 October 2026; complete the integrated P1 material/pacing pass on `codex/ink-presentation`. Read [23](review/23-p1-material-pacing.md), which supplements [21] and [22].
+- **Delivered:** slower, content-sized unfolding of the actual reading surface; actual loaded-source readiness gets a material transition, without another file icon/tool invocation. All five finite moves use the slower tempo. Captured characters remain stationary, whole and selectable. Preview heights adapt to the viewport, bodies scroll without fading evidence, and typography is balanced for source/output/prose.
+- **Camera:** delayed large artifacts hold the prior reading position instead of bottom-following. Small results still follow; initial load and explicit Return to latest reach the edge. Long inputs and paged prose are staged. An automatic camera hold permits the visible first arrival; deliberate reading cancels it. Burst motion budgets prioritize the first new actions rather than off-screen last actions. Tool-input inspection is bounded rather than JSON-serializing arbitrary payloads.
+- **Motion ownership:** source readiness is capped at 96 IDs, finite animations at 36. Historical mounts and deliberate navigation do not replay source arrivals. Header glyphs retain their exact destination independently of body growth; moving/resizing destinations cancel stale geometry. Loading placeholders are static. Both docs/prototype HTML references remain; no retired gallery returned.
+- **Local checks:** typechecks and 252 units; 33 integrated browser journeys, with real-session/sustained-reader cases separate opt-ins; final offline package install/import/API/restart. The final source-header readiness transition passed 20 consecutive repetitions. Desktop, mobile, material-in-flight and late-source frames inspected; screenshots remain local. Sustained live-reader probes passed at 602,459 ms / 114 rounds / peak 709 DOM nodes (readiness implementation) and 603,247 ms / 114 rounds / peak 709 nodes (material/late-growth implementation). These predate the final bounded-input, glyph-geometry, source-header and programmatic-scroll refinements; the complete ordinary suite and 20 readiness repeats checked those final refinements separately.
+- **Preserved:** both builders' feature work, independent capture/history, provenance, exact source utilities/pin limits, bounded worker/API projections, qualified verification, graph approval and all observe-only/privacy boundaries. No capture/store/API/observation-schema/dependency change. Original choreography/patch tests are preserved.
+- **Phase boundary:** P1's integrated presentation implementation is complete on this branch; future folder/symbol/tab/workspace features remain staged in DEVELOPER_WORKSPACE / review/19. User preference, physical/platform compatibility, contract freeze and publishing acceptance remain separate. This is not a claim of market superiority or human approval of a permanent visual identity.
+- **Handoff:** CONTINUITY → [23] → CODEBASE → DEVELOPER_WORKSPACE. Rebuild/reload the integrated UI before assessing it; use Watch live demo or an actual watched session. Completed recordings are not fabricated fresh activity. Local tests/commits only; hosted CI stays publishing-only. Package-manager edits and model-planning notes remain excluded. PR #38 remains the separate review branch.
 
 ## Next up
 
@@ -235,3 +235,6 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | 2026-10-06 | Keep finite origin arrivals across passive React updates; reserve a readable curve for travel | Ordinary capture/hover cleanup was erasing cues before they could communicate their relationship. Bounded ownership and geometry/reading interruption preserve truthful, quiet motion | Origins; review/22 |
 | 2026-10-06 | Retire redundant standalone HTML studies; preserve docs/prototype references | Latest builder instruction supersedes the earlier retain-every-study direction. Continue the integrated app and keep written historical findings, without alternate production-looking pages | review/22; both builders |
+
+| 2026-10-06 | Finish P1 through the material's actual display, rather than a file-icon animation alone | Builder requested slower, smoother presentation and readable sizing. Actual source readiness, spatial unfolding and late-growth camera holds preserve evidence while making the work readable | review/23; Origins/History |
+| 2026-10-06 | Budget staged-burst motion from its beginning | The held camera reads earliest new work; selecting final calls spent animation below the viewport. Capture remains immediate and all work remains accessible, without a playback queue | choreographyBetween; regressions |

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { ReplayBundle } from '@drishya/contracts';
-import { asOfProjection, compose } from '@drishya/scene';
+import type { Projection, ReplayBundle } from '@drishya/contracts';
+import { asOfProjection, compose, type Scene } from '@drishya/scene';
 import { choreographyBetween, frameOf } from '../src/lib/choreography.ts';
 import { splitDiffRows } from '../src/lib/split-diff.ts';
 
@@ -47,5 +47,18 @@ describe('captured patch columns', () => {
   it('does not synthesize a missing side at a page boundary', () => {
     const rows = splitDiffRows(hunks, 3, 1);
     expect(rows).toEqual([{ before: undefined, after: { number: 21, text: 'new one', kind: 'added' } }]);
+  });
+});
+
+describe('visible beginning of a staged burst', () => {
+  const projection = { timeline: Array.from({ length: 12 }, (_, i) => ({ type: 'op-start', operationId: `call-${i}`, sequence: i })) } as unknown as Projection;
+  const scene = { step: 12, passages: [] } as unknown as Scene;
+  it('spends its finite arrival budget on the beginning rather than off-screen final calls', () => {
+    expect(choreographyBetween({ step: 0, settled: new Map() }, scene, projection).arrivals).toEqual(['call-0', 'call-1', 'call-2']);
+    expect(choreographyBetween({ step: 10_000, settled: new Map() }, { ...scene, step: 10_012 }, projection, 10_000).arrivals).toEqual(['call-0', 'call-1', 'call-2']);
+  });
+  it('does not replay a historical mount or a backwards seek', () => {
+    expect(choreographyBetween({ step: 12, settled: new Map() }, scene, projection).arrivals).toEqual([]);
+    expect(choreographyBetween({ step: 15, settled: new Map() }, scene, projection).arrivals).toEqual([]);
   });
 });

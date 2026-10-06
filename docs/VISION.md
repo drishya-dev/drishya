@@ -1,5 +1,7 @@
 # Drishya — Vision & Creative Direction
 
+**Latest P1 refinement — 6 October:** [23](review/23-p1-material-pacing.md) governs slower content-sized material unfolding, actual loaded-source transitions, preview typography/height and late-growth camera holds. This is the integrated P1 implementation; larger workspace features and physical/platform/human release checks remain separate. Preserve the prototypes, not the retired HTML gallery.
+
 **Current direction — 6 October:** [22](review/22-p1-motion-lifecycle.md) supersedes the standalone-study queue. The builder reopened P1 because the running app still felt like popups. Finish the integrated application; preserve both files under docs/prototype, retire the redundant concept pages, and do not treat engineering passes as visual approval.
 
 **The north star for how Drishya looks, moves and feels.** Read this before any UI, graphics, motion or layout work. It is authoritative for the *experience*; the [engineering plan](review/03-engineering-plan.md) is authoritative for the *system*, and [the precedence map](README.md) resolves anything in between.

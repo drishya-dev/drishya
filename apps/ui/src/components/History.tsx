@@ -1,9 +1,9 @@
-import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
-import { stageIncomingWork } from '../lib/live-pacing.ts';
+import { stageIncomingWork, stageViewportGrowth } from '../lib/live-pacing.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
 import { useApp } from '../state.ts';
@@ -43,8 +43,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
   const seenThrough = useRef(scene.total);
-  const presented = useRef<{ step: number; top: number; anchor?: { id: string; offset: number } } | undefined>(undefined);
+  const presented = useRef<{ step: number; top: number; extent: number; anchor?: { id: string; offset: number } } | undefined>(undefined);
+  const watchLiveGrowth = useRef(false);
+  const stagedArrivalStep = useRef<number | undefined>(undefined);
   const requestedWindow = useRef('');
+  const isProgrammaticScroll = useCallback(() => programmatic.current && Math.abs((ref.current?.scrollTop ?? 0) - lastScrollTop.current) < .5, []);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
@@ -128,9 +131,21 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
   };
 
+  const holdPresented = (previous: NonNullable<typeof presented.current>) => {
+    stagedArrivalStep.current = scene.total;
+    seenThrough.current = previous.step;
+    setScrollTop(previous.top);
+    readingAnchor.current = previous.anchor;
+    if (!readingAnchor.current) rememberReading();
+    set({ follow: false, readingPassageId: readingAnchor.current?.id });
+  };
+
   useLayoutEffect(() => {
     if (follow) {
       readingAnchor.current = undefined;
+      // Initial session load and explicit Return to latest still reach the latest edge.
+      watchLiveGrowth.current = false;
+      stagedArrivalStep.current = undefined;
     } else if (!readingAnchor.current) rememberReading();
   }, [follow]);
 
@@ -162,7 +177,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         if (pointerFocus.current) return;
         setMeasurementVersion((n) => n + 1);
         // A burst can detach follow before this observer's closure is replaced.
-        if (useApp.getState().follow) setScrollTop(el.scrollHeight);
+        if (useApp.getState().follow) {
+          const previous = presented.current;
+          if (mode === 'history' && watchLiveGrowth.current && previous && stageViewportGrowth(previous.extent, el.scrollHeight, el.clientHeight)) holdPresented(previous);
+          else setScrollTop(el.scrollHeight);
+        }
         else restoreReading();
       }
     });
@@ -170,7 +189,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // alternates the stored height and can create an endless scroll/resize feedback loop.
     for (const node of el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')) observer.observe(node);
     return () => observer.disconnect();
-  }, [layout.runs, follow]);
+  }, [layout.runs, follow, mode]);
 
   useLayoutEffect(() => {
     if (!follow && !readingAnchor.current) rememberReading();
@@ -218,15 +237,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (!el) return;
     const previous = presented.current;
     if (follow) {
-      if (mode === 'history' && previous && scene.total > previous.step && stageIncomingWork(projection, previous.step, scene.total)) {
-        seenThrough.current = previous.step;
-        // Preserve the last reading viewport; old estimated document heights can exceed
-        // the new measured height after content-shaped packing and artifact resolution.
-        setScrollTop(previous.top);
-        readingAnchor.current = previous.anchor;
-        if (!readingAnchor.current) rememberReading();
-        if (useApp.getState().readingPassageId !== readingAnchor.current?.id) set({ readingPassageId: readingAnchor.current?.id });
-        set({ follow: false });
+      const incoming = mode === 'history' && previous && scene.total > previous.step;
+      if (incoming) watchLiveGrowth.current = true;
+      const timelineStart = onWindow ? Math.max(0, scene.total - projection.timeline.length) : 0;
+      if (incoming && stageIncomingWork(projection, previous.step, scene.total, timelineStart)) {
+        holdPresented(previous);
       } else {
         setScrollTop(el.scrollHeight);
         seenThrough.current = scene.total;
@@ -234,7 +249,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     }
     const bounds = el.getBoundingClientRect();
     const first = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((node) => node.getBoundingClientRect().bottom > bounds.top + 1);
-    presented.current = { step: scene.total, top: el.scrollTop, anchor: first?.dataset.passageId ? { id: first.dataset.passageId, offset: first.getBoundingClientRect().top - bounds.top } : undefined };
+    presented.current = { step: scene.total, top: el.scrollTop, extent: el.scrollHeight, anchor: first?.dataset.passageId ? { id: first.dataset.passageId, offset: first.getBoundingClientRect().top - bounds.top } : undefined };
   }, [scene.step, follow, layout.total, mode, projection]);
 
   useLayoutEffect(() => () => {
@@ -307,7 +322,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         ])}
         {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
-      <Origins scene={scene} projection={projection} />
+      <Origins scene={scene} projection={projection} stagedArrival={stagedArrivalStep.current === scene.total} isProgrammaticScroll={isProgrammaticScroll} />
     </div>
       {!follow && (
         <button className="follow-pill" onClick={() => { userScrollUntil.current = 0; set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false }); }}>

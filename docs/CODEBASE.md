@@ -1,6 +1,10 @@
 # Codebase — the system as built
 
+**Latest P1 refinement — 6 October:** [23](review/23-p1-material-pacing.md) governs slower content-sized material unfolding, actual loaded-source transitions, preview typography/height and late-growth camera holds. This is the integrated P1 implementation; larger workspace features and physical/platform/human release checks remain separate. Preserve the prototypes, not the retired HTML gallery.
+
 **Current direction — 6 October:** [22](review/22-p1-motion-lifecycle.md) supersedes the standalone-study queue. The builder reopened P1 because the running app still felt like popups. Finish the integrated application; preserve both files under docs/prototype, retire the redundant concept pages, and do not treat engineering passes as visual approval.
+
+Origins now observes true source-preview readiness with a 96-ID bound; pending state is seeded before paint measurement and historical mounts do not animate. Finite material unfoldings run at 1.6–2.1 times the previous durations. Glyph destinations and material rectangles are tracked separately. History records actual extent plus anchor, holds large late growth, and corrects paged pacing offsets. Preview bodies scroll with viewport-height bounds and no evidence mask. See [23](review/23-p1-material-pacing.md).
 
 **Integrated local product updated 6 October 2026.** This maps the code that exists. The [baseline audit](review/06-baseline-audit.md) retains historical findings; [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) and the [roadmap](IMPLEMENTATION_ROADMAP.md) govern current execution. For architecture rationale see the engineering plan; for creative intent see VISION. [`packages/contracts`](../packages/contracts/src/index.ts) remains `0.1.0-draft`, and freezing it needs both builders ([`AGENTS.md`](../AGENTS.md)).
 

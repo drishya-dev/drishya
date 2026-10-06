@@ -1,8 +1,10 @@
 # Integrated local product — 6 October 2026
 
+**Latest P1 refinement — 6 October:** [23](review/23-p1-material-pacing.md) governs slower content-sized material unfolding, actual loaded-source transitions, preview typography/height and late-growth camera holds. This is the integrated P1 implementation; larger workspace features and physical/platform/human release checks remain separate. Preserve the prototypes, not the retired HTML gallery.
+
 **Current direction — 6 October:** [22](review/22-p1-motion-lifecycle.md) supersedes the standalone-study queue. The builder reopened P1 because the running app still felt like popups. Finish the integrated application; preserve both files under docs/prototype, retire the redundant concept pages, and do not treat engineering passes as visual approval.
 
-The builder's latest instruction is to **finish the working product in `apps/ui`**, with our best coherent presentation now, and refine colour and animation later. Standalone HTML studies are retained as references; they are no longer an approval gate or the deliverable. This document describes the implemented local product candidate. VISION still governs experience, and the B4 report still governs measured resource claims.
+The builder's latest instruction is to **finish the working product in `apps/ui`**, with our best coherent presentation now, and refine colour and animation later. Only the two docs/prototype HTML references are retained; redundant app studies are removed; they are no longer an approval gate or the deliverable. This document describes the implemented local product candidate. VISION still governs experience, and the B4 report still governs measured resource claims.
 
 ## What you can use
 
