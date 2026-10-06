@@ -1,9 +1,10 @@
 /* Production workspace: one continuous world, with boundaries around captured material. */
 :root {
-  --bg: #101113; --s1: #191b1f; --s2: #22242a; --s3: #2a2d34;
+  color-scheme: dark;
+  --bg: #131516; --s1: #1c2021; --s2: #252a2b; --s3: #303637;
   --line: #2c2f36; --line-2: #3b3f49; --line-3: #5c6270;
   --t1: #ededf0; --t2: #b7bac4; --t3: #9b9faa; --t4: #9095a2;
-  --focus: #aab8ff; --pass: #8bd3aa; --fail: #f1a39c; --edited: #e6b08e;
+  --focus: #92d6c3; --external: #c4b4e6; --pass: #8bd3aa; --fail: #f1a39c; --edited: #e6b08e;
   --pass-wash: #42846124; --fail-wash: #bc625329;
   --crown-h: 62px; --workspace-h: 42px; --dock-w: 232px; --spine-w: 204px;
 }
@@ -11,8 +12,8 @@
   color-scheme: light;
   --bg: #edeee8; --s1: #fafaf6; --s2: #e2e5de; --s3: #d6dbd3;
   --line: #c7ccc4; --line-2: #b4bdb3; --line-3: #899786;
-  --t1: #272d30; --t2: #50595c; --t3: #60696b; --t4: #60696b;
-  --focus: #4f598d; --pass: #286b48; --fail: #a33e36; --edited: #91512f;
+  --t1: #272d30; --t2: #50595c; --t3: #596365; --t4: #596365;
+  --focus: #326e60; --external: #70518f; --pass: #286b48; --fail: #a33e36; --edited: #91512f;
   --pass-wash: #79b99124; --fail-wash: #d7948629;
 }
 .viewer { grid-template-rows: var(--crown-h) var(--workspace-h) minmax(0, 1fr) var(--transport-h); --dock-w: 232px; }
@@ -36,7 +37,7 @@
 .transport { grid-row: 4; border: 0; background: var(--bg); }
 .viewer > .notice { position: absolute; top: calc(var(--crown-h) + var(--workspace-h)); left: 20px; z-index: 60; background: var(--s1); border: 1px solid var(--fail); padding: 12px; max-width: calc(100vw - 40px); }
 .spine { padding: 20px 14px; background: transparent; border: 0; }
-.spine-head { padding: 0 0 14px; text-transform: uppercase; letter-spacing: .1em; font-size: 9px; color: var(--t3); }
+.spine-head { padding: 0 0 14px; text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--t2); }
 .spine .spine-file { padding-inline: 5px; border-radius: 4px; }
 .spine .spine-name { font-size: 11px; }
 .spine .spine-dir { font-size: 9px; color: var(--t3); }
@@ -81,7 +82,7 @@
 .dock .instrument:hover, .dock .instrument.on { background: var(--s2); }
 .dock .inst-tools { font-size: 10px; }
 .dock .server-tool { font-size: 10px; }
-.dock .dock-head { font-size: 10px; letter-spacing: .06em; }
+.dock .dock-head { font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--t2); }
 .dock .dock-basis { font-size: 10px; }
 .inspector, .sheet { top: calc(var(--crown-h) + var(--workspace-h)); background: var(--s1); box-shadow: -12px 0 36px #00000026; }
 .map-legend, .map-tools, .map-tip { background: var(--s1); color: var(--t1); border-color: var(--line-2); }
@@ -110,9 +111,9 @@
 .theme-options { display: flex; gap: 12px; }
 .theme-option { flex: 1; text-align: left; padding: 8px; border: 1px solid var(--line-2); border-radius: 7px; font-size: 12px; }
 .theme-option[aria-pressed="true"] { border-color: var(--focus); }
-.theme-option i { display: block; height: 55px; border-radius: 4px; margin-bottom: 8px; background: #101113; border: 1px solid #41454f; }
+.theme-option i { display: block; height: 55px; border-radius: 4px; margin-bottom: 8px; background: #131516; border: 1px solid #41454f; }
 .theme-light i { background: #edeee8; }
-.theme-system i { background: linear-gradient(90deg, #101113 50%, #edeee8 50%); }
+.theme-system i { background: linear-gradient(90deg, #131516 50%, #edeee8 50%); }
 .setting-row { display: flex; align-items: center; gap: 16px; padding: 14px 0; font-size: 12px; }
 .setting-row input { margin-left: auto; width: 17px; height: 17px; accent-color: var(--focus); }
 .setting-row small { display: block; color: var(--t3); font-size: 11px; margin-top: 4px; }
@@ -218,3 +219,29 @@ input:not([type="checkbox"]), select { background-color: var(--s2); border-color
 .file-workspace-layout { flex: 1; min-height: 0; height: auto; }
 .spine-dot { box-shadow: none; }
 .recovery-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+/* Material identity sits at the reading edge; chrome remains one continuous world. */
+.history .op { --material: var(--line-3); }
+.history .material-source { --material: var(--focus); }
+.history .material-change { --material: var(--edited); }
+.history .material-external { --material: var(--external); }
+.history .op-head { box-shadow: inset 2px 0 var(--material); }
+.history .material-source .op-kind { color: var(--focus); }
+.op-kind.k-mcp, .dock .server-dot, .history .material-external .mcp-tool { color: var(--external); }
+.dock .server-dot { background: var(--external); }
+.history .op.selected { outline: 1px solid var(--focus); outline-offset: 2px; }
+.history .op:hover:not(.selected):not(.lit) { border-color: var(--line-3); }
+.history .op-foot { color: var(--t3); }
+.history .cmd { padding: 8px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; line-height: 1.65; }
+.history .query { padding-bottom: 8px; border-bottom: 1px solid var(--line-2); }
+.history .prose { border-left: 2px solid var(--agent, var(--line-3)); padding-left: 14px; line-height: 1.85; }
+.history .prose-reasoning { border-left-color: color-mix(in srgb, var(--agent, var(--line-3)) 45%, var(--bg)); }
+.origin-thread, .origin-shell { stroke: var(--focus); }
+.workspace-views [aria-pressed="true"] { box-shadow: inset 0 -2px var(--focus); }
+.crown .agent { border-radius: 5px; }
+.dock .instrument, .dock .server-tool, .spine-file, .workspace-views button, .btn, .theme-option { transition: background-color 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out; }
+.theme-option[aria-pressed="true"] { background: var(--s2); box-shadow: inset 0 -2px var(--focus); }
+.home-kicker { letter-spacing: 0; font-size: 11px; }
+@media (prefers-reduced-motion: reduce) {
+  .dock .instrument, .dock .server-tool, .spine-file, .workspace-views button, .btn, .theme-option { transition: none; }
+}

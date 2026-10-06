@@ -51,7 +51,9 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       animations.push(animation);
       void animation.finished.then(() => el.remove(), () => el.remove());
     };
-    const contour = (el: Element, move: string, tone = '#8b9bff') => {
+    const palette = getComputedStyle(viewer);
+    const colour = (token: string) => palette.getPropertyValue(token).trim();
+    const contour = (el: Element, move: string, tone?: string) => {
       const material = el.closest<HTMLElement>('[data-material]')?.dataset.material;
       // Animate the material's own reading edge, rather than flying the same empty
       // rectangle around every action. Every character stays at its final position.
@@ -61,7 +63,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       const edge = node('path', 'origin-shell', move);
       const rail = material === 'source' || material === 'change' || material === 'external';
       edge.setAttribute('d', rail ? `M${r.left + 10},${r.top} H${r.left} V${end} H${r.left + 10}` : `M${r.left},${end} H${r.right}`);
-      edge.style.stroke = tone;
+      edge.style.stroke = tone ?? (getComputedStyle(el).getPropertyValue('--material').trim() || colour('--focus'));
       return edge;
     };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false) => {
@@ -74,6 +76,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       const bend = Math.min(90, Math.abs(x2 - x1) / 2);
       const sign = fromRight ? -1 : 1;
       const path = node('path', 'origin-thread', move) as SVGPathElement;
+      path.style.stroke = getComputedStyle(target).getPropertyValue(move === 'Surface' ? '--agent' : '--material').trim() || colour('--focus');
       path.setAttribute('d', `M${x1},${y1} C${x1 + bend * sign},${y1} ${x2 - bend * sign},${y2} ${x2},${y2}`);
       path.setAttribute('data-origin-type', label);
       path.setAttribute('data-origin-renderer', origin instanceof HTMLElement ? origin.dataset.originRenderer ?? (label === 'Repository node' ? 'world' : 'reference') : 'reference');
@@ -150,7 +153,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
         const op = projection.operations.find((op) => op.id === id);
         if (!target || !op || !visible(target)) continue;
         emitted.add(`outcome:${id}`);
-        const rect = contour(target, 'Resolve', op.status === 'error' ? '#f2706a' : op.status === 'ok' ? '#4fc38a' : '#a1a1aa');
+        const rect = contour(target, 'Resolve', colour(op.status === 'error' ? '--fail' : op.status === 'ok' ? '--pass' : '--t3'));
         play(rect, [{ opacity: .7 }, { opacity: 0 }], 420);
       }
       for (const id of plan.prose) {

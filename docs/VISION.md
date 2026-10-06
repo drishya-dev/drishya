@@ -195,6 +195,8 @@ The rule from your vision — *not boxes* — means **no generic card template**
 
 ## 6. Micro-interactions — "every single little thing"
 
+**6 October integrated refinement:** The React app now uses warm graphite (`#131516` world, `#1c2021` material), jade source/navigation (`#92d6c3`), copper edits and lilac MCP (`#c4b4e6`), with darker corresponding role colours on light paper. This supersedes the neutral-only production note above; the old petrol/blue studies remain references. Distinction sits on the material's reading edge and command backing, not separate coloured panels. Agent identity stays stable. Relationship/resolve cues read the same theme tokens; prose remains unboxed with its agent rule. Short hover transitions change chrome, never captured characters or geometry. This is an implemented candidate, not a human preference certificate.
+
 The $1,000 feel lives in the details people only notice unconsciously. Every one of these must be precise, brief and *reversible*.
 
 - **Hover a line of code** → its file's map node brightens; the tether lights.
