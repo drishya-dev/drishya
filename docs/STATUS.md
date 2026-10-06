@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Integrated local product candidate.** B0-B4 engineering and P1/P2 reading utility are implemented; public release acceptance remains separate |
+| **Milestone** | **Integrated local product candidate; P1 visual completion reopened by the builder.** B0-B4 engineering and P1/P2 reading utility are implemented; visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -25,7 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-*No active claims.*
+| — | No active claims | — |
 
 ---
 
@@ -65,14 +65,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 6 October 2026. Integrated ink presentation on `codex/ink-presentation`, per the builder's explicit branch request. Local verification only; hosted CI stays publishing-only under CI_POLICY.
-- **Delivered on the branch:** semantic coloured content boundaries, one continuous dark/paper workspace, full-width expanded reading, wrapped native-tool aliases and native source-utility disclosure. The map fits the full rectangle with shared drawing/hit-test/search/origin coordinates; at most 12 background or 24 exploration path labels stay in the DOM. A finite circle identifies the actual repository origin during Lift. See [21](review/21-integrated-ink-workspace.md).
-- **Claude PR review:** #37 merged as `fc34e25` after fixing its machine-dependent marker golden, with 245 units and 35 browser journeys locally green. Harsh/Claude's named palettes, activity strip, file silhouette and feature proposals are preserved. Actual reviewer-fix contributors remain credited. Our separate branch removes grain/vignette/chrome blur under canonical doctrine and caps visual timeline sampling at 400 even for failure-heavy recordings (two new regressions).
-- **Local verification:** typechecks/247 units, 35 ordinary browser journeys (2 opt-in skips), deterministic demo, and isolated offline package install/import/API/restart pass. Fresh ten-minute retained-reference/live-reader probe: **602,719 ms, 113 rounds, peak 709 DOM nodes**. Final CSS-only removal of pale theme-transition flashes passed both palette/anchor journeys separately. Windows results do not certify Linux/macOS or physical low-resource acceptance.
-- **Visual review/fixes:** synthetic dark/light, source-range and toolbox frames inspected locally. Larger source surfaces keep legible coloured boundaries; aliases no longer truncate. An earlier terminal journey depended on off-window material being mounted; it now uses captured-command global search before checking the same reversible folding assertions. Native disclosure is tested by keyboard and retains page/range controls during live append. Browser review surface was unavailable; rendered Playwright frames were used. Screenshots stay local.
-- **Handoff:** CONTINUITY → CODEBASE → [21](review/21-integrated-ink-workspace.md) → DEVELOPER_WORKSPACE / [19](review/19-developer-feature-proposals.md). Both older index and new builder-provided ink reference are retained. No new standalone prototype replaces the integrated product. Future reader tabs/folder explorer/tripwires/review packets remain proposals; supplied-marker history-strip shortcuts are not exhaustive navigation across unsampled marks.
-- **Preserved:** independent live capture/history, optional replay, source/range provenance, one 200-line/64 KiB historical pin, since-your-mark, order-qualified verification, global file evidence comparison, finite origin checks/cancellation and worker-owned bounded projection. Graph refresh remains explicit; graph approval never silently grants whole-file access. No capture/store/API/observation-schema/dependency change.
-- **State:** this presentation candidate is committed on its own branch for review, not merged into main. Original package.json/pnpm-lock.yaml/pnpm-workspace.yaml edits, model-planning notes and screenshots remain local/excluded. Human preference, physical/platform release acceptance and contract freeze remain separate.
+- **When:** 6 October 2026; continued integrated P1 completion on `codex/ink-presentation`, with the builder explicitly rejecting the popup-like result as final.
+- **Fixed:** finite origin cues now survive ordinary scene/capture/hover updates, retain measured destinations, clean up on completion and cap at 36 animations. Navigation/reading, geometry changes, session/view/theme changes, hidden documents and system reduced-motion changes cancel immediately. File/tool travel has its own readable curve; captured characters remain whole and stationary. See [22](review/22-p1-motion-lifecycle.md).
+- **Preserved:** the ink material/graph/reading improvements in [21], Claude PR #37's palettes/activity strip/file lift, both builder prototype references, independent capture/history, held reading, provenance, bounded workers and existing utility features. No capture/store/API/schema/dependency change.
+- **Retired:** redundant app concept HTML/CSS/JS pages and their five study tests, plus the obsolete single-panel storyboard. `docs/prototype/index.html`, `docs/prototype/vantage-ink.html` and the required app HTML entry remain. Written study records are marked historical; current handoff points to the integrated app.
+- **Local final checks:** typechecks, 247 unit tests, 31 integrated browser journeys plus the added dynamic reduced-motion regression (real-session/soak are separate opt-ins), and isolated offline package install/import/API/restart pass. The new frozen-arrival regression proves that passive hover preserves the real transfer and deliberate reading removes it. Desktop, mobile and mid-flight synthetic frames were inspected; screenshots stay local. Sustained lifecycle reader passed: **604,783 ms, 113 rounds, peak 709 DOM nodes**. It ran before the final travel-curve/boundary/media-listener refinements; the final code/browser/package checks and both frozen-arrival interruption cases passed after those refinements. No new physical/platform or real-session certificate is implied.
+- **Scope:** this branch remains a reviewable product candidate, not a claim that the builder has accepted the visual finish. Human comprehension/preference and physical/platform release checks remain separate. Do not replace further integrated refinement with another HTML study.
+- **Handoff:** CONTINUITY → [22](review/22-p1-motion-lifecycle.md) → CODEBASE → [21] → staged DEVELOPER_WORKSPACE / [19]. Rebuild UI assets before reviewing `pnpm serve`; use Watch live demo for ongoing synthetic arrivals, not a completed recording. Hosted CI stays publishing-only; no runs dispatched. Original package-manager edits and model-planning notes remain excluded.
 
 ## Next up
 
@@ -233,3 +232,6 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | 2026-10-06 | Isolate the integrated ink presentation on its own branch; use both builder references without copying fictional behavior | Builder explicitly requested a separate branch. Clear coloured materials and a wider real repository world preserve meaningful origins; prose stays open. Canonical no-grain/no-blur rules supersede the decorative treatment in PR #37 | review/21; codex/ink-presentation |
 | 2026-10-06 | History strip has a strict 400-tick visual budget, even when all operations fail | Failure-preserving thinning could otherwise grow without bound. The sample prioritizes failures while retaining chronology; it is not an exhaustive navigation index | lib/activity.ts; two regression tests |
+
+| 2026-10-06 | Keep finite origin arrivals across passive React updates; reserve a readable curve for travel | Ordinary capture/hover cleanup was erasing cues before they could communicate their relationship. Bounded ownership and geometry/reading interruption preserve truthful, quiet motion | Origins; review/22 |
+| 2026-10-06 | Retire redundant standalone HTML studies; preserve docs/prototype references | Latest builder instruction supersedes the earlier retain-every-study direction. Continue the integrated app and keep written historical findings, without alternate production-looking pages | review/22; both builders |

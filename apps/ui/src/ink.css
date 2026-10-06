@@ -1,4 +1,5 @@
 /* One world; source surfaces carry boundaries, surrounding navigation stays quiet. */
+.origin-material { fill-opacity: .5; stroke-width: 1.5; }
 :root {
   --bg: #0e1014; --s1: #181b21; --s2: #232730; --s3: #2e3440;
   --line: #292e38; --line-2: #353d49; --line-3: #596575;

@@ -109,6 +109,43 @@ test('actions share stable reading widths, wrap when full and restart after agen
   await expect(last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]')).toContainText('Captured reasoning punctuates this action row.');
 });
 
+for (const interruption of ['reading', 'reduced motion'] as const) test('a finite arrival survives passive hover and cancels immediately for ' + interruption, async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await expect(page.locator('.origins')).toBeAttached();
+  await page.evaluate(() => {
+    new MutationObserver((changes) => {
+      for (const change of changes) for (const node of change.addedNodes) {
+        if (!(node instanceof SVGElement) || !node.classList.contains('origin-tool-transfer')) continue;
+        const animation = node.getAnimations()[0];
+        if (!animation) continue;
+        // Freeze the real arrival frame so assertion timing cannot outlast its lifetime.
+        animation.pause();
+        animation.currentTime = 260;
+        (window as unknown as { retainedCue: { node: SVGElement; animation: Animation } }).retainedCue = { node, animation };
+      }
+    }).observe(document.querySelector('.origins')!, { childList: true });
+  });
+  const id = 'p1-persistent-arrival-' + interruption.replaceAll(' ', '-');
+  append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
+  await app.ingest.sync(recordingId);
+  await expect.poll(() => page.evaluate(() => !!(window as unknown as { retainedCue?: object }).retainedCue)).toBe(true);
+  const operation = page.locator('article.op-mcp').filter({ hasText: id });
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/retained-tool-arrival.png') });
+  await operation.hover();
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  expect(await page.evaluate(() => {
+    const cue = (window as unknown as { retainedCue: { node: SVGElement; animation: Animation } }).retainedCue;
+    return cue.node.isConnected && cue.animation.playState === 'paused';
+  })).toBe(true);
+  if (interruption === 'reading') await operation.getByRole('button', { name: /Expand/ }).click();
+  else await page.emulateMedia({ reducedMotion: 'reduce' });
+  // Browser media emulation acknowledges before the native change event is dispatched.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { retainedCue: { node: SVGElement } }).retainedCue.node.isConnected), { timeout: 1000 }).toBe(false);
+  expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+});
+
 test('tool silhouettes transfer from the exact visible instrument and cancel for reading', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);

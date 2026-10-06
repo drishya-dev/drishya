@@ -1,5 +1,7 @@
 # Codebase — the system as built
 
+**Current direction — 6 October:** [22](review/22-p1-motion-lifecycle.md) supersedes the standalone-study queue. The builder reopened P1 because the running app still felt like popups. Finish the integrated application; preserve both files under docs/prototype, retire the redundant concept pages, and do not treat engineering passes as visual approval.
+
 **Integrated local product updated 6 October 2026.** This maps the code that exists. The [baseline audit](review/06-baseline-audit.md) retains historical findings; [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) and the [roadmap](IMPLEMENTATION_ROADMAP.md) govern current execution. For architecture rationale see the engineering plan; for creative intent see VISION. [`packages/contracts`](../packages/contracts/src/index.ts) remains `0.1.0-draft`, and freezing it needs both builders ([`AGENTS.md`](../AGENTS.md)).
 
 ## Material presentation amendment — 6 October 2026
@@ -16,7 +18,7 @@ External previews choose a stable 300 px receipt or 560 px reading surface from 
 
 `lib/repository-context.ts` resolves a captured primary file from an explicit scene selection, the held reader's first visible passage, or the latest composed action. `History` publishes ephemeral `readingPassageId` only on identity changes; `Spine` uses it while held, with no capture/replay cursor change. `RepositoryContext` renders at most three composed action links and two typed current imports per direction. Unknown locations remain unknown; worker pages are labelled shown history, not global counts. Map-off still releases graph data. Material flex allocations now stay stable as siblings arrive, wrap by available width, and preserve the reducer's prose boundaries. See [reader context and flow](review/13-reader-context-flow.md).
 
-`apps/ui/src/polish.css` loads after `product.css`: named palettes via `data-palette` (`jet` default, matte black and champagne gold with grain/vignette layers; `midnight`; `paper`; `data-theme` stays the light/dark scheme), type, reading widths, compact dock and the history activity timeline styles. See [20](review/20-presentation-polish.md).
+`apps/ui/src/polish.css` loads after `product.css`: named palettes via `data-palette` (`jet` default, matte black and champagne gold with decorative grain/vignette removed by ink.css; `midnight`; `paper`; `data-theme` stays the light/dark scheme), type, reading widths, compact dock and the history activity timeline styles. See [20](review/20-presentation-polish.md).
 
 `apps/ui/src/lib/sample-source.ts` publishes only the built-in synthetic fixture at `?demo=live` through the existing DataSource subscription/reload boundary. Its projection, artifacts, search and verification expose only published evidence; reader holds do not pause publication. The optional `sample`/`completeSample` source methods are presentation metadata, not observation-contract changes. Ordinary bundles and daemon sources retain their existing behavior. Exact combined recording identity is preferred before component matching when handling notices and refreshed summaries.
 
@@ -129,7 +131,7 @@ Loopback only. `drishya serve` prints a per-launch token in the URL fragment. Th
 
 The DOM mounts the measured viewport, overscan and disjoint selected/focused/expanded/anchor passages; the B4 worker supplies bounded windows for large sessions. Source readers request 200 lines, diff readers render 120 lines and daemon file history requests 24 actions. Comparison retains at most two selected references across trail pages. Source metadata, full export and arbitrary heavy edit limitations remain qualified by the B4 report. Resource preferences persist; map-off skips geometry loading/polling and motion-off retains every readable character.
 
-Canvas 2D and DOM syntax rendering remain replaceable implementations; PixiJS and CodeMirror 6 are later options only when a measured need justifies them. P1's five finite semantic moves and measured origins are implemented. The old HTML studies remain under `/concepts/` as synthetic references; they do not replace the integrated worker/as-of engine. `compose()` output remains the contract, with golden tests. No capture or schema changes accompany the product presentation.
+Canvas 2D and DOM syntax rendering remain replaceable implementations; PixiJS and CodeMirror 6 are later options only when a measured need justifies them. P1's five finite semantic moves and measured origins are implemented. The old HTML gallery was retired at the builder's request; only docs/prototype references remain; they do not replace the integrated worker/as-of engine. `compose()` output remains the contract, with golden tests. No capture or schema changes accompany the product presentation.
 
 ## Tests
 

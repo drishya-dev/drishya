@@ -1,12 +1,14 @@
 # P1 — one workspace, material evidence
 
+> Historical design record. The builder superseded this queue and requested removal of its HTML studies. Continue the integrated app; preserve only docs/prototype references. See [22](22-p1-motion-lifecycle.md). Links and recommendations below describe the earlier experiment, not current deliverables.
+
 6 October 2026. Latest builder feedback takes precedence over the earlier independent colour studies. This records the candidate and its limits so a model switch does not flatten the product vision again.
 
 ## What changed and why
 
 The three studies were rejected: too generic, insufficiently distinct content, weak left side, and three different themes confusing the product identity. The preferred reference is `docs/prototype/index.html`, especially its bounded source/diff/result surfaces and middle/right presentation. Retain it untouched. This session could read the source, but the browser rejected its file URL; no fresh visual comparison is claimed.
 
-New entry: `apps/ui/public/concepts/canvas.html` (`/concepts/canvas.html`). Charcoal `#101113`, graphite material `#191B1F`, raised headers `#202227`, hairlines `#34363E`, readable ink `#EDEDF0`. Light uses stone `#EDEEE8` and paper `#FAFAF6`. Agent copper/lilac/teal and pass/fail colours encode identity/outcome; colour is never the only cue. All task views share these themes. Older Studio/Relay/Atlas files remain archived studies.
+New entry: `apps/ui/public/concepts/canvas.html` (`/concepts/canvas.html`). Charcoal `#101113`, graphite material `#191B1F`, raised headers `#202227`, hairlines `#34363E`, readable ink `#EDEDF0`. Light uses stone `#EDEEE8` and paper `#FAFAF6`. Agent copper/lilac/teal and pass/fail colours encode identity/outcome; colour is never the only cue. All task views share these themes. The Studio/Relay/Atlas/Canvas HTML files were subsequently retired; this written record preserves the historical reasoning.
 
 The page shares a single world background. Permanent vertical panel borders and colour slabs are removed. Source and patches have full, small-radius material boundaries; headers identify the actual tool/path, and the source keeps captured line numbers. Searches use an excerpt ledger; verification uses parsed counts and inspectable failure output; MCP input and result occupy the same object. Prose stays unboxed. Material bodies scroll internally when lengthy; expanded reading gives the source more space without substituting current files.
 

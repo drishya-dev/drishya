@@ -11,6 +11,13 @@ const EASE = 'cubic-bezier(.16,1,.3,1)';
 /** Material shells move from measured origins; characters stay selectable in their final DOM. */
 export function Origins({ scene, projection }: { scene: Scene; projection: Projection }) {
   const svg = useRef<SVGSVGElement>(null);
+  // Scene revisions are faster than an arrival. Own finite animations across renders,
+  // rather than cancelling them whenever capture or a passive hover updates React.
+  const runningMotion = useRef(new Map<Animation, { element: SVGElement; target?: Element; rect?: DOMRect }>());
+  const cancelMotion = () => {
+    for (const [animation, cue] of runningMotion.current) { animation.cancel(); cue.element.remove(); }
+    runningMotion.current.clear();
+  };
   const previous = useRef(frameOf(scene));
   const motion = useApp((s) => s.motion);
   const theme = useApp((s) => s.theme);
@@ -23,6 +30,16 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
   const explore = useApp((s) => s.explore);
   const follow = useApp((s) => s.follow);
   const paged = useApp((s) => !!s.historyPage);
+  const recordingId = useApp((s) => s.recordingId);
+  const source = useApp((s) => s.source);
+  const mode = useApp((s) => s.mode);
+
+  useLayoutEffect(() => { previous.current = frameOf(scene); }, [recordingId, source]);
+
+  useLayoutEffect(() => {
+    cancelMotion();
+    return cancelMotion;
+  }, [recordingId, source, theme, mapVisible, explore, motion, follow, compareAgents, settingsOpen, filePanel, mode]);
 
   useLayoutEffect(() => {
     const root = svg.current;
@@ -30,10 +47,11 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
     const history = viewer?.querySelector('.history');
     const plan = choreographyBetween(previous.current, scene, projection, paged ? Math.max(0, scene.step - projection.timeline.length) : 0);
     if (!root || !viewer || !history || explore || settingsOpen || filePanel) { previous.current = frameOf(scene); return; }
-    const animations: Animation[] = [];
     const emitted = new Set<string>();
+    let motionTarget: Element | undefined;
     let raf = 0;
-    const animate = motion && follow && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const animate = motion && follow && !document.hidden && !preference.matches;
     const visible = (el: Element) => {
       const r = el.getBoundingClientRect();
       const v = history.getBoundingClientRect();
@@ -46,10 +64,17 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       root.append(el);
       return el;
     };
-    const play = (el: SVGElement, frames: Keyframe[], duration: number) => {
-      const animation = el.animate(frames, { duration, easing: EASE, fill: 'forwards' });
-      animations.push(animation);
-      void animation.finished.then(() => el.remove(), () => el.remove());
+    const play = (el: SVGElement, frames: Keyframe[], duration: number, easing = EASE) => {
+      // Bursts stay bounded even when the next capture lands before earlier cues finish.
+      while (runningMotion.current.size >= 36) {
+        const oldest = runningMotion.current.entries().next().value;
+        if (!oldest) break;
+        oldest[0].cancel(); oldest[1].element.remove(); runningMotion.current.delete(oldest[0]);
+      }
+      const animation = el.animate(frames, { duration, easing, fill: 'forwards' });
+      runningMotion.current.set(animation, { element: el, target: motionTarget, rect: motionTarget?.getBoundingClientRect() });
+      const release = () => { runningMotion.current.delete(animation); el.remove(); };
+      void animation.finished.then(release, release);
     };
     const palette = getComputedStyle(viewer);
     const colour = (token: string) => palette.getPropertyValue(token).trim();
@@ -79,8 +104,8 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       const x = fromRight ? origin.left : origin.left + origin.width / 2;
       const y = origin.top + origin.height / 2;
       play(plate, [
-        { transform: `translate(${x - r.left}px,${y - r.top}px) scale(.12,.08)`, opacity: .55 },
-        { transform: 'none', opacity: .32, offset: .78 },
+        { transform: `translate(${x - r.left}px,${y - r.top}px) scale(.12,.08)`, opacity: .85 },
+        { transform: 'none', opacity: .45, offset: .78 },
         { transform: 'none', opacity: 0 },
       ], 620);
       const edge = contour(target, move);
@@ -123,7 +148,9 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
         const point = route.getPointAtLength(length * i / 8);
         return { transform: `translate(${point.x}px,${point.y}px)`, opacity: i === 8 ? 0 : i === 0 ? .65 : .9, offset: i / 8 };
       });
-      play(mark, frames, 620);
+      // A travel curve reserves time for the relationship, rather than landing in
+      // the first frames like the material's faster expansion curve.
+      play(mark, frames, 620, 'cubic-bezier(.4,0,.2,1)');
     };
     // A read's file lifts out of its measured origin (map node or working-set row) as a plain
     // document silhouette, rises, then travels into the action's header glyph. No path text or
@@ -156,7 +183,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
           return { transform: `translate(${point.x}px,${point.y}px) scale(${1.15 - (i + 1) * .05})`, opacity: i === 5 ? 0 : .95, offset: .22 + (i + 1) * .13 };
         }),
       ];
-      play(mark, frames, 700);
+      play(mark, frames, 700, 'cubic-bezier(.4,0,.2,1)');
     };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false) => {
       const a = origin.getBoundingClientRect();
@@ -199,13 +226,23 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       }
     };
     const draw = (arrivals = false) => {
-      root.replaceChildren();
+      // A retained cue is valid only while its destination still occupies that space.
+      // Content growth/wrapping or virtualization cancels it; passive hover does not.
+      for (const [animation, cue] of runningMotion.current) {
+        const now = cue.target?.getBoundingClientRect();
+        if (cue.target && (!cue.target.isConnected || !now || !cue.rect || Math.abs(now.left - cue.rect.left) > 2 || Math.abs(now.top - cue.rect.top) > 2 || Math.abs(now.width - cue.rect.width) > 2)) {
+          animation.cancel(); cue.element.remove(); runningMotion.current.delete(animation);
+        }
+      }
+      // Repaint passive relationships without deleting still-running arrivals.
+      for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove();
       const articles = new Map([...history.querySelectorAll<HTMLElement>('[data-op-id]')].map((el) => [el.dataset.opId, el]));
       const operations = scene.passages.flatMap((ps) => ps.ops);
       const active = operations.filter((op) => op.id === hoveredOp || op.id === selectedOp || (arrivals && animate && plan.arrivals.includes(op.id))).slice(-3);
       for (const op of active) {
         const target = articles.get(op.id);
         if (!target || !visible(target)) continue;
+        motionTarget = target;
         let origin: HTMLElement | undefined;
         let label: string;
         if (op.origin.type === 'map') {
@@ -255,6 +292,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
         const target = articles.get(id)?.querySelector('.verification-track, .result-area, .op-head');
         const op = projection.operations.find((op) => op.id === id);
         if (!target || !op || !visible(target)) continue;
+        motionTarget = target;
         emitted.add(`outcome:${id}`);
         const rect = contour(target, 'Resolve', colour(op.status === 'error' ? '--fail' : op.status === 'ok' ? '--pass' : '--t3'));
         play(rect, [{ opacity: .7 }, { opacity: 0 }], 420);
@@ -265,6 +303,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
         const origin = [...viewer.querySelectorAll<HTMLElement>('.crown [data-agent-id]')].find((el) => el.dataset.agentId === target?.dataset.agentId);
         const r = origin?.getBoundingClientRect();
         if (target && origin && visible(target) && r && r.width > 0 && r.left >= 0 && r.right <= innerWidth) {
+          motionTarget = target;
           emitted.add(`prose:${id}`);
           tether(origin, target, 'Agent presence', 'Surface');
         }
@@ -273,6 +312,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
         if (emitted.has(`settle:${id}`)) continue;
         const target = [...history.querySelectorAll<HTMLElement>('.passage[data-passage-id]')].find((el) => el.dataset.passageId === id);
         if (!target || !visible(target)) continue;
+        motionTarget = target;
         emitted.add(`settle:${id}`);
         const r = target.getBoundingClientRect();
         const line = node('path', 'origin-thread', 'Settle');
@@ -281,7 +321,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       }
     };
     const interrupt = () => {
-      animations.forEach((animation) => animation.cancel());
+      cancelMotion();
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { raf = 0; draw(); });
     };
@@ -301,7 +341,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
     const scroll = () => {
       if (!useApp.getState().follow) interrupt();
       else if (!raf) {
-        animations.forEach((a) => a.cancel());
+        cancelMotion();
         // The follow scroll can land after measurement. Retry only this update's
         // unshown cues; emitted identities prevent repeating an already visible arrival.
         raf = requestAnimationFrame(() => { raf = 0; draw(true); });
@@ -314,7 +354,9 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
     history.addEventListener('wheel', interrupt, { passive: true });
     viewer.addEventListener('pointerdown', interrupt, { passive: true });
     viewer.addEventListener('keydown', interrupt);
-    return () => { resize.disconnect(); history.removeEventListener('scroll', scroll); history.removeEventListener('wheel', interrupt); viewer.removeEventListener('pointerdown', interrupt); viewer.removeEventListener('keydown', interrupt); animations.forEach((a) => a.cancel()); cancelAnimationFrame(raf); root.replaceChildren(); };
-  }, [scene, projection, motion, hoveredOp, selectedOp, mapVisible, explore, follow, paged, theme, compareAgents, settingsOpen, filePanel]);
+    document.addEventListener('visibilitychange', interrupt);
+    preference.addEventListener('change', interrupt);
+    return () => { resize.disconnect(); history.removeEventListener('scroll', scroll); history.removeEventListener('wheel', interrupt); viewer.removeEventListener('pointerdown', interrupt); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
+  }, [scene, projection, motion, hoveredOp, selectedOp, mapVisible, explore, follow, paged, theme, compareAgents, settingsOpen, filePanel, mode]);
   return typeof document === 'undefined' ? null : createPortal(<svg className="origins" ref={svg} aria-hidden="true" />, document.body);
 }
