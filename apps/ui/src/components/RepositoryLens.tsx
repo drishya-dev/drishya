@@ -15,7 +15,7 @@ export function RepositoryLens({ graph, heat, focusPath }: { graph: RepoGraph; h
   const height = 170;
   const byId = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph]);
   const activity = useMemo(() => new Map(heat.map((h) => [h.path, h])), [heat]);
-  const labelPath = hovered ?? focusPath ?? heat.find((cell) => cell.active)?.path;
+  const labelPath = hovered ?? focusPath;
   const labelled = labelPath ? byId.get(labelPath) : undefined;
   const points = (node: { x: number; y: number }) => ({ x: 12 + node.x * Math.max(0, width - 24), y: 12 + node.y * (height - 24) });
   const anchors = heat.slice(0, 63).map((h) => h.path);

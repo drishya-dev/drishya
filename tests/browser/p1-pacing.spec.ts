@@ -77,6 +77,38 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
 });
 
+test('actions share stable reading widths, wrap when full and restart after agent prose', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  append({ type: 'assistant', message: { id: 'row-intro', role: 'assistant', content: [{ type: 'text', text: 'Starting the synthetic row allocation check.' }] } });
+  const call = (n: number) => ({ type: 'tool_use', id: `row-call-${n}`, name: 'Bash', input: { command: `printf row-allocation-${n}` } });
+  append({ type: 'assistant', message: { id: 'row-first', role: 'assistant', content: [call(0)] } });
+  await app.ingest.sync(recordingId);
+  const first = page.locator('article.op-shell').filter({ hasText: 'row-allocation-0' });
+  await expect(first).toBeAttached();
+  await first.scrollIntoViewIfNeeded();
+  const width = (await first.boundingBox())!.width;
+  append({ type: 'assistant', message: { id: 'row-more', role: 'assistant', content: [call(1), call(2), call(3)] } });
+  await app.ingest.sync(recordingId);
+  const last = page.locator('article.op-shell').filter({ hasText: 'row-allocation-3' });
+  await expect(last).toBeAttached();
+  const boxes = await Promise.all([0, 1, 2, 3].map((n) => page.locator('article.op-shell').filter({ hasText: `row-allocation-${n}` }).boundingBox()));
+  expect(Math.abs(boxes[0]!.width - width)).toBeLessThan(1);
+  expect(Math.abs(boxes[0]!.y - boxes[1]!.y)).toBeLessThan(1);
+  expect(Math.abs(boxes[0]!.y - boxes[2]!.y)).toBeLessThan(1);
+  expect(boxes[1]!.x).toBeGreaterThan(boxes[0]!.x);
+  expect(boxes[3]!.y).toBeGreaterThan(boxes[0]!.y + boxes[0]!.height);
+  const passageId = await last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]').getAttribute('data-passage-id');
+  append({ type: 'assistant', message: { id: 'row-prose', role: 'assistant', content: [{ type: 'text', text: 'Captured reasoning punctuates this action row.' }] } });
+  append({ type: 'assistant', message: { id: 'row-after-prose', role: 'assistant', content: [call(4)] } });
+  await app.ingest.sync(recordingId);
+  const next = page.locator('article.op-shell').filter({ hasText: 'row-allocation-4' });
+  await expect(next).toBeAttached();
+  expect(await next.locator('xpath=ancestor::*[contains(@class,"passage-slot")]').getAttribute('data-passage-id')).not.toBe(passageId);
+  await expect(last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]')).toContainText('Captured reasoning punctuates this action row.');
+});
+
 test('patch layouts retain captured changes and adapt without overflowing a narrow screen', async ({ page }) => {
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -312,6 +344,9 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     await page.mouse.move(800, 350);
     await page.mouse.wheel(0, -120);
     await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+    const context = page.getByRole('region', { name: 'Repository reading context' });
+    await expect(context).toContainText('Reading here');
+    const contextPath = await context.locator('.repo-context-file').allTextContents();
     const anchor = await history.evaluate((el) => {
       const top = el.getBoundingClientRect().top;
       const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.getBoundingClientRect().bottom > top + 1)!;
@@ -324,6 +359,8 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', model: 'synthetic', content: [{ type: 'text', text: `Captured explanation for synthetic round ${rounds}.` }] } });
     await app.ingest.sync(recordingId);
     await expect(steps).toContainText(`${before + 3} recorded steps`);
+    await expect(context).toContainText('Reading here');
+    expect(await context.locator('.repo-context-file').allTextContents()).toEqual(contextPath);
     await expect.poll(() => history.evaluate((el, anchor) => {
       const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.dataset.passageId === anchor.id);
       return node ? Math.abs(node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset) : Infinity;

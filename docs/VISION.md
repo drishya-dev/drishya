@@ -62,6 +62,8 @@ The centre remains the agent and its accumulated work; native tools and MCP inst
 
 ## 1. The doctrine: quiet at rest, articulate in motion
 
+**Latest builder clarification (6 October, continued work):** keep action surfaces side by side until useful reading space runs out, then wrap to the next row. Agent thinking/reasoning/replies punctuate the action flow beneath it; subsequent actions begin a new passage. Sharing a row describes presentation order, never proof of concurrent execution. Preserve each content-shaped surface's allocated width when another action arrives, rather than stretching the first across the whole row and shrinking its text later. Smooth origin-backed surface unfolding supplies the requested popping-up feeling; captured characters still arrive whole and selectable, without typewriter effects or delayed evidence.
+
 **5 October builder emphasis:** a transcript on a different background, attractive boxes, or animations around tool-call labels do not satisfy this vision. Theme, colour and choreography are part of the product, but their purpose is to make the real work understandable side by side with the running agent. The repository must participate as an intelligible place; source, changes and outcomes must have visible relationships and distinct useful compositions. A miniature map or five named transitions alone is not proof of this standard. Review the rendered application after each substantial visual change; technical acceptance does not freeze the design or establish a market-first claim.
 
 Two forces must both win:

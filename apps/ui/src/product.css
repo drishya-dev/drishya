@@ -48,8 +48,8 @@
 .history-inner { max-width: 1240px; padding: 22px 24px 140px; }
 .history .ops-row { gap: 12px; }
 .history .op { border: 1px solid var(--line-2); border-radius: 9px; background: var(--s1); max-height: 410px; box-shadow: 0 5px 16px #00000012; }
-.history .op.shape-source { flex-basis: 400px; }
-.history .op.shape-medium { flex-basis: 300px; }
+.history .op.shape-source { flex: 0 1 440px; }
+.history .op.shape-medium { flex: 0 1 300px; }
 .history .op.shape-compact { flex: 0 1 270px; }
 .history .op.expanded { background: var(--s1); }
 .history .op:hover, .history .op.lit, .history .op.selected { border-color: var(--focus); box-shadow: 0 5px 16px #00000012; }
@@ -254,6 +254,23 @@ input:not([type="checkbox"]), select { background-color: var(--s2); border-color
 }
 .repo-lens-label { position: absolute; max-width: calc(100% - 16px); font: 10px/1.6 var(--mono); background: var(--s1); color: var(--t1); padding: 1px 5px; border: 1px solid var(--line-2); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 .repo-lens-focus { font-size: 11px; color: var(--t2); }
+.repository-context { padding: 0 5px 16px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.repo-context-scope, .repo-context-actions > span, .repo-current-relations > span, .repo-relations > span { display: block; font-size: 10px; color: var(--t3); margin-bottom: 7px; }
+.repo-context-file { position: relative; display: block; text-align: left; width: 100%; padding: 4px 18px 8px 0; overflow-wrap: anywhere; }
+.repo-context-file > span:first-child { display: block; font: 10px/1.6 var(--mono); color: var(--t3); }
+.repo-context-file strong { font: 12px/1.7 var(--mono); color: var(--focus); }
+.repo-context-file > span:last-child { position: absolute; right: 0; top: 9px; color: var(--t3); }
+.repo-context-actions { margin-top: 9px; }
+.repo-context-actions button { display: flex; align-items: center; gap: 7px; width: 100%; padding: 6px 0; text-align: left; font-size: 11px; }
+.repo-context-actions small { margin-left: auto; font-size: 9px; color: var(--t3); }
+.repo-action-status { width: 4px; height: 4px; background: var(--t3); border-radius: 50%; flex-shrink: 0; }
+.repo-action-status.status-ok { background: var(--pass); }
+.repo-action-status.status-error { background: var(--fail); }
+.repo-current-relations { margin-top: 15px; }
+.repo-relations { padding-left: 10px; border-left: 1px solid var(--line-2); margin-block: 12px; }
+.repo-relations button { display: block; font: 10px/1.7 var(--mono); text-align: left; overflow-wrap: anywhere; padding: 4px 0; color: var(--t2); }
+.repo-current-relations small, .repo-context-empty { display: block; color: var(--t3); font-size: 10px; line-height: 1.7; }
+.repository-context button:hover { color: var(--focus); }
 .dock .instrument .op-kind { display: flex; align-items: center; gap: 7px; }
 .dock .instrument .material-glyph { width: 14px; height: 14px; }
 .pending-result { display: flex; align-items: center; gap: 10px; min-height: 60px; color: var(--t3); font-size: 11px; }

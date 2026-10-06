@@ -1,4 +1,4 @@
-import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { appendFileSync, copyFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
@@ -33,6 +33,46 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('repository context follows older reading and exposes only qualified current imports', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  sample.graph.temporal = 'current';
+  sample.graph.edges = [
+    { from: 'src/checkout/guard.ts', to: 'src/cart/types.ts', relation: 'static-import', basis: 'deterministic-rule', specifier: '../cart/types.ts' },
+    { from: 'src/checkout/index.ts', to: 'src/checkout/guard.ts', relation: 'static-import', basis: 'deterministic-rule', specifier: './guard.ts' },
+  ];
+  await page.route('**/demo/bundle.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.goto(demoUrl());
+  const context = page.getByRole('region', { name: 'Repository reading context' });
+  await expect(context).toContainText('Latest file reference');
+  await expect(context.locator('.repo-context-file')).toContainText('checkout.test.ts');
+  const history = page.locator('.history');
+  await page.mouse.move(800, 350);
+  await page.mouse.wheel(0, -100_000);
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+  await expect(context).toContainText('No file location captured for this passage.');
+  await expect(page.locator('article.op-read').first()).toBeAttached();
+  await history.evaluate((el) => {
+    const passage = el.querySelector('article.op-read')!.closest('.passage-slot')!;
+    el.scrollTop += passage.getBoundingClientRect().top - el.getBoundingClientRect().top + 2;
+  });
+  await expect(context).toContainText('Reading here');
+  await expect(context.locator('.repo-context-file')).toContainText('guard.ts');
+  await expect(context).toContainText('Current static imports');
+  await expect(context).toContainText('Workspace index · not historical execution');
+  await expect(context.locator('.repo-relations').first()).toContainText('src/cart/types.ts');
+  await expect(context.locator('.repo-relations').last()).toContainText('src/checkout/index.ts');
+  await page.getByRole('button', { name: 'Map on', exact: true }).click();
+  await expect(context.locator('.repo-context-file')).toContainText('guard.ts');
+  await context.locator('.repo-context-file').click();
+  await expect(page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/repository-reading-context.png') });
+  await page.getByRole('button', { name: /Back to latest/ }).click();
+  await expect(context).toContainText('Latest file reference');
+  await expect(context.locator('.repo-context-file')).toContainText('checkout.test.ts');
+});
+
 test('synthetic live demo publishes pending requests, resolves in place and keeps capture going while reading', async ({ page }) => {
   await page.goto(new URL('/?demo=live', server.launchUrl).href);
   await expect(page.locator('.workspace-context')).toContainText('Synthetic live demonstration');
@@ -45,8 +85,13 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   expect(await operation.getAttribute('data-op-id')).toBe(id);
   const settings = page.getByRole('button', { name: 'Workspace settings', exact: true });
   await settings.click();
+  const context = page.getByRole('region', { name: 'Repository reading context' });
+  await expect(context).toContainText('Reading here');
+  const contextPath = await context.locator('.repo-context-file').allTextContents();
   const before = Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]);
   await expect.poll(async () => Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]), { timeout: 10_000 }).toBeGreaterThan(before);
+  await expect(context).toContainText('Reading here');
+  expect(await context.locator('.repo-context-file').allTextContents()).toEqual(contextPath);
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   await page.getByRole('button', { name: 'Show complete sample' }).click();
   await expect(page.locator('.reading-status')).toContainText('45 recorded steps');

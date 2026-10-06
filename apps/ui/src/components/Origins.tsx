@@ -82,9 +82,9 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
         { transform: `translate(${x - r.left}px,${y - r.top}px) scale(.12,.08)`, opacity: .55 },
         { transform: 'none', opacity: .32, offset: .78 },
         { transform: 'none', opacity: 0 },
-      ], 440);
+      ], 620);
       const edge = contour(target, move);
-      play(edge, [{ opacity: 0 }, { opacity: .8, offset: .7 }, { opacity: 0 }], 580);
+      play(edge, [{ opacity: 0 }, { opacity: .8, offset: .6 }, { opacity: 0 }], 680);
     };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false) => {
       const a = origin.getBoundingClientRect();
