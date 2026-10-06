@@ -109,6 +109,68 @@ test('actions share stable reading widths, wrap when full and restart after agen
   await expect(last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]')).toContainText('Captured reasoning punctuates this action row.');
 });
 
+test('tool silhouettes transfer from the exact visible instrument and cancel for reading', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await expect(page.locator('.origins')).toBeAttached();
+  await page.evaluate(() => {
+    const observed: { sourceX: number; sourceY: number; targetX: number; targetY: number; glyph: string; label: string; text: string; actualSource: number[]; actualTarget: number[]; interrupted: boolean }[] = [];
+    (window as unknown as { toolboxTransfers: typeof observed }).toolboxTransfers = observed;
+    new MutationObserver((changes) => {
+      for (const change of changes) for (const node of change.addedNodes) {
+        if (!(node instanceof Element) || !node.classList.contains('origin-tool-transfer')) continue;
+        // Sample the DOM in the arrival frame: legitimate follow/reflow can move
+        // the card before an asynchronous test assertion reads its later position.
+        const a = document.querySelector('[data-mcp-server="context7"][data-mcp-tool="get-library-docs"] .material-glyph')!.getBoundingClientRect();
+        const card = [...document.querySelectorAll('article.op-mcp')].find((el) => el.textContent?.includes('synthetic-toolbox-input'))!;
+        const b = card.querySelector('.op-head > .material-glyph')!.getBoundingClientRect();
+        const active = node.getAnimations().length > 0;
+        document.querySelector('.viewer')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        observed.push({ sourceX: Number(node.getAttribute('data-source-x')), sourceY: Number(node.getAttribute('data-source-y')), targetX: Number(node.getAttribute('data-target-x')), targetY: Number(node.getAttribute('data-target-y')), glyph: node.querySelector('svg path')?.getAttribute('d') ?? '', label: node.getAttribute('data-origin-type') ?? '', text: node.textContent ?? '', actualSource: [a.x + a.width / 2, a.y + a.height / 2], actualTarget: [b.x + b.width / 2, b.y + b.height / 2], interrupted: active && node.getAnimations().length === 0 });
+      }
+    }).observe(document.querySelector('.origins')!, { childList: true });
+  });
+  const id = 'toolbox-visible-mcp';
+  append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: 'synthetic-toolbox-input' } }] } });
+  await app.ingest.sync(recordingId);
+  const operation = page.locator('article.op-mcp').filter({ hasText: 'synthetic-toolbox-input' });
+  await expect(operation).toBeVisible();
+  await expect(operation).toContainText('Waiting for result');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { toolboxTransfers: unknown[] }).toolboxTransfers.length)).toBeGreaterThan(0);
+  const transfer = await page.evaluate(() => (window as unknown as { toolboxTransfers: { sourceX: number; sourceY: number; targetX: number; targetY: number; glyph: string; label: string; text: string; actualSource: number[]; actualTarget: number[]; interrupted: boolean }[] }).toolboxTransfers.at(-1)!);
+  const source = page.locator('[data-mcp-server="context7"][data-mcp-tool="get-library-docs"] .material-glyph');
+  expect(transfer.label).toBe('MCP tool');
+  expect(transfer.glyph).toBe(await source.locator('path').getAttribute('d'));
+  expect(transfer.text).toBe('');
+  expect(transfer.sourceX).toBeCloseTo(transfer.actualSource[0]!, 0);
+  expect(transfer.sourceY).toBeCloseTo(transfer.actualSource[1]!, 0);
+  expect(transfer.targetX).toBeCloseTo(transfer.actualTarget[0]!, 0);
+  expect(transfer.targetY).toBeCloseTo(transfer.actualTarget[1]!, 0);
+  expect(transfer.interrupted).toBe(true);
+  expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/toolbox-workspace.png') });
+  await operation.getByRole('button', { name: /Expand/ }).click();
+  expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+  await expect(page.locator('.origin-tool-transfer')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+  await operation.getByRole('button', { name: /Close .* in history/ }).click();
+  await page.getByRole('button', { name: /Back to latest/ }).click();
+  const bounds = (await source.boundingBox())!;
+  await page.evaluate((bounds) => {
+    const cover = document.createElement('div'); cover.id = 'synthetic-tool-cover';
+    Object.assign(cover.style, { position: 'fixed', zIndex: '1000', left: `${bounds.x - 4}px`, top: `${bounds.y - 4}px`, width: `${bounds.width + 8}px`, height: `${bounds.height + 8}px` });
+    document.body.append(cover);
+  }, bounds);
+  const hiddenId = 'toolbox-occluded-mcp';
+  append({ type: 'assistant', message: { id: hiddenId, role: 'assistant', content: [{ type: 'tool_use', id: hiddenId, name: 'mcp__context7__get-library-docs', input: { topic: 'synthetic-occluded-tool-input' } }] } });
+  await app.ingest.sync(recordingId);
+  await expect(page.locator('article.op-mcp').filter({ hasText: 'synthetic-occluded-tool-input' })).toContainText('Waiting for result');
+  await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+  expect(await page.evaluate(() => (window as unknown as { toolboxTransfers: unknown[] }).toolboxTransfers.length)).toBe(1);
+  await page.evaluate(() => document.getElementById('synthetic-tool-cover')!.remove());
+});
+
 test('patch layouts retain captured changes and adapt without overflowing a narrow screen', async ({ page }) => {
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.setViewportSize({ width: 1440, height: 900 });
