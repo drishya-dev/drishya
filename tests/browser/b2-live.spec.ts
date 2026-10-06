@@ -152,7 +152,13 @@ test('long history mounts only nearby work while selected evidence and live upda
   const selectedId = await selected.getAttribute('data-op-id');
   await selected.locator('.op-head').click();
   await history.locator(`article[data-op-id="${selectedId}"]`).focus();
-  await history.hover();
+  // Target the history's reading gutter: the centre can be a nested source or
+  // terminal scroller, whose wheel consumption is deliberately independent.
+  const gutter = await history.evaluate((el) => {
+    const bounds = el.getBoundingClientRect();
+    return { x: bounds.left + parseFloat(getComputedStyle(el).paddingLeft) + 8, y: bounds.top + bounds.height / 2 };
+  });
+  await page.mouse.move(gutter.x, gutter.y);
   // Wheel through the measured end, rather than assuming ten events exhaust a
   // virtual document whose last passages are still resolving their heights.
   // Detached reading must not auto-follow those late measurements.
