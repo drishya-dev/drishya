@@ -226,6 +226,41 @@ input:not([type="checkbox"]), select { background-color: var(--s2); border-color
 .history .material-change { --material: var(--edited); }
 .history .material-external { --material: var(--external); }
 .history .op-head { box-shadow: inset 2px 0 var(--material); }
+.origin-material { fill: var(--s2); fill-opacity: .24; stroke-width: 1.5; }
+.origin-instrument { fill: none; stroke-width: 1; }
+.history .passage.settled .op { opacity: 1; }
+.history .material-source .op-body { padding-left: 16px; }
+.history .material-source .code { border-left: 1px solid var(--line); padding-left: 4px; }
+.history .material-change .op-body { padding: 12px 0; }
+.history .material-change .request-line, .history .material-change .pending-result { padding-inline: 14px; }
+.history .material-change .diff .ln { padding-inline: 10px; }
+.history .material-external .mcp-tool { font: 12px var(--mono); margin-bottom: 12px; }
+.request-fields { margin: 0; font: 11px/1.7 var(--mono); }
+.request-fields > div { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr); gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); }
+.request-fields dt { color: var(--t3); overflow-wrap: anywhere; }
+.request-fields dd { margin: 0; color: var(--t1); white-space: pre-wrap; overflow-wrap: anywhere; }
+.request-fields .muted { font-family: var(--sans); }
+.sample-complete, .sample-watch { margin-left: auto; flex: none; font-size: 11px; }
+.crown-sample { font-size: 10px; color: var(--t3); flex: none; }
+.material-glyph { width: 16px; height: 16px; flex: none; color: var(--material); }
+.history .op-head .op-title { font-family: var(--mono); line-height: 1.6; }
+.history .op-head { min-height: 43px; }
+.history .op { box-shadow: 0 1px 0 color-mix(in srgb, var(--t1) 5%, transparent) inset, 0 6px 18px #00000012; }
+.history .passage.settled .ops-row { position: relative; }
+.history .passage.settled .ops-row::before { display: block; content: ''; position: absolute; top: -4px; left: 8px; width: 54px; height: 1px; background: var(--line-2); box-shadow: 4px -3px var(--line); pointer-events: none; }
+@container passage (min-width: 700px) {
+  .history .ops-row { gap: 12px 0; }
+  .history .op + .op:not(.shape-wide) { margin-left: -4px; }
+}
+.repo-lens-label { position: absolute; max-width: calc(100% - 16px); font: 10px/1.6 var(--mono); background: var(--s1); color: var(--t1); padding: 1px 5px; border: 1px solid var(--line-2); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.repo-lens-focus { font-size: 11px; color: var(--t2); }
+.pending-result { display: flex; align-items: center; gap: 10px; min-height: 60px; color: var(--t3); font-size: 11px; }
+.pending-result > span:first-child { font: 22px var(--mono); color: var(--material, var(--t2)); }
+.patch-request { margin-top: 12px; }
+@media (max-width: 820px) {
+  .sample-complete, .sample-watch { font-size: 10px; padding-inline: 5px; }
+  .workspace-recording-title { display: none; }
+}
 .history .material-source .op-kind { color: var(--focus); }
 .op-kind.k-mcp, .dock .server-dot, .history .material-external .mcp-tool { color: var(--external); }
 .dock .server-dot { background: var(--external); }

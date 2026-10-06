@@ -134,7 +134,7 @@ export const useApp = create<State>((set, get) => ({
       const page = (count > 10_000 || bytes > 32 * 1024 * 1024) && src.history ? await src.history(id, { step: typeof opts.at === 'number' ? opts.at : opts.play ? 0 : undefined }) : undefined;
       const projection = page?.projection ?? await src.projection(id);
       if (!current() || get().recordingId !== id) return; // the user moved on; this response is stale
-      const recording = recordings.find((r) => r.id === id.split('+')[0]) ?? recordings[0];
+      const recording = recordings.find((r) => r.id === id) ?? recordings.find((r) => r.id === id.split('+')[0]) ?? recordings[0];
       const mode = opts.at === undefined && !opts.play ? 'history' : 'replay';
       const total = page?.scene.total ?? projection.timeline.length;
       const step = mode === 'history' || opts.at === 'end' ? total : Math.max(0, Math.min(opts.at ?? 0, total));
@@ -153,14 +153,14 @@ export const useApp = create<State>((set, get) => ({
     const count = recordings.filter((r) => recordingId.split('+').includes(r.id)).reduce((n, r) => n + r.observationCount, 0);
     const bytes = recordings.filter((r) => recordingId.split('+').includes(r.id)).reduce((n, r) => n + (r.sourceBytes ?? 0), 0);
     if (source.history && (get().historyPage || count > 10_000 || bytes > 32 * 1024 * 1024)) {
-      set({ recordings, recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording });
+      set({ recordings, recording: recordings.find((r) => r.id === recordingId) ?? recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording });
       await get().loadHistoryWindow({ start: get().follow ? undefined : get().historyPage?.start });
       return;
     }
     const projection = await source.projection(recordingId);
     if (!current() || get().recordingId !== recordingId) return; // superseded by a newer load
     const { step, mode } = get();
-      set({ error: undefined, projection, recordings, renderedRevisions: revisionsOf(recordings), recording: recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording,
+      set({ error: undefined, projection, recordings, renderedRevisions: revisionsOf(recordings), recording: recordings.find((r) => r.id === recordingId) ?? recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording,
       step: mode === 'history' ? projection.timeline.length : Math.min(step, projection.timeline.length) });
     // History grows regardless of the reader's scroll position; `follow` only controls the viewport.
   },

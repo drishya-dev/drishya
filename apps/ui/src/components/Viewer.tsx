@@ -138,9 +138,10 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
         <span className="brand-mark" />
         Drishya
       </button>
+      {source?.sample && <span className="crown-sample">Synthetic demo</span>}
       <div className="crown-title" title={projection.title}>
         {projection.title ?? recording?.title ?? 'Recording'}
-        {source?.kind === 'bundle' && <span className="tag">offline bundle</span>}
+        {source?.kind === 'bundle' && !source.sample && <span className="tag">offline bundle</span>}
         {connection === 'reconnecting' && <span className="tag warn" role="status">reconnecting…</span>}
         {recording && recording.health?.state !== 'following' && recording.health?.state !== 'idle' && <HealthTag r={recording} />}
         {recording?.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
@@ -211,6 +212,17 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   }, []);
   const heat = useMemo(() => new Map(scene.heat.map((h) => [h.path, h])), [scene.heat]);
   const files = projection.files.filter((f) => f.firstStep < scene.step);
+  const recentPath = useMemo(() => {
+    const operations = new Map(projection.operations.map((op) => [op.id, op]));
+    const pathOf = (id?: string) => id ? operations.get(id)?.paths.find((ref) => ref.role !== 'search-hit')?.path : undefined;
+    const focused = pathOf(scene.focus?.operationId);
+    if (focused) return focused;
+    for (let p = scene.passages.length - 1; p >= 0; p--) {
+      const ops = scene.passages[p]!.ops;
+      for (let i = ops.length - 1; i >= 0; i--) { const path = pathOf(ops[i]!.id); if (path) return path; }
+    }
+    return undefined;
+  }, [projection, scene.passages, scene.focus?.operationId]);
   const rowHeight = 48;
   const rowStart = useRef<HTMLDivElement>(null);
   const [rowOffset, setRowOffset] = useState(32);
@@ -231,7 +243,7 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   return (
     <nav className="spine" ref={ref} aria-label="Files in this run" onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedPath((e.target as HTMLElement).closest<HTMLElement>('[data-spine-path]')?.dataset.spinePath)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-spine-path]')) setFocusedPath(undefined); }}>
       <div className="spine-head">Recorded working set</div>
-      {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} />}
+      {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} focusPath={recentPath} />}
       <div ref={rowStart} aria-hidden="true" />
       {files.length === 0 && <div className="muted small">None yet</div>}
       {[...visible].sort((a, b) => a - b).map((i) => {

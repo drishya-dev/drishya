@@ -17,7 +17,7 @@ function byProject<T>(items: T[], rootOf: (item: T) => string | undefined): [str
   return [...groups];
 }
 
-export function Home({ openDemo }: { openDemo: () => void }) {
+export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const source = useApp((s) => s.source);
   const recordings = useApp((s) => s.recordings);
   const set = useApp((s) => s.set);
@@ -86,7 +86,7 @@ export function Home({ openDemo }: { openDemo: () => void }) {
       </header>
       {usage && <p className={usage.overBudget ? 'bad small' : 'muted small'}>Local store · {(usage.bytes / 1024 ** 3).toFixed(2)} GiB of {(usage.budgetBytes / 1024 ** 3).toFixed(0)} GiB advisory budget{usage.overBudget ? ' · budget exceeded' : ''}. Nothing is deleted automatically. Remove selected recordings with <code>drishya forget &lt;recording&gt;</code>.</p>}
 
-      <div className="home-intro"><span className="home-kicker">YOUR LOCAL AGENT WORKSPACE</span><h1>See the work.<br />Know what changed.</h1><p>Choose a Claude Code or Codex session. Follow its captured source, changes and results, or return to earlier work at your own pace.</p><div className="home-intro-actions"><button className="btn primary" onClick={openDemo}>Explore the synthetic demo</button><button className="btn" disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}>Refresh local sessions</button></div><div className="home-principles"><span>Local storage</span><span>Read-only observation</span><span>No telemetry</span></div></div>
+      <div className="home-intro"><span className="home-kicker">YOUR LOCAL AGENT WORKSPACE</span><h1>See the work.<br />Know what changed.</h1><p>Choose a Claude Code or Codex session. Follow its captured source, changes and results, or return to earlier work at your own pace.</p><div className="home-intro-actions"><button className="btn primary" onClick={() => openDemo(true)}>Watch the live demo</button><button className="btn" onClick={() => openDemo()}>Explore the synthetic demo</button><button className="btn" disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}>Refresh local sessions</button></div><div className="home-principles"><span>Local storage</span><span>Read-only observation</span><span>No telemetry</span></div></div>
       <div className="home-filters">
         <input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => { setQ(e.target.value); resetShown(); }} />
         <select aria-label="Harness" value={harness} onChange={(e) => { setHarness(e.target.value); resetShown(); }}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>
@@ -119,7 +119,7 @@ export function Home({ openDemo }: { openDemo: () => void }) {
               <strong>Synthetic demo</strong>
               <div className="muted small">Claude Code fixes free orders at checkout, a subagent searches the tests, Codex reviews the change. Every byte is invented.</div>
             </div>
-            <button className="btn" onClick={openDemo}>Open demo</button>
+            <button className="btn" onClick={() => openDemo()}>Open demo</button>
           </div>
         </section>
 

@@ -8,7 +8,7 @@ import { useApp } from '../state.ts';
 const NS = 'http://www.w3.org/2000/svg';
 const EASE = 'cubic-bezier(.16,1,.3,1)';
 
-/** Only empty contours move. Characters remain in the DOM, selectable from arrival. */
+/** Material shells move from measured origins; characters stay selectable in their final DOM. */
 export function Origins({ scene, projection }: { scene: Scene; projection: Projection }) {
   const svg = useRef<SVGSVGElement>(null);
   const previous = useRef(frameOf(scene));
@@ -66,6 +66,26 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       edge.style.stroke = tone ?? (getComputedStyle(el).getPropertyValue('--material').trim() || colour('--focus'));
       return edge;
     };
+    const materialArrival = (target: Element, origin: DOMRect, move: string, fromRight: boolean) => {
+      const r = target.getBoundingClientRect();
+      const plate = node('rect', 'origin-material', move);
+      plate.setAttribute('x', String(r.left)); plate.setAttribute('y', String(r.top));
+      plate.setAttribute('width', String(r.width)); plate.setAttribute('height', String(Math.min(r.height, 420)));
+      plate.setAttribute('rx', '9');
+      plate.style.stroke = getComputedStyle(target).getPropertyValue('--material').trim() || colour('--focus');
+      // The empty backing carries the allocated material shape, never a second copy
+      // of captured text. Its small origin footprint expands to the measured reading space.
+      plate.style.transformOrigin = `${r.left}px ${r.top}px`;
+      const x = fromRight ? origin.left : origin.left + origin.width / 2;
+      const y = origin.top + origin.height / 2;
+      play(plate, [
+        { transform: `translate(${x - r.left}px,${y - r.top}px) scale(.12,.08)`, opacity: .55 },
+        { transform: 'none', opacity: .32, offset: .78 },
+        { transform: 'none', opacity: 0 },
+      ], 440);
+      const edge = contour(target, move);
+      play(edge, [{ opacity: 0 }, { opacity: .8, offset: .7 }, { opacity: 0 }], 580);
+    };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false) => {
       const a = origin.getBoundingClientRect();
       const b = target.getBoundingClientRect();
@@ -81,6 +101,11 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       path.setAttribute('data-origin-type', label);
       path.setAttribute('data-origin-renderer', origin instanceof HTMLElement ? origin.dataset.originRenderer ?? (label === 'Repository node' ? 'world' : 'reference') : 'reference');
       if (move) {
+        const ignition = node('rect', 'origin-instrument', move);
+        ignition.setAttribute('x', String(a.left - 2)); ignition.setAttribute('y', String(a.top - 2));
+        ignition.setAttribute('width', String(a.width + 4)); ignition.setAttribute('height', String(a.height + 4)); ignition.setAttribute('rx', '5');
+        ignition.style.stroke = path.style.stroke;
+        play(ignition, [{ opacity: .8 }, { opacity: 0 }], 380);
         const length = path.getTotalLength();
         play(path, [{ strokeDasharray: `${length}`, strokeDashoffset: length, opacity: .65 }, { strokeDasharray: `${length}`, strokeDashoffset: 0, opacity: 0 }], 560);
         if (move === 'Surface') {
@@ -89,10 +114,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
           rule.setAttribute('d', `M${b.left},${b.top} V${b.bottom}`);
           rule.style.stroke = getComputedStyle(target).borderLeftColor;
           play(rule, [{ opacity: .75 }, { opacity: 0 }], 480);
-        } else {
-          const shell = contour(target, move);
-          play(shell, [{ transform: `translate(${x1 - x2}px,${y1 - y2}px)`, opacity: .08 }, { transform: 'none', opacity: .5, offset: .75 }, { transform: 'none', opacity: 0 }], 480);
-        }
+        } else if (label !== 'Read instrument') materialArrival(target, a, move, fromRight);
       }
     };
     const draw = (arrivals = false) => {

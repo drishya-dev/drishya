@@ -2,6 +2,12 @@
 
 **Integrated local product updated 6 October 2026.** This maps the code that exists. The [baseline audit](review/06-baseline-audit.md) retains historical findings; [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) and the [roadmap](IMPLEMENTATION_ROADMAP.md) govern current execution. For architecture rationale see the engineering plan; for creative intent see VISION. [`packages/contracts`](../packages/contracts/src/index.ts) remains `0.1.0-draft`, and freezing it needs both builders ([`AGENTS.md`](../AGENTS.md)).
 
+## Material presentation amendment — 6 October 2026
+
+`apps/ui/src/lib/sample-source.ts` publishes only the built-in synthetic fixture at `?demo=live` through the existing DataSource subscription/reload boundary. Its projection, artifacts, search and verification expose only published evidence; reader holds do not pause publication. The optional `sample`/`completeSample` source methods are presentation metadata, not observation-contract changes. Ordinary bundles and daemon sources retain their existing behavior. Exact combined recording identity is preferred before component matching when handling notices and refreshed summaries.
+
+`Origins.tsx` uses finite SVG material backings measured from visible real origins while characters remain selectable in their final DOM positions. The repository overview adds DOM path labels on actual geometry; pending reads and patches distinguish captured input from a result not yet observed. Full readers, deterministic scenes and large-session paging remain unchanged. See [material experience](review/12-material-experience.md) for details and limits.
+
 ## B4 reader amendment — 5 October 2026
 
 The current architecture and validation limits are in [08: bounded history reader](review/08-b4-history-reader.md). This section supersedes older full-projection descriptions for large interactive histories.

@@ -67,6 +67,8 @@ Canvas PR #27 is squash-merged as `8537acd` after all seven checks on final head
 
 ## Current integrated product baseline (supersedes the prototype queue)
 
+Latest builder direction: keep improving the actual product and commit verified increments until the complete experience is ready; do not announce palette polish as premium completion or ask for another prototype review first. The material pass is in [12](review/12-material-experience.md): real-origin surface shells with stationary selectable DOM text, content-specific layouts, useful file labels and a synthetic growing demo through the reader subscription boundary. It preserves history/worker/provenance constraints. Future results remain hidden until publication; synthetic timing is illustrative, never real agent timing. Continue this product rather than another HTML study.
+
 Latest builder follow-up: refine the integrated app now. The 6 Oct material pass uses graphite/jade/copper/lilac roles shared by dark/light, bounded reading edges, command backing, unboxed agent rules, chrome-only hover transitions and theme-aware origin/resolve cues. Continue in the real app; no new standalone prototype. Local check/build and ordinary browser regressions pass. Do not treat a palette pass as human preference or physical release acceptance.
 
 The builder now says to finish the working product first and revisit colours/animations later. **Continue in `apps/ui`; do not restart another standalone HTML study or wait for its approval.** [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) is the current user workflow and implementation account. Older study recommendations above are historical references.

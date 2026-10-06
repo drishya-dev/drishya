@@ -5,6 +5,7 @@ import { ProductShell } from './components/ProductShell.tsx';
 import { Home } from './components/Home.tsx';
 import { Viewer } from './components/Viewer.tsx';
 import { needsReload } from './lib/sync.ts';
+import { growingSample } from './lib/sample-source.ts';
 import { setMotion, useApp } from './state.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
@@ -21,10 +22,11 @@ function params() {
   };
 }
 
-async function openBundle(url: string) {
+async function openBundle(url: string, growing = false) {
   const at = params().at;
   const bundle = await loadBundle(url);
-  const source = bundleSource(bundle);
+  const source = growing && url === DEMO_URL ? growingSample(bundle) : bundleSource(bundle);
+  if (url === DEMO_URL && !growing) source.sample = 'recorded';
   useApp.setState({ source, config: await source.config() });
   await useApp.getState().openRecording(bundle.recording.id, at === undefined ? undefined : { at });
 }
@@ -39,7 +41,7 @@ export function App() {
     if (p.motion === '0') setMotion(false);
     (async () => {
       try {
-        if (p.bundle) return await openBundle(p.bundle);
+        if (p.bundle) return await openBundle(p.bundle, new URLSearchParams(location.search).get('demo') === 'live');
         const auth = await signIn();
         if (auth === 'ok') {
           useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings: await daemon.recordings() });
@@ -106,7 +108,7 @@ export function App() {
         </div>
       </div>
     );
-    if (screen === 'home') return <Home openDemo={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
+    if (screen === 'home') return <Home openDemo={(growing = false) => openBundle(DEMO_URL, growing).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
     return <Viewer />;
   };
   return <ProductShell>{render()}</ProductShell>;
@@ -183,14 +185,14 @@ function useLiveUpdates() {
     let pending: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = source.subscribe((e) => {
       const s = useApp.getState();
-      if (!s.recordingId?.split('+').includes(e.recordingId)) return;
+      if (s.recordingId !== e.recordingId && !s.recordingId?.split('+').includes(e.recordingId)) return;
       if (e.health && !e.added) {
         // A capture-state change carries no new data: refresh the summary, not the projection.
         void s.source?.recordings().then((recordings) => {
           const current = useApp.getState();
           if (current.source !== s.source) return;
           const openId = current.recordingId?.split('+')[0];
-          useApp.setState({ recordings, recording: recordings.find((r) => r.id === openId) ?? current.recording });
+          useApp.setState({ recordings, recording: recordings.find((r) => r.id === current.recordingId) ?? recordings.find((r) => r.id === openId) ?? current.recording });
         }).catch(() => undefined);
         return;
       }
