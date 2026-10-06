@@ -25,7 +25,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash / Codex | Repository context follows the reader; bounded recorded actions and qualified imports | UI history/state/repository components, tests and handoff docs |
 
 ---
 
@@ -64,6 +63,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
+- **Reader-context increment merged:** PR #31 final head `f44d11d` passed all seven exact-head CI jobs (run `37440541005`) and squash-merged as `d6f1087`; local main fast-forwarded. Author Yash Doke, Codex coauthor; Harsh's work remains intact. Typechecks/243 units and 30 ordinary browser cases pass (two opt-in skips). The final ten-minute synthetic reader passed: 603,171 ms, 113 append/hold/return rounds, peak 640 history DOM nodes, with held file context and anchors checked throughout. Main CI is monitored separately after this handoff. No final aesthetic preference or broad hardware readiness claim.
 - **Context boundary hardening:** Manual growing-demo review exposed automatic scene focus stealing held context. Only explicit `selectedOp` now takes priority; action status comes from the composed boundary, with only id/kind/status retained. Typechecks/243 units and final repository/live-growth browser cases pass; the restarted sustained reader includes scope/path preservation on every append. PR #31 initial head `f3ba023` passed all seven CI jobs (run `37439911030`); final revision is validated independently.
 - **Reader context/flow increment:** Added captured primary-file context for the held first-visible passage, selected action and latest work; up to three composed action links, and bounded typed current imports with stale/partial qualification. Missing locations do not borrow newer work. Map-off keeps file/action context and releases the graph. Source/medium surfaces keep allocated widths as siblings arrive, naturally wrap, and restart after agent prose. Source/dock shell opening is 620 ms, with immediate stationary captured text. Typechecks/241 unit tests and 30 ordinary browser cases pass (two opt-in skips); a fresh ten-minute reader is running. See [13](review/13-reader-context-flow.md). Final creative preference and physical/platform gates remain separate.
 - **Completed-demo follow-up:** The finished growing sample now offers **Watch demo again**, including on narrow screens, instead of requiring a browser refresh to see arrivals again. UI typecheck/build and the synthetic live/pending/result/hold/mobile/restart journey pass. This changes only built-in sample navigation, not real capture or replay.

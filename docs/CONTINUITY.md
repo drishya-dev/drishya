@@ -2,6 +2,8 @@
 
 **Last implementation update: 6 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
 
+**Latest completed increment:** PR #31 merged as `d6f1087`, with stable horizontal action widths/wrapping, agent-prose boundaries, smoother finite openings and repository context following held reading rather than automatic latest-step focus. All seven exact-head CI jobs and the final ten-minute reader passed (113 rounds, peak 640 history nodes). See [reader context and flow](review/13-reader-context-flow.md). Continue refining the integrated app; this is not the final creative sign-off. The three original package-manager edits remain local and excluded.
+
 ## Read in this order
 
 1. [STATUS](STATUS.md) for active claims and the last completed work.
