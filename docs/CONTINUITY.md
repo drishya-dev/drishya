@@ -2,6 +2,8 @@
 
 **Last implementation update: 6 October 2026.** Repository files are memory. Do not rely on a previous chat, model, desktop account or session transcript.
 
+**Latest refinement:** External tool content now chooses 300/560 px reading space, keeps structured JSON intact within its existing captured-preview bounds, exposes original previews and preserves null/missing fields. Tables scroll locally on narrow screens. Repository action links show recorded ranges/commands/titles, with pending replay ranges withheld. See [external reading](review/14-external-reading.md). Continue on the integrated experience rather than HTML studies; human preference and physical release gates remain open.
+
 **Latest completed increment:** PR #31 merged as `d6f1087`, with stable horizontal action widths/wrapping, agent-prose boundaries, smoother finite openings and repository context following held reading rather than automatic latest-step focus. All seven exact-head CI jobs and the final ten-minute reader passed (113 rounds, peak 640 history nodes). See [reader context and flow](review/13-reader-context-flow.md). Continue refining the integrated app; this is not the final creative sign-off. The three original package-manager edits remain local and excluded.
 
 ## Read in this order
