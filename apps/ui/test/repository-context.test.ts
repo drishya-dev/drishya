@@ -37,7 +37,8 @@ describe('repository reading context', () => {
     const firstRead = projection.operations.find((op) => op.detail.kind === 'read')!;
     const at = projection.timeline.findIndex((item) => item.type === 'op-start' && item.operationId === firstRead.id) + 1;
     const context = repositoryContext(projection, compose(projection, { step: at }));
-    expect(context.actions).toEqual([{ id: firstRead.id, kind: firstRead.kind, status: 'running' }]);
+    expect(context.actions).toEqual([{ id: firstRead.id, kind: firstRead.kind, status: 'running', label: firstRead.tool }]);
+    expect(context.actions[0]!.label).not.toContain('line');
   });
   it('does not let automatic scene focus steal the held reading location', () => {
     const nextRead = projection.operations.find((op) => op.detail.kind === 'read' && op.detail.path === 'src/cart/discount.ts')!;

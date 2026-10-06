@@ -23,4 +23,21 @@ describe('captured material presentation', () => {
     expect(html).toContain('nested');
     expect(html).not.toContain('<script>');
   });
+  it('allocates reading width for long external content without making short receipts full width', () => {
+    const op = bundle.projection.operations.find((op) => op.detail.kind === 'mcp')!;
+    expect(presentationOf({ ...op, detail: { kind: 'mcp', server: 'docs', tool: 'query', input: { query: 'brief' } } }).shape).toBe('medium');
+    expect(presentationOf({ ...op, detail: { kind: 'mcp', server: 'docs', tool: 'query', input: { query: 'input '.repeat(40) } } }).shape).toBe('reading');
+    expect(presentationOf({ ...op, detail: { kind: 'mcp', server: 'docs', tool: 'query', input: {}, resultPreview: 'result '.repeat(100) } }).shape).toBe('reading');
+  });
+  it('preserves null, missing fields and the original preview in structured layouts', () => {
+    const text = JSON.stringify([{ name: 'first', value: null }, { name: 'second', later: false }]);
+    const html = renderToStaticMarkup(createElement(StructuredResult, { text }));
+    expect(html).toContain('<th>later</th>');
+    expect(html).toContain('<td>null</td>');
+    expect(html).toContain('not present');
+    expect(html).toContain('Original captured preview');
+    const fields = renderToStaticMarkup(createElement(StructuredResult, { text: '{"value":null}' }));
+    expect(fields).toContain('<dd>null</dd>');
+    expect(fields).toContain('Original captured preview');
+  });
 });

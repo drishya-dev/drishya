@@ -564,7 +564,7 @@ function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
           <div className="material-context">Captured arguments · bounded preview</div>
           <RequestFields input={d.input} />
           <ResultArea state={op.status} resolving={resolving}>
-            {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview.slice(0, 1400)} /></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
+            {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview} /></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
           </ResultArea>
         </div>
       );

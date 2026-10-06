@@ -33,6 +33,38 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('substantial external results retain structured evidence and adapt to narrow reading', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const op = sample.projection.operations.find((op: { detail: { kind: string } }) => op.detail.kind === 'mcp');
+  const records = Array.from({ length: 5 }, (_, i) => ({ path: `synthetic/file-${i}.ts`, note: `Recorded result ${i}: ${'preserve this captured evidence '.repeat(12)}`, value: i === 0 ? null : false }));
+  op.detail.resultPreview = JSON.stringify(records);
+  await page.route('**/demo/bundle.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.goto(demoUrl());
+  const external = page.locator(`article[data-op-id="${op.id}"]`);
+  await page.mouse.move(1000, 350);
+  await page.mouse.wheel(0, -100_000);
+  await expect(external).toBeAttached();
+  await external.scrollIntoViewIfNeeded();
+  await expect(external).toHaveClass(/shape-reading/);
+  expect((await external.boundingBox())!.width).toBeGreaterThan(500);
+  await expect(external.locator('tbody tr')).toHaveCount(5);
+  await expect(external.locator('tbody')).toContainText('synthetic/file-4.ts');
+  await expect(external.locator('tbody')).toContainText('null');
+  await external.getByText('Original captured preview', { exact: true }).click();
+  await expect(external.locator('.result-original pre')).toHaveText(op.detail.resultPreview);
+  await external.getByText('Original captured preview', { exact: true }).click();
+  await external.locator('.op-body').evaluate((el) => { el.scrollTop = 0; });
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-desktop.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await external.scrollIntoViewIfNeeded();
+  expect((await external.boundingBox())!.width).toBeLessThan(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect((await external.locator('table').boundingBox())!.width).toBeGreaterThan((await external.boundingBox())!.width);
+  await expect(external.locator('tbody')).toContainText('synthetic/file-4.ts');
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-mobile.png') });
+});
+
 test('repository context follows older reading and exposes only qualified current imports', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
@@ -58,6 +90,7 @@ test('repository context follows older reading and exposes only qualified curren
   });
   await expect(context).toContainText('Reading here');
   await expect(context.locator('.repo-context-file')).toContainText('guard.ts');
+  await expect(context.locator('.repo-context-action-label').first()).not.toHaveText('Read');
   await expect(context).toContainText('Current static imports');
   await expect(context).toContainText('Workspace index · not historical execution');
   await expect(context.locator('.repo-relations').first()).toContainText('src/cart/types.ts');

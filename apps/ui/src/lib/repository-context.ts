@@ -4,7 +4,7 @@ import type { Scene } from '@drishya/scene';
 export interface RepositoryContext {
   scope: 'selected' | 'reading' | 'latest';
   path?: string;
-  actions: Pick<Operation, 'id' | 'kind' | 'status'>[];
+  actions: (Pick<Operation, 'id' | 'kind' | 'status'> & { label: string })[];
 }
 
 /** Resolve a place from captured references, never from prose or nearby activity. */
@@ -29,7 +29,14 @@ export function repositoryContext(projection: Projection, scene: Scene, readingP
   // Only currently composed actions are candidates: an offline replay projection
   // can still contain future operations, and a worker page is not the whole run.
   const visible = new Map(scene.passages.flatMap((passage) => passage.ops.map((op) => [op.id, op.state] as const)));
-  const actions = path ? projection.operations.filter((op) => visible.has(op.id) && op.paths.some((ref) => ref.path === path && ref.role !== 'search-hit')).slice(-3).map((op) => ({ id: op.id, kind: op.kind, status: visible.get(op.id)! })) : [];
+  const actions = path ? projection.operations.filter((op) => visible.has(op.id) && op.paths.some((ref) => ref.path === path && ref.role !== 'search-hit')).slice(-3).map((op) => {
+    const status = visible.get(op.id)!;
+    const d = op.detail;
+    // Completed read ranges can incorporate the result. Never expose that range
+    // from a complete projection while its replay action is still pending.
+    const label = status === 'running' ? op.tool : d.kind === 'read' ? `line ${d.startLine}${d.lineCount > 0 ? `–${d.startLine + d.lineCount - 1}` : ' onward'}` : d.kind === 'shell' || d.kind === 'test' ? d.command : op.title;
+    return { id: op.id, kind: op.kind, status, label: label.replace(/\s+/g, ' ').slice(0, 120) };
+  }) : [];
   return { scope, path, actions };
 }
 

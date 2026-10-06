@@ -1,6 +1,6 @@
 import type { Operation } from '@drishya/contracts';
 
-export type MaterialShape = 'source' | 'wide' | 'medium' | 'compact';
+export type MaterialShape = 'source' | 'reading' | 'wide' | 'medium' | 'compact';
 
 /** A repeatable view decision from captured content. Never changes evidence or tool identity. */
 export function presentationOf(op: Operation): { shape: MaterialShape; material: string } {
@@ -14,8 +14,11 @@ export function presentationOf(op: Operation): { shape: MaterialShape; material:
     case 'shell': return { shape: d.command.length > 110 || d.command.includes('\n') ? 'wide' : (d.outputPreview?.length ?? 0) > 160 ? 'medium' : 'compact', material: 'terminal' };
     case 'test': return { shape: d.summary?.failures.length ? 'medium' : 'compact', material: 'verification' };
     case 'search': return { shape: d.hits.length > 3 ? 'medium' : 'compact', material: 'matches' };
-    case 'mcp': return { shape: (d.resultPreview?.length ?? 0) > 180 ? 'medium' : 'compact', material: 'external' };
-    case 'web': return { shape: 'medium', material: 'external' };
+    case 'mcp': {
+      const inputNeedsSpace = typeof d.input === 'string' ? d.input.length > 180 : !!d.input && typeof d.input === 'object' && Object.values(d.input).some((value) => typeof value === 'string' && value.length > 180);
+      return { shape: inputNeedsSpace || (d.resultPreview?.length ?? 0) > 300 ? 'reading' : 'medium', material: 'external' };
+    }
+    case 'web': return { shape: (d.resultPreview?.length ?? 0) > 300 || (d.url ?? d.query ?? '').length > 180 ? 'reading' : 'medium', material: 'external' };
     default: return { shape: 'compact', material: 'action' };
   }
 }
