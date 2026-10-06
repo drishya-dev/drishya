@@ -4,11 +4,11 @@
 
 A local, cross-harness history and live view for coding agents. Follow **real captured content** — the source it read, the output it got, the diff it wrote — connected to your repository. The intended live experience keeps accumulating while you scroll back and read; sequence replay is optional.
 
-> **Status: pre-alpha, working draft.** Claude Code/Codex adapters, storage, projections, local API and a base UI exist. The [30 September audit](docs/review/06-baseline-audit.md) passed 96 tests and found privacy, recovery and live-history gaps. Backend hardening and a usable integrated history are next; the premium frontend is not finalized. Optional remote explanations and release packaging remain unverified.
+> **Status: working local product candidate.** Claude Code/Codex discovery, import/watch, bounded accumulating history, source/diff/result readers, repository exploration, agent ownership, file evidence comparison, reading marks and verification freshness are integrated. Shared charcoal/light/system themes and resource settings are included. [Product delivery](docs/PRODUCT_DELIVERY.md) describes what works and how to run it. Physical/platform release acceptance, a human comprehension pilot and optional live model-provider validation remain open; final colours and animations can evolve on this baseline.
 
 ## Run it
 
-Requires a developer checkout, **Node 24** and **pnpm 10.34.5** (or prefix commands with `npx pnpm@10.34.5`). There is no verified published `npx drishya` installation yet. Use the synthetic demo while the known privacy bypasses are being closed; see the audit before importing sensitive recordings.
+Requires a developer checkout, **Node 24** and **pnpm 10.34.5** (or prefix commands with `npx pnpm@10.34.5`). There is no published `npx drishya` installation yet. The isolated offline package/install is verified with `pnpm package:verify`. Imports redact before storage; pattern detection is best effort. Review exports before sharing and re-import recordings flagged with an older privacy policy.
 
 ```bash
 pnpm install
@@ -16,15 +16,18 @@ pnpm ui:build
 pnpm serve
 ```
 
-`pnpm serve` starts the local app on `127.0.0.1:7878` and opens it with a per-launch authentication link. The home screen lists local Claude Code/Codex sessions; **Import** opens recorded work, **Watch live** tails the selected journal. Drishya reads those source files without changing them. Live-history interaction is still being revised; tailing status does not prove an agent is running.
+`pnpm serve` starts the local app on `127.0.0.1:7878` and opens it with a per-launch authentication link. The home screen lists local Claude Code/Codex sessions; **Import** opens recorded work, **Watch live** tails the selected journal. Drishya reads those source files without changing them. Scroll back to read while capture continues; **Back to latest** resumes following. Tailing status does not prove an agent is running.
 
 | Command | What it does |
 |---|---|
 | `pnpm serve` | Start the local app |
 | `pnpm dev` + `pnpm ui:dev` | Daemon with the Vite dev server on `127.0.0.1:5173` (hot reload) |
 | `pnpm drishya sources` | List harness sessions on this machine |
-| `pnpm drishya import <file>` | Import a session journal; the advertised `--live` CLI flag currently has no effect |
-| `pnpm drishya export <recording> --out f.json` | Write a replay bundle; export privacy coverage needs hardening before sharing real recordings |
+| `pnpm drishya import <file>` | Import a journal; add `--live` to keep following until Ctrl+C |
+| `pnpm drishya export <recording> --out f.json` | Write a sanitized replay bundle; review before sharing |
+| `pnpm drishya list` / `pnpm drishya storage` | List recordings / inspect the local advisory storage budget |
+| `pnpm package:verify` | Build and test a checksummed isolated offline package |
+| `pnpm test:browser` | Build and exercise integrated synthetic browser journeys |
 | `pnpm demo:bundle` | Rebuild the synthetic demo from `fixtures/synthetic/` |
 | `pnpm check` | Typecheck and run every test |
 | `node scripts/validate-baseline.ts` | Synthetic persistence/API/live diagnostics and known privacy probes |
@@ -32,7 +35,7 @@ pnpm serve
 
 **Demo with no install:** the built UI with no daemon (or `?demo`) plays the synthetic replay bundle. Deep links: `?demo&at=26` (the edit), `&motion=0` (reduced motion).
 
-**Explanations with NVIDIA Nemotron (optional, experimental).** The implementation accepts `NEBIUS_API_KEY` and configurable model/endpoint variables. Evidence-based explanations are labelled generated and are user-triggered. Live API validation and binding consent to an exact immutable preview are still open; use synthetic evidence until those gates pass. Core capture/review needs no model key.
+**Explanations with NVIDIA Nemotron (optional, experimental).** The implementation accepts `NEBIUS_API_KEY` and configurable model/endpoint variables. Generated explanations are user-triggered and require consent to the exact previewed payload. A changed payload invalidates consent. Live-provider validation remains open. Core capture/review needs no model key.
 
 Data lives in `~/.drishya` (override with `DRISHYA_HOME`). The code map is [`docs/CODEBASE.md`](docs/CODEBASE.md).
 
@@ -52,7 +55,7 @@ Much of that work may be available in harness transcripts, tool results and snap
 
 - **A map of your repository**, not of the agent's call tree — so "it's working in the wrong place" is something you *see*, not something you read.
 - **Captured content with provenance** — inspect available source regions, results and diffs, with historical versions and gaps distinguished from current files.
-- **An accumulating work history** that keeps your reading position while new work arrives, with optional sequence replay. This is the target interaction; the draft currently exposes a playback-led interface.
+- **An accumulating work history** that keeps your reading position while new work arrives, with optional sequence replay.
 - **Cross-harness.** Claude Code and Codex first. Your agents keep running in their own harness; Drishya only watches.
 
 ## Principles

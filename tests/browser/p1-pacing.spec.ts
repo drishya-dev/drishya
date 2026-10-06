@@ -107,7 +107,7 @@ test('terminal folding is reversible and keyboard map search targets a real file
   await match.press('Enter');
   await expect(page.locator('.map-tip-path')).toHaveText('src/checkout/guard.ts');
   await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
-  await expect(page.locator('.file-panel')).toContainText('guard.ts');
+  await expect(page.locator('.file-workspace')).toContainText('guard.ts');
 });
 
 test('reduced motion keeps captured history and suppresses relationship animations', async ({ page }) => {

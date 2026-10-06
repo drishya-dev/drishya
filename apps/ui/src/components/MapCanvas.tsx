@@ -6,14 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
-
-const TONE: Record<HeatCell['tone'], string> = {
-  read: '#C8C8D0',
-  search: '#8B9BFF',
-  write: '#E6B98A',
-  fail: '#F2706A',
-  pass: '#4FC38A',
-};
+import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
 
 interface Cam {
   x: number;
@@ -65,6 +58,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const explore = useApp((s) => s.explore);
+  useResolvedTheme();
   const hoveredPath = useApp((s) => s.hoveredPath);
   const set = useApp((s) => s.set);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -103,11 +97,12 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       c.height = size.h * dpr;
     }
     const g = c.getContext('2d')!;
+    const colours = mapPalette(c);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, size.w, size.h);
 
     g.lineWidth = 1;
-    g.strokeStyle = 'rgba(255,255,255,0.05)';
+    g.strokeStyle = colours.edge;
     g.beginPath();
     for (const e of graph.edges) {
       const a = byId.get(e.from);
@@ -129,7 +124,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         const pa = project(a); const pb = project(b);
         g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y);
       }
-      g.strokeStyle = 'rgba(139,155,255,.55)'; g.stroke();
+      g.strokeStyle = colours.focus; g.stroke();
     }
 
     const r0 = Math.max(1.6, Math.min(3.2, 1.2 * Math.sqrt(cam.k) * (explore ? 1.6 : 1.2)));
@@ -139,32 +134,32 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       const h = heatMap.get(n.id);
       g.beginPath();
       g.arc(p.x, p.y, r0, 0, Math.PI * 2);
-      g.fillStyle = h ? '#71717A' : '#3F3F46';
+      g.fillStyle = h ? colours.active : colours.node;
       g.fill();
       if (h && h.heat > 0.02) {
         g.globalAlpha = Math.min(1, 0.25 + h.heat);
         g.beginPath();
         g.arc(p.x, p.y, r0 + 1.2 + h.heat * 2.2, 0, Math.PI * 2);
-        g.fillStyle = TONE[h.tone];
+        g.fillStyle = colours.tones[h.tone];
         g.fill();
         g.globalAlpha = 1;
       }
       if (h?.edited) {
         g.beginPath();
         g.arc(p.x, p.y, r0 + 4.5, 0, Math.PI * 2);
-        g.strokeStyle = 'rgba(230,185,138,0.75)';
+        g.strokeStyle = colours.tones.write;
         g.stroke();
       }
       if (h?.tone === 'fail') {
         g.beginPath();
         g.arc(p.x, p.y, r0 + 6.5, 0, Math.PI * 2);
-        g.strokeStyle = 'rgba(242,112,106,0.8)';
+        g.strokeStyle = colours.tones.fail;
         g.stroke();
       }
       if (hoveredPath === n.id) {
         g.beginPath();
         g.arc(p.x, p.y, r0 + 8, 0, Math.PI * 2);
-        g.strokeStyle = '#EDEDEF';
+        g.strokeStyle = colours.text;
         g.stroke();
       }
     }
@@ -173,7 +168,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     if (!explore && readingRect) {
       const grad = g.createLinearGradient(readingRect.left - 32, 0, readingRect.left + readingRect.width + 32, 0);
       // Match the DOM theme; the reading mask must not become an old black slab.
-      const theme = getComputedStyle(c).getPropertyValue('--bg').trim();
+      const theme = colours.background;
       const base = /^#[0-9a-f]{6}$/i.test(theme) ? theme : '#0b1b1e';
       grad.addColorStop(0, `${base}00`);
       grad.addColorStop(0.04, `${base}e6`);

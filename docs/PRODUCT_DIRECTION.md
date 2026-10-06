@@ -223,6 +223,8 @@ Proposed pilot gate: at least 8 participants; median task time improves by 25% w
 
 ## 10. Build sequence and durable handoff
 
+**Latest builder direction, 6 October:** finish the integrated local product now and refine art direction later. Standalone HTML exploration no longer blocks implementation. [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) is the current account of the workspace, shared themes/settings, global file evidence comparison and usable workflows. Technical acceptance does not substitute for the pilot below or certify all devices/harness versions.
+
 Finish trust and reliability first, alongside a usable integrated history. Then implement the content-shaped visual system and one differentiating return-to-work feature. Only then expand themes, sharing and harness breadth. [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md) defines gates and acceptance criteria; STATUS identifies the next actual commit.
 
 The next agent should preserve these four things even under a smaller context budget: **live history keeps growing; the reader owns their position; content and evidence drive the layout; backend completion precedes premium expansion**. Read the [continuity brief](CONTINUITY.md) before proposing a new direction. These repository files, not chat memory, are the durable product memory.

@@ -37,15 +37,15 @@ export function Home({ openDemo }: { openDemo: () => void }) {
 
   const refresh = async () => {
     if (!source) return;
-    set({ recordings: await source.recordings() });
-    if (source.storage) setUsage(await source.storage());
-    const found = await source.sources();
-    setSources(found.sources);
-    setSourceErrors(found.errors);
+    const [recordings, found, storage] = await Promise.all([source.recordings(), source.sources(), source.storage?.()]);
+    if (useApp.getState().source !== source) return;
+    set({ recordings }); setUsage(storage); setSources(found.sources); setSourceErrors(found.errors);
   };
   useEffect(() => {
     refresh().catch((e) => setErr(e.message));
-    return source?.subscribe(() => source.recordings().then((r) => set({ recordings: r })));
+    let active = true;
+    const stop = source?.subscribe(() => { void source.recordings().then((r) => { if (active) set({ recordings: r }); }).catch((e) => { if (active) setErr(e.message); }); });
+    return () => { active = false; stop?.(); };
   }, [source]);
 
   const open = async (s: DiscoveredSource, live: boolean) => {
@@ -82,9 +82,11 @@ export function Home({ openDemo }: { openDemo: () => void }) {
           Drishya
         </div>
         <span className="muted">See what your coding agents did — replayed on your own code. Observe only.</span>
+        <button className="btn ghost" onClick={() => set({ settingsOpen: true })}>Settings</button>
       </header>
       {usage && <p className={usage.overBudget ? 'bad small' : 'muted small'}>Local store · {(usage.bytes / 1024 ** 3).toFixed(2)} GiB of {(usage.budgetBytes / 1024 ** 3).toFixed(0)} GiB advisory budget{usage.overBudget ? ' · budget exceeded' : ''}. Nothing is deleted automatically. Remove selected recordings with <code>drishya forget &lt;recording&gt;</code>.</p>}
 
+      <div className="home-intro"><span className="home-kicker">YOUR LOCAL AGENT WORKSPACE</span><h1>See the work.<br />Know what changed.</h1><p>Choose a Claude Code or Codex session. Follow its captured source, changes and results, or return to earlier work at your own pace.</p><div className="home-intro-actions"><button className="btn primary" onClick={openDemo}>Explore the synthetic demo</button><button className="btn" disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}>Refresh local sessions</button></div><div className="home-principles"><span>Local storage</span><span>Read-only observation</span><span>No telemetry</span></div></div>
       <div className="home-filters">
         <input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => { setQ(e.target.value); resetShown(); }} />
         <select aria-label="Harness" value={harness} onChange={(e) => { setHarness(e.target.value); resetShown(); }}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>
@@ -134,6 +136,7 @@ export function Home({ openDemo }: { openDemo: () => void }) {
             </p>
           ))}
           {!sources && <div className="skeleton tall" />}
+          {sources && filteredSources.length === 0 && <p className="muted">{sources.length ? 'No sessions match these filters.' : 'No Claude Code or Codex journals were found in their standard local directories. Start a session in your harness, then refresh. For a journal stored elsewhere, use drishya import --help.'}</p>}
           <div className="rows">
             {byProject(filteredSources.slice(0, shownSources), (s) => s.cwd).map(([root, group]) => <div className="project-group" key={root}>
               <div className="project-heading" title={root}>{root}</div>

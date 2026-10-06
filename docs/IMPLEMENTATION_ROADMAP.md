@@ -40,6 +40,8 @@ Each row should become a small reviewable PR or closely related sequence. Do not
 
 Nemotron or another explanation service is optional and does not block B0–B4. A model key is not required to build or validate the core product. The live remote explain integration remains unverified. Harden consent before sending real evidence, then validate separately with an explicitly configured service.
 
+**6 October product delivery amendment:** the builder now requests the finished integrated local product rather than more standalone studies. [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) describes the shared production workspace, settings/themes, P2-B file evidence comparison and run/package flows. P1/P2 implementation is the current baseline; human comprehension/preference and physical/platform release checks remain acceptance work. Further colour/motion refinement proceeds in `apps/ui`, retaining truthful origins and bounded history.
+
 **P1 implementation amendment (5 Oct):** the [P1 record](review/09-p1-content-origins.md) describes the implemented repository lens, evidence-matched origins, material readers and five semantic cues. Engineering acceptance does not freeze the art direction. The builder's latest standard rejects a decorated transcript; retain useful spatial relationships, capture honesty and reader agency while refining theme/colour/composition. P2-A reading marks are already merged via PR #21, with whole-recording worker facts. Remaining P2 work is file-centred comparison/history, qualified verification freshness and a human comprehension/preference pilot.
 
 ## 3. B0 — privacy and trust are release blockers
@@ -178,9 +180,7 @@ After B4, choose the next coding harness by pilot demand and passive source qual
 
 ## 10. First concrete implementation session
 
-Read [CONTINUITY](CONTINUITY.md), [STATUS](STATUS.md), the audit and privacy code/tests. Claim the relevant files. Fix the two reproduced sanitizer bypasses with regression tests and cover observation metadata/protected nested content. Update privacy policy version/migration implications explicitly; do not just change a regex and keep old stores silently “certified.” Re-run targeted privacy + ingest tests, then typecheck/full suite because sanitation affects every package. Commit B0 as a scoped change with agent attribution. Continue the remaining B0 sinks before reopening real persistence or remote model use.
-
-The current audit intentionally does not implement all these changes. It provides a reproducible starting point and a plan that a smaller model can execute one gate at a time, without rediscovering the product intent.
+The original 30 September starting task was B0 privacy hardening. That work is completed; do not reopen it from this historical audit wording. Read [CONTINUITY](CONTINUITY.md), [STATUS](STATUS.md) and [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) for the current integrated baseline. Preserve its privacy regressions and bounded worker/data-source boundary while refining the real UI, then execute the remaining human/physical/platform acceptance. New capture formats or remote-provider validation remain separate scoped work.
 
 ## 11. Delivery tags and planning ranges (3 October 2026)
 

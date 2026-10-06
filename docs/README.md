@@ -24,6 +24,8 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 ## Current B4 amendment
 
+**Current product delivery:** [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) supersedes older base-UI/prototype-only descriptions for implemented workspace behavior, P2-B evidence comparison and local run/package instructions. The 30 September audit remains historical; current evidence comes from STATUS, CODEBASE and the B4/P1 delivery records. VISION governs creative intent. Further UI changes belong in the integrated app.
+
 [08: bounded history reader](review/08-b4-history-reader.md) supersedes earlier B4 full-projection/deferral statements for architecture, measurements and limits. STATUS and CONTINUITY carry current execution state; [07](review/07-b4-scale-install.md) retains historical probes. The non-negotiable privacy/evidence/observe-only constraints still win.
 
 ## Reading order
@@ -34,7 +36,7 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 **Before capture, store or daemon work** — [`CODEBASE.md`](CODEBASE.md) → [`review/06-baseline-audit.md`](review/06-baseline-audit.md) → [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md) → [`review/03-engineering-plan.md`](review/03-engineering-plan.md). Read the research ledger for harness facts.
 
-**Before frontend work** — [`VISION.md`](VISION.md) → [`CODEBASE.md` § Base UI](CODEBASE.md#base-ui--what-is-placeholder) → the `compose()` goldens in `packages/scene/test/__golden__`.
+**Before frontend work**: [VISION](VISION.md), [CODEBASE integrated UI](CODEBASE.md#integrated-ui-and-replaceable-renderers), [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md), then the composer goldens in `packages/scene/test/__golden__`.
 
 ---
 

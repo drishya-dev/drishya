@@ -10,6 +10,8 @@ If you are an agent and read one design document, read this one.
 
 This section is the source. Everything below it is interpretation and must serve it.
 
+**Latest execution direction — 6 October:** the builder asked us to finish the working product in the integrated app now, with our best coherent theme, and revisit colours/animations later. HTML studies are reference material, not the deliverable or an approval gate. [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) records the implemented baseline and its honest release limits. This changes the order of work, not the requirements for truthful visualization, readable materials or reader control.
+
 > Show the whole repo graph or pipeline and connections. Then from those graphs, bring that file in a cool way, as well as meaning to those graphs. Show what the agent is looking at one by one as it proceeds — tools and results visually, connected — what it is thinking and going through, then changes, properly. A whole visual of its working.
 
 > Not boxes of `model thinking:`, `tool call:`, `output:`, `code edit:`. **Visualization is the main.**

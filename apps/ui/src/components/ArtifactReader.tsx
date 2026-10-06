@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { Hunk } from '@drishya/contracts';
-import { CodeView, DiffView, Output, useArtifact } from './common.tsx';
+import { CodeView, DiffView, Output, ProvenanceBadge, useArtifact } from './common.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
 
 /** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
-export function ArtifactReader({ id, kind, path, startLine = 1, fallback }: {
+export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false }: {
   id?: string;
   kind: 'code' | 'output';
   path?: string;
   startLine?: number;
   fallback?: string;
+  provenance?: boolean;
 }) {
   const [pages, setPages] = useState([0]);
   const [index, setIndex] = useState(0);
@@ -24,10 +25,12 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback }: {
   if (view.unavailable) return <p className="muted">{view.unavailable}{fallback ? <> Available preview: <Output text={fallback} /></> : null}</p>;
   if (view.text === undefined) return <div className="skeleton tall" />;
   const next = view.hasMore && view.nextStart !== undefined && view.nextStart > pageStart;
+  const pageLabel = view.artifact?.provenance.kind === 'derived' ? 'Derived page' : view.artifact?.provenance.kind === 'generated' ? 'Generated page' : 'Captured page';
   return (
     <div className="artifact-reader">
-      <div className="reader-tools"><span className="material-context">Captured page{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span><button className="btn ghost small" onClick={() => { void navigator.clipboard.writeText(view.text!).then(() => setCopied('Copied captured page'), () => setCopied('Copy unavailable · select text to copy')); }}>Copy captured page</button><span role="status" className="muted small">{copied}</span></div>
-      {kind === 'code' ? <CodeView text={view.text} startLine={startLine + pageStart} path={path} /> : <Output text={view.text} />}
+      {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.kind === 'excerpt' ? `Excerpt · lines ${view.artifact.range?.start ?? startLine}–${view.artifact.range?.end ?? "unknown"}` : 'Historical artifact'}</span></div>}
+      <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span><button className="btn ghost small" onClick={() => { void navigator.clipboard.writeText(view.text!).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>
+      {kind === 'code' ? <CodeView text={view.text} startLine={(view.artifact?.range?.start ?? startLine) + pageStart} path={path} /> : <Output text={view.text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(index > 0 || next) && (
         <nav className="reader-pages" aria-label="Captured content pages">
