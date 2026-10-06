@@ -201,6 +201,12 @@ test('a burst is captured immediately without fast-forwarding the reading camera
   await expect(page.getByRole('button', { name: /8 new steps · Back to latest/ })).toBeVisible();
   const history = page.locator('.history');
   await expect.poll(() => history.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight)).toBeGreaterThan(2);
+  // End a reading gesture outside history; an explicit return must still work.
+  const bounds = (await history.boundingBox())!;
+  await page.mouse.move(bounds.x + 20, bounds.y + bounds.height - 20);
+  await page.mouse.down();
+  await page.mouse.move(10, 10);
+  await page.mouse.up();
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
 });

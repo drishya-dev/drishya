@@ -60,6 +60,20 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     [scene.passages, viewport, measurementVersion, targetId, expandedId, focusedPassageId, readingAnchor.current?.id, lowResource]);
 
   useLayoutEffect(() => {
+    // A selection can end outside history. Do not leave following locked by a
+    // pointer release that never bubbles through the history element.
+    const release = () => { pointerFocus.current = false; };
+    window.addEventListener('pointerup', release, true);
+    window.addEventListener('pointercancel', release, true);
+    window.addEventListener('blur', release);
+    return () => {
+      window.removeEventListener('pointerup', release, true);
+      window.removeEventListener('pointercancel', release, true);
+      window.removeEventListener('blur', release);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
     if (!onWindow) return;
     const visible = passageWindow(ids, measurements.current, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
     const missing = visible.runs.flatMap((run) => Array.from({ length: run.end - run.start }, (_, i) => run.start + i))
