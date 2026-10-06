@@ -138,7 +138,7 @@ Canvas 2D and DOM syntax rendering remain replaceable implementations; PixiJS an
 - **Daemon**: host, origin, token, CSRF, import allow-list, export leak checks.
 - **Golden scenes**: `packages/scene/test/__golden__`, a pure composer at the fail, edit, pass and end moments.
 
-CI runs on Linux and Windows and checks that the committed demo bundle is reproducible.
+CI is manually dispatched for explicitly selected final candidates, with checks/browser journeys on Linux and Windows and packaging on Linux/Windows/macOS. Commits and PRs do not trigger hosted runs; development verification runs locally. The committed demo bundle must remain reproducible. See [CI policy](CI_POLICY.md).
 
 ## Measured on real sessions (this machine)
 
