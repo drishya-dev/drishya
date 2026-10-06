@@ -39,7 +39,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       const v = history.getBoundingClientRect();
       return r.width > 0 && r.height > 0 && r.bottom > v.top && r.top < v.bottom && r.right > v.left && r.left < v.right;
     };
-    const node = (tag: 'path' | 'rect', cls: string, move?: string) => {
+    const node = (tag: 'path' | 'rect' | 'g', cls: string, move?: string) => {
       const el = document.createElementNS(NS, tag);
       el.setAttribute('class', cls);
       if (move) el.setAttribute('data-move', move);
@@ -86,6 +86,45 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       const edge = contour(target, move);
       play(edge, [{ opacity: 0 }, { opacity: .8, offset: .6 }, { opacity: 0 }], 680);
     };
+    const toolTransfer = (origin: Element, target: Element, label: string, tone: string) => {
+      const source = origin.querySelector<SVGSVGElement>('.material-glyph');
+      const destination = target.querySelector<SVGSVGElement>('.op-head > .material-glyph');
+      if (!source || !destination || !visible(destination)) return;
+      const a = source.getBoundingClientRect();
+      const b = destination.getBoundingClientRect();
+      if (!a.width || !a.height || !b.width || !b.height) return;
+      const pane = origin.closest('.dock')?.getBoundingClientRect();
+      const viewport = history.getBoundingClientRect();
+      const sourceHit = document.elementFromPoint(a.left + a.width / 2, a.top + a.height / 2);
+      const targetHit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      if (!pane || a.top < pane.top || a.bottom > pane.bottom || b.top < viewport.top || b.bottom > viewport.bottom || !sourceHit || !origin.contains(sourceHit) || !targetHit || !target.contains(targetHit)) return;
+      const x1 = a.left + a.width / 2; const y1 = a.top + a.height / 2;
+      const x2 = b.left + b.width / 2; const y2 = b.top + b.height / 2;
+      const bend = Math.min(120, Math.abs(x1 - x2) / 3);
+      const route = document.createElementNS(NS, 'path');
+      route.setAttribute('d', `M${x1},${y1} C${x1 - bend},${y1} ${x2 + bend},${y2} ${x2},${y2}`);
+      const mark = node('g', 'origin-tool-transfer', 'Emit');
+      mark.setAttribute('data-origin-type', label);
+      mark.setAttribute('data-source-x', String(x1)); mark.setAttribute('data-source-y', String(y1));
+      mark.setAttribute('data-target-x', String(x2)); mark.setAttribute('data-target-y', String(y2));
+      mark.style.color = tone;
+      const backing = document.createElementNS(NS, 'rect');
+      backing.setAttribute('x', '-13'); backing.setAttribute('y', '-13');
+      backing.setAttribute('width', '26'); backing.setAttribute('height', '26'); backing.setAttribute('rx', '5');
+      mark.append(backing);
+      // Transfer only our instrument silhouette, never tool text or captured content.
+      const glyph = source.cloneNode(true) as SVGSVGElement;
+      glyph.removeAttribute('class');
+      glyph.setAttribute('x', '-8'); glyph.setAttribute('y', '-8');
+      glyph.setAttribute('width', '16'); glyph.setAttribute('height', '16');
+      mark.append(glyph);
+      const length = route.getTotalLength();
+      const frames = Array.from({ length: 9 }, (_, i): Keyframe => {
+        const point = route.getPointAtLength(length * i / 8);
+        return { transform: `translate(${point.x}px,${point.y}px)`, opacity: i === 8 ? 0 : i === 0 ? .65 : .9, offset: i / 8 };
+      });
+      play(mark, frames, 620);
+    };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false) => {
       const a = origin.getBoundingClientRect();
       const b = target.getBoundingClientRect();
@@ -101,6 +140,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       path.setAttribute('data-origin-type', label);
       path.setAttribute('data-origin-renderer', origin instanceof HTMLElement ? origin.dataset.originRenderer ?? (label === 'Repository node' ? 'world' : 'reference') : 'reference');
       if (move) {
+        if (move === 'Emit') toolTransfer(origin, target, label, path.style.stroke);
         const ignition = node('rect', 'origin-instrument', move);
         ignition.setAttribute('x', String(a.left - 2)); ignition.setAttribute('y', String(a.top - 2));
         ignition.setAttribute('width', String(a.width + 4)); ignition.setAttribute('height', String(a.height + 4)); ignition.setAttribute('rx', '5');

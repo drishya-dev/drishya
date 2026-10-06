@@ -229,6 +229,14 @@ input:not([type="checkbox"]), select { background-color: var(--s2); border-color
 .history .op-head { box-shadow: inset 2px 0 var(--material); }
 .origin-material { fill: var(--s2); fill-opacity: .24; stroke-width: 1.5; }
 .origin-instrument { fill: none; stroke-width: 1; }
+.origin-tool-transfer > rect { fill: var(--s1); stroke: currentColor; stroke-width: 1; }
+.dock .tool-mark { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: none; border: 1px solid var(--line-2); border-radius: 5px; background: var(--s1); }
+.dock .instrument .op-kind, .server-tool-identity { display: flex; align-items: center; gap: 8px; }
+.dock .server-tool-identity { min-width: 0; }
+.server-tool-identity > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.dock .server-tool .material-glyph { width: 14px; height: 14px; color: var(--external); }
+.dock .instrument:hover .tool-mark, .dock .instrument.on .tool-mark { border-color: var(--focus); }
+.dock .server-tool:hover .tool-mark, .dock .server-tool[aria-pressed="true"] .tool-mark { border-color: var(--external); }
 .history .passage.settled .op { opacity: 1; }
 .history .material-source .op-body { padding-left: 16px; }
 .history .material-source .code { border-left: 1px solid var(--line); padding-left: 4px; }

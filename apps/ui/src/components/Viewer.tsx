@@ -282,7 +282,7 @@ function Dock({ scene }: { scene: Scene }) {
       <div className="dock-basis">Observed in this recording</div>
       {scene.dock.native.map((d) => (
         <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
-          <span className={`op-kind k-${d.kind}`}><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} />{KIND_LABEL[d.kind]}</span>
+          <span className={`op-kind k-${d.kind}`}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span>{KIND_LABEL[d.kind]}</span>
           <span className="inst-tools">{d.tools.join(' · ')}</span>
           <span className="inst-uses">{d.uses || ''}</span>
         </button>
@@ -299,7 +299,7 @@ function Dock({ scene }: { scene: Scene }) {
             <div className="drawer">
               {s.tools.map((t) => (
                 <button key={t.tool} data-mcp-server={s.server} data-mcp-tool={t.tool} className={`server-tool${t.active ? ' active' : ''}${t.uses ? '' : ' unused'}`} disabled={!t.uses} aria-pressed={filter?.server === s.server && filter?.tool === t.tool} onClick={() => setFilter(filter?.server === s.server && filter?.tool === t.tool ? undefined : { server: s.server, tool: t.tool })}>
-                  <span>{t.tool}</span>
+                  <span className="server-tool-identity"><span className="tool-mark"><MaterialGlyph material="external" /></span><span>{t.tool}</span></span>
                   <span className="inst-uses">{t.uses || ''}</span>
                 </button>
               ))}
