@@ -39,7 +39,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       const v = history.getBoundingClientRect();
       return r.width > 0 && r.height > 0 && r.bottom > v.top && r.top < v.bottom && r.right > v.left && r.left < v.right;
     };
-    const node = (tag: 'path' | 'rect' | 'g', cls: string, move?: string) => {
+    const node = (tag: 'path' | 'rect' | 'g' | 'circle', cls: string, move?: string) => {
       const el = document.createElementNS(NS, tag);
       el.setAttribute('class', cls);
       if (move) el.setAttribute('data-move', move);
@@ -175,9 +175,16 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
       if (move) {
         if (move === 'Emit') toolTransfer(origin, target, label, path.style.stroke);
         if (move === 'Lift' && label !== 'Read instrument') fileTransfer(origin, target, label, path.style.stroke);
-        const ignition = node('rect', 'origin-instrument', move);
-        ignition.setAttribute('x', String(a.left - 2)); ignition.setAttribute('y', String(a.top - 2));
-        ignition.setAttribute('width', String(a.width + 4)); ignition.setAttribute('height', String(a.height + 4)); ignition.setAttribute('rx', '5');
+        const repositoryNode = label === 'Repository node';
+        const ignition = node(repositoryNode ? 'circle' : 'rect', 'origin-instrument', move);
+        if (repositoryNode) {
+          ignition.setAttribute('cx', String(a.left + a.width / 2));
+          ignition.setAttribute('cy', String(a.top + a.height / 2));
+          ignition.setAttribute('r', '9');
+        } else {
+          ignition.setAttribute('x', String(a.left - 2)); ignition.setAttribute('y', String(a.top - 2));
+          ignition.setAttribute('width', String(a.width + 4)); ignition.setAttribute('height', String(a.height + 4)); ignition.setAttribute('rx', '5');
+        }
         ignition.style.stroke = path.style.stroke;
         play(ignition, [{ opacity: .8 }, { opacity: 0 }], 380);
         const length = path.getTotalLength();

@@ -28,6 +28,8 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 ## Current B4 amendment
 
+[21: integrated ink workspace](review/21-integrated-ink-workspace.md) records the production presentation pass using both builder references, real graph coordinates/activity, quieter source utilities and strict timeline sampling. It supersedes the decorative grain/blur treatment in [20](review/20-presentation-polish.md); named palettes and Claude's feature proposals remain intact. STATUS carries acceptance.
+
 [18: temporary source reference](review/18-source-reference.md) records loaded-range copy, the one-reference memory boundary and session/replay resets. STATUS/CONTINUITY carry local acceptance and the publishing-only hosted verification policy.
 
 [17: stored source navigation](review/17-source-navigation.md) adds bounded line/match navigation and stable historical readers during live append. CONTINUITY/STATUS carry current acceptance; CODEBASE describes descriptor-keyed cache invalidation. Larger workspace capabilities remain staged.

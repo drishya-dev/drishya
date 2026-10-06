@@ -96,11 +96,13 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
         <button className="btn ghost small" disabled={!matches.length} onClick={() => moveMatch(1)}>Next match</button>
         <span className="muted small" role="status">{loading ? 'Opening stored source page…' : query ? `${matchingLines.size} matching ${matchingLines.size === 1 ? 'line' : 'lines'} in this page${matches.includes(activeLine ?? -1) ? ` · ${matches.indexOf(activeLine!) + 1} of ${matches.length}` : ''}` : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'}</span>
       </div>}
-      {kind === 'code' && <form className="source-go" onSubmit={(e) => { e.preventDefault(); goToLine(); }}>
+      {kind === 'code' && <details className="source-utilities">
+        <summary>Source tools · go to line, copy & pin range</summary>
+      <form className="source-go" onSubmit={(e) => { e.preventDefault(); goToLine(); }}>
         <input inputMode="numeric" aria-label="Go to stored source line" placeholder="Source line" maxLength={16} value={lineInput} onChange={(e) => { setLineInput(e.target.value); setLineError(undefined); }} aria-invalid={!!lineError} />
         <button className="btn ghost small" disabled={!view.totalLines}>Go to line</button>
         <span className="muted small" role="status">{lineError ?? (sourceEnd !== undefined && sourceEnd >= sourceBase ? `Stored range ${sourceBase}–${sourceEnd}` : 'No stored source lines')}</span>
-      </form>}
+      </form>
       {kind === 'code' && !loading && sourceLines.length > 0 && <div className="source-range" role="group" aria-label="Loaded source range actions">
         <span className="material-context">Range</span>
         <input inputMode="numeric" aria-label="Source range start" placeholder={String(sourceStart)} maxLength={16} value={rangeFrom} onChange={(e) => { setRangeFrom(e.target.value); setRangeStatus(''); }} />
@@ -116,6 +118,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
         }}>Pin range</button>}
         <span className="muted small" role="status">{rangeStatus || 'Loaded page only · one temporary reference'}</span>
       </div>}
+      </details>}
       {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <Output text={text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(pageStart > 0 || next) && (

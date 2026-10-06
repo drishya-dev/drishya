@@ -1,0 +1,76 @@
+/* One world; source surfaces carry boundaries, surrounding navigation stays quiet. */
+:root {
+  --bg: #0e1014; --s1: #181b21; --s2: #232730; --s3: #2e3440;
+  --line: #292e38; --line-2: #353d49; --line-3: #596575;
+  --t1: #eceef3; --t2: #b7becb; --t3: #929baa; --t4: #7c8798;
+  --focus: #8fb9da; --source: #8fb4d9; --external: #b4a4df; --edited: #dfb387;
+  --pass: #81c6a3; --fail: #ee929e;
+}
+:root[data-theme="light"] {
+  --bg: #eeeee9; --s1: #fafaf7; --s2: #e3e5e1; --s3: #d6dbd7;
+  --line: #d1d5d0; --line-2: #bfc7c3; --line-3: #8b9997;
+  --t1: #293137; --t2: #4c5b64; --t3: #617078; --t4: #69777d;
+  --focus: #326986; --source: #326986; --external: #735a99; --edited: #935b32;
+  --pass: #2d7151; --fail: #a03d4b;
+}
+.viewer { --spine-w: 190px; --dock-w: 230px; }
+.brand-mark { border-color: var(--edited); }
+.crown, .workspace-bar, .transport { background: transparent; }
+.workspace-views { background: color-mix(in srgb, var(--s2) 65%, transparent); border: 1px solid var(--line); }
+.workspace-views button { transition: border-color 140ms ease-out; }
+.agent { border-color: var(--line); background: transparent; }
+.crown .agent { transition: border-color 160ms ease-out; }
+.agent.st-active { border-color: color-mix(in srgb, var(--agent) 55%, var(--line)); }
+.spine, .dock { background: color-mix(in srgb, var(--bg) 80%, transparent); }
+.spine-head, .dock > h3 { letter-spacing: .07em; font-size: 10px; text-transform: uppercase; }
+.spine .repo-lens { margin-inline: 0; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--s1) 80%, transparent); padding: 12px; }
+.spine .spine-file { padding-block: 9px; border-left: 1px solid transparent; }
+.spine .spine-file.on, .spine .spine-file:hover { border-left-color: var(--focus); background: var(--s1); }
+.history { padding-right: 18px; }
+.history-inner { padding-top: 30px; }
+.history .passage { margin-bottom: 32px; }
+.history .ops-row { gap: 14px; }
+.history .op { border: 1px solid var(--line); border-radius: 9px; background: color-mix(in srgb, var(--s1) 96%, transparent); box-shadow: 0 8px 24px -18px #000; transition: border-color 180ms ease; }
+.history .op:hover, .history .op.lit { border-color: color-mix(in srgb, var(--material) 65%, var(--line)); }
+.history .op-head { padding: 11px 14px; background: color-mix(in srgb, var(--material) 5%, var(--s1)); border-bottom: 1px solid var(--line); gap: 9px; }
+.history .material-source { --material: var(--source); }
+.history .material-verification { --material: var(--pass); }
+.history .op.st-error { --material: var(--fail); }
+:root[data-palette] .history .op { background: var(--s1); border-color: color-mix(in srgb, var(--material) 27%, var(--line-2)); }
+:root[data-palette] .history .op-head { background: color-mix(in srgb, var(--material) 7%, var(--s1)); }
+:root[data-palette] .history .op:hover:not(.selected):not(.lit) { border-color: color-mix(in srgb, var(--material) 65%, var(--line)); }
+:root[data-palette] .history .op.selected { outline-color: var(--material); }
+:root[data-palette] .spine, :root[data-palette] .dock { background: color-mix(in srgb, var(--bg) 80%, transparent); border-color: transparent; }
+.history .material-terminal .op-body, .history .material-verification .op-body { padding-inline: 14px; }
+.history .op-title { font: 12px/1.5 var(--mono); }
+.history .op-kind { font-size: 10px; letter-spacing: .025em; }
+.history .op-body, .history .material-source .op-body, .history .material-change .op-body { background: transparent; padding: 12px 14px 16px; }
+.history .code, .history .diff { font-size: 13px; line-height: 1.75; }
+.history .op.expanded { flex: 1 1 100%; max-height: none; background: var(--s1); border-color: color-mix(in srgb, var(--material) 50%, var(--line)); }
+.history .op.st-error { border-color: color-mix(in srgb, var(--fail) 65%, var(--line)); }
+.history .prose { padding: 4px 10px 8px; font-size: 15px; line-height: 1.85; max-width: 74ch; }
+.history .prose-reasoning { color: var(--t2); }
+.history .prose-label { letter-spacing: .07em; margin-bottom: 10px; }
+.history .passage-head { margin-bottom: 12px; }
+.history .ln-no { color: var(--t4); }
+.dock .instrument { padding: 10px 8px; margin-bottom: 3px; border: 1px solid transparent; }
+.dock .instrument.on { border-color: var(--line-2); }
+.dock .server { border-radius: 8px; padding: 8px; background: color-mix(in srgb, var(--s1) 70%, transparent); }
+.dock .inst-tools, .dock .server-tool { font-size: 11px; }
+.dock .inst-tools { white-space: normal; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; }
+.reader-tools { gap: 8px; margin-bottom: 8px; }
+.source-find { gap: 8px; margin-bottom: 8px; }
+.source-find input { flex: 1 1 160px; width: auto; max-width: 280px; }
+.source-find [role="status"] { flex-basis: 100%; }
+.source-utilities { margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.source-utilities > summary { cursor: pointer; color: var(--t2); font-size: 11px; padding: 7px 0; }
+.source-utilities[open] > summary { margin-bottom: 8px; color: var(--focus); }
+.source-utilities > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.map-file-label { position: absolute; pointer-events: none; color: var(--t3); font: 10px/1.5 var(--mono); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; background: var(--bg); padding: 2px 4px; }
+.map-file-label.tone-write { color: var(--edited); }
+.map-file-label.tone-fail { color: var(--fail); }
+.map-file-label.tone-pass { color: var(--pass); }
+.pinned-reference { border-radius: 8px; box-shadow: 0 10px 28px -20px #000; }
+@media (min-width: 1500px) { .viewer { --spine-w: 220px; --dock-w: 252px; } .history .ops-row { gap: 18px; } }
+@media (max-width: 1100px) and (min-width: 821px) { .viewer { --spine-w: 166px; --dock-w: 210px; } .history { padding-right: 12px; } }
+@media (max-width: 820px) { .viewer { --spine-w: 0px; --dock-w: 0px; } .history { padding-right: 0; } .history-inner { padding-top: 18px; } .history .op-title { font-size: 11px; } .history .prose { font-size: 14px; } }

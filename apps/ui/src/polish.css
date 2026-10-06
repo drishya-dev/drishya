@@ -33,7 +33,7 @@
 /* ── Jet: the signature palette ───────────────────────────────────────────────────────────
    Matte jet black and champagne gold. Neutral blacks with no warm or blue cast, flat
    surfaces with no gloss, separation by hairline and depth rather than sheen, and gold as
-   the one accent. A fine static grain gives the matte finish; low resource mode drops it. */
+   the navigation accent. Semantic colours distinguish the captured materials. */
 :root[data-palette="jet"] {
   --bg: #0b0b0b; --s1: #121212; --s2: #171717; --s3: #1e1e1e;
   --line: #1f1f1f; --line-2: #2a2a2a; --line-3: #424242;
@@ -45,14 +45,8 @@
   --lift: 0 0 0 1px #00000066, 0 16px 36px -22px #000000f2;
   --lift-strong: 0 0 0 1px #00000080, 0 26px 56px -24px #000000;
   --chrome: #0b0b0be0;
-  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>");
 }
 :root[data-palette="jet"] body { background: var(--bg); }
-/* Matte finish: a whisper of grain everywhere, and a vignette that only deepens the edges. */
-:root[data-palette="jet"]:not([data-low-resource]) body::before,
-:root[data-palette="jet"]:not([data-low-resource]) body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; }
-:root[data-palette="jet"]:not([data-low-resource]) body::before { background: radial-gradient(140% 120% at 50% 45%, #0000 60%, #00000066 100%); }
-:root[data-palette="jet"]:not([data-low-resource]) body::after { background-image: var(--grain); background-size: 160px 160px; opacity: .5; }
 :root[data-palette="jet"] .crown { position: relative; border-bottom: 0; }
 :root[data-palette="jet"] .crown::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, #d4b98a00 2%, #d4b98a66 30%, #d4b98a2e 70%, #d4b98a00 98%); pointer-events: none; }
 :root[data-palette="jet"] .transport { border-top-color: #1c1c1c; }
@@ -97,7 +91,7 @@ body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering:
 ::selection { background: color-mix(in srgb, var(--focus) 32%, transparent); }
 
 /* ── crown and workspace bar ──────────────────────────────────────────────────────────── */
-.crown { background: var(--chrome); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.crown { background: var(--chrome); border-bottom: 1px solid var(--line); }
 .brand { font-size: 13.5px; letter-spacing: -.01em; }
 .crown-title { font-weight: 500; font-size: 12.5px; }
 .crown .agent { padding: 4px 10px; border: 1px solid var(--line-2); background: var(--s1); transition: background-color 160ms ease-out, border-color 160ms ease-out; }
@@ -163,7 +157,7 @@ body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering:
 .spine .spine-file.tone-fail .spine-name { color: var(--fail); }
 
 /* ── transport and the history activity timeline ──────────────────────────────────────── */
-.transport { border-top: 1px solid var(--line); background: var(--chrome); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.transport { border-top: 1px solid var(--line); background: var(--chrome); }
 .transport .icon-btn.txt, .transport .btn.ghost { border-radius: 7px; color: var(--t2); }
 .transport .icon-btn.txt:hover, .transport .btn.ghost:hover { color: var(--t1); background: var(--s2); }
 .history-transport .muted.small { display: none; }

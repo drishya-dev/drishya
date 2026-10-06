@@ -18,6 +18,7 @@ import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
 import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 import { ReadingReferenceProvider } from './ReadingReference.tsx';
+import { sampleActivity } from '../lib/activity.ts';
 
 export function Viewer() {
   return <ReadingReferenceProvider><WorkspaceViewer /></ReadingReferenceProvider>;
@@ -420,7 +421,6 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
 // ─── activity timeline: the whole recording at a glance, in history mode ─────────────────
 
 const MARK_LABEL: Record<string, string> = { edit: 'Edit', fail: 'Failure', pass: 'Passed test', spawn: 'Subagent', turn: 'Prompt', gap: 'Capture gap' };
-const MAX_MARKS = 400;
 
 /** Recorded edits, failures and test outcomes as ticks; a tick opens its operation in history.
  * Positions are recorded order (timeline steps), not wall-clock time. */
@@ -429,12 +429,7 @@ function ActivityTimeline({ scene, projection }: { scene: Scene; projection: Pro
   const selectedOp = useApp((s) => s.selectedOp);
   const select = useApp((s) => s.select);
   const all = useMemo(() => (historyPage?.markers ?? markers(projection)).filter((m) => m.type !== 'prose'), [projection, historyPage]);
-  const shown = useMemo(() => {
-    if (all.length <= MAX_MARKS) return all;
-    // Thin quiet marks first; failures stay visible in a very long recording.
-    const stride = Math.ceil(all.length / MAX_MARKS);
-    return all.filter((m, i) => m.type === 'fail' || i % stride === 0);
-  }, [all]);
+  const shown = useMemo(() => sampleActivity(all), [all]);
   const total = Math.max(1, scene.total);
   const openable = all.filter((m) => m.operationId);
   const current = openable.find((m) => m.operationId === selectedOp);

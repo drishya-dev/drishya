@@ -193,6 +193,10 @@ test('patch layouts retain captured changes and adapt without overflowing a narr
 test('terminal folding is reversible and keyboard map search targets a real file', async ({ page }) => {
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
+  // Earlier work may be outside the mounted history window after material sizes change.
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill('git diff');
+  await page.locator('.search-results button').first().click();
   const shell = page.locator('article.op-shell');
   await shell.getByRole('button', { name: /captured lines between/ }).click();
   await expect(shell).toContainText('missing-total');
@@ -409,6 +413,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   const read = history.locator('article.op-read').first();
   await read.scrollIntoViewIfNeeded();
   await read.getByRole('button', { name: /Read excerpt of/ }).click();
+  await read.locator('.source-utilities > summary').click();
   await read.getByRole('button', { name: 'Pin range', exact: true }).click();
   const pinned = page.getByRole('complementary', { name: 'Pinned source reference' });
   await expect(pinned).toBeVisible();

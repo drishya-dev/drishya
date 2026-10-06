@@ -20,6 +20,8 @@ The builder's latest instruction is to **finish the working product in `apps/ui`
 
 ## Presentation baseline
 
+The integrated ink pass is recorded in [21](review/21-integrated-ink-workspace.md): distinct semantic content boundaries, open agent prose, full-width expanded reading, wrapped tool identities, a wider evidence-backed map and measured finite file-origin cues. Source utilities open on demand; named palettes remain shared across task views. There are no decorative grain/blur layers or idle animation. The bounded history-strip sample is not an exhaustive navigation index. This work is isolated on `codex/ink-presentation` for review.
+
 Loaded code pages now offer exact source-range copying and one temporary pinned reference. It retains actual source lines/provenance independently of the scrolling history, with a 200-line/64 KiB decoded-text limit and session/replay resets. It does not load or impersonate today's whole file. See [18](review/18-source-reference.md).
 
 The next integrated material pass is documented in [12](review/12-material-experience.md). **Watch the live demo** (or `?demo=live`) publishes built-in synthetic events into growing history, with requests before results; it is labelled synthetic on desktop and mobile. It never starts an agent. Material shells emerge from measured origins while actual captured text remains stationary/selectable. Pending patch input, aligned MCP arguments, multiline command preview, material silhouettes, four-pixel wide-screen margin overlap and a labelled repository reference strengthen presentation. This increment does not declare the final premium experience complete.

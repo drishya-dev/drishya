@@ -51,6 +51,8 @@ Captured patches have adaptive/unified/split 120-line pages; split alignment is 
 
 233 unit tests/typechecks and six new integrated product browser journeys cover settings/OS preference/focus, real file comparison, agent ownership/replay cutoff, distant paged comparison, sanitized export round-trip and semantic anchors across views/themes. Existing B4 performance limitations and the separate physical/platform/pilot gates remain in force.
 
+The integrated ink presentation is documented in [21](review/21-integrated-ink-workspace.md). `ink.css` follows `polish.css` and supplies semantic material boundaries, responsive reading space and quieter source utilities without changing persisted palette identities. `MapCanvas` shares rectangular projection coordinates across drawing, hit tests, search and DOM origins; bounded path labels stay in the DOM. `Origins` adds a finite ring only at a measured repository source. `lib/activity.ts` caps the visual history sample at 400, including failure-heavy sessions. No capture/store/API/schema change; long-session projections remain worker-owned. Grain/vignette and chrome blur from the original palette pass are removed under the canonical creative rules.
+
 ## The pipeline
 
 ```text
