@@ -22,6 +22,10 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 ---
 
+## CI verification policy
+
+[CI_POLICY](CI_POLICY.md) records the builder-requested manual final-candidate hosted checks and local development verification. It supersedes older automatic push/PR CI descriptions.
+
 ## Current B4 amendment
 
 [17: stored source navigation](review/17-source-navigation.md) adds bounded line/match navigation and stable historical readers during live append. CONTINUITY/STATUS carry current acceptance; CODEBASE describes descriptor-keyed cache invalidation. Larger workspace capabilities remain staged.

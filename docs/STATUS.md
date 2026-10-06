@@ -25,7 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Codex / Yash | Stored source match/line navigation and held-reader live append | ArtifactReader.tsx, common.tsx, reader styles, browser tests, shared docs |
+*No active claims.*
 
 ---
 
@@ -64,12 +64,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **Current continuation:** matching-line navigation, stored-range go-to-line and persistent controls during page fetch. Failing-first live append test reproduced reader focus loss; complete descriptor-keyed immutable material now preserves query/page/focus/inner scroll on unrelated work while invalidating changed metadata. Typechecks/245 units, UI build and 33 ordinary browser cases pass (two opt-in skips). Fresh ten-minute reader and CI/merge remain pending; see [17](review/17-source-navigation.md). Shared docs updated; original package-manager edits excluded.
-- **When:** 6 October 2026. PR #34 merged as `3ad7336`; local main fast-forwarded. All seven exact-head CI jobs passed on `9b25ec8` (run `37449558192`). Yash author/Codex coauthor; Harsh's work remains intact. Final main CI is monitored separately after this docs handoff.
-- **Delivered:** exact operation-to-artifact read opening, artifact-authoritative preview coordinates, hover/focus excerpt edge, historical provenance/ranges, full-width deliberate expansion and literal find within the loaded 200-line source page. Query stays across pages and highlights matching source lines; it is not whole-file/current-source search. The width fix was found during manual integrated UI review.
-- **Verification:** typechecks/245 units, UI build and 33 ordinary browser cases pass (two opt-in skips). Fresh final-build ten-minute reader passed: 600,148 ms, 114 append/hold/return rounds, peak 664 DOM nodes. The first isolated probe failed at round zero because its wheel preceded asynchronous history readiness; the test now waits for visible/scrollable history at latest, preserving every acceptance assertion. No failed probe is counted as acceptance.
-- **Visual review:** integrated charcoal/light source reading reviewed; keyboard opening preserves Close focus, mobile overflow and pending replay masking are covered. Technical checks do not settle the final art direction or human comprehension/preference.
-- **Shared handoff for Harsh's agent:** CONTINUITY → CODEBASE → [16](review/16-captured-range-reader.md) → DEVELOPER_WORKSPACE. Claim before editing. Next bounded source slice: matching-line navigation and go-to-line within stored range limits; verify held expanded reading across live append before pins/tabs. W1 is partial, W2–W6 staged; current whole-file access requires separate privacy/consent work.
+- **When:** 6 October 2026. PR #35 merged as `2c23b76`, exact head `e50d9ff` green across seven jobs (run `37452694698`); local main updated before the separate CI policy branch.
+- **Delivered:** matching-line navigation, validated stored-range go-to-line, persistent loading controls and complete descriptor-keyed historical material. Live append preserves find focus/query/page/inner scroll; changed metadata and late non-blob content still invalidate. See [17](review/17-source-navigation.md).
+- **Verification:** typechecks/245 units, UI build, 33 ordinary browser cases (two opt-in skips), integrated charcoal/light review, fresh ten-minute reader 604,905 ms / 115 rounds / peak 664 nodes. Source-navigation CI all seven jobs passed. No broad creative/platform release certification.
+- **Builder quota direction:** manual hosted CI only when a selected final candidate is requested; run code checks locally during development. Workflow trigger change is separate from source work. No payment/budget/visibility changes. See [CI_POLICY](CI_POLICY.md). Original package-manager edits remain local and excluded.
+- **Shared next task:** bounded range copy/one historical pin; retain artifact provenance and explicit session/cutoff resets. W1 partial; W2–W6 staged. Claim reader files before editing; do not silently grant current-file access.
 - **Baseline preserved:** integrated Claude Code/Codex session selection/live history, deterministic optional replay, source/patch/result readers, combined agent ownership, global file evidence comparison, since-your-mark and order-qualified verification. Native/MCP glyph transfer remains finite and origin-checked; text stays stationary/selectable. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md), [12](review/12-material-experience.md), [13](review/13-reader-context-flow.md), [14](review/14-external-reading.md), [15](review/15-toolbox-emission.md).
 - **Release limits:** B4 reference-machine engineering candidate; physical low-resource/lower-core, real platform acceptance, human pilot and full contract freeze remain open. No universal-harness or final premium-visual claim.
 - **Local state:** the original package.json/pnpm-lock.yaml/pnpm-workspace.yaml edits, model-planning notes and screenshots stay local/excluded. No new capture/store/API/schema/dependency work in this increment.
@@ -225,3 +224,6 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-10-06 | External content earns reading space; structured rendering retains original evidence | Actual rendered documentation was squeezed at 300 px; long results now use 560 px without turning every action full width. JSON formatting must not erase null/missing distinctions or hide the source preview | UI presentation/StructuredResult; review/14 |
 | 2026-10-06 | Toolbox motion transfers identity, while captured content stays in place | A finite app-owned glyph connects the actual visible instrument to its action header. Bounds/hit-testing suppress hidden glyph origins, and existing interruption/burst gates own the cue | Origins; review/15 |
 | 2026-10-06 | Exact stored read opens in place; find searches only the loaded source page | Generic file opening could select a different moment. Returned artifact coordinates and provenance stay authoritative; bounded literal find does not imply whole-file search or current workspace access | History/ArtifactReader; review/16 |
+
+
+| 2026-10-06 | **Manual final-candidate Actions verification** | Builder requested hosted runs only for explicitly selected final candidates after the 90% organization allowance alert; local checks during development, seven platform jobs retained, no automatic push/PR triggers. See CI_POLICY | CI / both builders |
