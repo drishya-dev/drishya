@@ -197,12 +197,19 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (pendingNavigation.current !== targetId) return;
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((n) => n.dataset.passageId === targetId);
     if (!node) return;
-    const bounds = node.getBoundingClientRect();
+    // Bring the selected action itself into view: a tall passage centred as a whole can leave
+    // its first action above the viewport. Taller-than-viewport material aligns to its top.
+    const selected = selectedOp ? [...node.querySelectorAll<HTMLElement>('[data-op-id]')].find((n) => n.dataset.opId === selectedOp) : undefined;
+    const bounds = (selected ?? node).getBoundingClientRect();
     const viewportBounds = el.getBoundingClientRect();
-    if (bounds.top < viewportBounds.top || bounds.bottom > viewportBounds.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - (el.clientHeight - bounds.height) / 2);
-    rememberReading();
+    if (bounds.top < viewportBounds.top || bounds.bottom > viewportBounds.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - Math.max(16, (el.clientHeight - bounds.height) / 2));
+    // Anchor reading to the navigated passage itself. Passages above may still carry estimated
+    // heights; anchoring to whichever slot was first visible let their measurement pull the
+    // reader away from the action just opened.
+    readingAnchor.current = { id: targetId, offset: node.getBoundingClientRect().top - el.getBoundingClientRect().top };
+    if (useApp.getState().readingPassageId !== targetId) set({ readingPassageId: targetId });
     pendingNavigation.current = undefined;
-  }, [targetId, targetIndex, layout]);
+  }, [targetId, targetIndex, layout, selectedOp]);
 
   // Small arrivals follow naturally. A burst or a long result is captured and rendered at once,
   // but the camera stops at its beginning instead of fast-forwarding past what the user could read.
