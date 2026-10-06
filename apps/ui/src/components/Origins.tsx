@@ -13,6 +13,10 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
   const svg = useRef<SVGSVGElement>(null);
   const previous = useRef(frameOf(scene));
   const motion = useApp((s) => s.motion);
+  const theme = useApp((s) => s.theme);
+  const compareAgents = useApp((s) => s.compareAgents);
+  const settingsOpen = useApp((s) => s.settingsOpen);
+  const filePanel = useApp((s) => s.filePanel);
   const hoveredOp = useApp((s) => s.hoveredOp);
   const selectedOp = useApp((s) => s.selectedOp);
   const mapVisible = useApp((s) => s.mapVisible);
@@ -25,7 +29,7 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
     const viewer = document.querySelector('.viewer');
     const history = viewer?.querySelector('.history');
     const plan = choreographyBetween(previous.current, scene, projection, paged ? Math.max(0, scene.step - projection.timeline.length) : 0);
-    if (!root || !viewer || !history || explore) { previous.current = frameOf(scene); return; }
+    if (!root || !viewer || !history || explore || settingsOpen || filePanel) { previous.current = frameOf(scene); return; }
     const animations: Animation[] = [];
     const emitted = new Set<string>();
     let raf = 0;
@@ -205,6 +209,6 @@ export function Origins({ scene, projection }: { scene: Scene; projection: Proje
     viewer.addEventListener('pointerdown', interrupt, { passive: true });
     viewer.addEventListener('keydown', interrupt);
     return () => { resize.disconnect(); history.removeEventListener('scroll', scroll); history.removeEventListener('wheel', interrupt); viewer.removeEventListener('pointerdown', interrupt); viewer.removeEventListener('keydown', interrupt); animations.forEach((a) => a.cancel()); cancelAnimationFrame(raf); root.replaceChildren(); };
-  }, [scene, projection, motion, hoveredOp, selectedOp, mapVisible, explore, follow, paged]);
+  }, [scene, projection, motion, hoveredOp, selectedOp, mapVisible, explore, follow, paged, theme, compareAgents, settingsOpen, filePanel]);
   return typeof document === 'undefined' ? null : createPortal(<svg className="origins" ref={svg} aria-hidden="true" />, document.body);
 }

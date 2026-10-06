@@ -16,6 +16,7 @@ function sourceId(source: DataSource): number {
 }
 
 export interface ArtifactView {
+  artifact?: Artifact;
   text?: string;
   error?: string;
   /** Why there is no content to show: never captured, or no longer stored. Never "empty". */
@@ -29,10 +30,10 @@ export interface ArtifactView {
 
 /** What a slice means to a reader: content, an honest unavailable reason, and any cut. */
 export function viewOf(s: ArtifactSlice): ArtifactView {
-  if (!s.available) return { unavailable: s.reason === 'no-longer-stored' ? 'Captured, but no longer stored (deleted or past retention).' : 'Not captured by the harness.' };
+  if (!s.available) return { artifact: s.artifact, unavailable: s.reason === 'no-longer-stored' ? 'Captured, but no longer stored (deleted or past retention).' : 'Not captured by the harness.' };
   const end = s.start + s.returnedLines;
   const partial = s.hasMore || s.truncated ? `Showing lines ${(s.start + 1).toLocaleString()}–${end.toLocaleString()} of ${s.totalLines.toLocaleString()}${s.truncated ? ' (cut at the response size limit)' : ''}` : undefined;
-  return { text: s.text, partial, start: s.start, nextStart: end, hasMore: s.hasMore };
+  return { artifact: s.artifact, text: s.text, partial, start: s.start, nextStart: end, hasMore: s.hasMore };
 }
 
 export function useArtifact(artifactId: string | undefined, opts: { scope?: MaterialScope; start?: number; count?: number; retry?: number } = {}): ArtifactView {

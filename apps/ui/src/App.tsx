@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { dwellFor } from '@drishya/scene';
 import { bundleSource, daemon, loadBundle, signIn } from './api.ts';
+import { ProductShell } from './components/ProductShell.tsx';
 import { Home } from './components/Home.tsx';
 import { Viewer } from './components/Viewer.tsx';
 import { needsReload } from './lib/sync.ts';
@@ -72,29 +73,43 @@ export function App() {
   useKeyboard();
   useLiveUpdates();
 
-  if (screen === 'loading') return <div className="center muted">Starting…</div>;
-  if (screen === 'signed-out')
-    return (
+  const render = () => {
+    if (screen === 'loading') return <div className="center muted">Starting…</div>;
+    if (screen === 'signed-out')
+      return (
+        <div className="center notice">
+          <h2>Open Drishya from its launch link</h2>
+          <p className="muted">This page needs the launch link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p>
+        </div>
+      );
+    if (screen === 'no-daemon')
+      return (
+        <div className="center notice">
+          <h2>Drishya is not running</h2>
+          <p className="muted">
+            Start it with <code>pnpm serve</code> (or <code>drishya serve</code>) and open the link it prints.
+          </p>
+          <button className="btn" onClick={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ screen: 'error', error: e.message }))}>
+            Open the demo instead
+          </button>
+        </div>
+      );
+    if (screen === 'error') return (
       <div className="center notice">
-        <h2>Open Drishya from its launch link</h2>
-        <p className="muted">This page needs the launch link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p>
+        <h2>Could not open this workspace</h2>
+        <p className="bad" role="alert">{error}</p>
+        <p className="muted">Your captured recordings remain in the local store.</p>
+        <div className="recovery-actions">
+          <button className="btn primary" onClick={() => location.reload()}>Retry connection</button>
+          <button className="btn" onClick={() => location.assign(location.pathname)}>Open local workspace</button>
+          <button className="btn" onClick={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ error: e.message }))}>Open synthetic demo</button>
+        </div>
       </div>
     );
-  if (screen === 'no-daemon')
-    return (
-      <div className="center notice">
-        <h2>Drishya is not running</h2>
-        <p className="muted">
-          Start it with <code>pnpm serve</code> (or <code>drishya serve</code>) and open the link it prints.
-        </p>
-        <button className="btn" onClick={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ screen: 'error', error: e.message }))}>
-          Open the demo instead
-        </button>
-      </div>
-    );
-  if (screen === 'error') return <div className="center notice bad">{error}</div>;
-  if (screen === 'home') return <Home openDemo={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
-  return <Viewer />;
+    if (screen === 'home') return <Home openDemo={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
+    return <Viewer />;
+  };
+  return <ProductShell>{render()}</ProductShell>;
 }
 
 /** The playback clock. The composer never reads time; only this hook does. */
@@ -128,7 +143,8 @@ function useKeyboard() {
       if (s.screen !== 'viewer') return;
       const k = e.key;
       if (k === 'Escape') {
-        if (s.searchOpen) s.set({ searchOpen: false });
+        if (s.settingsOpen) s.set({ settingsOpen: false });
+        else if (s.searchOpen) s.set({ searchOpen: false });
         else if (s.filePanel) s.set({ filePanel: undefined });
         else if (s.expandedOp) s.set({ expandedOp: undefined });
         else if (s.selectedOp) s.select(undefined);

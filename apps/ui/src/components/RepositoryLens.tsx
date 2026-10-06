@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
-
-const TONE = { read: '#c8c8d0', search: '#8b9bff', write: '#e6b98a', fail: '#f2706a', pass: '#4fc38a' };
+import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
 
 /** A second view of the actual repository geometry, never a diagram of inferred reasoning. */
 export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCell[] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const hovered = useApp((s) => s.hoveredPath);
+  const theme = useResolvedTheme();
   const set = useApp((s) => s.set);
   const [width, setWidth] = useState(0);
   const height = 142;
@@ -31,6 +31,7 @@ export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCe
     const dpr = Math.min(devicePixelRatio || 1, 2);
     c.width = Math.round(width * dpr); c.height = height * dpr;
     const g = c.getContext('2d')!;
+    const colours = mapPalette(c);
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, width, height);
     for (const focused of [false, true]) {
       g.beginPath();
@@ -41,18 +42,18 @@ export function RepositoryLens({ graph, heat }: { graph: RepoGraph; heat: HeatCe
         const a = points(from); const b = points(to);
         g.moveTo(a.x, a.y); g.lineTo(b.x, b.y);
       }
-      g.strokeStyle = focused ? 'rgba(139,155,255,.65)' : 'rgba(161,161,170,.18)'; g.stroke();
+      g.strokeStyle = focused ? colours.focus : colours.edge; g.stroke();
     }
     for (const node of graph.nodes) {
       const p = points(node); const h = activity.get(node.id);
       g.beginPath(); g.arc(p.x, p.y, hovered === node.id ? 3.5 : h ? 2.3 : 1.2, 0, Math.PI * 2);
-      g.fillStyle = h ? TONE[h.tone] : '#52525b'; g.fill();
+      g.fillStyle = h ? colours.tones[h.tone] : colours.node; g.fill();
       if (h?.edited || hovered === node.id) {
         g.beginPath(); g.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
-        g.strokeStyle = hovered === node.id ? '#ededef' : TONE.write; g.stroke();
+        g.strokeStyle = hovered === node.id ? colours.text : colours.tones.write; g.stroke();
       }
     }
-  }, [graph, heat, hovered, width]);
+  }, [graph, heat, hovered, width, theme]);
   const nearest = (x: number, y: number) => {
     let found: RepoGraph['nodes'][number] | undefined;
     let distance = 12 ** 2;

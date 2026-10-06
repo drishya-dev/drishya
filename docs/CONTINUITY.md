@@ -7,7 +7,7 @@
 1. [STATUS](STATUS.md) for active claims and the last completed work.
 2. [AGENTS](../AGENTS.md) and [VISION](VISION.md) for constraints and creative intent.
 3. [PRODUCT_DIRECTION](PRODUCT_DIRECTION.md) for audience, differentiated utility, content-shaped presentation and the builder's latest clarification.
-4. [Baseline audit](review/06-baseline-audit.md) for what actually passed and what remains broken/unverified.
+4. [Product delivery](PRODUCT_DELIVERY.md) and [B4 evidence](review/08-b4-history-reader.md) for current behavior and limits. The 30 September audit is historical.
 5. [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md) for the next bounded implementation gate; [CODEBASE](CODEBASE.md) before edits.
 
 ## Preserve these decisions
@@ -63,3 +63,14 @@ This supersedes the Studio-default/per-view palette recommendation above. The bu
 New `/concepts/canvas.html` is a synthetic-only candidate with bounded material surfaces, unboxed prose, a files-only working set, persistent observed instruments, reversible deep reading, shared filters/theme and per-view scroll positions. Whole-passage preview controls are **not live event pacing or a production as-of engine**. See [11](review/11-p1-unified-canvas.md). Do not replace the React reader with this eager fixture renderer. Next: evaluate this material/space direction with the builder, then translate approved elements into the paged production history with genuine operation-start input and late-result resolution, stable anchors, and measured origin choreography. Retain all old prototypes. Model switches must preserve these requirements; visual preference remains unvalidated.
 
 Canvas PR #27 is squash-merged as `8537acd` after all seven checks on final head `92083d7` passed. Local main was fast-forwarded; the three pre-existing package-manager edits remain local. Local checks passed: typechecks, 230 unit tests and 21 synthetic browser journeys (two opt-in skips). Main CI is checked separately; no new performance/ten-minute or preference certificate is implied.
+
+
+## Current integrated product baseline (supersedes the prototype queue)
+
+The builder now says to finish the working product first and revisit colours/animations later. **Continue in `apps/ui`; do not restart another standalone HTML study or wait for its approval.** [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) is the current user workflow and implementation account. Older study recommendations above are historical references.
+
+The real workspace now has shared charcoal/light/system settings, onboarding/recovery, Follow/Agents/Repository over one chronology, and global 24-action file-history pages. Comparison retains two chosen evidence references across pages, labels actual provenance after loading, and never substitutes current disk or a previous read as an immediate-before snapshot. Replay changes remount the file reader so later choices cannot leak. Verification links close the modal and open the recorded action. View/theme changes preserve the semantic reading anchor; native dialogs restore focus. A capture-phase reflow that could swallow preview activation was deferred until after the target handler.
+
+Accepted local checks: typechecks/233 unit tests, 27 normal browser journeys (two opt-in skips), six new integrated product cases, five repeats each of preview activation and view/theme anchors, isolated offline package/API/restart and a ten-minute synthetic reader (110 rounds, peak 532 history DOM nodes). No real journal imported for these UI changes. Do not generalize these results to new harness versions, every huge edit/export or physical low-resource devices.
+
+P1/P2 implementation is the working candidate. Next: try/refine this integrated experience and run the human comprehension/preference plus physical/platform release acceptance; optional live-provider validation and E1 harness expansion are separate. Preserve Harsh's attribution, pure composer, observe-only capture, redaction and worker/page boundary. Pre-existing manifest/lock/workspace edits remain local and excluded from commits.

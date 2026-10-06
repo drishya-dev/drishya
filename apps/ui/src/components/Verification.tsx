@@ -19,12 +19,13 @@ const CAVEAT: Record<VerificationTrail['verdict'], string> = {
   'changed-after-last-check': 'The latest version of the file has no recorded run after it.',
 };
 
-export function VerificationPanel({ op }: { op: Operation }) {
+export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (operationId: string) => void }) {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
   const mode = useApp((s) => s.mode);
   const revision = useApp((s) => s.renderedRevisions[recordingId ?? '']);
   const select = useApp((s) => s.select);
+  const open = onOpen ?? select;
   const [trail, setTrail] = useState<VerificationTrail | null>();
   const [error, setError] = useState<string>();
   // The daemon computes this per recording; a bundle computes it locally on its whole (possibly
@@ -58,7 +59,7 @@ export function VerificationPanel({ op }: { op: Operation }) {
       {last && (
         <p className="small">
           Last recorded run:{' '}
-          <button className="link verify-open" onClick={() => select(last.operationId)}>{last.title}</button>
+          <button className="link verify-open" onClick={() => open(last.operationId)}>{last.title}</button>
           {last.detail && <span className="muted"> · {last.detail}</span>}
           {last.status === 'error' && <span className="bad"> · failed</span>}
           {last.namesChangedFile && <span className="muted"> · a captured failure names this file</span>}
@@ -72,7 +73,7 @@ export function VerificationPanel({ op }: { op: Operation }) {
           <ul>
             {trail.laterChanges.map((c) => (
               <li key={c.operationId}>
-                <button className="link verify-open" onClick={() => select(c.operationId)}>{c.title}</button>
+                <button className="link verify-open" onClick={() => open(c.operationId)}>{c.title}</button>
                 {last && c.sequence > last.sequence && <span className="muted"> · after the last recorded run</span>}
               </li>
             ))}

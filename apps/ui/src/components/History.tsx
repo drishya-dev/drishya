@@ -17,6 +17,9 @@ import { VerificationStrip } from './VerificationStrip.tsx';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
+  const compareAgents = useApp((s) => s.compareAgents);
+  const explore = useApp((s) => s.explore);
+  const theme = useApp((s) => s.theme);
   const lowResource = useApp((s) => s.lowResource);
   const follow = useApp((s) => s.follow);
   const selectedOp = useApp((s) => s.selectedOp);
@@ -133,7 +136,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   // and pixel offset after React updates it, instead of trusting an old array index.
   useLayoutEffect(() => {
     restoreReading();
-  }, [scene.passages, follow]);
+  }, [scene.passages, follow, compareAgents, explore, theme]);
 
   // A passage can grow after its artifact arrives or its width changes. Record the actual slot
   // height, then reflow spacers; preserve the captured passage/pixel anchor while detached.
@@ -270,10 +273,16 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       // Pointer focus must not reflow the button between press and release. Hold at
       // activation instead; keyboard focus and text selection still hold immediately.
       if ((e.target as HTMLElement).closest('button, input, select, a')) {
-        setFocusedPassageId((e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId);
-        setMeasurementVersion((n) => n + 1);
+        const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId;
         rememberReading();
-        if (follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
+        // External-store updates can flush before the target's click handler. Defer
+        // pinning/reflow until activation has delivered its own reading action.
+        queueMicrotask(() => {
+          if (!ref.current) return;
+          setFocusedPassageId(id);
+          setMeasurementVersion((n) => n + 1);
+          if (useApp.getState().follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
+        });
       }
     }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { if (pointerFocus.current && (e.target as HTMLElement).closest('button, input, select, a')) return; const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false, playing: false, held: true }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       <div className="history-inner">

@@ -10,6 +10,8 @@ import { ExplanationView, Inspector } from './Inspector.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 import { RepositoryLens } from './RepositoryLens.tsx';
+import { FileHistory } from './FileHistory.tsx';
+import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
 import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 
@@ -26,6 +28,7 @@ export function Viewer() {
   const filter = useApp((s) => s.filter);
   const selectedOp = useApp((s) => s.selectedOp);
   const explore = useApp((s) => s.explore);
+  const compareAgents = useApp((s) => s.compareAgents);
   const motion = useApp((s) => s.motion);
   const main = useRef<HTMLDivElement>(null);
   const [reading, setReading] = useState<{ left: number; width: number }>();
@@ -93,14 +96,16 @@ export function Viewer() {
   if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
   return (
-    <div className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <Crown scene={scene} projection={projection} />
+      <WorkspaceBar />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
         {mapVisible && <MapCanvas graph={graph} heat={scene.heat} readingRect={reading} />}
         <Spine scene={scene} projection={historical} />
+        <AgentOverview scene={scene} projection={historical} />
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
-        <FilePanel projection={historical} />
+        <FileHistory projection={historical} />
       </div>
       <Dock scene={scene} />
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); useApp.setState({ follow: false, playing: false, held: true }); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
@@ -129,18 +134,18 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
 
   return (
     <header className="crown">
-      <button className="brand" onClick={() => source?.kind === 'daemon' && (set({ screen: 'home', playing: false }), (location.hash = ''))} title="All recordings">
+      <button className="brand" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname) : (set({ screen: 'home', playing: false }), (location.hash = ''))} title="All recordings">
         <span className="brand-mark" />
         Drishya
       </button>
       <div className="crown-title" title={projection.title}>
         {projection.title ?? recording?.title ?? 'Recording'}
-        {source?.kind === 'bundle' && <span className="tag">replay</span>}
+        {source?.kind === 'bundle' && <span className="tag">offline bundle</span>}
         {connection === 'reconnecting' && <span className="tag warn" role="status">reconnecting…</span>}
         {recording && recording.health?.state !== 'following' && recording.health?.state !== 'idle' && <HealthTag r={recording} />}
         {recording?.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
       </div>
-      <div className="agents" role="list">
+      <div className="agents" role="group" aria-label="Recorded agents">
         {scene.agents.map((a) => {
           const agent = projection.agents.find((x) => x.id === a.id);
           const on = filter?.agentId === a.id;
@@ -148,7 +153,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
             <button
               key={a.id}
               data-agent-id={a.id}
-              role="listitem"
+              aria-label={`Filter by ${agentName(agent)} agent`}
               className={`agent st-${a.state}${on ? ' on' : ''}${a.parentId ? ' child' : ''}`}
               style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties}
               onClick={() => setFilter(on ? undefined : { agentId: a.id })}
@@ -162,13 +167,14 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
         })}
       </div>
       <div className="crown-actions">
+        <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, playing: false, held: true, follow: false })}>Settings</button>
         <button className="btn ghost" onClick={() => set({ searchOpen: true })} title="Search (/)">Search</button>
         <button className="btn ghost" onClick={() => set({ briefingOpen: true })}>Briefing</button>
         <SinceMarkPill projection={projection} />
         {source?.kind === 'daemon' && single && (
           <button
             className={`btn ghost live${live ? ' on' : ''}`}
-            onClick={async () => setLive(await source.setLive(recordingId!, !live))}
+            onClick={async () => { try { const on = await source.setLive(recordingId!, !live); if (useApp.getState().recordingId === recordingId) setLive(on); } catch (failure) { set({ error: (failure as Error).message }); } }}
             title="Watch the session file for new activity. Observe only."
           >
             <span className="live-dot" />
@@ -224,7 +230,7 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   let previous = 0;
   return (
     <nav className="spine" ref={ref} aria-label="Files in this run" onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedPath((e.target as HTMLElement).closest<HTMLElement>('[data-spine-path]')?.dataset.spinePath)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-spine-path]')) setFocusedPath(undefined); }}>
-      <div className="spine-head">Files in this run</div>
+      <div className="spine-head">Recorded working set</div>
       {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} />}
       <div ref={rowStart} aria-hidden="true" />
       {files.length === 0 && <div className="muted small">None yet</div>}
@@ -253,110 +259,6 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
       })}
       <div aria-hidden="true" style={{ height: (files.length - previous) * rowHeight }} />
     </nav>
-  );
-}
-
-function FilePanel({ projection }: { projection: Projection }) {
-  const paged = useApp((s) => !!s.historyPage);
-  return paged ? <PagedFilePanel /> : <LocalFilePanel projection={projection} />;
-}
-
-function PagedFilePanel() {
-  const path = useApp((s) => s.filePanel);
-  const source = useApp((s) => s.source);
-  const recordingId = useApp((s) => s.recordingId);
-  const mode = useApp((s) => s.mode);
-  const step = useApp((s) => s.step);
-  const revisions = useApp((s) => s.renderedRevisions);
-  const [query, setQuery] = useState('');
-  const [start, setStart] = useState(0);
-  const [page, setPage] = useState<{ operations: Operation[]; total: number }>();
-  const [error, setError] = useState<string>();
-  useEffect(() => { setStart(0); setQuery(''); }, [path]);
-  useEffect(() => {
-    let active = true;
-    setPage(undefined); setError(undefined);
-    if (!path || !recordingId || !source?.fileOperations) return;
-    const timer = setTimeout(() => source.fileOperations!(recordingId, path, start, 100, mode === 'replay' ? step : undefined, query)
-      .then((data) => { if (active) setPage(data); }).catch((e) => { if (active) setError(e.message); }), 120);
-    return () => { active = false; clearTimeout(timer); };
-  }, [source, recordingId, path, start, query, mode, step, revisions]);
-  if (!path) return null;
-  return <div className="file-panel" role="dialog" aria-label={`Work on ${path}`}>
-    <header><code>{path}{page ? ` · ${page.total} actions` : ''}</code><button className="icon-btn" aria-label="Close" onClick={() => useApp.setState({ filePanel: undefined })}>✕</button></header>
-    <input className="file-filter" aria-label="Filter actions on this file" placeholder="Filter actions on this file" value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); }} />
-    <div className="file-list">
-      {error && <p className="bad">{error}</p>}
-      {!page && !error && <p className="muted">Loading captured actions…</p>}
-      {page?.operations.map((op) => <button key={op.id} className="file-op" onClick={() => {
-        const state = useApp.getState();
-        state.select(op.id);
-        state.set({ filePanel: undefined, explore: false });
-      }}><span className={`op-kind k-${op.kind}`}>{KIND_LABEL[op.kind]}</span><span className="file-op-title">{op.title}</span></button>)}
-      {page?.total === 0 && <p className="muted">No matching captured actions.</p>}
-    </div>
-    {page && <footer><button className="btn" disabled={start === 0} onClick={() => setStart(Math.max(0, start - 100))}>Previous</button><span className="muted">{page.total ? start + 1 : 0}–{Math.min(start + 100, page.total)} of {page.total}</span><button className="btn" disabled={start + 100 >= page.total} onClick={() => setStart(start + 100)}>Next</button></footer>}
-  </div>;
-}
-
-function LocalFilePanel({ projection }: { projection: Projection }) {
-  const path = useApp((s) => s.filePanel);
-  const set = useApp((s) => s.set);
-  const seek = useApp((s) => s.seek);
-  const select = useApp((s) => s.select);
-  const listRef = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState('');
-  const [top, setTop] = useState(0);
-  const [height, setHeight] = useState(600);
-  const [focusedId, setFocusedId] = useState<string>();
-  useEffect(() => { setQuery(''); setTop(0); listRef.current?.scrollTo(0, 0); }, [path]);
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() => setHeight(el.clientHeight));
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [path]);
-  if (!path) return null;
-  const ops = projection.operations.filter((o) => o.paths.some((p) => p.path === path) && (!query || `${o.title} ${o.kind}`.toLowerCase().includes(query.toLowerCase())));
-  const rowHeight = 52;
-  const first = Math.max(0, Math.floor(top / rowHeight) - 6);
-  const last = Math.min(ops.length, Math.ceil((top + height) / rowHeight) + 6);
-  const focusedIndex = ops.findIndex((o) => o.id === focusedId);
-  const visible = new Set<number>();
-  for (let i = first; i < last; i++) visible.add(i);
-  if (focusedIndex >= 0) visible.add(focusedIndex);
-  let previous = 0;
-  return (
-    <div className="file-panel" role="dialog" aria-label={`Work on ${path}`}>
-      <header>
-        <code>{path} · {ops.length} actions</code>
-        <button className="icon-btn" onClick={() => set({ filePanel: undefined })} aria-label="Close">✕</button>
-      </header>
-      <input className="file-filter" value={query} placeholder="Filter actions on this file" aria-label="Filter actions on this file" onChange={(e) => { setQuery(e.target.value); setTop(0); listRef.current?.scrollTo(0, 0); }} />
-      <div className="file-list" ref={listRef} onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedId((e.target as HTMLElement).closest<HTMLElement>('[data-file-op]')?.dataset.fileOp)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-file-op]')) setFocusedId(undefined); }}>
-        {ops.length === 0 && <p className="muted">{query ? 'No matching actions on this file.' : 'This recording never touched this file.'}</p>}
-        {[...visible].sort((a, b) => a - b).map((i) => {
-          const o = ops[i]!;
-          const gap = (i - previous) * rowHeight;
-          previous = i + 1;
-          return <div key={o.id}>
-            {gap > 0 && <div aria-hidden="true" style={{ height: gap }} />}
-            <button data-file-op={o.id} className="file-op" onClick={() => {
-              const s = stepOfOperation(projection, o.id);
-              if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
-              select(o.id);
-              set({ filePanel: undefined, explore: false });
-            }}>
-              <span className={`op-kind k-${o.origin.type === 'mcp' ? 'mcp' : o.kind}`}>{KIND_LABEL[o.kind]}</span>
-              <span className="file-op-title">{o.title}</span>
-              <span className="muted">{o.paths.find((p) => p.path === path)?.role.replace('-', ' ')}</span>
-            </button>
-          </div>;
-        })}
-        <div aria-hidden="true" style={{ height: (ops.length - previous) * rowHeight }} />
-      </div>
-    </div>
   );
 }
 

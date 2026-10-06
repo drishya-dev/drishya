@@ -48,6 +48,9 @@ interface State {
   lowResource: boolean;
   mapVisible: boolean;
   explore: boolean;
+  compareAgents: boolean;
+  theme: 'dark' | 'light' | 'system';
+  settingsOpen: boolean;
   selectedOp?: string;
   /** One content-shaped reader expanded inside its original passage. */
   expandedOp?: string;
@@ -109,6 +112,9 @@ export const useApp = create<State>((set, get) => ({
   motion: !storedLowResource && (storedMotion ? storedMotion === '1' : !prefersReducedMotion),
   mapVisible: !storedLowResource && storedMapVisible !== '0',
   explore: false,
+  compareAgents: false,
+  theme: storedTheme(),
+  settingsOpen: false,
   inspectorTab: 'detail',
   briefingOpen: false,
   searchOpen: false,
@@ -118,7 +124,7 @@ export const useApp = create<State>((set, get) => ({
   async openRecording(id, opts = {}) {
     const src = get().source;
     if (!src) return;
-    set({ error: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false });
+    set({ error: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, filePanel: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     try {
@@ -244,4 +250,18 @@ export function setMapVisible(on: boolean) {
   } catch {
     // The preference is optional when storage is unavailable.
   }
+}
+
+function storedTheme(): 'dark' | 'light' | 'system' {
+  try {
+    const value = localStorage.getItem('drishya.theme');
+    return value === 'light' || value === 'system' ? value : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+export function setTheme(theme: 'dark' | 'light' | 'system') {
+  useApp.setState({ theme });
+  try { localStorage.setItem('drishya.theme', theme); } catch { /* Optional local preference. */ }
 }
