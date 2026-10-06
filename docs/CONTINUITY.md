@@ -67,6 +67,8 @@ Canvas PR #27 is squash-merged as `8537acd` after all seven checks on final head
 
 ## Current integrated product baseline (supersedes the prototype queue)
 
+Latest builder follow-up: refine the integrated app now. The 6 Oct material pass uses graphite/jade/copper/lilac roles shared by dark/light, bounded reading edges, command backing, unboxed agent rules, chrome-only hover transitions and theme-aware origin/resolve cues. Continue in the real app; no new standalone prototype. Local check/build and ordinary browser regressions pass. Do not treat a palette pass as human preference or physical release acceptance.
+
 The builder now says to finish the working product first and revisit colours/animations later. **Continue in `apps/ui`; do not restart another standalone HTML study or wait for its approval.** [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) is the current user workflow and implementation account. Older study recommendations above are historical references.
 
 The real workspace now has shared charcoal/light/system settings, onboarding/recovery, Follow/Agents/Repository over one chronology, and global 24-action file-history pages. Comparison retains two chosen evidence references across pages, labels actual provenance after loading, and never substitutes current disk or a previous read as an immediate-before snapshot. Replay changes remount the file reader so later choices cannot leak. Verification links close the modal and open the recorded action. View/theme changes preserve the semantic reading anchor; native dialogs restore focus. A capture-phase reflow that could swallow preview activation was deferred until after the target handler.
