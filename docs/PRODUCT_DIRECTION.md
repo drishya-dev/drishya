@@ -4,6 +4,8 @@
 
 ## 1. What we are trying to make indispensable
 
+**6 October developer-workspace expansion:** the builder wants enough read-only source/evidence navigation to keep a developer in Drishya for supported comprehension tasks: genuine toolbox/file origins, captured-range peeks, deeper source reading, graph/folder alternatives and later symbols/evidence navigation. [DEVELOPER_WORKSPACE](DEVELOPER_WORKSPACE.md) is the staged backlog. Finish the agent-working presentation first. Do not broaden into editing/execution or equate captured excerpts with a current whole-file editor.
+
 Drishya turns an agent's work into a navigable account of the actual material it encountered and changed. The promise is: **come back understanding the work, with the evidence one action away**. Someone should be able to find the relevant read, compare the edit, inspect the test, and continue reading without reconstructing a story from terminal output.
 
 The builder's ambition remains a product whose motion and presentation feel exceptionally crafted. “Jarvis” describes fluent orchestration of information: material appears from an intelligible origin, assumes the shape it needs, remains available, and responds immediately to the reader. It does not require sci-fi decoration, incessant movement, fabricated reasoning, or an assistant that takes control of the user's harness.
