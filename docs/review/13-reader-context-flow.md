@@ -12,6 +12,8 @@ The builder clarified the original prototype's strength: actions share horizonta
 
 ## Validation and boundaries
 
+The composer's automatic latest-step `focus` is not an explicit user selection. Only `selectedOp` overrides held reading. The context retains just action id/kind plus the composed outcome state, never a future completed state from a full replay projection. Regression cases cover both mistakes, and the sustained reader checks the held context path and scope on every append.
+
 Unit cases cover held vs latest reference, missing/unlocated passages, exclusion of future action IDs and qualified graph adjacency. Browser acceptance covers scrolling to an older passage, current import direction, map-off file reading, explicit return to latest, stable widths with new siblings, actual overflow to a new row, and an action group restarting after agent prose. Existing live/worker/replay/resource/focus tests still apply. Record actual full-suite and sustained-reader results in STATUS.
 
 This improves navigable repository context and accumulation; it does not complete the full creative presentation or establish human preference. The next useful work is a richer evidence-linked world and increasingly articulate content/outcome presentation, assessed in a complete real review journey. Preserve the backend/page boundary, finite motion, recorded provenance and observe-only constraints. Do not add generic dashboard widgets or fake decision pipelines to fill empty space.

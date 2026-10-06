@@ -15,14 +15,14 @@ describe('repository reading context', () => {
     expect(context.scope).toBe('reading');
     expect(context.path).toBe('src/checkout/guard.ts');
     expect(context.actions.length).toBeLessThanOrEqual(3);
-    expect(context.actions.every((op) => op.paths.some((ref) => ref.path === context.path && ref.role !== 'search-hit'))).toBe(true);
+    expect(context.actions.every((action) => projection.operations.find((op) => op.id === action.id)!.paths.some((ref) => ref.path === context.path && ref.role !== 'search-hit'))).toBe(true);
     expect(repositoryContext(projection, scene).path).toBe('test/checkout.test.ts');
   });
   it('does not substitute nearby activity for a missing or unlocated passage', () => {
     expect(repositoryContext(projection, scene, 'unloaded-passage')).toEqual({ scope: 'reading', path: undefined, actions: [] });
     const search = projection.operations.find((op) => op.kind === 'search')!;
     const focused = { ...scene, focus: { ...scene.focus, operationId: search.id } } as typeof scene;
-    const context = repositoryContext({ ...projection, operations: projection.operations.map((op) => op.id === search.id ? { ...op, paths: op.paths.filter((ref) => ref.role === 'search-hit') } : op) }, focused);
+    const context = repositoryContext({ ...projection, operations: projection.operations.map((op) => op.id === search.id ? { ...op, paths: op.paths.filter((ref) => ref.role === 'search-hit') } : op) }, focused, undefined, search.id);
     expect(context.path).toBeUndefined();
     expect(context.actions).toEqual([]);
   });
@@ -32,6 +32,21 @@ describe('repository reading context', () => {
     const early = compose(projection, { step: at });
     const context = repositoryContext(projection, early);
     expect(context.actions.map((op) => op.id)).toEqual([firstRead.id]);
+  });
+  it('takes outcomes from the composed boundary, not a future completed operation', () => {
+    const firstRead = projection.operations.find((op) => op.detail.kind === 'read')!;
+    const at = projection.timeline.findIndex((item) => item.type === 'op-start' && item.operationId === firstRead.id) + 1;
+    const context = repositoryContext(projection, compose(projection, { step: at }));
+    expect(context.actions).toEqual([{ id: firstRead.id, kind: firstRead.kind, status: 'running' }]);
+  });
+  it('does not let automatic scene focus steal the held reading location', () => {
+    const nextRead = projection.operations.find((op) => op.detail.kind === 'read' && op.detail.path === 'src/cart/discount.ts')!;
+    const at = projection.timeline.findIndex((item) => item.type === 'op-start' && item.operationId === nextRead.id) + 1;
+    const growing = compose(projection, { step: at });
+    expect(growing.focus?.operationId).toBe(nextRead.id);
+    const earlier = growing.passages.find((passage) => passage.ops.some((op) => op.kind === 'read'))!;
+    expect(repositoryContext(projection, growing, earlier.id).path).toBe('src/checkout/guard.ts');
+    expect(repositoryContext(projection, growing, earlier.id).scope).toBe('reading');
   });
   it('uses only qualified current static edges, deduplicates and excludes unresolved targets', () => {
     const graph = bundle.graph!;

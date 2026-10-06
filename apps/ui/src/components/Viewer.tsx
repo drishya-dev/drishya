@@ -198,6 +198,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
 // ─── spine: this run's files, in the left gutter ─────────────────────────────────────────
 
 function Spine({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const selectedOp = useApp((s) => s.selectedOp);
   const readingPassageId = useApp((s) => s.readingPassageId);
   const follow = useApp((s) => s.follow);
   const graph = useApp((s) => s.graph);
@@ -217,7 +218,7 @@ function Spine({ scene, projection }: { scene: Scene; projection: Projection }) 
   }, []);
   const heat = useMemo(() => new Map(scene.heat.map((h) => [h.path, h])), [scene.heat]);
   const files = projection.files.filter((f) => f.firstStep < scene.step);
-  const context = useMemo(() => repositoryContext(projection, scene, follow ? undefined : readingPassageId), [projection, scene, follow, readingPassageId]);
+  const context = useMemo(() => repositoryContext(projection, scene, follow ? undefined : readingPassageId, selectedOp), [projection, scene, follow, readingPassageId, selectedOp]);
   const rowHeight = 48;
   const rowStart = useRef<HTMLDivElement>(null);
   const [rowOffset, setRowOffset] = useState(32);

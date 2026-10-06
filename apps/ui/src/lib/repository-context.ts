@@ -4,18 +4,18 @@ import type { Scene } from '@drishya/scene';
 export interface RepositoryContext {
   scope: 'selected' | 'reading' | 'latest';
   path?: string;
-  actions: Operation[];
+  actions: Pick<Operation, 'id' | 'kind' | 'status'>[];
 }
 
 /** Resolve a place from captured references, never from prose or nearby activity. */
-export function repositoryContext(projection: Projection, scene: Scene, readingPassageId?: string): RepositoryContext {
+export function repositoryContext(projection: Projection, scene: Scene, readingPassageId?: string, selectedOperationId?: string): RepositoryContext {
   const operations = new Map(projection.operations.map((op) => [op.id, op]));
   const primaryPath = (id: string) => operations.get(id)?.paths.find((ref) => ref.role !== 'search-hit')?.path;
   let scope: RepositoryContext['scope'] = 'latest';
   let path: string | undefined;
-  if (scene.focus?.operationId) {
+  if (selectedOperationId) {
     scope = 'selected';
-    path = primaryPath(scene.focus.operationId);
+    path = primaryPath(selectedOperationId);
   } else if (readingPassageId) {
     scope = 'reading';
     const passage = scene.passages.find((item) => item.id === readingPassageId);
@@ -28,8 +28,8 @@ export function repositoryContext(projection: Projection, scene: Scene, readingP
   }
   // Only currently composed actions are candidates: an offline replay projection
   // can still contain future operations, and a worker page is not the whole run.
-  const visible = new Set(scene.passages.flatMap((passage) => passage.ops.map((op) => op.id)));
-  const actions = path ? projection.operations.filter((op) => visible.has(op.id) && op.paths.some((ref) => ref.path === path && ref.role !== 'search-hit')).slice(-3) : [];
+  const visible = new Map(scene.passages.flatMap((passage) => passage.ops.map((op) => [op.id, op.state] as const)));
+  const actions = path ? projection.operations.filter((op) => visible.has(op.id) && op.paths.some((ref) => ref.path === path && ref.role !== 'search-hit')).slice(-3).map((op) => ({ id: op.id, kind: op.kind, status: visible.get(op.id)! })) : [];
   return { scope, path, actions };
 }
 

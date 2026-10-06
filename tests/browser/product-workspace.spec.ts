@@ -85,8 +85,13 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   expect(await operation.getAttribute('data-op-id')).toBe(id);
   const settings = page.getByRole('button', { name: 'Workspace settings', exact: true });
   await settings.click();
+  const context = page.getByRole('region', { name: 'Repository reading context' });
+  await expect(context).toContainText('Reading here');
+  const contextPath = await context.locator('.repo-context-file').allTextContents();
   const before = Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]);
   await expect.poll(async () => Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]), { timeout: 10_000 }).toBeGreaterThan(before);
+  await expect(context).toContainText('Reading here');
+  expect(await context.locator('.repo-context-file').allTextContents()).toEqual(contextPath);
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   await page.getByRole('button', { name: 'Show complete sample' }).click();
   await expect(page.locator('.reading-status')).toContainText('45 recorded steps');

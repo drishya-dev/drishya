@@ -344,6 +344,9 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     await page.mouse.move(800, 350);
     await page.mouse.wheel(0, -120);
     await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+    const context = page.getByRole('region', { name: 'Repository reading context' });
+    await expect(context).toContainText('Reading here');
+    const contextPath = await context.locator('.repo-context-file').allTextContents();
     const anchor = await history.evaluate((el) => {
       const top = el.getBoundingClientRect().top;
       const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.getBoundingClientRect().bottom > top + 1)!;
@@ -356,6 +359,8 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', model: 'synthetic', content: [{ type: 'text', text: `Captured explanation for synthetic round ${rounds}.` }] } });
     await app.ingest.sync(recordingId);
     await expect(steps).toContainText(`${before + 3} recorded steps`);
+    await expect(context).toContainText('Reading here');
+    expect(await context.locator('.repo-context-file').allTextContents()).toEqual(contextPath);
     await expect.poll(() => history.evaluate((el, anchor) => {
       const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.dataset.passageId === anchor.id);
       return node ? Math.abs(node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset) : Infinity;
