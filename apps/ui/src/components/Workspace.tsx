@@ -6,17 +6,15 @@ import { agentColor, agentName } from '../lib/identity.ts';
 export function WorkspaceBar() {
   const explore = useApp((s) => s.explore);
   const compare = useApp((s) => s.compareAgents);
-  const map = useApp((s) => s.mapVisible);
   const source = useApp((s) => s.source);
   const recording = useApp((s) => s.recording);
-  const mode = useApp((s) => s.mode);
   const filter = useApp((s) => s.filter);
-  const title = useApp((s) => s.projection?.title ?? s.recording?.title);
+  const multipleAgents = useApp(s => (s.projection?.agents.length ?? 0) > 1);
   const foldersHidden = useApp(s => s.foldersHidden);
   const foldersShown = foldersHidden === false || foldersHidden !== true && window.innerWidth > 820;
   return <nav className="workspace-bar" aria-label="Workspace views">
     <span className="workspace-context sr-only">{source?.sample === 'growing' ? recording?.live ? 'Synthetic live demonstration · Publishing sample events' : 'Synthetic live demonstration · Sample complete' : source?.sample ? 'Synthetic recording' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local recording'}</span>
-    <div className="workspace-toggles"><button aria-label="Show session folders" aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}>⌑ Folders</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ mapVisible: true, explore: !explore, follow: false, held: true, playing: false })}>⌘ Map</button><button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false, follow: false, held: true, playing: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button></div>
+    <div className="workspace-toggles"><button aria-label="Show session folders" aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}>⌑ Folders</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ mapVisible: true, explore: !explore, follow: false, held: true, playing: false })}>⌘ Map</button>{multipleAgents && <button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false, follow: false, held: true, playing: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button>}</div>
     {source?.sample === 'growing' && recording?.live && <button className="btn ghost sample-complete" onClick={() => source.completeSample?.()}>Show complete sample</button>}
     {(source?.sample === 'recorded' || source?.sample === 'growing' && !recording?.live) && <button className="btn ghost sample-watch" onClick={() => location.assign(`${location.pathname}?demo=live`)}>{source.sample === 'growing' ? 'Watch demo again' : 'Watch live demo'}</button>}
     {filter && <button className="btn ghost clear-workspace-filter" onClick={() => useApp.getState().setFilter(undefined)}>Clear focus</button>}

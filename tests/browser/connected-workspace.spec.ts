@@ -47,6 +47,15 @@ test('selected workspace folders read current files separately from the exact hi
   const folder = page.getByRole('complementary',{name:'Session folders'});
   await expect(folder).toHaveCount(1);
   await expect(folder).toContainText('session-repository');
+  await expect(page.getByRole('group', { name: 'Recorded agents' })).toHaveCount(0);
+  await expect(page.locator('.history-transport .prompt-menu')).toHaveCount(0);
+  const centre = () => page.locator('.history-inner').evaluate(el => { const r = el.getBoundingClientRect(); return r.x + r.width / 2; });
+  const before = await centre();
+  expect(Math.abs(before - page.viewportSize()!.width / 2)).toBeLessThan(2);
+  const folderBox = await folder.boundingBox();
+  expect(folderBox!.height).toBeGreaterThan(page.viewportSize()!.height * .75);
+  await expect(page.locator('.passage-agent')).toHaveCount(0);
+
   await folder.getByRole('button',{name:/Enable workspace reading/}).click();
   await expect(folder.getByRole('button',{name:/Enable workspace reading/})).toHaveCount(0);
   await folder.getByRole('treeitem',{name:'actual.ts',exact:true}).click();
@@ -63,6 +72,7 @@ test('selected workspace folders read current files separately from the exact hi
   await historical.getByRole('button',{name:'Close Work on src/actual.ts'}).click();
   await page.getByRole('button',{name:'Show session folders',exact:true}).click();
   await expect(folder).toHaveCount(0);
+  expect(Math.abs(await centre() - before)).toBeLessThan(2);
   await page.getByRole('button',{name:'Show session folders',exact:true}).click();
   await expect(folder).toHaveCount(1);
   await page.getByRole('button',{name:'Explore repository map',exact:true}).click();
@@ -77,6 +87,10 @@ test('the composer submits through the real API transport, handles one approval 
   await expect(page.getByRole('textbox',{name:'Prompt for selected harness session'})).toBeVisible();
   const composer=page.getByRole('region',{name:'Harness prompt'});
   await expect(composer).toContainText('session-repository');
+  const box = await composer.boundingBox();
+  expect(Math.abs(box!.x + box!.width / 2 - page.viewportSize()!.width / 2)).toBeLessThan(2);
+  await expect(composer.getByRole('button', { name: 'Add files or folders (coming later)' })).toBeDisabled();
+
   const enable=composer.getByRole('button',{name:'Enable this workspace',exact:true});
   if (await enable.count()) await enable.click();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Please explain the selected workspace');
@@ -108,6 +122,11 @@ test('connected action flow and agent switches replace tabs without inventing ca
   await page.setViewportSize({width:1600,height:1000});
   await expect(page.locator('.flow-connections > path')).not.toHaveCount(0);
   await expect(page.locator('.flow-connections')).toContainText(/Recorded sequence|same-artifact/);
+  const chrome = await page.locator('.history .op').evaluateAll(nodes => nodes.map(n => ({ error: n.classList.contains('st-error'), border: getComputedStyle(n).borderColor, header: getComputedStyle(n.querySelector('.op-head')!).backgroundColor })));
+  expect(new Set(chrome.filter(n => !n.error).map(n => n.border)).size).toBe(1);
+  expect(new Set(chrome.map(n => n.header)).size).toBe(1);
+  expect(chrome.find(n => n.error)?.border).not.toBe(chrome.find(n => !n.error)?.border);
+
   if(process.env.DRISHYA_REVIEW_SHOTS==='1') {
     await page.getByRole('button',{name:'Show session folders',exact:true}).click();
     await expect(page.locator('.folder-explorer')).toHaveCSS('opacity', '1');
@@ -138,10 +157,13 @@ test('a large repository groups spatial density and reveals files at the zoomed 
   });
   await page.locator('.map-group').first().click();
   await expect.poll(() => page.evaluate(() => (window as any).mapPaints)).toBeGreaterThan(3);
+  await page.mouse.move(0, 0);
   await page.waitForTimeout(450);
   const settledPaints = await page.evaluate(() => (window as any).mapPaints);
   await page.waitForTimeout(250);
-  expect(await page.evaluate(() => (window as any).mapPaints)).toBe(settledPaints);
+  // One deferred graph/hover state commit may paint after the camera settles.
+  // A perpetual animation loop would paint repeatedly during this quiet interval.
+  expect(await page.evaluate(() => (window as any).mapPaints) - settledPaints).toBeLessThanOrEqual(1);
   await expect(page.getByRole('button', { name: /parent/ })).toHaveCount(0);
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('client/src/file0.ts');
   await page.getByRole('button', { name: 'client/src/file0.ts', exact: true }).click();
@@ -150,4 +172,23 @@ test('a large repository groups spatial density and reveals files at the zoomed 
   await expect.poll(() => page.locator('.map-group').count()).toBeGreaterThan(0);
   expect(await page.locator('.map-group').count()).toBeLessThan(48);
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') { await page.waitForTimeout(450); await page.screenshot({ path: resolve('.local/connected-grouped-map.png') }); }
+});
+
+
+test('long captured labels and inputs remain inside material allocations on desktop and mobile', async ({ page }) => {
+  await page.route('**/demo/bundle.json', async route => {
+    const response = await route.fetch(); const bundle = await response.json();
+    for (const op of bundle.projection.operations) {
+      op.title += ' ' + 'longCapturedIdentifier'.repeat(35);
+      if (op.detail.kind === 'shell') op.detail.command += ' ' + 'longCapturedArgument'.repeat(50);
+      if (op.detail.kind === 'mcp') op.detail.input = { capturedLongValue: 'longCapturedValue'.repeat(60) };
+    }
+    await route.fulfill({ response, json: bundle });
+  });
+  await page.goto(new URL('/?demo', server.launchUrl).href);
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => page.locator('.history .op-head, .history .op-body').evaluateAll(nodes => nodes.filter(n => n.scrollWidth > n.clientWidth + 1).length)).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
 });

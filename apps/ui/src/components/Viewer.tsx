@@ -106,7 +106,7 @@ function WorkspaceViewer() {
   if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
   return (
-    <div style={{ '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties} className={`viewer connected-workspace${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div style={{ '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <Crown scene={scene} projection={projection} />
       <WorkspaceBar />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
@@ -155,7 +155,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
         {recording && recording.health?.state !== 'following' && recording.health?.state !== 'idle' && <HealthTag r={recording} />}
         {recording?.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
       </div>
-      <div className="agents" role="group" aria-label="Recorded agents">
+      {scene.agents.length > 1 && <div className="agents" role="group" aria-label="Recorded agents">
         {scene.agents.map((a) => {
           const agent = projection.agents.find((x) => x.id === a.id);
           const on = filter?.agentId === a.id;
@@ -177,13 +177,14 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
             </button>
           );
         })}
-      </div>
+      </div>}
       <div className="crown-actions"><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, playing: false, held: true, follow: false })}>Settings</button>
         <button className="btn ghost" onClick={() => set({ searchOpen: true })} title="Search (/)">Search</button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
           {exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}
           <SinceMarkPill projection={projection} />
+          <details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details>
         </div></details>
       </div>
     </header>
@@ -287,7 +288,6 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
   if (!diagnostic) return (
     <footer className="transport history-transport">
       <span className="reading-status sr-only">{scene.total} recorded steps</span>
-      <details className="prompt-menu"><summary>Prompts</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details>
       {mode === 'replay' && <button className="btn ghost" onClick={showHistory}>Full history</button>}
       <LiveWatch />
     </footer>

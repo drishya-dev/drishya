@@ -102,7 +102,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
     const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
     await appendSyntheticRecords(); // 200 source records become 300 observations/steps.
     await expect(steps).toContainText(`${before + 300} recorded steps`);
-    await expect(latest).toContainText('300 new steps');
+    await expect(latest).toHaveAccessibleName(/300 new steps/);
     await expect.poll(() => history.evaluate((el) => {
       const viewport = el.getBoundingClientRect();
       const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.getBoundingClientRect().bottom > viewport.top + 1);

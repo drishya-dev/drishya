@@ -364,6 +364,9 @@ test('view and appearance changes keep the same captured passage under the reade
   await page.goto(demoUrl());
   const history = page.locator('.history');
   await expect(page.locator('article.op-test').last()).toBeVisible();
+  await expect.poll(async () => { const reads = await page.locator('article.op-read').count(); return reads > 0 && reads === await page.locator('article.op-read .read-preview').count(); }).toBe(true);
+  await expect.poll(() => history.evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
+  await expect.poll(() => history.evaluate(el => [...el.querySelectorAll('article')].flatMap(card => card.getAnimations()).filter(a => a.id.startsWith('surface-') && a.playState === 'running').length)).toBe(0);
   const scrollBox = (await history.boundingBox())!;
   await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
   await page.mouse.wheel(0, -1000);
@@ -397,8 +400,10 @@ test('view and appearance changes keep the same captured passage under the reade
   }
 });
 
+
 test('history activity timeline opens recorded failures and edits; named palettes switch', async ({ page }) => {
   await page.goto(demoUrl());
+  await page.getByLabel('More workspace options').click();
   await page.locator('.prompt-menu > summary').click();
   const timeline = page.getByRole('group', { name: 'Recorded activity' });
   await expect(timeline).toContainText('2 edits · 1 failed · 2 passed');
@@ -437,6 +442,7 @@ test('history activity timeline opens recorded failures and edits; named palette
 test('prompt chapters review captured work without movie controls and resize detail by keyboard', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   await page.goto(demoUrl());
+  await page.getByLabel('More workspace options').click();
   await page.locator('.prompt-menu > summary').click();
   const navigation = page.getByRole('navigation', {name:'Captured prompts'});
   await expect(navigation.locator('.prompt-chapters button').first()).toBeVisible();
@@ -446,6 +452,7 @@ test('prompt chapters review captured work without movie controls and resize det
   await expect(page.locator('.turn').first()).toBeInViewport({ratio:.1});
   await expect(navigation.getByRole('button',{name:'Follow from prompt'})).toBeVisible();
   await expect(page.locator('.workspace-context')).not.toContainText('Sequence replay');
+  await page.getByLabel('More workspace options').click();
   const read = page.locator('article.op-read').first();
   await read.locator('.op-head').click();
   const inspector = page.getByRole('complementary',{name:'Operation detail'});
@@ -454,6 +461,7 @@ test('prompt chapters review captured work without movie controls and resize det
   await handle.focus(); await page.keyboard.press('ArrowLeft');
   await expect.poll(async() => (await inspector.boundingBox())!.width).toBeGreaterThan(before);
   await inspector.getByRole('button',{name:'Close',exact:true}).click();
+  await page.getByLabel('More workspace options').click();
   await navigation.locator('.prompt-chapters button').first().click();
   await navigation.getByRole('button',{name:'Follow from prompt'}).click();
   await expect(page.getByRole('button',{name:'Full history',exact:true})).toBeVisible();
@@ -482,4 +490,16 @@ test('a write with an after-state and no patch opens its actual source instead o
   await action.getByRole('button',{name:/Expand/}).click();
   await expect(action.locator('.artifact-reader')).toContainText('cart.total == null');
   await expect(action).not.toContainText('No change captured');
+});
+
+
+test('prompt marks jump to captured prompt starts without starting a native turn', async ({ page }) => {
+  await page.goto(demoUrl());
+  const rail = page.getByRole('navigation', { name: 'Prompt positions in history' });
+  await rail.getByRole('button').first().click();
+  await expect(page.locator('.turn').first()).toBeInViewport({ ratio: .5 });
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveText('↓');
+  await expect(page.locator('.history-transport .prompt-menu')).toHaveCount(0);
+  await page.getByRole('button', { name: /Back to latest/ }).click();
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveCount(0);
 });
