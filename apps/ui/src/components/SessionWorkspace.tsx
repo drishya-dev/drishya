@@ -151,7 +151,6 @@ export function PromptComposer() {
   const [exclusive, setExclusive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-  const [open, setOpen] = useState(true);
   const element = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const node = element.current;
@@ -168,14 +167,12 @@ export function PromptComposer() {
     setBusy(true); setError(undefined);
     try { await fn(); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
-  return <section ref={element} className={`prompt-composer${open ? ' open' : ''}`} aria-label="Harness prompt">
-    <button className="composer-toggle" aria-expanded={open} onClick={() => setOpen(v => !v)}><span>✦</span> Continue with a prompt <small>{recording?.harness} · {controller?.state ?? 'checking'}</small><span>{open ? '⌄' : '↑'}</span></button>
-    {open && <>
-      <div className="composer-target"><strong>{recording?.title}</strong><small title={workspace?.root}>{workspace?.root ?? 'No local workspace'}</small></div>
+  return <section ref={element} className="prompt-composer open" aria-label="Harness prompt">
+    <div className="composer-target"><small title={workspace?.root}>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'} · {controller?.state ?? 'checking'}</small></div>
       {!workspace?.approved && <button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(approve)}>Enable this workspace</button>}
       {controller && !controller.available && <p className="muted small">Install the native {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI and sign in there, then restart Drishya.</p>}
-      <form onSubmit={e => { e.preventDefault(); void act(async () => { await workspaceApi.prompt(id, prompt, exclusive); setPrompt(''); }); }}>
-        <textarea aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={2} onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => setPrompt(e.target.value)} onFocus={() => useApp.setState({ follow: false, held: true, playing: false })} />
+      <form onSubmit={e => { e.preventDefault(); if (running || busy || !prompt.trim() || !workspace?.approved || !controller?.available || !exclusive) return; void act(async () => { await workspaceApi.prompt(id, prompt, exclusive); setPrompt(''); }); }}>
+        <textarea aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={1} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => { setPrompt(e.target.value); e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = `${Math.min(120, e.currentTarget.scrollHeight)}px`; }} onFocus={() => useApp.setState({ follow: false, held: true, playing: false })} />
         <div className="composer-actions"><label title="Finish the turn in other native clients before submitting here"><input type="checkbox" checked={exclusive} disabled={!!running} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label>{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))}>Stop turn</button> : <button type="submit" className="send-prompt" disabled={busy || !prompt.trim() || !workspace?.approved || !controller?.available || !exclusive}>Send prompt ↗</button>}</div>
       </form>
       <span className="composer-note">Native session · conservative permissions</span>
@@ -183,6 +180,5 @@ export function PromptComposer() {
       {controller?.promptRedacted && <p className="muted small">Detected secrets were removed before sending this prompt.</p>}
       {controller?.approvals.map(p => <div className="tool-approval" key={p.id}><strong>{p.name} · approval requested</strong><pre>{p.detail}</pre><button disabled={busy} onClick={() => void act(() => workspaceApi.decide(id, controller.runId!, p.id, false))}>Decline</button><button disabled={busy} onClick={() => void act(() => workspaceApi.decide(id, controller.runId!, p.id, true))}>Allow once</button></div>)}
       {controller?.output && <details className="controller-receipt"><summary>Native response · {controller.state}</summary><pre>{controller.output}</pre></details>}
-    </>}
   </section>;
 }

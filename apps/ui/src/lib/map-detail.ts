@@ -2,25 +2,35 @@ import type { GraphNode, RepoGraph } from '@drishya/contracts';
 
 export interface MapGroup extends GraphNode { members?: string[] }
 /** A derived navigation grouping. Edges aggregate actual imports, never inferred causality. */
-export function mapDetail(graph: RepoGraph, zoom: number, baseDepth = 0): { nodes: MapGroup[]; edges: { from: string; to: string; count: number }[]; depth: number } {
+export function mapDetail(graph: RepoGraph, zoom: number): { nodes: MapGroup[]; edges: { from: string; to: string; count: number }[]; depth: number } {
   const source = graph.temporal === 'current' ? graph.nodes.filter(n => !n.path.startsWith('.local/')) : graph.nodes;
-  const depth = source.length <= 80 || zoom >= 5.5 ? 99 : baseDepth + (zoom >= 3 ? 3 : zoom >= 1.7 ? 2 : 1);
+  // Screen-density bins preserve the repository's spatial layout. Folder names are
+  // labels only: membership never depends on the directory hierarchy.
+  const depth = source.length <= 80 || zoom >= 5.5 ? 99 : Math.max(1, Math.floor(zoom * 5));
   const groups = new Map<string, MapGroup>();
   const member = new Map<string, string>();
   for (const node of source) {
-    const parts = node.path.split('/');
-    const key = parts.length > depth ? parts.slice(0, depth).join('/') : node.id;
+    const individual = depth === 99 || !node.path.includes('/');
+    const key = individual ? node.id : `density:${depth}:${Math.floor(node.x * depth)}:${Math.floor(node.y * depth)}`;
     member.set(node.id, key);
     const existing = groups.get(key);
     if (existing) { existing.members!.push(node.id); existing.x += node.x; existing.y += node.y; }
-    else groups.set(key, parts.length > depth ? { ...node, id: key, path: key, dir: key, members: [node.id] } : { ...node });
+    else groups.set(key, individual ? { ...node } : { ...node, id: key, members: [node.id] });
   }
+  const pathsById = new Map(source.map(n => [n.id, n.path.split('/')]));
   const nodes = [...groups.values()];
-  for (const node of nodes) if (node.members) { node.x /= node.members.length; node.y /= node.members.length; }
-  // At overview, use a legible spatial navigation layout rather than overlapping centroids.
-  if (depth === baseDepth + 1 && nodes.length > 1) {
-    const columns = Math.ceil(Math.sqrt(nodes.length)); const rows = Math.ceil(nodes.length / columns);
-    nodes.forEach((node, i) => { node.x = (i % columns + .5) / columns; node.y = (Math.floor(i / columns) + .5) / rows; });
+  for (const node of nodes) if (node.members) {
+    node.x /= node.members.length; node.y /= node.members.length;
+    if (node.members.length === 1) {
+      member.set(node.members[0]!, node.members[0]!);
+      node.id = node.members[0]!; delete node.members;
+    } else {
+      const paths = node.members.map(id => pathsById.get(id)!);
+      let length = 0;
+      while (length < paths[0]!.length && paths.every(p => p[length] === paths[0]![length])) length++;
+      const common = paths[0]!.slice(0, length).join('/');
+      node.path = common || 'Mixed files';
+    }
   }
   const edges = new Map<string, { from: string; to: string; count: number }>();
   for (const edge of graph.edges) {

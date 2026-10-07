@@ -1,3 +1,4 @@
+import { flowRoute } from '../lib/flow-route.ts';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Projection } from '@drishya/contracts';
 import { createPortal } from 'react-dom';
@@ -16,7 +17,7 @@ export function FlowConnections({ projection }: { projection: Projection }) {
   useLayoutEffect(() => {
     const history = document.querySelector<HTMLElement>('.history');
     if (!history || explore || lowResource) { setPaths([]); return; }
-    const deadline = performance.now() + 1800;
+    const deadline = performance.now() + 2400;
     const measure = () => {
       frame.current = undefined;
       const viewport = history.getBoundingClientRect();
@@ -27,7 +28,6 @@ export function FlowConnections({ projection }: { projection: Projection }) {
         if (visible.size >= 64) break;
       }
       const result: Connection[] = [];
-      const headY = (r: DOMRect) => Math.max(viewport.top + 8, r.top + 18);
       for (const row of history.querySelectorAll('.ops-row')) {
         const ids = [...row.querySelectorAll<HTMLElement>('.op[data-op-id]')].map(el => el.dataset.opId!);
         if (!ids.some(id => visible.has(id))) continue;
@@ -35,10 +35,8 @@ export function FlowConnections({ projection }: { projection: Projection }) {
           const from = ids[i - 1]!; const to = ids[i]!;
           const a = visible.get(from); const b = visible.get(to);
           if (!a || !b) continue;
-          const sameRow = Math.abs(a.top - b.top) < 12;
-          // Never draw through reading content. Wrapped rows use their free outer margin.
-          const d = sameRow ? `M ${a.right} ${headY(a)} C ${a.right + 10} ${headY(a)} ${b.left - 10} ${headY(b)} ${b.left} ${headY(b)}` : `M ${a.left + 12} ${Math.min(a.bottom, viewport.bottom)} L ${a.left + 12} ${a.bottom + 8} L ${b.left - 9} ${a.bottom + 8} L ${b.left - 9} ${headY(b)} L ${b.left} ${headY(b)}`;
-          if (!sameRow && (a.bottom + 8 > b.top || a.bottom > viewport.bottom)) continue;
+          const d = flowRoute(a, b, [...visible.values()]);
+          if (!d) continue;
           const link = evidence.get(`${from}/${to}`);
           result.push({ key: `${from}/${to}`, d, label: link ? `${link.relation}: ${link.explanation}` : 'Recorded sequence · order, not a causal link', strong: selected === from || selected === to || hovered === from || hovered === to });
         }
@@ -54,7 +52,7 @@ export function FlowConnections({ projection }: { projection: Projection }) {
     history.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     // A finite material translation updates endpoint geometry at its final resting position.
-    const timer = setTimeout(schedule, 1400);
+    const timer = setTimeout(schedule, 1800);
     return () => { observer.disconnect(); history.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); clearTimeout(timer); if (frame.current !== undefined) cancelAnimationFrame(frame.current); frame.current = undefined; };
   }, [projection, selected, hovered, explore, lowResource]);
   if (!paths.length || explore || lowResource) return null;

@@ -314,3 +314,28 @@
 .connected-workspace .follow-pill { bottom: calc(var(--composer-gap, 0px) + 16px); }
 
 .connected-workspace.exploring .prompt-composer, .connected-workspace.exploring .follow-pill { display: none; }
+
+/* Whole real surfaces grow into their measured resting geometry; no proxy text. */
+.op { transform-origin: 0 0; min-width: 0; }
+.op-body, .op-expanded, .terminal-preview, .result-area { min-width: 0; max-width: 100%; box-sizing: border-box; overscroll-behavior: contain; }
+.op .cmd, .op .output, .terminal-preview pre { min-width: 0; max-width: 100%; box-sizing: border-box; white-space: pre-wrap; overflow-wrap: anywhere; }
+:root[data-palette='jet'] .history .op { border-color: color-mix(in srgb, var(--material) 55%, #383b42); box-shadow: inset 0 1px 0 #ffffff09; }
+:root[data-palette='jet'] .history .op-head { background: color-mix(in srgb, var(--material) 14%, #17191d); border-bottom-color: color-mix(in srgb, var(--material) 35%, #35373d); }
+:root[data-palette='jet'] .tk-kw { color: #c586c0; }
+:root[data-palette='jet'] .tk-str { color: #ce9178; }
+:root[data-palette='jet'] .tk-fn { color: #dcdcaa; }
+:root[data-palette='jet'] .tk-num { color: #b5cea8; }
+:root[data-palette='jet'] .tk-com { color: #7fa66a; }
+:root[data-palette='jet'] .tk-type { color: #4ec9b0; }
+:root[data-palette='jet'] .tk-property { color: #9cdcfe; }
+:root[data-palette='jet'] .ln-hi { background: #163c60; border-left: 2px solid #55baff; }
+:root[data-palette='jet'] ::selection { background: #285c88; color: #fff; }
+.read-preview:hover .ln { color: #74c5ff; }
+.prompt-composer.open { padding: 8px 12px; }
+.prompt-composer .composer-target { margin: 0 0 4px; }
+.prompt-composer textarea { min-height: 38px; padding: 8px 10px; resize: none; }
+.prompt-composer .composer-note { display: none; }
+.prompt-composer .composer-actions { margin-top: 4px; }
+.map.exploring .map-group { width: auto; min-width: 32px; max-width: 115px; padding: 4px 7px; border-radius: 16px; border: 1px solid #527792; background: #101c27; box-shadow: none; }
+.map.exploring .map-group strong { color: #8fd2ff; font: 11px var(--mono); }
+.map.exploring .map-group small { font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

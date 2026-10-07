@@ -1,5 +1,7 @@
 # Product direction — work you can follow, evidence you can revisit
 
+**Latest presentation correction (7 October):** [27 — Continuous materials and density map](review/27-continuous-materials.md) permits a finite whole-DOM zoom through its final allocation, spatial-density node groups, an always-visible ordinary prompt and local result scrolling without detaching live follow. It supersedes conflicting earlier presentation details; captured truth, native permissions and publishing-only hosted CI remain unchanged.
+
 **Latest scope, 7 October:** [26](review/26-connected-workspace.md) implements session-specific folders/current-file reading, a larger connected map, agent switches and an opt-in native prompt composer. The builder explicitly requested real prompting, superseding the earlier observe-only product boundary. Passive capture remains independent, offline evidence remains read-only, and native sessions retain conservative approval/sandbox handling. Actual Codex continuation passed locally; Claude live validation is blocked by this account's organization subscription restriction.
 
 **7 October refinement:** [24](review/24-prompt-workspace.md) records implemented captured-prompt navigation, compact parallel receipts, actual DOM surface arrivals, resizable reading/comparison and the strict implementer review. Normal use is scrolling and following from a captured prompt; movie transport is optional Diagnostics. This records the previous scope; the explicit controller decision in [26](review/26-connected-workspace.md) is newer.

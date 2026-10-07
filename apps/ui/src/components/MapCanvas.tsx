@@ -68,17 +68,14 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
   const [cam, setCam] = useState<Cam>({ x: 0, y: 0, k: 1 });
   const [tip, setTip] = useState<{ node: MapGroup; x: number; y: number }>();
   const [query, setQuery] = useState('');
-  const [directory, setDirectory] = useState('');
-  const focusedGraph = useMemo(() => {
-    if (!graph || !directory) return graph;
-    const nodes = graph.nodes.filter(n => n.path.startsWith(directory + '/'));
-    const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
-    const minX = Math.min(...xs), minY = Math.min(...ys);
-    const dx = Math.max(.01, Math.max(...xs) - minX), dy = Math.max(.01, Math.max(...ys) - minY);
-    return { ...graph, nodes: nodes.map(n => ({ ...n, x: .1 + .8 * (n.x - minX) / dx, y: .1 + .8 * (n.y - minY) / dy })) };
-  }, [graph, directory]);
-  const detail = useMemo(() => focusedGraph ? mapDetail(focusedGraph, cam.k, directory ? directory.split('/').length : 0) : undefined, [focusedGraph, cam.k, directory]);
-  const openDirectory = (path: string) => { setDirectory(path); setCam({ x: 0, y: 0, k: 1 }); setTip(undefined); };
+  const detail = useMemo(() => graph ? mapDetail(graph, cam.k) : undefined, [graph, cam.k]);
+  const zoomGroup = (node: MapGroup) => {
+    const k = Math.min(8, Math.max(2, cam.k * 2));
+    const x = 48 + node.x * Math.max(40, size.w - 96);
+    const y = 48 + node.y * Math.max(40, size.h - 96);
+    setCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
+    setTip(undefined);
+  };
   const displayNodes = detail?.nodes ?? [];
   const displayById = useMemo(() => new Map(displayNodes.map(n => [n.id, n])), [detail]);
   const heatMap = useMemo(() => new Map(heat.map((h) => [h.path, h])), [heat]);
@@ -119,14 +116,17 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     g.lineWidth = 1.2;
     g.strokeStyle = colours.edge;
     g.beginPath();
-    for (const e of (detail?.edges ?? []).slice(0, 600)) {
+    let drawnEdges = 0;
+    for (const e of detail?.edges ?? []) {
       const a = displayById.get(e.from);
       const b = displayById.get(e.to);
       if (!a || !b) continue;
       const pa = project(a);
       const pb = project(b);
+      if (Math.max(pa.x, pb.x) < 0 || Math.max(pa.y, pb.y) < 0 || Math.min(pa.x, pb.x) > size.w || Math.min(pa.y, pb.y) > size.h) continue;
       g.moveTo(pa.x, pa.y);
       g.lineTo(pb.x, pb.y);
+      if (++drawnEdges >= 600) break;
     }
     g.stroke();
 
@@ -150,7 +150,8 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       if (p.x < -10 || p.y < -10 || p.x > size.w + 10 || p.y > size.h + 10) continue;
       const h = heatMap.get(n.id) ?? (n.members ? n.members.map(id => heatMap.get(id)).find(Boolean) : undefined);
       g.beginPath();
-      g.roundRect(p.x - r0, p.y - r0 * 1.3, r0 * 2, n.members ? r0 * 1.8 : r0 * 2.6, 1.5);
+      if (n.members) g.arc(p.x, p.y, r0 + 2, 0, Math.PI * 2);
+      else g.roundRect(p.x - r0, p.y - r0 * 1.3, r0 * 2, r0 * 2.6, 1.5);
       g.fillStyle = h && h.heat > 0.02 ? colours.tones[h.tone] : h ? colours.active : colours.node;
       g.fill();
       if (explore && r0 >= 4) {
@@ -276,7 +277,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         const r = wrap.current!.getBoundingClientRect();
         const n = nearest(e.clientX - r.left, e.clientY - r.top);
         if (n?.members) {
-          openDirectory(n.path); return;
+          zoomGroup(n); return;
         }
         if (n) set(workspace?.approved ? { currentFile: n.path } : { filePanel: n.id });
       }}
@@ -284,16 +285,16 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       aria-hidden={!explore}
     >
       <canvas ref={canvas} style={{ width: size.w, height: size.h }} />
-      {explore && <div className="map-tools">{directory && <button className="btn ghost" onClick={() => openDirectory(directory.includes('/') ? directory.slice(0, directory.lastIndexOf('/')) : '')}>↑ {directory} · parent</button>}
+      {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
         <button className="btn ghost" aria-label="Zoom into repository" onClick={() => setCam(c => ({ ...c, k: Math.min(8, c.k * 1.25) }))}>+</button>
         <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => setCam(c => ({ ...c, k: Math.max(.5, c.k / 1.25) }))}>−</button>
-        <button className="btn ghost" onClick={() => { openDirectory(''); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
+        <button className="btn ghost" onClick={() => { setCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
         <input aria-label="Find a file on the map" placeholder="Find a file on the map…" value={query} onChange={(e) => setQuery(e.target.value)} />
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
             const x = fit.ox + node.x * fit.sx; const y = fit.oy + node.y * fit.sy;
-            setDirectory(''); const k = graph && graph.nodes.length > 80 ? 6 : 2;
+            const k = graph && graph.nodes.length > 80 ? 6 : 2;
             setCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
             setTip({ node, x: size.w / 2, y: size.h / 2 });
             set({ hoveredPath: node.id, follow: false, playing: false, held: true });
@@ -317,9 +318,9 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         if (!explore && readingRect && p.x + 155 > readingRect.left - 24 && p.x < readingRect.left + readingRect.width + 24) return null;
         return <span key={path} className={`map-file-label tone-${heatMap.get(path)?.tone}`} title={node.path} style={{ left: p.x + 9, top: p.y - 9 }}>{node.path}</span>;
       })}
-      {explore && displayNodes.filter(n => n.members).slice(0, 48).map(n => {
+      {explore && displayNodes.filter(n => { const p = project(n); return n.members && p.x >= 0 && p.y >= 0 && p.x <= size.w - 100 && p.y <= size.h - 40; }).slice(0, 48).map(n => {
         const p = project(n); if (p.x < 0 || p.y < 0 || p.x > size.w - 100 || p.y > size.h - 40) return null;
-        return <button className="map-group" key={n.id} style={{ left: p.x + 14, top: p.y - 12 }} onClick={() => openDirectory(n.path)}><strong>{n.path}</strong><small>{n.members!.length} files · zoom in</small></button>;
+        return <button className="map-group" key={n.id} style={{ left: p.x + 14, top: p.y - 12 }} title="Spatial density group · zoom to reveal individual files" onClick={() => zoomGroup(n)}><strong>{n.members!.length}</strong><small>{n.path}</small></button>;
       })}
       {labels.map((l) => {
         const p = project(l);
@@ -340,7 +341,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       )}
       {graph && explore && (
         <div className="map-legend">
-          <span>{graph.nodes.length} files · {graph.edges.length} imports</span><span className="muted">{detail?.depth === 99 ? 'Files' : `Folder depth ${detail?.depth}`} · {displayNodes.length} map items · zoom for detail</span>
+          <span>{graph.nodes.length} files · {graph.edges.length} imports</span><span className="muted">{detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · {displayNodes.length} map items · zoom for detail</span>
           <span className="muted">{graph.temporal === 'current' ? 'Map of the workspace as it is now' : 'Only files this recording touched'}</span>
           <MapActions graph={graph} />
         </div>

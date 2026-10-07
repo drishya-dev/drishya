@@ -44,7 +44,8 @@ test('source preview opens the exact stored range and keeps pending replay evide
   const history = page.locator('.history');
   await expect(history).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
-  await page.mouse.move(1000, 350);
+  const scrollBox = (await history.boundingBox())!;
+  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
   await page.mouse.wheel(0, -100_000);
   const read = history.locator(`article[data-op-id="${op.id}"]`);
   await read.scrollIntoViewIfNeeded();
@@ -121,7 +122,8 @@ test('source references reject oversized text, preserve derived provenance and c
   const history = page.locator('.history');
   await expect(history).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
-  await page.mouse.move(1000, 350);
+  const scrollBox = (await history.boundingBox())!;
+  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
   await page.mouse.wheel(0, -100_000);
   const read = page.locator(`article[data-op-id="${op.id}"]`);
   await read.scrollIntoViewIfNeeded();
@@ -153,7 +155,8 @@ test('substantial external results retain structured evidence and adapt to narro
   const history = page.locator('.history');
   await expect(history).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
-  await page.mouse.move(1000, 350);
+  const scrollBox = (await history.boundingBox())!;
+  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
   await page.mouse.wheel(0, -100_000);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   await expect(external).toBeAttached();
@@ -193,7 +196,8 @@ test('repository context follows older reading and exposes only qualified curren
   await expect(context).toContainText('Latest file reference');
   await expect(context.locator('.repo-context-file')).toContainText('checkout.test.ts');
   const history = page.locator('.history');
-  await page.mouse.move(800, 350);
+  const scrollBox = (await history.boundingBox())!;
+  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
   await page.mouse.wheel(0, -100_000);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   await expect(context).toContainText('No file location captured for this passage.');
@@ -389,9 +393,11 @@ test('view and appearance changes keep the same captured passage under the reade
   await page.goto(demoUrl());
   const history = page.locator('.history');
   await expect(page.locator('article.op-test').last()).toBeVisible();
-  await page.mouse.move(800, 350);
+  const scrollBox = (await history.boundingBox())!;
+  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
   await page.mouse.wheel(0, -1000);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   const anchor = await history.evaluate((el) => {
     const top = el.getBoundingClientRect().top;
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.getBoundingClientRect().bottom > top + 1)!;

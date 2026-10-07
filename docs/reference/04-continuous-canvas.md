@@ -1,5 +1,7 @@
 # Continuous canvas: authoritative visual direction
 
+**Latest presentation correction (7 October):** [27 — Continuous materials and density map](../review/27-continuous-materials.md) permits a finite whole-DOM zoom through its final allocation, spatial-density node groups, an always-visible ordinary prompt and local result scrolling without detaching live follow. It supersedes conflicting earlier presentation details; captured truth, native permissions and publishing-only hosted CI remain unchanged.
+
 **Latest amendment:** [26](../review/26-connected-workspace.md#latest-developer-refinement) adds the ordinary native composer, compact prompt disclosure, folder-first map detail, partial-card connectors and paragraph fades without delayed evidence. Independent capture remains passive; the explicitly authorized controller is separate. Layout reserves full virtual history extent during run replacement.
 
 **7 October amendment:** [24](../review/24-prompt-workspace.md) governs prompt-led normal navigation, compact content allocations and resizable reading. By specific builder request, finite measured-origin arrivals can translate/reveal the real DOM surface and its content; no copied/scaled/typewritten source or capture delay. Earlier stationary-text arrival recipes are superseded only for this finite move. The composition and evidence constraints below remain.
