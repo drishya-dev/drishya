@@ -4,7 +4,7 @@
 
 ## Current implementation
 
-Read [26](review/26-connected-workspace.md) first. The connected workspace replaces task tabs with agent switches; adds session-correct collapsible folders, consented current-disk reading, larger file-tile map, visible recorded-order connections, compact vivid black materials and an actual native prompt composer. Previous merged foundation: P1 #38 (`62d2d56`), refinement #39 (`61bb47b`), black correction #40 (`11311f5`). The present branch is `codex/connected-workspace`; STATUS records final commit/merge and measurements.
+Read [26](review/26-connected-workspace.md) first. The connected workspace replaces task tabs with agent switches; adds session-correct collapsible folders, consented current-disk reading, larger file-tile map, visible recorded-order connections, compact vivid black materials and an actual native prompt composer. Previous merged foundation: P1 #38 (`62d2d56`), refinement #39 (`61bb47b`), black correction #40 (`11311f5`). Connected workspace PR #41 is squash-merged on main as `dca1b28`; local main is updated. STATUS records measurements.
 
 **Explicit scope override:** the builder asked for real prompt input, superseding the old observe-only product constraint. Canonical AGENTS now permits a separate opt-in controller through supported native protocols. Passive capture stays independent; no observer-hook steering, arbitrary terminal attachment, journal fabrication, native config/credential changes, shell-interpolated prompts or bypassed permissions. Explicit selected-workspace consent and idle-other-clients acknowledgement are required. Native account model usage applies to explicit sends; offline/demo views cannot send.
 

@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **P1 and refinements #38–40 merged; black compact map is on main (`11311f5`).** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **P1 and connected workspace #41 merged on main (`dca1b28`), following #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -65,7 +65,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 7 October 2026; connected workspace on `codex/connected-workspace`, based on synced main after #40. See [26](review/26-connected-workspace.md).
+- **When:** 7 October 2026; connected workspace PR #41 squash-merged as `dca1b28`; local main updated. See [26](review/26-connected-workspace.md).
 - **Delivered:** black vivid content-shaped surfaces with tinted material chrome/borders and smoother non-snapping reveals, compact 166/150 px dock, persistent partial-card order connectors, extension/folder icons and bounded session explorer, consented current-file reader (200 lines / 2 MiB), folder-first map zoom/drill-down with displayed-coordinate imports and cache exclusion, captured agent/model switches and optional native-only usage. The normal composer reserves reading space; prompt chapters live in a compact disclosure. A stable virtual extent fixes long-history native scroll clamping. Existing prompt chapters, whole-DOM arrivals, reader holds, comparison, pinned evidence and Harsh's features remain.
 - **Scope decision:** the builder explicitly requested real prompting, superseding the prior observe-only product boundary. A separate native controller resumes the selected UUID through supported Claude stream-json/Codex app-server protocols, requires workspace consent/idle acknowledgement, supports exact one-time approvals and owned-turn interrupt/EOF shutdown. Observer capture stays independent; no arbitrary terminal attachment, journal fabrication, schema/runtime dependency changes or relaxed permissions.
 - **Checks:** typechecks/279 unit tests; 40 browser journeys (two opt-ins skipped); offline package install/import/demo/API/restart. Demo/model identity regenerated deliberately and golden end sequence updated 15→16 for captured Codex model metadata. Fresh ten-minute synthetic live reading passed: **603,101 ms, 113 rounds, peak 775 DOM nodes**. Final map hover/Fit/static-chrome changes and removal of unnecessary wheel guards followed its start; full browser/type/package and targeted long/live-history checks passed after those changes. The stable virtual extent and composer reservation were present in the soak. Hosted CI not dispatched, per publishing-only policy.
