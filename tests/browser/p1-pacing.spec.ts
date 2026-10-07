@@ -199,13 +199,20 @@ test('patch layouts retain captured changes and adapt without overflowing a narr
   await expect(edit.locator('.split-change')).toBeVisible();
   await expect(edit.locator('.split-change')).toContainText('still blocks a cart whose total is missing');
   await expect(edit.locator('.split-change')).toContainText('columns aligned by patch order');
-  await edit.getByRole('button', { name: 'Unified', exact: true }).click();
+  await edit.getByRole('button', { name: 'Changes', exact: true }).click();
   await expect(edit.locator('.unified-change')).toBeVisible();
   await expect(edit.locator('.split-change')).toBeHidden();
-  await edit.getByRole('button', { name: 'Adaptive', exact: true }).click();
+  await expect(edit.getByRole('button', { name: 'Adaptive', exact: true })).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(edit.locator('.unified-change')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await edit.getByRole('button', { name: 'Open provenance and file states' }).click();
+  const inspector = page.locator('.inspector');
+  await expect(inspector.getByRole('button', { name: 'Changes', exact: true })).toHaveCount(1);
+  await inspector.getByRole('button', { name: 'Side by side', exact: true }).click();
+  await expect(inspector.locator('.split-change')).toBeVisible();
+  await expect(inspector.getByRole('button', { name: /^(Before|After|Adaptive)$/ })).toHaveCount(0);
 });
 
 test('terminal folding is reversible and keyboard map search targets a real file', async ({ page }) => {
@@ -296,12 +303,12 @@ test('file relationships start at measured renderer nodes and fall back when the
 test('verification marks represent recorded counts and open the captured failing assertion', async ({ page }) => {
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
-  await expect(page.locator('article.op-test').last().locator('.verification-group.passed i')).toHaveCount(7);
+  await expect(page.locator('article.op-test').last().locator('.verification-tile.passed')).toHaveCount(7);
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('npm test');
   await page.locator('.search-results button').first().click();
   const failed = page.locator('article.op-test.st-error');
-  await expect(failed.locator('.verification-group.failed i')).toHaveCount(1);
+  await expect(failed.locator('.verification-tile.failed')).toHaveCount(1);
   await failed.getByRole('button', { name: '1 failed · inspect assertions', exact: true }).click();
   await expect(failed.locator('.op-expanded')).toContainText('expected false to be true');
   await expect(failed.locator('.op-expanded .output')).toContainText('FAIL');
@@ -349,7 +356,7 @@ test('content gets reading width and origin tethers use the visible instrument',
   await page.goto(demo.href);
   const edit = page.locator('article.op-edit').last();
   const verification = page.locator('article.op-test').last();
-  await expect(verification.locator('.verification-group.passed i')).toHaveCount(7);
+  await expect(verification.locator('.verification-tile.passed')).toHaveCount(7);
   await expect.poll(async () => { const reads = await page.locator('article.op-read').count(); return reads > 0 && reads === await page.locator('article.op-read .read-preview').count(); }).toBe(true);
   await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -412,7 +419,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
   await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
   await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
   const panel = page.getByRole('region', { name: 'Test runs after this change' });
-  await expect(panel).toContainText('Full recording');
+  await expect(panel).toContainText('Recorded order · coverage not established');
   const id = 'p1-live-verification';
   append({ type: 'assistant', message: { id, role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'npm test -- p1-live-verification' } }] } });
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Tests  1 passed (1)' }] } });

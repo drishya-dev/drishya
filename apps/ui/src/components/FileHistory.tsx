@@ -6,6 +6,8 @@ import { agentName, KIND_LABEL } from '../lib/identity.ts';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
 import { VerificationPanel } from './Verification.tsx';
+import { CapturedTime } from './common.tsx';
+import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 
 /** Global bounded file history; the loaded passage window is never mistaken for the whole session. */
@@ -20,6 +22,9 @@ export function FileHistory({ projection }: { projection: Projection }) {
 }
 
 function FileWorkspace({ path, projection }: { path: string; projection: Projection }) {
+  const explore = useApp(s => s.explore);
+  const { workspace, approve } = useSessionWorkspace();
+  const [diskError, setDiskError] = useState<string>();
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId)!;
   const mode = useApp((s) => s.mode);
@@ -65,8 +70,8 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const first = choices.find((item) => item.key === left?.key) ?? choices[0];
   const second = choices.find((item) => item.key === right?.key) ?? choices.at(-1);
   const close = () => useApp.setState({ filePanel: undefined });
-  return <ReadingDialog title={`Work on ${path}`} close={close} className="file-workspace">
-    <div className="file-workspace-intro"><code>{path}</code><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Whole-recording history'}</span></div>
+  return <ReadingDialog title={`Work on ${path}`} close={close} className="file-workspace" modeless={explore}>
+    <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}</span></div>
     <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
       {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} label="Resize file action history" />}
       <nav className="file-trail" aria-label="File action history">
@@ -80,14 +85,15 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
             if (evidence.length) setLeft(evidence[0]);
             else { const state = useApp.getState(); state.select(op.id); state.set({ filePanel: undefined, explore: false }); }
           }} aria-pressed={first?.operation.id === op.id}>
-            <span className={`op-kind k-${op.kind}`}>{KIND_LABEL[op.kind]}</span><span className="file-op-title">{op.title}</span><small>{agentName(projection.agents.find((agent) => agent.id === op.agentId))} · {op.status === 'error' ? 'failed' : op.status === 'running' ? 'in flight' : op.status}</small>
+            <span className={`op-kind k-${op.kind}`}>{KIND_LABEL[op.kind]}</span><span className="file-op-title">{op.title}</span><small>{projection.agents.length > 1 && <>{agentName(projection.agents.find((agent) => agent.id === op.agentId))} · </>}{op.status === 'error' ? 'failed' : op.status === 'running' ? 'in flight' : op.status} {op.startTime && <CapturedTime iso={op.startTime} />}</small>
           </button>{evidence.length > 0 && <button data-file-op={op.id} className="file-inspect" onClick={() => { const state = useApp.getState(); state.select(op.id); state.set({ filePanel: undefined, explore: false }); }}>Open in history ↗</button>}</div>;
         })}
         {page && page.total > 24 && <div className="file-pagination"><button className="btn" disabled={start === 0} onClick={() => setStart(Math.max(0, start - 24))}>Previous</button><span>{start + 1}–{Math.min(start + 24, page.total)} / {page.total}</span><button className="btn" disabled={start + 24 >= page.total} onClick={() => setStart(start + 24)}>Next</button></div>}
       </nav>
       <section className="file-evidence-reading" aria-label="File evidence">
-        <div className="file-evidence-toolbar"><strong>Historical evidence</strong><button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button><button className="btn" aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{compare ? 'Single evidence' : 'Compare evidence'}</button></div>
-        <p className="muted small">Read excerpts and file states recorded at different moments. Ranges may differ. No current source or inferred intermediate state is substituted.</p>
+        <div className="file-evidence-toolbar"><strong>Historical evidence</strong>{source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" title={workspace.root} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.setState({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}<button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button><button className="btn" aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{compare ? 'Single evidence' : 'Compare evidence'}</button></div>
+
+        {diskError && <p className="bad" role="alert">{diskError}</p>}
         {choices.length > 0 ? <div className={`file-evidence-columns${compare ? ' paired' : ''}`}>
           <EvidenceColumn choices={choices} value={first} choose={(key) => setLeft(choices.find((item) => item.key === key))} label="First evidence" path={path} />
           {compare && <EvidenceColumn choices={choices} value={second} choose={(key) => setRight(choices.find((item) => item.key === key))} label="Second evidence" path={path} />}

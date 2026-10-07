@@ -60,7 +60,7 @@ test('selected workspace folders read current files separately from the exact hi
   await expect(folder.getByRole('button',{name:/Enable workspace reading/})).toHaveCount(0);
   await folder.getByRole('treeitem',{name:'actual.ts',exact:true}).click();
   const reader=page.getByRole('dialog',{name:'src/actual.ts',exact:true});
-  await expect(reader).toContainText('Current disk · not a historical snapshot');
+  await expect(reader.getByTitle('Current disk · not a historical snapshot')).toHaveText('On disk');
   await expect(reader).toContainText('fromSelectedWorkspace');
   await expect(reader).not.toContainText('recorded historical bytes');
   await reader.getByRole('button',{name:'Next lines'}).click();
@@ -191,4 +191,26 @@ test('long captured labels and inputs remain inside material allocations on desk
     await expect.poll(() => page.locator('.history .op-head, .history .op-body').evaluateAll(nodes => nodes.filter(n => n.scrollWidth > n.clientWidth + 1).length)).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   }
+});
+
+
+test('map file reading leaves a usable graph beside the bounded reader', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('actual.ts');
+  await page.locator('.map-matches').getByRole('button', { name: 'src/actual.ts', exact: true }).click();
+  await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/actual.ts' });
+  await expect(reader).toContainText('recorded historical bytes');
+  await expect(reader).toHaveClass(/map-reader/);
+  const graph = await page.locator('.map').boundingBox();
+  const reading = await reader.boundingBox();
+  expect(graph!.x + graph!.width).toBeLessThan(reading!.x);
+  await page.getByRole('button', { name: 'Zoom into repository' }).click();
+  await reader.getByRole('button', { name: 'Close Work on src/actual.ts' }).focus();
+  await page.keyboard.press('Escape');
+  await expect(reader).toHaveCount(0);
+  await expect(page.locator('.map')).toHaveClass(/exploring/);
 });

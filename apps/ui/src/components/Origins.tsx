@@ -5,7 +5,7 @@ import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { choreographyBetween, frameOf } from '../lib/choreography.ts';
 import { useApp } from '../state.ts';
-import { moveMaterial, restingRect } from '../lib/material-motion.ts';
+import { moveMaterial, restingRect, settleArrival } from '../lib/material-motion.ts';
 
 const NS = 'http://www.w3.org/2000/svg';
 const EASE = 'cubic-bezier(.16,1,.3,1)';
@@ -130,6 +130,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       }
       const scale = Math.max(.06, Math.min(.18, a.width / Math.max(1, r.width)));
       const animation = moveMaterial(target, new DOMRect(r.left + dx + r.width * (1 - scale) / 2, r.top + dy, r.width * scale, r.height * scale), duration, `surface-${move}`);
+      settleArrival(target, r, animation);
       runningMotion.current.set(animation, { element: target, target, rect: r });
       const release = () => { runningMotion.current.delete(animation); animation.cancel(); };
       void animation.finished.then(release, release);

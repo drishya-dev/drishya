@@ -41,12 +41,12 @@ test('whole material zoom stays continuous while the captured result changes its
   await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await page.evaluate(() => {
-    const samples: { scale: number; width: number; height: number }[] = [];
+    const samples: { scale: number; width: number; height: number; settling: boolean; time: number }[] = [];
     (window as any).zoomSamples = samples;
     const deadline = performance.now() + 4000;
     const sample = () => {
       const card = [...document.querySelectorAll<HTMLElement>('article.op-shell')].find(el => el.textContent?.includes('continuous-zoom-proof'));
-      if (card) { const r = card.getBoundingClientRect(); samples.push({ scale: new DOMMatrixReadOnly(getComputedStyle(card).transform).m11, width: r.width, height: r.height }); }
+      if (card) { const r = card.getBoundingClientRect(); samples.push({ scale: new DOMMatrixReadOnly(getComputedStyle(card).transform).m11, width: r.width, height: r.height, settling: card.hasAttribute('data-material-settling'), time: performance.now() }); }
       if (performance.now() < deadline) requestAnimationFrame(sample);
     }; requestAnimationFrame(sample);
   });
@@ -59,7 +59,7 @@ test('whole material zoom stays continuous while the captured result changes its
   const card = page.locator('article.op-shell').filter({ hasText: id });
   await expect(card).toContainText('captured output line');
   await expect(page.locator('.origin-material, .origin-tool-transfer, .origin-file-transfer')).toHaveCount(0);
-  await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.id.startsWith('surface-')).length)).toBe(0);
+  await expect.poll(() => card.evaluate(el => el.hasAttribute('data-material-settling') || el.getAnimations().some(a => a.id.startsWith('surface-')))).toBe(false);
   const samples = await page.evaluate(() => (window as any).zoomSamples as { scale: number; width: number; height: number }[]);
   expect(samples.some(s => s.scale > .75 && s.scale < .98)).toBe(true);
   expect(samples.at(-1)!.scale).toBeCloseTo(1, 2);
@@ -101,4 +101,29 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
   await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveCount(0);
   await page.locator('.history').dispatchEvent('wheel', { deltaY: -100 });
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
+});
+
+
+test('hover reading preserves live follow and safely releases when new captured work arrives', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  const id = 'live-hover-proof';
+  append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'printf live-hover-proof' } }] } });
+  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Captured hover output' }] } });
+  await app.ingest.sync(recordingId);
+  const card = page.locator('article.op-shell').filter({ hasText: id });
+  await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+  const latest = page.getByRole('button', { name: /Back to latest/ });
+  if (await latest.isVisible()) await latest.click();
+  await expect(latest).toHaveCount(0);
+  await card.hover();
+  await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+  await expect(latest).toHaveCount(0);
+  append({ type: 'assistant', message: { id: 'hover-follow-next', role: 'assistant', content: [{ type: 'text', text: 'Captured work keeps arriving during hover.' }] } });
+  await app.ingest.sync(recordingId);
+  await expect(page.locator('.prose').last()).toContainText('during hover');
+  await expect(latest).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.op:popover-open')).toHaveCount(0);
 });

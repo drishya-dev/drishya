@@ -17,7 +17,7 @@ export function FlowConnections({ projection }: { projection: Projection }) {
   useLayoutEffect(() => {
     const history = document.querySelector<HTMLElement>('.history');
     if (!history || explore || lowResource) { setPaths([]); return; }
-    const deadline = performance.now() + 2400;
+    let deadline = performance.now() + 2400;
     const measure = () => {
       frame.current = undefined;
       const viewport = history.getBoundingClientRect();
@@ -42,18 +42,19 @@ export function FlowConnections({ projection }: { projection: Projection }) {
         }
       }
       setPaths(result);
-      if (performance.now() < deadline && [...history.querySelectorAll('.op[data-op-id]')].some(el => el.getAnimations().some(a => a.id.startsWith('surface-') && a.playState === 'running'))) frame.current = requestAnimationFrame(measure);
+      if (performance.now() < deadline && [...history.querySelectorAll('.op[data-op-id]')].some(el => el.getAnimations().some(a => (a.id.startsWith('surface-') || a.id.startsWith('reading-focus-')) && a.playState === 'running'))) frame.current = requestAnimationFrame(measure);
     };
-    const schedule = () => { if (frame.current === undefined) frame.current = requestAnimationFrame(measure); };
+    const schedule = () => { deadline = performance.now() + 2400; if (frame.current === undefined) frame.current = requestAnimationFrame(measure); };
     measure();
     const observer = new ResizeObserver(schedule);
     observer.observe(history);
     for (const card of history.querySelectorAll('.op[data-op-id]')) observer.observe(card);
     history.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
+    window.addEventListener('drishya-material-layout', schedule);
     // A finite material translation updates endpoint geometry at its final resting position.
     const timer = setTimeout(schedule, 1800);
-    return () => { observer.disconnect(); history.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); clearTimeout(timer); if (frame.current !== undefined) cancelAnimationFrame(frame.current); frame.current = undefined; };
+    return () => { observer.disconnect(); history.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); window.removeEventListener('drishya-material-layout', schedule); clearTimeout(timer); if (frame.current !== undefined) cancelAnimationFrame(frame.current); frame.current = undefined; };
   }, [projection, selected, hovered, explore, lowResource]);
   if (!paths.length || explore || lowResource) return null;
   return createPortal(<svg className="flow-connections" aria-label="Connections in recorded order" role="img"><defs><marker id="flow-arrow" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5" /></marker></defs>{paths.map(path => <path key={path.key} d={path.d} className={path.strong ? 'focused' : ''} markerEnd="url(#flow-arrow)"><title>{path.label}</title></path>)}</svg>, document.body);

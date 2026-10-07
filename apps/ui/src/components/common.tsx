@@ -197,3 +197,8 @@ export function calendarTime(iso: string, now = new Date()): string {
   if (sameDay(date, yesterday)) return 'Yesterday';
   return date.toLocaleDateString([], { month: 'short', day: 'numeric', ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) });
 }
+
+/** The exact captured time is disclosed in place, including keyboard focus. */
+export function CapturedTime({ iso }: { iso: string }) {
+  return <time className="captured-time" dateTime={iso} tabIndex={0} aria-label={new Date(iso).toLocaleString()}><span>{calendarTime(iso)}</span><span className="captured-clock"> · {timeOf(iso)}</span></time>;
+}

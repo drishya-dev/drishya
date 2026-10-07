@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import type { Operation } from '@drishya/contracts';
 import type { VerificationTrail } from '@drishya/scene';
+import { CapturedTime } from './common.tsx';
 import { useApp } from '../state.ts';
 
 const VERDICT: Record<VerificationTrail['verdict'], string> = {
@@ -25,6 +26,7 @@ export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (ope
   const mode = useApp((s) => s.mode);
   const revision = useApp((s) => s.renderedRevisions[recordingId ?? '']);
   const select = useApp((s) => s.select);
+  const operations = useApp(s => s.projection?.operations);
   const open = onOpen ?? select;
   const [trail, setTrail] = useState<VerificationTrail | null>();
   const [error, setError] = useState<string>();
@@ -50,23 +52,23 @@ export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (ope
   if (trail === null) return null;
 
   const last = trail.lastCheck;
+  const lastOperation = operations?.find(operation => operation.id === last?.operationId);
   return (
     <section className={`verify verify-${trail.verdict}`} aria-label="Test runs after this change">
-      <h4>Test runs after this change</h4>
-      <p className="muted small">Full recording · recorded order, not coverage</p>
-      <p className="verify-verdict">{VERDICT[trail.verdict]}</p>
-      <p className="muted small">{CAVEAT[trail.verdict]}</p>
+      <h4>Test runs after this change{trail.totalChecks > 1 && <small> · {trail.totalChecks} runs</small>}</h4>
+      <p className="verify-verdict" title={CAVEAT[trail.verdict]}>{VERDICT[trail.verdict]}</p>
       {last && (
         <p className="small">
-          Last recorded run:{' '}
-          <button className="link verify-open" onClick={() => open(last.operationId)}>{last.title}</button>
+          Latest:{' '}
+          <button className="link verify-open" title={last.title} onClick={() => open(last.operationId)}>{last.title}</button>
+          {(lastOperation?.endTime ?? lastOperation?.startTime) && <CapturedTime iso={(lastOperation?.endTime ?? lastOperation?.startTime)!} />}
           {last.detail && <span className="muted"> · {last.detail}</span>}
           {last.status === 'error' && <span className="bad"> · failed</span>}
           {last.namesChangedFile && <span className="muted"> · a captured failure names this file</span>}
           {!last.sameAgent && <span className="muted"> · run by another agent</span>}
         </p>
       )}
-      {trail.totalChecks > 1 && <p className="muted small">{trail.totalChecks} runs were recorded after this change in total.</p>}
+      <small className="muted">Recorded order · coverage not established</small>
       {trail.laterChanges.length > 0 && (
         <div className="small">
           Later changes to {trail.paths.length === 1 ? 'this file' : 'these files'}:

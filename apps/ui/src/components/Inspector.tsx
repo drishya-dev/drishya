@@ -28,9 +28,7 @@ export function Inspector({ projection }: { projection: Projection }) {
       <ReadingResize value={width} minimum={360} maximum={1400} change={setWidth} label="Resize operation detail" fromRight />
       <header className="insp-head">
         <div className="insp-meta">
-          <span className="agent-dot" />
-          <span>{agentName(agent)}</span>
-          <span className="muted">·</span>
+          {projection.agents.length > 1 && <><span className="agent-dot" /><span>{agentName(agent)}</span><span className="muted">·</span></>}
           <span className="muted">{op.origin.type === 'mcp' ? `${op.origin.server} (MCP)` : op.tool}</span>
           {op.startTime && <span className="muted">· {timeOf(op.startTime)}</span>}
         </div>
@@ -78,9 +76,8 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
       );
     }
     case 'edit': {
-      const before = artifacts.find((a) => a.id.endsWith('_before'));
       const after = artifacts.find((a) => a.id.endsWith('_after'));
-      return <EditDetail key={op.id} op={op} before={before?.id} after={after?.id} afterProv={after} />;
+      return <EditDetail key={op.id} op={op} after={after?.id} afterProv={after} />;
     }
     case 'search':
       return (
@@ -194,29 +191,17 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
   }
 }
 
-function EditDetail({ op, before, after, afterProv }: { op: Operation; before?: string; after?: string; afterProv?: Projection['artifacts'][number] }) {
-  const [view, setView] = useState<'diff' | 'after' | 'before'>(op.detail.kind === 'edit' && !op.detail.hunks.length && after ? 'after' : 'diff');
+function EditDetail({ op, after, afterProv }: { op: Operation; after?: string; afterProv?: Projection['artifacts'][number] }) {
   const d = op.detail;
   if (d.kind !== 'edit') return null;
-  return (
-    <>
-      <div className="seg">
-        <button className={view === 'diff' ? 'on' : ''} onClick={() => setView('diff')}>Change</button>
-        <button className={view === 'before' ? 'on' : ''} disabled={!before} onClick={() => setView('before')} title={before ? '' : 'The harness did not record the file before this edit'}>Before</button>
-        <button className={view === 'after' ? 'on' : ''} disabled={!after} onClick={() => setView('after')} title={after ? '' : d.reconstructionNote}>After</button>
-      </div>
-      {view === 'diff' && (d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : <p className="muted">No hunks captured.</p>)}
-      {view === 'before' && <ArtifactCode id={before} path={d.path} />}
-      {view === 'after' && (
-        <>
-          {afterProv && <ProvenanceBadge artifact={afterProv} />}
-          {afterProv?.note && <p className="insp-note">{afterProv.note}</p>}
-          <ArtifactCode id={after} path={d.path} />
-        </>
-      )}
-      {d.reconstruction !== 'complete' && d.reconstructionNote && <p className="insp-note muted">After-state unavailable: {d.reconstructionNote}</p>}
-    </>
-  );
+  return <>
+    {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : after ? <>
+      {afterProv && <ProvenanceBadge artifact={afterProv} />}
+      {afterProv?.note && <p className="insp-note">{afterProv.note}</p>}
+      <ArtifactCode id={after} path={d.path} />
+    </> : <p className="muted">No patch or source bytes captured.</p>}
+    {d.reconstruction !== 'complete' && d.reconstructionNote && <p className="insp-note muted">After-state unavailable: {d.reconstructionNote}</p>}
+  </>;
 }
 
 function ArtifactCode({ id, start = 1, path }: { id?: string; start?: number; path?: string }) {

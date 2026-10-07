@@ -36,6 +36,7 @@ function WorkspaceViewer() {
   const filter = useApp((s) => s.filter);
   const selectedOp = useApp((s) => s.selectedOp);
   const explore = useApp((s) => s.explore);
+  const mapReading = useApp(s => !!(s.currentFile || s.filePanel));
   const compareAgents = useApp((s) => s.compareAgents);
   const motion = useApp((s) => s.motion);
   const inspectorWidth = useApp(s => s.inspectorWidth);
@@ -106,7 +107,7 @@ function WorkspaceViewer() {
   if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
   return (
-    <div style={{ '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div style={{ '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <Crown scene={scene} projection={projection} />
       <WorkspaceBar />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
@@ -289,7 +290,7 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
     <footer className="transport history-transport">
       <span className="reading-status sr-only">{scene.total} recorded steps</span>
       {mode === 'replay' && <button className="btn ghost" onClick={showHistory}>Full history</button>}
-      <LiveWatch />
+      {!explore && <LiveWatch />}
     </footer>
   );
   return (

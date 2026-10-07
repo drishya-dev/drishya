@@ -503,3 +503,83 @@ test('prompt marks jump to captured prompt starts without starting a native turn
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveCount(0);
 });
+
+
+test('hover reading lifts the same material, keeps its slot and switches without losing follow', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(demoUrl());
+  const history = page.locator('.history');
+  await expect(page.locator('article.op-test').last()).toBeVisible();
+  const viewport = (await history.boundingBox())!;
+  await page.mouse.move(viewport.x + viewport.width - 2, 180);
+  await page.mouse.wheel(0, -10000);
+  await expect.poll(() => history.evaluate(el => el.scrollTop)).toBe(0);
+  await page.mouse.move(1400, 850);
+  await expect.poll(() => history.evaluate(el => [...el.querySelectorAll('article')].flatMap(card => card.getAnimations()).filter(a => a.playState === 'running').length)).toBe(0);
+  const first = page.locator('article.op-read').first();
+  const second = page.locator('article.op-search').first();
+  const id = await first.getAttribute('data-op-id');
+  const firstRect = (await first.boundingBox())!;
+  const before = await second.boundingBox();
+  const scroll = await history.evaluate(el => el.scrollTop);
+  await first.evaluate(el => {
+    const samples: { width: number; height: number; scale: number }[] = []; (window as any).hoverGeometry = samples;
+    const end = performance.now() + 1500;
+    const sample = () => { const r = el.getBoundingClientRect(); samples.push({ width: r.width, height: r.height, scale: new DOMMatrixReadOnly(getComputedStyle(el).transform).m11 }); if (performance.now() < end) requestAnimationFrame(sample); };
+    requestAnimationFrame(sample);
+  });
+  await page.mouse.move(firstRect.x + 20, firstRect.y + 20);
+  await expect(first).toHaveAttribute('data-hover-reading', 'focused');
+  await expect(page.locator(`article[data-op-id="${id}"]`)).toHaveCount(1);
+  await expect(page.locator('.hover-reading-slot')).toHaveCount(1);
+  expect(await history.evaluate(el => el.scrollTop)).toBe(scroll);
+  expect(Math.abs((await second.boundingBox())!.y - before!.y)).toBeLessThan(2);
+  await expect.poll(() => first.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+  const geometry = await page.evaluate(() => (window as any).hoverGeometry as { width: number; height: number; scale: number }[]);
+  expect(geometry.some(sample => sample.scale < .98)).toBe(true);
+  expect(Math.max(...geometry.slice(1).map((sample, i) => Math.abs(sample.width - geometry[i]!.width)))).toBeLessThan(65);
+  const focusRect = (await first.boundingBox())!;
+  expect(await first.locator('.op-body').evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+  expect(focusRect.x).toBeGreaterThanOrEqual(viewport.x + 15);
+  expect(focusRect.x + focusRect.width).toBeLessThanOrEqual(viewport.x + viewport.width - 15);
+  expect(focusRect.y).toBeGreaterThanOrEqual(70);
+  expect(focusRect.y + focusRect.height).toBeLessThanOrEqual(884);
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/hover-reading.png') });
+  await page.mouse.move(before!.x + before!.width - 20, before!.y + 20);
+  await expect(second).toHaveAttribute('data-hover-reading', 'focused');
+  await expect.poll(() => page.locator('.hover-reading-slot').count()).toBe(1);
+  await page.mouse.move(firstRect.x + 20, firstRect.y + 20);
+  await expect(first).toHaveAttribute('data-hover-reading', 'focused');
+  await expect.poll(() => first.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+  await first.locator('.ln-tx').filter({ hasText: /\S/ }).first().click({ clickCount: 3 });
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString().length ?? 0)).toBeGreaterThan(0);
+  await page.mouse.move(1400, 850);
+  await page.waitForTimeout(350); // Leaving must not remove selected text during copy.
+  await expect(first).toHaveAttribute('data-hover-reading', 'focused');
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => getSelection()?.removeAllRanges());
+  await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
+  await expect(page.locator('.op:popover-open')).toHaveCount(0);
+  expect(await history.evaluate(el => el.scrollTop)).toBe(scroll);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.mouse.move(firstRect.x + 20, firstRect.y + 20);
+  await expect(first).toHaveAttribute('data-hover-reading', 'focused');
+  expect(await first.evaluate(el => el.getAnimations().filter(a => a.id.startsWith('reading-focus-')).length)).toBe(0);
+  await page.mouse.move(1400, 850);
+  await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
+});
+
+
+test('full-height world sits beneath progressive edge chrome and prompt typography matches prose', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(demoUrl());
+  await expect(page.locator('article.op-test').last()).toBeVisible();
+  await page.getByRole('navigation', { name: 'Prompt positions in history' }).getByRole('button').first().click();
+  await expect(page.locator('.turn-text').first()).toBeVisible();
+  const sizes = await page.evaluate(() => ({ prompt: getComputedStyle(document.querySelector('.turn-text')!).fontSize, response: getComputedStyle(document.querySelector('.prose')!).fontSize, blur: getComputedStyle(document.querySelector('.crown')!, '::before').backdropFilter, main: document.querySelector('.main')!.getBoundingClientRect().toJSON() }));
+  expect(sizes.prompt).toBe('15px'); expect(sizes.response).toBe(sizes.prompt);
+  expect(sizes.blur).toBe('blur(10px)'); expect(sizes.main.y).toBe(0); expect(sizes.main.height).toBe(900);
+  const time = page.locator('.captured-time').first();
+  await time.focus();
+  await expect.poll(() => time.locator('.captured-clock').evaluate(el => getComputedStyle(el).opacity)).toBe('1');
+});

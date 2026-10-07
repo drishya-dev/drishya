@@ -1,16 +1,16 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { setLowResource, setMapVisible, setMotion, setTheme, useApp } from '../state.ts';
+import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, useApp } from '../state.ts';
 
-export function ReadingDialog({ title, close, children, className = '' }: { title: string; close: () => void; children: ReactNode; className?: string }) {
+export function ReadingDialog({ title, close, children, className = '', modeless = false }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const dialog = ref.current!;
-    dialog.showModal();
+    if (modeless) dialog.show(); else dialog.showModal();
     return () => { dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
-  }, []);
-  return <dialog ref={ref} className={`product-dialog ${className}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }}>
+  }, [modeless]);
+  return <dialog ref={ref} className={`product-dialog ${className}${modeless ? " map-reader" : ""}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
     <header><h2 id={titleId}>{title}</h2><button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></header>
     {children}
   </dialog>;
@@ -48,6 +48,7 @@ function Settings() {
   const motion = useApp((s) => s.motion);
   const map = useApp((s) => s.mapVisible);
   const low = useApp((s) => s.lowResource);
+  const hoverReading = useApp(s => s.hoverReading);
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
@@ -58,6 +59,7 @@ function Settings() {
       <label className="setting-row"><span>Low resource mode<small>Smaller material cache and history overscan. Turns map and motion off.</small></span><input type="checkbox" checked={low} onChange={(e) => setLowResource(e.target.checked)} /></label>
       <label className="setting-row"><span>Repository map<small>Static imports and recorded locations. No inferred execution flow.</small></span><input type="checkbox" checked={map} onChange={(e) => setMapVisible(e.target.checked)} /></label>
       <label className="setting-row"><span>Relationship motion<small>Finite origin and outcome cues; captured text is always immediately readable.</small></span><input type="checkbox" checked={motion} onChange={(e) => setMotion(e.target.checked)} /></label>
+      <label className="setting-row"><span>Hover reading focus<small>After a short dwell, centre the real preview without moving history. Escape restores it. Desktop pointer only.</small></span><input type="checkbox" checked={hoverReading} onChange={e => setHoverReading(e.target.checked)} /></label>
       <p className="muted small">Low resource mode sets economical defaults; you can explicitly re-enable map or motion. Your browser's reduced-motion preference always suppresses animated cues.</p>
     </section>
     <section><h3>Sequence diagnostics</h3><p className="muted small">Optional playback for inspecting captured event order. Ordinary reading uses scroll and prompt navigation.</p><button className="btn" onClick={() => { const app = useApp.getState(); app.set({ replayDiagnostics: true, settingsOpen: false }); app.togglePlay(); }}>Replay sequence</button></section>
