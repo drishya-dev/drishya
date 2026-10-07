@@ -1,5 +1,7 @@
 # Continuous canvas: authoritative visual direction
 
+**7 October amendment:** [24](../review/24-prompt-workspace.md) governs prompt-led normal navigation, compact content allocations and resizable reading. By specific builder request, finite measured-origin arrivals can translate/reveal the real DOM surface and its content; no copied/scaled/typewritten source or capture delay. Earlier stationary-text arrival recipes are superseded only for this finite move. The composition and evidence constraints below remain.
+
 21 September 2026 · User-directed revision after the first storyboard
 
 **The primary experience is an accumulating, vertically navigable composition.** Actions arrive left to right during an action passage. Captured agent explanation and response text then flow underneath, directly on the canvas. The next action passage starts below. Earlier material remains in the history and can be brought forward. The first storyboard's single replacing panel was a design probe, not the intended default.

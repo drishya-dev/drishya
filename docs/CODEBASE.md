@@ -1,5 +1,7 @@
 # Codebase — the system as built
 
+**7 October user-facing refinement:** [24](review/24-prompt-workspace.md) governs prompt-led normal navigation, compact content-sized receipts, resizable source/comparison reading, Write after-source rendering and charcoal graph contrast. The builder specifically requested whole-surface arrivals: the real DOM material may translate/reveal from a measured origin, without copied/scaled/typewritten text, invented output or delayed capture. Diagnostics retain optional playback; normal use has captured prompts and scrolling. Harness prompt sending was researched only and remains a separate scope decision. P1 PR #38 merged as `62d2d56`; refinement is on `codex/prompt-workspace`.
+
 **Latest P1 refinement — 6 October:** [23](review/23-p1-material-pacing.md) governs slower content-sized material unfolding, actual loaded-source transitions, preview typography/height and late-growth camera holds. This is the integrated P1 implementation; larger workspace features and physical/platform/human release checks remain separate. Preserve the prototypes, not the retired HTML gallery.
 
 **Current direction — 6 October:** [22](review/22-p1-motion-lifecycle.md) supersedes the standalone-study queue. The builder reopened P1 because the running app still felt like popups. Finish the integrated application; preserve both files under docs/prototype, retire the redundant concept pages, and do not treat engineering passes as visual approval.

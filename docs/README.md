@@ -75,3 +75,5 @@ When two documents disagree, the one higher in its row wins. When a document her
 | [`reference/`](reference/) | Evidence pack, motion catalog, event schema (draft), continuous canvas |
 | [`prototype/`](prototype/) | **The interactive design reference** — the continuous canvas, all five signature moves. Synthetic data only; never presented as a working integration |
 | [`Vantage_Base_Prompt.md`](Vantage_Base_Prompt.md) | The original brief, kept for provenance |
+
+- [24 — Prompt-led reading and real surface arrivals](review/24-prompt-workspace.md): latest 7 October direction; supersedes earlier stationary-surface/default transport presentation where specified.

@@ -39,6 +39,7 @@ function WorkspaceViewer() {
   const explore = useApp((s) => s.explore);
   const compareAgents = useApp((s) => s.compareAgents);
   const motion = useApp((s) => s.motion);
+  const inspectorWidth = useApp(s => s.inspectorWidth);
   const main = useRef<HTMLDivElement>(null);
   const [reading, setReading] = useState<{ left: number; width: number }>();
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -105,7 +106,7 @@ function WorkspaceViewer() {
   if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
   return (
-    <div className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div style={{ '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties} className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <Crown scene={scene} projection={projection} />
       <WorkspaceBar />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
@@ -343,27 +344,31 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
   const historyPage = useApp((s) => s.historyPage);
   const ms = useMemo(() => (historyPage?.markers ?? markers(projection)).filter((m) => m.type !== 'prose'), [projection, historyPage]);
   const strip = useRef<HTMLDivElement>(null);
+  const diagnostic = useApp(s => s.replayDiagnostics);
+  const setDiagnostic = (value: boolean) => useApp.setState({ replayDiagnostics: value });
   const total = Math.max(1, scene.total);
   const at = (clientX: number) => {
     const r = strip.current!.getBoundingClientRect();
     return Math.round(((clientX - r.left) / r.width) * total);
   };
   const cur = scene.current;
-  if (mode === 'history') return (
+  if (!diagnostic) return (
     <footer className="transport history-transport">
       <span className="reading-status"><span className="reading-dot" /> History · {scene.total} recorded steps</span>
       <span className="muted small">Scroll to review. New work joins below.</span>
+      <PromptNavigation scene={scene} projection={projection} />
+      {mode === 'replay' && <button className="btn ghost" onClick={showHistory}>Full history</button>}
       <ActivityTimeline scene={scene} projection={projection} />
       <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} disabled={!mapVisible} title={mapVisible ? 'Explore the map (X)' : 'Show the map to explore it'}>Explore</button>
       <button className="icon-btn txt" onClick={() => setMapVisible(!mapVisible)} aria-pressed={mapVisible} title={mapVisible ? 'Hide repository map' : 'Show repository map'}>{mapVisible ? 'Map on' : 'Map off'}</button>
       <button className={`icon-btn txt${motion ? '' : ' on'}`} onClick={() => setMotion(!motion)} title="Motion (M)">{motion ? 'Motion' : 'Still'}</button>
-      <button className="btn ghost" onClick={togglePlay}>Replay sequence</button>
+      <details className="replay-diagnostics"><summary>Diagnostics</summary><button className="btn ghost" onClick={() => { setDiagnostic(true); togglePlay(); }}>Replay sequence</button></details>
       <button className="icon-btn txt" aria-pressed={lowResource} onClick={() => setLowResource(!lowResource)} title="Hide map, stop motion, and reduce material cache and overscan">{lowResource ? 'Low resource' : 'Standard'}</button>
     </footer>
   );
   return (
     <footer className="transport">
-      <button className="btn ghost" onClick={showHistory} title="Show all recorded work">← History</button>
+      <button className="btn ghost" onClick={() => { setDiagnostic(false); showHistory(); }} title="Show all recorded work">← History</button>
       <button className="icon-btn txt" aria-pressed={lowResource} onClick={() => setLowResource(!lowResource)}>{lowResource ? 'Low resource' : 'Standard'}</button>
       <div className="t-controls">
         <button className="icon-btn" onClick={() => stepBy(-1)} aria-label="Step back" title="Step back (←)">‹</button>
@@ -416,6 +421,42 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
       </div>
     </footer>
   );
+}
+
+/** Prompt navigation holds the reading camera; it never reruns a harness task. */
+function PromptNavigation({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const page = useApp(s => s.historyPage);
+  const source = useApp(s => s.source);
+  const recordingId = useApp(s => s.recordingId);
+  const chosen = useApp(s => s.promptStep);
+  const turns = useMemo(() => (page?.markers ?? markers(projection)).filter(m => m.type === 'turn'), [page, projection]);
+  const sampled = useMemo(() => { const stride = Math.max(1, Math.ceil(turns.length / 58)); return turns.filter((turn, i) => i % stride === 0 || i === turns.length - 1 || turn.step === chosen).slice(0, 60); }, [turns, chosen]);
+  const navigateAll = !!page || turns.length > 60;
+  const open = async (step: number) => {
+    const state = useApp.getState();
+    if (state.mode !== 'history') state.showHistory();
+    state.set({ promptStep: step, follow: false, playing: false, held: true, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined });
+    if (page) {
+      try { await state.loadHistoryWindow({ promptStep: step, count: 32 }); }
+      catch (e) { if (useApp.getState().recordingId === recordingId) state.set({ error: (e as Error).message }); }
+    }
+  };
+  const adjacent = async (direction: 1 | -1) => {
+    if (!recordingId) return;
+    if (!source?.historyMarker) {
+      const target = direction > 0 ? turns.find(turn => turn.step > (chosen ?? 0)) : [...turns].reverse().find(turn => turn.step < (chosen ?? scene.total + 1));
+      if (target) await open(target.step);
+      return;
+    }
+    try { const step = await source.historyMarker(recordingId, chosen ?? (direction > 0 ? 0 : scene.total + 1), ['turn'], direction); if (step !== undefined && useApp.getState().recordingId === recordingId) await open(step); }
+    catch(e) { if (useApp.getState().recordingId === recordingId) useApp.setState({error:(e as Error).message}); }
+  };
+  return <nav className="prompt-navigation" aria-label="Captured prompts">
+    {navigateAll && <button className="icon-btn" aria-label="Previous captured prompt" onClick={() => void adjacent(-1)}>‹</button>}
+    <div className="prompt-chapters" title={navigateAll ? 'Sampled chapters; Previous/Next visits every captured prompt' : undefined}>{sampled.map((turn, i) => <button key={turn.step} aria-pressed={chosen === turn.step} title={turn.label} onClick={() => void open(turn.step)}><span>{page ? 'Prompt' : turns.indexOf(turn) + 1}</span><span className="prompt-copy">{turn.label}</span></button>)}</div>
+    {navigateAll && <button className="icon-btn" aria-label="Next captured prompt" onClick={() => void adjacent(1)}>›</button>}
+    {chosen !== undefined && <button className="btn ghost" onClick={() => { const state=useApp.getState();state.set({selectedOp:undefined,expandedOp:undefined,follow:true,held:false,playing:true});state.seek(chosen - 1); }}>Follow from prompt</button>}
+  </nav>;
 }
 
 // ─── activity timeline: the whole recording at a glance, in history mode ─────────────────

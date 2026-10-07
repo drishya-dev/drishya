@@ -99,6 +99,8 @@ test('source preview opens the exact stored range and keeps pending replay evide
   expect((await pinned.boundingBox())!.width).toBeLessThan(390);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await pinned.getByRole('button', { name: 'Minimize reference' }).press('Escape');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator('.replay-diagnostics summary').click();
   await page.getByRole('button', { name: 'Replay sequence' }).click();
   await expect(pinned).toHaveCount(0);
   // The result exists in the offline bundle, but has not landed at this replay boundary.
@@ -296,6 +298,7 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   await expect(dialog.locator('.file-evidence-columns')).toContainText('cart.total == null');
   await expect(dialog.getByRole('button', { name: 'Copy derived page', exact: true })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/product-file-comparison.png') });
+  await dialog.getByRole('button', { name: 'Show actions', exact: true }).click();
   const first = dialog.locator('.file-trail-item').first();
   const buttonBounds = (await first.locator('.file-op').boundingBox())!;
   const linkBounds = (await first.locator('[data-file-op]').boundingBox())!;
@@ -350,6 +353,7 @@ test('distant file moments compare across bounded trail pages', async ({ page })
   await dialog.getByRole('button', { name: 'Compare evidence' }).click();
   const first = dialog.getByLabel('First evidence');
   const selected = await first.inputValue();
+  await dialog.getByRole('button', { name: 'Show actions', exact: true }).click();
   await dialog.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(dialog.locator('.file-trail-item')).toHaveCount(2);
   await expect(first).toHaveValue(selected);
@@ -432,7 +436,7 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Jet is the signature default. No grain or full-screen decorative layer obscures text.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(11, 11, 11)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(22, 24, 23)');
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
@@ -445,4 +449,54 @@ test('history activity timeline opens recorded failures and edits; named palette
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
   await dialog.getByRole('checkbox', { name: /^Low resource mode/ }).check();
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
+});
+
+
+test('prompt chapters review captured work without movie controls and resize detail by keyboard', async ({ page }) => {
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(demoUrl());
+  const navigation = page.getByRole('navigation', {name:'Captured prompts'});
+  await expect(navigation.locator('.prompt-chapters button').first()).toBeVisible();
+  await expect(page.getByRole('button',{name:'Play',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Pause',exact:true})).toHaveCount(0);
+  await navigation.locator('.prompt-chapters button').first().click();
+  await expect(page.locator('.turn').first()).toBeInViewport({ratio:.1});
+  await expect(navigation.getByRole('button',{name:'Follow from prompt'})).toBeVisible();
+  await expect(page.locator('.workspace-context')).not.toContainText('Sequence replay');
+  const read = page.locator('article.op-read').first();
+  await read.locator('.op-head').click();
+  const inspector = page.getByRole('complementary',{name:'Operation detail'});
+  const before = (await inspector.boundingBox())!.width;
+  const handle = inspector.getByRole('separator',{name:'Resize operation detail'});
+  await handle.focus(); await page.keyboard.press('ArrowLeft');
+  await expect.poll(async() => (await inspector.boundingBox())!.width).toBeGreaterThan(before);
+  await inspector.getByRole('button',{name:'Close',exact:true}).click();
+  await navigation.locator('.prompt-chapters button').first().click();
+  await navigation.getByRole('button',{name:'Follow from prompt'}).click();
+  await expect(page.getByRole('button',{name:'Full history',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Pause',exact:true})).toHaveCount(0);
+  await page.locator('.history').dispatchEvent('pointerdown');
+  await page.getByRole('button', {name:/Back to latest/}).click();
+  await expect(page.getByRole('button',{name:'Full history',exact:true})).toHaveCount(0);
+  if(process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({path:resolve('.local/prompt-workspace.png')});
+});
+
+
+test('a write with an after-state and no patch opens its actual source instead of an empty change', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const write = sample.projection.operations.find((o: {detail:{kind:string};artifactIds:string[]}) => o.detail.kind === 'edit' && o.artifactIds.some(id => id.endsWith('_after')));
+  write.kind = 'write'; write.title = 'Write ' + write.detail.path; write.detail.hunks = [];
+  await page.route('**/demo/bundle.json', route => route.fulfill({contentType:'application/json',body:JSON.stringify(sample)}));
+  await page.goto(demoUrl());
+  await page.getByRole('button',{name:'Search',exact:true}).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill(write.title);
+  await page.locator('.search-results button').first().click();
+  const inspector = page.getByRole('complementary',{name:'Operation detail'});
+  await expect(inspector).toContainText('cart.total == null');
+  await inspector.getByRole('button',{name:'Close',exact:true}).click();
+  const action = page.locator(`article[data-op-id="${write.id}"]`);
+  await expect(action).toContainText('cart.total == null');
+  await action.getByRole('button',{name:/Expand/}).click();
+  await expect(action.locator('.artifact-reader')).toContainText('cart.total == null');
+  await expect(action).not.toContainText('No change captured');
 });

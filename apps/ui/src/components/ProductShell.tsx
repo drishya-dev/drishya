@@ -37,7 +37,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
 }
 
 const THEMES = [
-  ['dark', 'Jet', 'Matte black, champagne gold'],
+  ['dark', 'Jet', 'Charcoal, warm stone accents'],
   ['midnight', 'Midnight', 'Near-black, cool contrast'],
   ['light', 'Light', 'Paper and stone'],
   ['system', 'System', 'Jet or Light'],
@@ -61,6 +61,6 @@ function Settings() {
       <p className="muted small">Low resource mode sets economical defaults; you can explicitly re-enable map or motion. Your browser's reduced-motion preference always suppresses animated cues.</p>
     </section>
     <section><h3>Your data stays here</h3><p className="muted">Drishya observes journals. It never sends prompts, launches an agent or writes to a harness. Imported evidence is copied and redacted before storage. There is no telemetry.</p><p className="muted small">Pattern redaction is best effort. Review sanitized exports before sharing them. Optional model explanations require a separate exact-payload consent; core reading works offline.</p><p className="small">{source?.kind === 'bundle' ? 'Offline replay bundle' : 'Local authenticated daemon'} · {config?.version ?? 'Drishya'}</p></section>
-    <section><h3>Keyboard</h3><dl className="shortcut-list"><div><dt>/</dt><dd>Search captured work</dd></div><div><dt>Esc</dt><dd>Close the current reading space</dd></div><div><dt>X</dt><dd>Explore / leave repository</dd></div><div><dt>M</dt><dd>Toggle relationship motion</dd></div><div><dt>Space · ← · →</dt><dd>Play / step in optional sequence replay</dd></div><div><dt>E · F</dt><dd>Next edit / failure in sequence replay</dd></div></dl></section>
+    <section><h3>Keyboard</h3><dl className="shortcut-list"><div><dt>/</dt><dd>Search captured work</dd></div><div><dt>Esc</dt><dd>Close the current reading space</dd></div><div><dt>X</dt><dd>Explore / leave repository</dd></div><div><dt>M</dt><dd>Toggle relationship motion</dd></div><div><dt>Space · ← · →</dt><dd>Play / step in explicit replay diagnostics</dd></div><div><dt>E · F</dt><dd>Next edit / failure in sequence replay</dd></div></dl></section>
   </ReadingDialog>;
 }

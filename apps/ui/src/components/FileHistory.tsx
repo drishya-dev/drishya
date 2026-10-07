@@ -6,6 +6,7 @@ import { agentName, KIND_LABEL } from '../lib/identity.ts';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
 import { VerificationPanel } from './Verification.tsx';
+import { ReadingResize } from './ReadingResize.tsx';
 
 /** Global bounded file history; the loaded passage window is never mistaken for the whole session. */
 export function FileHistory({ projection }: { projection: Projection }) {
@@ -24,6 +25,8 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const mode = useApp((s) => s.mode);
   const step = useApp((s) => s.step);
   const revisions = useApp((s) => s.renderedRevisions);
+  const [trailWidth, setTrailWidth] = useState(230);
+  const [trailHidden, setTrailHidden] = useState(false);
   const [query, setQuery] = useState('');
   const [start, setStart] = useState(0);
   const [retry, setRetry] = useState(0);
@@ -64,7 +67,8 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const close = () => useApp.setState({ filePanel: undefined });
   return <ReadingDialog title={`Work on ${path}`} close={close} className="file-workspace">
     <div className="file-workspace-intro"><code>{path}</code><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Whole-recording history'}</span></div>
-    <div className="file-workspace-layout">
+    <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
+      {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} label="Resize file action history" />}
       <nav className="file-trail" aria-label="File action history">
         <input className="file-filter" aria-label="Filter actions on this file" placeholder="Find a recorded action" value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); setLeft(undefined); setRight(undefined); }} />
         {error && <p role="alert" className="bad">{error} <button className="btn" onClick={() => { setFailure(undefined); setRetry((n) => n + 1); }}>Retry</button></p>}
@@ -82,7 +86,7 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
         {page && page.total > 24 && <div className="file-pagination"><button className="btn" disabled={start === 0} onClick={() => setStart(Math.max(0, start - 24))}>Previous</button><span>{start + 1}–{Math.min(start + 24, page.total)} / {page.total}</span><button className="btn" disabled={start + 24 >= page.total} onClick={() => setStart(start + 24)}>Next</button></div>}
       </nav>
       <section className="file-evidence-reading" aria-label="File evidence">
-        <div className="file-evidence-toolbar"><strong>Historical evidence</strong><button className="btn" aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); }}>{compare ? 'Single evidence' : 'Compare evidence'}</button></div>
+        <div className="file-evidence-toolbar"><strong>Historical evidence</strong><button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button><button className="btn" aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{compare ? 'Single evidence' : 'Compare evidence'}</button></div>
         <p className="muted small">Read excerpts and file states recorded at different moments. Ranges may differ. No current source or inferred intermediate state is substituted.</p>
         {choices.length > 0 ? <div className={`file-evidence-columns${compare ? ' paired' : ''}`}>
           <EvidenceColumn choices={choices} value={first} choose={(key) => setLeft(choices.find((item) => item.key === key))} label="First evidence" path={path} />

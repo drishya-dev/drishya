@@ -13,11 +13,11 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
   const svg = useRef<SVGSVGElement>(null);
   // Scene revisions are faster than an arrival. Own finite animations across renders,
   // rather than cancelling them whenever capture or a passive hover updates React.
-  const runningMotion = useRef(new Map<Animation, { element: SVGElement; target?: Element; rect?: DOMRect }>());
+  const runningMotion = useRef(new Map<Animation, { element: Element; target?: Element; rect?: DOMRect }>());
   const materialReady = useRef(new Map<string, boolean>());
   const liveMaterials = useRef(new Set<string>());
   const cancelMotion = () => {
-    for (const [animation, cue] of runningMotion.current) { animation.cancel(); cue.element.remove(); }
+    for (const [animation, cue] of runningMotion.current) { animation.cancel(); if (cue.element instanceof SVGElement) cue.element.remove(); }
     runningMotion.current.clear();
   };
   const previous = useRef(frameOf(scene));
@@ -79,7 +79,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       while (runningMotion.current.size >= 36) {
         const oldest = runningMotion.current.entries().next().value;
         if (!oldest) break;
-        oldest[0].cancel(); oldest[1].element.remove(); runningMotion.current.delete(oldest[0]);
+        oldest[0].cancel(); if (oldest[1].element instanceof SVGElement) oldest[1].element.remove(); runningMotion.current.delete(oldest[0]);
       }
       // Readable material arrival, not an icon race. Large reading spaces unfold longer;
       // evidence is already mounted and no capture or presentation queue waits for this.
@@ -95,7 +95,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
     const contour = (el: Element, move: string, tone?: string) => {
       const material = el.closest<HTMLElement>('[data-material]')?.dataset.material;
       // Animate the material's own reading edge, rather than flying the same empty
-      // rectangle around every action. Every character stays at its final position.
+      // rectangle around every action. The backing never copies captured characters.
       const content = el.matches('.op') ? el.querySelector('.verification-track, .cmd, .query, .code, .diff, .mcp-tool') ?? el : el;
       const r = content.getBoundingClientRect();
       const end = Math.min(r.bottom, r.top + 420);
@@ -172,7 +172,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
     };
     // A read's file lifts out of its measured origin (map node or working-set row) as a plain
     // document silhouette, rises, then travels into the action's header glyph. No path text or
-    // captured content travels; the excerpt is already stationary in its final DOM.
+    // captured characters are copied into this glyph. The real DOM surface owns its arrival.
     const fileTransfer = (origin: Element, target: Element, label: string, tone: string) => {
       const destination = target.querySelector<SVGSVGElement>('.op-head > .material-glyph');
       if (!destination || !visible(destination)) return;
@@ -205,6 +205,27 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       motionTarget = destination;
       play(mark, frames, 700, 'cubic-bezier(.4,0,.2,1)');
       motionTarget = materialTarget;
+    };
+    const arriveSurface = (origin: Element, target: HTMLElement, move: string) => {
+      const r = target.getBoundingClientRect(); const a = origin.getBoundingClientRect();
+      const dx = a.left + a.width / 2 - (r.left + r.width / 2);
+      const dy = a.top + a.height / 2 - (r.top + Math.min(22, r.height / 2));
+      const duration = Math.round(1050 + Math.min(250, r.width * r.height / 1000));
+      // One real DOM surface travels; no duplicated text or scaling of source characters.
+      while (runningMotion.current.size >= 36) {
+        const oldest = runningMotion.current.entries().next().value;
+        if (!oldest) break;
+        oldest[0].cancel(); if (oldest[1].element instanceof SVGElement) oldest[1].element.remove(); runningMotion.current.delete(oldest[0]);
+      }
+      const animation = target.animate([
+        { transform: `translate(${dx}px,${dy}px)`, clipPath: 'inset(0 46% 88% 46% round 6px)', opacity: .72 },
+        { transform: `translate(${dx * .2}px,${dy * .2}px)`, clipPath: 'inset(0 8% 60% 8% round 6px)', opacity: 1, offset: .48 },
+        { transform: 'none', clipPath: 'inset(0 0 0 0 round 6px)', opacity: 1 }
+      ], { duration, easing: 'cubic-bezier(.4,0,.2,1)' });
+      animation.id = `surface-${move}`;
+      runningMotion.current.set(animation, { element: target, target, rect: r });
+      const release = () => { runningMotion.current.delete(animation); animation.cancel(); };
+      void animation.finished.then(release, release);
     };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false, materialOnly = false) => {
       const a = origin.getBoundingClientRect();
@@ -244,15 +265,21 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           rule.style.stroke = getComputedStyle(target).borderLeftColor;
           play(rule, [{ opacity: .75 }, { opacity: 0 }], 480);
         } else if (label !== 'Read instrument') materialArrival(target, a, move, fromRight);
+        if (!materialOnly && label !== 'Read instrument' && (move === 'Lift' || move === 'Emit') && target instanceof HTMLElement) arriveSurface(origin, target, move);
       }
     };
     const draw = (arrivals = false) => {
       // A retained cue is valid only while its destination still occupies that space.
       // Content growth/wrapping or virtualization cancels it; passive hover does not.
       for (const [animation, cue] of runningMotion.current) {
-        const now = cue.target?.getBoundingClientRect();
+        let now = cue.target?.getBoundingClientRect();
+        const travelling = cue.target?.closest('.op');
+        if (now && travelling?.getAnimations().some(animation => animation.id.startsWith('surface-'))) {
+          const transform = new DOMMatrixReadOnly(getComputedStyle(travelling).transform);
+          now = new DOMRect(now.x - transform.m41, now.y - transform.m42, now.width, now.height);
+        }
         if (cue.target && (!cue.target.isConnected || !now || !cue.rect || Math.abs(now.left - cue.rect.left) > 2 || Math.abs(now.top - cue.rect.top) > 2 || Math.abs(now.width - cue.rect.width) > 2 || Math.abs(now.height - cue.rect.height) > 2)) {
-          animation.cancel(); cue.element.remove(); runningMotion.current.delete(animation);
+          animation.cancel(); if (cue.element instanceof SVGElement) cue.element.remove(); runningMotion.current.delete(animation);
         }
       }
       // Repaint passive relationships without deleting still-running arrivals.
@@ -306,12 +333,18 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           origin = viewer.querySelector<HTMLElement>(`.instrument.k-${op.kind}`) ?? undefined;
           label = 'Tool instrument';
         }
+        const originBounds = origin?.getBoundingClientRect();
+        const originPane = origin?.closest('.spine')?.getBoundingClientRect();
+        if (op.origin.type === 'map' && (!origin || !visible(origin) || (originBounds && originPane && (originBounds.top < originPane.top || originBounds.bottom > originPane.bottom)))) {
+          origin = viewer.querySelector<HTMLElement>(`.instrument.k-${op.kind === 'write' ? 'edit' : op.kind}`) ?? undefined;
+          label = 'Tool instrument';
+        }
         if (!origin) continue;
         const r = origin.getBoundingClientRect();
         const pane = origin.closest('.dock, .spine')?.getBoundingClientRect();
         if (r.width <= 0 || r.height <= 0 || r.top < 0 || r.bottom > innerHeight || (pane && (r.bottom <= pane.top || r.top >= pane.bottom))) continue;
         const materialOnly = ready.includes(op.id);
-        const move = materialOnly ? 'Lift' : arrivals && animate && plan.arrivals.includes(op.id) && !emitted.has(`start:${op.id}`) ? op.origin.type === 'map' ? 'Lift' : 'Emit' : undefined;
+        const move = materialOnly ? 'Lift' : arrivals && animate && plan.arrivals.includes(op.id) && !emitted.has(`start:${op.id}`) ? op.origin.type === 'map' && label !== 'Tool instrument' ? 'Lift' : 'Emit' : undefined;
         if (move) emitted.add(`start:${op.id}`);
         // A captured read has two real identities: its calling instrument and the file
         // it requested. Show the call leaving Read as well as the excerpt lifting from
@@ -322,7 +355,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           const dock = instrument?.closest('.dock')?.getBoundingClientRect();
           if (instrument && bounds && dock && bounds.width > 0 && bounds.top >= dock.top && bounds.bottom <= dock.bottom) tether(instrument, target, 'Read instrument', 'Emit', true);
         }
-        tether(origin, target, label, move, op.origin.type !== 'map', materialOnly);
+        tether(origin, target, label, move, op.origin.type !== 'map' || label === 'Tool instrument', materialOnly);
       }
       if (!arrivals || !animate) return;
       for (const id of plan.outcomes) {

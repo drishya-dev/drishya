@@ -63,7 +63,7 @@ function call(path: string, opts: { method?: string; headers?: Record<string, st
 const auth = () => ({ authorization: `Bearer ${s.token}` });
 
 it('bounds and validates paged history requests before reduction', async () => {
-  for (const body of [{ count: -1 }, { step: 'ten' }, { start: 0.5 }, { pinnedPassageIds: [1] }, { filter: { tool: {} } }]) {
+  for (const body of [{ promptStep: -1 }, { promptStep: 1.5 }, { promptStep: 'one' }, { count: -1 }, { step: 'ten' }, { start: 0.5 }, { pinnedPassageIds: [1] }, { filter: { tool: {} } }]) {
     expect((await call(`/v1/recordings/${recId}/history`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body })).status).toBe(400);
   }
   const result = await call(`/v1/recordings/${recId}/history`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body: { count: 1, start: 0 } });

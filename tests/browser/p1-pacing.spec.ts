@@ -123,6 +123,7 @@ test('a single delayed read result keeps its input and reading position instead 
 });
 
 test('actions share stable reading widths, wrap when full and restart after agent prose', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
@@ -134,21 +135,21 @@ test('actions share stable reading widths, wrap when full and restart after agen
   await expect(first).toBeAttached();
   await first.scrollIntoViewIfNeeded();
   const width = (await first.boundingBox())!.width;
-  append({ type: 'assistant', message: { id: 'row-more', role: 'assistant', content: [call(1), call(2), call(3)] } });
+  append({ type: 'assistant', message: { id: 'row-more', role: 'assistant', content: [call(1), call(2), call(3), call(4)] } });
   await app.ingest.sync(recordingId);
-  const last = page.locator('article.op-shell').filter({ hasText: 'row-allocation-3' });
+  const last = page.locator('article.op-shell').filter({ hasText: 'row-allocation-4' });
   await expect(last).toBeAttached();
-  const boxes = await Promise.all([0, 1, 2, 3].map((n) => page.locator('article.op-shell').filter({ hasText: `row-allocation-${n}` }).boundingBox()));
+  const boxes = await Promise.all([0, 1, 2, 3, 4].map((n) => page.locator('article.op-shell').filter({ hasText: `row-allocation-${n}` }).boundingBox()));
   expect(Math.abs(boxes[0]!.width - width)).toBeLessThan(1);
   expect(Math.abs(boxes[0]!.y - boxes[1]!.y)).toBeLessThan(1);
   expect(Math.abs(boxes[0]!.y - boxes[2]!.y)).toBeLessThan(1);
   expect(boxes[1]!.x).toBeGreaterThan(boxes[0]!.x);
-  expect(boxes[3]!.y).toBeGreaterThan(boxes[0]!.y + boxes[0]!.height);
+  expect(boxes[4]!.y).toBeGreaterThan(boxes[0]!.y + boxes[0]!.height);
   const passageId = await last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]').getAttribute('data-passage-id');
   append({ type: 'assistant', message: { id: 'row-prose', role: 'assistant', content: [{ type: 'text', text: 'Captured reasoning punctuates this action row.' }] } });
-  append({ type: 'assistant', message: { id: 'row-after-prose', role: 'assistant', content: [call(4)] } });
+  append({ type: 'assistant', message: { id: 'row-after-prose', role: 'assistant', content: [call(5)] } });
   await app.ingest.sync(recordingId);
-  const next = page.locator('article.op-shell').filter({ hasText: 'row-allocation-4' });
+  const next = page.locator('article.op-shell').filter({ hasText: 'row-allocation-5' });
   await expect(next).toBeAttached();
   expect(await next.locator('xpath=ancestor::*[contains(@class,"passage-slot")]').getAttribute('data-passage-id')).not.toBe(passageId);
   await expect(last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]')).toContainText('Captured reasoning punctuates this action row.');
@@ -183,7 +184,8 @@ for (const interruption of ['reading', 'reduced motion'] as const) test('a finit
   await expect.poll(() => page.evaluate(() => !!(window as unknown as { retainedCue?: object }).retainedCue)).toBe(true);
   const operation = page.locator('article.op-mcp').filter({ hasText: id });
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/retained-tool-arrival.png') });
-  await operation.locator('.op-head').hover();
+  // Do not let automation scroll a still-travelling surface into view: that is deliberate reading.
+  await operation.dispatchEvent('mouseover');
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   expect(await page.evaluate(() => {
     const cue = (window as unknown as { retainedCue: { node: SVGElement; animation: Animation } }).retainedCue;
@@ -202,7 +204,7 @@ test('tool silhouettes transfer from the exact visible instrument and cancel for
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   await expect(page.locator('.origins')).toBeAttached();
   await page.evaluate(() => {
-    const observed: { sourceX: number; sourceY: number; targetX: number; targetY: number; glyph: string; label: string; text: string; actualSource: number[]; actualTarget: number[]; interrupted: boolean }[] = [];
+    const observed: { sourceX: number; sourceY: number; targetX: number; targetY: number; glyph: string; label: string; text: string; actualSource: number[]; actualTarget: number[]; surface: boolean; interrupted: boolean }[] = [];
     (window as unknown as { toolboxTransfers: typeof observed }).toolboxTransfers = observed;
     new MutationObserver((changes) => {
       for (const change of changes) for (const node of change.addedNodes) {
@@ -212,9 +214,11 @@ test('tool silhouettes transfer from the exact visible instrument and cancel for
         const a = document.querySelector('[data-mcp-server="context7"][data-mcp-tool="get-library-docs"] .material-glyph')!.getBoundingClientRect();
         const card = [...document.querySelectorAll('article.op-mcp')].find((el) => el.textContent?.includes('synthetic-toolbox-input'))!;
         const b = card.querySelector('.op-head > .material-glyph')!.getBoundingClientRect();
+        const transform = new DOMMatrixReadOnly(getComputedStyle(card).transform);
+        const surface = card.getAnimations().some(animation => animation.id === 'surface-Emit');
         const active = node.getAnimations().length > 0;
         document.querySelector('.viewer')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-        observed.push({ sourceX: Number(node.getAttribute('data-source-x')), sourceY: Number(node.getAttribute('data-source-y')), targetX: Number(node.getAttribute('data-target-x')), targetY: Number(node.getAttribute('data-target-y')), glyph: node.querySelector('svg path')?.getAttribute('d') ?? '', label: node.getAttribute('data-origin-type') ?? '', text: node.textContent ?? '', actualSource: [a.x + a.width / 2, a.y + a.height / 2], actualTarget: [b.x + b.width / 2, b.y + b.height / 2], interrupted: active && node.getAnimations().length === 0 });
+        observed.push({ sourceX: Number(node.getAttribute('data-source-x')), sourceY: Number(node.getAttribute('data-source-y')), targetX: Number(node.getAttribute('data-target-x')), targetY: Number(node.getAttribute('data-target-y')), glyph: node.querySelector('svg path')?.getAttribute('d') ?? '', label: node.getAttribute('data-origin-type') ?? '', text: node.textContent ?? '', actualSource: [a.x + a.width / 2, a.y + a.height / 2], actualTarget: [b.x + b.width / 2 - transform.m41, b.y + b.height / 2 - transform.m42], surface, interrupted: active && node.getAnimations().length === 0 });
       }
     }).observe(document.querySelector('.origins')!, { childList: true });
   });
@@ -234,6 +238,7 @@ test('tool silhouettes transfer from the exact visible instrument and cancel for
   expect(transfer.sourceY).toBeCloseTo(transfer.actualSource[1]!, 0);
   expect(transfer.targetX).toBeCloseTo(transfer.actualTarget[0]!, 0);
   expect(transfer.targetY).toBeCloseTo(transfer.actualTarget[1]!, 0);
+  expect(transfer.surface).toBe(true);
   expect(transfer.interrupted).toBe(true);
   expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/toolbox-workspace.png') });
@@ -468,6 +473,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Tests  1 passed (1)' }] } });
   await app.ingest.sync(recordingId);
   await expect(panel).toContainText('npm test -- p1-live-verification');
+  await page.locator('.replay-diagnostics summary').click();
   await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await page.getByRole('button', { name: 'Search', exact: true }).click();
@@ -480,6 +486,57 @@ test('verification refreshes while reading and hides whole-recording facts durin
   await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
   await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
   await expect(panel).toContainText('npm test -- p1-live-verification');
+});
+
+test('every observed action kind can arrive as a real surface without removing its evidence', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1400 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await expect(page.locator('.origins')).toBeAttached();
+  await page.evaluate(() => {
+    const observed: string[] = [];
+    (window as unknown as { actionSurfaces: string[] }).actionSurfaces = observed;
+    new MutationObserver(() => {
+      for (const card of document.querySelectorAll<HTMLElement>('article.op')) {
+        if (card.getAnimations().some(animation => animation.id.startsWith('surface-'))) observed.push(card.dataset.opId!);
+      }
+    }).observe(document.querySelector('.origins')!, { childList: true });
+  });
+  const calls = [
+    { name: 'Read', input: { file_path: '/home/dev/shop/src/arrival-read.ts', limit: 3 }, kind: 'read' },
+    { name: 'Write', input: { file_path: '/home/dev/shop/src/arrival-write.ts', content: 'export const value = 1;' }, kind: 'write' },
+    { name: 'Edit', input: { file_path: '/home/dev/shop/src/arrival-edit.ts', old_string: '1', new_string: '2' }, kind: 'edit' },
+    { name: 'Grep', input: { pattern: 'arrival', path: '/home/dev/shop/src' }, kind: 'search' },
+    { name: 'Bash', input: { command: 'printf synthetic-arrival' }, kind: 'shell' },
+    { name: 'Bash', input: { command: 'npm test' }, kind: 'test' },
+    { name: 'WebSearch', input: { query: 'synthetic arrival documentation' }, kind: 'web' },
+    { name: 'Task', input: { subagent_type: 'Explore', description: 'Synthetic arrival review', prompt: 'Read the fixture only' }, kind: 'spawn' },
+    { name: 'TodoWrite', input: { todos: [{ content: 'Review captured evidence', status: 'in_progress' }] }, kind: 'plan' },
+    { name: 'SyntheticUnknownTool', input: { captured: 'synthetic action' }, kind: 'other' },
+    { name: 'mcp__arrival__inspect', input: { fixture: 'synthetic' }, kind: 'mcp' },
+  ];
+  for (const [index, call] of calls.entries()) {
+    const latest = page.getByRole('button', { name: /Back to latest/ });
+    if (await latest.isVisible()) await latest.click();
+    const id = `all-kind-arrival-${index}`;
+    append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: call.name, input: call.input }] } });
+    await app.ingest.sync(recordingId);
+    // Pin the captured identity: Write becomes an Edit material on completion,
+    // and an older same-kind card can already be visible before this SSE arrives.
+    const operation = page.locator(`article[data-op-id="${recordingId}.${id}"]`);
+    await expect(operation).toBeVisible();
+    await expect(operation).toHaveClass(new RegExp(`op-${call.kind}\\b`));
+    const operationId = await operation.getAttribute('data-op-id');
+    await expect.poll(() => page.evaluate(() => (window as unknown as { actionSurfaces: string[] }).actionSurfaces), { message: `${call.name}: the actual DOM surface owns a finite arrival` }).toContain(operationId);
+    await operation.dispatchEvent('pointerdown');
+    await operation.dispatchEvent('pointerup');
+    await expect(operation).toBeVisible();
+    expect(await operation.evaluate(el => el.getAnimations().some(animation => animation.id.startsWith('surface-')))).toBe(false);
+    append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Synthetic recorded completion' }] } });
+    append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', content: [{ type: 'text', text: `Captured outcome for ${call.name}.` }] } });
+    await app.ingest.sync(recordingId);
+    await expect(page.locator('.prose').last()).toContainText(`Captured outcome for ${call.name}`);
+  }
 });
 
 test('sustained live reading keeps evidence, anchors and presentation bounded', async ({ page }) => {

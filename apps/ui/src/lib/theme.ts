@@ -16,7 +16,7 @@ export function mapPalette(canvas: HTMLCanvasElement) {
   const styles = getComputedStyle(canvas);
   const colour = (token: string) => styles.getPropertyValue(token).trim();
   return {
-    edge: colour('--line'), node: colour('--line-3'), active: colour('--t3'),
+    edge: colour('--graph-edge') || colour('--line'), node: colour('--graph-node') || colour('--line-3'), active: colour('--t1'),
     focus: colour('--focus'), text: colour('--t1'), background: colour('--bg'),
     tones: { read: colour('--t2'), search: colour('--focus'), write: colour('--edited'), fail: colour('--fail'), pass: colour('--pass') },
   };

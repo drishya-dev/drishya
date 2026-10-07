@@ -1,4 +1,4 @@
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
@@ -9,7 +9,7 @@ import { Markdown } from '../lib/markdown.tsx';
 import { useApp } from '../state.ts';
 import { CodeView, DiffView, Output, timeOf, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
-import { presentationOf } from '../lib/presentation.ts';
+import { presentationOf, readingWidth } from '../lib/presentation.ts';
 import { Origins } from './Origins.tsx';
 import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
@@ -26,6 +26,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const selectedOp = useApp((s) => s.selectedOp);
   const expandedOp = useApp((s) => s.expandedOp);
   const focusObservationId = useApp((s) => s.focusObservationId);
+  const promptStep = useApp((s) => s.promptStep);
   const set = useApp((s) => s.set);
   const ref = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ top: 0, height: 900 });
@@ -56,7 +57,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const targetIndex = scene.passages.findIndex((ps) =>
     selectedOp ? ps.ops.some((op) => op.id === selectedOp) : focusObservationId ?
       ps.ops.some((op) => ops.get(op.id)?.observationIds.includes(focusObservationId)) ||
-      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : false,
+      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : promptStep !== undefined ? ps.id === projection.passages.find(p => p.firstStep >= promptStep - 1)?.id : false,
   );
   const targetId = scene.passages[targetIndex]?.id;
   const expandedId = scene.passages.find((ps) => ps.ops.some((op) => op.id === expandedOp))?.id;
@@ -325,7 +326,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       <Origins scene={scene} projection={projection} stagedArrival={stagedArrivalStep.current === scene.total} isProgrammaticScroll={isProgrammaticScroll} />
     </div>
       {!follow && (
-        <button className="follow-pill" onClick={() => { userScrollUntil.current = 0; set({ follow: true, selectedOp: undefined, focusObservationId: undefined, held: false }); }}>
+        <button className="follow-pill" onClick={() => {
+          userScrollUntil.current = 0;
+          set({ follow: true, selectedOp: undefined, focusObservationId: undefined, promptStep: undefined, held: false });
+          if (mode === 'replay') useApp.getState().showHistory();
+        }}>
           {mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest ↓
         </button>
       )}
@@ -397,6 +402,9 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const lit = !!hoveredPath && op.paths.some((p) => p.path === hoveredPath);
   const from = so.origin.type === 'map' ? 'from-map' : 'from-dock';
   const presentation = presentationOf(op);
+  const [sourceWidth, setSourceWidth] = useState<number>();
+  const measureSource = useCallback((text: string) => setSourceWidth(Math.max(320, Math.min(580, readingWidth(...text.split('\n').slice(0, 12))))), []);
+  const readingAllocation = presentation.width ?? sourceWidth;
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   return (
     <article
@@ -404,7 +412,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       data-material={presentation.material}
       data-origin={so.origin.type}
       className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
-      style={{ zIndex: selected ? 50 : 10 + index }}
+      style={{ zIndex: selected ? 50 : 10 + index, ...(readingAllocation ? { '--reading-width': `${readingAllocation}px` } : {}) } as React.CSSProperties}
       tabIndex={0}
       onClick={(e) => {
         // Reading or selecting captured content must not open an inspector and reflow
@@ -430,7 +438,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         )}
       </header>
       {!expanded && <div className="op-body">
-        <OpPreview op={op} resolving={so.resolving} />
+        <OpPreview op={op} resolving={so.resolving} onSource={measureSource} />
       </div>}
       {expanded && <ExpandedOperation op={op} />}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
@@ -452,7 +460,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'edit':
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.path} · captured patch{d.reconstruction !== 'complete' ? ' · after-state not verified' : ''}</div>
-        {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : <p className="muted">No change captured.</p>}
+        {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ArtifactReader id={op.artifactIds.find(id => id.endsWith('_after'))} kind="code" path={d.path} provenance /> : <p className="muted">No source bytes or patch captured.</p>}
         <button className="material-more" onClick={() => select(op.id)}>Open provenance and file states</button>
       </div>;
     case 'search':
@@ -515,20 +523,20 @@ function ResultArea({ state, resolving, children }: { state: Operation['status']
   </div>;
 }
 
-function OpPreview({ op, resolving }: { op: Operation; resolving: boolean }) {
+function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: boolean; onSource?: (text: string) => void }) {
   const d = op.detail;
   const set = useApp((s) => s.set);
   switch (d.kind) {
     case 'read':
       return <>
         <div className="request-line excerpt-range">{op.status === 'running' ? <>Requested from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · awaiting excerpt</> : 'Historical source · recorded result'}</div>
-        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : <ReadPreview opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
       </>;
     case 'edit':
       return <>
         <div className="request-line">{op.status === 'running' ? 'Patch request · awaiting recorded outcome' : `Captured patch${d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}`}</div>
         {op.status === 'running' && <PatchRequest op={op} path={d.path} />}
-        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={14} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No change captured.'}</div>}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={14} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ReadPreview opId={op.id} artifactId={op.artifactIds.find(id => id.endsWith('_after'))} start={1} path={d.path} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No source bytes or patch captured.'}</div>}</ResultArea>
       </>;
     case 'search':
       return (
@@ -639,8 +647,9 @@ function PatchRequest({ op, path }: { op: Operation; path: string }) {
   return <div className="patch-request">{view.text !== undefined ? <CodeView text={view.text} path={path} maxLines={12} /> : <span className="muted">{view.error ?? view.unavailable ?? 'Opening captured patch input…'}</span>}</div>;
 }
 
-function ReadPreview({ opId, artifactId, start, path }: { opId: string; artifactId?: string; start: number; path: string }) {
+function ReadPreview({ opId, artifactId, start, path, onSource }: { opId: string; artifactId?: string; start: number; path: string; onSource?: (text: string) => void }) {
   const { text, artifact, error, unavailable } = useArtifact(artifactId, { scope: 'preview' });
+  useEffect(() => { if (text !== undefined) onSource?.(text); }, [text, onSource]);
   const set = useApp((s) => s.set);
   if (!artifactId) return <div className="muted">Content not captured</div>;
   if (error) return <div className="muted">{error}</div>;

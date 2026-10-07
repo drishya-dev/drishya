@@ -37,6 +37,7 @@ interface State {
 
   /** Normal reading shows every committed step; replay alone applies a visibility cursor. */
   mode: 'history' | 'replay';
+  replayDiagnostics: boolean;
   step: number;
   playing: boolean;
   speed: number;
@@ -56,6 +57,8 @@ interface State {
   expandedOp?: string;
   /** Stable captured observation to bring into view without switching normal history to replay. */
   focusObservationId?: string;
+  /** Reading navigation, independent of the capture/replay cursor. */
+  promptStep?: number;
   hoveredPath?: string;
   hoveredOp?: string;
   /** The held reader's first visible passage; presentation context, not a capture cursor. */
@@ -64,6 +67,7 @@ interface State {
   filePanel?: string;
   filter?: ComposeInput['filter'];
   inspectorTab: 'detail' | 'evidence' | 'explain';
+  inspectorWidth: number;
   briefingOpen: boolean;
   searchOpen: boolean;
 
@@ -105,6 +109,7 @@ export const useApp = create<State>((set, get) => ({
   renderedRevisions: {},
   connection: 'connected',
   mode: 'history',
+  replayDiagnostics: false,
   step: 0,
   playing: false,
   speed: 1,
@@ -118,6 +123,7 @@ export const useApp = create<State>((set, get) => ({
   theme: storedTheme(),
   settingsOpen: false,
   inspectorTab: 'detail',
+  inspectorWidth: 760,
   briefingOpen: false,
   searchOpen: false,
 
@@ -126,7 +132,7 @@ export const useApp = create<State>((set, get) => ({
   async openRecording(id, opts = {}) {
     const src = get().source;
     if (!src) return;
-    set({ error: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, filePanel: undefined, explore: false, compareAgents: false });
+    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, filePanel: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     try {
@@ -210,7 +216,7 @@ export const useApp = create<State>((set, get) => ({
   },
 
   select(opId) {
-    set({ selectedOp: opId, ...(opId ? { expandedOp: undefined, playing: false, held: true, follow: false, inspectorTab: 'detail' } : {}) });
+    set({ selectedOp: opId, promptStep: undefined, ...(opId ? { expandedOp: undefined, playing: false, held: true, follow: false, inspectorTab: 'detail' } : {}) });
     if (opId && get().historyPage && !get().projection?.operations.some((op) => op.id === opId)) void get().loadHistoryWindow({ selectedOperationId: opId }).catch((error) => set({ error: error.message }));
   },
 
@@ -220,7 +226,7 @@ export const useApp = create<State>((set, get) => ({
 
   showHistory() {
     const projection = get().projection;
-    set({ mode: 'history', step: get().historyPage?.scene.total ?? projection?.timeline.length ?? 0, playing: false, held: false, follow: true, selectedOp: undefined, expandedOp: undefined });
+    set({ promptStep: undefined, mode: 'history', step: get().historyPage?.scene.total ?? projection?.timeline.length ?? 0, playing: false, held: false, follow: true, selectedOp: undefined, expandedOp: undefined });
     if (get().historyPage) void get().loadHistoryWindow({}).catch((error) => set({ error: error.message }));
   },
 
