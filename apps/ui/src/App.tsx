@@ -156,7 +156,7 @@ function useKeyboard() {
         return;
       }
       if (t.closest('input, textarea, select, button, a, [role="slider"], [role="dialog"], .op-expanded') || t.isContentEditable) return;
-      if (s.mode === 'history' && [' ', 'ArrowRight', 'ArrowLeft', 'Home', 'End', 'e', 'E', 'f', 'F'].includes(k)) return;
+      if (!document.querySelector('.t-controls') && [' ', 'ArrowRight', 'ArrowLeft', 'Home', 'End', 'e', 'E', 'f', 'F'].includes(k)) return;
       if (k === ' ') {
         e.preventDefault();
         s.togglePlay();

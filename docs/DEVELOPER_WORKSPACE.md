@@ -6,6 +6,8 @@ The builder wants Drishya to support the reading and understanding work that oth
 
 Read with [VISION](VISION.md), [PRODUCT_DIRECTION](PRODUCT_DIRECTION.md), [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) and [CODEBASE](CODEBASE.md). The delivery document describes what already works. This document persists the new direction across model/chat switches.
 
+**7 October implemented refinement:** [24](review/24-prompt-workspace.md) adds captured-prompt chapters/follow, compact allocations, whole DOM material arrivals, resizable operation detail and file trails, and comparison reading space. It fixes actual Write after-source without patch hunks. Folder/current-file/symbol navigation and the proposals below remain staged; harness prompting is researched only. The strict self-review in [24] guides the next bounded slice.
+
 ## The developer journey to design around
 
 An agent reads a guard. Its map node highlights and the captured excerpt lifts into the passage. Hovering the reference can clarify the recorded range; deliberate activation opens a reading surface at that range. The developer follows a qualified import to understand a nearby type, compares the captured change, then opens the recorded failing test and the later test run. They return to their original position while live work continues below. They can do this through the map or a familiar folder navigator without reconstructing the session from logs.

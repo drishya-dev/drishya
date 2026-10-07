@@ -8,8 +8,11 @@ import { Output, ProvenanceBadge, timeOf } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { summarizeInput } from './History.tsx';
 import { VerificationPanel } from './Verification.tsx';
+import { ReadingResize } from './ReadingResize.tsx';
 
 export function Inspector({ projection }: { projection: Projection }) {
+  const width = useApp(s => s.inspectorWidth);
+  const setWidth = (inspectorWidth: number) => useApp.setState({ inspectorWidth });
   const selected = useApp((s) => s.selectedOp);
   const tab = useApp((s) => s.inspectorTab);
   const set = useApp((s) => s.set);
@@ -20,7 +23,8 @@ export function Inspector({ projection }: { projection: Projection }) {
   const links = projection.links.filter((l) => (l.from === op.id || l.to === op.id || op.observationIds.includes(l.from) || op.observationIds.includes(l.to)) && l.relation !== 'tool-result');
 
   return (
-    <aside className="inspector" aria-label="Operation detail" style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties}>
+    <aside className="inspector" aria-label="Operation detail" style={{ '--agent': agentColor(agent, projection.agents), '--inspector-width': `${width}px` } as React.CSSProperties}>
+      <ReadingResize value={width} minimum={360} maximum={1400} change={setWidth} label="Resize operation detail" fromRight />
       <header className="insp-head">
         <div className="insp-meta">
           <span className="agent-dot" />
@@ -77,7 +81,7 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
     case 'edit': {
       const before = artifacts.find((a) => a.id.endsWith('_before'));
       const after = artifacts.find((a) => a.id.endsWith('_after'));
-      return <EditDetail op={op} before={before?.id} after={after?.id} afterProv={after} />;
+      return <EditDetail key={op.id} op={op} before={before?.id} after={after?.id} afterProv={after} />;
     }
     case 'search':
       return (
@@ -192,7 +196,7 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
 }
 
 function EditDetail({ op, before, after, afterProv }: { op: Operation; before?: string; after?: string; afterProv?: Projection['artifacts'][number] }) {
-  const [view, setView] = useState<'diff' | 'after' | 'before'>('diff');
+  const [view, setView] = useState<'diff' | 'after' | 'before'>(op.detail.kind === 'edit' && !op.detail.hunks.length && after ? 'after' : 'diff');
   const d = op.detail;
   if (d.kind !== 'edit') return null;
   return (

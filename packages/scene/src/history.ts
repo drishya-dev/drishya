@@ -3,6 +3,8 @@ import type { ComposeInput, Marker, Scene } from './index.ts';
 
 /** Local reader API, separate from the immutable capture/event schema. */
 export interface HistoryQuery {
+  /** Locate the first reading passage after a captured turn; does not limit evidence. */
+  promptStep?: number;
   start?: number;
   count?: number;
   step?: number;

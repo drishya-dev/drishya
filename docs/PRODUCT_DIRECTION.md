@@ -1,5 +1,7 @@
 # Product direction — work you can follow, evidence you can revisit
 
+**7 October refinement:** [24](review/24-prompt-workspace.md) records implemented captured-prompt navigation, compact parallel receipts, actual DOM surface arrivals, resizable reading/comparison and the strict implementer review. Normal use is scrolling and following from a captured prompt; movie transport is optional Diagnostics. Harness prompting was researched only; observe-only remains the product boundary.
+
 **Decision date: 30 September 2026.** This is the durable product plan following the builder's clarification and a review of the working draft. Read with [VISION](VISION.md), the [implementation roadmap](IMPLEMENTATION_ROADMAP.md), and the [baseline audit](review/06-baseline-audit.md). Proposed features below are **not claims about what the application already does**.
 
 ## 1. What we are trying to make indispensable

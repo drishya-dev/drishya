@@ -93,3 +93,14 @@ Primary documentation/source descriptions were rechecked for the [current produc
 | [OpenAI conversation state](https://developers.openai.com/api/docs/guides/conversation-state) | Conversations API persists state used with Responses | Not evidence that a consumer ChatGPT archive is accessible through that API |
 
 No generic supported live connector to arbitrary consumer ChatGPT/Claude chat archives was verified. Treat those as separate future integrations, with export-format research and capability declarations. Do not confuse tools available to the coding assistant inside its host app with APIs available to Drishya's users.
+
+## 7 October — harness prompting feasibility
+
+Primary sources checked for the builder’s question, not permission to add control:
+
+| Source | Verified scope | Limit for Drishya |
+|---|---|---|
+| [Claude programmatic CLI](https://code.claude.com/docs/en/headless) | Non-interactive `-p`, structured/stream-json output and continuation options | Does not establish safe prompt injection into arbitrary already-running terminal sessions |
+| [Codex app-server protocol](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md) | Threads, `turn/start` and progress notifications for a client-controlled session | Does not establish passive attachment/control of every existing Codex process |
+
+A separate supported-interface controller is feasible in principle, with explicit session/workspace ownership, authentication, permissions, approval handling and cancellation. Drishya remains observe-only; no prompt-sending or launch endpoint was added. This is desk research, not tested interoperability. See [24](24-prompt-workspace.md).

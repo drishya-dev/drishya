@@ -11,6 +11,27 @@ let dir: string;
 afterEach(async () => { await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 describe('worker-owned history pages', () => {
+  it('locates an older captured prompt without rewinding or loading the whole recording', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'drishya-prompts-'));
+    const journal = join(dir, 'rollout.jsonl');
+    const timestamp = '2026-10-07T00:00:00Z';
+    const rows = [JSON.stringify({ timestamp, type: 'session_meta', payload: { id: 'prompt-reader', cwd: '/home/dev/shop' } })];
+    for (let i = 0; i < 70; i++) {
+      rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'message', role: 'user', content: [{type:'input_text',text:`Prompt chapter ${i}`}] } }));
+      rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{type:'output_text',text:`Captured response ${i}`}] } }));
+    }
+    (await import('node:fs')).writeFileSync(journal, rows.join('\n') + '\n');
+    app = new App(join(dir, 'data'));
+    const { recordingId } = await app.ingest.importSource('codex', journal);
+    const latest = await app.history.page(recordingId, { count: 2 });
+    const turn = latest.markers.find(m => m.type === 'turn')!;
+    const earlier = await app.history.page(recordingId, { count: 2, promptStep: turn.step });
+    expect(earlier.scene.total).toBe(latest.scene.total);
+    expect(earlier.scene.step).toBe(latest.scene.step);
+    expect(earlier.projection.prose.some(p => p.text === 'Captured response 0')).toBe(true);
+    expect(earlier.loadedPassageIds).toHaveLength(2);
+    expect(earlier.projection.prose.length).toBeLessThan(70);
+  });
   it('counts the whole session since a reading mark while bounding digest previews', async () => {
     dir = mkdtempSync(join(tmpdir(), 'drishya-since-'));
     const journal = join(dir, 'rollout.jsonl');
