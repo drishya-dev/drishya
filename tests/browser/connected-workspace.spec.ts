@@ -214,3 +214,42 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
   await expect(reader).toHaveCount(0);
   await expect(page.locator('.map')).toHaveClass(/exploring/);
 });
+
+
+test('compact native composer contains its decoration and narrow form without artificial scrollbars', async ({ page }) => {
+  const root = join(dir, 'session-repository');
+  const journal = join(dir, 'glass-proof.jsonl');
+  const base = { sessionId: '77777777-7777-4777-8777-777777777777', cwd: root, timestamp: '2026-10-07T12:00:00Z' };
+  writeFileSync(journal, [
+    { ...base, type: 'user', uuid: 'glass-user', message: { role: 'user', content: 'Glass proof synthetic session' } },
+    { ...base, type: 'assistant', uuid: 'glass-prose', message: { role: 'assistant', content: [{ type: 'text', text: Array.from({ length: 20 }, (_, n) => `Captured explanation ${n}: the source remains available as the developer reads earlier work. These paragraphs are actual synthetic journal content, not cloned overlay text or a fake backdrop.`).join('\n\n') }] } },
+  ].map(row => JSON.stringify(row)).join('\n') + '\n');
+  await app.ingest.importSource('claude-code', journal);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Glass proof synthetic session/ }).click();
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  await expect(composer).toBeVisible();
+  await page.locator('.history').dispatchEvent('wheel', { deltaY: -100 });
+  await page.locator('.history').evaluate(el => { el.scrollTop = 300; });
+  const glass = await composer.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    const prose = document.querySelector('.prose')!.getBoundingClientRect();
+    const history = document.querySelector('.history')!.getBoundingClientRect();
+    return { worldBottom: history.bottom, composerBottom: box.bottom, opacity: getComputedStyle(el).opacity, background: getComputedStyle(el).backgroundColor, field: getComputedStyle(el.querySelector('textarea')!).backgroundColor, decoration: getComputedStyle(el, '::before').content, overflowX: el.scrollWidth - el.clientWidth, overflowY: el.scrollHeight - el.clientHeight, overlapping: prose.top < box.bottom && prose.bottom > box.top };
+  });
+  expect(glass.opacity).toBe('1');
+  expect(glass.background).toMatch(/^rgb\(/);
+  expect(glass.field).toBe('rgba(0, 0, 0, 0)');
+  expect(glass.decoration).toBe('none');
+  expect(glass.overflowX).toBe(0);
+  expect(glass.overflowY).toBe(0);
+  expect(glass.overlapping).toBe(true);
+  expect(glass.worldBottom).toBeGreaterThanOrEqual(glass.composerBottom);
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/native-composer-glass.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await composer.locator('textarea').fill('a-long-prompt-token-' .repeat(30));
+  await expect.poll(() => composer.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
+  await expect.poll(() => composer.evaluate(el => el.scrollHeight - el.clientHeight)).toBe(0);
+
+});

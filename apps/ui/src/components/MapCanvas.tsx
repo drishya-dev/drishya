@@ -319,7 +319,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
             const k = graph && graph.nodes.length > 80 ? 6 : 2;
             animateCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
             setTip({ node, x: size.w / 2, y: size.h / 2 });
-            set({ hoveredPath: node.id, follow: false, playing: false, held: true });
+            set({ hoveredPath: node.id, follow: false });
           }}>{node.path}</button>)}
           <span className="muted small">{matches.length} matched files{matches.length > 30 ? ' · first 30 shown; refine the query' : ''}</span>
           {tip && <button className="btn" onClick={() => { set({ filePanel: tip.node.id, currentFile: undefined }); }}>Open recorded work on this file</button>}

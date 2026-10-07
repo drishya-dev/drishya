@@ -58,7 +58,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(operation.locator('.state-running')).toHaveCount(1);
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Emit');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.some((material) => material.move === 'Emit' && material.width > 0 && material.height > 0))).toBe(true);
-  expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+  expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
 
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'drishya-live-output' }] } });
   await app.ingest.sync(recordingId);
@@ -76,7 +76,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(page.locator('article.op-read').last()).toContainText('awaiting excerpt');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Lift');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Settle');
-  await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+  await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
 });
 
 test('a single delayed read result keeps its request readable in a bounded material', async ({ page }) => {
@@ -243,7 +243,7 @@ test('reduced motion keeps captured history and suppresses relationship animatio
   await page.goto(demo.href);
   await expect(page.locator('article.op-edit').last()).toBeVisible();
   await expect(page.locator('.origins')).toBeHidden();
-  expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+  expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
 });
 
 test('file relationships start at measured renderer nodes and fall back when the map is hidden', async ({ page }) => {
@@ -550,11 +550,41 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     const nodes = await page.evaluate(() => document.querySelectorAll('*').length);
     peakNodes = Math.max(peakNodes, nodes);
     expect(nodes).toBeLessThan(2500);
-    expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+    expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
     await page.getByRole('button', { name: /Back to latest/ }).click();
     await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight)), { message: `Round ${rounds}: explicit return reaches the latest captured work` }).toBeLessThan(2);
     rounds++;
     await page.waitForTimeout(5000);
   }
   console.log(JSON.stringify({ p1SyntheticReader: { elapsedMs: Date.now() - started, rounds, peakNodes } }));
+});
+
+
+test('replay clock advances independently while hovering, scrolling above and reading an action', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(new URL('/?demo&at=16', server.launchUrl).href);
+  await page.getByRole('combobox', { name: 'Speed', exact: true }).selectOption('0.5');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  const history = page.locator('.history');
+  const bounds = (await history.boundingBox())!;
+  await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 130);
+  await page.mouse.wheel(0, -10000);
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  const step = () => page.getByRole('slider', { name: 'Timeline' }).getAttribute('aria-valuenow').then(Number);
+  const before = await step();
+  const read = page.locator('article.op-read').first();
+  await read.hover();
+  await expect(read).toHaveAttribute('data-hover-reading', 'focused');
+  await expect.poll(step, { timeout: 15000 }).toBeGreaterThan(before);
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await read.getByRole('button', { name: /Expand/ }).click();
+  await expect(read.locator('.op-expanded')).toBeVisible();
+  const readingStep = await step();
+  await expect.poll(step, { timeout: 15000 }).toBeGreaterThan(readingStep);
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /Back to latest/ }).click();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
 });

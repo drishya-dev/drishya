@@ -32,18 +32,18 @@ export function ReadingReferenceProvider({ children }: { children: ReactNode }) 
   useEffect(() => { setPin(undefined); setOpen(false); setCopyStatus(''); }, [source, recordingId, mode, cutoff, available]);
   useLayoutEffect(() => { if (open && reference) close.current?.focus(); }, [open, reference]);
   const minimize = () => { setOpen(false); toggle.current?.focus(); };
-  const hold = () => useApp.setState({ follow: false, playing: false, held: true });
+  const hold = () => useApp.setState({ follow: false });
   return <ReferenceContext.Provider value={{ pin(reference) {
     // Defense in depth: callers cannot retain an oversized or multi-page reference.
     if (reference.text.length * 2 > 64 * 1024 || reference.end - reference.start + 1 > 200) return;
     setPin({ source, recordingId, mode, cutoff, reference: { ...reference, artifact: structuredClone(reference.artifact) } });
     setOpen(false); setCopyStatus('');
-    useApp.setState({ follow: false, playing: false, held: true });
+    useApp.setState({ follow: false });
   } }}>
     {children}
     {reference && <aside className={`pinned-reference${open ? ' open' : ''}`} aria-label="Pinned source reference" tabIndex={-1} onPointerDown={(e) => { hold(); if (!(e.target as HTMLElement).closest('button, input, a')) e.currentTarget.focus({ preventScroll: true }); }} onWheel={hold} onKeyDown={(e) => { hold(); e.stopPropagation(); if (e.key === 'Escape' && open) { e.preventDefault(); minimize(); } }}>
       <div className="reference-heading">
-        <button className="btn ghost reference-toggle" ref={toggle} aria-expanded={open} aria-controls="pinned-source-content" onClick={() => { setOpen(!open); useApp.setState({ follow: false, playing: false, held: true }); }}>
+        <button className="btn ghost reference-toggle" ref={toggle} aria-expanded={open} aria-controls="pinned-source-content" onClick={() => { setOpen(!open); useApp.setState({ follow: false }); }}>
           <span className="material-context">Pinned source · {reference.start}–{reference.end}</span>
           <span className="reference-path">{reference.path ?? 'Historical source'}</span>
         </button>

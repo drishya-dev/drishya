@@ -214,12 +214,12 @@
 }
 .connected-workspace .crown > * { position: relative; z-index: 1; }
 .connected-workspace .crown-sample { transform: none; }
-.connected-workspace .prompt-composer.open { background: transparent; box-shadow: none; }
-.connected-workspace .prompt-composer.open::before {
-  content: ''; position: absolute; inset: -36px -8px -12px; pointer-events: none; border-radius: 12px;
-  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg) 18%, transparent) 45%, color-mix(in srgb, var(--bg) 40%, transparent));
-  backdrop-filter: blur(10px); mask-image: linear-gradient(to bottom, transparent, #000a 45%, #000);
-}
+/* Keep the compact input readable; decorative layers must not create scroll extents. */
+.connected-workspace .prompt-composer.open { background: var(--s1); box-shadow: 0 4px 16px #0003; overflow-x: hidden; overflow-y: auto; }
+.connected-workspace .prompt-composer.open::before { content: none; }
+.prompt-composer form, .prompt-composer .composer-actions, .prompt-composer textarea { min-width: 0; max-width: 100%; }
+.prompt-composer .composer-actions { flex-wrap: wrap; }
+.prompt-composer .composer-actions label { min-width: 0; overflow-wrap: anywhere; }
 .prompt-composer > * { position: relative; z-index: 1; }
 .connected-workspace .prompt-composer textarea { font-size: 15px; line-height: 1.65; }
 .connected-workspace .history .turn-text, .connected-workspace .history .prose { font-size: 15px; line-height: 1.75; }
@@ -308,3 +308,10 @@
 @media (prefers-reduced-motion: reduce) { .connected-workspace .history .op-body { transition: none; } }
 @media (hover: none) { .connected-workspace .history .op-body { scrollbar-color: var(--t3) transparent; } }
 @media (forced-colors: active) { .connected-workspace .history .op-body { scrollbar-color: auto; } }
+
+/* Do not clip the world above the composer: use document padding, not a shortened viewport. */
+.connected-workspace .history { bottom: 0; }
+.connected-workspace .history-inner { padding-bottom: calc(var(--composer-gap, 0px) + 36px); }
+
+/* The input stays stable during capture; workspace arrivals belong to work material. */
+.connected-workspace:not(.still) .prompt-composer.open { animation: none; }
