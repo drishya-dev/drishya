@@ -1,5 +1,7 @@
 # Codebase — the system as built
 
+**Latest frame/material correction (7 October):** [29 — Centred neutral workspace](review/29-centred-neutral-workspace.md) centres work independently of the full-height explorer, hides single-agent header switches, keeps one compact translucent bottom input, moves prompt navigation to overflow, and uses shared neutral boxes with coloured icons and error-only red boundaries. This supersedes conflicting chrome/colour choices in 28; consent, evidence and temporary Settings replay remain.
+
 **Latest presentation correction (7 October):** [28 — Unified stage](review/28-unified-stage.md) replaces duplicate plate/glyph arrivals with one real DOM transform, tightens vivid materials and the bottom composer, removes redundant chrome, and introduces a cached spatial pyramid with smooth dot-map zoom/detail. It supersedes conflicting presentation in 24–27; captured truth, native permissions and publishing-only CI remain unchanged.
 
 **7 October connected workspace:** [26](review/26-connected-workspace.md) is the implementation record for `workspace.ts`, `controller.ts`, session folders/current disk reading, native prompt continuation, runtime inventory and visible action connections. New routes are listed there. No captured event schema, store schema or runtime dependency changed. Historical artifacts and current disk bytes remain separate capabilities; controller output is an ephemeral native response receipt, not a synthetic captured event.

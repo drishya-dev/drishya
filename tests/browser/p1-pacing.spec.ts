@@ -70,6 +70,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await app.ingest.sync(recordingId);
   await expect(page.locator('.prose').last()).toContainText('Now reading the guard');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Surface');
+  await page.locator('.folder-tree [data-spine-path="src/checkout/guard.ts"]').scrollIntoViewIfNeeded();
   append({ type: 'assistant', message: { id: 'p1-next-read', role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id: 'p1-next-read', name: 'Read', input: { file_path: '/home/dev/shop/src/checkout/guard.ts', offset: 1, limit: 3 } }] } });
   await app.ingest.sync(recordingId);
   await expect(page.locator('article.op-read').last()).toContainText('awaiting excerpt');
@@ -246,14 +247,19 @@ test('file relationships start at measured renderer nodes and fall back when the
     const response = await route.fetch();
     const bundle = await response.json();
     const node = bundle.graph.nodes.find((node: { path: string }) => node.path === 'test/checkout.test.ts');
-    node.x = .95; node.y = .35;
+    node.x = .86; node.y = .35;
     await route.fulfill({ response, json: bundle });
   });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
   const edit = page.locator('article.op-edit').last();
+  await expect.poll(async () => { const reads = await page.locator('article.op-read').count(); return reads > 0 && reads === await page.locator('article.op-read .read-preview').count(); }).toBe(true);
+  await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect.poll(() => page.locator('.history').evaluate(el => [...el.querySelectorAll('article')].flatMap(card => card.getAnimations()).filter(a => a.id.startsWith('surface-') && a.playState === 'running').length)).toBe(0);
   await expect(page.locator('.map [data-origin-file="test/checkout.test.ts"]')).toHaveAttribute('data-origin-visible', 'true');
-  await edit.hover();
+  await page.mouse.move(0, 0);
+  await edit.locator('.op-head').hover();
   const tether = page.locator('.origin-thread[data-origin-type="Repository node"]');
   await expect(tether).toHaveCount(1);
   const point = (await page.locator('.map [data-origin-file="test/checkout.test.ts"]').boundingBox())!;
@@ -263,6 +269,7 @@ test('file relationships start at measured renderer nodes and fall back when the
   expect(Number(coordinates[1])).toBeCloseTo(measured.x + measured.width / 2, 0);
   expect(Number(coordinates[2])).toBeCloseTo(measured.y + measured.height / 2, 0);
   // Occlusion must switch to another real view of the node, not draw through the reader.
+  await page.locator('.folder-tree [data-spine-path="test/checkout.test.ts"]').scrollIntoViewIfNeeded();
   await page.evaluate((point) => {
     const cover = document.createElement('div'); cover.className = 'inspector'; cover.id = 'synthetic-origin-cover';
     Object.assign(cover.style, { position: 'fixed', animation: 'none', transform: 'none', zIndex: '1000', left: `${point.x - 4}px`, top: `${point.y - 4}px`, width: '16px', height: '16px' });
@@ -279,7 +286,9 @@ test('file relationships start at measured renderer nodes and fall back when the
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('checkbox', { name: /^Repository map/ }).uncheck();
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
-  await edit.hover();
+  // Map-off may return to the captured-path tree; make the reference visible again.
+  await page.locator('.folder-tree [data-spine-path="test/checkout.test.ts"]').scrollIntoViewIfNeeded();
+  await edit.locator('.op-head').hover();
   await expect(page.locator('.origin-thread[data-origin-type="Repository node"]')).toHaveCount(0);
   await expect(page.locator('.origin-thread[data-origin-type="File reference"]')).toHaveCount(1);
 });
@@ -341,7 +350,7 @@ test('content gets reading width and origin tethers use the visible instrument',
   const edit = page.locator('article.op-edit').last();
   const verification = page.locator('article.op-test').last();
   await expect(verification.locator('.verification-group.passed i')).toHaveCount(7);
-  await expect(page.locator('article.op-read .read-preview')).toHaveCount(await page.locator('article.op-read').count());
+  await expect.poll(async () => { const reads = await page.locator('article.op-read').count(); return reads > 0 && reads === await page.locator('article.op-read .read-preview').count(); }).toBe(true);
   await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect.poll(() => page.locator('.history').evaluate(el => [...el.querySelectorAll('article')].flatMap(card => card.getAnimations()).filter(a => a.id.startsWith('surface-') && a.playState === 'running').length)).toBe(0);

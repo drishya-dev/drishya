@@ -73,9 +73,9 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
         preparedMaterials.current.set(article, article.style.opacity); article.style.opacity = '0';
       }
     }
-    const visible = (el: Element) => {
+    const visible = (el: Element, inHistory = true) => {
       const r = restingRect(el);
-      const v = history.getBoundingClientRect();
+      const v = (inHistory ? history : viewer.querySelector('.main') ?? history).getBoundingClientRect();
       return r.width > 0 && r.height > 0 && r.bottom > v.top && r.top < v.bottom && r.right > v.left && r.left < v.right;
     };
     const node = (tag: 'path' | 'rect' | 'g' | 'circle', cls: string, move?: string) => {
@@ -223,7 +223,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
             const r = el.getBoundingClientRect();
             const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
             const overview = el.dataset.originRenderer === 'overview' && hit?.closest('.repo-lens-world');
-            return visible(el) && !!hit && (overview || !hit.closest('.op, .prose, .turn, .passage-head, .spine, .dock, .crown, .inspector, .sheet, .file-panel, .map-legend, .map-tip'));
+            return visible(el, false) && !!hit && (overview || !hit.closest('.op, .prose, .turn, .passage-head, .spine, .dock, .crown, .inspector, .sheet, .file-panel, .map-legend, .map-tip'));
           }) : undefined;
           label = origin ? 'Repository node' : 'File reference';
           origin ??= [...viewer.querySelectorAll<HTMLElement>('[data-spine-path]')].find((el) => {
@@ -246,7 +246,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
         }
         const originBounds = origin?.getBoundingClientRect();
         const originPane = origin?.closest('.spine')?.getBoundingClientRect();
-        if (op.origin.type === 'map' && (!origin || !visible(origin) || (originBounds && originPane && (originBounds.top < originPane.top || originBounds.bottom > originPane.bottom)))) {
+        if (op.origin.type === 'map' && (!origin || !visible(origin, false) || (originBounds && originPane && (originBounds.top < originPane.top || originBounds.bottom > originPane.bottom)))) {
           origin = viewer.querySelector<HTMLElement>(`.instrument.k-${op.kind === 'write' ? 'edit' : op.kind}`) ?? undefined;
           label = 'Tool instrument';
         }
@@ -282,12 +282,14 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       for (const id of plan.prose) {
         if (emitted.has(`prose:${id}`)) continue;
         const target = [...history.querySelectorAll<HTMLElement>('[data-prose-id]')].find((el) => el.dataset.proseId === id);
-        const origin = [...viewer.querySelectorAll<HTMLElement>('.crown [data-agent-id]')].find((el) => el.dataset.agentId === target?.dataset.agentId);
+        const agentOrigin = [...viewer.querySelectorAll<HTMLElement>('.crown [data-agent-id]')].find((el) => el.dataset.agentId === target?.dataset.agentId);
+        // Single-agent sessions omit the badge; their captured session title is the home.
+        const origin = agentOrigin ?? (projection.agents.length === 1 ? viewer.querySelector<HTMLElement>('.crown-title') : undefined);
         const r = origin?.getBoundingClientRect();
         if (target && origin && visible(target) && r && r.width > 0 && r.left >= 0 && r.right <= innerWidth) {
           motionTarget = target;
           emitted.add(`prose:${id}`);
-          tether(origin, target, 'Agent presence', 'Surface');
+          tether(origin, target, agentOrigin ? 'Agent presence' : 'Session presence', 'Surface');
         }
       }
       for (const id of plan.settle) {

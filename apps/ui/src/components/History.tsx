@@ -372,13 +372,21 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       <Origins scene={scene} projection={projection} stagedArrival={stagedArrivalStep.current === scene.total} isProgrammaticScroll={isProgrammaticScroll} />
       <FlowConnections projection={projection} />
     </div>
+      {mode === 'history' && <nav className="history-prompt-marks" aria-label={onWindow ? 'Prompts in loaded history' : 'Prompt positions in history'}>
+        {scene.passages.map((ps, index) => ({ ps, index })).filter(item => item.ps.turnPrompt).filter((_, index, items) => index % Math.max(1, Math.ceil(items.length / 60)) === 0).slice(0, 60).map(({ ps, index }) => <button key={ps.id} aria-label={`Go to prompt: ${ps.turnPrompt}`} title={ps.turnPrompt} style={{ top: `${Math.max(0, Math.min(100, layout.prefix[index]! / Math.max(1, layout.total) * 100))}%` }} onClick={() => {
+          set({ follow: false, playing: false, held: true, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
+          setFocusedPassageId(ps.id);
+          readingAnchor.current = { id: ps.id, offset: 0 };
+          setScrollTop(layout.prefix[index]!);
+        }} />)}
+      </nav>}
       {!follow && (
-        <button className="follow-pill" onClick={() => {
+        <button className="follow-pill" aria-label={`${mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest`} title="Back to latest" onClick={() => {
           userScrollUntil.current = 0;
           set({ follow: true, selectedOp: undefined, focusObservationId: undefined, promptStep: undefined, held: false });
           if (mode === 'replay') useApp.getState().showHistory();
         }}>
-          {mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest ↓
+          ↓
         </button>
       )}
     </>
@@ -399,8 +407,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
       {ps.ops.length > 0 && (
         <>
           <div className="passage-head">
-            <span className="agent-dot" />
-            <span className="passage-agent">{agentName(agent)}</span>
+            {agents.length > 1 && <><span className="agent-dot" /><span className="passage-agent">{agentName(agent)}</span></>}
             {first?.startTime && <time className="passage-time" dateTime={first.startTime} title={new Date(first.startTime).toLocaleString()}>{calendarTime(first.startTime)}</time>}
           </div>
           <div className="ops-row">
