@@ -101,6 +101,25 @@ export interface DataSource {
 /** Presentation hints do not change the immutable captured event contract. */
 export interface ReaderRecording extends RecordingSummary { sourceBytes?: number }
 
+export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace' }
+export interface CurrentFile { path: string; scope: 'current-workspace'; text: string; start: number; totalLines: number; returnedLines: number; hasMore: boolean; redacted: boolean; modifiedAt: string }
+export interface ControllerStatus {
+  usage?: { input: number; output: number; cached: number; costUsd?: number };
+  runId?: string; state: 'idle' | 'connecting' | 'running' | 'approval' | 'completed' | 'failed' | 'stopped';
+  harness: string; available: boolean; output: string; error?: string; tools: string[]; inventory: 'unknown' | 'runtime';
+  approvals: { id: string; name: string; detail: string }[]; promptRedacted?: boolean;
+}
+/** Explicit local workspace/controller capabilities; offline bundles never call them. */
+export const workspaceApi = {
+  status: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace`),
+  approve: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {} }),
+  file: (id: string, path: string, start: number) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/file?${new URLSearchParams({ path, start: String(start), count: '200' })}`),
+  controller: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller`),
+  prompt: (id: string, prompt: string, exclusive: boolean) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/prompt`, { method: 'POST', json: { prompt, exclusive } }),
+  decide: (id: string, runId: string, approvalId: string, allow: boolean) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/approval`, { method: 'POST', json: { runId, approvalId, allow } }),
+  stop: (id: string, runId: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/stop`, { method: 'POST', json: { runId } }),
+};
+
 export class HttpError extends Error {
   status: number;
   /** The parsed error body, e.g. the fresh consent preview a 409 carries. */

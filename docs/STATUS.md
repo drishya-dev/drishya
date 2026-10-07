@@ -26,6 +26,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | Who | What | Files |
 |---|---|---|
 
+
 ---
 
 ## Last session
@@ -64,11 +65,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 7 October 2026; black/compact/map correction after merged P1 #38 and refinement #39; PR #40 squash-merged as `11311f5`, local main updated. See [25](review/25-black-compact-map.md).
-- **Delivered:** black static CSS charcoal lining (builder override), smaller action surfaces/typography and 184 px tool dock; names remain fully wrapped. Source previews cap at 420 px, collapsed height at 280 px, expanded reading remains adjustable. Lowered late-growth camera threshold to preserve input position with compact results.
-- **Graph:** fixed files-only demo export by explicitly indexing its known synthetic workspace: 14 files / 14 actual imports, sanitized, root removed, normalized metadata. Stronger real edges and pale overview nodes; focused connections brighten. Real-session approval/mixed-worktree safeguards are unchanged; no invented execution/causal links.
-- **Checks:** typechecks/254 units, 36 browser journeys (two separate opt-ins skipped), final offline package install/import/API/restart; black texture, connected map and compact materials inspected. Prior review/24 ten-minute probe is historical and not rerun for this correction. Hosted CI remains publishing-only; public physical/platform/human acceptance remains separate.
-- **Preserved:** both builders' features/attribution, prompt navigation, actual surface arrivals, provenance/redaction, independent capture, paged history, original prototypes and local package-manager edits. Shared docs now reflect black texture rather than the rejected green/stone interpretation.
+- **When:** 7 October 2026; connected workspace on `codex/connected-workspace`, based on synced main after #40. See [26](review/26-connected-workspace.md).
+- **Delivered:** black vivid content-shaped surfaces with tinted material chrome/borders and smoother non-snapping reveals, compact 166/150 px dock, persistent partial-card order connectors, extension/folder icons and bounded session explorer, consented current-file reader (200 lines / 2 MiB), folder-first map zoom/drill-down with displayed-coordinate imports and cache exclusion, captured agent/model switches and optional native-only usage. The normal composer reserves reading space; prompt chapters live in a compact disclosure. A stable virtual extent fixes long-history native scroll clamping. Existing prompt chapters, whole-DOM arrivals, reader holds, comparison, pinned evidence and Harsh's features remain.
+- **Scope decision:** the builder explicitly requested real prompting, superseding the prior observe-only product boundary. A separate native controller resumes the selected UUID through supported Claude stream-json/Codex app-server protocols, requires workspace consent/idle acknowledgement, supports exact one-time approvals and owned-turn interrupt/EOF shutdown. Observer capture stays independent; no arbitrary terminal attachment, journal fabrication, schema/runtime dependency changes or relaxed permissions.
+- **Checks:** typechecks/279 unit tests; 40 browser journeys (two opt-ins skipped); offline package install/import/demo/API/restart. Demo/model identity regenerated deliberately and golden end sequence updated 15→16 for captured Codex model metadata. Fresh ten-minute synthetic live reading passed: **603,101 ms, 113 rounds, peak 775 DOM nodes**. Final map hover/Fit/static-chrome changes and removal of unnecessary wheel guards followed its start; full browser/type/package and targeted long/live-history checks passed after those changes. The stable virtual extent and composer reservation were present in the soak. Hosted CI not dispatched, per publishing-only policy.
+- **Native verification:** actual Codex 0.160.0 continuation passed twice against a newly created synthetic thread: requested harmless response, 9 normally captured observations. Installed Claude 2.1.282 refuses subscription access under this organization; live Claude verification is blocked by that account setting. Synthetic Claude handshake/permission/background lifecycle/UI checks pass; do not claim live certification or bypass sign-in policies.
+- **Remaining:** physical/platform/human release acceptance, old-client compatibility and unsupported advanced native interactive requests remain explicit limits. Preserve three pre-existing package-manager edits and ignored local model notes. No additional standalone HTML approval gate.
+
 ## Next up
 
 **Current backend-first sequence:**
@@ -111,6 +114,10 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **7 October — native continuation explicitly authorized:** the builder requested an actual prompt input and session-correct workspace now, superseding observe-only product scope. Keep passive capture independent and read-only, use separate opt-in supported native protocols, conservative approval/sandbox policy, root consent and idle-client acknowledgement. No arbitrary terminal injection or schema fabrication. Details/limits: review/26.
+- **7 October — developer density and graph detail:** use tinted window chrome, content-sized centred/wrapping materials, extension/folder icons, ordinary prompt input and quiet utilities. Current maps derive folder groups before individual files, exclude private `.local` caches, and aggregate only actual imports. Captured model names supersede generic names; usage is native reported data only. Paragraph fades do not delay capture or type characters. Preserve `layout.total` outside padding while virtual runs change; animate growth clip, never virtual layout height.
+- **7 October — connected workspace composition:** folders left, compact observed/runtime tools right, one accumulating history with visible recorded-order links, expanded connected file-tile map and agent switches. CodeForge informs crisp black materials/vivid semantic colour/finite fades, not fake typing or causal claims. Current disk reads never replace historical artifacts.
 
 *Append only. Never delete a row — supersede it with a new one.*
 

@@ -60,7 +60,7 @@ Much of that work may be available in harness transcripts, tool results and snap
 
 ## Principles
 
-- **Observe only.** Drishya never sends a prompt, approves a tool call, or launches an agent.
+- **Passive capture, optional native continuation.** Viewing stays independent. An explicitly enabled composer can resume a selected local native session with conservative permissions; no arbitrary terminal attachment or observer-hook steering. See [connected workspace](docs/review/26-connected-workspace.md).
 - **Local-first. Zero telemetry.** Not opt-out — there is nothing to opt out of.
 - **Captured is never confused with derived.** Everything shown carries its provenance.
 

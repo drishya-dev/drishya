@@ -1,5 +1,5 @@
 // Local HTTP API. Loopback only; per-launch token exchanged for an HttpOnly session cookie;
-// strict Host and Origin checks; no generic filesystem access; no agent control of any kind.
+// strict Host and Origin checks; no generic filesystem access; passive capture plus explicitly opted-in native harness clients.
 // Zero runtime dependencies on purpose: `node:http` + Server-Sent Events for change notices.
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
@@ -25,6 +25,8 @@ import type { ChangeEvent, HealthEvent } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 import { storageUsage } from './storage.ts';
+import { WorkspaceAccess } from './workspace.ts';
+import { HarnessController } from './controller.ts';
 
 export interface ServerOptions {
   port?: number;
@@ -46,6 +48,8 @@ export interface ServerOptions {
   sessionMaxAgeMs?: number;
   /** At most this many sessions; signing in beyond it drops the least recently used. Default 32. */
   maxSessions?: number;
+  /** Synthetic/native transport substitution for integration tests; never exposed over HTTP. */
+  controllerFactory?: (app: App, workspace: WorkspaceAccess) => HarnessController;
 }
 
 /** A subscriber this far behind is disconnected; on reconnect it resyncs from revisions (B1b). */
@@ -95,6 +99,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const host = opts.host ?? '127.0.0.1';
   if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('Drishya binds to loopback only.');
   const app = opts.app ?? new App(opts.dataDir);
+  const workspace = new WorkspaceAccess(app);
+  const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
   app.ingest.resetLiveFlags();
   const token = opts.token ?? randomBytes(24).toString('hex');
   // The launch token is valid for this server's lifetime: it is the credential printed to the
@@ -238,9 +244,23 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
 
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
+      if (sub === 'workspace' && !subId && m === 'GET') return json(res, workspace.status(id));
+      if (sub === 'workspace' && subId === 'approve' && m === 'POST') return json(res, await workspace.approve(id));
+      if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));
+      if (sub === 'controller' && !subId && m === 'GET') return json(res, controller.status(id));
+      if (sub === 'controller' && subId === 'prompt' && m === 'POST') {
+        const body = await readJson(req);
+        return json(res, await controller.start(id, body.prompt, body.exclusive));
+      }
+      if (sub === 'controller' && subId === 'approval' && m === 'POST') {
+        const body = await readJson(req);
+        return json(res, controller.decide(id, body.runId, body.approvalId, body.allow));
+      }
+      if (sub === 'controller' && subId === 'stop' && m === 'POST') return json(res, await controller.stop(id, (await readJson(req)).runId));
       if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId), health: app.ingest.health(firstId) } });
       if (!sub && m === 'DELETE') {
         app.recording(firstId);
+        await controller.forget(firstId); workspace.revoke(firstId);
         const removed = await app.forget(firstId);
         return json(res, { ok: true, ...removed });
       }
@@ -405,6 +425,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     app,
     server,
     close: async () => {
+      await controller.close();
       await new Promise<void>((ok) => {
         for (const c of clients) c.end();
         app.ingest.off('change', onChange);

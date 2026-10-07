@@ -143,15 +143,17 @@ export function createParser(_ctx: ParseContext): RecordParser {
   let cwd: string | undefined;
   let version: string | undefined;
   let branch: string | undefined;
+  let model: string | undefined;
 
   return {
     prime(observations: Observation[]) {
       for (const o of observations) {
         if (o.kind === 'session.meta') {
-          const p = o.payload as { cwd?: string; harnessVersion?: string; branch?: string };
+          const p = o.payload as { cwd?: string; harnessVersion?: string; branch?: string; model?: string };
           cwd = p.cwd ?? cwd;
           version = p.harnessVersion ?? version;
           branch = p.branch ?? branch;
+          model = p.model ?? model;
         }
         if (o.kind === 'tool.call' && o.operationId) {
           const p = o.payload as { tool?: string; intent?: ToolIntent };
@@ -172,12 +174,15 @@ export function createParser(_ctx: ParseContext): RecordParser {
         cwd = typeof p.cwd === 'string' ? p.cwd : cwd;
         version = typeof p.cli_version === 'string' ? p.cli_version : version;
         branch = typeof p.git?.branch === 'string' ? p.git.branch : branch;
-        return [{ ...base, workspaceRoot: cwd, harnessVersion: version, branchRef: branch, kind: 'session.meta', payload: { harness: 'codex', harnessVersion: version, cwd, branch, model: p.model_provider } }];
+        // Provider identifies a service, not the model that performed this turn.
+        return [{ ...base, workspaceRoot: cwd, harnessVersion: version, branchRef: branch, kind: 'session.meta', payload: { harness: 'codex', harnessVersion: version, cwd, branch } }];
       }
       if (type === 'turn_context') {
-        if (typeof p.cwd === 'string' && p.cwd !== cwd) {
-          cwd = p.cwd;
-          return [{ ...base, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', cwd, model: p.model } }];
+        const nextCwd = typeof p.cwd === 'string' ? p.cwd : cwd;
+        const nextModel = typeof p.model === 'string' ? p.model : model;
+        if (nextCwd !== cwd || nextModel !== model) {
+          cwd = nextCwd; model = nextModel;
+          return [{ ...base, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', cwd, model } }];
         }
         return [];
       }

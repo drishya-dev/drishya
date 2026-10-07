@@ -50,6 +50,8 @@ interface State {
   mapVisible: boolean;
   explore: boolean;
   compareAgents: boolean;
+  foldersHidden?: boolean;
+  currentFile?: string;
   theme: ThemePreference;
   settingsOpen: boolean;
   selectedOp?: string;

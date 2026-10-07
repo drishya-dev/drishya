@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Latest amendment:** [26 — Connected session workspace](review/26-connected-workspace.md) supersedes older observe-only product scope, task tabs, staged folder/current-file reading and researched-only prompting. The builder explicitly requested the controller; AGENTS now records the narrow permitted boundary. Captured-data architecture, redaction, typed evidence, independent observation and publishing-only hosted CI still apply. This record and CODEBASE describe the implementation; older review documents remain history.
+
 The docs were written in layers: a blueprint (20 Sep), an external review (21 Sep), a working backend draft (25 Sep), and the builder's live-history/backend-first clarification with a baseline audit (30 Sep). Several documents therefore overlap. **This page is the single answer to "which one is right?"**
 
 When two documents disagree, the one higher in its row wins. When a document here conflicts with the [non-negotiable constraints](../AGENTS.md#non-negotiable-constraints), the constraints win.
@@ -42,7 +44,7 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 **Current product delivery:** [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) supersedes older base-UI/prototype-only descriptions for implemented workspace behavior, P2-B evidence comparison and local run/package instructions. The 30 September audit remains historical; current evidence comes from STATUS, CODEBASE and the B4/P1 delivery records. VISION governs creative intent. Further UI changes belong in the integrated app.
 
-[08: bounded history reader](review/08-b4-history-reader.md) supersedes earlier B4 full-projection/deferral statements for architecture, measurements and limits. STATUS and CONTINUITY carry current execution state; [07](review/07-b4-scale-install.md) retains historical probes. The non-negotiable privacy/evidence/observe-only constraints still win.
+[08: bounded history reader](review/08-b4-history-reader.md) supersedes earlier B4 full-projection/deferral statements for architecture, measurements and limits. STATUS and CONTINUITY carry current execution state; [07](review/07-b4-scale-install.md) retains historical probes. The non-negotiable privacy/evidence/independent-observation constraints still win; the explicit controller scope in review/26 supersedes observe-only product wording.
 
 ## Reading order
 

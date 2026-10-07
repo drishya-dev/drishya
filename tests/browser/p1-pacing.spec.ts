@@ -34,6 +34,7 @@ test.afterAll(async () => {
 });
 
 test('the tool request is visible before its result and remains beside it', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   await expect(page.locator('.origins')).toBeAttached();
@@ -343,11 +344,12 @@ test('file relationships start at measured renderer nodes and fall back when the
     document.body.append(cover);
   }, point);
   await page.mouse.move(0, 0); await edit.hover();
-  await expect(tether).toHaveAttribute('data-origin-renderer', 'overview');
-  const overview = (await page.locator('.repo-lens [data-origin-file="test/checkout.test.ts"]').boundingBox())!;
-  const overviewCoordinates = (await tether.getAttribute('d'))!.match(/^M([\d.-]+),([\d.-]+)/)!;
-  expect(Number(overviewCoordinates[1])).toBeCloseTo(overview.x + overview.width / 2, 0);
-  expect(Number(overviewCoordinates[2])).toBeCloseTo(overview.y + overview.height / 2, 0);
+  const fileReference = page.locator('.origin-thread[data-origin-type="File reference"]');
+  await expect(fileReference).toHaveCount(1);
+  const folder = (await page.locator('.folder-tree [data-spine-path="test/checkout.test.ts"]').boundingBox())!;
+  const folderCoordinates = (await fileReference.getAttribute('d'))!.match(/^M([\d.-]+),([\d.-]+)/)!;
+  expect(Number(folderCoordinates[1])).toBeCloseTo(folder.x + folder.width / 2, 0);
+  expect(Number(folderCoordinates[2])).toBeCloseTo(folder.y + folder.height / 2, 0);
   await page.evaluate(() => document.getElementById('synthetic-origin-cover')!.remove());
   await page.getByRole('button', { name: 'Map on', exact: true }).click();
   await edit.hover();

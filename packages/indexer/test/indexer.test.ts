@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildGraph, graphFromPaths, jsImports, layout, probeGeneration, pythonImports, resolveJs, resolvePython } from '../src/index.ts';
@@ -56,6 +56,18 @@ describe('graph', () => {
 // B2: graph freshness is checked cheaply (walk and stat only, no parsing) against the generation a
 // map was built at, and protected files are never opened while looking for imports.
 describe('graph freshness and scope', () => {
+  it('keeps private local caches out of both the graph and freshness generation', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'drishya-index-cache-'));
+    try {
+      mkdirSync(join(dir, '.local'));
+      writeFileSync(join(dir, 'main.ts'), 'export const main = 1;');
+      writeFileSync(join(dir, '.local', 'private.ts'), 'export const privateCache = 1;');
+      const graph = await buildGraph(dir, { now: () => 'fixed' });
+      expect(graph.nodes.map(n => n.path)).toEqual(['main.ts']);
+      writeFileSync(join(dir, '.local', 'private.ts'), 'export const privateCache = 200;');
+      expect(await probeGeneration(dir)).toBe(graph.generation);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
   it('probes the same generation a full build produces, and notices an edit', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'drishya-graph-'));
     try {

@@ -1,5 +1,7 @@
 # Implementation roadmap — trustworthy baseline before premium expansion
 
+**7 October amendment:** [Connected workspace](review/26-connected-workspace.md) implements session folders/current-file reading and an explicitly authorized opt-in native prompt controller. This supersedes older observe-only product scope while preserving passive capture, privacy/evidence boundaries and publishing-only CI. No event/store schema or runtime dependency changed.
+
 **30 September 2026.** Execution plan for the builder's backend-first direction. The backend is a functioning **draft**, not a completed production substrate. See the [measured baseline and findings](review/06-baseline-audit.md). This document supersedes the older “frontend pass next” queue. It supplements the [engineering architecture](review/03-engineering-plan.md); contracts below remain proposals requiring the existing two-builder agreement where they change the event schema.
 
 ## 1. Keep the architecture, strengthen its boundaries

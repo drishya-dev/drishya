@@ -1,5 +1,7 @@
 # Drishya: engineering, integration and delivery plan
 
+**7 October amendment:** [Connected workspace](26-connected-workspace.md) implements session folders/current-file reading and an explicitly authorized opt-in native prompt controller. This supersedes older observe-only product scope while preserving passive capture, privacy/evidence boundaries and publishing-only CI. No event/store schema or runtime dependency changed.
+
 > **5 Oct implementation amendment:** [08: bounded history reader](08-b4-history-reader.md) is current for worker ownership, streaming/indexed history, internal reader APIs and measured release limits. Earlier full-projection and deferral statements below are historical.
 
 

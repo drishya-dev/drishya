@@ -1,6 +1,8 @@
 # Product direction — work you can follow, evidence you can revisit
 
-**7 October refinement:** [24](review/24-prompt-workspace.md) records implemented captured-prompt navigation, compact parallel receipts, actual DOM surface arrivals, resizable reading/comparison and the strict implementer review. Normal use is scrolling and following from a captured prompt; movie transport is optional Diagnostics. Harness prompting was researched only; observe-only remains the product boundary.
+**Latest scope, 7 October:** [26](review/26-connected-workspace.md) implements session-specific folders/current-file reading, a larger connected map, agent switches and an opt-in native prompt composer. The builder explicitly requested real prompting, superseding the earlier observe-only product boundary. Passive capture remains independent, offline evidence remains read-only, and native sessions retain conservative approval/sandbox handling. Actual Codex continuation passed locally; Claude live validation is blocked by this account's organization subscription restriction.
+
+**7 October refinement:** [24](review/24-prompt-workspace.md) records implemented captured-prompt navigation, compact parallel receipts, actual DOM surface arrivals, resizable reading/comparison and the strict implementer review. Normal use is scrolling and following from a captured prompt; movie transport is optional Diagnostics. This records the previous scope; the explicit controller decision in [26](review/26-connected-workspace.md) is newer.
 
 **Decision date: 30 September 2026.** This is the durable product plan following the builder's clarification and a review of the working draft. Read with [VISION](VISION.md), the [implementation roadmap](IMPLEMENTATION_ROADMAP.md), and the [baseline audit](review/06-baseline-audit.md). Proposed features below are **not claims about what the application already does**.
 
@@ -46,7 +48,7 @@ The first three share one interface. Team sharing and many simultaneous agents r
 
 We are not first to visualize agent activity. Agent Flow documents live Claude Code/Codex graphs, session views, timelines, transcripts, file attention and log replay. These are table stakes for this category, not our moat. This review inspected its published description, not a hands-on feature/performance comparison. [Agent Flow](https://github.com/patoles/agent-flow).
 
-Native environments also keep improving. Cursor documents checkpoints and file previews/restoration, so “see code changes” alone is insufficient. Drishya's opportunity is a consistent, observe-only account across environments, with the actual historical material and useful navigation between it. [Cursor Agent](https://cursor.com/docs/agent/overview).
+Native environments also keep improving. Cursor documents checkpoints and file previews/restoration, so “see code changes” alone is insufficient. Drishya's opportunity is a consistent captured account across environments, with the actual historical material and useful navigation between it. [Cursor Agent](https://cursor.com/docs/agent/overview).
 
 Langfuse's tracing is adjacent competition for understanding execution. We should compete on the developer's repository and review task, rather than recreating a generic tracing dashboard. [Langfuse observability](https://langfuse.com/docs/observability/overview).
 
@@ -203,7 +205,7 @@ This keeps privacy and correctness first. It only moves the question "is this ac
 
 ### Deliberately defer or remove
 
-Defer dashboards of token spend without reliable captured accounting, comprehensive runtime/database graphs, every-harness promises, generated architecture narration, team surveillance, and theme marketplaces. Remove mandatory autoplay, idle animation, fake complete-file context, default model-generated titles as if captured, and giant history carousels. Never add prompting, approvals, rollback actions or agent launching: those break the observe-only product.
+Defer dashboards of token spend without reliable captured accounting, comprehensive runtime/database graphs, every-harness promises, generated architecture narration, team surveillance, and theme marketplaces. Remove mandatory autoplay, idle animation, fake complete-file context, default model-generated titles as if captured, and giant history carousels. The builder subsequently authorized an opt-in supported native controller (review/26). This narrow extension does not authorize arbitrary terminal attachment, unattended prompts, rollback, IDE execution or file mutation by Drishya.
 
 ## 8. Base theme now; alternatives later
 

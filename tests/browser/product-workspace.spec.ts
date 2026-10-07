@@ -189,6 +189,7 @@ test('repository context follows older reading and exposes only qualified curren
   await page.route('**/demo/bundle.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
   await page.goto(demoUrl());
   const context = page.getByRole('region', { name: 'Repository reading context' });
+  await page.locator('.folder-reading-context > summary').click();
   await expect(context).toContainText('Latest file reference');
   await expect(context.locator('.repo-context-file')).toContainText('checkout.test.ts');
   const history = page.locator('.history');
@@ -215,6 +216,7 @@ test('repository context follows older reading and exposes only qualified curren
   await page.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/repository-reading-context.png') });
   await page.getByRole('button', { name: /Back to latest/ }).click();
+  await page.locator('.folder-reading-context > summary').click();
   await expect(context).toContainText('Latest file reference');
   await expect(context.locator('.repo-context-file')).toContainText('checkout.test.ts');
 });
@@ -245,7 +247,7 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   await expect(page.locator('.transport')).not.toContainText('Pause');
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect(page.locator('article.op-test').last()).toContainText('7 passed');
-  await expect(page.getByRole('button', { name: 'Filter by Codex agent' })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Filter by gpt-5-codex agent' })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/material-live-complete.png') });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('.crown-sample')).toBeVisible();
@@ -324,14 +326,14 @@ test('file comparison reads real daemon artifacts and opens the same action in h
 
 test('agent ownership shares one history, and replay file choices obey the historical boundary', async ({ page }) => {
   await page.goto(demoUrl());
-  await page.getByRole('button', { name: 'Agents', exact: true }).click();
+  await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
   const overview = page.getByRole('region', { name: 'Agent comparison' });
   await expect(overview).toContainText('counts and files describe the work shown in this view');
-  await expect(overview).toContainText('Captured child of Claude Code');
+  await expect(overview).toContainText('Captured child of claude-opus-5');
   await overview.getByRole('button').last().click();
   await expect(page.getByRole('button', { name: 'Clear focus' })).toBeVisible();
   await page.getByRole('button', { name: 'Clear focus' }).click();
-  await page.getByRole('button', { name: 'Follow', exact: true }).click();
+  await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
   await expect(overview).toHaveCount(0);
   // Deep link intentionally holds replay at an early step before the guard read completes.
   await page.goto(new URL('/?demo&at=3', server.launchUrl).href);
@@ -399,10 +401,10 @@ test('view and appearance changes keep the same captured passage under the reade
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.dataset.passageId === anchor.id);
     return node ? Math.abs(node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset) : Infinity;
   }, anchor);
-  await page.getByRole('button', { name: 'Agents', exact: true }).click();
+  await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
   await expect.poll(displacement).toBeLessThan(3);
-  await page.getByRole('button', { name: 'Repository', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Follow', exact: true }).click();
+  await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
+  await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('button', { name: 'Light', exact: true }).click();
@@ -437,7 +439,7 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Jet is the signature default. No grain or full-screen decorative layer obscures text.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(8, 9, 11)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(9, 9, 9)');
   expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toContain('repeating-linear-gradient');
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
@@ -457,6 +459,7 @@ test('history activity timeline opens recorded failures and edits; named palette
 test('prompt chapters review captured work without movie controls and resize detail by keyboard', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   await page.goto(demoUrl());
+  await page.locator('.prompt-menu > summary').click();
   const navigation = page.getByRole('navigation', {name:'Captured prompts'});
   await expect(navigation.locator('.prompt-chapters button').first()).toBeVisible();
   await expect(page.getByRole('button',{name:'Play',exact:true})).toHaveCount(0);

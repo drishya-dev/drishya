@@ -219,7 +219,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       }
       const animation = target.animate([
         { transform: `translate(${dx}px,${dy}px)`, clipPath: 'inset(0 46% 88% 46% round 6px)', opacity: .72 },
-        { transform: `translate(${dx * .2}px,${dy * .2}px)`, clipPath: 'inset(0 8% 60% 8% round 6px)', opacity: 1, offset: .48 },
+        { transform: `translate(${dx * .2}px,${dy * .2}px)`, clipPath: 'inset(0 12% 32% 12% round 6px)', opacity: 1, offset: .48 },
         { transform: 'none', clipPath: 'inset(0 0 0 0 round 6px)', opacity: 1 }
       ], { duration, easing: 'cubic-bezier(.4,0,.2,1)' });
       animation.id = `surface-${move}`;
@@ -274,11 +274,13 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       for (const [animation, cue] of runningMotion.current) {
         let now = cue.target?.getBoundingClientRect();
         const travelling = cue.target?.closest('.op');
+        // Content may grow while its clip unfolds. Do not cancel into a full-size snap.
+        if (now && cue.rect && cue.element === cue.target) cue.rect = new DOMRect(cue.rect.x, cue.rect.y, now.width, now.height);
         if (now && travelling?.getAnimations().some(animation => animation.id.startsWith('surface-'))) {
           const transform = new DOMMatrixReadOnly(getComputedStyle(travelling).transform);
           now = new DOMRect(now.x - transform.m41, now.y - transform.m42, now.width, now.height);
         }
-        if (cue.target && (!cue.target.isConnected || !now || !cue.rect || Math.abs(now.left - cue.rect.left) > 2 || Math.abs(now.top - cue.rect.top) > 2 || Math.abs(now.width - cue.rect.width) > 2 || Math.abs(now.height - cue.rect.height) > 2)) {
+        if (cue.target && (!cue.target.isConnected || !now || !cue.rect || Math.abs(now.left - cue.rect.left) > 2 || Math.abs(now.top - cue.rect.top) > 2)) {
           animation.cancel(); if (cue.element instanceof SVGElement) cue.element.remove(); runningMotion.current.delete(animation);
         }
       }
@@ -319,7 +321,11 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
             return visible(el) && !!hit && (overview || !hit.closest('.op, .prose, .turn, .passage-head, .spine, .dock, .crown, .inspector, .sheet, .file-panel, .map-legend, .map-tip'));
           }) : undefined;
           label = origin ? 'Repository node' : 'File reference';
-          origin ??= [...viewer.querySelectorAll<HTMLElement>('[data-spine-path]')].find((el) => el.dataset.spinePath === path);
+          origin ??= [...viewer.querySelectorAll<HTMLElement>('[data-spine-path]')].find((el) => {
+            if (el.dataset.spinePath !== path) return false;
+            const r = el.getBoundingClientRect(); const tree = el.closest('.folder-tree')?.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && (!tree || r.top >= tree.top && r.bottom <= tree.bottom);
+          });
         } else if (op.origin.type === 'mcp') {
           const server = op.origin.server;
           const operation = projection.operations.find((item) => item.id === op.id);

@@ -12,8 +12,10 @@ export function WorkspaceBar() {
   const mode = useApp((s) => s.mode);
   const filter = useApp((s) => s.filter);
   const title = useApp((s) => s.projection?.title ?? s.recording?.title);
+  const foldersHidden = useApp(s => s.foldersHidden);
+  const foldersShown = foldersHidden === false || foldersHidden !== true && window.innerWidth > 820;
   return <nav className="workspace-bar" aria-label="Workspace views">
-    <div className="workspace-views">{(['Follow', 'Agents', 'Repository'] as const).map((view) => <button key={view} aria-pressed={view === 'Repository' ? explore : view === 'Agents' ? compare && !explore : !compare && !explore} disabled={view === 'Repository' && !map} onClick={() => useApp.setState({ explore: view === 'Repository', compareAgents: view === 'Agents', follow: false, playing: false, held: true })}>{view}</button>)}</div>
+    <div className="workspace-toggles"><button aria-label="Show session folders" aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}>⌑ Folders</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ mapVisible: true, explore: !explore, follow: false, held: true, playing: false })}>⌘ Map</button><button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false, follow: false, held: true, playing: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button></div>
     <span className="workspace-recording-title" title={title}>{title}</span>
     <div className="workspace-context"><span>{source?.sample === 'growing' ? 'Synthetic live demonstration' : source?.sample === 'recorded' ? 'Synthetic recording' : source?.kind === 'bundle' ? 'Offline evidence' : recording?.live ? 'Observing local journal' : 'Local recording'}</span><span> / {mode === 'replay' ? 'Sequence replay' : source?.sample === 'growing' ? recording?.live ? 'Publishing sample events' : 'Sample complete' : 'Scrollable history'}</span></div>
     {source?.sample === 'growing' && recording?.live && <button className="btn ghost sample-complete" onClick={() => source.completeSample?.()}>Show complete sample</button>}

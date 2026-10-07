@@ -1,12 +1,14 @@
 # Visual developer workspace — direction and staged backlog
 
+**Latest, implemented 7 October:** [26](review/26-connected-workspace.md) delivers bounded session folders, separately consented current-file reading, map zoom/file tiles and real native prompt continuation. The original folder/current-reader proposals below are now implemented to the stated limits; symbols, tabs/breadcrumbs, LSP, arbitrary file editing and IDE execution remain future work. The new explicit controller scope supersedes older observe-only exclusions.
+
 6 October 2026 · Latest builder expansion · **Proposed work, not an implementation inventory**
 
-The builder wants Drishya to support the reading and understanding work that otherwise sends a developer back into an IDE. The distinguishing experience is spatial: a real tool leaves its toolbox, a referenced file lifts from its repository location, and the exact captured lines lead into deeper exploration. First finish the agent-work baseline and its premium presentation; then add useful read-only workspace capabilities in bounded increments. This plan does not authorize editing files, executing commands or controlling a harness.
+The builder wants Drishya to support the reading and understanding work that otherwise sends a developer back into an IDE. The distinguishing experience is spatial: a real tool leaves its toolbox, a referenced file lifts from its repository location, and the exact captured lines lead into deeper exploration. First finish the agent-work baseline and its premium presentation; then add useful read-only workspace capabilities in bounded increments. This original plan did not authorize editing/execution/control; the explicit 7 October controller decision above is the narrow exception. Drishya still does not directly edit files or execute arbitrary commands.
 
 Read with [VISION](VISION.md), [PRODUCT_DIRECTION](PRODUCT_DIRECTION.md), [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) and [CODEBASE](CODEBASE.md). The delivery document describes what already works. This document persists the new direction across model/chat switches.
 
-**7 October implemented refinement:** [24](review/24-prompt-workspace.md) adds captured-prompt chapters/follow, compact allocations, whole DOM material arrivals, resizable operation detail and file trails, and comparison reading space. It fixes actual Write after-source without patch hunks. Folder/current-file/symbol navigation and the proposals below remain staged; harness prompting is researched only. The strict self-review in [24] guides the next bounded slice.
+**7 October implemented refinement:** [24](review/24-prompt-workspace.md) adds captured-prompt chapters/follow, compact allocations, whole DOM material arrivals, resizable operation detail and file trails, and comparison reading space. It fixes actual Write after-source without patch hunks. At that point these features were staged; review/26 now implements folders/current files and the opt-in controller. Symbols and the remaining proposals are still staged. The strict self-review in [24] guides the next bounded slice.
 
 ## The developer journey to design around
 
@@ -62,7 +64,7 @@ Prefer a direct read-only service returning sanitized bounded slices; do not cop
 
 ## Features to deliberately exclude
 
-No prompt composer, approvals, agent launch, terminal execution, file editing, Git checkout/reset/commit, automatic fix, or unattended cloud explanation. Copying a recorded command is useful; running it from Drishya changes the product's role. Captured diagnostics are useful; fabricating live compiler/LSP diagnostics or test coverage is not. Start with static read-only source navigation instead of importing an entire IDE platform.
+The earlier no-composer rule was superseded by the builder's explicit 7 October prompt request (review/26). Still excluded: arbitrary agent launch/terminal execution, file editing, Git checkout/reset/commit, automatic fixes and unattended cloud explanation. Copying a recorded command is useful; running it from Drishya changes the product's role. Captured diagnostics are useful; fabricating live compiler/LSP diagnostics or test coverage is not. Start with static read-only source navigation instead of importing an entire IDE platform.
 
 ## Architecture and craft constraints
 
