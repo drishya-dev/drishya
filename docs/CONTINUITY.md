@@ -4,6 +4,8 @@
 
 ## Current work
 
+**Latest merge:** black/compact/connected-map PR #40 squash-merged as `11311f5`; local main updated. Local 254 units/typechecks, 36 browser journeys and offline packaging pass; see review/25. Hosted CI remains publishing-only.
+
 P1 PR #38 was squash-merged as `62d2d56`. User-facing refinement PR #39 was squash-merged as `61bb47b`; local main is updated. Final checks are in STATUS and review/24. [25](review/25-black-compact-map.md) is the latest colour/density/map correction; [24](review/24-prompt-workspace.md) retains prompt/navigation and motion behavior. P1 implementation closure does not freeze art direction or certify public release.
 
 Normal use is accumulating captured history, scrolling and captured prompt chapters. Selecting a prompt opens the work after it; “Follow from prompt” presents already recorded work from there. It never sends a prompt or reruns a harness. Ordinary UI has no play/pause/speed controller. Explicit Diagnostics retains sequence transport for testing; explicit diagnostic URLs remain compatible. Large-session prompt navigation uses validated internal `promptStep` and exact Previous/Next marker queries, without loading the whole projection. Prompt chips are bounded samples, not an exhaustive large-session list.

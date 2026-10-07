@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **P1 #38 and user-facing refinement #39 merged; local main updated (`61bb47b`).** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **P1 and refinements #38–40 merged; black compact map is on main (`11311f5`).** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -64,7 +64,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 7 October 2026; black/compact/map correction after merged P1 #38 and refinement #39. See [25](review/25-black-compact-map.md).
+- **When:** 7 October 2026; black/compact/map correction after merged P1 #38 and refinement #39; PR #40 squash-merged as `11311f5`, local main updated. See [25](review/25-black-compact-map.md).
 - **Delivered:** black static CSS charcoal lining (builder override), smaller action surfaces/typography and 184 px tool dock; names remain fully wrapped. Source previews cap at 420 px, collapsed height at 280 px, expanded reading remains adjustable. Lowered late-growth camera threshold to preserve input position with compact results.
 - **Graph:** fixed files-only demo export by explicitly indexing its known synthetic workspace: 14 files / 14 actual imports, sanitized, root removed, normalized metadata. Stronger real edges and pale overview nodes; focused connections brighten. Real-session approval/mixed-worktree safeguards are unchanged; no invented execution/causal links.
 - **Checks:** typechecks/254 units, 36 browser journeys (two separate opt-ins skipped), final offline package install/import/API/restart; black texture, connected map and compact materials inspected. Prior review/24 ten-minute probe is historical and not rerun for this correction. Hosted CI remains publishing-only; public physical/platform/human acceptance remains separate.
