@@ -44,12 +44,13 @@ export function RepositoryLens({ graph, heat, focusPath }: { graph: RepoGraph; h
         const a = points(from); const b = points(to);
         g.moveTo(a.x, a.y); g.lineTo(b.x, b.y);
       }
-      g.strokeStyle = focused ? colours.focus : colours.edge; g.stroke();
+      g.lineWidth = focused ? 1.5 : 1.1;
+      g.strokeStyle = focused ? colours.text : colours.edge; g.stroke();
     }
     for (const node of graph.nodes) {
       const p = points(node); const h = activity.get(node.id);
       g.beginPath(); g.arc(p.x, p.y, labelPath === node.id ? 3.5 : h ? 2.3 : 1.2, 0, Math.PI * 2);
-      g.fillStyle = h ? colours.tones[h.tone] : colours.node; g.fill();
+      g.fillStyle = labelPath === node.id ? colours.text : colours.node; g.fill();
       if (h?.edited || labelPath === node.id) {
         g.beginPath(); g.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
         g.strokeStyle = labelPath === node.id ? colours.text : colours.tones.write; g.stroke();

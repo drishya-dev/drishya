@@ -104,7 +104,7 @@ test('a single delayed read result keeps its input and reading position instead 
       (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold = false;
       new MutationObserver((changes) => {
         for (const change of changes) for (const node of change.addedNodes) {
-          if (node instanceof Element && node.classList.contains('origin-material') && node.getAttribute('data-move') === 'Lift' && Number(node.getAttribute('height')) > 300) (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold = true;
+          if (node instanceof Element && node.classList.contains('origin-material') && node.getAttribute('data-move') === 'Lift' && Number(node.getAttribute('height')) > 200) (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold = true;
         }
       }).observe(document.querySelector('.origins')!, { childList: true });
     });
@@ -116,7 +116,7 @@ test('a single delayed read result keeps its input and reading position instead 
     const viewport = await history.boundingBox();
     expect(header!.y).toBeGreaterThanOrEqual(viewport!.y);
     expect(header!.y).toBeLessThan(viewport!.y + viewport!.height);
-    expect((await read.boundingBox())!.height).toBeLessThanOrEqual(431);
+    expect((await read.boundingBox())!.height).toBeLessThanOrEqual(280);
     await expect.poll(() => page.evaluate(() => (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold)).toBe(true);
     if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/late-source-reading.png') });
   } finally { release(); await page.unroute('**/artifacts/**'); }
@@ -413,7 +413,8 @@ test('content gets reading width and origin tethers use the visible instrument',
   const verification = page.locator('article.op-test').last();
   await expect(edit).toBeVisible();
   const sourceWidth = (await edit.boundingBox())!.width;
-  expect(sourceWidth).toBeGreaterThan(420);
+  expect(sourceWidth).toBeGreaterThanOrEqual(280);
+  expect(sourceWidth).toBeLessThanOrEqual(420);
   expect(sourceWidth).toBeGreaterThan((await verification.boundingBox())!.width);
   await verification.hover();
   const tether = page.locator('.origin-thread[data-origin-type="Tool instrument"]');

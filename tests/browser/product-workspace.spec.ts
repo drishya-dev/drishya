@@ -159,7 +159,8 @@ test('substantial external results retain structured evidence and adapt to narro
   await expect(external).toBeAttached();
   await external.scrollIntoViewIfNeeded();
   await expect(external).toHaveClass(/shape-reading/);
-  expect((await external.boundingBox())!.width).toBeGreaterThan(500);
+  expect((await external.boundingBox())!.width).toBeGreaterThanOrEqual(400);
+  expect((await external.boundingBox())!.width).toBeLessThanOrEqual(440);
   await expect(external.locator('tbody tr')).toHaveCount(5);
   await expect(external.locator('tbody')).toContainText('synthetic/file-4.ts');
   await expect(external.locator('tbody')).toContainText('null');
@@ -436,7 +437,8 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Jet is the signature default. No grain or full-screen decorative layer obscures text.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(22, 24, 23)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(8, 9, 11)');
+  expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toContain('repeating-linear-gradient');
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });

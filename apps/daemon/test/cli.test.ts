@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
+import { buildDemoBundle } from '../src/commands.ts';
 
 // B1 (audit A09): `drishya import --live` used to import once and exit, ignoring the flag.
 const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
@@ -13,6 +14,15 @@ afterAll(() => rmSync(dir, { recursive: true, force: true, maxRetries: 20, retry
 
 const line = (uuid: string, text: string) =>
   JSON.stringify({ type: 'user', uuid, sessionId: 's', cwd: '/w', version: '2.1.0', timestamp: '2026-10-02T10:00:00Z', message: { role: 'user', content: text } }) + '\n';
+
+it('indexes actual fixture imports in the portable demo instead of exporting isolated points', async () => {
+  const bundle = await buildDemoBundle();
+  expect(bundle.graph?.root).toBe('');
+  expect(bundle.graph?.temporal).toBe('current');
+  expect(bundle.graph?.edges).toEqual(expect.arrayContaining([
+    expect.objectContaining({ from: 'src/checkout/guard.ts', to: 'src/cart/types.ts', relation: 'static-import', basis: 'deterministic-rule' }),
+  ]));
+});
 
 describe('drishya import --live', () => {
   it('keeps following the journal and reports what arrives', async () => {

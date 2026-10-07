@@ -37,7 +37,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
 }
 
 const THEMES = [
-  ['dark', 'Jet', 'Charcoal, warm stone accents'],
+  ['dark', 'Jet', 'Black, fine charcoal weave'],
   ['midnight', 'Midnight', 'Near-black, cool contrast'],
   ['light', 'Light', 'Paper and stone'],
   ['system', 'System', 'Jet or Light'],

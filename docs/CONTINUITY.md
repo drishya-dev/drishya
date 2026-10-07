@@ -4,7 +4,7 @@
 
 ## Current work
 
-P1 PR #38 was squash-merged as `62d2d56`. User-facing refinement PR #39 was squash-merged as `61bb47b`; local main is updated. Final checks are in STATUS and review/24. [24](review/24-prompt-workspace.md) is the latest implementation/design amendment. P1 implementation closure does not freeze art direction or certify public release.
+P1 PR #38 was squash-merged as `62d2d56`. User-facing refinement PR #39 was squash-merged as `61bb47b`; local main is updated. Final checks are in STATUS and review/24. [25](review/25-black-compact-map.md) is the latest colour/density/map correction; [24](review/24-prompt-workspace.md) retains prompt/navigation and motion behavior. P1 implementation closure does not freeze art direction or certify public release.
 
 Normal use is accumulating captured history, scrolling and captured prompt chapters. Selecting a prompt opens the work after it; “Follow from prompt” presents already recorded work from there. It never sends a prompt or reruns a harness. Ordinary UI has no play/pause/speed controller. Explicit Diagnostics retains sequence transport for testing; explicit diagnostic URLs remain compatible. Large-session prompt navigation uses validated internal `promptStep` and exact Previous/Next marker queries, without loading the whole projection. Prompt chips are bounded samples, not an exhaustive large-session list.
 
@@ -14,7 +14,7 @@ The builder explicitly requested the whole action surface to move, rather than o
 
 Operation detail is wider and draggable/keyboard resizable. File history has an adjustable action trail and Reading space toggle. Comparison initially hides the trail, wraps source and uses the actual available width for split/unified patch layout. Writes with recorded after-source and no hunks show that source; empty patches no longer displace real evidence. Unknown whole files remain explicitly unavailable.
 
-Jet uses charcoal/stone tonal boundaries inspired by the supplied fabric reference, with pale graph nodes/quiet edges. No fabric bitmap, grain, glow or idle shine. Current static import edges already render when an approved repository has them; a files-only captured map cannot invent connections. Map on/off works in Follow and Agents.
+The builder corrected Jet to black (#08090b) with fine static CSS charcoal weave; no grain/glow/animated texture. The dock and collapsed materials are smaller; full reading remains adjustable. Demo generation now indexes the actual synthetic fixture workspace: 14 nodes / 14 real imports, current workspace provenance. See review/25 for dimensions and local checks. Current static import edges already render when an approved repository has them; a files-only captured map cannot invent connections. Map on/off works in Follow and Agents.
 
 ## Read before changing anything
 

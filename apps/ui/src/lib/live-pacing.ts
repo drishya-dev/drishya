@@ -43,5 +43,6 @@ export function stageIncomingWork(projection: Projection, fromStep: number, toSt
 
 /** One late artifact can occupy more reading space than a whole short burst. */
 export function stageViewportGrowth(before: number, after: number, viewportHeight: number): boolean {
-  return after - before > Math.max(72, Math.min(180, viewportHeight / 4));
+  // Compact previews still need to hold a substantial late reveal at its input.
+  return after - before > Math.max(72, Math.min(120, viewportHeight / 5));
 }

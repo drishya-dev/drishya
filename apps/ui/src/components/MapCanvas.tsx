@@ -101,7 +101,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, size.w, size.h);
 
-    g.lineWidth = 1;
+    g.lineWidth = 1.2;
     g.strokeStyle = colours.edge;
     g.beginPath();
     for (const e of graph.edges) {
@@ -124,7 +124,9 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         const pa = project(a); const pb = project(b);
         g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y);
       }
-      g.strokeStyle = colours.focus; g.stroke();
+      g.lineWidth = 1.6;
+      g.strokeStyle = colours.text; g.stroke();
+      g.lineWidth = 1.2;
     }
 
     const r0 = Math.max(1.6, Math.min(3.2, 1.2 * Math.sqrt(cam.k) * (explore ? 1.6 : 1.2)));

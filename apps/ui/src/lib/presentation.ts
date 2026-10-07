@@ -27,5 +27,5 @@ export function presentationOf(op: Operation): { shape: MaterialShape; material:
 export function readingWidth(...texts: (string | undefined)[]): number {
   let longest = 0;
   for (const text of texts) for (const line of (text ?? '').slice(0, 4096).split('\n').slice(0, 40)) longest = Math.max(longest, Math.min(90, line.length));
-  return Math.max(230, Math.min(620, 86 + longest * 7));
+  return Math.max(210, Math.min(440, 72 + longest * 6));
 }
