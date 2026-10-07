@@ -16,8 +16,10 @@ export function agentColor(a: Pick<Agent, 'harness' | 'parentId' | 'id'> | undef
 
 export function agentName(a: Agent | undefined): string {
   if (!a) return 'Agent';
-  if (!a.parentId) return a.label;
-  return a.agentType ?? a.label;
+  const generic = ['claude code', 'codex', 'agent', 'main'].includes(a.label.toLowerCase());
+  if (!generic) return a.label;
+  if (a.model && !['openai', 'anthropic'].includes(a.model.toLowerCase())) return a.model;
+  return a.agentType ?? (a.parentId ? `Agent ${a.id.slice(-6)}` : 'Main agent');
 }
 
 function hash(s: string) {

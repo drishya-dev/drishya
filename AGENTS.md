@@ -48,8 +48,8 @@ If an animation carries no information about where something came from, what it 
 
 Violating any of these is a bug, not a tradeoff.
 
-1. **Observe only.** Drishya never sends a prompt, approves a tool call, or launches an agent. The moment it does, it is a harness and it loses.
-2. **Never mutate a harness's files.** All harness paths are read-only, always. Copy what is needed into our own store.
+1. **Passive observation stays independent.** On 7 October the builder explicitly requested a real prompt input, superseding the earlier observe-only product boundary. An opt-in controller may resume a selected local native session, send an explicitly submitted prompt, interrupt its own turn and answer an exact one-time approval through supported harness protocols. It must never attach to arbitrary terminals, weaken sandbox/approval policy, run shell-interpolated prompts, or steer from observer hooks. Workspace consent and an idle-other-clients acknowledgement are mandatory; unsupported requests fail explicitly. Offline bundles remain read-only. See `docs/review/26-connected-workspace.md`.
+2. **Never directly mutate harness files.** Observer/controller code opens harness journals read-only; copy what is needed into our own store. An explicitly resumed native harness owns its normal journal writes. Drishya never fabricates journal events, edits native configuration or credentials, or edits project files itself.
 3. **Redact before persisting.** Secrets are scrubbed in the ingest path — before SQLite, the blob store, previews, search indexes, exports and the screen. Never after. **No real recording is imported before redaction exists.**
 4. **Captured ≠ derived.** Every rendered string carries provenance. Never present a heuristic or model-generated summary as if the agent said it.
 5. **Never invent a location or causal link.** Use evidence-backed mappings and typed relationships. Temporal proximity is "nearby activity", never "reason". Unresolved locations stay explicitly unresolved.

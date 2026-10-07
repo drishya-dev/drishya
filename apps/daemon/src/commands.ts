@@ -55,7 +55,7 @@ export async function main() {
         token: process.env.DRISHYA_TOKEN || undefined,
         devOrigins: values.dev ? ['http://127.0.0.1:5173', 'http://localhost:5173'] : [],
       });
-      console.log(`\n  Drishya ${VERSION} — observing, never steering.\n`);
+      console.log(`\n  Drishya ${VERSION} — local agent workspace.\n`);
       console.log(`  Open:  ${running.launchUrl}`);
       if (values.dev) console.log(`  Dev UI: http://127.0.0.1:5173/#token=${running.token}  (run \`pnpm ui:dev\`)`);
       console.log(`  Data:  ${running.app.store.dataDir}\n  Model: ${process.env.NEBIUS_API_KEY ? 'Nebius Token Factory configured (explicit calls only)' : 'off (set NEBIUS_API_KEY to enable explanations)'}\n`);

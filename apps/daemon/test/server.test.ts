@@ -456,3 +456,13 @@ describe('verification freshness', () => {
     expect((await call(`/v1/recordings/${recId}/verification/${encodeURIComponent(test.id)}`, { headers: auth() })).status).toBe(404);
   });
 });
+
+it('guards connected workspace and native prompt routes with local API authentication and Origin', async () => {
+  for (const path of ['workspace', 'controller']) expect((await call(`/v1/recordings/${recId}/${path}`)).status).toBe(401);
+  for (const path of ['workspace/approve', 'controller/prompt', 'controller/approval', 'controller/stop']) {
+    expect((await call(`/v1/recordings/${recId}/${path}`, { method: 'POST', body: {} })).status).toBe(401);
+    expect((await call(`/v1/recordings/${recId}/${path}`, { method: 'POST', headers: { ...auth(), origin: 'https://external.invalid' }, body: {} })).status).toBe(403);
+  }
+  expect((await call(`/v1/recordings/${recId}/workspace/file?path=a.ts&count=invalid`, { headers: auth() })).status).toBe(400);
+  expect((await call(`/v1/recordings/${recId}/controller/prompt`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body: { prompt: 'hello' } })).status).toBe(400);
+});

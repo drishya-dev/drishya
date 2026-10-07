@@ -80,7 +80,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
 
   await page.getByRole('button', { name: 'Map on' }).click();
   await expect(page.locator('.map')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Explore' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Explore', exact: true })).toBeDisabled();
 
   for (const width of [1440, 900, 390]) {
     await page.setViewportSize({ width, height: 900 });
@@ -130,6 +130,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
 });
 
 test('long history mounts only nearby work while selected evidence and live updates survive', async ({ page }) => {
+  page.on('console', msg => { if(msg.text().includes('SCROLLTRACE')) console.log(msg.text()); });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const history = page.locator('.history');

@@ -1,5 +1,7 @@
 # Continuous canvas: authoritative visual direction
 
+**Latest amendment:** [26](../review/26-connected-workspace.md#latest-developer-refinement) adds the ordinary native composer, compact prompt disclosure, folder-first map detail, partial-card connectors and paragraph fades without delayed evidence. Independent capture remains passive; the explicitly authorized controller is separate. Layout reserves full virtual history extent during run replacement.
+
 **7 October amendment:** [24](../review/24-prompt-workspace.md) governs prompt-led normal navigation, compact content allocations and resizable reading. By specific builder request, finite measured-origin arrivals can translate/reveal the real DOM surface and its content; no copied/scaled/typewritten source or capture delay. Earlier stationary-text arrival recipes are superseded only for this finite move. The composition and evidence constraints below remain.
 
 21 September 2026 · User-directed revision after the first storyboard

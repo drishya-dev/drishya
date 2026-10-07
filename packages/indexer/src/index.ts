@@ -14,7 +14,7 @@ import { isDeniedPath } from '@drishya/privacy';
 export const INDEXER_VERSION = 'imports-rules-v1';
 
 const SKIP_DIRS = new Set([
-  'node_modules', '.git', '.hg', '.svn', 'dist', 'build', 'out', '.next', '.nuxt', '.svelte-kit', '.turbo', '.cache',
+  'node_modules', '.local', '.git', '.hg', '.svn', 'dist', 'build', 'out', '.next', '.nuxt', '.svelte-kit', '.turbo', '.cache',
   'coverage', 'vendor', 'target', '__pycache__', '.venv', 'venv', 'env', '.tox', '.mypy_cache', '.pytest_cache',
   '.idea', '.vscode', '.drishya', 'playwright-report', 'test-results', '.gradle', 'Pods', 'DerivedData',
 ]);

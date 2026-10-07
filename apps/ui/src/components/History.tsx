@@ -15,6 +15,7 @@ import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
+import { FlowConnections } from './FlowConnections.tsx';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
@@ -311,7 +312,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         });
       }
     }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { if (pointerFocus.current && (e.target as HTMLElement).closest('button, input, select, a')) return; const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false, playing: false, held: true }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
-      <div className="history-inner">
+      {/* Keep the document extent stable while React replaces disjoint virtual runs.
+          Otherwise removing a spacer can clamp native scroll to the pinned old work. */}
+      <div className="history-inner"><div style={{ minHeight: layout.total }}>
         {scene.passages.length === 0 && <div className="history-empty">No captured work in this view yet.</div>}
         {layout.runs.flatMap((run) => [
           ...(run.before > 0 ? [<div key={`gap-${run.start}`} aria-hidden="true" style={{ height: run.before }} />] : []),
@@ -323,7 +326,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         ])}
         {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
+      </div>
       <Origins scene={scene} projection={projection} stagedArrival={stagedArrivalStep.current === scene.total} isProgrammaticScroll={isProgrammaticScroll} />
+      <FlowConnections projection={projection} />
     </div>
       {!follow && (
         <button className="follow-pill" onClick={() => {
@@ -354,6 +359,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
           <div className="passage-head">
             <span className="agent-dot" />
             <span className="passage-agent">{agentName(agent)}</span>
+            {ps.ops.length > 1 && <span className="flow-order-label" title="Connections show recorded order, not a decision or causal pipeline">Recorded order →</span>}
             {first?.startTime && <span className="passage-time">{timeOf(first.startTime)}</span>}
           </div>
           <div className="ops-row">
@@ -376,9 +382,19 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   const set = useApp((s) => s.set);
   const [open, setOpen] = useState(true);
   const [full, setFull] = useState(false);
+  const prose = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const root = prose.current;
+    if (!root || !arriving || !useApp.getState().motion || !useApp.getState().follow || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const animations = [...root.querySelectorAll(':scope > p, :scope > ul, :scope > pre')].slice(0, 12).map((el, i) => el.animate([{ opacity: .12, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 480, delay: Math.min(660, i * 60), fill: 'backwards', easing: 'ease-out' }));
+    const cancel = () => animations.forEach(a => a.cancel());
+    const history = root.closest('.history'); history?.addEventListener('wheel', cancel, { passive: true });
+    root.addEventListener('pointerdown', cancel); window.addEventListener('keydown', cancel);
+    return () => { cancel(); history?.removeEventListener('wheel', cancel); root.removeEventListener('pointerdown', cancel); window.removeEventListener('keydown', cancel); };
+  }, [arriving, pr.id]);
   const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   return (
-    <div data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
+    <div ref={prose} data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
         <button className="prose-label" onClick={() => { setOpen((o) => !o); set({ follow: false }); }} aria-expanded={open}>
           {label}
@@ -394,6 +410,29 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
 // ─── operation cards ─────────────────────────────────────────────────────────────────────
 
 const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operation; index: number }) {
+  const card = useRef<HTMLElement>(null);
+  const growthEnabled = useApp(s => s.motion && s.follow && !s.lowResource);
+  useLayoutEffect(() => {
+    const root = card.current; const body = root?.querySelector('.op-body');
+    if (!root || !body) return;
+    let height = root.getBoundingClientRect().height; let growth: Animation | undefined;
+    const cancel = () => { growth?.cancel(); growth = undefined; height = root.getBoundingClientRect().height; };
+    const observer = new ResizeObserver(() => {
+      const before = growth ? root.getBoundingClientRect().height : height;
+      growth?.cancel();
+      const next = root.getBoundingClientRect().height; height = next;
+      if (!growthEnabled || !useApp.getState().follow || matchMedia('(prefers-reduced-motion: reduce)').matches || Math.abs(next - before) < 3) return;
+      if (root.getAnimations().some(a => a.id.startsWith('surface-') && a.playState === 'running')) return;
+      // Reserve final layout once; animate its visible boundary, never the virtual height.
+      growth = root.animate([{ clipPath: `inset(0 0 ${Math.max(0, next - before)}px 0 round 11px)` }, { clipPath: 'inset(0 0 0 0 round 11px)' }], { duration: 650, easing: 'cubic-bezier(.4,0,.2,1)' });
+      growth.id = 'material-growth';
+      void growth.finished.then(() => { growth = undefined; }, () => {});
+    });
+    observer.observe(body); root.addEventListener('pointerdown', cancel);
+    const history = root.closest('.history'); history?.addEventListener('wheel', cancel, { passive: true });
+    window.addEventListener('keydown', cancel);
+    return () => { observer.disconnect(); cancel(); root.removeEventListener('pointerdown', cancel); history?.removeEventListener('wheel', cancel); window.removeEventListener('keydown', cancel); };
+  }, [growthEnabled]);
   const selected = useApp((s) => s.selectedOp === op.id);
   const expanded = useApp((s) => s.expandedOp === op.id);
   const hoveredPath = useApp((s) => s.hoveredPath);
@@ -407,7 +446,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const readingAllocation = presentation.width ?? sourceWidth;
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   return (
-    <article
+    <article ref={card}
       data-op-id={op.id}
       data-material={presentation.material}
       data-origin={so.origin.type}

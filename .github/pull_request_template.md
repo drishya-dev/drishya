@@ -14,8 +14,8 @@
 
 The non-negotiables from [`AGENTS.md`](../AGENTS.md#non-negotiable-constraints). Tick what applies; say why for anything that does not.
 
-- [ ] **Observe only** — nothing sends a prompt, approves a tool call or launches an agent
-- [ ] **No harness file is written** — all harness paths stay read-only
+- [ ] **Independent passive capture** — any native control is separately opted in, selected-session scoped, permission preserving and explicitly submitted
+- [ ] **No direct harness file writes** — journals/configuration/credentials remain read-only to Drishya; a resumed native harness owns its normal writes
 - [ ] **Redaction first** — anything persisted, indexed, exported or shown passes redaction before it lands
 - [ ] **Provenance** — derived content is labelled; no location or causal link is drawn without evidence
 - [ ] **Deterministic composer** — no wall-clock reads inside it; golden tests updated if choreography changed

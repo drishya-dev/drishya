@@ -4,6 +4,16 @@ import { createParser, intentOf, parseShellOutput } from '../src/index.ts';
 const ctx = { recordingId: 'r', sourceId: 's', sourcePath: 'x.jsonl' };
 
 describe('Codex adapter', () => {
+  it('captures the actual model on same-workspace turn changes without confusing it with the provider', () => {
+    const parser = createParser(ctx);
+    const [meta] = parser.parse({ type: 'session_meta', payload: { cwd: '/repo', model_provider: 'openai' } });
+    expect(meta!.payload).not.toHaveProperty('model');
+    const turn = { type: 'turn_context', payload: { cwd: '/repo', model: 'captured-model-a' } };
+    const [first] = parser.parse(turn);
+    expect(first!.payload).toMatchObject({ model: 'captured-model-a', cwd: '/repo' });
+    expect(parser.parse(turn)).toEqual([]);
+    expect(parser.parse({ ...turn, payload: { ...turn.payload, model: 'captured-model-b' } })[0]!.payload).toMatchObject({ model: 'captured-model-b' });
+  });
   it('parses both shell output encodings', () => {
     expect(parseShellOutput('Exit code: 1\nWall time: 0.5 seconds\nOutput:\nboom\n')).toEqual({ text: 'boom\n', exitCode: 1, durationMs: 500 });
     expect(parseShellOutput(JSON.stringify({ output: 'ok', metadata: { exit_code: 0, duration_seconds: 1.2 } }))).toEqual({ text: 'ok', exitCode: 0, durationMs: 1200 });

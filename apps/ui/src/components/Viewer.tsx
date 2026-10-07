@@ -9,9 +9,6 @@ import { History } from './History.tsx';
 import { ExplanationView, Inspector } from './Inspector.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
-import { RepositoryLens } from './RepositoryLens.tsx';
-import { RepositoryContext } from './RepositoryContext.tsx';
-import { repositoryContext } from '../lib/repository-context.ts';
 import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { FileHistory } from './FileHistory.tsx';
 import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
@@ -19,9 +16,11 @@ import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
 import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 import { ReadingReferenceProvider } from './ReadingReference.tsx';
 import { sampleActivity } from '../lib/activity.ts';
+import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComposer, useSessionWorkspace } from './SessionWorkspace.tsx';
 
 export function Viewer() {
-  return <ReadingReferenceProvider><WorkspaceViewer /></ReadingReferenceProvider>;
+  const id = useApp(s => s.recordingId);
+  return <ReadingReferenceProvider><SessionWorkspaceProvider key={id}><WorkspaceViewer /></SessionWorkspaceProvider></ReadingReferenceProvider>;
 }
 
 function WorkspaceViewer() {
@@ -40,6 +39,7 @@ function WorkspaceViewer() {
   const compareAgents = useApp((s) => s.compareAgents);
   const motion = useApp((s) => s.motion);
   const inspectorWidth = useApp(s => s.inspectorWidth);
+  const foldersHidden = useApp(s => s.foldersHidden);
   const main = useRef<HTMLDivElement>(null);
   const [reading, setReading] = useState<{ left: number; width: number }>();
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -106,20 +106,22 @@ function WorkspaceViewer() {
   if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
   return (
-    <div style={{ '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties} className={`viewer${motion ? '' : ' still'}${explore ? ' exploring' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div style={{ '--inspector-width': `${inspectorWidth}px` } as React.CSSProperties} className={`viewer connected-workspace${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <Crown scene={scene} projection={projection} />
       <WorkspaceBar />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
         {mapVisible && <MapCanvas graph={graph} heat={scene.heat} readingRect={reading} />}
-        <Spine scene={scene} projection={historical} />
+        <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />
         <AgentOverview scene={scene} projection={historical} />
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
         <FileHistory projection={historical} />
+        <CurrentFileReader />
       </div>
       <Dock scene={scene} />
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); useApp.setState({ follow: false, playing: false, held: true }); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
+      <PromptComposer key={recordingId} />
       <Inspector projection={historical} />
       <Briefing projection={projection} />
       <Search projection={projection} />
@@ -165,19 +167,21 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
               key={a.id}
               data-agent-id={a.id}
               aria-label={`Filter by ${agentName(agent)} agent`}
+              role="switch"
+              aria-checked={on}
               className={`agent st-${a.state}${on ? ' on' : ''}${a.parentId ? ' child' : ''}`}
               style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties}
               onClick={() => setFilter(on ? undefined : { agentId: a.id })}
               title={`${agentName(agent)} — ${a.state}${a.activeOperationIds.length ? `, ${a.activeOperationIds.length} call in flight` : ''}. Click to follow only this agent.`}
             >
               <span className="agent-dot" />
-              {agentName(agent)}
+              {agentName(agent)}<small className="agent-harness">{agent?.harness}</small>
               {a.state === 'active' && a.activeOperationIds.length > 0 && <span className="orbit" />}
             </button>
           );
         })}
       </div>
-      <div className="crown-actions">
+      <div className="crown-actions"><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, playing: false, held: true, follow: false })}>Settings</button>
         <button className="btn ghost" onClick={() => set({ searchOpen: true })} title="Search (/)">Search</button>
         <button className="btn ghost" onClick={() => set({ briefingOpen: true })}>Briefing</button>
@@ -202,91 +206,22 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
   );
 }
 
-// ─── spine: this run's files, in the left gutter ─────────────────────────────────────────
-
-function Spine({ scene, projection }: { scene: Scene; projection: Projection }) {
-  const selectedOp = useApp((s) => s.selectedOp);
-  const readingPassageId = useApp((s) => s.readingPassageId);
-  const follow = useApp((s) => s.follow);
-  const graph = useApp((s) => s.graph);
-  const mapVisible = useApp((s) => s.mapVisible);
-  const hovered = useApp((s) => s.hoveredPath);
-  const set = useApp((s) => s.set);
-  const ref = useRef<HTMLElement>(null);
-  const [top, setTop] = useState(0);
-  const [height, setHeight] = useState(600);
-  const [focusedPath, setFocusedPath] = useState<string>();
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() => setHeight(el.clientHeight));
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  const heat = useMemo(() => new Map(scene.heat.map((h) => [h.path, h])), [scene.heat]);
-  const files = projection.files.filter((f) => f.firstStep < scene.step);
-  const context = useMemo(() => repositoryContext(projection, scene, follow ? undefined : readingPassageId, selectedOp), [projection, scene, follow, readingPassageId, selectedOp]);
-  const rowHeight = 48;
-  const rowStart = useRef<HTMLDivElement>(null);
-  const [rowOffset, setRowOffset] = useState(32);
-  useEffect(() => {
-    const marker = rowStart.current;
-    if (!marker) return;
-    const observer = new ResizeObserver(() => setRowOffset(marker.offsetTop));
-    observer.observe(marker.parentElement!);
-    return () => observer.disconnect();
-  }, [graph, mapVisible, context.path, context.scope, context.actions.length]);
-  const first = Math.max(0, Math.floor((top - rowOffset) / rowHeight) - 8);
-  const last = Math.min(files.length, Math.max(0, Math.ceil((top + height - rowOffset) / rowHeight) + 8));
-  const visible = new Set<number>();
-  for (let i = first; i < last; i++) visible.add(i);
-  const focused = files.findIndex((file) => file.path === focusedPath);
-  if (focused >= 0) visible.add(focused);
-  let previous = 0;
-  return (
-    <nav className="spine" ref={ref} aria-label="Files in this run" onScroll={(e) => setTop(e.currentTarget.scrollTop)} onFocusCapture={(e) => setFocusedPath((e.target as HTMLElement).closest<HTMLElement>('[data-spine-path]')?.dataset.spinePath)} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-spine-path]')) setFocusedPath(undefined); }}>
-      <div className="spine-head">Recorded working set</div>
-      {mapVisible && graph && <RepositoryLens graph={graph} heat={scene.heat} focusPath={context.path} />}
-      <RepositoryContext context={context} graph={graph} />
-      <div ref={rowStart} aria-hidden="true" />
-      {files.length === 0 && <div className="muted small">None yet</div>}
-      {[...visible].sort((a, b) => a - b).map((i) => {
-        const f = files[i]!;
-        const gap = (i - previous) * rowHeight;
-        previous = i + 1;
-        const h = heat.get(f.path);
-        const name = f.path.split('/').pop();
-        const dir = f.path.slice(0, f.path.length - (name?.length ?? 0));
-        return (
-          <div key={f.path}>{gap > 0 && <div aria-hidden="true" style={{ height: gap }} />}<button
-            data-spine-path={f.path}
-            className={`spine-file tone-${h?.tone ?? 'none'}${h?.edited ? ' edited' : ''}${hovered === f.path ? ' hover' : ''}`}
-            style={{ '--heat': String(h?.heat ?? 0), height: rowHeight } as React.CSSProperties}
-            onMouseEnter={() => set({ hoveredPath: f.path })}
-            onMouseLeave={() => set({ hoveredPath: undefined })}
-            onClick={() => set({ filePanel: f.path })}
-            title={f.path}
-          >
-            <span className="spine-dot" />
-            <span className="spine-dir">{dir}</span>
-            <span className="spine-name">{name}</span>
-          </button></div>
-        );
-      })}
-      <div aria-hidden="true" style={{ height: (files.length - previous) * rowHeight }} />
-    </nav>
-  );
+function UsagePeek() {
+  const { controller } = useSessionWorkspace();
+  return <details className="usage-peek"><summary>Usage</summary><div><strong>Connected turn</strong><dl><dt>Input tokens</dt><dd>{controller?.usage?.input ?? 'Not reported'}</dd><dt>Output tokens</dt><dd>{controller?.usage?.output ?? 'Not reported'}</dd><dt>Cached input</dt><dd>{controller?.usage?.cached ?? 'Not reported'}</dd><dt>Cost (USD)</dt><dd>{controller?.usage?.costUsd ?? 'Not reported'}</dd></dl><small>Native runtime values only. Historical token accounting is not captured; subscription usage is not a per-turn bill.</small></div></details>;
 }
 
 // ─── dock: native instruments, then MCP servers by name ──────────────────────────────────
 
 function Dock({ scene }: { scene: Scene }) {
+  const { controller } = useSessionWorkspace();
   const filter = useApp((s) => s.filter);
   const setFilter = useApp((s) => s.setFilter);
   return (
     <aside id="observed-tools" className="dock" aria-label="Tools">
       <div className="dock-head">Tools</div>
       <div className="dock-basis">Observed in this recording</div>
+      {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary>{controller.tools.map(t => <div key={t}>{t}</div>)}{controller.tools.length === 0 && <small>No MCP tools reported by this runtime</small>}</details>}
       {scene.dock.native.map((d) => (
         <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
           <span className={`op-kind k-${d.kind}`}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span>{KIND_LABEL[d.kind]}</span>
@@ -356,7 +291,7 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
     <footer className="transport history-transport">
       <span className="reading-status"><span className="reading-dot" /> History · {scene.total} recorded steps</span>
       <span className="muted small">Scroll to review. New work joins below.</span>
-      <PromptNavigation scene={scene} projection={projection} />
+      <details className="prompt-menu"><summary>Prompts</summary><PromptNavigation scene={scene} projection={projection} /></details>
       {mode === 'replay' && <button className="btn ghost" onClick={showHistory}>Full history</button>}
       <ActivityTimeline scene={scene} projection={projection} />
       <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} disabled={!mapVisible} title={mapVisible ? 'Explore the map (X)' : 'Show the map to explore it'}>Explore</button>
