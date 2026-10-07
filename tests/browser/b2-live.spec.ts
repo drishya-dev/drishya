@@ -78,14 +78,16 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await latest.click();
   await expect(latest).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Map on' }).click();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('checkbox', { name: /^Repository map/ }).uncheck();
+  await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   await expect(page.locator('.map')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Explore', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Explore repository map', exact: true })).toBeVisible();
 
   for (const width of [1440, 900, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
-    await history.hover();
+    { const bounds = (await history.boundingBox())!; await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 100); }
     await page.mouse.wheel(0, -900);
     await expect(latest).toBeVisible();
     // Wheel dispatch can return before the browser applies the scroll. Measure a stationary
@@ -108,7 +110,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
     })).toMatchObject({ id: anchor.id, offset: anchor.offset });
 
     // Reaching the bottom by scrolling is not consent to resume following.
-    await history.hover();
+    { const bounds = (await history.boundingBox())!; await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 100); }
     await page.mouse.wheel(0, 100_000);
     await expect(latest).toBeVisible();
     await latest.click();
@@ -136,7 +138,7 @@ test('long history mounts only nearby work while selected evidence and live upda
   const history = page.locator('.history');
   const steps = page.locator('.reading-status');
   const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
-  await history.hover();
+  { const bounds = (await history.boundingBox())!; await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 100); }
   await page.mouse.wheel(0, -100_000);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollTop)).toBe(0);

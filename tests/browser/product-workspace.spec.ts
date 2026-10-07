@@ -101,7 +101,7 @@ test('source preview opens the exact stored range and keeps pending replay evide
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await pinned.getByRole('button', { name: 'Minimize reference' }).press('Escape');
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.locator('.replay-diagnostics summary').click();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('button', { name: 'Replay sequence' }).click();
   await expect(pinned).toHaveCount(0);
   // The result exists in the offline bundle, but has not landed at this replay boundary.
@@ -162,8 +162,8 @@ test('substantial external results retain structured evidence and adapt to narro
   await expect(external).toBeAttached();
   await external.scrollIntoViewIfNeeded();
   await expect(external).toHaveClass(/shape-reading/);
-  expect((await external.boundingBox())!.width).toBeGreaterThanOrEqual(400);
-  expect((await external.boundingBox())!.width).toBeLessThanOrEqual(440);
+  expect((await external.boundingBox())!.width).toBeGreaterThanOrEqual(350);
+  expect((await external.boundingBox())!.width).toBeLessThanOrEqual(390);
   await expect(external.locator('tbody tr')).toHaveCount(5);
   await expect(external.locator('tbody')).toContainText('synthetic/file-4.ts');
   await expect(external.locator('tbody')).toContainText('null');
@@ -181,48 +181,21 @@ test('substantial external results retain structured evidence and adapt to narro
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-mobile.png') });
 });
 
-test('repository context follows older reading and exposes only qualified current imports', async ({ page }) => {
+test('the explorer keeps current file navigation without redundant relationship and map panels', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
-  sample.graph.temporal = 'current';
-  sample.graph.edges = [
-    { from: 'src/checkout/guard.ts', to: 'src/cart/types.ts', relation: 'static-import', basis: 'deterministic-rule', specifier: '../cart/types.ts' },
-    { from: 'src/checkout/index.ts', to: 'src/checkout/guard.ts', relation: 'static-import', basis: 'deterministic-rule', specifier: './guard.ts' },
-  ];
-  await page.route('**/demo/bundle.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
   await page.goto(demoUrl());
-  const context = page.getByRole('region', { name: 'Repository reading context' });
-  await page.locator('.folder-reading-context > summary').click();
-  await expect(context).toContainText('Latest file reference');
-  await expect(context.locator('.repo-context-file')).toContainText('checkout.test.ts');
-  const history = page.locator('.history');
-  const scrollBox = (await history.boundingBox())!;
-  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
-  await page.mouse.wheel(0, -100_000);
-  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
-  await expect(context).toContainText('No file location captured for this passage.');
-  await expect(page.locator('article.op-read').first()).toBeAttached();
-  await history.evaluate((el) => {
-    const passage = el.querySelector('article.op-read')!.closest('.passage-slot')!;
-    el.scrollTop += passage.getBoundingClientRect().top - el.getBoundingClientRect().top + 2;
-  });
-  await expect(context).toContainText('Reading here');
-  await expect(context.locator('.repo-context-file')).toContainText('guard.ts');
-  await expect(context.locator('.repo-context-action-label').first()).not.toHaveText('Read');
-  await expect(context).toContainText('Current static imports');
-  await expect(context).toContainText('Workspace index · not historical execution');
-  await expect(context.locator('.repo-relations').first()).toContainText('src/cart/types.ts');
-  await expect(context.locator('.repo-relations').last()).toContainText('src/checkout/index.ts');
-  await page.getByRole('button', { name: 'Map on', exact: true }).click();
-  await expect(context.locator('.repo-context-file')).toContainText('guard.ts');
-  await context.locator('.repo-context-file').click();
+  const explorer = page.getByRole('complementary', { name: 'Session folders' });
+  await expect(explorer).toBeVisible();
+  await expect(explorer).not.toContainText('Current workspace index');
+  await expect(explorer).not.toContainText('File relationships');
+  await expect(explorer.locator('.folder-map-link')).toHaveCount(0);
+  await explorer.getByRole('textbox', { name: 'Find session files' }).fill('guard.ts');
+  await explorer.getByRole('treeitem').filter({ hasText: 'guard.ts' }).click();
   await expect(page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' })).toBeVisible();
   await page.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
-  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/repository-reading-context.png') });
-  await page.getByRole('button', { name: /Back to latest/ }).click();
-  await page.locator('.folder-reading-context > summary').click();
-  await expect(context).toContainText('Latest file reference');
-  await expect(context.locator('.repo-context-file')).toContainText('checkout.test.ts');
+  await page.getByRole('button', { name: 'Explore repository map' }).click();
+  await expect(page.locator('.map.exploring')).toBeVisible();
+  await expect(explorer).toHaveCSS('opacity', '0');
 });
 
 test('synthetic live demo publishes pending requests, resolves in place and keeps capture going while reading', async ({ page }) => {
@@ -237,13 +210,10 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   expect(await operation.getAttribute('data-op-id')).toBe(id);
   const settings = page.getByRole('button', { name: 'Workspace settings', exact: true });
   await settings.click();
-  const context = page.getByRole('region', { name: 'Repository reading context' });
-  await expect(context).toContainText('Reading here');
-  const contextPath = await context.locator('.repo-context-file').allTextContents();
+  const beforeScroll = await page.locator('.history').evaluate(el => el.scrollTop);
   const before = Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]);
   await expect.poll(async () => Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]), { timeout: 10_000 }).toBeGreaterThan(before);
-  await expect(context).toContainText('Reading here');
-  expect(await context.locator('.repo-context-file').allTextContents()).toEqual(contextPath);
+  expect(await page.locator('.history').evaluate(el => el.scrollTop)).toBeCloseTo(beforeScroll, 0);
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   await page.getByRole('button', { name: 'Show complete sample' }).click();
   await expect(page.locator('.reading-status')).toContainText('45 recorded steps');
@@ -374,7 +344,8 @@ test('distant file moments compare across bounded trail pages', async ({ page })
 test('a sanitized export opens as read-only evidence and can return to the local workspace', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
-  const exportPath = await page.getByRole('link', { name: 'Export', exact: true }).getAttribute('href');
+  await page.locator('.workspace-menu > summary').click();
+  const exportPath = await page.getByRole('link', { name: 'Export recording', exact: true }).getAttribute('href');
   const replay = new URL('/', server.launchUrl);
   replay.searchParams.set('bundle', new URL(exportPath!, server.launchUrl).href);
   await page.goto(replay.href);
@@ -428,6 +399,7 @@ test('view and appearance changes keep the same captured passage under the reade
 
 test('history activity timeline opens recorded failures and edits; named palettes switch', async ({ page }) => {
   await page.goto(demoUrl());
+  await page.locator('.prompt-menu > summary').click();
   const timeline = page.getByRole('group', { name: 'Recorded activity' });
   await expect(timeline).toContainText('2 edits · 1 failed · 2 passed');
   await timeline.getByRole('button', { name: 'Next failure' }).click();

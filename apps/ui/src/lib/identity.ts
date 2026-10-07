@@ -18,7 +18,7 @@ export function agentName(a: Agent | undefined): string {
   if (!a) return 'Agent';
   const generic = ['claude code', 'codex', 'agent', 'main'].includes(a.label.toLowerCase());
   if (!generic) return a.label;
-  if (a.model && !['openai', 'anthropic'].includes(a.model.toLowerCase())) return a.model;
+  if (a.model && !['openai', 'anthropic', 'synthetic', '<synthetic>'].includes(a.model.toLowerCase())) return a.model;
   return a.agentType ?? (a.parentId ? `Agent ${a.id.slice(-6)}` : 'Main agent');
 }
 

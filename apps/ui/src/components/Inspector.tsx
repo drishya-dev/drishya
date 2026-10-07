@@ -14,7 +14,8 @@ export function Inspector({ projection }: { projection: Projection }) {
   const width = useApp(s => s.inspectorWidth);
   const setWidth = (inspectorWidth: number) => useApp.setState({ inspectorWidth });
   const selected = useApp((s) => s.selectedOp);
-  const tab = useApp((s) => s.inspectorTab);
+  const selectedTab = useApp((s) => s.inspectorTab);
+  const tab = selectedTab === 'explain' ? 'detail' : selectedTab;
   const set = useApp((s) => s.set);
   const select = useApp((s) => s.select);
   const op = projection.operations.find((o) => o.id === selected);
@@ -43,7 +44,7 @@ export function Inspector({ projection }: { projection: Projection }) {
         <ProvenanceBadge p={op.classification} />
       </div>
       <nav className="tabs" role="tablist">
-        {(['detail', 'evidence', 'explain'] as const).map((t) => (
+        {(['detail', 'evidence'] as const).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => set({ inspectorTab: t })}>
             {t === 'detail' ? 'Detail' : t === 'evidence' ? `Evidence${links.length ? ` · ${links.length}` : ''}` : 'Explain'}
           </button>
@@ -52,9 +53,7 @@ export function Inspector({ projection }: { projection: Projection }) {
       <div className="insp-body">
         {tab === 'detail' && <><Detail op={op} projection={projection} /><VerificationPanel op={op} /></>}
         {tab === 'evidence' && <Evidence op={op} links={links} projection={projection} />}
-        {tab === 'explain' && (op.endSequence === undefined
-          ? <p className="muted">The result is not available at this step. Move to the result to inspect its evidence.</p>
-          : <Explain op={op} />)}
+
       </div>
     </aside>
   );

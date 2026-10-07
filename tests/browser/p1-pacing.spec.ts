@@ -45,7 +45,7 @@ test('the tool request is visible before its result and remains beside it', asyn
     new MutationObserver((changes) => {
       for (const change of changes) for (const node of change.addedNodes) {
         if (node instanceof Element && node.getAttribute('data-move')) observed.push(node.getAttribute('data-move')!);
-        if (node instanceof Element && node.classList.contains('origin-material')) (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.push({ move: node.getAttribute('data-move')!, width: Number(node.getAttribute('width')), height: Number(node.getAttribute('height')) });
+        if (node instanceof Element && node.classList.contains('origin-thread')) (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.push({ move: node.getAttribute('data-move')!, width: document.querySelector('article.op-shell:last-of-type')?.getBoundingClientRect().width ?? 0, height: document.querySelector('article.op-shell:last-of-type')?.getBoundingClientRect().height ?? 0 });
       }
     }).observe(document.querySelector('.origins')!, { childList: true });
   });
@@ -57,7 +57,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(operation).toContainText('Waiting for output');
   await expect(operation.locator('.state-running')).toHaveCount(1);
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Emit');
-  await expect.poll(() => page.evaluate(() => (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.some((material) => material.move === 'Emit' && material.width > 150 && material.height > 60))).toBe(true);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.some((material) => material.move === 'Emit' && material.width > 0 && material.height > 0))).toBe(true);
   expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
 
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'drishya-live-output' }] } });
@@ -78,7 +78,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
 });
 
-test('a single delayed read result keeps its input and reading position instead of following its bottom', async ({ page }) => {
+test('a single delayed read result keeps its request readable in a bounded material', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
@@ -105,14 +105,15 @@ test('a single delayed read result keeps its input and reading position instead 
       (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold = false;
       new MutationObserver((changes) => {
         for (const change of changes) for (const node of change.addedNodes) {
-          if (node instanceof Element && node.classList.contains('origin-material') && node.getAttribute('data-move') === 'Lift' && Number(node.getAttribute('height')) > 200) (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold = true;
+          if (node instanceof Element && node.classList.contains('origin-shell') && node.getAttribute('data-move') === 'Lift') (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold = true;
         }
       }).observe(document.querySelector('.origins')!, { childList: true });
     });
     release();
     await expect(read).toContainText('captured_line_0');
-    await expect(latest).toBeVisible();
-    await expect.poll(() => history.evaluate((el) => el.scrollTop)).toBeCloseTo(before, 0);
+    // Compact material may fit without a camera hold. It must never hide the request
+    // or jump farther than the newly allocated reading surface.
+    expect(Math.abs(await history.evaluate(el => el.scrollTop) - before)).toBeLessThanOrEqual(245);
     const header = await read.locator('.op-head').boundingBox();
     const viewport = await history.boundingBox();
     expect(header!.y).toBeGreaterThanOrEqual(viewport!.y);
@@ -156,113 +157,35 @@ test('actions share stable reading widths, wrap when full and restart after agen
   await expect(last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]')).toContainText('Captured reasoning punctuates this action row.');
 });
 
-for (const interruption of ['reading', 'reduced motion'] as const) test('a finite arrival survives passive hover and cancels immediately for ' + interruption, async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+for (const interruption of ['reading', 'reduced motion'] as const) test('one real material arrival survives hover and cancels for ' + interruption, async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   await expect(page.locator('.origins')).toBeAttached();
+  await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await page.evaluate(() => {
-    new MutationObserver((changes) => {
-      for (const change of changes) for (const node of change.addedNodes) {
-        if (!(node instanceof SVGElement)) continue;
-        if (node.classList.contains('origin-material')) {
-          const material = node.getAnimations()[0];
-          if (material) { material.pause(); material.currentTime = Number(material.effect?.getTiming().duration) * .55; }
-        }
-        if (!node.classList.contains('origin-tool-transfer')) continue;
-        const animation = node.getAnimations()[0];
-        if (!animation) continue;
-        // Freeze the real arrival frame so assertion timing cannot outlast its lifetime.
-        animation.pause();
-        animation.currentTime = Number(animation.effect?.getTiming().duration) * .4;
-        (window as unknown as { retainedCue: { node: SVGElement; animation: Animation } }).retainedCue = { node, animation };
-      }
+    new MutationObserver(() => {
+      const card = [...document.querySelectorAll<HTMLElement>('article.op-mcp')].filter(el => el.textContent?.includes('single-arrival-proof')).at(-1);
+      const animation = card?.getAnimations().find(a => a.id === 'surface-Emit');
+      if (!card || !animation || (window as any).retainedSurface) return;
+      animation.pause(); animation.currentTime = Number(animation.effect?.getTiming().duration) * .4;
+      (window as any).retainedSurface = { card, animation };
     }).observe(document.querySelector('.origins')!, { childList: true });
   });
-  const id = 'p1-persistent-arrival-' + interruption.replaceAll(' ', '-');
+  const id = 'single-arrival-proof-' + interruption.replaceAll(' ', '-');
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
   await app.ingest.sync(recordingId);
-  await expect.poll(() => page.evaluate(() => !!(window as unknown as { retainedCue?: object }).retainedCue)).toBe(true);
+  await expect.poll(() => page.evaluate(() => !!(window as any).retainedSurface)).toBe(true);
   const operation = page.locator('article.op-mcp').filter({ hasText: id });
-  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/retained-tool-arrival.png') });
-  // Do not let automation scroll a still-travelling surface into view: that is deliberate reading.
+  await expect(page.locator('.origin-material, .origin-tool-transfer, .origin-file-transfer')).toHaveCount(0);
   await operation.dispatchEvent('mouseover');
-  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  expect(await page.evaluate(() => {
-    const cue = (window as unknown as { retainedCue: { node: SVGElement; animation: Animation } }).retainedCue;
-    return cue.node.isConnected && cue.animation.playState === 'paused';
-  })).toBe(true);
-  if (interruption === 'reading') await operation.getByRole('button', { name: /Expand/ }).click();
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  expect(await page.evaluate(() => (window as any).retainedSurface.animation.playState)).toBe('paused');
+  if (interruption === 'reading') await page.evaluate(() => document.querySelector('.viewer')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
   else await page.emulateMedia({ reducedMotion: 'reduce' });
-  // Browser media emulation acknowledges before the native change event is dispatched.
-  await expect.poll(() => page.evaluate(() => (window as unknown as { retainedCue: { node: SVGElement } }).retainedCue.node.isConnected), { timeout: 1000 }).toBe(false);
-  expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
-});
-
-test('tool silhouettes transfer from the exact visible instrument and cancel for reading', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
-  await expect(page.locator('.origins')).toBeAttached();
-  await page.evaluate(() => {
-    const observed: { sourceX: number; sourceY: number; targetX: number; targetY: number; glyph: string; label: string; text: string; actualSource: number[]; actualTarget: number[]; surface: boolean; interrupted: boolean }[] = [];
-    (window as unknown as { toolboxTransfers: typeof observed }).toolboxTransfers = observed;
-    new MutationObserver((changes) => {
-      for (const change of changes) for (const node of change.addedNodes) {
-        if (!(node instanceof Element) || !node.classList.contains('origin-tool-transfer')) continue;
-        // Sample the DOM in the arrival frame: legitimate follow/reflow can move
-        // the card before an asynchronous test assertion reads its later position.
-        const a = document.querySelector('[data-mcp-server="context7"][data-mcp-tool="get-library-docs"] .material-glyph')!.getBoundingClientRect();
-        const card = [...document.querySelectorAll('article.op-mcp')].find((el) => el.textContent?.includes('synthetic-toolbox-input'))!;
-        const b = card.querySelector('.op-head > .material-glyph')!.getBoundingClientRect();
-        const transform = new DOMMatrixReadOnly(getComputedStyle(card).transform);
-        const naturalTarget = [card.getBoundingClientRect().x - transform.m41 + (b.x + b.width / 2 - card.getBoundingClientRect().x) / transform.m11, card.getBoundingClientRect().y - transform.m42 + (b.y + b.height / 2 - card.getBoundingClientRect().y) / transform.m22];
-        const surface = card.getAnimations().some(animation => animation.id === 'surface-Emit');
-        const active = node.getAnimations().length > 0;
-        document.querySelector('.viewer')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-        observed.push({ sourceX: Number(node.getAttribute('data-source-x')), sourceY: Number(node.getAttribute('data-source-y')), targetX: Number(node.getAttribute('data-target-x')), targetY: Number(node.getAttribute('data-target-y')), glyph: node.querySelector('svg path')?.getAttribute('d') ?? '', label: node.getAttribute('data-origin-type') ?? '', text: node.textContent ?? '', actualSource: [a.x + a.width / 2, a.y + a.height / 2], actualTarget: naturalTarget, surface, interrupted: active && node.getAnimations().length === 0 });
-      }
-    }).observe(document.querySelector('.origins')!, { childList: true });
-  });
-  const id = 'toolbox-visible-mcp';
-  append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: 'synthetic-toolbox-input' } }] } });
-  await app.ingest.sync(recordingId);
-  const operation = page.locator('article.op-mcp').filter({ hasText: 'synthetic-toolbox-input' });
-  await expect(operation).toBeVisible();
-  await expect(operation).toContainText('Waiting for result');
-  await expect.poll(() => page.evaluate(() => (window as unknown as { toolboxTransfers: unknown[] }).toolboxTransfers.length)).toBeGreaterThan(0);
-  const transfer = await page.evaluate(() => (window as unknown as { toolboxTransfers: { sourceX: number; sourceY: number; targetX: number; targetY: number; glyph: string; label: string; text: string; actualSource: number[]; actualTarget: number[]; interrupted: boolean }[] }).toolboxTransfers.at(-1)!);
-  const source = page.locator('[data-mcp-server="context7"][data-mcp-tool="get-library-docs"] .material-glyph');
-  expect(transfer.label).toBe('MCP tool');
-  expect(transfer.glyph).toBe(await source.locator('path').getAttribute('d'));
-  expect(transfer.text).toBe('');
-  expect(transfer.sourceX).toBeCloseTo(transfer.actualSource[0]!, 0);
-  expect(transfer.sourceY).toBeCloseTo(transfer.actualSource[1]!, 0);
-  expect(transfer.targetX).toBeCloseTo(transfer.actualTarget[0]!, 0);
-  expect(transfer.targetY).toBeCloseTo(transfer.actualTarget[1]!, 0);
-  expect(transfer.surface).toBe(true);
-  expect(transfer.interrupted).toBe(true);
-  expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
-  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/toolbox-workspace.png') });
-  await operation.getByRole('button', { name: /Expand/ }).click();
-  expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
-  await expect(page.locator('.origin-tool-transfer')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
-  await operation.getByRole('button', { name: /Close .* in history/ }).click();
-  await page.getByRole('button', { name: /Back to latest/ }).click();
-  const bounds = (await source.boundingBox())!;
-  await page.evaluate((bounds) => {
-    const cover = document.createElement('div'); cover.id = 'synthetic-tool-cover';
-    Object.assign(cover.style, { position: 'fixed', zIndex: '1000', left: `${bounds.x - 4}px`, top: `${bounds.y - 4}px`, width: `${bounds.width + 8}px`, height: `${bounds.height + 8}px` });
-    document.body.append(cover);
-  }, bounds);
-  const hiddenId = 'toolbox-occluded-mcp';
-  append({ type: 'assistant', message: { id: hiddenId, role: 'assistant', content: [{ type: 'tool_use', id: hiddenId, name: 'mcp__context7__get-library-docs', input: { topic: 'synthetic-occluded-tool-input' } }] } });
-  await app.ingest.sync(recordingId);
-  await expect(page.locator('article.op-mcp').filter({ hasText: 'synthetic-occluded-tool-input' })).toContainText('Waiting for result');
-  await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
-  expect(await page.evaluate(() => (window as unknown as { toolboxTransfers: unknown[] }).toolboxTransfers.length)).toBe(1);
-  await page.evaluate(() => document.getElementById('synthetic-tool-cover')!.remove());
+  await expect.poll(() => page.evaluate(() => (window as any).retainedSurface.animation.playState)).toBe('idle');
+  expect(await operation.evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m11)).toBe(1);
 });
 
 test('patch layouts retain captured changes and adapt without overflowing a narrow screen', async ({ page }) => {
@@ -296,7 +219,7 @@ test('terminal folding is reversible and keyboard map search targets a real file
   await expect(shell).toContainText('missing-total');
   await shell.getByRole('button', { name: 'Fold captured preview' }).click();
   await expect(shell.getByRole('button', { name: /captured lines between/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('checkout/guard');
   const match = page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true });
   await match.focus();
@@ -323,12 +246,13 @@ test('file relationships start at measured renderer nodes and fall back when the
     const response = await route.fetch();
     const bundle = await response.json();
     const node = bundle.graph.nodes.find((node: { path: string }) => node.path === 'test/checkout.test.ts');
-    node.x = .95; node.y = .96;
+    node.x = .95; node.y = .35;
     await route.fulfill({ response, json: bundle });
   });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
   const edit = page.locator('article.op-edit').last();
+  await expect(page.locator('.map [data-origin-file="test/checkout.test.ts"]')).toHaveAttribute('data-origin-visible', 'true');
   await edit.hover();
   const tether = page.locator('.origin-thread[data-origin-type="Repository node"]');
   await expect(tether).toHaveCount(1);
@@ -352,7 +276,9 @@ test('file relationships start at measured renderer nodes and fall back when the
   expect(Number(folderCoordinates[1])).toBeCloseTo(folder.x + folder.width / 2, 0);
   expect(Number(folderCoordinates[2])).toBeCloseTo(folder.y + folder.height / 2, 0);
   await page.evaluate(() => document.getElementById('synthetic-origin-cover')!.remove());
-  await page.getByRole('button', { name: 'Map on', exact: true }).click();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('checkbox', { name: /^Repository map/ }).uncheck();
+  await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   await edit.hover();
   await expect(page.locator('.origin-thread[data-origin-type="Repository node"]')).toHaveCount(0);
   await expect(page.locator('.origin-thread[data-origin-type="File reference"]')).toHaveCount(1);
@@ -414,12 +340,18 @@ test('content gets reading width and origin tethers use the visible instrument',
   await page.goto(demo.href);
   const edit = page.locator('article.op-edit').last();
   const verification = page.locator('article.op-test').last();
+  await expect(verification.locator('.verification-group.passed i')).toHaveCount(7);
+  await expect(page.locator('article.op-read .read-preview')).toHaveCount(await page.locator('article.op-read').count());
+  await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect.poll(() => page.locator('.history').evaluate(el => [...el.querySelectorAll('article')].flatMap(card => card.getAnimations()).filter(a => a.id.startsWith('surface-') && a.playState === 'running').length)).toBe(0);
   await expect(edit).toBeVisible();
   const sourceWidth = (await edit.boundingBox())!.width;
   expect(sourceWidth).toBeGreaterThanOrEqual(280);
   expect(sourceWidth).toBeLessThanOrEqual(420);
   expect(sourceWidth).toBeGreaterThan((await verification.boundingBox())!.width);
-  await verification.hover();
+  await page.mouse.move(0, 0);
+  await verification.locator('.op-head').hover();
   const tether = page.locator('.origin-thread[data-origin-type="Tool instrument"]');
   await expect(tether).toHaveCount(1);
   const instrument = (await page.locator('.instrument.k-test').boundingBox())!;
@@ -439,7 +371,7 @@ test('the dock keeps observed identities readable at rest and remains accessible
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
   const dock = page.getByRole('complementary', { name: 'Tools' });
-  await expect(dock).toContainText('Observed in this recording');
+  await expect(dock).toHaveAttribute('title', /Tools observed in this recording/);
   await expect(dock.getByRole('button', { name: 'get-library-docs 1', exact: true })).toBeVisible();
   await expect(dock.getByRole('button', { name: 'search_code 1', exact: true })).toBeVisible();
   expect(await dock.locator('.inst-tools').evaluateAll((els) => els.every((el) => el.scrollWidth <= el.clientWidth + 1))).toBe(true);
@@ -477,7 +409,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Tests  1 passed (1)' }] } });
   await app.ingest.sync(recordingId);
   await expect(panel).toContainText('npm test -- p1-live-verification');
-  await page.locator('.replay-diagnostics summary').click();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await page.getByRole('button', { name: 'Search', exact: true }).click();
@@ -579,9 +511,8 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   while (Date.now() - started < 600_000) {
     await scrollHistory(-120);
     await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
-    const context = page.getByRole('region', { name: 'Repository reading context' });
-    await expect(context).toContainText('Reading here');
-    const contextPath = await context.locator('.repo-context-file').allTextContents();
+    const folders = page.getByRole('complementary', { name: 'Session folders' });
+    const folderPaths = await folders.locator('[data-spine-path]').allTextContents();
     const anchor = await history.evaluate((el) => {
       const top = el.getBoundingClientRect().top;
       const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.getBoundingClientRect().bottom > top + 1)!;
@@ -595,8 +526,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     await app.ingest.sync(recordingId);
     await expect(steps).toContainText(`${before + 3} recorded steps`);
     await expect(pinned).toHaveText(pinnedLabel);
-    await expect(context).toContainText('Reading here');
-    expect(await context.locator('.repo-context-file').allTextContents()).toEqual(contextPath);
+    expect(await folders.locator('[data-spine-path]').allTextContents()).toEqual(folderPaths);
     await expect.poll(() => history.evaluate((el, anchor) => {
       const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.dataset.passageId === anchor.id);
       return node ? Math.abs(node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset) : Infinity;

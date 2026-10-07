@@ -139,10 +139,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
   const filter = useApp((s) => s.filter);
   const set = useApp((s) => s.set);
   const setFilter = useApp((s) => s.setFilter);
-  const [live, setLive] = useState(recording?.live ?? false);
-  useEffect(() => setLive(recording?.live ?? false), [recording?.live]);
   const exportUrl = recordingId ? source?.exportUrl(recordingId) : undefined;
-  const single = recordingId && !recordingId.includes('+');
 
   return (
     <header className="crown">
@@ -184,26 +181,26 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
       <div className="crown-actions"><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, playing: false, held: true, follow: false })}>Settings</button>
         <button className="btn ghost" onClick={() => set({ searchOpen: true })} title="Search (/)">Search</button>
-        <button className="btn ghost" onClick={() => set({ briefingOpen: true })}>Briefing</button>
-        <SinceMarkPill projection={projection} />
-        {source?.kind === 'daemon' && single && (
-          <button
-            className={`btn ghost live${live ? ' on' : ''}`}
-            onClick={async () => { try { const on = await source.setLive(recordingId!, !live); if (useApp.getState().recordingId === recordingId) setLive(on); } catch (failure) { set({ error: (failure as Error).message }); } }}
-            title="Watch the session file for new activity. Observe only."
-          >
-            <span className="live-dot" />
-            {live ? 'Live' : 'Watch live'}
-          </button>
-        )}
-        {exportUrl && (
-          <a className="btn ghost" href={exportUrl} download title="Download a sanitized replay bundle">
-            Export
-          </a>
-        )}
+        <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
+          {exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}
+          <SinceMarkPill projection={projection} />
+        </div></details>
       </div>
     </header>
   );
+}
+
+function LiveWatch() {
+  const recording = useApp(s => s.recording);
+  const id = useApp(s => s.recordingId);
+  const source = useApp(s => s.source);
+  const [live, setLive] = useState(recording?.live ?? false);
+  useEffect(() => setLive(recording?.live ?? false), [recording?.live]);
+  if (source?.kind !== 'daemon' || !id || id.includes('+')) return null;
+  return <button className={`btn ghost live${live ? ' on' : ''}`} onClick={async () => {
+    try { const on = await source.setLive(id, !live); if (useApp.getState().recordingId === id) setLive(on); }
+    catch (error) { useApp.setState({ error: (error as Error).message }); }
+  }} title="Observe new session activity"><span className="live-dot" />{live ? 'Live' : 'Watch live'}</button>;
 }
 
 function UsagePeek() {
@@ -218,9 +215,9 @@ function Dock({ scene }: { scene: Scene }) {
   const filter = useApp((s) => s.filter);
   const setFilter = useApp((s) => s.setFilter);
   return (
-    <aside id="observed-tools" className="dock" aria-label="Tools">
+    <aside id="observed-tools" className="dock" aria-label="Tools" title="Tools observed in this recording; connected runtime inventory is listed separately">
       <div className="dock-head">Tools</div>
-      <div className="dock-basis">Observed in this recording</div>
+
       {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary>{controller.tools.map(t => <div key={t}>{t}</div>)}{controller.tools.length === 0 && <small>No MCP tools reported by this runtime</small>}</details>}
       {scene.dock.native.map((d) => (
         <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
@@ -289,16 +286,10 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
   const cur = scene.current;
   if (!diagnostic) return (
     <footer className="transport history-transport">
-      <span className="reading-status"><span className="reading-dot" /> History · {scene.total} recorded steps</span>
-      <span className="muted small">Scroll to review. New work joins below.</span>
-      <details className="prompt-menu"><summary>Prompts</summary><PromptNavigation scene={scene} projection={projection} /></details>
+      <span className="reading-status sr-only">{scene.total} recorded steps</span>
+      <details className="prompt-menu"><summary>Prompts</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details>
       {mode === 'replay' && <button className="btn ghost" onClick={showHistory}>Full history</button>}
-      <ActivityTimeline scene={scene} projection={projection} />
-      <button className={`icon-btn txt${explore ? ' on' : ''}`} onClick={() => set({ explore: !explore })} disabled={!mapVisible} title={mapVisible ? 'Explore the map (X)' : 'Show the map to explore it'}>Explore</button>
-      <button className="icon-btn txt" onClick={() => setMapVisible(!mapVisible)} aria-pressed={mapVisible} title={mapVisible ? 'Hide repository map' : 'Show repository map'}>{mapVisible ? 'Map on' : 'Map off'}</button>
-      <button className={`icon-btn txt${motion ? '' : ' on'}`} onClick={() => setMotion(!motion)} title="Motion (M)">{motion ? 'Motion' : 'Still'}</button>
-      <details className="replay-diagnostics"><summary>Diagnostics</summary><button className="btn ghost" onClick={() => { setDiagnostic(true); togglePlay(); }}>Replay sequence</button></details>
-      <button className="icon-btn txt" aria-pressed={lowResource} onClick={() => setLowResource(!lowResource)} title="Hide map, stop motion, and reduce material cache and overscan">{lowResource ? 'Low resource' : 'Standard'}</button>
+      <LiveWatch />
     </footer>
   );
   return (

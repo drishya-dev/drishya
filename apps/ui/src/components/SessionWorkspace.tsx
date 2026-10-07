@@ -5,9 +5,7 @@ import { CodeView } from './common.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
-import { repositoryContext } from '../lib/repository-context.ts';
 import { FileIcon } from './FileIcon.tsx';
-import { RepositoryContext } from './RepositoryContext.tsx';
 
 interface Connection {
   workspace?: WorkspaceStatus; controller?: ControllerStatus; error?: string;
@@ -69,10 +67,6 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     }
     return initial;
   });
-  const selectedOp = useApp(s => s.selectedOp);
-  const passage = useApp(s => s.readingPassageId);
-  const follow = useApp(s => s.follow);
-  const context = useMemo(() => repositoryContext(projection, scene, follow ? undefined : passage, selectedOp), [projection, scene, passage, selectedOp, follow]);
   const [page, setPage] = useState(0);
   const [error, setError] = useState<string>();
   useEffect(() => {
@@ -101,8 +95,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
   if (hidden) return null;
   return <aside className="folder-explorer spine" aria-label="Session folders">
-    <header><strong>Explorer</strong><button className="icon-btn" aria-label="Minimize folders" onClick={() => useApp.setState({ foldersHidden: true })}>‹</button></header>
-    <div className="folder-root" title={workspace?.root}>{rootName}<small>{graph?.temporal === 'current' ? 'Current workspace index' : 'Recorded paths only'}</small></div>
+    <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label="Minimize folders" onClick={() => useApp.setState({ foldersHidden: true })}>‹</button></header>
     <input aria-label="Find session files" placeholder="Find files…" value={query} onChange={e => setQuery(e.target.value)} />
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" onClick={() => void approve().catch(e => setError(e.message))}>Enable workspace reading<small>Read current files in this folder</small></button>}
     {error && <p className="bad small" role="alert">{error}</p>}
@@ -115,8 +108,6 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       {!tree.length && <p className="muted small">{query ? 'No matching files' : 'No relative paths captured yet'}</p>}
     </div>
     {tree.length > 120 && <div className="folder-pages"><button disabled={!page} onClick={() => setPage(p => p - 1)}>Previous</button><span>{page + 1} / {Math.ceil(tree.length / 120)}</span><button disabled={(page + 1) * 120 >= tree.length} onClick={() => setPage(p => p + 1)}>Next</button></div>}
-    <details className="folder-reading-context" open={!follow}><summary>File relationships</summary><RepositoryContext context={context} graph={graph} /></details>
-    <button className="folder-map-link" onClick={() => useApp.setState({ mapVisible: true, explore: true, follow: false, held: true, playing: false })}><span>⌘</span> Repository map <small>{graph?.nodes.length ?? 0} files · {graph?.edges.length ?? 0} imports ↗</small></button>
   </aside>;
 }
 

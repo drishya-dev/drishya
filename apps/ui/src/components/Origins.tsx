@@ -116,107 +116,6 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       edge.style.stroke = tone ?? (getComputedStyle(el).getPropertyValue('--material').trim() || colour('--focus'));
       return edge;
     };
-    const materialArrival = (target: Element, origin: DOMRect, move: string, fromRight: boolean) => {
-      const r = restingRect(target);
-      const plate = node('rect', 'origin-material', move);
-      plate.setAttribute('x', String(r.left)); plate.setAttribute('y', String(r.top));
-      plate.setAttribute('width', String(r.width)); plate.setAttribute('height', String(Math.min(r.height, 420)));
-      plate.setAttribute('rx', '9');
-      plate.style.stroke = getComputedStyle(target).getPropertyValue('--material').trim() || colour('--focus');
-      // The empty backing carries the allocated material shape, never a second copy
-      // of captured text. Its small origin footprint expands to the measured reading space.
-      plate.style.transformOrigin = `${r.left}px ${r.top}px`;
-      const x = fromRight ? origin.left : origin.left + origin.width / 2;
-      const y = origin.top + origin.height / 2;
-      play(plate, [
-        { transform: `translate(${x - r.left}px,${y - r.top}px) scale(.08,.04)`, opacity: .7 },
-        { transform: `translate(${(x - r.left) * .22}px,${(y - r.top) * .22}px) scale(.78,.14)`, opacity: .6, offset: .42 },
-        { transform: 'none', opacity: .4, offset: .86 },
-        { transform: 'none', opacity: 0 },
-      ], 620, 'cubic-bezier(.4,0,.2,1)');
-      const edge = contour(target, move);
-      play(edge, [{ opacity: 0 }, { opacity: .8, offset: .6 }, { opacity: 0 }], 680);
-    };
-    const toolTransfer = (origin: Element, target: Element, label: string, tone: string) => {
-      const source = origin.querySelector<SVGSVGElement>('.material-glyph');
-      const destination = target.querySelector<SVGSVGElement>('.op-head > .material-glyph');
-      if (!source || !destination || !visible(destination)) return;
-      const a = source.getBoundingClientRect();
-      const b = restingRect(destination);
-      if (!a.width || !a.height || !b.width || !b.height) return;
-      const pane = origin.closest('.dock')?.getBoundingClientRect();
-      const viewport = history.getBoundingClientRect();
-      const sourceHit = document.elementFromPoint(a.left + a.width / 2, a.top + a.height / 2);
-      const targetHit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-      if (!pane || a.top < pane.top || a.bottom > pane.bottom || b.top < viewport.top || b.bottom > viewport.bottom || !sourceHit || !origin.contains(sourceHit) || !targetHit || !target.contains(targetHit)) return;
-      const x1 = a.left + a.width / 2; const y1 = a.top + a.height / 2;
-      const x2 = b.left + b.width / 2; const y2 = b.top + b.height / 2;
-      const bend = Math.min(120, Math.abs(x1 - x2) / 3);
-      const route = document.createElementNS(NS, 'path');
-      route.setAttribute('d', `M${x1},${y1} C${x1 - bend},${y1} ${x2 + bend},${y2} ${x2},${y2}`);
-      const mark = node('g', 'origin-tool-transfer', 'Emit');
-      mark.setAttribute('data-origin-type', label);
-      mark.setAttribute('data-source-x', String(x1)); mark.setAttribute('data-source-y', String(y1));
-      mark.setAttribute('data-target-x', String(x2)); mark.setAttribute('data-target-y', String(y2));
-      mark.style.color = tone;
-      const backing = document.createElementNS(NS, 'rect');
-      backing.setAttribute('x', '-13'); backing.setAttribute('y', '-13');
-      backing.setAttribute('width', '26'); backing.setAttribute('height', '26'); backing.setAttribute('rx', '5');
-      mark.append(backing);
-      // Transfer only our instrument silhouette, never tool text or captured content.
-      const glyph = source.cloneNode(true) as SVGSVGElement;
-      glyph.removeAttribute('class');
-      glyph.setAttribute('x', '-8'); glyph.setAttribute('y', '-8');
-      glyph.setAttribute('width', '16'); glyph.setAttribute('height', '16');
-      mark.append(glyph);
-      const length = route.getTotalLength();
-      const frames = Array.from({ length: 9 }, (_, i): Keyframe => {
-        const point = route.getPointAtLength(length * i / 8);
-        return { transform: `translate(${point.x}px,${point.y}px)`, opacity: i === 8 ? 0 : i === 0 ? .65 : .9, offset: i / 8 };
-      });
-      // A travel curve reserves time for the relationship, rather than landing in
-      // the first frames like the material's faster expansion curve.
-      const materialTarget = motionTarget;
-      motionTarget = destination;
-      play(mark, frames, 620, 'cubic-bezier(.4,0,.2,1)');
-      motionTarget = materialTarget;
-    };
-    // A read's file lifts out of its measured origin (map node or working-set row) as a plain
-    // document silhouette, rises, then travels into the action's header glyph. No path text or
-    // captured characters are copied into this glyph. The real DOM surface owns its arrival.
-    const fileTransfer = (origin: Element, target: Element, label: string, tone: string) => {
-      const destination = target.querySelector<SVGSVGElement>('.op-head > .material-glyph');
-      if (!destination || !visible(destination)) return;
-      const a = origin.getBoundingClientRect();
-      const b = restingRect(destination);
-      if (!a.width || !a.height || !b.width || !b.height) return;
-      const x1 = a.left + Math.min(a.width / 2, 14); const y1 = a.top + a.height / 2;
-      const x2 = b.left + b.width / 2; const y2 = b.top + b.height / 2;
-      const rise = Math.min(28, Math.max(12, a.height));
-      const route = document.createElementNS(NS, 'path');
-      route.setAttribute('d', `M${x1},${y1 - rise} C${x1 + Math.abs(x2 - x1) / 2},${y1 - rise} ${x2 - 60},${y2} ${x2},${y2}`);
-      const mark = node('g', 'origin-file-transfer', 'Lift');
-      mark.setAttribute('data-origin-type', label);
-      mark.style.color = tone;
-      const sheet = document.createElementNS(NS, 'path');
-      sheet.setAttribute('d', 'M-7,-9 H3 L8,-4 V9 H-7 Z');
-      const fold = document.createElementNS(NS, 'path');
-      fold.setAttribute('d', 'M3,-9 V-4 H8 M-4,0 H5 M-4,4 H3');
-      mark.append(sheet, fold);
-      const length = route.getTotalLength();
-      const frames: Keyframe[] = [
-        { transform: `translate(${x1}px,${y1}px) scale(.55)`, opacity: 0, offset: 0 },
-        { transform: `translate(${x1}px,${y1 - rise}px) scale(1.15)`, opacity: 1, offset: .22 },
-        ...Array.from({ length: 6 }, (_, i): Keyframe => {
-          const point = route.getPointAtLength(length * (i + 1) / 6);
-          return { transform: `translate(${point.x}px,${point.y}px) scale(${1.15 - (i + 1) * .05})`, opacity: i === 5 ? 0 : .95, offset: .22 + (i + 1) * .13 };
-        }),
-      ];
-      const materialTarget = motionTarget;
-      motionTarget = destination;
-      play(mark, frames, 700, 'cubic-bezier(.4,0,.2,1)');
-      motionTarget = materialTarget;
-    };
     const arriveSurface = (origin: Element, target: HTMLElement, move: string) => {
       const r = restingRect(target); const a = origin.getBoundingClientRect();
       const dx = a.left + a.width / 2 - (r.left + r.width / 2);
@@ -250,8 +149,6 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       path.setAttribute('data-origin-type', label);
       path.setAttribute('data-origin-renderer', origin instanceof HTMLElement ? origin.dataset.originRenderer ?? (label === 'Repository node' ? 'world' : 'reference') : 'reference');
       if (move) {
-        if (move === 'Emit' && !materialOnly) toolTransfer(origin, target, label, path.style.stroke);
-        if (move === 'Lift' && label !== 'Read instrument' && !materialOnly) fileTransfer(origin, target, label, path.style.stroke);
         const repositoryNode = label === 'Repository node';
         const ignition = node(repositoryNode ? 'circle' : 'rect', 'origin-instrument', move);
         if (repositoryNode) {
@@ -272,7 +169,10 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           rule.setAttribute('d', `M${b.left},${b.top} V${b.bottom}`);
           rule.style.stroke = getComputedStyle(target).borderLeftColor;
           play(rule, [{ opacity: .75 }, { opacity: 0 }], 480);
-        } else if (label !== 'Read instrument') materialArrival(target, a, move, fromRight);
+        } else if (materialOnly) {
+          // A late excerpt is already at home. Mark availability without a second box.
+          play(contour(target, move), [{ opacity: .8 }, { opacity: 0 }], 480);
+        }
         if (!materialOnly && label !== 'Read instrument' && (move === 'Lift' || move === 'Emit') && target instanceof HTMLElement) arriveSurface(origin, target, move);
       }
     };

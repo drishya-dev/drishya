@@ -110,6 +110,7 @@ test('connected action flow and agent switches replace tabs without inventing ca
   await expect(page.locator('.flow-connections')).toContainText(/Recorded sequence|same-artifact/);
   if(process.env.DRISHYA_REVIEW_SHOTS==='1') {
     await page.getByRole('button',{name:'Show session folders',exact:true}).click();
+    await expect(page.locator('.folder-explorer')).toHaveCSS('opacity', '1');
     await page.screenshot({path:resolve('.local/connected-materials.png')});
     await page.getByRole('button',{name:'Explore repository map',exact:true}).click();
     await page.screenshot({path:resolve('.local/connected-map.png')});
@@ -129,7 +130,18 @@ test('a large repository groups spatial density and reveals files at the zoomed 
   await expect.poll(() => page.locator('.map-group').count()).toBeGreaterThan(0);
   expect(await page.locator('.map-group').count()).toBeLessThan(48);
   await expect(page.locator('.map-legend')).toContainText('180 files');
+  await page.evaluate(() => {
+    const context = document.querySelector<HTMLCanvasElement>('.map canvas')!.getContext('2d')!;
+    const clear = context.clearRect.bind(context);
+    (window as any).mapPaints = 0;
+    context.clearRect = (...args: Parameters<CanvasRenderingContext2D['clearRect']>) => { (window as any).mapPaints++; clear(...args); };
+  });
   await page.locator('.map-group').first().click();
+  await expect.poll(() => page.evaluate(() => (window as any).mapPaints)).toBeGreaterThan(3);
+  await page.waitForTimeout(450);
+  const settledPaints = await page.evaluate(() => (window as any).mapPaints);
+  await page.waitForTimeout(250);
+  expect(await page.evaluate(() => (window as any).mapPaints)).toBe(settledPaints);
   await expect(page.getByRole('button', { name: /parent/ })).toHaveCount(0);
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('client/src/file0.ts');
   await page.getByRole('button', { name: 'client/src/file0.ts', exact: true }).click();
@@ -137,5 +149,5 @@ test('a large repository groups spatial density and reveals files at the zoomed 
   await page.getByRole('button', { name: 'Fit', exact: true }).click();
   await expect.poll(() => page.locator('.map-group').count()).toBeGreaterThan(0);
   expect(await page.locator('.map-group').count()).toBeLessThan(48);
-  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/connected-grouped-map.png') });
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') { await page.waitForTimeout(450); await page.screenshot({ path: resolve('.local/connected-grouped-map.png') }); }
 });

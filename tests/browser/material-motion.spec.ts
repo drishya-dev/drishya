@@ -58,6 +58,7 @@ test('whole material zoom stays continuous while the captured result changes its
   await app.ingest.sync(recordingId);
   const card = page.locator('article.op-shell').filter({ hasText: id });
   await expect(card).toContainText('captured output line');
+  await expect(page.locator('.origin-material, .origin-tool-transfer, .origin-file-transfer')).toHaveCount(0);
   await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.id.startsWith('surface-')).length)).toBe(0);
   const samples = await page.evaluate(() => (window as any).zoomSamples as { scale: number; width: number; height: number }[]);
   expect(samples.some(s => s.scale > .75 && s.scale < .98)).toBe(true);
