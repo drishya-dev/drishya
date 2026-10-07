@@ -146,26 +146,30 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     g.lineWidth = 1.2;
     g.strokeStyle = colours.edge;
     let drawnEdges = 0;
+    const edgeBudget = Math.min(600, Math.round(120 * Math.max(1, cam.k)));
+    const stride = Math.max(1, Math.ceil((detail?.edges.length ?? 0) / edgeBudget));
+    let edgeIndex = 0;
     for (const e of detail?.edges ?? []) {
+      if (edgeIndex++ % stride !== 0) continue;
       const a = displayById.get(e.from);
       const b = displayById.get(e.to);
       if (!a || !b) continue;
       const pa = project(a);
       const pb = project(b);
       if (Math.max(pa.x, pb.x) < 0 || Math.max(pa.y, pb.y) < 0 || Math.min(pa.x, pb.x) > size.w || Math.min(pa.y, pb.y) > size.h) continue;
-      g.globalAlpha = Math.min(a.opacity ?? 1, b.opacity ?? 1);
+      g.globalAlpha = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (hoveredPath ? .18 : .55);
       if (g.globalAlpha < .02) continue;
       g.beginPath();
       g.moveTo(pa.x, pa.y);
       g.lineTo(pb.x, pb.y);
       g.stroke();
-      if (++drawnEdges >= 600) break;
+      if (++drawnEdges >= edgeBudget) break;
     }
     g.globalAlpha = 1;
 
     if (hoveredPath) {
       g.beginPath();
-      for (const edge of (detail?.edges ?? []).slice(0, 600)) {
+      for (const edge of detail?.edges ?? []) {
         if (edge.from !== hoveredPath && edge.to !== hoveredPath) continue;
         const a = displayById.get(edge.from); const b = displayById.get(edge.to);
         if (!a || !b) continue;
@@ -177,35 +181,17 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       g.lineWidth = 1.2;
     }
 
-    const r0 = Math.max(1.8, Math.min(3, 1.8 * Math.sqrt(cam.k)));
+    const r0 = Math.max(1.2, Math.min(2, 1.2 * Math.sqrt(cam.k)));
     for (const n of displayNodes) {
       const p = project(n);
       if (p.x < -10 || p.y < -10 || p.x > size.w + 10 || p.y > size.h + 10) continue;
-      const h = heatMap.get(n.id) ?? (n.members ? n.members.map(id => heatMap.get(id)).find(Boolean) : undefined);
-      g.globalAlpha = n.opacity ?? 1;
+      // Group detail crossfades without semantic rings or a changed file position.
+      g.globalAlpha = (n.opacity ?? 1) * (n.members || hoveredPath === n.id ? 1 : .72 + Math.min(.28, (cam.k - 1) * .07));
       g.beginPath();
-      const radius = n.members ? Math.min(10, 3 + Math.log2(n.members.length) * .8) : r0;
+      const radius = n.members ? Math.min(4.5, 2 + Math.log2(n.members.length) * .25) : hoveredPath === n.id ? r0 + .5 : r0;
       g.arc(p.x, p.y, radius, 0, Math.PI * 2);
-      g.fillStyle = h && h.heat > 0.02 ? colours.tones[h.tone] : h ? colours.active : colours.node;
+      g.fillStyle = colours.node;
       g.fill();
-      if (h?.edited) {
-        g.beginPath();
-        g.arc(p.x, p.y, radius + 3, 0, Math.PI * 2);
-        g.strokeStyle = colours.tones.write;
-        g.stroke();
-      }
-      if (h?.tone === 'fail') {
-        g.beginPath();
-        g.arc(p.x, p.y, radius + 5, 0, Math.PI * 2);
-        g.strokeStyle = colours.tones.fail;
-        g.stroke();
-      }
-      if (hoveredPath === n.id) {
-        g.beginPath();
-        g.arc(p.x, p.y, radius + 6, 0, Math.PI * 2);
-        g.strokeStyle = colours.text;
-        g.stroke();
-      }
     }
 
     g.globalAlpha = 1;
@@ -276,7 +262,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       ref={wrap}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-legend, .map-group')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group')) return;
         if (!explore) return;
         const r = wrap.current!.getBoundingClientRect();
         const mx = e.clientX - r.left;
@@ -287,13 +273,13 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       }}
       onPointerDown={(e) => {
         if (!explore) return;
-        if ((e.target as HTMLElement).closest('.map-tools, .map-legend, .map-group')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group')) return;
         cancelAnimationFrame(cameraFrame.current);
         drag.current = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false };
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-legend, .map-group')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group')) return;
         const r = wrap.current!.getBoundingClientRect();
         if (drag.current && explore) {
           const dx = e.clientX - drag.current.x;
@@ -309,7 +295,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         set({ hoveredPath: n?.id });
       }}
       onPointerUp={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-legend, .map-group')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group')) return;
         const d = drag.current;
         drag.current = undefined;
         if (!explore || (d && d.moved)) return;
@@ -318,7 +304,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         if (n?.members) {
           zoomGroup(n); return;
         }
-        if (n) set(workspace?.approved ? { currentFile: n.path } : { filePanel: n.id });
+        if (n) set(workspace?.approved ? { currentFile: n.path, filePanel: undefined } : { filePanel: n.id, currentFile: undefined });
       }}
       onPointerLeave={() => explore && (setTip(undefined), set({ hoveredPath: undefined }))}
       aria-hidden={!explore}
@@ -326,9 +312,6 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       <canvas ref={canvas} style={{ width: size.w, height: size.h }} />
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
-        <button className="btn ghost" aria-label="Zoom into repository" onClick={() => zoomCamera(1.25)}>+</button>
-        <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => zoomCamera(1 / 1.25)}>−</button>
-        <button className="btn ghost" onClick={() => { animateCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
         <input aria-label="Find a file on the map" placeholder="Find a file on the map…" value={query} onChange={(e) => setQuery(e.target.value)} />
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
@@ -339,8 +322,13 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
             set({ hoveredPath: node.id, follow: false, playing: false, held: true });
           }}>{node.path}</button>)}
           <span className="muted small">{matches.length} matched files{matches.length > 30 ? ' · first 30 shown; refine the query' : ''}</span>
-          {tip && <button className="btn" onClick={() => { set({ filePanel: tip.node.id, explore: false }); }}>Open recorded work on this file</button>}
+          {tip && <button className="btn" onClick={() => { set({ filePanel: tip.node.id, currentFile: undefined }); }}>Open recorded work on this file</button>}
         </div>}
+      </div>}
+      {explore && <div className="map-zoom" aria-label="Repository zoom">
+        <button className="btn ghost" aria-label="Zoom into repository" onClick={() => zoomCamera(1.25)}>+</button>
+        <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => zoomCamera(1 / 1.25)}>−</button>
+        <button className="btn ghost" onClick={() => { animateCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
       </div>}
       {anchors.map((path) => {
         const node = displayById.get(path);
@@ -355,7 +343,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         const p = project(node);
         if (p.x < 6 || p.y < 6 || p.x > size.w - 160 || p.y > size.h - 24) return null;
         if (!explore && readingRect && p.x + 155 > readingRect.left - 24 && p.x < readingRect.left + readingRect.width + 24) return null;
-        return <span key={path} className={`map-file-label tone-${heatMap.get(path)?.tone}`} title={node.path} style={{ left: p.x + 9, top: p.y - 9 }}>{node.path}</span>;
+        return <span key={path} className="map-file-label" title={node.path} style={{ left: p.x + 9, top: p.y - 9 }}>{node.path}</span>;
       })}
       {labels.map(({ node, x, y }) => node.members
         ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} title={`${node.members.length} spatially grouped files · zoom to reveal`} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>
@@ -371,8 +359,8 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       )}
       {graph && explore && (
         <div className="map-legend">
-          <span>{graph.nodes.length} files · {graph.edges.length} imports</span><span className="muted">{detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · {displayNodes.length} map items · zoom for detail</span>
-          <span className="muted">{graph.temporal === 'current' ? 'Map of the workspace as it is now' : 'Only files this recording touched'}</span>
+          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{graph.nodes.length} files · {graph.edges.length} imports</span>
+
           <MapActions graph={graph} />
         </div>
       )}

@@ -200,3 +200,111 @@
 .connected-workspace .history .op-head > .op-kind { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media(max-width: 820px) { .connected-workspace .dock { display: none; } .connected-workspace.catalog-open .dock { display: flex; } }
+
+/* Work spans the world; the edge veils sample actual content beneath the chrome. */
+.connected-workspace .main { grid-row: 1 / 4; }
+.connected-workspace .crown { grid-row: 1; background: transparent; }
+.connected-workspace .dock { grid-column: 2; grid-row: 3; }
+.connected-workspace .history-inner { padding-top: calc(var(--crown-h) + 50px); }
+.connected-workspace .folder-explorer { top: calc(var(--crown-h) + 44px); }
+.connected-workspace .crown::before {
+  content: ''; position: absolute; inset: 0 0 -32px; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 58%, transparent), color-mix(in srgb, var(--bg) 25%, transparent) 55%, transparent);
+  backdrop-filter: blur(10px); mask-image: linear-gradient(to bottom, #000 15%, #0009 60%, transparent);
+}
+.connected-workspace .crown > * { position: relative; z-index: 1; }
+.connected-workspace .crown-sample { transform: none; }
+.connected-workspace .prompt-composer.open { background: transparent; box-shadow: none; }
+.connected-workspace .prompt-composer.open::before {
+  content: ''; position: absolute; inset: -36px -8px -12px; pointer-events: none; border-radius: 12px;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg) 18%, transparent) 45%, color-mix(in srgb, var(--bg) 40%, transparent));
+  backdrop-filter: blur(10px); mask-image: linear-gradient(to bottom, transparent, #000a 45%, #000);
+}
+.prompt-composer > * { position: relative; z-index: 1; }
+.connected-workspace .prompt-composer textarea { font-size: 15px; line-height: 1.65; }
+.connected-workspace .history .turn-text, .connected-workspace .history .prose { font-size: 15px; line-height: 1.75; }
+.connected-workspace .history .turn { max-width: min(76ch, 88%); margin-left: auto; padding: 8px 12px; border-left: 0; border-right: 2px solid color-mix(in srgb, var(--session-color) 65%, var(--t1)); background: linear-gradient(to left, var(--s1), transparent); }
+.connected-workspace .history .prose { max-width: 76ch; }
+.captured-time { display: inline-flex; align-items: baseline; color: var(--t3); font-size: 10px; white-space: nowrap; }
+.captured-clock { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; transition: max-width 240ms var(--ease), opacity 240ms var(--ease); }
+.captured-time:hover .captured-clock, .captured-time:focus .captured-clock { max-width: 16ch; opacity: 1; }
+.connected-workspace .map-tools { top: auto; bottom: max(72px, calc(var(--composer-gap, 60px) + 12px)); left: 50%; transform: translateX(-50%); }
+.connected-workspace .map-file-label { color: var(--t2); }
+.connected-workspace .map-group { color: var(--t2); border: 0; background: transparent; box-shadow: none; }
+.connected-workspace .map-group:hover { color: var(--t1); background: transparent; border: 0; }
+.diff-reader .diff, .diff-reader .change-columns { font: 12px/1.65 var(--mono); }
+.history .op.expanded .diff-reader .diff, .history .op.expanded .diff-reader .change-columns { font: 12px/1.65 var(--mono); }
+.diff-reader .change-row { min-width: 0; }
+.verify h4 small { font-weight: 400; color: var(--t3); }
+.verify .verify-open { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.product-dialog.file-workspace, .product-dialog.current-file-reader { width: min(1200px, calc(100vw - 64px)); max-height: calc(100dvh - 96px); }
+.file-evidence-reading { padding: 16px; }
+.product-dialog.map-reader { position: fixed; margin: 0; right: 20px; left: auto; top: calc(var(--crown-h) + 16px); bottom: 72px; width: calc(46vw - 32px); height: auto; max-height: none; z-index: 15; }
+.map-reader.current-file-reader { display: flex; flex-direction: column; }
+.map-reader .current-file-code { flex: 1; min-height: 0; max-height: none; }
+.map-reader.file-workspace .file-workspace-layout { grid-template-columns: minmax(0, 1fr); overflow: auto; display: block; }
+.map-reader .file-trail { max-height: 180px; }
+.connected-workspace.map-reading .map { right: 46vw; }
+@media (max-width: 820px) {
+  .product-dialog.file-workspace, .product-dialog.current-file-reader { width: calc(100vw - 24px); max-height: calc(100dvh - 48px); }
+  .product-dialog.map-reader { right: 12px; top: 45dvh; bottom: 64px; width: calc(100vw - 24px); max-height: none; }
+  .connected-workspace.map-reading .map { right: 0; bottom: 55dvh; }
+  .connected-workspace.map-reading .map-tools { bottom: 8px; }
+  .connected-workspace.map-reading .map-legend { display: none; }
+}
+:root[data-low-resource] .crown::before, :root[data-low-resource] .prompt-composer.open::before { backdrop-filter: none; }
+@media (prefers-reduced-motion: reduce) { .captured-clock { transition: none; } }
+
+/* Hover focus keeps a resting slot and lifts the same material into the top layer. */
+.hover-reading-slot { pointer-events: auto; min-width: 0; }
+:root[data-palette] .connected-workspace .history .op[data-hover-reading]:popover-open {
+  position: fixed; inset: auto; margin: 0; left: var(--hover-left); top: var(--hover-top);
+  width: var(--hover-width); height: var(--hover-height); min-width: 0; max-width: none; max-height: none;
+  transform-origin: top left; overflow: hidden; box-shadow: 0 18px 50px #0005;
+}
+.history .op[data-hover-reading] .op-body { flex: 1; min-height: 0; max-height: none; overflow: auto; }
+.history .op[data-hover-reading='returning'] { pointer-events: none; }
+.history .op[data-hover-reading]::backdrop { background: transparent; pointer-events: none; }
+
+.connected-workspace .history { scroll-padding-top: calc(var(--crown-h) + 36px); }
+
+.prompt-composer .controller-receipt .output { font: 15px/1.75 var(--sans); }
+.hover-reading-slot { border: 1px solid var(--line); border-radius: 12px; }
+
+.connected-workspace .history-prompt-marks { top: calc(var(--crown-h) + 16px); }
+
+/* Readable input, with the real work visible through both the field and its edge veil. */
+.connected-workspace .prompt-composer textarea { background: transparent; }
+.connected-workspace .prompt-composer.open { border-color: color-mix(in srgb, var(--t1) 20%, transparent); }
+
+.verification-track { display: flex; flex-wrap: wrap; gap: 3px; max-width: 100%; height: auto; max-height: 108px; overflow: auto; }
+.verification-tile { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 12px; height: 9px; border-radius: 2px; background: var(--pass); font: 8px/1 var(--mono); color: var(--bg); }
+.verification-tile.failed { background: var(--fail); }
+.verification-tile.skipped { background: transparent; border: 1px solid var(--t3); }
+.verification-tile[aria-label] { flex-basis: 23px; height: 16px; }
+.history .op[data-material-settling] .op-body { min-height: 0; flex: 1; overflow: auto; }
+
+/* Map navigation stays at the edge; the central graph remains the reading surface. */
+.connected-workspace .map-tools { top: calc(var(--crown-h) + 16px); bottom: auto; right: 16px; left: auto; transform: none; width: min(290px, calc(100% - 32px)); }
+.connected-workspace .map-tools > .btn:first-child { justify-self: end; }
+.connected-workspace .map-legend { top: auto; bottom: 22px; left: 16px; right: auto; align-items: flex-start; max-width: calc(100% - 120px); }
+.map-zoom { position: absolute; right: 16px; bottom: 22px; z-index: 5; display: flex; gap: 3px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.map-zoom .btn { padding: 5px 8px; font-size: 11px; }
+.connected-workspace.map-reading .map-tools { top: calc(var(--crown-h) + 16px); bottom: auto; }
+@media(max-width: 820px) {
+  .connected-workspace .map-tools { top: calc(var(--crown-h) + 10px); right: 12px; width: min(230px, calc(100% - 24px)); }
+  .connected-workspace .map-legend, .map-zoom { bottom: max(72px, calc(var(--composer-gap, 60px) + 12px)); }
+  .connected-workspace.map-reading .map-tools { top: 10px; }
+  .connected-workspace.map-reading .map-zoom { bottom: 8px; }
+}
+
+/* Keep reading affordances, with an overflow cue at rest and a transparent track. */
+.connected-workspace .history .op-body { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--t2) 28%, transparent) transparent; transition: scrollbar-color 220ms ease; }
+.connected-workspace .history .op:hover .op-body, .connected-workspace .history .op:focus-within .op-body { scrollbar-color: color-mix(in srgb, var(--t2) 38%, transparent) transparent; }
+.connected-workspace .history .op-body::-webkit-scrollbar { width: 7px; height: 7px; }
+.connected-workspace .history .op-body::-webkit-scrollbar-track { background: transparent; }
+.connected-workspace .history .op-body::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--t2) 28%, transparent); border: 2px solid transparent; background-clip: padding-box; }
+.connected-workspace .history .op:hover .op-body::-webkit-scrollbar-thumb, .connected-workspace .history .op:focus-within .op-body::-webkit-scrollbar-thumb { background-color: color-mix(in srgb, var(--t2) 38%, transparent); }
+@media (prefers-reduced-motion: reduce) { .connected-workspace .history .op-body { transition: none; } }
+@media (hover: none) { .connected-workspace .history .op-body { scrollbar-color: var(--t3) transparent; } }
+@media (forced-colors: active) { .connected-workspace .history .op-body { scrollbar-color: auto; } }

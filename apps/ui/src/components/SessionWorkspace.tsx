@@ -118,6 +118,7 @@ export function CurrentFileReader() {
   return <CurrentDocument key={`${id}/${path}`} id={id} path={path} />;
 }
 function CurrentDocument({ id, path }: { id: string; path: string }) {
+  const explore = useApp(s => s.explore);
   const [start, setStart] = useState(0);
   const [file, setFile] = useState<CurrentFile>();
   const [error, setError] = useState<string>();
@@ -127,8 +128,8 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
     void workspaceApi.file(id, path, start).then(f => { if (active) setFile(f); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
   }, [id, path, start, retry]);
-  return <ReadingDialog title={path} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader">
-    <div className="current-file-meta"><span className="tag">Current disk · not a historical snapshot</span><button className="btn ghost" onClick={() => setRetry(r => r + 1)}>Refresh</button><button className="btn ghost" onClick={() => useApp.setState({ currentFile: undefined, filePanel: path })}>Recorded work on this file</button></div>
+  return <ReadingDialog title={path} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader" modeless={explore}>
+    <div className="current-file-meta"><span className="tag" title="Current disk · not a historical snapshot">On disk</span><button className="btn ghost" onClick={() => setRetry(r => r + 1)}>Refresh</button><button className="btn ghost" onClick={() => useApp.setState({ currentFile: undefined, filePanel: path })}>Recorded work on this file</button></div>
     {error ? <p className="bad" role="alert">{error}</p> : !file ? <p className="muted">Reading current file…</p> : <><div className="current-file-code"><CodeView text={file.text} path={path} startLine={file.start + 1} /></div><footer><span>Lines {file.start + 1}–{file.start + file.returnedLines} of {file.totalLines}{file.redacted ? ' · secrets redacted' : ''}</span><button disabled={!start} onClick={() => setStart(s => Math.max(0, s - 200))}>Previous lines</button><button disabled={!file.hasMore} onClick={() => setStart(s => s + 200)}>Next lines</button><button onClick={() => void navigator.clipboard.writeText(file.text)}>Copy visible page</button></footer></>}
   </ReadingDialog>;
 }

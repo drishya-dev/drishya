@@ -1,3 +1,4 @@
+import { useApp } from '../state.ts';
 /** Finite, interruptible motion of one real DOM surface. Layout keeps its final geometry. */
 const active = new WeakMap<HTMLElement, Animation>();
 export function materialRect(element: HTMLElement): DOMRect {
@@ -56,4 +57,44 @@ export function restingRect(element: Element): DOMRect {
   const rect = element.getBoundingClientRect(), visual = parent.getBoundingClientRect(), natural = materialRect(parent);
   const sx = visual.width / Math.max(1, natural.width), sy = visual.height / Math.max(1, natural.height);
   return new DOMRect(natural.left + (rect.left - visual.left) / Math.max(.001, sx), natural.top + (rect.top - visual.top) / Math.max(.001, sy), rect.width / Math.max(.001, sx), rect.height / Math.max(.001, sy));
+}
+
+/** Reserve an arriving request's allocation, then resize after it has visibly settled.
+ * Captured result DOM remains mounted inside the scrollable material throughout. */
+export function settleArrival(element: HTMLElement, start: DOMRect, flight: Animation): void {
+  const properties = ['width', 'height', 'flex-basis'];
+  const saved = properties.map(name => [name, element.style.getPropertyValue(name), element.style.getPropertyPriority(name)]);
+  element.style.setProperty('width', `${start.width}px`);
+  element.style.setProperty('height', `${start.height}px`);
+  element.style.setProperty('flex-basis', `${start.width}px`);
+  element.dataset.materialSettling = 'true';
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let growth: Animation | undefined;
+  let interrupted = false;
+  let unsubscribe = () => {};
+  const restore = () => {
+    for (const [name, value, priority] of saved) { if (value) element.style.setProperty(name!, value, priority); else element.style.removeProperty(name!); }
+    delete element.dataset.materialSettling;
+  };
+  const interrupt = () => { interrupted = true; clearTimeout(timer); growth?.cancel(); restore(); cleanup(); };
+  const cleanup = () => { history?.removeEventListener('wheel', interrupt); history?.removeEventListener('pointerdown', interrupt); window.removeEventListener('keydown', interrupt); unsubscribe(); };
+  const history = element.closest('.history');
+  history?.addEventListener('wheel', interrupt, { passive: true }); history?.addEventListener('pointerdown', interrupt); window.addEventListener('keydown', interrupt);
+  unsubscribe = useApp.subscribe(state => { if (!state.motion || state.lowResource || !state.follow || state.explore) interrupt(); });
+  void flight.finished.then(() => {
+    if (interrupted) return;
+    timer = setTimeout(() => {
+      if (!element.isConnected) { interrupt(); return; }
+      const from = element.getBoundingClientRect(); restore();
+      const to = materialRect(element);
+      if (Math.abs(from.width - to.width) < 1 && Math.abs(from.height - to.height) < 1 || matchMedia('(prefers-reduced-motion: reduce)').matches || !useApp.getState().motion || useApp.getState().lowResource) { cleanup(); return; }
+      const frame = (r: DOMRect) => ({ width: `${r.width}px`, height: `${r.height}px`, flexBasis: `${r.width}px` });
+      element.dataset.materialSettling = 'true';
+      growth = element.animate([frame(from), frame(to)], { duration: 780, easing: 'cubic-bezier(.22,.65,.18,1)' });
+      growth.id = 'surface-Settle'; active.set(element, growth);
+      window.dispatchEvent(new Event('drishya-material-layout'));
+      const finish = () => { delete element.dataset.materialSettling; if (active.get(element) === growth) active.delete(element); cleanup(); };
+      void growth.finished.then(finish, finish);
+    }, 280);
+  }, interrupt);
 }

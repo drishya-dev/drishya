@@ -140,11 +140,11 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
 
 export function DiffReader({ hunks, path }: { hunks: Hunk[]; path?: string }) {
   const [page, setPage] = useState(0);
-  const [layout, setLayout] = useState<'auto' | 'unified' | 'split'>('auto');
+  const [layout, setLayout] = useState<'unified' | 'split'>('unified');
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
   return <div className={`artifact-reader diff-reader diff-${layout}`}>
-    <div className="reader-tools" aria-label="Change layout">{(['auto', 'unified', 'split'] as const).map((mode) => <button key={mode} className="btn ghost small" aria-pressed={layout === mode} onClick={() => setLayout(mode)}>{mode === 'auto' ? 'Adaptive' : mode === 'split' ? 'Side by side' : 'Unified'}</button>)}</div>
+    <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button></div>
     <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={page * pageSize} maxLines={pageSize} /></div>
     <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={page * pageSize} maxLines={pageSize} /></div>
     {total > pageSize && <nav className="reader-pages" aria-label="Captured change pages">

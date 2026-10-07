@@ -46,6 +46,7 @@ interface State {
   /** History follows the newest work; scrolling away turns it off. */
   follow: boolean;
   motion: boolean;
+  hoverReading: boolean;
   lowResource: boolean;
   mapVisible: boolean;
   explore: boolean;
@@ -117,6 +118,7 @@ export const useApp = create<State>((set, get) => ({
   speed: 1,
   held: false,
   follow: true,
+  hoverReading: (() => { try { return localStorage.getItem("drishya.hoverReading") !== "0"; } catch { return true; } })(),
   lowResource: storedLowResource,
   motion: !storedLowResource && (storedMotion ? storedMotion === '1' : !prefersReducedMotion),
   mapVisible: !storedLowResource && storedMapVisible !== '0',
@@ -277,4 +279,9 @@ function storedTheme(): ThemePreference {
 export function setTheme(theme: ThemePreference) {
   useApp.setState({ theme });
   try { localStorage.setItem('drishya.theme', theme); } catch { /* Optional local preference. */ }
+}
+
+export function setHoverReading(on: boolean) {
+  useApp.setState({ hoverReading: on });
+  try { localStorage.setItem('drishya.hoverReading', on ? '1' : '0'); } catch { /* Optional local preference. */ }
 }

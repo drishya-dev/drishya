@@ -51,10 +51,7 @@ export function RepositoryLens({ graph, heat, focusPath }: { graph: RepoGraph; h
       const p = points(node); const h = activity.get(node.id);
       g.beginPath(); g.arc(p.x, p.y, labelPath === node.id ? 3.5 : h ? 2.3 : 1.2, 0, Math.PI * 2);
       g.fillStyle = labelPath === node.id ? colours.text : colours.node; g.fill();
-      if (h?.edited || labelPath === node.id) {
-        g.beginPath(); g.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
-        g.strokeStyle = labelPath === node.id ? colours.text : colours.tones.write; g.stroke();
-      }
+
     }
   }, [graph, heat, labelPath, width, theme]);
   const nearest = (x: number, y: number) => {

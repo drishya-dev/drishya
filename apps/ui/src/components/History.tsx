@@ -7,7 +7,7 @@ import { stageIncomingWork, stageViewportGrowth } from '../lib/live-pacing.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
 import { useApp } from '../state.ts';
-import { CodeView, DiffView, Output, calendarTime, useArtifact } from './common.tsx';
+import { CodeView, DiffView, Output, CapturedTime, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf, readingWidth } from '../lib/presentation.ts';
 import { Origins } from './Origins.tsx';
@@ -17,6 +17,7 @@ import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
 import { FlowConnections } from './FlowConnections.tsx';
 import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-motion.ts';
+import { useHoverReading } from '../lib/hover-reading.ts';
 import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
@@ -32,6 +33,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const promptStep = useApp((s) => s.promptStep);
   const set = useApp((s) => s.set);
   const ref = useRef<HTMLDivElement>(null);
+  useHoverReading(ref);
   const [viewport, setViewport] = useState({ top: 0, height: 900 });
   const [measurementVersion, setMeasurementVersion] = useState(0);
   const [focusedPassageId, setFocusedPassageId] = useState<string | undefined>();
@@ -60,6 +62,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const measure = () => {
       const next = new Map<string, DOMRect>();
       for (const card of history.querySelectorAll<HTMLElement>('article[data-op-id]')) {
+        if (card.dataset.hoverReading) continue;
         const id = card.dataset.opId!;
         const r = materialRect(card);
         const stored = new DOMRect(r.left, r.top + history.scrollTop, r.width, r.height);
@@ -408,7 +411,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
         <>
           <div className="passage-head">
             {agents.length > 1 && <><span className="agent-dot" /><span className="passage-agent">{agentName(agent)}</span></>}
-            {first?.startTime && <time className="passage-time" dateTime={first.startTime} title={new Date(first.startTime).toLocaleString()}>{calendarTime(first.startTime)}</time>}
+            {first?.startTime && <CapturedTime iso={first.startTime} />}
           </div>
           <div className="ops-row">
             {ps.ops.map((o, i) => {
@@ -627,7 +630,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="test">
           <div className="cmd">$ {d.command}</div>
           <ResultArea state={op.status} resolving={resolving}>{s ? (
-            <VerificationStrip summary={s} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined, follow: false, playing: false, held: true })} />
+            <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined, follow: false, playing: false, held: true })} />
           ) : op.status !== 'running' ? (
             <div className="muted">exit {d.exitCode ?? '?'}</div>
           ) : <div className="muted">Waiting for output</div>}
