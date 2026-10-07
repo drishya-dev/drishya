@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Continuous materials/density-map refinement #42 merged on main (`7802c5e`), following connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **Unified stage refinement #43 merged on main (`e26ca38`), following #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -64,7 +64,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 7 October 2026; unified-stage refinement locally verified on `codex/unified-stage`, following merged #42 (`7802c5e`). See [28](review/28-unified-stage.md).
+- **When:** 7 October 2026; unified-stage refinement squash-merged as PR #43 (`e26ca38`); local main synced, following #42 (`7802c5e`). See [28](review/28-unified-stage.md).
 - **Delivered:** one real DOM arrival instead of separately timed SVG backing/glyph animations; continuous final geometry retargeting and finite card reflow. Compact vivid semantic materials and code, centred fading header, compact bottom native composer, useful Explorer without duplicate relationship/index chrome, calendar labels and neutral tool hover. Prompts navigation and Live stay at the bottom; export uses overflow, rare controls use Settings. One white-dot/import map blends cached spatial density levels during smooth camera zoom, with bounded visible labels/edges and truthful file origins. File/folder composer additions are documented for later, not claimed implemented.
 - **Checks:** `pnpm check` passed typechecks and **284 unit tests**; the final full browser suite passed **41 journeys, two opt-ins skipped**. Isolated offline package installation/import/API/restart passed; generated demo bundle is unchanged. Hover/read-motion regression passed five repeats. Ten-minute synthetic live reading passed **601,638 ms, 111 rounds, peak 816 DOM nodes**, with pinned evidence and reading anchors preserved. Final map-label/fade/popup/diagnostic refinements followed the soak start and are covered by the final full browser/type/package checks. Reviewed integrated dark/light/map/composer screenshots. No hosted CI dispatched.
 - **Scope:** no backend/schema/runtime dependency or native permission/account changes. Existing capture/redaction/controller/reading features and both builders' attribution remain. Human preference and physical/platform/native-version release acceptance remain separate. Preserve three pre-existing package-manager edits and ignored local model notes.
@@ -245,3 +245,5 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-10-07 | Repository detail groups spatial density, not only folder hierarchy | Builder rejected folder-card drill-down as a replacement for nodes. Groups preserve measured node positions and real aggregated imports; zoom reveals member files, root config files remain identifiable and folder navigation stays in Explorer | review/27; map-detail/MapCanvas |
 
 | 2026-10-07 | One material arrival and a quieter unified stage | Builder rejected disconnected travel/zoom and redundant chrome. Remove separately timed proxy surfaces; retain one retargetable real DOM transform, vivid compact materials, bottom composer and one spatial dot map that gradually reveals real files/imports. Attachments remain later work. | review/28; Origins/stage/map-detail |
+
+| 2026-10-07 | Retain sequence replay only as a temporary side option | Builder explicitly requested keeping optional replay now and removing its controls and playback functionality at the product stage. Ordinary accumulating history, scroll and captured-prompt navigation remain; do not delete the capture/history data path with the playback transport. | Settings; review/28; CONTINUITY |

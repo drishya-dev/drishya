@@ -12,7 +12,7 @@
 
 ## Current foundation and truth boundaries
 
-B0–B4 engineering/P1–P2 reading utility are implemented candidates. P1 #38–40, connected workspace #41 (`dca1b28`) and continuous materials #42 (`7802c5e`) are merged foundations. The unified-stage branch is the latest refinement; STATUS carries its final merge and local gates.
+B0–B4 engineering/P1–P2 reading utility are implemented candidates. P1 #38–40, connected workspace #41 (`dca1b28`) and continuous materials #42 (`7802c5e`) are merged foundations. Unified stage #43 (`e26ca38`) is merged on main; STATUS carries its local gates.
 
 Codex installed 0.160.0 continuation was previously verified using a newly created synthetic native thread, real model response and nine normally captured journal observations. Claude installed 2.1.282 is refused subscription access under this organization; synthetic protocol/UI/background-agent coverage exists, but live Claude is not certified. Do not alter account policies or bypass native permissions. Native sessions own normal journal writes; Drishya's observer reads only. Unsupported interactive requests stay native-client work; offline/demo bundles cannot send prompts.
 
@@ -27,6 +27,8 @@ Latest local gates: typechecks and 284 unit tests, 41 regular browser journeys (
 Run `corepack pnpm ui:build`, restart `corepack pnpm serve`, open its authenticated launch URL and select a real discovered session rather than `?demo`. Enable workspace reading separately from graph approval. The ordinary composer submits only after native availability, workspace consent and an idle-other-clients acknowledgement. Current file reading works independently of controller availability.
 
 ## Next work and coordination
+
+Latest builder clarification: keep sequence replay as a secondary Settings option **for now**. At the product stage remove its controls and playback functionality, preserving accumulating capture/history, normal scrolling and captured-prompt navigation. This is a deferred removal, not authorization to delete playback now.
 
 Refine through real integrated use and the human comprehension/preference pilot, then physical/platform/native compatibility release checks. Keep both original docs/prototype references; no competing HTML studies. User wants file/folder prompt additions **later** in this same compact composer: bounded consented references, removable chips, exact protocol support and current/historical distinction. No attachment feature or fake upload button is implemented. Later symbols/source tabs/LSP/editing are likewise not claimed.
 

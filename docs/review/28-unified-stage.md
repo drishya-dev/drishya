@@ -42,3 +42,8 @@ Use local type, unit, browser and package checks, including one real DOM transfo
 ### Local results — 7 October 2026
 
 The final candidate passed typechecks and 284 unit tests, all 41 regular browser journeys (two opt-in probes skipped), isolated offline package install/import/API/restart, and unchanged demo-bundle generation. Hover/read interruption passed five repeats. Integrated dark/light material, map and native composer screenshots were reviewed locally. The ten-minute synthetic live-reading exercise passed at 601,638 ms: 111 rounds, peak 816 DOM nodes, pinned evidence and stable reading anchors. Final map-label/fade/popup/diagnostic refinements followed the soak start; the final full browser/type/package checks cover those corrections. No hosted CI was dispatched. This verifies the measured local candidate, not human preference or arbitrary repository/platform support.
+
+
+### Builder follow-up: temporary replay
+
+Keep optional sequence replay as a side option in Settings for now. The builder plans to remove its controls and playback functionality at the product stage. Preserve passive capture, historical evidence, accumulating live history, ordinary scrolling and captured-prompt navigation when removing the transport; those are independent features. No replay functionality is removed in this refinement. PR #43 was squash-merged as `e26ca38`.
