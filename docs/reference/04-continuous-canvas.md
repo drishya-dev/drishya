@@ -1,5 +1,7 @@
 # Continuous canvas: authoritative visual direction
 
+**Latest correction:** [31](../review/31-independent-replay-reading.md) supersedes automatic replay interruption for hover/scroll/reading: detach the viewport while the explicitly playing clock continues. Explicit transport navigation still holds.
+
 **Latest presentation correction (7 October):** [27 — Continuous materials and density map](../review/27-continuous-materials.md) permits a finite whole-DOM zoom through its final allocation, spatial-density node groups, an always-visible ordinary prompt and local result scrolling without detaching live follow. It supersedes conflicting earlier presentation details; captured truth, native permissions and publishing-only hosted CI remain unchanged.
 
 **Latest amendment:** [26](../review/26-connected-workspace.md#latest-developer-refinement) adds the ordinary native composer, compact prompt disclosure, folder-first map detail, partial-card connectors and paragraph fades without delayed evidence. Independent capture remains passive; the explicitly authorized controller is separate. Layout reserves full virtual history extent during run replacement.

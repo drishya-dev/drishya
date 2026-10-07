@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Latest playback/prompt correction:** [31](review/31-independent-replay-reading.md) keeps active replay advancing while the user hovers/reads above, independent of viewport follow, and keeps the compact native composer solid charcoal with contained decoration and no artificial scrollbars. This supersedes earlier automatic pause-on-reading rules; explicit transport controls and as-of evidence remain.
+
 7 October 2026. Repository files are project memory. Read [30 — Builder request audit](review/30-builder-request-audit.md) first, then [29 — Centred neutral workspace](review/29-centred-neutral-workspace.md), then [28 — Unified stage](review/28-unified-stage.md), then [27](review/27-continuous-materials.md) for material geometry and [26](review/26-connected-workspace.md) for the native workspace/controller. Earlier records remain history.
 
 **Latest request audit (7 October):** [30 — Builder request audit](review/30-builder-request-audit.md) supersedes the earlier hover deferral and edge/map/readability details. The integrated world spans behind bounded masked header/composer veils; hover lifts the same real material with a slower measured whole-card zoom, and result growth follows arrival settlement. White spatial-density dots, edge map controls, modeless map reading, concise evidence trails, unified-first diffs, matched 15 px prose/input and discrete truthful test tiles are the current direction. The ledger also owns the explicit later native/multi-agent/attachment/release matrix. Local checks only; no hosted CI.

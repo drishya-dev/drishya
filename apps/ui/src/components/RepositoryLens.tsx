@@ -64,7 +64,7 @@ export function RepositoryLens({ graph, heat, focusPath }: { graph: RepoGraph; h
     return found;
   };
   return <div className="repo-lens" ref={wrap}>
-    <button className="repo-lens-head" onClick={() => set({ explore: true, follow: false, playing: false, held: true })} title="Explore the repository map">
+    <button className="repo-lens-head" onClick={() => set({ explore: true, follow: false })} title="Explore the repository map">
       <span>Repository</span><span aria-hidden="true">↗</span>
     </button>
     <div className="repo-lens-world" style={{ height }} onMouseMove={(e) => {
@@ -72,7 +72,7 @@ export function RepositoryLens({ graph, heat, focusPath }: { graph: RepoGraph; h
       set({ hoveredPath: nearest(e.clientX - r.left, e.clientY - r.top)?.id });
     }} onMouseLeave={() => set({ hoveredPath: undefined })} onClick={(e) => {
       const r = e.currentTarget.getBoundingClientRect(); const node = nearest(e.clientX - r.left, e.clientY - r.top);
-      if (node) set({ filePanel: node.path, follow: false, playing: false, held: true });
+      if (node) set({ filePanel: node.path, follow: false });
     }}>
       <canvas ref={canvas} style={{ width, height }} aria-hidden="true" />
       {labelled && width > 0 && <span className="repo-lens-label" style={{ left: Math.max(8, Math.min(points(labelled).x + 6, width - 110)), top: Math.max(4, points(labelled).y - 22) }} title={labelled.path}>{labelled.path.split('/').at(-1)}</span>}

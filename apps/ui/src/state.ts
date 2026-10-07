@@ -192,7 +192,7 @@ export const useApp = create<State>((set, get) => ({
     if (!p) return;
     const s = Math.max(0, Math.min(get().historyPage?.scene.total ?? p.timeline.length, Math.round(step)));
     set({ mode: 'replay', step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
-    if (get().historyPage) void get().loadHistoryWindow({ step: s }).catch((error) => set({ error: error.message }));
+    if (get().historyPage) void get().loadHistoryWindow({ step: s, ...(!get().follow && get().readingPassageId ? { pinnedPassageIds: [get().readingPassageId!] } : {}) }).catch((error) => set({ error: error.message }));
   },
 
   stepBy(d) {
@@ -220,7 +220,8 @@ export const useApp = create<State>((set, get) => ({
   },
 
   select(opId) {
-    set({ selectedOp: opId, promptStep: undefined, ...(opId ? { expandedOp: undefined, playing: false, held: true, follow: false, inspectorTab: 'detail' } : {}) });
+    const clockRunning = get().mode === 'replay' && get().playing;
+    set({ selectedOp: opId, promptStep: undefined, ...(opId ? { expandedOp: undefined, ...(!clockRunning ? { playing: false, held: true } : {}), follow: false, inspectorTab: 'detail' } : {}) });
     if (opId && get().historyPage && !get().projection?.operations.some((op) => op.id === opId)) void get().loadHistoryWindow({ selectedOperationId: opId }).catch((error) => set({ error: error.message }));
   },
 

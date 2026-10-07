@@ -120,7 +120,7 @@ function WorkspaceViewer() {
         <CurrentFileReader />
       </div>
       <Dock scene={scene} />
-      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); useApp.setState({ follow: false, playing: false, held: true }); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
+      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); useApp.setState({ follow: false }); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
       <PromptComposer key={recordingId} />
       <Inspector projection={historical} />
@@ -180,7 +180,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
         })}
       </div>}
       <div className="crown-actions"><UsagePeek />
-        <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, playing: false, held: true, follow: false })}>Settings</button>
+        <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, follow: false })}>Settings</button>
         <button className="btn ghost" onClick={() => set({ searchOpen: true })} title="Search (/)">Search</button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
           {exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}

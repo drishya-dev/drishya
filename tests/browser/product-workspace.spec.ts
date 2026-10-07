@@ -468,6 +468,8 @@ test('prompt chapters review captured work without movie controls and resize det
   await expect(page.getByRole('button',{name:'Pause',exact:true})).toHaveCount(0);
   await page.locator('.history').dispatchEvent('pointerdown');
   await page.getByRole('button', {name:/Back to latest/}).click();
+  await expect(page.getByRole('button',{name:'Full history',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Full history',exact:true}).click();
   await expect(page.getByRole('button',{name:'Full history',exact:true})).toHaveCount(0);
   if(process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({path:resolve('.local/prompt-workspace.png')});
 });
