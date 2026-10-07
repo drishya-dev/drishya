@@ -220,6 +220,7 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await find.fill('LINE 249');
   await expect(content.locator('.ln-hi .ln-no')).toHaveText('249');
   await find.press('Enter');
+  await read.locator('.source-utilities > summary').click();
   const rangeActions = read.getByRole('group', { name: 'Loaded source range actions' });
   await rangeActions.getByRole('textbox', { name: 'Source range start' }).fill('201');
   await rangeActions.getByRole('textbox', { name: 'Source range end' }).fill('203');

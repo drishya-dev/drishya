@@ -1,5 +1,9 @@
 # Drishya — Vision & Creative Direction
 
+**Latest P1 refinement — 6 October:** [23](review/23-p1-material-pacing.md) governs slower content-sized material unfolding, actual loaded-source transitions, preview typography/height and late-growth camera holds. This is the integrated P1 implementation; larger workspace features and physical/platform/human release checks remain separate. Preserve the prototypes, not the retired HTML gallery.
+
+**Current direction — 6 October:** [22](review/22-p1-motion-lifecycle.md) supersedes the standalone-study queue. The builder reopened P1 because the running app still felt like popups. Finish the integrated application; preserve both files under docs/prototype, retire the redundant concept pages, and do not treat engineering passes as visual approval.
+
 **The north star for how Drishya looks, moves and feels.** Read this before any UI, graphics, motion or layout work. It is authoritative for the *experience*; the [engineering plan](review/03-engineering-plan.md) is authoritative for the *system*, and [the precedence map](README.md) resolves anything in between.
 
 If you are an agent and read one design document, read this one.
@@ -60,7 +64,7 @@ The centre remains the agent and its accumulated work; native tools and MCP inst
 
 ---
 
-**Latest correction (6 October, unified canvas):** the builder rejected all three studies as generic and less legible than the original `docs/prototype/index.html`. Its bounded source/result surfaces, middle/right composition and relationship animation are the reference to improve upon, not a final design to reproduce. Relay's instrument dock is useful; none of the permanent left lists are approved. Build **one continuous world** with imaginary zone boundaries, not three panel slabs. Follow / Compare / Repository are task views; **charcoal and light are the two shared theme choices**, independent of view. Retain the prior colours only as archived experiments. A single agent uses a session/project crown; multiple evidenced agents use a named roster, distinguishing captured child agents from independent sessions. Strong readable material borders and content-sized surfaces are welcome; unboxed prose remains. The new synthetic Canvas study is at `/concepts/canvas.html`; [its design record](review/11-p1-unified-canvas.md) states the implementation and remaining production work. It is a candidate, not a declaration that the builder likes it or that the premium product bar is reached.
+**Latest correction (6 October, unified canvas):** the builder rejected all three studies as generic and less legible than the original `docs/prototype/index.html`. Its bounded source/result surfaces, middle/right composition and relationship animation are the reference to improve upon, not a final design to reproduce. Relay's instrument dock is useful; none of the permanent left lists are approved. Build **one continuous world** with imaginary zone boundaries, not three panel slabs. Follow / Compare / Repository are task views; **charcoal and light are the two shared theme choices**, independent of view. Retain the prior colours only as archived experiments. A single agent uses a session/project crown; multiple evidenced agents use a named roster, distinguishing captured child agents from independent sessions. Strong readable material borders and content-sized surfaces are welcome; unboxed prose remains. The historical synthetic Canvas HTML study has since been retired; [its design record](review/11-p1-unified-canvas.md) states the implementation and remaining production work. It is a candidate, not a declaration that the builder likes it or that the premium product bar is reached.
 
 ## 1. The doctrine: quiet at rest, articulate in motion
 

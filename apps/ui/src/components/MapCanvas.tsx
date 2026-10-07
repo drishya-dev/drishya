@@ -80,13 +80,13 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     if (!explore) setCam({ x: 0, y: 0, k: 1 });
   }, [explore]);
 
-  // Fit the unit-square layout into the view, leaving room for the frame.
+  // Use the whole world, rather than hiding a square map behind the reading column.
+  // All hit tests, search destinations and motion origins share this same projection.
   const fit = useMemo(() => {
     const pad = 48;
-    const s = Math.max(40, Math.min(size.w, size.h) - pad * 2);
-    return { s, ox: (size.w - s) / 2, oy: (size.h - s) / 2 };
+    return { sx: Math.max(40, size.w - pad * 2), sy: Math.max(40, size.h - pad * 2), ox: pad, oy: pad };
   }, [size]);
-  const project = (n: { x: number; y: number }) => ({ x: (fit.ox + n.x * fit.s) * cam.k + cam.x, y: (fit.oy + n.y * fit.s) * cam.k + cam.y });
+  const project = (n: { x: number; y: number }) => ({ x: (fit.ox + n.x * fit.sx) * cam.k + cam.x, y: (fit.oy + n.y * fit.sy) * cam.k + cam.y });
 
   const draw = () => {
     const c = canvas.current;
@@ -271,7 +271,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         <input aria-label="Find a file on the map" placeholder="Find a file on the map…" value={query} onChange={(e) => setQuery(e.target.value)} />
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
-            const x = fit.ox + node.x * fit.s; const y = fit.oy + node.y * fit.s;
+            const x = fit.ox + node.x * fit.sx; const y = fit.oy + node.y * fit.sy;
             setCam({ k: 2, x: size.w / 2 - x * 2, y: size.h / 2 - y * 2 });
             setTip({ node, x: size.w / 2, y: size.h / 2 });
             set({ hoveredPath: node.id, follow: false, playing: false, held: true });
@@ -286,6 +286,14 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         const p = project(node);
         const visible = size.w > 0 && p.x >= 6 && p.y >= 6 && p.x < size.w - 6 && p.y < size.h - 6;
         return <span key={path} className="map-origin-point" data-origin-file={path} data-origin-visible={visible} style={{ left: p.x - 3, top: p.y - 3 }} aria-hidden="true" />;
+      })}
+      {anchors.slice(0, explore ? 24 : 12).map((path) => {
+        const node = byId.get(path);
+        if (!node) return null;
+        const p = project(node);
+        if (p.x < 6 || p.y < 6 || p.x > size.w - 160 || p.y > size.h - 24) return null;
+        if (!explore && readingRect && p.x + 155 > readingRect.left - 24 && p.x < readingRect.left + readingRect.width + 24) return null;
+        return <span key={path} className={`map-file-label tone-${heatMap.get(path)?.tone}`} title={node.path} style={{ left: p.x + 9, top: p.y - 9 }}>{node.path}</span>;
       })}
       {labels.map((l) => {
         const p = project(l);

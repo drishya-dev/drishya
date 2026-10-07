@@ -1,6 +1,10 @@
 # Integrated local product — 6 October 2026
 
-The builder's latest instruction is to **finish the working product in `apps/ui`**, with our best coherent presentation now, and refine colour and animation later. Standalone HTML studies are retained as references; they are no longer an approval gate or the deliverable. This document describes the implemented local product candidate. VISION still governs experience, and the B4 report still governs measured resource claims.
+**Latest P1 refinement — 6 October:** [23](review/23-p1-material-pacing.md) governs slower content-sized material unfolding, actual loaded-source transitions, preview typography/height and late-growth camera holds. This is the integrated P1 implementation; larger workspace features and physical/platform/human release checks remain separate. Preserve the prototypes, not the retired HTML gallery.
+
+**Current direction — 6 October:** [22](review/22-p1-motion-lifecycle.md) supersedes the standalone-study queue. The builder reopened P1 because the running app still felt like popups. Finish the integrated application; preserve both files under docs/prototype, retire the redundant concept pages, and do not treat engineering passes as visual approval.
+
+The builder's latest instruction is to **finish the working product in `apps/ui`**, with our best coherent presentation now, and refine colour and animation later. Only the two docs/prototype HTML references are retained; redundant app studies are removed; they are no longer an approval gate or the deliverable. This document describes the implemented local product candidate. VISION still governs experience, and the B4 report still governs measured resource claims.
 
 ## What you can use
 
@@ -19,6 +23,8 @@ The builder's latest instruction is to **finish the working product in `apps/ui`
 9. Export sanitized replay evidence using Export or the CLI. Bundles use the same readers without live capture/model calls. A served bundle can be opened with `?bundle=<URL>`; arbitrary downloaded-file upload is not implemented. Export/complete-projection memory is not certified for every large workload. Review exports before sharing: pattern redaction is best effort.
 
 ## Presentation baseline
+
+The integrated ink pass is recorded in [21](review/21-integrated-ink-workspace.md): distinct semantic content boundaries, open agent prose, full-width expanded reading, wrapped tool identities, a wider evidence-backed map and measured finite file-origin cues. Source utilities open on demand; named palettes remain shared across task views. There are no decorative grain/blur layers or idle animation. The bounded history-strip sample is not an exhaustive navigation index. This work is isolated on `codex/ink-presentation` for review.
 
 Loaded code pages now offer exact source-range copying and one temporary pinned reference. It retains actual source lines/provenance independently of the scrolling history, with a 200-line/64 KiB decoded-text limit and session/replay resets. It does not load or impersonate today's whole file. See [18](review/18-source-reference.md).
 

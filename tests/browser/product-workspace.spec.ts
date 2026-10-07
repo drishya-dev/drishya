@@ -57,6 +57,9 @@ test('source preview opens the exact stored range and keeps pending replay evide
   expect((await read.boundingBox())!.width).toBeGreaterThan(600);
   await expect(read.getByRole('button', { name: /Close .* in history/ })).toBeFocused();
   await expect(read.locator('.snapshot-provenance')).toContainText('Excerpt · lines 81–94');
+  await expect(read.getByRole('textbox', { name: 'Go to stored source line' })).toBeHidden();
+  await read.locator('.source-utilities > summary').focus();
+  await read.locator('.source-utilities > summary').press('Enter');
   await read.getByRole('searchbox', { name: 'Find in loaded source page' }).fill('cart.total');
   await expect(read.locator('.ln-hi .ln-no')).toHaveText('88');
   await read.getByRole('textbox', { name: 'Go to stored source line' }).fill('94');
@@ -121,6 +124,7 @@ test('source references reject oversized text, preserve derived provenance and c
   const read = page.locator(`article[data-op-id="${op.id}"]`);
   await read.scrollIntoViewIfNeeded();
   await read.getByRole('button', { name: `Read excerpt of ${op.detail.path}` }).click();
+  await read.locator('.source-utilities > summary').click();
   const ranges = read.getByRole('group', { name: 'Loaded source range actions' });
   await ranges.getByRole('button', { name: 'Pin range', exact: true }).click();
   await expect(ranges).toContainText('Reference limit · choose a smaller range');
@@ -401,6 +405,7 @@ test('view and appearance changes keep the same captured passage under the reade
   await expect.poll(displacement).toBeLessThan(3);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') {
+    await page.screenshot({ path: resolve('.local/product-workspace-light.png') });
     await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
     await page.getByRole('button', { name: 'Jet', exact: true }).click();
     await page.getByRole('button', { name: 'Close Workspace settings' }).click();
@@ -424,11 +429,11 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Ticks are a pointer shortcut and never enter the accessibility tree.
   await expect(timeline.locator('.activity-strip')).toHaveAttribute('aria-hidden', 'true');
 
-  // Jet is the signature default, with its matte grain layer; low resource mode drops it.
+  // Jet is the signature default. No grain or full-screen decorative layer obscures text.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(11, 11, 11)');
-  expect(await page.evaluate(() => getComputedStyle(document.body, '::after').backgroundImage)).toContain('data:image/svg+xml');
+  expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await dialog.getByRole('button', { name: 'Midnight', exact: true }).click();

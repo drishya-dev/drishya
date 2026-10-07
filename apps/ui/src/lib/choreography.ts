@@ -17,9 +17,11 @@ export function choreographyBetween(previous: PresentationFrame | undefined, sce
   // paged projections carry a trailing 128-step window, whose global offset is explicit.
   const events = p.timeline.slice(Math.max(0, previous.step - timelineStart), Math.max(0, scene.step - timelineStart));
   return {
-    arrivals: events.filter((item) => item.type === 'op-start').slice(-3).map((item) => item.operationId),
-    outcomes: events.filter((item) => item.type === 'op-end').slice(-3).map((item) => item.operationId),
-    prose: events.filter((item) => item.type === 'prose').slice(-2).map((item) => item.proseId),
+    // A staged burst holds at its beginning. Spending the budget on its last calls
+    // would animate off-screen destinations and leave the visible work as popups.
+    arrivals: events.filter((item) => item.type === 'op-start').slice(0, 3).map((item) => item.operationId),
+    outcomes: events.filter((item) => item.type === 'op-end').slice(0, 3).map((item) => item.operationId),
+    prose: events.filter((item) => item.type === 'prose').slice(0, 2).map((item) => item.proseId),
     settle: scene.passages.filter((ps) => previous.settled.get(ps.id) === false && ps.settled).slice(-2).map((ps) => ps.id),
   };
 }

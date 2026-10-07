@@ -57,7 +57,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(operation.locator('.state-running')).toHaveCount(1);
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Emit');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.some((material) => material.move === 'Emit' && material.width > 150 && material.height > 60))).toBe(true);
-  expect(await operation.evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+  expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
 
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'drishya-live-output' }] } });
   await app.ingest.sync(recordingId);
@@ -75,6 +75,51 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Lift');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Settle');
   await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+});
+
+test('a single delayed read result keeps its input and reading position instead of following its bottom', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  const id = 'p1-late-source-growth';
+  append({ type: 'assistant', message: { id: `${id}-intro`, role: 'assistant', content: [{ type: 'text', text: 'Reading a captured source excerpt next.' }] } });
+  append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: '/home/dev/shop/src/smooth-read.ts', offset: 1, limit: 80 } }] } });
+  await app.ingest.sync(recordingId);
+  const read = page.locator('article.op-read').filter({ hasText: 'smooth-read.ts' });
+  await expect(read).toContainText('awaiting excerpt');
+  const latest = page.getByRole('button', { name: /Back to latest/ });
+  if (await latest.isVisible()) await latest.click();
+  const history = page.locator('.history');
+  await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
+  let release!: () => void;
+  let requested = false;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/artifacts/**', async (route) => { requested = true; await gate; await route.continue(); });
+  try {
+    append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 80 }, (_, n) => `const captured_line_${n} = ${n};`).join('\n') }] } });
+    await app.ingest.sync(recordingId);
+    await expect.poll(() => requested).toBe(true);
+    const before = await history.evaluate((el) => el.scrollTop);
+    await page.evaluate(() => {
+      (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold = false;
+      new MutationObserver((changes) => {
+        for (const change of changes) for (const node of change.addedNodes) {
+          if (node instanceof Element && node.classList.contains('origin-material') && node.getAttribute('data-move') === 'Lift' && Number(node.getAttribute('height')) > 300) (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold = true;
+        }
+      }).observe(document.querySelector('.origins')!, { childList: true });
+    });
+    release();
+    await expect(read).toContainText('captured_line_0');
+    await expect(latest).toBeVisible();
+    await expect.poll(() => history.evaluate((el) => el.scrollTop)).toBeCloseTo(before, 0);
+    const header = await read.locator('.op-head').boundingBox();
+    const viewport = await history.boundingBox();
+    expect(header!.y).toBeGreaterThanOrEqual(viewport!.y);
+    expect(header!.y).toBeLessThan(viewport!.y + viewport!.height);
+    expect((await read.boundingBox())!.height).toBeLessThanOrEqual(431);
+    await expect.poll(() => page.evaluate(() => (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold)).toBe(true);
+    if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/late-source-reading.png') });
+  } finally { release(); await page.unroute('**/artifacts/**'); }
 });
 
 test('actions share stable reading widths, wrap when full and restart after agent prose', async ({ page }) => {
@@ -107,6 +152,48 @@ test('actions share stable reading widths, wrap when full and restart after agen
   await expect(next).toBeAttached();
   expect(await next.locator('xpath=ancestor::*[contains(@class,"passage-slot")]').getAttribute('data-passage-id')).not.toBe(passageId);
   await expect(last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]')).toContainText('Captured reasoning punctuates this action row.');
+});
+
+for (const interruption of ['reading', 'reduced motion'] as const) test('a finite arrival survives passive hover and cancels immediately for ' + interruption, async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await expect(page.locator('.origins')).toBeAttached();
+  await page.evaluate(() => {
+    new MutationObserver((changes) => {
+      for (const change of changes) for (const node of change.addedNodes) {
+        if (!(node instanceof SVGElement)) continue;
+        if (node.classList.contains('origin-material')) {
+          const material = node.getAnimations()[0];
+          if (material) { material.pause(); material.currentTime = Number(material.effect?.getTiming().duration) * .55; }
+        }
+        if (!node.classList.contains('origin-tool-transfer')) continue;
+        const animation = node.getAnimations()[0];
+        if (!animation) continue;
+        // Freeze the real arrival frame so assertion timing cannot outlast its lifetime.
+        animation.pause();
+        animation.currentTime = Number(animation.effect?.getTiming().duration) * .4;
+        (window as unknown as { retainedCue: { node: SVGElement; animation: Animation } }).retainedCue = { node, animation };
+      }
+    }).observe(document.querySelector('.origins')!, { childList: true });
+  });
+  const id = 'p1-persistent-arrival-' + interruption.replaceAll(' ', '-');
+  append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
+  await app.ingest.sync(recordingId);
+  await expect.poll(() => page.evaluate(() => !!(window as unknown as { retainedCue?: object }).retainedCue)).toBe(true);
+  const operation = page.locator('article.op-mcp').filter({ hasText: id });
+  if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/retained-tool-arrival.png') });
+  await operation.locator('.op-head').hover();
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  expect(await page.evaluate(() => {
+    const cue = (window as unknown as { retainedCue: { node: SVGElement; animation: Animation } }).retainedCue;
+    return cue.node.isConnected && cue.animation.playState === 'paused';
+  })).toBe(true);
+  if (interruption === 'reading') await operation.getByRole('button', { name: /Expand/ }).click();
+  else await page.emulateMedia({ reducedMotion: 'reduce' });
+  // Browser media emulation acknowledges before the native change event is dispatched.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { retainedCue: { node: SVGElement } }).retainedCue.node.isConnected), { timeout: 1000 }).toBe(false);
+  expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
 });
 
 test('tool silhouettes transfer from the exact visible instrument and cancel for reading', async ({ page }) => {
@@ -193,6 +280,10 @@ test('patch layouts retain captured changes and adapt without overflowing a narr
 test('terminal folding is reversible and keyboard map search targets a real file', async ({ page }) => {
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
+  // Earlier work may be outside the mounted history window after material sizes change.
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill('git diff');
+  await page.locator('.search-results button').first().click();
   const shell = page.locator('article.op-shell');
   await shell.getByRole('button', { name: /captured lines between/ }).click();
   await expect(shell).toContainText('missing-total');
@@ -409,6 +500,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   const read = history.locator('article.op-read').first();
   await read.scrollIntoViewIfNeeded();
   await read.getByRole('button', { name: /Read excerpt of/ }).click();
+  await read.locator('.source-utilities > summary').click();
   await read.getByRole('button', { name: 'Pin range', exact: true }).click();
   const pinned = page.getByRole('complementary', { name: 'Pinned source reference' });
   await expect(pinned).toBeVisible();

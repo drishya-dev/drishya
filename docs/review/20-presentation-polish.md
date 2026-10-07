@@ -2,6 +2,8 @@
 
 6 October 2026 · Harsh (with Claude Opus 5.5) · Local checks only (hosted CI deferred per [CI_POLICY](../CI_POLICY.md)).
 
+**Follow-up:** [21](21-integrated-ink-workspace.md) preserves the named palettes, timeline and file lift, but removes grain/vignette and chrome blur to follow VISION/AGENTS. It adds distinct material boundaries, quieter source utilities, rectangular map fitting and a strict visual tick ceiling. The marker golden was made machine-portable during PR #37 review. This page retains the original increment's evidence rather than claiming those decorative layers remain current.
+
 The builder asked for the main UI to feel finished: 2–3 good themes, the original `docs/prototype/index.html` as the reference for materials, more room for real code, and motion where "the file comes out of the folder" without popups or lag. This increment is presentation plus one navigation fix. It makes no capture, store, API or schema change.
 
 ## What changed

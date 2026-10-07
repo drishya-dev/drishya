@@ -2,7 +2,7 @@
 
 An interactive design prototype of Drishya's core experience, built to make [`VISION.md`](../VISION.md) tangible. **Synthetic data only.** Every event is invented to tell one coherent story; nothing here reads a harness, and it must never be presented as a working integration.
 
-It is the current design reference, in the clean developer-tool theme described in [`VISION.md` §5](../VISION.md#5-theme-a-clean-developer-tool). The first storyboard in [`review/05-experience-storyboard.html`](../review/05-experience-storyboard.html) is kept for provenance.
+It is the current design reference, in the clean developer-tool theme described in [`VISION.md` §5](../VISION.md#5-theme-a-clean-developer-tool). The obsolete storyboard and app concept gallery were removed at the builder's request. Both prototype HTML references remain; the integrated app is the deliverable. See [motion lifecycle](../review/22-p1-motion-lifecycle.md).
 
 ## Deep links
 

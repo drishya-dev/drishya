@@ -26,7 +26,13 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 [CI_POLICY](CI_POLICY.md) records the builder-requested manual final-candidate hosted checks and local development verification. It supersedes older automatic push/PR CI descriptions.
 
+[23: material pacing](review/23-p1-material-pacing.md) records slower content-sized unfolding, true loaded-source readiness, viewport-aware preview sizing and the late-result camera guard. Continue this integrated P1 baseline; future workspace features are separate claims.
+
+[22: P1 motion lifecycle](review/22-p1-motion-lifecycle.md) records retained, bounded origin animations and the builder-requested retirement of redundant HTML studies. Continue the integrated application, preserving docs/prototype references. Engineering acceptance is distinct from human visual acceptance.
+
 ## Current B4 amendment
+
+[21: integrated ink workspace](review/21-integrated-ink-workspace.md) records the production presentation pass using both builder references, real graph coordinates/activity, quieter source utilities and strict timeline sampling. It supersedes the decorative grain/blur treatment in [20](review/20-presentation-polish.md); named palettes and Claude's feature proposals remain intact. STATUS carries acceptance.
 
 [18: temporary source reference](review/18-source-reference.md) records loaded-range copy, the one-reference memory boundary and session/replay resets. STATUS/CONTINUITY carry local acceptance and the publishing-only hosted verification policy.
 

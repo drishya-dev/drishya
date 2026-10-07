@@ -1,12 +1,14 @@
 # P1 — fresh design directions, 6 October 2026
 
+> Historical design record. The builder superseded this queue and requested removal of its HTML studies. Continue the integrated app; preserve only docs/prototype references. See [22](22-p1-motion-lifecycle.md). Links and recommendations below describe the earlier experiment, not current deliverables.
+
 ## Builder direction and scope
 
 The builder asked to start the visual exploration afresh, create different interactive versions, choose the strongest, and preserve all of them. Minimalism must not hide developer essentials. Agent ownership and work belong in the centre/top; native tools and named MCP tools belong on the right. The left composition is open. Smooth, meaningful relationships, content-shaped reading and useful context must earn adoption; attractive transcript boxes alone are insufficient.
 
 This work contains two separate deliverables: **three retained synthetic design prototypes**, and a bounded improvement to the integrated reader. The prototypes are not replacement harnesses or three production applications. No real capture is imported, no model is called, and no source file is changed. The integrated history retains its pure composer, paged worker/data-source boundary, sanitation and as-of behavior.
 
-Open the gallery through the running daemon at `/concepts/index.html`. Sources live in `apps/ui/public/concepts/`; `studio.html`, `relay.html` and `atlas.html` share `concepts.js` and `concepts.css`. The normal build copies them into the local app. Keep every direction; future agents must not delete an alternative simply because Studio was recommended.
+The retired gallery previously opened through the daemon at `/concepts/index.html`. Sources live in `apps/ui/public/concepts/`; `studio.html`, `relay.html` and `atlas.html` share `concepts.js` and `concepts.css`. The normal build copies them into the local app. Earlier retention was explicitly superseded by the builder's later instruction to remove these studies and retain docs/prototype references.
 
 ## Same evidence, different spatial systems
 
