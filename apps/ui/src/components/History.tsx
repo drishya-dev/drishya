@@ -7,7 +7,7 @@ import { stageIncomingWork, stageViewportGrowth } from '../lib/live-pacing.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
 import { useApp } from '../state.ts';
-import { CodeView, DiffView, Output, timeOf, useArtifact } from './common.tsx';
+import { CodeView, DiffView, Output, calendarTime, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf, readingWidth } from '../lib/presentation.ts';
 import { Origins } from './Origins.tsx';
@@ -401,8 +401,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
           <div className="passage-head">
             <span className="agent-dot" />
             <span className="passage-agent">{agentName(agent)}</span>
-            {ps.ops.length > 1 && <span className="flow-order-label" title="Connections show recorded order, not a decision or causal pipeline">Recorded order →</span>}
-            {first?.startTime && <span className="passage-time">{timeOf(first.startTime)}</span>}
+            {first?.startTime && <time className="passage-time" dateTime={first.startTime} title={new Date(first.startTime).toLocaleString()}>{calendarTime(first.startTime)}</time>}
           </div>
           <div className="ops-row">
             {ps.ops.map((o, i) => {

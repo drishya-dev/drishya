@@ -52,7 +52,9 @@ for (const [adapterId, original] of sessions) {
       const steps = page.locator('.reading-status');
       await expect(steps).toContainText(`${stepsNow()} recorded steps`);
 
-      await page.getByRole('button', { name: 'Map on' }).click();
+      await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('checkbox', { name: /^Repository map/ }).uncheck();
+  await page.getByRole('button', { name: 'Close Workspace settings' }).click();
       await expect(page.locator('.map')).toHaveCount(0);
 
       const anchorOf = () =>

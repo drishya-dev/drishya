@@ -28,7 +28,7 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await expect(page.locator('.viewer')).toHaveClass(/still/);
     expect(requests.some((url) => url.endsWith('/projection'))).toBe(false);
     const history = page.locator('.history');
-    await history.hover();
+    { const bounds = (await history.boundingBox())!; await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 100); }
     await page.mouse.wheel(0, -900);
     await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
     await history.evaluate((el) => { el.scrollTop = 0; });
@@ -48,7 +48,7 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await page.locator('.search input').fill('synthetic-5999');
     await page.locator('.search-results button').first().click();
     await expect(page.locator(`[data-op-id="${recordingId}.call-5999"]`)).toBeVisible();
-    await page.locator('.replay-diagnostics summary').click();
+    await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
     await page.getByRole('button', { name: 'Replay sequence' }).click();
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
     await page.getByRole('button', { name: 'Step forward', exact: true }).click();

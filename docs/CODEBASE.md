@@ -1,6 +1,6 @@
 # Codebase — the system as built
 
-**Latest presentation correction (7 October):** [27 — Continuous materials and density map](review/27-continuous-materials.md) permits a finite whole-DOM zoom through its final allocation, spatial-density node groups, an always-visible ordinary prompt and local result scrolling without detaching live follow. It supersedes conflicting earlier presentation details; captured truth, native permissions and publishing-only hosted CI remain unchanged.
+**Latest presentation correction (7 October):** [28 — Unified stage](review/28-unified-stage.md) replaces duplicate plate/glyph arrivals with one real DOM transform, tightens vivid materials and the bottom composer, removes redundant chrome, and introduces a cached spatial pyramid with smooth dot-map zoom/detail. It supersedes conflicting presentation in 24–27; captured truth, native permissions and publishing-only CI remain unchanged.
 
 **7 October connected workspace:** [26](review/26-connected-workspace.md) is the implementation record for `workspace.ts`, `controller.ts`, session folders/current disk reading, native prompt continuation, runtime inventory and visible action connections. New routes are listed there. No captured event schema, store schema or runtime dependency changed. Historical artifacts and current disk bytes remain separate capabilities; controller output is an ephemeral native response receipt, not a synthetic captured event.
 

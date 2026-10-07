@@ -2,7 +2,7 @@
 // frontend pass). The canvas draws shapes only; every label is DOM. It redraws on change,
 // never on a continuous loop, so an idle screen costs nothing.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
@@ -60,12 +60,42 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const explore = useApp((s) => s.explore);
+  const motion = useApp(s => s.motion);
   const { workspace } = useSessionWorkspace();
   useResolvedTheme();
   const hoveredPath = useApp((s) => s.hoveredPath);
   const set = useApp((s) => s.set);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [cam, setCam] = useState<Cam>({ x: 0, y: 0, k: 1 });
+  const camera = useRef(cam);
+  const cameraFrame = useRef(0);
+  const cameraTarget = useRef(cam);
+  camera.current = cam;
+  const animateCam = (target: Cam) => {
+    cancelAnimationFrame(cameraFrame.current);
+    cameraTarget.current = target;
+    if (!useApp.getState().motion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setCam(target); return; }
+    const start = camera.current, began = performance.now();
+    const tick = (time: number) => {
+      const fraction = Math.min(1, (time - began) / 360);
+      const t = 1 - (1 - fraction) ** 3;
+      setCam({ x: start.x + (target.x - start.x) * t, y: start.y + (target.y - start.y) * t, k: start.k + (target.k - start.k) * t });
+      if (fraction < 1) cameraFrame.current = requestAnimationFrame(tick);
+    };
+    cameraFrame.current = requestAnimationFrame(tick);
+  };
+  useEffect(() => () => cancelAnimationFrame(cameraFrame.current), []);
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const stop = () => { cancelAnimationFrame(cameraFrame.current); setCam(cameraTarget.current); };
+    if (!motion || preference.matches) stop();
+    preference.addEventListener('change', stop);
+    return () => preference.removeEventListener('change', stop);
+  }, [motion]);
+  const zoomCamera = (factor: number) => {
+    const c = cameraTarget.current, k = Math.max(.5, Math.min(8, c.k * factor));
+    animateCam({ k, x: size.w / 2 - (size.w / 2 - c.x) * k / c.k, y: size.h / 2 - (size.h / 2 - c.y) * k / c.k });
+  };
   const [tip, setTip] = useState<{ node: MapGroup; x: number; y: number }>();
   const [query, setQuery] = useState('');
   const detail = useMemo(() => graph ? mapDetail(graph, cam.k) : undefined, [graph, cam.k]);
@@ -73,7 +103,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     const k = Math.min(8, Math.max(2, cam.k * 2));
     const x = 48 + node.x * Math.max(40, size.w - 96);
     const y = 48 + node.y * Math.max(40, size.h - 96);
-    setCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
+    animateCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
     setTip(undefined);
   };
   const displayNodes = detail?.nodes ?? [];
@@ -89,7 +119,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
   }, []);
 
   useEffect(() => {
-    if (!explore) setCam({ x: 0, y: 0, k: 1 });
+    if (!explore) { cancelAnimationFrame(cameraFrame.current); cameraTarget.current = { x: 0, y: 0, k: 1 }; setCam(cameraTarget.current); }
   }, [explore]);
 
   // Use the whole world, rather than hiding a square map behind the reading column.
@@ -115,7 +145,6 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
 
     g.lineWidth = 1.2;
     g.strokeStyle = colours.edge;
-    g.beginPath();
     let drawnEdges = 0;
     for (const e of detail?.edges ?? []) {
       const a = displayById.get(e.from);
@@ -124,11 +153,15 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       const pa = project(a);
       const pb = project(b);
       if (Math.max(pa.x, pb.x) < 0 || Math.max(pa.y, pb.y) < 0 || Math.min(pa.x, pb.x) > size.w || Math.min(pa.y, pb.y) > size.h) continue;
+      g.globalAlpha = Math.min(a.opacity ?? 1, b.opacity ?? 1);
+      if (g.globalAlpha < .02) continue;
+      g.beginPath();
       g.moveTo(pa.x, pa.y);
       g.lineTo(pb.x, pb.y);
+      g.stroke();
       if (++drawnEdges >= 600) break;
     }
-    g.stroke();
+    g.globalAlpha = 1;
 
     if (hoveredPath) {
       g.beginPath();
@@ -144,40 +177,38 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       g.lineWidth = 1.2;
     }
 
-    const r0 = explore ? Math.max(5, Math.min(10, 5 * Math.sqrt(cam.k))) : Math.max(2, Math.min(4, 2.4 * Math.sqrt(cam.k)));
+    const r0 = Math.max(1.8, Math.min(3, 1.8 * Math.sqrt(cam.k)));
     for (const n of displayNodes) {
       const p = project(n);
       if (p.x < -10 || p.y < -10 || p.x > size.w + 10 || p.y > size.h + 10) continue;
       const h = heatMap.get(n.id) ?? (n.members ? n.members.map(id => heatMap.get(id)).find(Boolean) : undefined);
+      g.globalAlpha = n.opacity ?? 1;
       g.beginPath();
-      if (n.members) g.arc(p.x, p.y, r0 + 2, 0, Math.PI * 2);
-      else g.roundRect(p.x - r0, p.y - r0 * 1.3, r0 * 2, r0 * 2.6, 1.5);
+      const radius = n.members ? Math.min(10, 3 + Math.log2(n.members.length) * .8) : r0;
+      g.arc(p.x, p.y, radius, 0, Math.PI * 2);
       g.fillStyle = h && h.heat > 0.02 ? colours.tones[h.tone] : h ? colours.active : colours.node;
       g.fill();
-      if (explore && r0 >= 4) {
-        g.strokeStyle = colours.background; g.lineWidth = 1;
-        g.beginPath(); g.moveTo(p.x - r0 / 2, p.y); g.lineTo(p.x + r0 / 2, p.y); g.moveTo(p.x - r0 / 2, p.y + r0 / 2); g.lineTo(p.x + r0 / 3, p.y + r0 / 2); g.stroke();
-        g.lineWidth = 1.2;
-      }
       if (h?.edited) {
         g.beginPath();
-        g.roundRect(p.x - r0 - 3, p.y - r0 * 1.3 - 3, r0 * 2 + 6, r0 * 2.6 + 6, 3);
+        g.arc(p.x, p.y, radius + 3, 0, Math.PI * 2);
         g.strokeStyle = colours.tones.write;
         g.stroke();
       }
       if (h?.tone === 'fail') {
         g.beginPath();
-        g.roundRect(p.x - r0 - 5, p.y - r0 * 1.3 - 5, r0 * 2 + 10, r0 * 2.6 + 10, 4);
+        g.arc(p.x, p.y, radius + 5, 0, Math.PI * 2);
         g.strokeStyle = colours.tones.fail;
         g.stroke();
       }
       if (hoveredPath === n.id) {
         g.beginPath();
-        g.roundRect(p.x - r0 - 7, p.y - r0 * 1.3 - 7, r0 * 2 + 14, r0 * 2.6 + 14, 4);
+        g.arc(p.x, p.y, radius + 6, 0, Math.PI * 2);
         g.strokeStyle = colours.text;
         g.stroke();
       }
     }
+
+    g.globalAlpha = 1;
 
     // Keep the reading column clear: the map recedes behind text, never crosses it.
     if (!explore && readingRect) {
@@ -194,11 +225,9 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     }
   };
 
-  useEffect(() => {
-    // Origins owns finite arrival choreography and its cancellation.
-    const raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  });
+  // Paint the camera's committed frame; scheduling another RAF here can cancel
+  // every intermediate paint while React commits the next camera position.
+  useLayoutEffect(() => { draw(); });
 
   // ── interaction (explore mode) ────────────────────────────────────────────
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | undefined>(undefined);
@@ -207,6 +236,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     let best: MapGroup | undefined;
     let bd = 14 * 14;
     for (const n of displayNodes) {
+      if ((n.opacity ?? 1) < .6) continue;
       const p = project(n);
       const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
       if (d < bd) {
@@ -218,17 +248,23 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
   };
 
   const labels = useMemo(() => {
-    if (!graph || !explore || detail?.depth !== 99) return [];
-    const dirs = new Map<string, { x: number; y: number; n: number }>();
-    for (const n of displayNodes) {
-      const d = dirs.get(n.dir) ?? { x: 0, y: 0, n: 0 };
-      d.x += n.x;
-      d.y += n.y;
-      d.n++;
-      dirs.set(n.dir, d);
+    if (!explore) return [];
+    const accepted: { node: MapGroup; x: number; y: number; width: number }[] = [];
+    // Cull before ranking: zooming into one region must not sort every file in a huge repo.
+    const sorted = displayNodes.filter(n => {
+      const p = project(n);
+      return (n.opacity ?? 1) > .6 && p.x >= 6 && p.y >= 70 && p.x < size.w - 20 && p.y < size.h - 50;
+    }).sort((a, b) =>
+      Number(b.id === hoveredPath) - Number(a.id === hoveredPath) || Number(heatMap.has(b.id)) - Number(heatMap.has(a.id)) || (b.members?.length ?? 0) - (a.members?.length ?? 0));
+    for (const node of sorted) {
+      const p = project(node), width = Math.min(190, node.path.length * 6 + 24);
+      if (p.x < 6 || p.y < 70 || p.x + width > size.w || p.y > size.h - 50) continue;
+      if (accepted.some(a => Math.abs(a.y - p.y) < 24 && p.x < a.x + a.width && p.x + width > a.x)) continue;
+      accepted.push({ node, ...p, width });
+      if (accepted.length >= 48) break;
     }
-    return [...dirs].filter(([, d]) => d.n >= 2).map(([dir, d]) => ({ dir, x: d.x / d.n, y: d.y / d.n }));
-  }, [graph, explore, detail]);
+    return accepted;
+  }, [detail, explore, cam, size, hoveredPath, heatMap]);
 
   // Share exact renderer coordinates for a bounded working set, never a guessed graph origin.
   const anchors = [...heat].sort((a, b) => b.heat - a.heat).slice(0, 63).map((h) => h.path);
@@ -245,12 +281,14 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         const r = wrap.current!.getBoundingClientRect();
         const mx = e.clientX - r.left;
         const my = e.clientY - r.top;
-        const k = Math.max(0.5, Math.min(8, cam.k * Math.exp(-e.deltaY * 0.0015)));
-        setCam({ k, x: mx - ((mx - cam.x) * k) / cam.k, y: my - ((my - cam.y) * k) / cam.k });
+        const c = cameraTarget.current;
+        const k = Math.max(0.5, Math.min(8, c.k * Math.exp(-e.deltaY * 0.0015)));
+        animateCam({ k, x: mx - ((mx - c.x) * k) / c.k, y: my - ((my - c.y) * k) / c.k });
       }}
       onPointerDown={(e) => {
         if (!explore) return;
         if ((e.target as HTMLElement).closest('.map-tools, .map-legend, .map-group')) return;
+        cancelAnimationFrame(cameraFrame.current);
         drag.current = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false };
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
       }}
@@ -261,7 +299,8 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
           const dx = e.clientX - drag.current.x;
           const dy = e.clientY - drag.current.y;
           if (Math.abs(dx) + Math.abs(dy) > 3) drag.current.moved = true;
-          setCam((c) => ({ ...c, x: drag.current!.cx + dx, y: drag.current!.cy + dy }));
+          const target = { ...cam, x: drag.current!.cx + dx, y: drag.current!.cy + dy };
+          cameraTarget.current = target; setCam(target);
           return;
         }
         if (!explore) return;
@@ -287,15 +326,15 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       <canvas ref={canvas} style={{ width: size.w, height: size.h }} />
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
-        <button className="btn ghost" aria-label="Zoom into repository" onClick={() => setCam(c => ({ ...c, k: Math.min(8, c.k * 1.25) }))}>+</button>
-        <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => setCam(c => ({ ...c, k: Math.max(.5, c.k / 1.25) }))}>−</button>
-        <button className="btn ghost" onClick={() => { setCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
+        <button className="btn ghost" aria-label="Zoom into repository" onClick={() => zoomCamera(1.25)}>+</button>
+        <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => zoomCamera(1 / 1.25)}>−</button>
+        <button className="btn ghost" onClick={() => { animateCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
         <input aria-label="Find a file on the map" placeholder="Find a file on the map…" value={query} onChange={(e) => setQuery(e.target.value)} />
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
             const x = fit.ox + node.x * fit.sx; const y = fit.oy + node.y * fit.sy;
             const k = graph && graph.nodes.length > 80 ? 6 : 2;
-            setCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
+            animateCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
             setTip({ node, x: size.w / 2, y: size.h / 2 });
             set({ hoveredPath: node.id, follow: false, playing: false, held: true });
           }}>{node.path}</button>)}
@@ -305,31 +344,22 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       </div>}
       {anchors.map((path) => {
         const node = displayById.get(path);
-        if (!node) return null;
+        if (!node || (node.opacity ?? 1) < .95) return null;
         const p = project(node);
         const visible = displayById.has(path) && size.w > 0 && p.x >= 6 && p.y >= 6 && p.x < size.w - 6 && p.y < size.h - 6;
         return <span key={path} className="map-origin-point" data-origin-file={path} data-origin-visible={visible} style={{ left: p.x - 3, top: p.y - 3 }} aria-hidden="true" />;
       })}
       {anchors.slice(0, explore ? 24 : 12).map((path) => {
         const node = displayById.get(path);
-        if (!node || !displayById.has(path)) return null;
+        if (explore || !node || (node.opacity ?? 1) < .95 || !displayById.has(path)) return null;
         const p = project(node);
         if (p.x < 6 || p.y < 6 || p.x > size.w - 160 || p.y > size.h - 24) return null;
         if (!explore && readingRect && p.x + 155 > readingRect.left - 24 && p.x < readingRect.left + readingRect.width + 24) return null;
         return <span key={path} className={`map-file-label tone-${heatMap.get(path)?.tone}`} title={node.path} style={{ left: p.x + 9, top: p.y - 9 }}>{node.path}</span>;
       })}
-      {explore && displayNodes.filter(n => { const p = project(n); return n.members && p.x >= 0 && p.y >= 0 && p.x <= size.w - 100 && p.y <= size.h - 40; }).slice(0, 48).map(n => {
-        const p = project(n); if (p.x < 0 || p.y < 0 || p.x > size.w - 100 || p.y > size.h - 40) return null;
-        return <button className="map-group" key={n.id} style={{ left: p.x + 14, top: p.y - 12 }} title="Spatial density group · zoom to reveal individual files" onClick={() => zoomGroup(n)}><strong>{n.members!.length}</strong><small>{n.path}</small></button>;
-      })}
-      {labels.map((l) => {
-        const p = project(l);
-        return (
-          <div key={l.dir} className="map-label" style={{ left: p.x, top: p.y - 18 }}>
-            {l.dir}
-          </div>
-        );
-      })}
+      {labels.map(({ node, x, y }) => node.members
+        ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} title={`${node.members.length} spatially grouped files · zoom to reveal`} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>
+        : <span className="map-file-label" key={node.id} title={node.path} style={{ left: x + 8, top: y - 9, opacity: node.opacity ?? 1 }}>{node.path}</span>)}
       {tip && (
         <div className="map-tip" style={{ left: tip.x + 12, top: tip.y + 8 }}>
           <div className="map-tip-path">{tip.node.path}</div>

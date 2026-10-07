@@ -10,10 +10,24 @@ it('groups spatial density across directories, preserving actual imports and zoo
   expect(overview.nodes.some(n => n.path === 'Mixed files')).toBe(true);
   expect(mapDetail(graph, 3).nodes.length).toBeGreaterThan(overview.nodes.length);
   expect(mapDetail(graph, 1)).toEqual(overview);
-  const zoomed = mapDetail(graph, 6);
+  const zoomed = mapDetail(graph, 8);
   expect(zoomed.nodes.map(n => n.id)).toEqual(graph.nodes.map(n => n.id));
   expect(zoomed.nodes.every(n => !n.members)).toBe(true);
   expect(zoomed.edges).toHaveLength(2);
+});
+it('splits nested bins continuously without moving a file abruptly to its resting point', () => {
+  const before = mapDetail(graph, 4);
+  const during = mapDetail(graph, 6);
+  const after = mapDetail(graph, 8);
+  expect(during.nodes.some(n => n.members && n.opacity! > 0 && n.opacity! < 1)).toBe(true);
+  const file = during.nodes.find(n => n.id === graph.nodes[0]!.id)!;
+  const parent = before.nodes.find(n => n.members?.includes(file.id) || n.id === file.id)!;
+  expect(file.opacity).toBeGreaterThan(0);
+  expect(file.opacity).toBeLessThan(1);
+  expect(file.x).toBeGreaterThanOrEqual(Math.min(parent.x, graph.nodes[0]!.x));
+  expect(file.x).toBeLessThanOrEqual(Math.max(parent.x, graph.nodes[0]!.x));
+  expect(after.nodes.find(n => n.id === file.id)?.x).toBe(graph.nodes[0]!.x);
+  expect(graph.nodes[0]!.x).toBe(0); // cached layers never mutate source geometry
 });
 it('keeps root configuration files individually identifiable', () => {
   const config = { ...graph.nodes[0]!, id: '.gitignore', path: '.gitignore' };

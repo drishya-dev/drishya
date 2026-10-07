@@ -1,12 +1,11 @@
 import type { GraphNode, RepoGraph } from '@drishya/contracts';
 
-export interface MapGroup extends GraphNode { members?: string[] }
+export interface MapGroup extends GraphNode { members?: string[]; opacity?: number }
 /** A derived navigation grouping. Edges aggregate actual imports, never inferred causality. */
-export function mapDetail(graph: RepoGraph, zoom: number): { nodes: MapGroup[]; edges: { from: string; to: string; count: number }[]; depth: number } {
+function mapLevel(graph: RepoGraph, depth: number): { nodes: MapGroup[]; edges: { from: string; to: string; count: number }[]; depth: number } {
   const source = graph.temporal === 'current' ? graph.nodes.filter(n => !n.path.startsWith('.local/')) : graph.nodes;
   // Screen-density bins preserve the repository's spatial layout. Folder names are
   // labels only: membership never depends on the directory hierarchy.
-  const depth = source.length <= 80 || zoom >= 5.5 ? 99 : Math.max(1, Math.floor(zoom * 5));
   const groups = new Map<string, MapGroup>();
   const member = new Map<string, string>();
   for (const node of source) {
@@ -40,4 +39,37 @@ export function mapDetail(graph: RepoGraph, zoom: number): { nodes: MapGroup[]; 
     if (prior) prior.count++; else edges.set(key, { from, to, count: 1 });
   }
   return { nodes, edges: [...edges.values()], depth };
+}
+
+const levels = new WeakMap<RepoGraph, Map<number, ReturnType<typeof mapLevel>>>();
+function level(graph: RepoGraph, depth: number) {
+  let cache = levels.get(graph);
+  if (!cache) { cache = new Map(); levels.set(graph, cache); }
+  let result = cache.get(depth);
+  if (!result) { result = mapLevel(graph, depth); cache.set(depth, result); }
+  return result;
+}
+
+/** Nested spatial bins split continuously; a group is navigation, not a source file. */
+export function mapDetail(graph: RepoGraph, zoom: number): ReturnType<typeof mapLevel> {
+  const count = graph.nodes.filter(n => !(graph.temporal === 'current' && n.path.startsWith('.local/'))).length;
+  if (count <= 80 || zoom >= 8) return level(graph, 99);
+  const position = Math.max(0, Math.log2(Math.max(1, zoom)));
+  const index = Math.min(2, Math.floor(position));
+  const phase = Math.min(1, position - index);
+  const t = phase * phase * (3 - 2 * phase);
+  const coarse = level(graph, 4 * 2 ** index);
+  if (t === 0) return coarse;
+  const fine = level(graph, index === 2 ? 99 : 8 * 2 ** index);
+  const parents = new Map<string, MapGroup>();
+  for (const node of coarse.nodes) for (const member of node.members ?? [node.id]) parents.set(member, node);
+  const coarseIds = new Set(coarse.nodes.map(n => n.id));
+  const unchanged = new Set(fine.nodes.filter(n => coarseIds.has(n.id)).map(n => n.id));
+  const nodes = coarse.nodes.filter(n => !unchanged.has(n.id)).map(n => ({ ...n, opacity: 1 - t }));
+  for (const node of fine.nodes) {
+    const parent = parents.get(node.members?.[0] ?? node.id);
+    nodes.push({ ...node, x: parent ? parent.x + (node.x - parent.x) * t : node.x,
+      y: parent ? parent.y + (node.y - parent.y) * t : node.y, opacity: unchanged.has(node.id) ? 1 : t });
+  }
+  return { nodes, edges: [...coarse.edges.filter(e => !unchanged.has(e.from) || !unchanged.has(e.to)), ...fine.edges], depth: fine.depth };
 }

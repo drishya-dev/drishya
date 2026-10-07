@@ -186,3 +186,14 @@ export function relTime(iso?: string) {
   if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
   return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short' });
 }
+
+/** Calendar labels belong to presentation, never the deterministic scene composer. */
+export function calendarTime(iso: string, now = new Date()): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (sameDay(date, now)) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (sameDay(date, yesterday)) return 'Yesterday';
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric', ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) });
+}
