@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Latest baseline:** PR #46 merged on main (`79e5d82`), local checks only; unrelated package-manager edits remain local.
+
 **Latest playback/prompt correction:** [31](review/31-independent-replay-reading.md) keeps active replay advancing while the user hovers/reads above, independent of viewport follow, and keeps the compact native composer solid charcoal with contained decoration and no artificial scrollbars. This supersedes earlier automatic pause-on-reading rules; explicit transport controls and as-of evidence remain.
 
 7 October 2026. Repository files are project memory. Read [30 — Builder request audit](review/30-builder-request-audit.md) first, then [29 — Centred neutral workspace](review/29-centred-neutral-workspace.md), then [28 — Unified stage](review/28-unified-stage.md), then [27](review/27-continuous-materials.md) for material geometry and [26](review/26-connected-workspace.md) for the native workspace/controller. Earlier records remain history.

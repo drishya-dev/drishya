@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Full request-audit refinement #45 merged on main (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **Independent replay reading and compact prompt #46 merged on main (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -64,7 +64,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 7 October 2026; independent replay reading and compact prompt on `codex/replay-reading`. See [31](review/31-independent-replay-reading.md); #45 remains the prior audit foundation.
+- **When:** 7 October 2026; independent replay reading and compact prompt merged as [PR #46](https://github.com/drishya-dev/drishya/pull/46) (`79e5d82`). See [31](review/31-independent-replay-reading.md); #45 remains the prior audit foundation.
 - **Delivered:** replay Play now survives hover, scrolling above, action expansion, readers and return-to-latest. Only camera following detaches; explicit transport controls still hold. Paged replay pins the reading passage without revealing future evidence. Translation/zoom remain one concurrent real-DOM trajectory, independent of capture. Builder's latest correction keeps the prompt solid charcoal and compact. Removed the negative-inset decorative overflow, wrapped narrow form controls, stopped prompt arrival fading and kept clearance in history padding rather than clipping the world.
 - **Checks:** Typechecks + 286 units, 49 regular browser journeys (two opt-ins skipped), UI build and isolated offline package installation/import/authenticated API/restart passed. Final prompt regression checks verify opaque full-opacity form and zero artificial scroll extents at 1440 and 390 px. Fresh ten-minute synthetic live-reading passed: 602,035 ms, 112 rounds, 809 peak DOM nodes. The final solid prompt followed its start and passed scoped desktop/mobile/API checks. No hosted CI dispatched.
 - **Next:** Shared later native multi-agent/harness/tool/map/reading/release matrix remains in [30](review/30-builder-request-audit.md#map-follow-up-and-durable-validation-backlog). Human visual preference and physical/platform/native compatibility remain separate release acceptance. Preserve unrelated package-manager edits.
