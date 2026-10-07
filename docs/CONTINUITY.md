@@ -16,7 +16,7 @@ Foundation in 29: fixed symmetric work margins independent of an independent ful
 
 ## Current foundation and truth boundaries
 
-B0–B4 engineering/P1–P2 reading utility are implemented candidates. P1 #38–40, connected workspace #41 (`dca1b28`) and continuous materials #42 (`7802c5e`) are merged foundations. Unified stage #43 (`e26ca38`) and centred neutral workspace #44 (`867a561`) are merged on main; STATUS and 29 carry the latest local gates.
+B0–B4 engineering/P1–P2 reading utility are implemented candidates. P1 #38–40, connected workspace #41 (`dca1b28`) and continuous materials #42 (`7802c5e`) are merged foundations. Request-audit refinement #45 (`94d459e`) is now merged on main. Unified stage #43 (`e26ca38`) and centred neutral workspace #44 (`867a561`) are merged on main; STATUS and 29 carry the latest local gates.
 
 Codex installed 0.160.0 continuation was previously verified using a newly created synthetic native thread, real model response and nine normally captured journal observations. Claude installed 2.1.282 is refused subscription access under this organization; synthetic protocol/UI/background-agent coverage exists, but live Claude is not certified. Do not alter account policies or bypass native permissions. Native sessions own normal journal writes; Drishya's observer reads only. Unsupported interactive requests stay native-client work; offline/demo bundles cannot send prompts.
 
