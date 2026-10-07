@@ -4,7 +4,7 @@
 
 ## Current work
 
-P1 PR #38 was squash-merged as `62d2d56`. The user-facing refinement is on `codex/prompt-workspace`; see STATUS for its final PR and checks. [24](review/24-prompt-workspace.md) is the latest implementation/design amendment. P1 implementation closure does not freeze art direction or certify public release.
+P1 PR #38 was squash-merged as `62d2d56`. User-facing refinement PR #39 was squash-merged as `61bb47b`; local main is updated. Final checks are in STATUS and review/24. [24](review/24-prompt-workspace.md) is the latest implementation/design amendment. P1 implementation closure does not freeze art direction or certify public release.
 
 Normal use is accumulating captured history, scrolling and captured prompt chapters. Selecting a prompt opens the work after it; “Follow from prompt” presents already recorded work from there. It never sends a prompt or reruns a harness. Ordinary UI has no play/pause/speed controller. Explicit Diagnostics retains sequence transport for testing; explicit diagnostic URLs remain compatible. Large-session prompt navigation uses validated internal `promptStep` and exact Previous/Next marker queries, without loading the whole projection. Prompt chips are bounded samples, not an exhaustive large-session list.
 

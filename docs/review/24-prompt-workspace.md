@@ -2,7 +2,7 @@
 
 7 October 2026 · Yash / Codex · `codex/prompt-workspace`.
 
-PR #38 was squash-merged as `62d2d56` at the builder's explicit request. This pass is a separate refinement branch, preserving both builders' work and both original prototype references. P1 closure was implementation closure, not a permanent art-direction approval.
+PR #38 was squash-merged as `62d2d56` at the builder's explicit request. This pass is a separate refinement branch, preserving both builders' work and both original prototype references. P1 closure was implementation closure, not a permanent art-direction approval. This refinement was squash-merged via [PR #39](https://github.com/drishya-dev/drishya/pull/39) as `61bb47b` after local acceptance; local main is updated.
 
 ## Latest direction and implemented behavior
 

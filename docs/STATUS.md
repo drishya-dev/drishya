@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **P1 merged as `62d2d56` via PR #38; user-facing refinement on `codex/prompt-workspace`.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **P1 #38 and user-facing refinement #39 merged; local main updated (`61bb47b`).** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -64,7 +64,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 7 October 2026; P1 #38 squash-merged as `62d2d56`, then the separate `codex/prompt-workspace` refinement. Read [24](review/24-prompt-workspace.md).
+- **When:** 7 October 2026; P1 #38 squash-merged as `62d2d56`, then the separate `codex/prompt-workspace` refinement, squash-merged via PR #39 as `61bb47b`. Local main is updated. Read [24](review/24-prompt-workspace.md).
 - **Delivered:** captured-prompt chapters and Follow from prompt replace normal movie transport; Diagnostics retains explicit developer replay. Large-session prompt navigation stays worker-paged and validated. Returning to latest from held prompt flow restores full live history.
 - **Presentation:** compact input/output-sized allocations retain parallel siblings and wrap; bounded loaded-source widths, stronger Search boundaries, charcoal/stone material contrast and pale real graph marks. Whole DOM surfaces translate/reveal from measured origins; Write falls back to its actual Edit instrument when its file reference is clipped/unavailable. No copied/scaled/typewritten evidence, invented graph edges or capture delay.
 - **Reading:** wider draggable/keyboard-resizable operation detail; adjustable file action trail, reading-space toggle and wider wrapping comparisons. Actual Write after-source without hunks previews/opens instead of an empty patch. Missing whole-file bytes remain explicitly unavailable.
