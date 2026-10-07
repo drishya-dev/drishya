@@ -403,7 +403,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const from = so.origin.type === 'map' ? 'from-map' : 'from-dock';
   const presentation = presentationOf(op);
   const [sourceWidth, setSourceWidth] = useState<number>();
-  const measureSource = useCallback((text: string) => setSourceWidth(Math.max(320, Math.min(580, readingWidth(...text.split('\n').slice(0, 12))))), []);
+  const measureSource = useCallback((text: string) => setSourceWidth(Math.max(280, Math.min(420, readingWidth(...text.split('\n').slice(0, 12))))), []);
   const readingAllocation = presentation.width ?? sourceWidth;
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   return (

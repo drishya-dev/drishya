@@ -6,6 +6,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { buildGraph } from '@drishya/indexer';
+import { sanitize } from '@drishya/privacy';
 import { App, dataDir, VERSION } from './app.ts';
 import { startServer } from './server.ts';
 import { storageUsage } from './storage.ts';
@@ -173,6 +175,9 @@ export async function buildDemoBundle() {
     const codex = await app.ingest.importSource('codex', join(fx, 'codex/rollout-checkout-review.jsonl'));
     for (const r of [claude, codex]) app.store.updateRecordingMeta(r.recordingId, { graphRoot: join(fx, 'workspace/shop') });
     const bundle = await app.exportBundle(`${claude.recordingId}+${codex.recordingId}`);
+    // Combined exports can omit a workspace root. This demo has one known fixture
+    // workspace: index its real imports rather than manufacturing graph connections.
+    bundle.graph = { ...sanitize(await buildGraph(join(fx, 'workspace/shop'))).value, root: '' };
     bundle.recording.title = 'Free orders reach checkout';
     // Fixed export time keeps the committed bundle reproducible.
     bundle.exportedAt = '2026-09-22T00:00:00.000Z';

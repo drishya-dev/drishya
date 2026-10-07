@@ -1,5 +1,7 @@
 # Drishya — Vision & Creative Direction
 
+**7 October colour/density correction:** the builder explicitly wants black with a subtle static charcoal lining texture, smaller materials and a smaller tool dock. [25](review/25-black-compact-map.md) supersedes the neutral green/stone interpretation in [24]. Fine CSS weave is allowed; no animated texture, noise, glow or blur. Show real indexed imports, not invented graph connections.
+
 **7 October user-facing refinement:** [24](review/24-prompt-workspace.md) governs prompt-led normal navigation, compact content-sized receipts, resizable source/comparison reading, Write after-source rendering and charcoal graph contrast. The builder specifically requested whole-surface arrivals: the real DOM material may translate/reveal from a measured origin, without copied/scaled/typewritten text, invented output or delayed capture. Diagnostics retain optional playback; normal use has captured prompts and scrolling. Harness prompt sending was researched only and remains a separate scope decision. P1 PR #38 merged as `62d2d56`; refinement PR #39 squash-merged as `61bb47b`. Local main is updated.
 
 **Latest P1 refinement — 6 October:** [23](review/23-p1-material-pacing.md) governs slower content-sized material unfolding, actual loaded-source transitions, preview typography/height and late-growth camera holds. This is the integrated P1 implementation; larger workspace features and physical/platform/human release checks remain separate. Preserve the prototypes, not the retired HTML gallery.

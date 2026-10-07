@@ -77,3 +77,5 @@ When two documents disagree, the one higher in its row wins. When a document her
 | [`Vantage_Base_Prompt.md`](Vantage_Base_Prompt.md) | The original brief, kept for provenance |
 
 - [24 — Prompt-led reading and real surface arrivals](review/24-prompt-workspace.md): latest 7 October direction; supersedes earlier stationary-surface/default transport presentation where specified.
+
+[25: black compact map](review/25-black-compact-map.md) is the latest builder colour/density correction: static black charcoal weave, smaller materials/tool dock, and actual synthetic fixture import connections. It supersedes review/24's neutral palette interpretation; prompt reading and motion remain.
