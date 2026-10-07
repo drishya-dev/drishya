@@ -16,6 +16,8 @@ import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
 import { FlowConnections } from './FlowConnections.tsx';
+import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-motion.ts';
+import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
@@ -49,7 +51,47 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const watchLiveGrowth = useRef(false);
   const stagedArrivalStep = useRef<number | undefined>(undefined);
   const requestedWindow = useRef('');
+  const motion = useApp(s => s.motion);
+  const materialPositions = useRef(new Map<string, DOMRect>());
   const isProgrammaticScroll = useCallback(() => programmatic.current && Math.abs((ref.current?.scrollTop ?? 0) - lastScrollTop.current) < .5, []);
+  useLayoutEffect(() => {
+    const history = ref.current;
+    if (!history) return;
+    const measure = () => {
+      const next = new Map<string, DOMRect>();
+      for (const card of history.querySelectorAll<HTMLElement>('article[data-op-id]')) {
+        const id = card.dataset.opId!;
+        const r = materialRect(card);
+        const stored = new DOMRect(r.left, r.top + history.scrollTop, r.width, r.height);
+        const before = materialPositions.current.get(id);
+        if (before && follow && useApp.getState().follow && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > history.getBoundingClientRect().top && r.top < history.getBoundingClientRect().bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
+          moveMaterial(card, new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), 720, 'surface-Reflow');
+        }
+        next.set(id, stored);
+        if (next.size >= 80) break;
+      }
+      materialPositions.current = next;
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    const inner = history.querySelector('.history-inner'); if (inner) observer.observe(inner);
+    for (const card of history.querySelectorAll('article[data-op-id]')) observer.observe(card);
+    const cancel = (event: WheelEvent) => { const local = scrollsInsideMaterial(event.target); const own = (event.target as Element)?.closest('article[data-op-id]'); for (const card of history.querySelectorAll('article[data-op-id]')) if (!local || card === own) for (const a of card.getAnimations()) if (a.id.startsWith('surface-')) a.cancel(); };
+    history.addEventListener('wheel', cancel, { passive: true });
+    return () => { observer.disconnect(); history.removeEventListener('wheel', cancel); };
+  });
+
+  useLayoutEffect(() => {
+    const preference = matchMedia('(prefers-reduced-motion: reduce)');
+    const cancel = () => { for (const card of ref.current?.querySelectorAll('article[data-op-id]') ?? []) for (const a of card.getAnimations()) if (a.id === 'surface-Reflow') a.cancel(); };
+    if (!motion || lowResource) cancel();
+    const changed = () => { if (preference.matches) cancel(); };
+    preference.addEventListener('change', changed);
+    const history = ref.current;
+    history?.addEventListener('pointerdown', cancel);
+    history?.addEventListener('keydown', cancel);
+    return () => { preference.removeEventListener('change', changed); history?.removeEventListener('pointerdown', cancel); history?.removeEventListener('keydown', cancel); };
+  }, [motion, lowResource]);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
@@ -296,7 +338,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   return (
     <>
-    <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => { userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY !== 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; if (follow && !(e.target as HTMLElement).closest('button, input, select, a') && (e.target === ref.current || (e.target as HTMLElement).closest('.op-body, .prose, .op-expanded'))) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onKeyDown={(e) => { pointerFocus.current = false; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } } }} onClickCapture={(e) => {
+    <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => { if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; } userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY !== 0) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onPointerDown={(e) => { if (scrollsInsideMaterial(e.target)) return; if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; if (follow && !(e.target as HTMLElement).closest('button, input, select, a') && (e.target === ref.current || (e.target as HTMLElement).closest('.op-body, .prose, .op-expanded'))) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) }); } } }} onClickCapture={(e) => {
       // Pointer focus must not reflow the button between press and release. Hold at
       // activation instead; keyboard focus and text selection still hold immediately.
       if ((e.target as HTMLElement).closest('button, input, select, a')) {
@@ -311,7 +353,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
           if (useApp.getState().follow) set({ follow: false, ...(mode === 'replay' ? { playing: false, held: true } : {}) });
         });
       }
-    }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { if (pointerFocus.current && (e.target as HTMLElement).closest('button, input, select, a')) return; const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false, playing: false, held: true }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
+    }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { if (scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) return; if (pointerFocus.current && (e.target as HTMLElement).closest('button, input, select, a')) return; const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false, playing: false, held: true }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       {/* Keep the document extent stable while React replaces disjoint virtual runs.
           Otherwise removing a spacer can clamp native scroll to the pinned old work. */}
       <div className="history-inner"><div style={{ minHeight: layout.total }}>
@@ -411,28 +453,6 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
 
 const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operation; index: number }) {
   const card = useRef<HTMLElement>(null);
-  const growthEnabled = useApp(s => s.motion && s.follow && !s.lowResource);
-  useLayoutEffect(() => {
-    const root = card.current; const body = root?.querySelector('.op-body');
-    if (!root || !body) return;
-    let height = root.getBoundingClientRect().height; let growth: Animation | undefined;
-    const cancel = () => { growth?.cancel(); growth = undefined; height = root.getBoundingClientRect().height; };
-    const observer = new ResizeObserver(() => {
-      const before = growth ? root.getBoundingClientRect().height : height;
-      growth?.cancel();
-      const next = root.getBoundingClientRect().height; height = next;
-      if (!growthEnabled || !useApp.getState().follow || matchMedia('(prefers-reduced-motion: reduce)').matches || Math.abs(next - before) < 3) return;
-      if (root.getAnimations().some(a => a.id.startsWith('surface-') && a.playState === 'running')) return;
-      // Reserve final layout once; animate its visible boundary, never the virtual height.
-      growth = root.animate([{ clipPath: `inset(0 0 ${Math.max(0, next - before)}px 0 round 11px)` }, { clipPath: 'inset(0 0 0 0 round 11px)' }], { duration: 650, easing: 'cubic-bezier(.4,0,.2,1)' });
-      growth.id = 'material-growth';
-      void growth.finished.then(() => { growth = undefined; }, () => {});
-    });
-    observer.observe(body); root.addEventListener('pointerdown', cancel);
-    const history = root.closest('.history'); history?.addEventListener('wheel', cancel, { passive: true });
-    window.addEventListener('keydown', cancel);
-    return () => { observer.disconnect(); cancel(); root.removeEventListener('pointerdown', cancel); history?.removeEventListener('wheel', cancel); window.removeEventListener('keydown', cancel); };
-  }, [growthEnabled]);
   const selected = useApp((s) => s.selectedOp === op.id);
   const expanded = useApp((s) => s.expandedOp === op.id);
   const hoveredPath = useApp((s) => s.hoveredPath);

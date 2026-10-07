@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Latest presentation correction (7 October):** [27 — Continuous materials and density map](review/27-continuous-materials.md) permits a finite whole-DOM zoom through its final allocation, spatial-density node groups, an always-visible ordinary prompt and local result scrolling without detaching live follow. It supersedes conflicting earlier presentation details; captured truth, native permissions and publishing-only hosted CI remain unchanged.
+
 **Latest amendment:** [26 — Connected session workspace](review/26-connected-workspace.md) supersedes older observe-only product scope, task tabs, staged folder/current-file reading and researched-only prompting. The builder explicitly requested the controller; AGENTS now records the narrow permitted boundary. Captured-data architecture, redaction, typed evidence, independent observation and publishing-only hosted CI still apply. This record and CODEBASE describe the implementation; older review documents remain history.
 
 The docs were written in layers: a blueprint (20 Sep), an external review (21 Sep), a working backend draft (25 Sep), and the builder's live-history/backend-first clarification with a baseline audit (30 Sep). Several documents therefore overlap. **This page is the single answer to "which one is right?"**

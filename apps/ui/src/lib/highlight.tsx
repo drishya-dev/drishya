@@ -7,7 +7,7 @@ const KEYWORDS = new Set(
   'abstract as async await break case catch class const continue debugger def default del delete do elif else enum except export extends false finally for from function global if implements import in instanceof interface is lambda let new nonlocal None not null of or pass private protected public raise readonly return static super switch this throw true True False try type typeof undefined var void while with yield fn pub mut impl struct use mod match func package go defer chan select'.split(' '),
 );
 
-type Tok = { t: 'kw' | 'str' | 'com' | 'num' | 'fn' | 'plain'; s: string };
+type Tok = { t: 'kw' | 'str' | 'com' | 'num' | 'fn' | 'type' | 'property' | 'plain'; s: string };
 
 const RE = /(\/\/.*$|#(?![!{[]).*$|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|(\b\d[\d_.]*(?:e[+-]?\d+)?\b)|([A-Za-z_$][\w$]*)(?=\s*\()|([A-Za-z_$][\w$]*)/gm;
 
@@ -24,7 +24,7 @@ export function tokenize(line: string, lang?: string): Tok[] {
     } else if (m[2]) out.push({ t: 'str', s: m[2] });
     else if (m[3]) out.push({ t: 'num', s: m[3] });
     else if (m[4]) out.push({ t: KEYWORDS.has(m[4]) ? 'kw' : 'fn', s: m[4] });
-    else if (m[5]) out.push({ t: KEYWORDS.has(m[5]) ? 'kw' : 'plain', s: m[5] });
+    else if (m[5]) out.push({ t: KEYWORDS.has(m[5]) ? 'kw' : /^[A-Z]/.test(m[5]) ? 'type' : line[i - 1] === '.' || /^\s*:/.test(line.slice(i + m[5].length)) ? 'property' : 'plain', s: m[5] });
     last = i + m[0].length;
   }
   if (last < line.length) out.push({ t: 'plain', s: line.slice(last) });

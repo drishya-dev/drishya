@@ -81,8 +81,11 @@ test('the composer submits through the real API transport, handles one approval 
   if (await enable.count()) await enable.click();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Please explain the selected workspace');
   await expect(composer.getByRole('button',{name:'Send prompt ↗'})).toBeDisabled();
+  await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).press('Enter');
+  await expect(composer.getByRole('textbox',{name:'Prompt for selected harness session'})).toHaveValue('Please explain the selected workspace');
+  await expect(composer.locator('.tool-approval')).toHaveCount(0);
   await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
-  await composer.getByRole('button',{name:'Send prompt ↗'}).click();
+  await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).press('Enter');
   await expect(composer).toContainText('Edit · approval requested');
   await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
   await composer.getByRole('button',{name:'Allow once',exact:true}).click();
@@ -118,20 +121,21 @@ test('connected action flow and agent switches replace tabs without inventing ca
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
-test('a large repository starts with folder groups and drills into actual files instead of a node cloud', async ({ page }) => {
+test('a large repository groups spatial density and reveals files at the zoomed location', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Hierarchical map synthetic session/ }).click();
   await page.getByRole('complementary', { name: 'Session folders' }).getByRole('button', { name: /Enable workspace reading/ }).click();
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
-  await expect(page.locator('.map-group')).toHaveCount(3);
+  await expect.poll(() => page.locator('.map-group').count()).toBeGreaterThan(0);
+  expect(await page.locator('.map-group').count()).toBeLessThan(48);
   await expect(page.locator('.map-legend')).toContainText('180 files');
-  await page.locator('.map-group').filter({ hasText: 'client' }).click();
-  await expect(page.getByRole('button', { name: /client · parent/ })).toBeVisible();
-  await expect(page.locator('.map-group')).toHaveCount(0);
+  await page.locator('.map-group').first().click();
+  await expect(page.getByRole('button', { name: /parent/ })).toHaveCount(0);
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('client/src/file0.ts');
   await page.getByRole('button', { name: 'client/src/file0.ts', exact: true }).click();
   await expect(page.locator('.map-tip')).toContainText('client/src/file0.ts');
   await page.getByRole('button', { name: 'Fit', exact: true }).click();
-  await expect(page.locator('.map-group')).toHaveCount(3);
+  await expect.poll(() => page.locator('.map-group').count()).toBeGreaterThan(0);
+  expect(await page.locator('.map-group').count()).toBeLessThan(48);
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/connected-grouped-map.png') });
 });

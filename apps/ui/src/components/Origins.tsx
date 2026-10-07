@@ -1,9 +1,11 @@
+import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { choreographyBetween, frameOf } from '../lib/choreography.ts';
 import { useApp } from '../state.ts';
+import { moveMaterial, restingRect } from '../lib/material-motion.ts';
 
 const NS = 'http://www.w3.org/2000/svg';
 const EASE = 'cubic-bezier(.16,1,.3,1)';
@@ -14,9 +16,12 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
   // Scene revisions are faster than an arrival. Own finite animations across renders,
   // rather than cancelling them whenever capture or a passive hover updates React.
   const runningMotion = useRef(new Map<Animation, { element: Element; target?: Element; rect?: DOMRect }>());
+  const preparedMaterials = useRef(new Map<HTMLElement, string>());
+  const revealPrepared = () => { for (const [element, opacity] of preparedMaterials.current) element.style.opacity = opacity; preparedMaterials.current.clear(); };
   const materialReady = useRef(new Map<string, boolean>());
   const liveMaterials = useRef(new Set<string>());
   const cancelMotion = () => {
+    revealPrepared();
     for (const [animation, cue] of runningMotion.current) { animation.cancel(); if (cue.element instanceof SVGElement) cue.element.remove(); }
     runningMotion.current.clear();
   };
@@ -41,7 +46,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
   useLayoutEffect(() => {
     cancelMotion();
     return cancelMotion;
-  }, [recordingId, source, theme, mapVisible, explore, motion, follow, compareAgents, settingsOpen, filePanel, mode]);
+  }, [recordingId, source, theme, mapVisible, explore, motion, compareAgents, settingsOpen, filePanel, mode]);
 
   useLayoutEffect(() => {
     const root = svg.current;
@@ -62,8 +67,14 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
     let raf = 0;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     const animate = motion && (follow || stagedArrival) && !document.hidden && !preference.matches;
+    if (animate) for (const article of history.querySelectorAll<HTMLElement>('article[data-op-id]')) {
+      if (plan.arrivals.includes(article.dataset.opId!) && !preparedMaterials.current.has(article)) {
+        // Avoid a full-size flash before the post-follow measurement starts the arrival.
+        preparedMaterials.current.set(article, article.style.opacity); article.style.opacity = '0';
+      }
+    }
     const visible = (el: Element) => {
-      const r = el.getBoundingClientRect();
+      const r = restingRect(el);
       const v = history.getBoundingClientRect();
       return r.width > 0 && r.height > 0 && r.bottom > v.top && r.top < v.bottom && r.right > v.left && r.left < v.right;
     };
@@ -86,7 +97,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       const area = motionTarget?.getBoundingClientRect();
       const scale = area ? Math.min(2.1, 1.6 + Math.min(1, area.width * Math.min(area.height, 420) / 240_000) * .5) : 1.6;
       const animation = el.animate(frames, { duration: Math.round(duration * scale), easing, fill: 'forwards' });
-      runningMotion.current.set(animation, { element: el, target: motionTarget, rect: motionTarget?.getBoundingClientRect() });
+      runningMotion.current.set(animation, { element: el, target: motionTarget, rect: motionTarget ? restingRect(motionTarget) : undefined });
       const release = () => { runningMotion.current.delete(animation); el.remove(); };
       void animation.finished.then(release, release);
     };
@@ -106,7 +117,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       return edge;
     };
     const materialArrival = (target: Element, origin: DOMRect, move: string, fromRight: boolean) => {
-      const r = target.getBoundingClientRect();
+      const r = restingRect(target);
       const plate = node('rect', 'origin-material', move);
       plate.setAttribute('x', String(r.left)); plate.setAttribute('y', String(r.top));
       plate.setAttribute('width', String(r.width)); plate.setAttribute('height', String(Math.min(r.height, 420)));
@@ -131,7 +142,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       const destination = target.querySelector<SVGSVGElement>('.op-head > .material-glyph');
       if (!source || !destination || !visible(destination)) return;
       const a = source.getBoundingClientRect();
-      const b = destination.getBoundingClientRect();
+      const b = restingRect(destination);
       if (!a.width || !a.height || !b.width || !b.height) return;
       const pane = origin.closest('.dock')?.getBoundingClientRect();
       const viewport = history.getBoundingClientRect();
@@ -177,7 +188,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       const destination = target.querySelector<SVGSVGElement>('.op-head > .material-glyph');
       if (!destination || !visible(destination)) return;
       const a = origin.getBoundingClientRect();
-      const b = destination.getBoundingClientRect();
+      const b = restingRect(destination);
       if (!a.width || !a.height || !b.width || !b.height) return;
       const x1 = a.left + Math.min(a.width / 2, 14); const y1 = a.top + a.height / 2;
       const x2 = b.left + b.width / 2; const y2 = b.top + b.height / 2;
@@ -207,29 +218,26 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       motionTarget = materialTarget;
     };
     const arriveSurface = (origin: Element, target: HTMLElement, move: string) => {
-      const r = target.getBoundingClientRect(); const a = origin.getBoundingClientRect();
+      const r = restingRect(target); const a = origin.getBoundingClientRect();
       const dx = a.left + a.width / 2 - (r.left + r.width / 2);
       const dy = a.top + a.height / 2 - (r.top + Math.min(22, r.height / 2));
-      const duration = Math.round(1050 + Math.min(250, r.width * r.height / 1000));
-      // One real DOM surface travels; no duplicated text or scaling of source characters.
+      const duration = Math.round(1400 + Math.min(250, r.width * r.height / 1000));
+      // The builder requested whole-material zoom: one real selectable DOM surface,
+      // including its content, grows continuously into its final reading allocation.
       while (runningMotion.current.size >= 36) {
         const oldest = runningMotion.current.entries().next().value;
         if (!oldest) break;
         oldest[0].cancel(); if (oldest[1].element instanceof SVGElement) oldest[1].element.remove(); runningMotion.current.delete(oldest[0]);
       }
-      const animation = target.animate([
-        { transform: `translate(${dx}px,${dy}px)`, clipPath: 'inset(0 46% 88% 46% round 6px)', opacity: .72 },
-        { transform: `translate(${dx * .2}px,${dy * .2}px)`, clipPath: 'inset(0 12% 32% 12% round 6px)', opacity: 1, offset: .48 },
-        { transform: 'none', clipPath: 'inset(0 0 0 0 round 6px)', opacity: 1 }
-      ], { duration, easing: 'cubic-bezier(.4,0,.2,1)' });
-      animation.id = `surface-${move}`;
+      const scale = Math.max(.06, Math.min(.18, a.width / Math.max(1, r.width)));
+      const animation = moveMaterial(target, new DOMRect(r.left + dx + r.width * (1 - scale) / 2, r.top + dy, r.width * scale, r.height * scale), duration, `surface-${move}`);
       runningMotion.current.set(animation, { element: target, target, rect: r });
       const release = () => { runningMotion.current.delete(animation); animation.cancel(); };
       void animation.finished.then(release, release);
     };
     const tether = (origin: Element, target: Element, label: string, move?: string, fromRight = false, materialOnly = false) => {
       const a = origin.getBoundingClientRect();
-      const b = target.getBoundingClientRect();
+      const b = restingRect(target);
       const x1 = fromRight ? a.left : a.left + a.width / 2;
       const y1 = a.top + a.height / 2;
       const x2 = fromRight ? b.right : b.left;
@@ -269,17 +277,14 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       }
     };
     const draw = (arrivals = false) => {
+      revealPrepared();
       // A retained cue is valid only while its destination still occupies that space.
       // Content growth/wrapping or virtualization cancels it; passive hover does not.
       for (const [animation, cue] of runningMotion.current) {
-        let now = cue.target?.getBoundingClientRect();
-        const travelling = cue.target?.closest('.op');
-        // Content may grow while its clip unfolds. Do not cancel into a full-size snap.
-        if (now && cue.rect && cue.element === cue.target) cue.rect = new DOMRect(cue.rect.x, cue.rect.y, now.width, now.height);
-        if (now && travelling?.getAnimations().some(animation => animation.id.startsWith('surface-'))) {
-          const transform = new DOMMatrixReadOnly(getComputedStyle(travelling).transform);
-          now = new DOMRect(now.x - transform.m41, now.y - transform.m42, now.width, now.height);
-        }
+        // Real surfaces retarget their motion through reflow; cancelling here was
+        // the late full-size pop. Decorative relationship marks still expire below.
+        if (cue.element === cue.target && cue.element instanceof HTMLElement) continue;
+        const now = cue.target ? restingRect(cue.target) : undefined;
         if (cue.target && (!cue.target.isConnected || !now || !cue.rect || Math.abs(now.left - cue.rect.left) > 2 || Math.abs(now.top - cue.rect.top) > 2)) {
           animation.cancel(); if (cue.element instanceof SVGElement) cue.element.remove(); runningMotion.current.delete(animation);
         }
@@ -391,7 +396,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
         if (!target || !visible(target)) continue;
         motionTarget = target;
         emitted.add(`settle:${id}`);
-        const r = target.getBoundingClientRect();
+        const r = restingRect(target);
         const line = node('path', 'origin-thread', 'Settle');
         line.setAttribute('d', `M${r.left},${r.top} H${Math.min(r.right, r.left + 80)}`);
         play(line, [{ transform: 'translateY(0)', opacity: .5 }, { transform: 'translateY(-4px)', opacity: 0 }], 360);
@@ -426,7 +431,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       }
       if (!useApp.getState().follow) interrupt();
       else if (!raf) {
-        cancelMotion();
+        // Active DOM arrivals retarget themselves across follow scrolling.
         // The follow scroll can land after measurement. Retry only this update's
         // unshown cues; emitted identities prevent repeating an already visible arrival.
         raf = requestAnimationFrame(() => { raf = 0; draw(true); });
@@ -440,12 +445,13 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
     const materials = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); });
     materials.observe(history, { childList: true, subtree: true });
     history.addEventListener('scroll', scroll, { passive: true });
-    history.addEventListener('wheel', interrupt, { passive: true });
+    const wheel = (event: Event) => { if (!scrollsInsideMaterial(event.target)) interrupt(); };
+    history.addEventListener('wheel', wheel, { passive: true });
     viewer.addEventListener('pointerdown', interrupt, { passive: true });
     viewer.addEventListener('keydown', interrupt);
     document.addEventListener('visibilitychange', interrupt);
     preference.addEventListener('change', interrupt);
-    return () => { resize.disconnect(); materials.disconnect(); history.removeEventListener('scroll', scroll); history.removeEventListener('wheel', interrupt); viewer.removeEventListener('pointerdown', interrupt); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
+    return () => { resize.disconnect(); materials.disconnect(); history.removeEventListener('scroll', scroll); history.removeEventListener('wheel', wheel); viewer.removeEventListener('pointerdown', interrupt); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
   }, [scene, projection, motion, hoveredOp, selectedOp, mapVisible, explore, follow, paged, theme, compareAgents, settingsOpen, filePanel, mode, stagedArrival, isProgrammaticScroll]);
   return typeof document === 'undefined' ? null : createPortal(<svg className="origins" ref={svg} aria-hidden="true" />, document.body);
 }

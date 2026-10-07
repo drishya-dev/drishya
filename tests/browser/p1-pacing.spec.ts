@@ -216,10 +216,11 @@ test('tool silhouettes transfer from the exact visible instrument and cancel for
         const card = [...document.querySelectorAll('article.op-mcp')].find((el) => el.textContent?.includes('synthetic-toolbox-input'))!;
         const b = card.querySelector('.op-head > .material-glyph')!.getBoundingClientRect();
         const transform = new DOMMatrixReadOnly(getComputedStyle(card).transform);
+        const naturalTarget = [card.getBoundingClientRect().x - transform.m41 + (b.x + b.width / 2 - card.getBoundingClientRect().x) / transform.m11, card.getBoundingClientRect().y - transform.m42 + (b.y + b.height / 2 - card.getBoundingClientRect().y) / transform.m22];
         const surface = card.getAnimations().some(animation => animation.id === 'surface-Emit');
         const active = node.getAnimations().length > 0;
         document.querySelector('.viewer')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-        observed.push({ sourceX: Number(node.getAttribute('data-source-x')), sourceY: Number(node.getAttribute('data-source-y')), targetX: Number(node.getAttribute('data-target-x')), targetY: Number(node.getAttribute('data-target-y')), glyph: node.querySelector('svg path')?.getAttribute('d') ?? '', label: node.getAttribute('data-origin-type') ?? '', text: node.textContent ?? '', actualSource: [a.x + a.width / 2, a.y + a.height / 2], actualTarget: [b.x + b.width / 2 - transform.m41, b.y + b.height / 2 - transform.m42], surface, interrupted: active && node.getAnimations().length === 0 });
+        observed.push({ sourceX: Number(node.getAttribute('data-source-x')), sourceY: Number(node.getAttribute('data-source-y')), targetX: Number(node.getAttribute('data-target-x')), targetY: Number(node.getAttribute('data-target-y')), glyph: node.querySelector('svg path')?.getAttribute('d') ?? '', label: node.getAttribute('data-origin-type') ?? '', text: node.textContent ?? '', actualSource: [a.x + a.width / 2, a.y + a.height / 2], actualTarget: naturalTarget, surface, interrupted: active && node.getAnimations().length === 0 });
       }
     }).observe(document.querySelector('.origins')!, { childList: true });
   });
@@ -555,8 +556,12 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   await expect(history).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
-  await page.mouse.move(800, 350);
-  await page.mouse.wheel(0, -100_000);
+  const scrollHistory = async (delta: number) => {
+    const r = (await history.boundingBox())!;
+    await page.mouse.move(r.x + r.width - 2, r.y + 100);
+    await page.mouse.wheel(0, delta);
+  };
+  await scrollHistory(-100_000);
   const read = history.locator('article.op-read').first();
   await read.scrollIntoViewIfNeeded();
   await read.getByRole('button', { name: /Read excerpt of/ }).click();
@@ -572,8 +577,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   let rounds = 0;
   let peakNodes = 0;
   while (Date.now() - started < 600_000) {
-    await page.mouse.move(800, 350);
-    await page.mouse.wheel(0, -120);
+    await scrollHistory(-120);
     await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
     const context = page.getByRole('region', { name: 'Repository reading context' });
     await expect(context).toContainText('Reading here');
