@@ -140,6 +140,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
   const filter = useApp((s) => s.filter);
   const set = useApp((s) => s.set);
   const setFilter = useApp((s) => s.setFilter);
+  const searchOpen = useApp((s) => s.searchOpen);
   const exportUrl = recordingId ? source?.exportUrl(recordingId) : undefined;
 
   return (
@@ -181,7 +182,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
       </div>}
       <div className="crown-actions"><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, follow: false })}>Settings</button>
-        <button className="btn ghost" onClick={() => set({ searchOpen: true })} title="Search (/)">Search</button>
+        <button className="btn ghost" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search</button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
           {exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}
           <SinceMarkPill projection={projection} />
@@ -555,6 +556,7 @@ function summarize(p: Projection, from: number) {
 // ─── search ──────────────────────────────────────────────────────────────────────────────
 
 function Search({ projection }: { projection: Projection }) {
+  const panel = useRef<HTMLDivElement>(null);
   const open = useApp((s) => s.searchOpen);
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
@@ -564,11 +566,19 @@ function Search({ projection }: { projection: Projection }) {
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<{ observationId: string; snippet: string }[]>([]);
   useEffect(() => {
+    const element = panel.current;
+    if (!element) return;
+    // Native light dismissal preserves the outside click and restores the opening control.
+    if (open && !element.matches(':popover-open')) element.showPopover();
+    else if (!open && element.matches(':popover-open')) element.hidePopover();
+    if (open) element.querySelector('input')?.focus({ preventScroll: true });
+  }, [open]);
+  useEffect(() => {
     if (!open || !source || !recordingId || q.trim().length < 2) return setHits([]);
-    const t = setTimeout(() => source.search(recordingId, q).then(setHits).catch(() => setHits([])), 160);
-    return () => clearTimeout(t);
+    let current = true;
+    const t = setTimeout(() => source.search(recordingId, q).then(result => { if (current) setHits(result); }).catch(() => { if (current) setHits([]); }), 160);
+    return () => { current = false; clearTimeout(t); };
   }, [q, open, source, recordingId]);
-  if (!open) return null;
   const go = (obs: string) => {
     if (useApp.getState().historyPage) {
       set({ focusObservationId: obs, follow: false, playing: false, held: true, selectedOp: undefined, searchOpen: false });
@@ -584,8 +594,11 @@ function Search({ projection }: { projection: Projection }) {
     set({ searchOpen: false });
   };
   return (
-    <div className="search" role="dialog" aria-label="Search this recording">
-      <input autoFocus placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); set({ searchOpen: false }); } }} />
+    <div ref={panel} id="recording-search" popover="auto" className="search" role="dialog" aria-label="Search this recording" onToggle={event => set({ searchOpen: event.newState === 'open' })}>
+      <div className="search-field">
+        <input autoFocus aria-label="Search prose, commands, paths" placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <button className="search-close" aria-label="Close search" popoverTarget="recording-search" popoverTargetAction="hide">×</button>
+      </div>
       <div className="search-results">
         {hits.map((h, i) => (
           <button key={i} onClick={() => go(h.observationId)}>
