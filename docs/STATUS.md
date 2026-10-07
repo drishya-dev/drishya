@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Unified stage refinement #43 merged on main (`e26ca38`), following #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **Centred neutral workspace #44 merged on main (`867a561`), following unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
