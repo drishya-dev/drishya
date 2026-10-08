@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Latest same-day refinement:** review 37 now records brighter foreground/background white maps and title-strip-only hover entry. Preview scrolling does not start enlargement; the already enlarged whole card retains hover and existing scroll behavior. Panel scale and prompt border-aware/responsive autosizing are committed on main. Local checks only.
+
 
 **Latest spatial/composer correction — 8 October:** [37](review/37-spatial-map-composer.md) supersedes shallow perspective and deferred attachments: real spatial WebGL points/edges, yaw/pitch orbit and pan, default gentle rotation resuming 12 seconds after camera movement, steady unnamed background geometry, slightly wider rails and shared card bounds. File/folder-content selection, screenshot paste, previews/removal and native text/image transport are implemented with explicit limits and text redaction. Effective native-policy synchronization and broader release checks remain separate; full access is still unsupported. Local checks only; no hosted CI.
 

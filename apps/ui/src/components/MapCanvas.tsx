@@ -206,7 +206,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     if (spatialActive && spatialCanvas.current && renderer.current && size.w && size.h) {
       const target = spatialCanvas.current;
       if (target.width !== c.width || target.height !== c.height) { target.width = c.width; target.height = c.height; }
-      const opacity = explore ? .78 : .46;
+      const opacity = explore ? .96 : .68;
       const vertex = (node: MapGroup): MapVertex => {
         const p = project(node);
         return { ...p, size: (node.members ? Math.min(8, 4 + Math.log2(node.members.length) * .4) : 2.5) * p.scale, alpha: (node.opacity ?? 1) * opacity };
@@ -230,7 +230,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     g.clearRect(0, 0, size.w, size.h);
 
     g.lineWidth = 1.2;
-    g.strokeStyle = explore ? colours.edge : colours.node;
+    g.strokeStyle = colours.node;
     let drawnEdges = 0;
     const edgeBudget = Math.min(600, Math.round(120 * Math.max(1, cam.k)));
     const stride = Math.max(1, Math.ceil((detail?.edges.length ?? 0) / edgeBudget));
@@ -243,7 +243,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const pa = project(a);
       const pb = project(b);
       if (Math.max(pa.x, pb.x) < 0 || Math.max(pa.y, pb.y) < 0 || Math.min(pa.x, pb.x) > size.w || Math.min(pa.y, pb.y) > size.h) continue;
-      g.globalAlpha = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .55 : .46);
+      g.globalAlpha = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .82 : .68);
       if (g.globalAlpha < .02) continue;
       g.beginPath();
       g.moveTo(pa.x, pa.y);
@@ -283,7 +283,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const p = project(n);
       if (p.x < -10 || p.y < -10 || p.x > size.w + 10 || p.y > size.h + 10) continue;
       // Group detail crossfades without semantic rings or a changed file position.
-      g.globalAlpha = (n.opacity ?? 1) * (explore ? .78 : .46);
+      g.globalAlpha = (n.opacity ?? 1) * (explore ? .96 : .68);
       g.beginPath();
       const radius = n.members ? Math.min(4.5, 2 + Math.log2(n.members.length) * .25) : hoveredPath === n.id ? r0 + .5 : r0;
       g.arc(p.x, p.y, radius, 0, Math.PI * 2);

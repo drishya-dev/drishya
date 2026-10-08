@@ -93,7 +93,11 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       pointer = { x: event.clientX, y: event.clientY };
       if (event.buttons || !permitted()) return;
       if (getSelection()?.toString()) { clearTimers(); return; }
-      const target = (event.target as Element).closest<HTMLElement>('.op[data-op-id]') ?? [...focuses].find(focus => event.target === focus.slot)?.card;
+      // Enter deliberately through the title strip; merely reading/scrolling
+      // preview content must not unexpectedly change its size under the cursor.
+      const element = event.target as Element;
+      const header = element.closest('.op-head');
+      const target = header && !element.closest('button, a, input') ? header.closest<HTMLElement>('.op[data-op-id]') : undefined;
       // Test the current enlarged rectangle, not a stale event target or source slot.
       const own = active && containsPointer(active.card);
       if (own) { clearTimers(); return; }

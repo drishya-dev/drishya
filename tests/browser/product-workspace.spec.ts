@@ -78,7 +78,7 @@ test('long paths and MCP fields stay inside shared card headers and reading boun
       expect(bounds.overflow, kind).toBeLessThanOrEqual(1);
     };
     await check();
-    await card.hover();
+    await card.locator('.op-head .op-title').hover();
     await expect(card).toHaveAttribute('data-hover-reading', 'focused');
     await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
     await check();
@@ -590,6 +590,9 @@ test('hover reading lifts the same material, keeps its slot and switches without
   const firstRect = (await first.boundingBox())!;
   const before = await second.boundingBox();
   const scroll = await history.evaluate(el => el.scrollTop);
+  await first.locator('.op-body').hover();
+  await page.waitForTimeout(500);
+  await expect(first).not.toHaveAttribute('data-hover-reading', 'focused');
   await first.evaluate(el => {
     const samples: { width: number; height: number; scale: number; time: number }[] = []; (window as any).hoverGeometry = samples;
     const end = performance.now() + 1500;
@@ -614,7 +617,9 @@ test('hover reading lifts the same material, keeps its slot and switches without
   expect(focusRect.y).toBeGreaterThanOrEqual(70);
   expect(focusRect.y + focusRect.height).toBeLessThanOrEqual(884);
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/hover-reading.png') });
-  await page.mouse.move(before!.x + before!.width - 20, before!.y + 20);
+  await page.mouse.move(1400, 850);
+  await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
+  await second.locator('.op-head .op-title').hover();
   await expect(second).toHaveAttribute('data-hover-reading', 'focused');
   await expect.poll(() => page.locator('.hover-reading-slot').count()).toBe(1);
   await page.mouse.move(firstRect.x + 20, firstRect.y + 20);
@@ -636,7 +641,7 @@ test('hover reading lifts the same material, keeps its slot and switches without
   expect(await first.evaluate(el => el.getAnimations().filter(a => a.id.startsWith('reading-focus-')).length)).toBe(0);
   await page.mouse.move(1400, 850);
   await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
-  await first.hover();
+  await first.locator('.op-head .op-title').hover();
   await expect(first).toHaveAttribute('data-hover-reading', 'focused');
   await first.locator('.op-head').hover();
   await page.mouse.wheel(0, 240);
