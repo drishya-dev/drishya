@@ -1,6 +1,6 @@
 # Continue here — current handoff
 
-**Latest hover clarification:** The enlarged card keeps its viewport position/size through scrolling. Scroll events do not dismiss it; cursor movement outside its enlarged bounds triggers return. Hit-test the card rectangle, not the moving source slot or transient `:hover` target. See the latest section of review 35. Local type/build and three affected browser checks passed; no hosted CI.
+**Latest hover clarification:** Keep the enlarged size, but move the box with history scrolling; the previous viewport-pinned interpretation was wrong. Apply actual scroll deltas to the popover, and keep hover only while the cursor lies in its current moving enlarged rectangle. A stationary cursor can leave those bounds through scrolling; use a brief dwell and smooth return, not an immediate reset. See review 35. Local type/build and three affected browser journeys passed; no hosted CI.
 
 **Latest scroll refinement — 8 October:** [35 — Scrolling preserves motion](review/35-scroll-preserved-reading.md) supersedes wheel cancellation/hover dismissal in 34: finite motion continues through scrolling, hover boundaries forward to history without closing the reader, prompt navigation is an independent chapter rail with an active mark, native response duplicates are removed, send/stop use compact icons and search enters at its final corner. Upward-only Follow, native consent, provenance and publishing-only hosted CI remain.
 

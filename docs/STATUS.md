@@ -64,10 +64,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 8 October 2026; small fixed-hover clarification directly on main after PR #49.
-- **Delivered:** scroll events no longer dismiss an enlarged card. It keeps its viewport position and dimensions while history scrolls behind it, until the cursor actually moves outside its enlarged rectangle. Pointer geometry supersedes stale browser `:hover`/event-target state and the moving source slot. Existing escape/view guards and independent Follow/capture/replay remain.
-- **Checks:** Local typechecks/build and three affected browser journeys passed: live hover/capture, nested result boundaries with unchanged position/size and pointer departure, and whole-card hover/switch/selection/reduced motion. Regression includes a post-scroll event retargeted to history with coordinates inside the card. No hosted CI; prior broad/sustained evidence remains in review 35, not claimed as rerun here.
-- **Next:** Human preference and native/physical/platform acceptance remain separate; unrelated package-manager edits preserved.
+- **When:** 8 October 2026; corrected hover scrolling interpretation directly on main.
+- **Delivered:** the previous viewport-pinning interpretation was wrong. The card now keeps its enlarged dimensions while moving by the same history scroll delta as the page. Current enlarged bounds determine retention; scrolling away from a stationary cursor or moving outside them triggers the existing dwell/smooth return. Slot pinning, single real content, inner scroll, Escape/view guards and independent capture/replay/Follow remain.
+- **Checks:** Local typechecks/build, three affected hover journeys and independent replay-clock check passed, including exact scroll-distance y movement, unchanged x/width/height, staying within moved bounds and returning when scroll carries them outside the cursor. No hosted CI; prior broad/sustained evidence remains in review 35, not claimed as rerun. Unrelated package-manager edits preserved.
+- **Next:** Human preference and native/physical/platform acceptance remain separate.
 
 ## Next up
 
@@ -111,6 +111,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **8 October — hover moves with history, superseding viewport pinning:** the builder clarified that fixed means retaining enlarged size, not screen position. Carry the enlarged real card by history scroll deltas; determine retention/return from its moving bounds and cursor position. This supersedes the earlier fixed-hover entry below, which records our mistaken interpretation. Latest section of review/35.
 
 - **8 October — fixed hover reader after scroll:** keep the enlarged card at its viewport allocation through scrolling; only actual cursor movement outside its enlarged bounds triggers pointer return. Scroll-driven source-slot movement or stale browser `:hover` targets cannot dismiss it. Escape/explicit view guards remain; latest clarification in review/35.
 

@@ -7,8 +7,9 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const root = history.current;
     if (!root) return;
-    type Focus = { card: HTMLElement; slot: HTMLElement; animation?: Animation; returning: boolean };
+    type Focus = { card: HTMLElement; slot: HTMLElement; animation?: Animation; returning: boolean; scrollTop: number };
     let active: Focus | undefined;
+    let pointer: { x: number; y: number } | undefined;
     let candidate: HTMLElement | undefined;
     let dwell: ReturnType<typeof setTimeout> | undefined;
     let leave: ReturnType<typeof setTimeout> | undefined;
@@ -43,6 +44,17 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       const state = useApp.getState();
       return state.hoverReading && !state.lowResource && !state.explore && !state.selectedOp && !state.expandedOp && !state.settingsOpen && !state.searchOpen && !state.currentFile && !state.filePanel && innerWidth > 820 && matchMedia('(hover: hover)').matches && typeof HTMLElement.prototype.showPopover === 'function';
     };
+    const containsPointer = (card: HTMLElement) => {
+      if (!pointer) return false;
+      const bounds = card.getBoundingClientRect();
+      return pointer.x >= bounds.left && pointer.x <= bounds.right && pointer.y >= bounds.top && pointer.y <= bounds.bottom;
+    };
+    const leaveAfterDwell = () => {
+      if (active && !leave && !getSelection()?.toString()) leave = setTimeout(() => {
+        leave = undefined;
+        if (active && !containsPointer(active.card)) close(active);
+      }, 180);
+    };
     const open = (card: HTMLElement) => {
       const previous = [...focuses].find(focus => focus.card === card);
       if (!permitted() || !card.isConnected || card === active?.card || (!previous?.returning && (materialIsMoving(card) || card.dataset.materialSettling === 'true'))) return;
@@ -72,18 +84,18 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       const height = Math.min(bottom - top, innerHeight * .72, Math.max(from.height, needed));
       card.style.setProperty('--hover-height', `${height}px`);
       card.style.setProperty('--hover-top', `${Math.max(top, Math.min(bottom - height, from.top + (from.height - height) / 2))}px`);
-      const focus: Focus = previous ?? { card, slot, returning: false }; focus.returning = false; active = focus; focuses.add(focus);
+      const focus: Focus = previous ?? { card, slot, returning: false, scrollTop: root.scrollTop }; focus.returning = false; focus.scrollTop = root.scrollTop; active = focus; focuses.add(focus);
       if (useApp.getState().motion && !matchMedia('(prefers-reduced-motion: reduce)').matches) focus.animation = moveMaterial(card, from, 360, 'reading-focus-arrive');
       window.dispatchEvent(new Event('drishya-material-layout'));
     };
     const move = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse' || event.buttons || !permitted()) return;
+      if (event.pointerType !== 'mouse') return;
+      pointer = { x: event.clientX, y: event.clientY };
+      if (event.buttons || !permitted()) return;
       if (getSelection()?.toString()) { clearTimers(); return; }
       const target = (event.target as Element).closest<HTMLElement>('.op[data-op-id]') ?? [...focuses].find(focus => event.target === focus.slot)?.card;
-      // Scrolling moves the source slot, not the viewport-fixed reader. Hit-test
-      // its actual enlarged bounds; browser :hover/event targets can lag a scroll.
-      const bounds = active?.card.getBoundingClientRect();
-      const own = bounds && event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+      // Test the current enlarged rectangle, not a stale event target or source slot.
+      const own = active && containsPointer(active.card);
       if (own) { clearTimers(); return; }
       if (target && root.contains(target) && target.dataset.hoverReading !== 'focused') {
         clearTimeout(leave);
@@ -98,12 +110,13 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
         dwell = setTimeout(attempt, 240);
       } else {
         clearTimeout(dwell); candidate = undefined;
-        if (active && !leave && !getSelection()?.toString()) leave = setTimeout(() => { leave = undefined; if (active) close(active); }, 180);
+        leaveAfterDwell();
       }
     };
     const wheel = (event: WheelEvent) => {
       const card = active?.card;
       if (!card || !(event.target instanceof Element) || !card.contains(event.target)) return;
+      pointer = { x: event.clientX, y: event.clientY };
       // At a result boundary, scroll history without tearing down the reading surface.
       for (let node: Element | null = event.target; node && node !== card; node = node.parentElement) {
         if (!(node instanceof HTMLElement)) continue;
@@ -116,12 +129,28 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? root.clientHeight : 1;
       root.scrollBy({ top: event.deltaY * unit, left: event.deltaX * unit });
     };
+    const scroll = () => {
+      // Top-layer popovers do not inherit the history scroll. Carry the one real
+      // enlarged card by the same delta instead of pinning it to the viewport.
+      let moved = false;
+      for (const focus of focuses) {
+        const delta = root.scrollTop - focus.scrollTop;
+        focus.scrollTop = root.scrollTop;
+        if (!delta) continue;
+        const top = parseFloat(focus.card.style.getPropertyValue('--hover-top'));
+        focus.card.style.setProperty('--hover-top', `${top - delta}px`);
+        moved = true;
+      }
+      if (moved) window.dispatchEvent(new Event('drishya-material-layout'));
+      if (active && containsPointer(active.card)) clearTimers();
+      else leaveAfterDwell();
+    };
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') reset(); };
     const unsubscribe = useApp.subscribe(() => { if (!permitted()) reset(); });
     const observer = new MutationObserver(() => { for (const focus of [...focuses]) if (!focus.card.isConnected) close(focus, true); });
     observer.observe(root, { childList: true, subtree: true });
     document.addEventListener('wheel', wheel, { capture: true, passive: false }); document.addEventListener('pointermove', move); document.addEventListener('keydown', key);
-    window.addEventListener('resize', reset); window.addEventListener('blur', reset);
-    return () => { reset(); observer.disconnect(); unsubscribe(); document.removeEventListener('wheel', wheel, true); document.removeEventListener('pointermove', move); document.removeEventListener('keydown', key); window.removeEventListener('resize', reset); window.removeEventListener('blur', reset); };
+    root.addEventListener('scroll', scroll, { passive: true }); window.addEventListener('resize', reset); window.addEventListener('blur', reset);
+    return () => { reset(); observer.disconnect(); unsubscribe(); document.removeEventListener('wheel', wheel, true); document.removeEventListener('pointermove', move); document.removeEventListener('keydown', key); root.removeEventListener('scroll', scroll); window.removeEventListener('resize', reset); window.removeEventListener('blur', reset); };
   }, [history]);
 }
