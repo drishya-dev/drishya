@@ -64,10 +64,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 8 October 2026; compact connected workspace and upward-only Follow correction, merged as [PR #48](https://github.com/drishya-dev/drishya/pull/48), main `2de25da`.
-- **Delivered:** ordinary clicks/selection/typing and downward scrolling preserve Follow. Upward main-history scrolling or the explicit switch turns it off; nested result scrolling stays local. Old-action/prompt navigation keeps its destination until new evidence arrives without changing Follow, and measured height changes restore that destination after layout commits. Visible arrivals/reflow run independently of Follow. Hover cards release the wheel to history at their local boundary. Removed the second toolbar and Activity widget; one Follow control, compact neutral search, bounded numbered runtime tools. Native composer resets after submission, keeps receipts outside its height, uses a Stop icon and send-time mandatory idle-client confirmation. Native CLI discovery checks known Windows installations without shell shims or editing PATH/credentials. Full-access switching is explicitly unsupported.
-- **Checks:** Local typechecks + 292 units, production UI build, complete browser suite (56 passed, two opt-in skips), isolated offline packed install/import/API/restart, clean diff and integrated rendered composer review passed. Long synthetic reading result is recorded in review 34. No hosted CI.
-- **Next:** Human preference review, genuine native/version and physical/platform release acceptance; attachments/full access/multi-agent matrix remain in review 30. Unrelated package-manager edits preserved.
+- **When:** 8 October 2026; scroll-preserved motion and prompt rail, branch `codex/scroll-preserved-reading`.
+- **Delivered:** wheel input no longer cancels arrivals/reflow/settlement/prose. Hover result boundaries forward to history without closing the real enlarged card; the source passage stays pinned. Follow remains upward-only. Gesture/React layout timing now preserves the new reading position, including an independent document-start boundary when virtualization temporarily has no mounted passage. Native response duplicate removed; errors/approvals retained. Compact arrow/square send/stop controls. Search entrance starts at the final corner. Prompt navigation uses bounded equal-rank chapters with active white tick and captured prompt hover/focus preview, separately from the scrollbar. See review 35.
+- **Checks:** Local typechecks, 292 units, production UI/isolated packed install/API/restart and 57 regular browser journeys passed (two opt-ins skipped); hover/start regression repeated three times. Rendered prompt rail/search/composer reviewed. Final-code ten-minute synthetic reading passed: 603,879 ms, 92 bursts, 804 peak DOM nodes; see review 35. No hosted CI.
+- **Next:** Human preference and native/physical/platform acceptance remain separate; attachments/full access/multi-agent matrix stays in review 30. Unrelated package-manager edits preserved.
 
 ## Next up
 
@@ -111,6 +111,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **8 October — scrolling is not motion cancellation:** latest builder feedback keeps finite arrivals/settlement/reflow and hover readers alive through wheel input. A nested hover result consumes its own scroll, then forwards the gesture to history without collapsing the card. Pin its one source passage. Restore the anchor after the gesture, not before the native scroll event; hold the document start independently of virtualized DOM presence. Independent prompt chapter rail, icon composer controls and corner-only search entrance; duplicate native output receipt removed, errors/approvals retained. See review/35. Supersedes the dismissal/cancellation parts of review 34; upward-only Follow stays.
 
 - **8 October — upward-only Follow and compact native work:** latest builder direction overrides click-to-detach rules. Ordinary clicks and downward scrolling preserve camera preference; upward main-history scrolling or explicit off detaches it. Navigation destinations hold until actual new captured work, not measurement changes. New visible motion is independent of following/capture. Compact prompt/receipts, one right-side Follow switch, no second toolbar, known-native-install discovery; conservative native approvals and send-time idle consent remain mandatory. See review/34. Local tests only, no hosted CI.
 

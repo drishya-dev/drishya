@@ -54,7 +54,9 @@ test('search has a finite entrance and stays contained with reduced motion on mo
   await page.goto(new URL('/?demo', server.launchUrl).href);
   const panel = page.getByRole('dialog', { name: 'Search this recording' });
   await page.getByRole('button', { name: 'Search', exact: true }).click();
-  await expect(panel).toHaveCSS('animation-name', 'search-arrive');
+  await expect(panel).toHaveCSS('animation-name', 'compact-search-arrive');
+  const horizontal = await panel.evaluate(el => el.getAnimations().flatMap(a => (a.effect as KeyframeEffect).getKeyframes()).filter(k => k.transform).map(k => new DOMMatrixReadOnly(k.transform as string).m41));
+  expect(horizontal.every(x => Math.abs(x) < .5)).toBe(true);
   await page.keyboard.press('Escape');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 390, height: 844 });

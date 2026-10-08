@@ -502,11 +502,16 @@ test('prompt marks jump to captured prompt starts without starting a native turn
   await page.goto(demoUrl());
   const rail = page.getByRole('navigation', { name: 'Prompt positions in history' });
   await rail.getByRole('button').first().click();
+  await expect(rail.getByRole('button').first()).toHaveAttribute('aria-current', 'location');
+  await rail.getByRole('button').first().hover();
+  await expect(rail.locator('.prompt-rail-preview').first()).toBeVisible();
+  await expect(rail.locator('.prompt-rail-preview').first()).toContainText('Prompt 1');
   await expect(page.locator('.turn').first()).toBeInViewport({ ratio: .5 });
   await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveText('↓');
   await expect(page.locator('.history-transport .prompt-menu')).toHaveCount(0);
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveCount(0);
+  await expect(rail.getByRole('button').last()).toHaveAttribute('aria-current', 'location');
 });
 
 
@@ -528,9 +533,9 @@ test('hover reading lifts the same material, keeps its slot and switches without
   const before = await second.boundingBox();
   const scroll = await history.evaluate(el => el.scrollTop);
   await first.evaluate(el => {
-    const samples: { width: number; height: number; scale: number }[] = []; (window as any).hoverGeometry = samples;
+    const samples: { width: number; height: number; scale: number; time: number }[] = []; (window as any).hoverGeometry = samples;
     const end = performance.now() + 1500;
-    const sample = () => { const r = el.getBoundingClientRect(); samples.push({ width: r.width, height: r.height, scale: new DOMMatrixReadOnly(getComputedStyle(el).transform).m11 }); if (performance.now() < end) requestAnimationFrame(sample); };
+    const sample = () => { const r = el.getBoundingClientRect(); samples.push({ width: r.width, height: r.height, scale: new DOMMatrixReadOnly(getComputedStyle(el).transform).m11, time: performance.now() }); if (performance.now() < end) requestAnimationFrame(sample); };
     requestAnimationFrame(sample);
   });
   await page.mouse.move(firstRect.x + 20, firstRect.y + 20);
@@ -540,9 +545,10 @@ test('hover reading lifts the same material, keeps its slot and switches without
   expect(await history.evaluate(el => el.scrollTop)).toBe(scroll);
   expect(Math.abs((await second.boundingBox())!.y - before!.y)).toBeLessThan(2);
   await expect.poll(() => first.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
-  const geometry = await page.evaluate(() => (window as any).hoverGeometry as { width: number; height: number; scale: number }[]);
+  const geometry = await page.evaluate(() => (window as any).hoverGeometry as { width: number; height: number; scale: number; time: number }[]);
   expect(geometry.some(sample => sample.scale < .98)).toBe(true);
-  expect(Math.max(...geometry.slice(1).map((sample, i) => Math.abs(sample.width - geometry[i]!.width)))).toBeLessThan(65);
+  // Missed JS sampling frames under load are not a discontinuity in compositor motion.
+  expect(Math.max(...geometry.slice(1).map((sample, i) => Math.abs(sample.width - geometry[i]!.width) * Math.min(1, 16.7 / Math.max(1, sample.time - geometry[i]!.time))))).toBeLessThan(65);
   const focusRect = (await first.boundingBox())!;
   expect(await first.locator('.op-body').evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
   expect(focusRect.x).toBeGreaterThanOrEqual(viewport.x + 15);
@@ -577,7 +583,9 @@ test('hover reading lifts the same material, keeps its slot and switches without
   await first.locator('.op-head').hover();
   await page.mouse.wheel(0, 240);
   await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
-  await expect(first).not.toHaveAttribute('data-hover-reading', 'focused');
+  await expect(first).toHaveAttribute('data-hover-reading', 'focused');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
 });
 
 

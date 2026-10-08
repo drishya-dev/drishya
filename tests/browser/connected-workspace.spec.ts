@@ -96,7 +96,7 @@ test('the composer submits through the real API transport, handles one approval 
   const promptInput = composer.getByRole('textbox',{name:'Prompt for selected harness session'});
   await promptInput.fill('Please explain the selected workspace\n' + 'More context\n'.repeat(12));
   const expandedHeight = (await promptInput.boundingBox())!.height;
-  await expect(composer.getByRole('button',{name:'Send prompt ↗'})).toBeEnabled();
+  await expect(composer.getByRole('button',{name:'Send prompt'})).toBeEnabled();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).press('Enter');
   await expect(promptInput).not.toHaveValue('');
   await expect(composer.locator('.tool-approval')).toHaveCount(0);
@@ -114,9 +114,9 @@ test('the composer submits through the real API transport, handles one approval 
   await expect(inventory.locator('summary')).toBeInViewport();
   await inventory.locator('summary').click();
   await composer.getByRole('button',{name:'Allow once',exact:true}).click();
-  await expect(composer.locator('.controller-receipt')).toContainText('completed');
-  await composer.locator('.controller-receipt summary').click();
-  await expect(composer).toContainText('Synthetic native transport completed the submitted prompt.');
+  await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeVisible();
+  await expect(composer.locator('.controller-receipt')).toHaveCount(0);
+  await expect(composer).not.toContainText('Synthetic native transport completed the submitted prompt.');
   expect((await composer.boundingBox())!.height).toBeLessThan(150);
   await expect(page.getByRole('complementary',{name:'Session folders'})).toHaveCount(1);
   if(process.env.DRISHYA_REVIEW_SHOTS==='1') await page.screenshot({path:resolve('.local/connected-composer.png')});
@@ -134,10 +134,15 @@ test('visible new material animates with Follow off without moving the reading p
   await page.getByRole('switch', { name: 'Automatically follow new work' }).click();
   await page.evaluate(() => {
     (window as any).independentArrivals = [];
+    (window as any).wheelMotionStates = [];
     const animate = HTMLElement.prototype.animate;
     HTMLElement.prototype.animate = function(...args) {
       const animation = animate.apply(this, args);
-      queueMicrotask(() => { if (animation.id.startsWith('surface-')) (window as any).independentArrivals.push(this.dataset.opId); });
+      queueMicrotask(() => { if (animation.id.startsWith('surface-')) {
+        (window as any).independentArrivals.push(this.dataset.opId);
+        this.closest('.history')?.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -1 }));
+        (window as any).wheelMotionStates.push(animation.playState);
+      } });
       return animation;
     };
   });
@@ -147,6 +152,7 @@ test('visible new material animates with Follow off without moving the reading p
   const operation = page.locator('article.op-shell');
   await expect(operation).toBeVisible();
   await expect.poll(() => page.evaluate(() => (window as any).independentArrivals)).toContain(`${recordingId}.independent-shell`);
+  expect(await page.evaluate(() => (window as any).wheelMotionStates)).not.toContain('idle');
   expect(await page.locator('.history').evaluate(el => el.scrollTop)).toBe(top);
   await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'false');
 });
