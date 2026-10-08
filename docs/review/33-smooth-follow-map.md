@@ -20,6 +20,8 @@ No capture, store, event schema or native controller protocol changes. No second
 
 After visual review, the builder explicitly requested raising a PR and asking Yash to review, with all CI checks run locally first. The final complete code candidate passed on Windows, Node 24.11.1 / pnpm 10.34.5:
 
+Submitted as [PR #47](https://github.com/drishya-dev/drishya/pull/47) from `harsh/fix-workspace-toolbar` into `main`, with Yash (`yashdoke7`) requested and canvas/map labels. The verified code commit is `f0dfc0f`; the subsequent documentation-only commit records this link.
+
 - `pnpm install --frozen-lockfile`: lockfile unchanged.
 - `pnpm check`: both typechecks and 289 unit tests across 39 files.
 - `pnpm test:browser`: 54 passed, two expected opt-in skips.
