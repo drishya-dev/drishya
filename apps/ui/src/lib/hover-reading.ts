@@ -17,8 +17,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
     const clearTimers = () => { clearTimeout(dwell); clearTimeout(leave); dwell = leave = undefined; candidate = undefined; };
     const restore = (focus: Focus) => {
       focus.animation?.cancel();
-      if (focus.card.matches(':popover-open')) focus.card.hidePopover();
-      focus.card.removeAttribute('popover'); focus.card.removeAttribute('data-hover-reading');
+      focus.card.removeAttribute('data-hover-reading');
       for (const name of ['--hover-left', '--hover-top', '--hover-width', '--hover-height']) focus.card.style.removeProperty(name);
       focus.slot.remove(); focuses.delete(focus);
       if (useApp.getState().hoveredOp === focus.card.dataset.opId && !focus.card.matches(':hover')) useApp.setState({ hoveredOp: undefined, hoveredPath: undefined });
@@ -42,7 +41,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
     const reset = () => { clearTimers(); for (const focus of [...focuses]) close(focus, true); };
     const permitted = () => {
       const state = useApp.getState();
-      return state.hoverReading && !state.lowResource && !state.explore && !state.selectedOp && !state.expandedOp && !state.settingsOpen && !state.searchOpen && !state.currentFile && !state.filePanel && innerWidth > 820 && matchMedia('(hover: hover)').matches && typeof HTMLElement.prototype.showPopover === 'function';
+      return state.hoverReading && !state.lowResource && !state.explore && !state.selectedOp && !state.expandedOp && !state.settingsOpen && !state.searchOpen && !state.currentFile && !state.filePanel && innerWidth > 820 && matchMedia('(hover: hover)').matches;
     };
     const containsPointer = (card: HTMLElement) => {
       if (!pointer) return false;
@@ -70,12 +69,13 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       previous?.animation?.cancel();
       const slot = previous?.slot ?? document.createElement('div'); slot.className = 'hover-reading-slot'; slot.setAttribute('aria-hidden', 'true');
       if (!previous) { slot.style.width = `${from.width}px`; slot.style.height = `${from.height}px`; slot.style.flex = `0 0 ${from.width}px`; card.before(slot); }
-      card.setAttribute('popover', 'manual'); card.dataset.hoverReading = 'focused';
+      // Keep the real article in history's stacking context. A top-layer popover
+      // would cover the header/composer instead of passing under their edge veils.
+      card.dataset.hoverReading = 'focused';
       const width = Math.min(Math.max(from.width, 520), viewport.width - 32);
       const left = Math.max(viewport.left + 16, Math.min(viewport.right - width - 16, from.left + (from.width - width) / 2));
       card.style.setProperty('--hover-width', `${width}px`); card.style.setProperty('--hover-height', 'auto');
       card.style.setProperty('--hover-left', `${left}px`); card.style.setProperty('--hover-top', `${top}px`);
-      if (!card.matches(':popover-open')) card.showPopover();
       // Keep the reading space near its source and clamp to real available bounds.
       const style = getComputedStyle(card);
       // scrollHeight omits the border: allocating it verbatim leaves a tiny
@@ -130,7 +130,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       root.scrollBy({ top: event.deltaY * unit, left: event.deltaX * unit });
     };
     const scroll = () => {
-      // Top-layer popovers do not inherit the history scroll. Carry the one real
+      // Fixed readers do not inherit the history scroll. Carry the one real
       // enlarged card by the same delta instead of pinning it to the viewport.
       let moved = false;
       for (const focus of focuses) {

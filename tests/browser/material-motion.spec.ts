@@ -125,7 +125,7 @@ test('hover reading preserves live follow and safely releases when new captured 
   await expect(page.locator('.prose').last()).toContainText('during hover');
   await expect(latest).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await expect(page.locator('.op:popover-open')).toHaveCount(0);
+  await expect(page.locator('.op[data-hover-reading]')).toHaveCount(0);
 });
 
 
@@ -172,7 +172,37 @@ test('hover result boundaries scroll history without dismissing the same reading
   await history.dispatchEvent('pointermove', { pointerType: 'mouse', clientX: afterScroll.x + 20, clientY: afterScroll.y + 20, buttons: 0 });
   await page.waitForTimeout(400);
   await expect(card).toHaveAttribute('data-hover-reading', 'focused');
-  await page.mouse.move(afterScroll.x + 20, afterScroll.y + 20);
+  // The same enlarged material passes under chrome, not over its inputs.
+  // Add trailing layout room so this last captured action can reach both edges.
+  await history.evaluate(el => { (el.querySelector('.history-inner') as HTMLElement).style.paddingBottom = '2000px'; });
+  for (const edge of ['composer', 'header'] as const) {
+    await card.evaluate((el, edge) => {
+      const root = document.querySelector('.history')!;
+      const chrome = document.querySelector(edge === 'composer' ? '.prompt-composer.open' : '.workspace-header')!;
+      const r = el.getBoundingClientRect(), c = chrome.getBoundingClientRect();
+      const targetTop = edge === 'composer' ? c.top - r.height + 40 : c.bottom - 40;
+      root.scrollTop += r.top - targetTop;
+      // Keep the pointer in the visible portion of the moving reader.
+      root.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerType: 'mouse', clientX: r.left + r.width / 2, clientY: edge === 'composer' ? targetTop + 20 : c.bottom + 20 }));
+    }, edge);
+    await page.waitForTimeout(60);
+    await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+    const overlap = await card.evaluate((el, edge) => {
+      const chrome = document.querySelector(edge === 'composer' ? '.prompt-composer.open' : '.workspace-header')!;
+      const r = el.getBoundingClientRect(), c = chrome.getBoundingClientRect();
+      const x = Math.max(r.left, c.left) + Math.min(r.right - Math.max(r.left, c.left), c.right - Math.max(r.left, c.left)) / 2;
+      const y = edge === 'composer' ? c.top + 10 : c.bottom - 10;
+      const hit = document.elementFromPoint(x, y);
+      return { overlaps: y > r.top && y < r.bottom, chromeOwnsHit: !!hit && chrome.contains(hit), blur: getComputedStyle(chrome, '::after').backdropFilter };
+    }, edge);
+    expect(overlap.overlaps).toBe(true);
+    expect(overlap.chromeOwnsHit).toBe(true);
+    expect(overlap.blur).toBe('blur(8px)');
+    if (process.env.DRISHYA_REVIEW_SHOTS) await page.screenshot({ path: `.local/hover-under-${edge}.png` });
+  }
+  const movingBounds = (await card.boundingBox())!;
+  await page.mouse.move(movingBounds.x + 20, movingBounds.y + movingBounds.height - 20);
+  await card.evaluate(el => { for (const node of [el, ...el.querySelectorAll<HTMLElement>('*')]) node.scrollTop = 0; });
   // A stationary cursor can leave the moving rectangle through scrolling alone.
   await page.mouse.wheel(0, -10000);
   await expect.poll(() => history.evaluate(el => el.scrollTop)).toBe(0);

@@ -570,7 +570,7 @@ test('hover reading lifts the same material, keeps its slot and switches without
   await page.keyboard.press('Escape');
   await page.evaluate(() => getSelection()?.removeAllRanges());
   await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
-  await expect(page.locator('.op:popover-open')).toHaveCount(0);
+  await expect(page.locator('.op[data-hover-reading]')).toHaveCount(0);
   expect(await history.evaluate(el => el.scrollTop)).toBe(scroll);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.mouse.move(firstRect.x + 20, firstRect.y + 20);

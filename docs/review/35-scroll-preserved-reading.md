@@ -26,8 +26,14 @@ Local final-code validation: typechecks and 292 units; 57 regular browser journe
 
 ## Latest builder clarification — enlarged size, moving with history
 
-The prior viewport-pinned interpretation was incorrect and is superseded. Keep the card's enlarged size, but move it with the conversation by the actual history scroll delta. Because a top-layer popover does not inherit an inner scroller's movement, update its top coordinate by that same delta, including during return/arrival motion. Do not clamp it back into a fixed screen position on each scroll.
+The prior viewport-pinned interpretation was incorrect and is superseded. Keep the card's enlarged size, but move it with the conversation by the actual history scroll delta. Because a fixed reader does not inherit an inner scroller's movement, update its top coordinate by that same delta, including during return/arrival motion. Do not clamp it back into a fixed screen position on each scroll.
 
 Hit-test the current, moving enlarged rectangle. While the cursor remains inside it, keep hover active. If scrolling moves that rectangle away from a stationary cursor, or the mouse leaves it, allow the existing brief departure dwell and smooth return. Re-entering the bounds cancels the pending return. Never dismiss merely because a scroll occurred or the event target/`:hover` state is stale. Source-passage pinning, one real article, local-result scrolling, Escape/view guards and independent capture/Follow/replay remain.
 
 Local typechecks/build and three affected browser journeys passed: live hover/capture, nested result boundaries with y movement exactly matching history and unchanged x/width/height, retention inside moved bounds and return when scrolling carries the box away from the stationary pointer, plus rapid switch/selection/reduced motion. Prior broad and ten-minute evidence above is not claimed as rerun. No hosted CI.
+
+### Scrolling beneath workspace chrome
+
+The same enlarged article now stays in history's normal stacking context, using fixed coordinates and its existing resting slot rather than a browser top-layer popover. The header and composer cover it naturally when scrolling carries it beneath them; no clamping, duplicate evidence or separate overlay copy. Their controls remain clickable. Header edge blur samples the actual material underneath, and the composer has a bounded 24 px masked blur above its solid, readable input. Neither veil intercepts pointer input; low-resource mode disables blur. Keep ancestors of this reader free of transforms/filter containment that would change its fixed-coordinate origin.
+
+Browser coverage scrolls the enlarged real card through both chrome edges, checks preserved hover and actual chrome hit-testing at overlapping coordinates, and retains exact scroll-delta geometry, local result scrolling, smooth return and independent replay checks. Composer checks also cover zero artificial horizontal/vertical overflow at desktop and narrow widths. These are local checks; hosted CI stays manual until publishing.

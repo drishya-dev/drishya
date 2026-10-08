@@ -64,9 +64,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 8 October 2026; corrected hover scrolling interpretation directly on main.
-- **Delivered:** the previous viewport-pinning interpretation was wrong. The card now keeps its enlarged dimensions while moving by the same history scroll delta as the page. Current enlarged bounds determine retention; scrolling away from a stationary cursor or moving outside them triggers the existing dwell/smooth return. Slot pinning, single real content, inner scroll, Escape/view guards and independent capture/replay/Follow remain.
-- **Checks:** Local typechecks/build, three affected hover journeys and independent replay-clock check passed, including exact scroll-distance y movement, unchanged x/width/height, staying within moved bounds and returning when scroll carries them outside the cursor. No hosted CI; prior broad/sustained evidence remains in review 35, not claimed as rerun. Unrelated package-manager edits preserved.
+- **When:** 8 October 2026; hover readers scroll beneath workspace chrome, directly on main.
+- **Delivered:** enlarged readers keep their dimensions and move by the actual history scroll delta, now in normal history stacking instead of the browser top layer. Header/composer cover overlapping readers and remain clickable; a bounded 24 px masked blur above the solid prompt softens the transition, disabled in low-resource mode. Same real article/slot, dwell/smooth return, nested scroll and independent capture/replay/Follow remain.
+- **Checks:** Local typechecks/build and 13 affected browser checks passed, including actual overlap hit-testing at both edges, scroll-distance geometry, hover return, composer desktop/narrow zero-overflow, native approval transport and independent replay. Rendered overlap screenshots reviewed. No hosted CI; prior broad/sustained evidence remains in review 35, not claimed as rerun. Unrelated package-manager edits preserved.
 - **Next:** Human preference and native/physical/platform acceptance remain separate.
 
 ## Next up

@@ -217,6 +217,11 @@
 /* Keep the compact input readable; decorative layers must not create scroll extents. */
 .connected-workspace .prompt-composer.open { background: var(--s1); box-shadow: 0 4px 16px #0003; overflow-x: hidden; overflow-y: auto; }
 .connected-workspace .prompt-composer.open::before { content: none; }
+.connected-workspace .prompt-composer.open::after {
+  content: ''; position: absolute; bottom: 100%; left: 0; right: 0; height: 24px; pointer-events: none;
+  background: linear-gradient(to top, color-mix(in srgb, var(--bg) 48%, transparent), transparent);
+  backdrop-filter: blur(8px); mask-image: linear-gradient(to top, #000, transparent);
+}
 .prompt-composer form, .prompt-composer .composer-actions, .prompt-composer textarea { min-width: 0; max-width: 100%; }
 .prompt-composer .composer-actions { flex-wrap: wrap; }
 .prompt-composer .composer-actions label { min-width: 0; overflow-wrap: anywhere; }
@@ -252,19 +257,19 @@
   .connected-workspace.map-reading .map-tools { bottom: 8px; }
   .connected-workspace.map-reading .map-legend { display: none; }
 }
-:root[data-low-resource] .crown::before, :root[data-low-resource] .prompt-composer.open::before { backdrop-filter: none; }
+:root[data-low-resource] .crown::before, :root[data-low-resource] .prompt-composer.open::after { backdrop-filter: none; }
 @media (prefers-reduced-motion: reduce) { .captured-clock { transition: none; } }
 
-/* Hover focus keeps a resting slot and lifts the same material into the top layer. */
+/* Hover keeps the same material above its peers, underneath workspace chrome. */
 .hover-reading-slot { pointer-events: auto; min-width: 0; }
-:root[data-palette] .connected-workspace .history .op[data-hover-reading]:popover-open {
+:root[data-palette] .connected-workspace .history .op[data-hover-reading] {
   position: fixed; inset: auto; margin: 0; left: var(--hover-left); top: var(--hover-top);
   width: var(--hover-width); height: var(--hover-height); min-width: 0; max-width: none; max-height: none;
   transform-origin: top left; overflow: hidden; box-shadow: 0 18px 50px #0005;
+  z-index: 100 !important;
 }
 .history .op[data-hover-reading] .op-body { flex: 1; min-height: 0; max-height: none; overflow: auto; }
 .history .op[data-hover-reading='returning'] { pointer-events: none; }
-.history .op[data-hover-reading]::backdrop { background: transparent; pointer-events: none; }
 
 .connected-workspace .history { scroll-padding-top: calc(var(--crown-h) + 36px); }
 
