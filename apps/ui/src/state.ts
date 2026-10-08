@@ -47,6 +47,9 @@ interface State {
   follow: boolean;
   motion: boolean;
   hoverReading: boolean;
+  reasoningDetail: 'expanded' | 'collapsed' | 'hidden';
+  mapDepth: boolean;
+  mapOrbit: boolean;
   lowResource: boolean;
   mapVisible: boolean;
   explore: boolean;
@@ -89,6 +92,7 @@ interface State {
 }
 
 const prefersReducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function storedPresentation(key: string): string | null { try { return localStorage.getItem(`drishya.${key}`); } catch { return null; } }
 const storedLowResource = (() => { try { return localStorage.getItem('drishya.lowResource') === '1'; } catch { return false; } })();
 materialCache.setLowResource(storedLowResource);
 const storedMotion = (() => {
@@ -119,6 +123,9 @@ export const useApp = create<State>((set, get) => ({
   held: false,
   follow: true,
   hoverReading: (() => { try { return localStorage.getItem("drishya.hoverReading") !== "0"; } catch { return true; } })(),
+  reasoningDetail: storedPresentation('reasoningDetail') === 'hidden' ? 'hidden' : storedPresentation('reasoningDetail') === 'collapsed' ? 'collapsed' : 'expanded',
+  mapDepth: storedPresentation('mapDepth') === 'true',
+  mapOrbit: storedPresentation('mapOrbit') === 'true',
   lowResource: storedLowResource,
   motion: !storedLowResource && (storedMotion ? storedMotion === '1' : !prefersReducedMotion),
   mapVisible: !storedLowResource && storedMapVisible !== '0',
@@ -285,4 +292,8 @@ export function setTheme(theme: ThemePreference) {
 export function setHoverReading(on: boolean) {
   useApp.setState({ hoverReading: on });
   try { localStorage.setItem('drishya.hoverReading', on ? '1' : '0'); } catch { /* Optional local preference. */ }
+}
+export function setPresentationPreferences(patch: Partial<Pick<State, 'mapDepth' | 'mapOrbit' | 'reasoningDetail'>>) {
+  useApp.setState(patch);
+  try { for (const [key, value] of Object.entries(patch)) localStorage.setItem(`drishya.${key}`, String(value)); } catch { /* Optional local preference. */ }
 }

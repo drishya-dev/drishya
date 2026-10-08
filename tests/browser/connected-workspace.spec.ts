@@ -26,7 +26,14 @@ const send=v=>process.stdout.write(JSON.stringify(v)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{
   const v=JSON.parse(line);
   if(v.type==='control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{}}});
-  if(v.type==='user') {send({type:'system',subtype:'init',tools:['Read','Edit','mcp__docs__lookup',...Array.from({length:90},(_,n)=>'mcp__synthetic__tool'+n)]});send({type:'control_request',request_id:'one',request:{subtype:'can_use_tool',tool_name:'Edit',input:{file_path:'src/actual.ts',new_string:'export const value = 43;'}}});}
+  if(v.type==='user') {
+    if(v.message.content === 'THINK') {
+      send({type:'stream_event',event:{type:'content_block_start',index:0,content_block:{type:'thinking',thinking:''}}});
+      send({type:'stream_event',event:{type:'content_block_delta',index:0,delta:{type:'thinking_delta',thinking:'Native exposed reasoning for the synthetic workspace.'}}});
+      setTimeout(()=>{send({type:'stream_event',event:{type:'content_block_stop',index:0}});send({type:'result',is_error:false});},900);
+      return;
+    }
+    send({type:'system',subtype:'init',tools:['Read','Edit','mcp__docs__lookup',...Array.from({length:90},(_,n)=>'mcp__synthetic__tool'+n)]});send({type:'control_request',request_id:'one',request:{subtype:'can_use_tool',tool_name:'Edit',input:{file_path:'src/actual.ts',new_string:'export const value = 43;'}}});}
   if(v.type==='control_response')send({type:'result',is_error:false,result:'Synthetic native transport completed the submitted prompt.'});
 });`);
   app = new App(join(dir,'store')); await app.ingest.importSource('claude-code',journal);
@@ -305,4 +312,35 @@ test('compact native composer contains its decoration and narrow form without ar
   await expect.poll(() => composer.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
   await expect.poll(() => composer.evaluate(el => el.scrollHeight - el.clientHeight)).toBe(0);
 
+});
+
+test('submission is visible before native output, exposed reasoning hands off to captured history', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
+  if (await enable.count()) await enable.click();
+  await page.route('**/controller/prompt', async route => { await new Promise(resolve => setTimeout(resolve, 400)); await route.continue(); });
+  await composer.getByRole('textbox').fill('THINK');
+  await composer.getByRole('button', { name: 'Send prompt' }).click();
+  await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
+  await composer.getByRole('button', { name: 'Confirm and send' }).click();
+  const progress = page.getByRole('region', { name: 'Native turn progress' });
+  await expect(progress).toContainText('Sending prompt');
+  await expect(progress).toContainText('Thinking');
+  await expect(progress).toContainText('Submitted here');
+  await expect(progress).not.toContainText('Native exposed reasoning');
+  await expect(progress).toContainText('Native exposed reasoning for the synthetic workspace.');
+  await expect(composer.getByRole('textbox')).toHaveValue('');
+  if (process.env.DRISHYA_REVIEW_SHOTS) await page.screenshot({ path: resolve('.local/native-thinking-review.png') });
+  const journal = join(dir, 'session.jsonl');
+  const id = (await app.ingest.importSource('claude-code', journal)).recordingId;
+  const base = { sessionId: '55555555-5555-4555-8555-555555555555', cwd: join(dir, 'session-repository'), timestamp: '2026-10-08T12:00:00Z' };
+  appendFileSync(journal, [
+    { ...base, type: 'user', uuid: 'native-prompt-proof', message: { role: 'user', content: 'THINK' } },
+    { ...base, type: 'assistant', uuid: 'native-thinking-proof', message: { role: 'assistant', content: [{ type: 'thinking', thinking: 'Native exposed reasoning for the synthetic workspace.' }] } },
+  ].map(row => JSON.stringify(row)).join('\n') + '\n');
+  await app.ingest.sync(id);
+  await expect(progress).toHaveCount(0);
+  await expect(page.locator('.prose-reasoning').filter({ hasText: 'Native exposed reasoning for the synthetic workspace.' })).toHaveCount(1);
 });

@@ -10,6 +10,10 @@ export { executable } from './native-executable.ts';
 
 type RecordValue = Record<string, any>;
 export interface ControllerState {
+  submittedPrompt?: string;
+  afterSequence?: number;
+  phase?: 'waiting' | 'thinking' | 'responding' | 'tool';
+  preview?: { id: string; role: 'response' | 'reasoning'; exposure?: 'summary' | 'full'; text: string };
   usage?: { input: number; output: number; cached: number; costUsd?: number };
   runId?: string;
   state: 'idle' | 'connecting' | 'running' | 'approval' | 'completed' | 'failed' | 'stopped';
@@ -36,6 +40,7 @@ interface Run {
   turnId?: string;
   threadId: string;
   sequence: number;
+  blocks: Map<string, { role: 'response' | 'reasoning'; exposure?: 'summary' | 'full'; text: string }>;
 }
 
 export class HarnessController {
@@ -72,6 +77,7 @@ export class HarnessController {
     run.state.state = state;
     run.state.error = error ? redactText(error).text.slice(0, 4000) : undefined;
     run.state.approvals = [];
+    run.blocks.clear();
     run.pending.clear();
     clearTimeout(run.timer);
     for (const p of run.requests.values()) { clearTimeout(p.timer); p.reject(new Error('harness connection ended')); }
@@ -127,10 +133,10 @@ export class HarnessController {
     } finally { await handle.close(); }
     if (!sessionId || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(sessionId)) throw new HttpError(409, 'no resumable native session ID in this journal');
     const safe = redactText(prompt);
-    const args = name === 'claude' ? ['-p', '--resume', sessionId, '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'manual', '--permission-prompts', 'host'] : ['app-server', '--stdio'];
+    const args = name === 'claude' ? ['-p', '--resume', sessionId, '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-mode', 'manual', '--permission-prompts', 'host'] : ['app-server', '--stdio'];
     const child = (this.options.launch ?? spawn)(bin, args, { cwd: root, shell: false, windowsHide: true, stdio: 'pipe', env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', CLAUDE_CODE_SDK_READS_SESSION_STATE: '1' } }) as ChildProcessWithoutNullStreams;
-    const state: ControllerState = { runId: randomUUID(), state: 'connecting', harness: rec.harness, available: true, output: '', tools: [], inventory: 'unknown', approvals: [], promptRedacted: safe.hits.length > 0 };
-    const run: Run = { state, child, pending: new Map(), requests: new Map(), claudeTasks: new Set(), claudeResult: false, threadId: sessionId, sequence: 0, timer: setTimeout(() => this.finish(run, 'failed', 'harness turn exceeded the connection time limit'), this.options.timeoutMs ?? 30 * 60_000) };
+    const state: ControllerState = { runId: randomUUID(), state: 'connecting', submittedPrompt: safe.text, afterSequence: rec.observationCount - 1, harness: rec.harness, available: true, output: '', tools: [], inventory: 'unknown', approvals: [], promptRedacted: safe.hits.length > 0 };
+    const run: Run = { state, child, pending: new Map(), requests: new Map(), blocks: new Map(), claudeTasks: new Set(), claudeResult: false, threadId: sessionId, sequence: 0, timer: setTimeout(() => this.finish(run, 'failed', 'harness turn exceeded the connection time limit'), this.options.timeoutMs ?? 30 * 60_000) };
     // Retain a bounded set of recent connection receipts, no raw journals or auth material.
     for (const [key, old] of this.runs) if (this.runs.size >= 16 && !['connecting', 'running', 'approval'].includes(old.state.state)) this.runs.delete(key);
     this.runs.set(id, run);
@@ -208,9 +214,32 @@ export class HarnessController {
       } else if (v.type === 'system' && v.subtype === 'task_notification') {
         run.claudeTasks.delete(v.task_id);
         // A finished background task can wake another turn: wait for its result/idle.
+      } else if (v.type === 'stream_event' && !v.parent_tool_use_id) {
+        const event = v.event;
+        const key = `claude:${event?.index ?? 0}`;
+        if (event?.type === 'message_start') { run.blocks.clear(); run.state.phase = 'waiting'; }
+        if (event?.type === 'content_block_start') {
+          const block = event.content_block;
+          run.state.phase = block?.type === 'thinking' ? 'thinking' : block?.type === 'tool_use' ? 'tool' : 'responding';
+          if (block?.type === 'thinking' || block?.type === 'text') this.block(run, key, block.type === 'thinking' ? 'reasoning' : 'response', block.thinking ?? block.text ?? '', block.type === 'thinking' ? 'full' : undefined);
+        }
+        if (event?.type === 'content_block_delta') {
+          const block = run.blocks.get(key);
+          const text = event.delta?.type === 'thinking_delta' ? event.delta.thinking : event.delta?.type === 'text_delta' ? event.delta.text : undefined;
+          if (block && typeof text === 'string') this.block(run, key, block.role, text, block.exposure, true);
+        }
+        if (event?.type === 'content_block_stop') this.publishBlock(run, key);
       } else if (v.type === 'assistant') {
         run.claudeResult = false;
-        for (const part of v.message?.content ?? []) if (part.type === 'text') this.output(run, String(part.text) + '\n');
+        for (const [index, part] of (v.message?.content ?? []).entries()) {
+          if (part.type === 'tool_use') run.state.phase = 'tool';
+          if (!v.parent_tool_use_id && (part.type === 'text' || part.type === 'thinking')) {
+            const key = `claude:${index}`;
+            this.block(run, key, part.type === 'thinking' ? 'reasoning' : 'response', part.thinking ?? part.text ?? '', part.type === 'thinking' ? 'full' : undefined);
+            this.publishBlock(run, key);
+          }
+          if (part.type === 'text') this.output(run, String(part.text) + '\n');
+        }
       } else if (v.type === 'result') {
         if (v.usage && [v.usage.input_tokens, v.usage.output_tokens, v.usage.cache_read_input_tokens ?? 0].every(n => Number.isSafeInteger(n) && n >= 0)) run.state.usage = { input: v.usage.input_tokens, output: v.usage.output_tokens, cached: v.usage.cache_read_input_tokens ?? 0, ...(typeof v.total_cost_usd === 'number' && Number.isFinite(v.total_cost_usd) && v.total_cost_usd >= 0 ? { costUsd: v.total_cost_usd } : {}) };
         if (v.result) this.output(run, String(v.result), true);
@@ -231,6 +260,25 @@ export class HarnessController {
       return;
     }
     if (v.params?.threadId && v.params.threadId !== run.threadId) return;
+    if (run.turnId && v.params?.turnId && v.params.turnId !== run.turnId) return;
+    const item = v.params?.item;
+    if (v.method === 'turn/started') run.state.phase = 'waiting';
+    if (v.method === 'item/started') run.state.phase = item?.type === 'reasoning' ? 'thinking' : item?.type === 'agentMessage' ? 'responding' : 'tool';
+    if (['item/agentMessage/delta', 'item/reasoning/summaryTextDelta', 'item/reasoning/textDelta'].includes(v.method) && typeof v.params?.delta === 'string' && typeof v.params.itemId === 'string') {
+      const reasoning = v.method !== 'item/agentMessage/delta';
+      run.state.phase = reasoning ? 'thinking' : 'responding';
+      const exposure = reasoning ? v.method.includes('summary') ? 'summary' : 'full' : undefined;
+      this.block(run, `${v.params.itemId}:${exposure ?? 'response'}:${v.params.summaryIndex ?? v.params.contentIndex ?? 0}`, reasoning ? 'reasoning' : 'response', v.params.delta, exposure, true);
+    }
+    if (v.method === 'item/completed' && (item?.type === 'reasoning' || item?.type === 'agentMessage')) {
+      const summary = (item.summary ?? []).filter((value: unknown) => typeof value === 'string').join('\n\n');
+      const content = (item.content ?? []).filter((value: unknown) => typeof value === 'string').join('\n\n');
+      const text = item.type === 'agentMessage' ? item.text : summary || content;
+      if (typeof text === 'string' && text) {
+        this.block(run, String(item.id), item.type === 'reasoning' ? 'reasoning' : 'response', text, item.type === 'reasoning' ? summary ? 'summary' : 'full' : undefined);
+        this.publishBlock(run, String(item.id));
+      } else for (const key of run.blocks.keys()) if (key.startsWith(`${item.id}:`)) this.publishBlock(run, key);
+    }
     if (v.method === 'thread/tokenUsage/updated') {
       const u = v.params?.tokenUsage?.last;
       if (u && [u.inputTokens, u.outputTokens, u.cachedInputTokens].every(n => Number.isSafeInteger(n) && n >= 0)) run.state.usage = { input: u.inputTokens, output: u.outputTokens, cached: u.cachedInputTokens };
@@ -239,6 +287,20 @@ export class HarnessController {
     if (v.method === 'item/completed' && v.params?.item?.type === 'agentMessage') this.output(run, String(v.params.item.text) + '\n');
     if (v.method === 'turn/completed') this.finish(run, v.params?.turn?.status === 'failed' ? 'failed' : v.params?.turn?.status === 'interrupted' ? 'stopped' : 'completed', v.params?.turn?.error?.message);
     if (v.method === 'error' && !v.params?.willRetry) this.finish(run, 'failed', v.params?.error?.message ?? 'native harness error');
+  }
+
+  private block(run: Run, id: string, role: 'response' | 'reasoning', text: string, exposure?: 'summary' | 'full', append = false) {
+    if (!run.blocks.has(id) && run.blocks.size >= 16) run.blocks.delete(run.blocks.keys().next().value!);
+    const previous = append ? run.blocks.get(id)?.text ?? '' : '';
+    // Never expose arbitrary token fragments: a credential may span native deltas.
+    // Oversized blocks are omitted whole, rather than truncating before redaction.
+    const combined = previous + text;
+    run.blocks.set(id, { role, exposure, text: combined.length <= 65_536 && previous !== '\0' ? combined : '\0' });
+  }
+  private publishBlock(run: Run, id: string) {
+    const block = run.blocks.get(id); run.blocks.delete(id);
+    if (!block?.text || block.text === '\0') return;
+    run.state.preview = { id: redactText(id).text.slice(0, 200), role: block.role, exposure: block.exposure, text: redactText(block.text).text };
   }
 
   decide(id: string, runId: unknown, approvalId: unknown, allow: unknown) {

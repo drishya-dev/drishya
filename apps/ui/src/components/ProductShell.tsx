@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, useApp } from '../state.ts';
+import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
 
 export function ReadingDialog({ title, close, children, className = '', modeless = false }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -49,6 +49,9 @@ function Settings() {
   const map = useApp((s) => s.mapVisible);
   const low = useApp((s) => s.lowResource);
   const hoverReading = useApp(s => s.hoverReading);
+  const depth = useApp(s => s.mapDepth);
+  const orbit = useApp(s => s.mapOrbit);
+  const reasoningDetail = useApp(s => s.reasoningDetail);
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
@@ -58,6 +61,9 @@ function Settings() {
     <section><h3>Reading and resources</h3>
       <label className="setting-row"><span>Low resource mode<small>Smaller material cache and history overscan. Turns map and motion off.</small></span><input type="checkbox" checked={low} onChange={(e) => setLowResource(e.target.checked)} /></label>
       <label className="setting-row"><span>Repository map<small>Static imports and recorded locations. No inferred execution flow.</small></span><input type="checkbox" checked={map} onChange={(e) => setMapVisible(e.target.checked)} /></label>
+      <label className="setting-row"><span>Depth map<small>Perspective view of the same repository connections; depth is layout only.</small></span><input type="checkbox" checked={depth} onChange={e => setPresentationPreferences({ mapDepth: e.target.checked })} /></label>
+      <label className="setting-row"><span>Slow background orbit<small>Optional 15 fps rotation. Pauses while exploring, hovering, reading or in a hidden tab; off in low resource/reduced motion.</small></span><input type="checkbox" checked={orbit} disabled={!depth} onChange={e => setPresentationPreferences({ mapOrbit: e.target.checked })} /></label>
+      <label className="setting-row"><span>Exposed reasoning<small>Display preference only. Includes captured thinking or summaries when supplied by the harness; never unlocks hidden reasoning or changes effort.</small></span><select aria-label="Exposed reasoning detail" value={reasoningDetail} onChange={e => setPresentationPreferences({ reasoningDetail: e.target.value as 'expanded' | 'collapsed' | 'hidden' })}><option value="expanded">Full available detail</option><option value="collapsed">Collapsed</option><option value="hidden">Hide</option></select></label>
       <label className="setting-row"><span>Relationship motion<small>Finite origin and outcome cues; captured text is always immediately readable.</small></span><input type="checkbox" checked={motion} onChange={(e) => setMotion(e.target.checked)} /></label>
       <label className="setting-row"><span>Hover reading focus<small>After a short dwell, centre the real preview without moving history. Escape restores it. Desktop pointer only.</small></span><input type="checkbox" checked={hoverReading} onChange={e => setHoverReading(e.target.checked)} /></label>
       <p className="muted small">Low resource mode sets economical defaults; you can explicitly re-enable map or motion. Your browser's reduced-motion preference always suppresses animated cues.</p>

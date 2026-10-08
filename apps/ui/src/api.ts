@@ -104,6 +104,10 @@ export interface ReaderRecording extends RecordingSummary { sourceBytes?: number
 export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace' }
 export interface CurrentFile { path: string; scope: 'current-workspace'; text: string; start: number; totalLines: number; returnedLines: number; hasMore: boolean; redacted: boolean; modifiedAt: string }
 export interface ControllerStatus {
+  submittedPrompt?: string;
+  afterSequence?: number;
+  phase?: 'waiting' | 'thinking' | 'responding' | 'tool';
+  preview?: { id: string; role: 'response' | 'reasoning'; exposure?: 'summary' | 'full'; text: string };
   usage?: { input: number; output: number; cached: number; costUsd?: number };
   runId?: string; state: 'idle' | 'connecting' | 'running' | 'approval' | 'completed' | 'failed' | 'stopped';
   harness: string; available: boolean; output: string; error?: string; tools: string[]; inventory: 'unknown' | 'runtime';
