@@ -1,6 +1,5 @@
-// The repository map, behind everything. Canvas 2D in this base UI (Pixi replaces it in the
-// frontend pass). The canvas draws shapes only; every label is DOM. It redraws on change,
-// never on a continuous loop, so an idle screen costs nothing.
+// Spatial WebGL points/edges with a flat low-resource fallback. Every label is DOM.
+// Only opt-in orbit runs continuously, at a bounded rate and outside manual navigation.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { GraphNode, RepoGraph } from '@drishya/contracts';
@@ -10,6 +9,7 @@ import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
 import { mapDetail, type MapGroup } from '../lib/map-detail.ts';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph } from '../lib/map-focus.ts';
+import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
 
 interface Cam {
   x: number;
@@ -59,15 +59,29 @@ function MapActions({ graph }: { graph: RepoGraph }) {
 
 export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { graph?: RepoGraph; heat: HeatCell[]; passagePaths?: string[]; readingRect?: { left: number; width: number } }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const spatialCanvas = useRef<HTMLCanvasElement>(null);
+  const renderer = useRef<ReturnType<typeof createSpatialRenderer>>(undefined);
+  const [gpuReady, setGpuReady] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const explore = useApp((s) => s.explore);
   const motion = useApp(s => s.motion);
   const lowResource = useApp(s => s.lowResource);
   const depth = useApp(s => s.mapDepth);
   const orbit = useApp(s => s.mapOrbit);
-  const reading = useApp(s => !!(s.selectedOp || s.expandedOp || s.currentFile || s.filePanel || s.settingsOpen || s.searchOpen));
-  const hoveredOp = useApp(s => s.hoveredOp);
   const [yaw, setYaw] = useState(.25);
+  const [pitch, setPitch] = useState(.18);
+  const manualUntil = useRef(0);
+  const spatialActive = depth && !lowResource && gpuReady;
+  const holdOrientation = () => { manualUntil.current = performance.now() + 12_000; };
+  useEffect(() => {
+    const node = spatialCanvas.current;
+    if (!node) return;
+    if (!depth || lowResource) { renderer.current?.dispose(); renderer.current = undefined; setGpuReady(false); node.width = node.height = 1; return; }
+    const create = () => { renderer.current?.dispose(); try { renderer.current = createSpatialRenderer(node); } catch { renderer.current = undefined; } setGpuReady(!!renderer.current); };
+    const lost = (event: Event) => { event.preventDefault(); setGpuReady(false); };
+    create(); node.addEventListener('webglcontextlost', lost); node.addEventListener('webglcontextrestored', create);
+    return () => { renderer.current?.dispose(); node.removeEventListener('webglcontextlost', lost); node.removeEventListener('webglcontextrestored', create); };
+  }, [depth, lowResource]);
   const { workspace } = useSessionWorkspace();
   const resolvedTheme = useResolvedTheme();
   const hoveredPath = useApp((s) => s.hoveredPath);
@@ -100,6 +114,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     return () => preference.removeEventListener('change', stop);
   }, [motion]);
   const zoomCamera = (factor: number) => {
+    holdOrientation();
     const c = cameraTarget.current, k = Math.max(.5, Math.min(8, c.k * factor));
     animateCam({ k, x: size.w / 2 - (size.w / 2 - c.x) * k / c.k, y: size.h / 2 - (size.h / 2 - c.y) * k / c.k });
   };
@@ -117,6 +132,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const connections = useMemo(() => graph && connectionsOpen && connectionFile ? importConnections(graph, connectionFile) : undefined, [graph, connectionsOpen, connectionFile]);
   const passageFiles = useMemo(() => graph?.nodes.filter(node => passagePaths.includes(node.id)).slice(0, 12) ?? [], [graph, passagePaths]);
   const focusFile = (node: GraphNode) => {
+    holdOrientation();
     setConnectionFile(node.id); setConnectionPage(0);
     set({ hoveredPath: node.id });
     const k = Math.max(cam.k, graph && graph.nodes.length > 80 ? 4 : 1.5);
@@ -124,28 +140,30 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     animateCam({ k, x: size.w / 2 - (fit.ox + p.x * fit.sx) * k, y: size.h / 2 - (fit.oy + p.y * fit.sy) * k });
   };
   const zoomGroup = (node: MapGroup) => {
+    holdOrientation();
     const k = Math.min(8, Math.max(2, cam.k * 2));
     const p = spatial(node);
-    const x = 48 + p.x * Math.max(40, size.w - 96);
-    const y = 48 + p.y * Math.max(40, size.h - 96);
+    const x = fit.ox + p.x * fit.sx;
+    const y = fit.oy + p.y * fit.sy;
     animateCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
     setTip(undefined);
   };
   const displayNodes = detail?.nodes ?? [];
+  const depths = useMemo(() => new Map(displayNodes.map(node => [node.id, node.members ? node.members.reduce((sum, id) => sum + fileDepth(id), 0) / node.members.length : fileDepth(node.id)])), [detail]);
   useEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0, last = 0;
-    const enabled = () => displayNodes.length > 0 && depth && orbit && motion && !lowResource && !explore && !reading && !hoveredOp && !hoveredPath && document.visibilityState === 'visible' && !preference.matches && displayNodes.length <= 1500;
+    const enabled = () => displayNodes.length > 0 && spatialActive && orbit && motion && document.visibilityState === 'visible' && !preference.matches && displayNodes.length <= 1500;
     const tick = (time: number) => {
       if (!enabled()) { frame = 0; last = 0; return; }
-      if (last && time - last >= 1000 / 15) { const elapsed = Math.min(100, time - last); setYaw(value => (value + elapsed * .000035) % (Math.PI * 2)); last = time; }
+      if (last && time - last >= 1000 / 15) { const elapsed = Math.min(100, time - last); if (time >= manualUntil.current) setYaw(value => (value + elapsed * .000035) % (Math.PI * 2)); last = time; }
       if (!last) last = time;
       frame = requestAnimationFrame(tick);
     };
     const resume = () => { cancelAnimationFrame(frame); frame = 0; last = 0; if (enabled()) frame = requestAnimationFrame(tick); };
     resume(); document.addEventListener('visibilitychange', resume); preference.addEventListener('change', resume);
     return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', resume); preference.removeEventListener('change', resume); };
-  }, [depth, orbit, motion, lowResource, explore, reading, hoveredOp, hoveredPath, displayNodes.length]);
+  }, [spatialActive, orbit, motion, displayNodes.length]);
   const displayById = useMemo(() => new Map(displayNodes.map(n => [n.id, n])), [detail]);
   const heatMap = useMemo(() => new Map(heat.map((h) => [h.path, h])), [heat]);
 
@@ -165,20 +183,15 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   // All hit tests, search destinations and motion origins share this same projection.
   const fit = useMemo(() => {
     const pad = 48;
+    if (spatialActive) { const span = Math.max(40, Math.min(size.w, size.h) - pad * 2); return { sx: span, sy: span, ox: (size.w - span) / 2, oy: (size.h - span) / 2 }; }
     return { sx: Math.max(40, size.w - pad * 2), sy: Math.max(40, size.h - pad * 2), ox: pad, oy: pad };
-  }, [size]);
-  // Canvas projects the geometry; DOM labels and arrival anchors share it exactly.
-  // This shallow depth is a spatial layout, never dependency strength or execution.
-  const spatial = (n: { x: number; y: number }) => {
-    if (!depth || lowResource) return n;
-    const x = n.x - .5, y = n.y - .5;
-    const z = Math.sin(n.x * 11 + n.y * 7) * .16;
-    const rx = x * Math.cos(yaw) + z * Math.sin(yaw);
-    const rz = -x * Math.sin(yaw) + z * Math.cos(yaw);
-    const perspective = 1.5 / (1.5 - rz);
-    return { x: .5 + rx * perspective, y: .5 + y * perspective };
+  }, [size, spatialActive]);
+  // GPU geometry, DOM labels, picking and arrivals share the same 3D camera.
+  const spatial = (n: { id: string; x: number; y: number }) => {
+    if (!spatialActive) return { ...n, z: 0, scale: 1 };
+    return spatialProject({ ...n, z: depths.get(n.id) ?? fileDepth(n.id) }, yaw, pitch);
   };
-  const project = (n: { x: number; y: number }) => { const p = spatial(n); return { x: (fit.ox + p.x * fit.sx) * cam.k + cam.x, y: (fit.oy + p.y * fit.sy) * cam.k + cam.y }; };
+  const project = (n: { id: string; x: number; y: number }) => { const p = spatial(n); return { x: (fit.ox + p.x * fit.sx) * cam.k + cam.x, y: (fit.oy + p.y * fit.sy) * cam.k + cam.y, z: p.z, scale: p.scale }; };
 
   const draw = () => {
     const c = canvas.current;
@@ -190,13 +203,34 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       c.width = size.w * dpr;
       c.height = size.h * dpr;
     }
+    if (spatialActive && spatialCanvas.current && renderer.current && size.w && size.h) {
+      const target = spatialCanvas.current;
+      if (target.width !== c.width || target.height !== c.height) { target.width = c.width; target.height = c.height; }
+      const opacity = explore ? .78 : .28;
+      const vertex = (node: MapGroup): MapVertex => {
+        const p = project(node);
+        return { ...p, size: (node.members ? Math.min(8, 4 + Math.log2(node.members.length) * .4) : 2.5) * p.scale, alpha: (node.opacity ?? 1) * opacity };
+      };
+      const nodes = displayNodes.filter(n => (n.opacity ?? 1) > .02).map(vertex);
+      const edges: MapVertex[] = [];
+      const budget = Math.min(600, Math.round(120 * Math.max(1, cam.k)));
+      const stride = Math.max(1, Math.ceil((detail?.edges.length ?? 0) / budget));
+      for (let i = 0; i < (detail?.edges.length ?? 0); i += stride) {
+        const edge = detail!.edges[i]!, a = displayById.get(edge.from), b = displayById.get(edge.to);
+        if (!a || !b) continue;
+        const va = vertex(a), vb = vertex(b), alpha = Math.min(va.alpha, vb.alpha);
+        edges.push({ ...va, alpha }, { ...vb, alpha });
+      }
+      renderer.current.draw(nodes, edges, mapPalette(c).node, size.w, size.h, dpr);
+      return;
+    }
     const g = c.getContext('2d')!;
     const colours = mapPalette(c);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, size.w, size.h);
 
     g.lineWidth = 1.2;
-    g.strokeStyle = colours.edge;
+    g.strokeStyle = explore ? colours.edge : colours.node;
     let drawnEdges = 0;
     const edgeBudget = Math.min(600, Math.round(120 * Math.max(1, cam.k)));
     const stride = Math.max(1, Math.ceil((detail?.edges.length ?? 0) / edgeBudget));
@@ -209,7 +243,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const pa = project(a);
       const pb = project(b);
       if (Math.max(pa.x, pb.x) < 0 || Math.max(pa.y, pb.y) < 0 || Math.min(pa.x, pb.x) > size.w || Math.min(pa.y, pb.y) > size.h) continue;
-      g.globalAlpha = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (hoveredPath ? .18 : .55);
+      g.globalAlpha = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .55 : .28);
       if (g.globalAlpha < .02) continue;
       g.beginPath();
       g.moveTo(pa.x, pa.y);
@@ -230,7 +264,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       }
     }
 
-    if (hoveredPath) {
+    if (explore && hoveredPath) {
       g.beginPath();
       for (const edge of detail?.edges ?? []) {
         if (edge.from !== hoveredPath && edge.to !== hoveredPath) continue;
@@ -249,7 +283,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const p = project(n);
       if (p.x < -10 || p.y < -10 || p.x > size.w + 10 || p.y > size.h + 10) continue;
       // Group detail crossfades without semantic rings or a changed file position.
-      g.globalAlpha = (n.opacity ?? 1) * (n.members || hoveredPath === n.id ? 1 : .72 + Math.min(.28, (cam.k - 1) * .07));
+      g.globalAlpha = (n.opacity ?? 1) * (explore ? .78 : .28);
       g.beginPath();
       const radius = n.members ? Math.min(4.5, 2 + Math.log2(n.members.length) * .25) : hoveredPath === n.id ? r0 + .5 : r0;
       g.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -259,27 +293,14 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
 
     g.globalAlpha = 1;
 
-    // Keep the reading column clear: the map recedes behind text, never crosses it.
-    if (!explore && readingRect) {
-      const grad = g.createLinearGradient(readingRect.left - 32, 0, readingRect.left + readingRect.width + 32, 0);
-      // Match the DOM theme; the reading mask must not become an old black slab.
-      const theme = colours.background;
-      const base = /^#[0-9a-f]{6}$/i.test(theme) ? theme : '#0b1b1e';
-      grad.addColorStop(0, `${base}00`);
-      grad.addColorStop(0.04, `${base}e6`);
-      grad.addColorStop(0.96, `${base}e6`);
-      grad.addColorStop(1, `${base}00`);
-      g.fillStyle = grad;
-      g.fillRect(readingRect.left - 32, 0, readingRect.width + 64, size.h);
-    }
   };
 
   // Paint the camera's committed frame; scheduling another RAF here can cancel
   // every intermediate paint while React commits the next camera position.
-  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections, depth, yaw]);
+  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections, spatialActive, yaw, pitch]);
 
   // ── interaction (explore mode) ────────────────────────────────────────────
-  const drag = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | undefined>(undefined);
+  const drag = useRef<{ x: number; y: number; cx: number; cy: number; yaw: number; pitch: number; rotate: boolean; moved: boolean } | undefined>(undefined);
   const nearest = (mx: number, my: number) => {
     if (!graph) return undefined;
     let best: MapGroup | undefined;
@@ -299,6 +320,10 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const labels = useMemo(() => {
     if (!explore) return [];
     const accepted: { node: MapGroup; x: number; y: number; width: number }[] = [];
+    const world = wrap.current?.getBoundingClientRect();
+    const chrome = world ? [...wrap.current!.querySelectorAll<HTMLElement>('.map-tools, .map-zoom, .map-legend, .map-connections')].map(el => {
+      const r = el.getBoundingClientRect(); return { left: r.left - world.left - 8, right: r.right - world.left + 8, top: r.top - world.top - 8, bottom: r.bottom - world.top + 8 };
+    }) : [];
     // Cull before ranking: zooming into one region must not sort every file in a huge repo.
     const sorted = displayNodes.filter(n => {
       const p = project(n);
@@ -308,13 +333,14 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     for (const node of sorted) {
       const p = project(node), width = Math.min(190, node.path.length * 6 + 24);
       if (p.x < 6 || p.y < 70 || p.x + width > size.w || p.y > size.h - 50) continue;
+      if (chrome.some(r => p.x + width > r.left && p.x < r.right && p.y + 10 > r.top && p.y - 10 < r.bottom)) continue;
       if (accepted.some(a => Math.abs(a.y - p.y) < 24 && p.x < a.x + a.width && p.x + width > a.x)) continue;
       accepted.push({ node, ...p, width });
       // Reserve at most nine labels for the explicit import-path working set.
       if (accepted.length >= (connections?.root ? 39 : 48)) break;
     }
     return accepted;
-  }, [detail, explore, cam, size, hoveredPath, heatMap, connections, depth, yaw, lowResource]);
+  }, [detail, explore, cam, size, hoveredPath, heatMap, connections, spatialActive, yaw, pitch, lowResource, query]);
 
   // Share exact renderer coordinates for a bounded working set, never a guessed graph origin.
   const anchors = [...heat].sort((a, b) => b.heat - a.heat).slice(0, 63).map((h) => h.path);
@@ -324,12 +350,14 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   return (
     <div
       ref={wrap}
-      data-map-depth={depth && !lowResource ? 'perspective' : 'flat'}
+      data-map-depth={spatialActive ? 'spatial-3d' : 'flat'}
       data-map-yaw={yaw.toFixed(5)}
+      data-map-pitch={pitch.toFixed(5)}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
         if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
         if (!explore) return;
+        holdOrientation();
         const r = wrap.current!.getBoundingClientRect();
         const mx = e.clientX - r.left;
         const my = e.clientY - r.top;
@@ -341,7 +369,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         if (!explore) return;
         if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
         cancelAnimationFrame(cameraFrame.current);
-        drag.current = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false };
+        holdOrientation();
+        drag.current = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, yaw, pitch, rotate: spatialActive && !e.shiftKey && e.button !== 1, moved: false };
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
@@ -351,6 +380,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
           const dx = e.clientX - drag.current.x;
           const dy = e.clientY - drag.current.y;
           if (Math.abs(dx) + Math.abs(dy) > 3) drag.current.moved = true;
+          holdOrientation();
+          if (drag.current.rotate) { setYaw(drag.current.yaw + dx * .006); setPitch(Math.max(-Math.PI / 2 + .05, Math.min(Math.PI / 2 - .05, drag.current.pitch + dy * .006))); return; }
           const target = { ...cam, x: drag.current!.cx + dx, y: drag.current!.cy + dy };
           cameraTarget.current = target; setCam(target);
           return;
@@ -366,6 +397,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
         const d = drag.current;
         drag.current = undefined;
+        if (d) holdOrientation();
         if (!explore || (d && d.moved)) return;
         const r = wrap.current!.getBoundingClientRect();
         const n = nearest(e.clientX - r.left, e.clientY - r.top);
@@ -376,9 +408,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         else if (n) set(workspace?.approved ? { currentFile: n.path, filePanel: undefined } : { filePanel: n.id, currentFile: undefined });
       }}
       onPointerLeave={() => explore && (setTip(undefined), set({ hoveredPath: undefined }))}
+      onPointerCancel={() => { drag.current = undefined; holdOrientation(); }}
       aria-hidden={!explore}
     >
-      <canvas ref={canvas} style={{ width: size.w, height: size.h }} />
+      <canvas ref={canvas} style={{ width: size.w, height: size.h, display: spatialActive ? 'none' : 'block' }} />
+      <canvas ref={spatialCanvas} data-spatial-renderer="webgl" style={{ width: size.w, height: size.h, display: spatialActive ? 'block' : 'none' }} />
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
         <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find a file on the map" placeholder="Find a file…" value={query} onChange={(e) => setQuery(e.target.value)} />{query && <button aria-label="Clear map search" onClick={() => setQuery('')}>×</button>}</label>
@@ -389,6 +423,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         }}>Import paths <span className={`mini-switch${connectionsOpen ? ' on' : ''}`} /></button>
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
+            holdOrientation();
             const point = spatial(node);
             const x = fit.ox + point.x * fit.sx; const y = fit.oy + point.y * fit.sy;
             const k = graph && graph.nodes.length > 80 ? 6 : 2;
@@ -414,9 +449,10 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         </> : <p className="muted small">Choose a file using the map or search.</p>}
       </section>}
       {explore && <div className="map-zoom" aria-label="Repository zoom">
+        {spatialActive && <span className="map-camera-hint">Drag orbit · Shift drag pan</span>}
         <button className="btn ghost" aria-label="Zoom into repository" onClick={() => zoomCamera(1.25)}>+</button>
         <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => zoomCamera(1 / 1.25)}>−</button>
-        <button className="btn ghost" onClick={() => { animateCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
+        <button className="btn ghost" onClick={() => { holdOrientation(); setYaw(.25); setPitch(.18); animateCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
       </div>}
       {anchors.map((path) => {
         const node = displayById.get(path);
@@ -424,14 +460,6 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         const p = project(node);
         const visible = displayById.has(path) && size.w > 0 && p.x >= 6 && p.y >= 6 && p.x < size.w - 6 && p.y < size.h - 6;
         return <span key={path} className="map-origin-point" data-origin-file={path} data-origin-visible={visible} style={{ left: p.x - 3, top: p.y - 3 }} aria-hidden="true" />;
-      })}
-      {anchors.slice(0, explore ? 24 : 12).map((path) => {
-        const node = displayById.get(path);
-        if (explore || !node || (node.opacity ?? 1) < .95 || !displayById.has(path)) return null;
-        const p = project(node);
-        if (p.x < 6 || p.y < 6 || p.x > size.w - 160 || p.y > size.h - 24) return null;
-        if (!explore && readingRect && p.x + 155 > readingRect.left - 24 && p.x < readingRect.left + readingRect.width + 24) return null;
-        return <span key={path} className="map-file-label" title={node.path} style={{ left: p.x + 9, top: p.y - 9 }}>{node.path}</span>;
       })}
       {labels.map(({ node, x, y }) => node.members
         ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} title={`${node.members.length} spatially grouped files · zoom to reveal`} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>
@@ -441,7 +469,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         if (p.x < 6 || p.y < 6 || p.x > size.w - 180 || p.y > size.h - 24) return null;
         return <span className="map-file-label" key={`connected/${node.id}`} style={{ left: p.x + 8, top: p.y - 9 }}>{node.path}</span>;
       })}
-      {tip && (
+      {explore && tip && (
         <div className="map-tip" style={{ left: tip.x + 12, top: tip.y + 8 }}>
           <div className="map-tip-path">{tip.node.path}</div>
           <div className="muted">

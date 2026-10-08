@@ -1,5 +1,8 @@
 # Drishya — Vision & Creative Direction
 
+
+**Latest spatial/composer correction — 8 October:** [37](review/37-spatial-map-composer.md) supersedes shallow perspective and deferred attachments: real spatial WebGL points/edges, yaw/pitch orbit and pan, default gentle rotation resuming 12 seconds after camera movement, steady unnamed background geometry, slightly wider rails and shared card bounds. File/folder-content selection, screenshot paste, previews/removal and native text/image transport are implemented with explicit limits and text redaction. Effective native-policy synchronization and broader release checks remain separate; full access is still unsupported. Local checks only; no hosted CI.
+
 **Latest native/depth direction — 8 October:** [36](review/36-native-progress-depth-map.md) adds honest sending/connection/thinking progress before output, local exposed-reasoning detail controls, and optional slow perspective-map orbit. Orbit is an explicit opt-in exception to the older no-loop rule, not a new default. Attachments/effective native-policy synchronization remain the documented next product work; hidden reasoning is never promised. Local checks only; no hosted CI.
 
 **Latest scroll refinement — 8 October:** [35 — Scrolling preserves motion](review/35-scroll-preserved-reading.md) supersedes wheel cancellation/hover dismissal in 34: finite motion continues through scrolling, hover boundaries forward to history without closing the reader, prompt navigation is an independent chapter rail with an active mark, native response duplicates are removed, send/stop use compact icons and search enters at its final corner. Upward-only Follow, native consent, provenance and publishing-only hosted CI remain.

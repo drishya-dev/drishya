@@ -34,6 +34,63 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('long paths and MCP fields stay inside shared card headers and reading bounds', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const long = 'C:/Users/synthetic/.claude/projects/' + 'long-project-segment-'.repeat(12) + '/memory/project_state.md';
+  for (const op of sample.projection.operations) op.title = `${op.kind} ${long}`;
+  const edits = sample.projection.operations.filter((op: any) => op.kind === 'edit');
+  edits[0].kind = 'write';
+  const reads = sample.projection.operations.filter((op: any) => op.kind === 'read');
+  reads[1].kind = 'web'; reads[1].detail = { kind: 'web', url: long, resultPreview: long };
+  reads[2].kind = 'other'; reads[2].detail = { kind: 'other', input: { long }, resultPreview: long };
+  reads[3].kind = 'plan'; reads[3].detail = { kind: 'plan', items: [{ text: long, status: 'pending' }] };
+  for (const op of sample.projection.operations.filter((op: any) => op.kind === 'mcp')) {
+    op.origin.server = 'long-server-name-'.repeat(10);
+    op.detail.input = { [long]: long };
+    op.detail.resultPreview = JSON.stringify([{ [long]: long, result: long }]);
+  }
+  let fixture = sample;
+  await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(fixture) }));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const kinds = ['read', 'write', 'edit', 'shell', 'test', 'search', 'mcp', 'web', 'other', 'spawn', 'plan'];
+  for (const kind of kinds) {
+    const op = sample.projection.operations.find((item: any) => item.kind === kind);
+    const passage = sample.projection.passages.find((item: any) => item.operationIds.includes(op.id));
+    fixture = { ...sample, projection: { ...sample.projection, passages: [{ ...passage, operationIds: [op.id], proseIds: [] }] } };
+    await page.goto(demoUrl());
+    const card = page.locator(`article[data-op-id="${op.id}"]`);
+    await page.mouse.move(5, 500);
+    await expect(card).toBeAttached();
+    await card.scrollIntoViewIfNeeded({ timeout: 5000 });
+    await expect(card).toBeVisible();
+    const check = async () => {
+      const bounds = await card.evaluate(el => {
+        const head = el.querySelector<HTMLElement>('.op-head')!;
+        const title = head.querySelector<HTMLElement>('.op-title')!;
+        const body = el.querySelector<HTMLElement>('.op-body, .op-expanded')!;
+        const h = head.getBoundingClientRect(), t = title.getBoundingClientRect(), b = body.getBoundingClientRect();
+        return { top: t.top - h.top, bottom: h.bottom - t.bottom, lines: title.offsetHeight / parseFloat(getComputedStyle(title).lineHeight), bodyTop: b.top - h.bottom, overflow: body.scrollWidth - body.clientWidth };
+      });
+      expect(bounds.top, kind).toBeGreaterThanOrEqual(0);
+      expect(bounds.bottom, kind).toBeGreaterThanOrEqual(0);
+      expect(bounds.lines, kind).toBeLessThan(1.1);
+      expect(bounds.bodyTop, kind).toBeGreaterThanOrEqual(-1);
+      expect(bounds.overflow, kind).toBeLessThanOrEqual(1);
+    };
+    await check();
+    await card.hover();
+    await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+    await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+    await check();
+    await page.keyboard.press('Escape');
+    const expand = card.locator('.op-expand');
+    if (await expand.count()) {
+      await expand.click(); await expect(card).toHaveClass(/expanded/); await check();
+      await expand.click();
+    }
+  }
+});
+
 test('source preview opens the exact stored range and keeps pending replay evidence hidden', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
   const op = sample.projection.operations.find((item: { kind: string }) => item.kind === 'read');
@@ -177,7 +234,8 @@ test('substantial external results retain structured evidence and adapt to narro
   await external.scrollIntoViewIfNeeded();
   expect((await external.boundingBox())!.width).toBeLessThan(390);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  expect((await external.locator('table').boundingBox())!.width).toBeGreaterThan((await external.boundingBox())!.width);
+  expect((await external.locator('table').boundingBox())!.width).toBeLessThan((await external.boundingBox())!.width);
+  expect(await external.locator('.op-body').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
   await expect(external.locator('tbody')).toContainText('synthetic/file-4.ts');
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-mobile.png') });
 });
@@ -603,28 +661,35 @@ test('full-height world sits beneath progressive edge chrome and prompt typograp
   await expect.poll(() => time.locator('.captured-clock').evaluate(el => getComputedStyle(el).opacity)).toBe('1');
 });
 
-test('optional depth orbit pauses for exploration and reduced motion; reasoning detail is a local display preference', async ({ page }) => {
+test('spatial camera orbits both axes and resumes after manual navigation; reduced motion stops automatic orbit', async ({ page }) => {
   await page.goto(demoUrl());
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
-  await settings.getByRole('checkbox', { name: /^Depth map/ }).check();
+  await settings.getByRole('checkbox', { name: /^3D repository map/ }).check();
   await settings.getByRole('checkbox', { name: /^Slow background orbit/ }).check();
   await settings.getByRole('combobox', { name: 'Exposed reasoning detail' }).selectOption('collapsed');
   await settings.getByRole('button', { name: 'Close Workspace settings' }).click();
   await page.mouse.move(10, 800);
   const map = page.locator('.map');
-  await expect(map).toHaveAttribute('data-map-depth', 'perspective');
+  await expect(map).toHaveAttribute('data-map-depth', 'spatial-3d');
+  await expect(map.locator('[data-spatial-renderer="webgl"]')).toBeVisible();
+  await expect(map.locator('.map-file-label')).toHaveCount(0);
   const first = await map.getAttribute('data-map-yaw');
   await expect.poll(() => map.getAttribute('data-map-yaw')).not.toBe(first);
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
+  await page.mouse.move(600, 400); await page.mouse.down();
+  await page.mouse.move(710, 455, { steps: 12 }); await page.mouse.up();
   const stopped = await map.getAttribute('data-map-yaw');
+  expect(stopped).not.toBe(first);
+  expect(Number(await map.getAttribute('data-map-pitch'))).toBeGreaterThan(.4);
   await page.waitForTimeout(300);
   expect(await map.getAttribute('data-map-yaw')).toBe(stopped);
+  await expect.poll(() => map.getAttribute('data-map-yaw'), { timeout: 15_000 }).not.toBe(stopped);
+  if (process.env.DRISHYA_REVIEW_SHOTS) await page.screenshot({ path: '.local/spatial-map-review.png' });
   await page.getByRole('button', { name: 'Back to work', exact: true }).click();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const reduced = await map.getAttribute('data-map-yaw');
   await page.waitForTimeout(300);
   expect(await map.getAttribute('data-map-yaw')).toBe(reduced);
   expect(await page.evaluate(() => localStorage.getItem('drishya.reasoningDetail'))).toBe('collapsed');
-  if (process.env.DRISHYA_REVIEW_SHOTS) await page.screenshot({ path: '.local/depth-map-review.png' });
 });

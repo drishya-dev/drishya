@@ -10,6 +10,7 @@ import { HarnessController } from '../src/controller.ts';
 let dir: string, root: string, app: App, access: WorkspaceAccess, claudeId: string, codexId: string;
 let controller: HarnessController;
 const launches: { args: string[]; cwd: string | undefined; shell: unknown }[] = [];
+const frames: any[] = [];
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-controller-')); root = join(dir, 'repo'); mkdirSync(root);
   writeFileSync(join(root, 'a.ts'), 'export const a = 1;');
@@ -79,13 +80,14 @@ createInterface({ input: process.stdin }).on('line', line => {
   }
 });`);
   controller = new HarnessController(app, access, { resolveExecutable: () => process.execPath,
-    launch: ((_bin: string, args: string[], opts: any) => { launches.push({ args, cwd: opts.cwd, shell: opts.shell }); return spawn(process.execPath, [fake], opts); }) as typeof spawn, timeoutMs: 5000 });
+    launch: ((_bin: string, args: string[], opts: any) => { launches.push({ args, cwd: opts.cwd, shell: opts.shell }); const child = spawn(process.execPath, [fake], opts); const write = child.stdin!.write.bind(child.stdin!); child.stdin!.write = ((chunk: string, ...rest: any[]) => { frames.push(JSON.parse(String(chunk))); return (write as any)(chunk, ...rest); }) as any; return child; }) as typeof spawn, timeoutMs: 5000 });
 });
 afterAll(async () => { await controller.close(); await app.close(); rmSync(dir, { recursive: true, force: true }); });
 const wait = async (id: string, state: string) => {
   await expect.poll(() => controller.status(id).state, { timeout: 4000 }).toBe(state);
   return controller.status(id);
 };
+
 it('requires workspace consent and an idle-session acknowledgement', async () => {
   await expect(controller.start(claudeId, 'test', false)).rejects.toMatchObject({ status: 400 });
   await expect(controller.start(claudeId, 'test', true)).rejects.toMatchObject({ status: 403 });
@@ -158,4 +160,36 @@ for (const harness of ['claude', 'codex'] as const) it(`${harness} exposes genui
   expect(preview.exposure).toBe(harness === 'claude' ? 'full' : 'summary');
   if (harness === 'claude') expect(launches.at(-1)!.args).toContain('--include-partial-messages');
   await controller.stop(id, run.runId);
+});
+
+for (const harness of ['claude', 'codex']) it(`${harness} receives redacted text attachments and real inline image content`, async () => {
+  const id = harness === 'claude' ? claudeId : codexId;
+  await access.approve(id);
+  const image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+  const first = frames.length;
+  const state = await controller.start(id, 'Review attached source', true, [
+    { name: 'src/example.ts', type: 'text', data: 'const token = "sk-proj-abcdefghijklmnopqrstuvw0123456789";' },
+    { name: 'screenshot.png', type: 'image', mime: 'image/png', data: image }
+  ]);
+  await wait(id, 'approval');
+  const sent = frames.slice(first).find(v => harness === 'claude' ? v.type === 'user' : v.method === 'turn/start');
+  const content = harness === 'claude' ? sent.message.content : sent.params.input;
+  expect(content[0].text).toContain('[Attached file: src/example.ts]');
+  expect(content[0].text).not.toContain('sk-proj-');
+  expect(content[1]).toEqual(harness === 'claude' ? { type: 'image', source: { type: 'base64', media_type: 'image/png', data: image } } : { type: 'image', url: `data:image/png;base64,${image}` });
+  expect(state.promptRedacted).toBe(true);
+  expect(JSON.stringify(controller.status(id))).not.toContain(image);
+  await controller.stop(id, state.runId);
+});
+
+it('rejects protected, binary, oversized and disguised image attachments before launching', async () => {
+  const before = launches.length;
+  for (const attachment of [
+    { name: '../secret.txt', type: 'text', data: 'secret' },
+    { name: '.env', type: 'text', data: 'secret' },
+    { name: 'file.bin', type: 'text', data: 'binary\0content' },
+    { name: 'large.txt', type: 'text', data: 'x'.repeat(512 * 1024 + 1) },
+    { name: 'fake.png', type: 'image', mime: 'image/png', data: Buffer.from('not an image').toString('base64') }
+  ]) await expect(controller.start(claudeId, 'Review', true, [attachment])).rejects.toMatchObject({ status: 400 });
+  expect(launches.length).toBe(before);
 });

@@ -6,6 +6,7 @@ import { redactText, sanitize } from '@drishya/privacy';
 import { App, HttpError } from './app.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { executable } from './native-executable.ts';
+import { attachmentText, prepareAttachments, type PromptAttachment } from './prompt-attachments.ts';
 export { executable } from './native-executable.ts';
 
 type RecordValue = Record<string, any>;
@@ -25,6 +26,7 @@ export interface ControllerState {
   inventory: 'unknown' | 'runtime';
   approvals: { id: string; name: string; detail: string }[];
   promptRedacted?: boolean;
+  attachments?: { name: string; type: 'text' | 'image' }[];
 }
 interface Run {
   state: ControllerState;
@@ -34,6 +36,7 @@ interface Run {
   timer: NodeJS.Timeout;
   shutdown?: NodeJS.Timeout;
   prompt?: string;
+  attachments?: PromptAttachment[];
   claudeSessionState?: string;
   claudeTasks: Set<string>;
   claudeResult: boolean;
@@ -78,6 +81,7 @@ export class HarnessController {
     run.state.error = error ? redactText(error).text.slice(0, 4000) : undefined;
     run.state.approvals = [];
     run.blocks.clear();
+    delete run.attachments; delete run.prompt;
     run.pending.clear();
     clearTimeout(run.timer);
     for (const p of run.requests.values()) { clearTimeout(p.timer); p.reject(new Error('harness connection ended')); }
@@ -102,13 +106,13 @@ export class HarnessController {
     run.state.state = 'approval';
   }
 
-  async start(id: string, prompt: unknown, exclusive: unknown): Promise<ControllerState> {
+  async start(id: string, prompt: unknown, exclusive: unknown, attachments?: unknown): Promise<ControllerState> {
     if (this.starting.has(id)) throw new HttpError(409, 'this session is already connecting');
     this.starting.add(id);
-    try { return await this.startTurn(id, prompt, exclusive); } finally { this.starting.delete(id); }
+    try { return await this.startTurn(id, prompt, exclusive, attachments); } finally { this.starting.delete(id); }
   }
 
-  private async startTurn(id: string, prompt: unknown, exclusive: unknown): Promise<ControllerState> {
+  private async startTurn(id: string, prompt: unknown, exclusive: unknown, attachments?: unknown): Promise<ControllerState> {
     if (id.includes('+')) throw new HttpError(400, 'choose one harness session');
     if (typeof prompt !== 'string' || !prompt.trim() || Buffer.byteLength(prompt) > 64 * 1024) throw new HttpError(400, 'prompt must be 1–65536 bytes');
     if (exclusive !== true) throw new HttpError(400, 'confirm this session is idle in its other harness clients');
@@ -133,9 +137,13 @@ export class HarnessController {
     } finally { await handle.close(); }
     if (!sessionId || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(sessionId)) throw new HttpError(409, 'no resumable native session ID in this journal');
     const safe = redactText(prompt);
+    const prepared = prepareAttachments(attachments);
+    const inputPrompt = attachmentText(safe.text, prepared.attachments);
     const args = name === 'claude' ? ['-p', '--resume', sessionId, '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-mode', 'manual', '--permission-prompts', 'host'] : ['app-server', '--stdio'];
     const child = (this.options.launch ?? spawn)(bin, args, { cwd: root, shell: false, windowsHide: true, stdio: 'pipe', env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', CLAUDE_CODE_SDK_READS_SESSION_STATE: '1' } }) as ChildProcessWithoutNullStreams;
     const state: ControllerState = { runId: randomUUID(), state: 'connecting', submittedPrompt: safe.text, afterSequence: rec.observationCount - 1, harness: rec.harness, available: true, output: '', tools: [], inventory: 'unknown', approvals: [], promptRedacted: safe.hits.length > 0 };
+    state.attachments = prepared.attachments.map(a => ({ name: a.name, type: a.type }));
+    state.promptRedacted ||= prepared.redacted;
     const run: Run = { state, child, pending: new Map(), requests: new Map(), blocks: new Map(), claudeTasks: new Set(), claudeResult: false, threadId: sessionId, sequence: 0, timer: setTimeout(() => this.finish(run, 'failed', 'harness turn exceeded the connection time limit'), this.options.timeoutMs ?? 30 * 60_000) };
     // Retain a bounded set of recent connection receipts, no raw journals or auth material.
     for (const [key, old] of this.runs) if (this.runs.size >= 16 && !['connecting', 'running', 'approval'].includes(old.state.state)) this.runs.delete(key);
@@ -144,7 +152,8 @@ export class HarnessController {
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk: string) => {
       buffer += chunk;
-      if (Buffer.byteLength(buffer) > 4 * 1024 * 1024) { this.finish(run, 'failed', 'harness frame exceeds 4 MiB'); return; }
+      // Native user-message notifications may echo our bounded inline images.
+      if (Buffer.byteLength(buffer) > 9 * 1024 * 1024) { this.finish(run, 'failed', 'harness frame exceeds 9 MiB'); return; }
       let end: number;
       while ((end = buffer.indexOf('\n')) >= 0) {
         const line = buffer.slice(0, end); buffer = buffer.slice(end + 1);
@@ -163,19 +172,21 @@ export class HarnessController {
     if (name === 'claude') {
       this.write(run, { type: 'control_request', request_id: 'initialize', request: { subtype: 'initialize', hooks: null } });
       // Claude's initialization response is handled before the user message is sent.
-      run.prompt = safe.text;
+      run.prompt = inputPrompt;
+      run.attachments = prepared.attachments.filter(a => a.type === 'image');
     } else {
-      void this.connectCodex(run, root, safe.text).catch(e => this.finish(run, 'failed', e.message));
+      void this.connectCodex(run, root, inputPrompt, prepared.attachments).catch(e => this.finish(run, 'failed', e.message));
     }
     return state;
   }
 
-  private async connectCodex(run: Run, root: string, prompt: string) {
+  private async connectCodex(run: Run, root: string, prompt: string, attachments: PromptAttachment[]) {
     await this.rpc(run, 'initialize', { clientInfo: { name: 'drishya', version: '0.1.0', title: 'Drishya' }, capabilities: { experimentalApi: false } });
     this.write(run, { method: 'initialized' });
     const resumed = await this.rpc(run, 'thread/resume', { threadId: run.threadId, cwd: root, approvalPolicy: 'untrusted', sandbox: 'workspace-write', excludeTurns: true });
     if (resumed.thread?.status?.type === 'active') throw new Error('native thread is already active; finish its other turn first');
-    const result = await this.rpc(run, 'turn/start', { threadId: run.threadId, input: [{ type: 'text', text: prompt, text_elements: [] }] });
+    const result = await this.rpc(run, 'turn/start', { threadId: run.threadId, input: [{ type: 'text', text: prompt, text_elements: [] }, ...attachments.filter(a => a.type === 'image').map(a => ({ type: 'image', url: `data:${a.mime};base64,${a.data}` }))] });
+    attachments = []; // Release image bytes before the optional inventory queries.
     run.turnId = result.turn?.id;
     if (run.state.state === 'connecting') run.state.state = 'running';
     // Inventory is the actual resumed thread runtime, not a global guessed MCP configuration.
@@ -197,8 +208,10 @@ export class HarnessController {
       if (v.type === 'control_response' && v.response?.request_id === 'initialize') {
         if (v.response.subtype !== 'success') throw new Error(v.response.error ?? 'Claude initialization failed');
         const prompt = run.prompt;
-        this.write(run, { type: 'user', session_id: run.threadId, message: { role: 'user', content: prompt } });
+        const images = run.attachments ?? [];
+        this.write(run, { type: 'user', session_id: run.threadId, message: { role: 'user', content: images.length ? [{ type: 'text', text: prompt }, ...images.map(a => ({ type: 'image', source: { type: 'base64', media_type: a.mime, data: a.data } }))] : prompt } });
         delete run.prompt;
+        delete run.attachments;
         run.state.state = 'running';
       } else if (v.type === 'control_request') {
         if (v.request?.subtype === 'can_use_tool') this.approval(run, v.request_id, 'claude-permission', String(v.request.tool_name), v.request.input);
@@ -263,7 +276,7 @@ export class HarnessController {
     if (run.turnId && v.params?.turnId && v.params.turnId !== run.turnId) return;
     const item = v.params?.item;
     if (v.method === 'turn/started') run.state.phase = 'waiting';
-    if (v.method === 'item/started') run.state.phase = item?.type === 'reasoning' ? 'thinking' : item?.type === 'agentMessage' ? 'responding' : 'tool';
+    if (v.method === 'item/started') run.state.phase = item?.type === 'reasoning' ? 'thinking' : item?.type === 'agentMessage' ? 'responding' : item?.type === 'userMessage' ? 'waiting' : 'tool';
     if (['item/agentMessage/delta', 'item/reasoning/summaryTextDelta', 'item/reasoning/textDelta'].includes(v.method) && typeof v.params?.delta === 'string' && typeof v.params.itemId === 'string') {
       const reasoning = v.method !== 'item/agentMessage/delta';
       run.state.phase = reasoning ? 'thinking' : 'responding';
