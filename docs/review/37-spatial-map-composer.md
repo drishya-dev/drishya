@@ -1,6 +1,6 @@
 # Spatial map, prompt attachments and shared card bounds
 
-8 October 2026. Supersedes review 36's shallow perspective/static default and deferred attachment implementation. Native progress and reasoning redaction from PR #50 (`6bf89ef`) remain. Work on `codex/spatial-composer-materials`; local validation only, publishing-only hosted CI remains mandatory.
+8 October 2026. Supersedes review 36's shallow perspective/static default and deferred attachment implementation. Native progress and reasoning redaction from PR #50 (`6bf89ef`) remain. Merged through [PR #51](https://github.com/drishya-dev/drishya/pull/51) as `29a7c75`, local main updated; local validation only, publishing-only hosted CI remains mandatory.
 
 ## Builder corrections and delivered behavior
 
