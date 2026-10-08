@@ -4,7 +4,7 @@
 
 Local evidence: typechecks/build + 289 units passed; ordinary browser journeys passed across full/focused runs. Ten-minute synthetic reading passed (604,858 ms, 103 rounds, 895 peak DOM nodes); final narrow fixes followed its start and have scoped checks. A 24-second 4× CPU demo probe improved p99 frames from 50 to 16.8 ms, with no automatic follow detachment; long-task time stayed similar. Heap counters are JavaScript-only, not total RAM. Review 33 for timing, resource caps and unmeasured physical/platform scope. Local synthetic preview remains at port 7878; no new branch/commit/PR/hosted CI.
 
-**Latest baseline:** PR #46 merged on main (`79e5d82`), local checks only; unrelated package-manager edits remain local.
+**Latest baseline:** Harsh PR #47 merged on main (`e1ca4d3`) after independent local review and a high-refresh follow endpoint correction. Post-fix: 289 units/typechecks, 54 browser journeys (2 opt-ins skipped), packaging and unchanged demo pass; no hosted CI. See reviewer section in [33](review/33-smooth-follow-map.md). Unrelated package-manager edits remain local.
 
 **Latest publishing authorization — 8 October:** Harsh requested a PR and Yash review after all local CI checks. The complete candidate passed frozen-lock install, typechecks + 289 units, full browser suite (54 passed, two opt-in skips), isolated offline package verification, unchanged regenerated demo bundle and diff checks. Fresh final-code ten-minute reading passed at 605,196 ms / 103 rounds / 895 peak DOM nodes. `harsh/fix-workspace-toolbar` includes the unmerged search-dismissal commit. Only source/tests/docs are committed; `.local` evidence and stores stay local. Hosted CI remains undispatched.
 

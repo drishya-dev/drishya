@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Independent replay reading and compact prompt #46 merged on main (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **Smooth follow and workspace navigation #47 merged on main (`e1ca4d3`), following replay/prompt #46 (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -64,7 +64,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 8 October 2026; independent review of Harsh's PR #47. The implementation is documented in [33](review/33-smooth-follow-map.md); #46 remains the prior baseline.
+- **When:** 8 October 2026; independent review of Harsh's [PR #47](https://github.com/drishya-dev/drishya/pull/47), merged as `e1ca4d3`. The implementation is documented in [33](review/33-smooth-follow-map.md); #46 remains the prior baseline.
 - **Delivered:** pulled and reviewed smooth follow, compositor-only material motion, bounded SVG updates, responsive header/search, observed graph scope and static direct/reverse imports. Found high-refresh subpixel rounding that left follow 2–4 px short and caused six existing browser failures. Guaranteed one-pixel endpoint progress without weakening test assertions; the native-session probe now reaches the exact edge. Preserve Harsh's implementation and attribution. Solid compact prompt and independent replay reading remain intact.
 - **Checks:** Post-correction typechecks and 289 unit tests, production UI build, isolated offline package install/import/API/restart, unchanged generated demo and clean diff passed locally. Full browser rerun passed 54 journeys with two expected opt-ins skipped. Reviewed desktop/mobile integrated frames. Harsh's final ten-minute reading evidence predates the small reviewer correction; do not describe it as a fresh post-correction soak. No hosted CI.
 - **Next:** Human preference review of the denser header plus existing physical/platform/native release acceptance. Shared later matrix remains in 30. Three unrelated package-manager edits remain local.
