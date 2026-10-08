@@ -80,7 +80,10 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       if (event.pointerType !== 'mouse' || event.buttons || !permitted()) return;
       if (getSelection()?.toString()) { clearTimers(); return; }
       const target = (event.target as Element).closest<HTMLElement>('.op[data-op-id]') ?? [...focuses].find(focus => event.target === focus.slot)?.card;
-      const own = target === active?.card || event.target === active?.slot;
+      // Scrolling moves the source slot, not the viewport-fixed reader. Hit-test
+      // its actual enlarged bounds; browser :hover/event targets can lag a scroll.
+      const bounds = active?.card.getBoundingClientRect();
+      const own = bounds && event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
       if (own) { clearTimers(); return; }
       if (target && root.contains(target) && target.dataset.hoverReading !== 'focused') {
         clearTimeout(leave);
@@ -114,12 +117,11 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       root.scrollBy({ top: event.deltaY * unit, left: event.deltaX * unit });
     };
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') reset(); };
-    const scroll = () => { if (active && !active.card.matches(':hover') && !getSelection()?.toString()) close(active); };
     const unsubscribe = useApp.subscribe(() => { if (!permitted()) reset(); });
     const observer = new MutationObserver(() => { for (const focus of [...focuses]) if (!focus.card.isConnected) close(focus, true); });
     observer.observe(root, { childList: true, subtree: true });
     document.addEventListener('wheel', wheel, { capture: true, passive: false }); document.addEventListener('pointermove', move); document.addEventListener('keydown', key);
-    root.addEventListener('scroll', scroll, { passive: true }); window.addEventListener('resize', reset); window.addEventListener('blur', reset);
-    return () => { reset(); observer.disconnect(); unsubscribe(); document.removeEventListener('wheel', wheel, true); document.removeEventListener('pointermove', move); document.removeEventListener('keydown', key); root.removeEventListener('scroll', scroll); window.removeEventListener('resize', reset); window.removeEventListener('blur', reset); };
+    window.addEventListener('resize', reset); window.addEventListener('blur', reset);
+    return () => { reset(); observer.disconnect(); unsubscribe(); document.removeEventListener('wheel', wheel, true); document.removeEventListener('pointermove', move); document.removeEventListener('keydown', key); window.removeEventListener('resize', reset); window.removeEventListener('blur', reset); };
   }, [history]);
 }

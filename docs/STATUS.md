@@ -64,10 +64,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 8 October 2026; scroll-preserved motion and prompt rail, merged as [PR #49](https://github.com/drishya-dev/drishya/pull/49), main `e34ee14`.
-- **Delivered:** wheel input no longer cancels arrivals/reflow/settlement/prose. Hover result boundaries forward to history without closing the real enlarged card; the source passage stays pinned. Follow remains upward-only. Gesture/React layout timing now preserves the new reading position, including an independent document-start boundary when virtualization temporarily has no mounted passage. Native response duplicate removed; errors/approvals retained. Compact arrow/square send/stop controls. Search entrance starts at the final corner. Prompt navigation uses bounded equal-rank chapters with active white tick and captured prompt hover/focus preview, separately from the scrollbar. See review 35.
-- **Checks:** Local typechecks, 292 units, production UI/isolated packed install/API/restart and 57 regular browser journeys passed (two opt-ins skipped); hover/start regression repeated three times. Rendered prompt rail/search/composer reviewed. Final-code ten-minute synthetic reading passed: 603,879 ms, 92 bursts, 804 peak DOM nodes; see review 35. No hosted CI.
-- **Next:** Human preference and native/physical/platform acceptance remain separate; attachments/full access/multi-agent matrix stays in review 30. Unrelated package-manager edits preserved.
+- **When:** 8 October 2026; small fixed-hover clarification directly on main after PR #49.
+- **Delivered:** scroll events no longer dismiss an enlarged card. It keeps its viewport position and dimensions while history scrolls behind it, until the cursor actually moves outside its enlarged rectangle. Pointer geometry supersedes stale browser `:hover`/event-target state and the moving source slot. Existing escape/view guards and independent Follow/capture/replay remain.
+- **Checks:** Local typechecks/build and three affected browser journeys passed: live hover/capture, nested result boundaries with unchanged position/size and pointer departure, and whole-card hover/switch/selection/reduced motion. Regression includes a post-scroll event retargeted to history with coordinates inside the card. No hosted CI; prior broad/sustained evidence remains in review 35, not claimed as rerun here.
+- **Next:** Human preference and native/physical/platform acceptance remain separate; unrelated package-manager edits preserved.
 
 ## Next up
 
@@ -111,6 +111,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **8 October — fixed hover reader after scroll:** keep the enlarged card at its viewport allocation through scrolling; only actual cursor movement outside its enlarged bounds triggers pointer return. Scroll-driven source-slot movement or stale browser `:hover` targets cannot dismiss it. Escape/explicit view guards remain; latest clarification in review/35.
 
 - **8 October — scrolling is not motion cancellation:** latest builder feedback keeps finite arrivals/settlement/reflow and hover readers alive through wheel input. A nested hover result consumes its own scroll, then forwards the gesture to history without collapsing the card. Pin its one source passage. Restore the anchor after the gesture, not before the native scroll event; hold the document start independently of virtualized DOM presence. Independent prompt chapter rail, icon composer controls and corner-only search entrance; duplicate native output receipt removed, errors/approvals retained. See review/35. Supersedes the dismissal/cancellation parts of review 34; upward-only Follow stays.
 

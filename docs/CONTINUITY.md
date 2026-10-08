@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Latest hover clarification:** The enlarged card keeps its viewport position/size through scrolling. Scroll events do not dismiss it; cursor movement outside its enlarged bounds triggers return. Hit-test the card rectangle, not the moving source slot or transient `:hover` target. See the latest section of review 35. Local type/build and three affected browser checks passed; no hosted CI.
+
 **Latest scroll refinement — 8 October:** [35 — Scrolling preserves motion](review/35-scroll-preserved-reading.md) supersedes wheel cancellation/hover dismissal in 34: finite motion continues through scrolling, hover boundaries forward to history without closing the reader, prompt navigation is an independent chapter rail with an active mark, native response duplicates are removed, send/stop use compact icons and search enters at its final corner. Upward-only Follow, native consent, provenance and publishing-only hosted CI remain.
 
 **Current merge:** [PR #49](https://github.com/drishya-dev/drishya/pull/49), main `e34ee14`, Yash author with Codex co-author. Final local 292 units/typechecks, 57 regular browser checks, packaging and ten-minute reading (603,879 ms, 92 bursts, 804 peak DOM nodes) passed. No hosted CI; unrelated package-manager edits remain local.

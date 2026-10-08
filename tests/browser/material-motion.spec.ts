@@ -144,6 +144,7 @@ test('hover result boundaries scroll history without dismissing the same reading
   await card.hover();
   await expect(card).toHaveAttribute('data-hover-reading', 'focused');
   await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+  const focusedBounds = (await card.boundingBox())!;
   const body = card.locator('.op-body');
   await expect.poll(() => body.evaluate(el => el.scrollHeight > el.clientHeight + 1)).toBe(true);
   await body.hover();
@@ -161,6 +162,14 @@ test('hover result boundaries scroll history without dismissing the same reading
   await page.mouse.wheel(0, 100);
   await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeGreaterThan(above);
   await expect(card).toHaveAttribute('data-hover-reading', 'focused');
-  await page.keyboard.press('Escape');
+  // A scroll can retarget a pointer event to the underlying history while its
+  // coordinates still lie within the fixed reader. Only those bounds matter.
+  await history.dispatchEvent('pointermove', { pointerType: 'mouse', clientX: focusedBounds.x + 20, clientY: focusedBounds.y + 20, buttons: 0 });
+  await page.waitForTimeout(400); // Past the deliberate pointer-departure dwell.
+  await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+  const afterScroll = (await card.boundingBox())!;
+  for (const dimension of ['x', 'y', 'width', 'height'] as const) expect(Math.abs(afterScroll[dimension] - focusedBounds[dimension])).toBeLessThan(1);
+  await page.mouse.move(focusedBounds.x - 20, focusedBounds.y + 20);
+  await expect(card).not.toHaveAttribute('data-hover-reading', 'focused');
   await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
 });
