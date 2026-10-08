@@ -1,4 +1,3 @@
-import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Projection } from '@drishya/contracts';
@@ -332,8 +331,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
         if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); });
         return;
       }
-      if (!useApp.getState().follow) interrupt();
-      else if (!raf) {
+      if (!raf) {
         // Active DOM arrivals retarget themselves across follow scrolling.
         // The follow scroll can land after measurement. Retry only this update's
         // unshown cues; emitted identities prevent repeating an already visible arrival.
@@ -348,13 +346,11 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
     const materials = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); });
     materials.observe(history, { childList: true, subtree: true });
     history.addEventListener('scroll', scroll, { passive: true });
-    const wheel = (event: Event) => { if (!scrollsInsideMaterial(event.target)) interrupt(); };
-    history.addEventListener('wheel', wheel, { passive: true });
     viewer.addEventListener('pointerdown', interrupt, { passive: true });
     viewer.addEventListener('keydown', interrupt);
     document.addEventListener('visibilitychange', interrupt);
     preference.addEventListener('change', interrupt);
-    return () => { resize.disconnect(); materials.disconnect(); history.removeEventListener('scroll', scroll); history.removeEventListener('wheel', wheel); viewer.removeEventListener('pointerdown', interrupt); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
+    return () => { resize.disconnect(); materials.disconnect(); history.removeEventListener('scroll', scroll); viewer.removeEventListener('pointerdown', interrupt); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
   }, [scene, projection, motion, hoveredOp, selectedOp, mapVisible, explore, follow, paged, theme, compareAgents, settingsOpen, filePanel, mode, stagedArrival, isProgrammaticScroll]);
   return typeof document === 'undefined' ? null : createPortal(<svg className="origins" ref={svg} aria-hidden="true" />, document.body);
 }

@@ -28,6 +28,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const follow = useApp((s) => s.follow);
   const selectedOp = useApp((s) => s.selectedOp);
   const expandedOp = useApp((s) => s.expandedOp);
+  const hoveredOp = useApp((s) => s.hoveredOp);
   const focusObservationId = useApp((s) => s.focusObservationId);
   const promptStep = useApp((s) => s.promptStep);
   const set = useApp((s) => s.set);
@@ -44,7 +45,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const scrollFrame = useRef<number | undefined>(undefined);
   const navigationFrame = useRef<number | undefined>(undefined);
   const navigating = useRef(false);
-  const readingAnchor = useRef<{ id: string; offset: number; atStart?: boolean } | undefined>(undefined);
+  const readingAnchor = useRef<{ id: string; offset: number } | undefined>(undefined);
+  const readingAtStart = useRef(false);
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
   const navigationBoundary = useRef<{ step: number; projection: Projection } | undefined>(undefined);
@@ -79,9 +81,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const observer = new ResizeObserver(measure);
     const inner = history.querySelector('.history-inner'); if (inner) observer.observe(inner);
     for (const card of history.querySelectorAll('article[data-op-id]')) observer.observe(card);
-    const cancel = (event: WheelEvent) => { const local = scrollsInsideMaterial(event.target); const own = (event.target as Element)?.closest('article[data-op-id]'); for (const card of history.querySelectorAll('article[data-op-id]')) if (!local || card === own) for (const a of card.getAnimations()) if (a.id.startsWith('surface-')) a.cancel(); };
-    history.addEventListener('wheel', cancel, { passive: true });
-    return () => { observer.disconnect(); history.removeEventListener('wheel', cancel); };
+    return () => observer.disconnect();
   }, [scene.passages, follow, lowResource, measurementVersion, viewport.height]);
 
   useLayoutEffect(() => {
@@ -108,10 +108,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const targetId = scene.passages[targetIndex]?.id;
   const expandedId = scene.passages.find((ps) => ps.ops.some((op) => op.id === expandedOp))?.id;
   const ids = scene.passages.map((ps) => ps.id);
-  const pinned = new Set([readingAnchor.current?.id, targetId, expandedId, focusedPassageId].filter((id): id is string => !!id));
+  const hoverPassageId = scene.passages.find(ps => ps.ops.some(op => op.id === hoveredOp))?.id;
+  const pinned = new Set([readingAnchor.current?.id, targetId, expandedId, focusedPassageId, hoverPassageId].filter((id): id is string => !!id));
   const layout = useMemo(() => passageWindow(ids, measurements.current, viewport.top, viewport.height, pinned, lowResource ? 300 : 900),
     // IDs and pinning are recreated as scene and reader state change. Measurements need their own revision.
-    [scene.passages, viewport, measurementVersion, targetId, expandedId, focusedPassageId, readingAnchor.current?.id, lowResource]);
+    [scene.passages, viewport, measurementVersion, targetId, expandedId, focusedPassageId, hoverPassageId, readingAnchor.current?.id, lowResource]);
 
   useLayoutEffect(() => {
     // A selection can end outside history. Do not leave following locked by a
@@ -151,7 +152,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       const bounds = item.getBoundingClientRect();
       return bounds.bottom > viewport.top + 1 && bounds.top < viewport.bottom;
     });
-    readingAnchor.current = node?.dataset.passageId ? { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top, atStart: el.scrollTop < 1 } : undefined;
+    // The start boundary exists even while virtualization has no mounted passage there.
+    readingAtStart.current = el.scrollTop < 1 || navigating.current && readingAtStart.current;
+    readingAnchor.current = node?.dataset.passageId ? { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top } : undefined;
     if (useApp.getState().readingPassageId !== readingAnchor.current?.id) set({ readingPassageId: readingAnchor.current?.id });
   };
 
@@ -209,10 +212,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const anchor = readingAnchor.current;
     const boundary = navigationBoundary.current;
     const atDestination = boundary?.step === scene.step && boundary.projection === projection;
-    if (!el || follow && !atDestination || !anchor || navigating.current) return;
+    if (!el || follow && !atDestination || navigating.current) return;
     // At the document start, late allocation changes must preserve the boundary,
     // rather than pull the reader down to an old first-passage pixel offset.
-    if (anchor.atStart) { if (el.scrollTop > .5) setScrollTop(0); return; }
+    if (readingAtStart.current) { if (el.scrollTop > .5) setScrollTop(0); return; }
+    if (!anchor) return;
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
@@ -221,7 +225,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   useLayoutEffect(() => {
     if (follow) {
-      readingAnchor.current = undefined;
+      readingAnchor.current = undefined; readingAtStart.current = false;
     } else {
       if (followFrame.current !== undefined) cancelAnimationFrame(followFrame.current);
       followFrame.current = undefined;
@@ -288,6 +292,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       lastNavigation.current = targetId;
       pendingNavigation.current = targetId;
       navigationBoundary.current = { step: scene.step, projection };
+      readingAtStart.current = false;
       setScrollTop(layout.prefix[targetIndex]!);
       return;
     }
@@ -357,6 +362,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false });
   };
 
+  const prompts = scene.passages.flatMap((ps, index) => ps.turnPrompt ? [{ ps, index }] : []);
+  const readingIndex = Math.max(0, layout.prefix.findIndex((_, index) => index < scene.passages.length && layout.prefix[index + 1]! > viewport.top + 80));
+  const activePrompt = prompts.findLast(item => item.index <= readingIndex)?.ps.id ?? prompts[0]?.ps.id;
+  const railPrompts = prompts.filter((item, index) => item.ps.id === activePrompt || index % Math.max(1, Math.ceil(prompts.length / 60)) === 0 || index === prompts.length - 1);
+
   const holdForSelection = (event: React.SyntheticEvent) => {
     if ((event.target as HTMLElement).closest('button, input, select, a')) return;
     const selection = window.getSelection();
@@ -368,7 +378,23 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   return (
     <>
-    <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => { if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; } userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY < 0) { rememberReading(); set({ follow: false }); } }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) userScrollUntil.current = performance.now() + 750; }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
+    <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
+      if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; }
+      userScrollUntil.current = performance.now() + 750;
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? (ref.current?.clientHeight ?? 1) : 1;
+      const reachesStart = e.deltaY < 0 && (ref.current?.scrollTop ?? 0) + e.deltaY * unit <= 0;
+      readingAtStart.current = reachesStart;
+      // A forwarded hover wheel updates Follow before the native scroll event.
+      // Do not restore its old anchor in the intervening React layout commit.
+      navigating.current = true;
+      if (follow && e.deltaY < 0) { rememberReading(); if (reachesStart) readingAtStart.current = true; set({ follow: false }); }
+      if (navigationFrame.current !== undefined) cancelAnimationFrame(navigationFrame.current);
+      navigationFrame.current = requestAnimationFrame(() => {
+        navigationFrame.current = requestAnimationFrame(() => {
+          rememberReading(); navigating.current = false; restoreReading(); navigationFrame.current = undefined;
+        });
+      });
+    }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) { userScrollUntil.current = performance.now() + 750; readingAtStart.current = false; } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) readingAtStart.current = false; if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
       // Pin the interacted material after activation without disabling Follow.
       if ((e.target as HTMLElement).closest('button, input, select, a')) {
         const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId;
@@ -400,19 +426,19 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       <Origins scene={scene} projection={projection} isProgrammaticScroll={isProgrammaticScroll} />
       <FlowConnections projection={projection} />
     </div>
-      {mode === 'history' && <nav className="history-prompt-marks" aria-label={onWindow ? 'Prompts in loaded history' : 'Prompt positions in history'}>
-        {scene.passages.map((ps, index) => ({ ps, index })).filter(item => item.ps.turnPrompt).filter((_, index, items) => index % Math.max(1, Math.ceil(items.length / 60)) === 0).slice(0, 60).map(({ ps, index }) => <button key={ps.id} aria-label={`Go to prompt: ${ps.turnPrompt}`} title={ps.turnPrompt} style={{ top: `${Math.max(0, Math.min(100, layout.prefix[index]! / Math.max(1, layout.total) * 100))}%` }} onClick={() => {
+      {mode === 'history' && prompts.length > 0 && <nav className="history-prompt-marks" aria-label={onWindow ? 'Prompts in loaded history' : 'Prompt positions in history'}>
+        {railPrompts.map(({ ps, index }) => <button key={ps.id} aria-label={`Go to prompt: ${ps.turnPrompt}`} aria-current={ps.id === activePrompt ? 'location' : undefined} onClick={() => {
           set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
           navigationBoundary.current = { step: scene.step, projection };
           setFocusedPassageId(ps.id);
-          readingAnchor.current = { id: ps.id, offset: 0 };
+          readingAnchor.current = { id: ps.id, offset: 0 }; readingAtStart.current = false;
           setScrollTop(layout.prefix[index]!);
-        }} />)}
+        }}><span className="prompt-rail-tick" aria-hidden="true" /><span className="prompt-rail-preview"><small>Prompt {prompts.findIndex(item => item.ps.id === ps.id) + 1}</small><span>{ps.turnPrompt}</span></span></button>)}
       </nav>}
       {(!follow || navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection) && (
         <button className="follow-pill" aria-label={`${mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest`} title="Back to latest" onClick={() => {
           userScrollUntil.current = 0;
-          navigationBoundary.current = undefined; readingAnchor.current = undefined;
+          navigationBoundary.current = undefined; readingAnchor.current = undefined; readingAtStart.current = false;
           setFocusedPassageId(undefined);
           requestAnimationFrame(() => followLatest());
           set({ follow: true, selectedOp: undefined, focusObservationId: undefined, promptStep: undefined, held: false });
@@ -468,9 +494,8 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
     if (!root || !arriving || !useApp.getState().motion || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const animations = [...root.querySelectorAll(':scope > p, :scope > ul, :scope > pre')].slice(0, 12).map((el, i) => el.animate([{ opacity: .12, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 400, delay: Math.min(480, i * 40), fill: 'backwards', easing: 'ease-out' }));
     const cancel = () => animations.forEach(a => a.cancel());
-    const history = root.closest('.history'); history?.addEventListener('wheel', cancel, { passive: true });
     root.addEventListener('pointerdown', cancel); window.addEventListener('keydown', cancel);
-    return () => { cancel(); history?.removeEventListener('wheel', cancel); root.removeEventListener('pointerdown', cancel); window.removeEventListener('keydown', cancel); };
+    return () => { cancel(); root.removeEventListener('pointerdown', cancel); window.removeEventListener('keydown', cancel); };
   }, [arriving, pr.id]);
   const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   return (

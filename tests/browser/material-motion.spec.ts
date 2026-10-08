@@ -127,3 +127,40 @@ test('hover reading preserves live follow and safely releases when new captured 
   await page.keyboard.press('Escape');
   await expect(page.locator('.op:popover-open')).toHaveCount(0);
 });
+
+
+test('hover result boundaries scroll history without dismissing the same reading surface', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  const id = 'hover-boundary-proof';
+  append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
+  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 100 }, (_, n) => `Captured documentation ${n}`).join('\n') }] } });
+  await app.ingest.sync(recordingId);
+  const card = page.locator('article.op-mcp').filter({ hasText: id });
+  const history = page.locator('.history');
+  await expect(card).toContainText('Captured documentation');
+  await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+  await card.hover();
+  await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+  await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+  const body = card.locator('.op-body');
+  await expect.poll(() => body.evaluate(el => el.scrollHeight > el.clientHeight + 1)).toBe(true);
+  await body.hover();
+  await page.mouse.wheel(0, 80);
+  await expect.poll(() => body.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+  await card.evaluate(el => { for (const node of [el, ...el.querySelectorAll<HTMLElement>('*')]) node.scrollTop = 0; });
+  const before = await history.evaluate(el => el.scrollTop);
+  await page.mouse.wheel(0, -140);
+  await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeLessThan(before);
+  await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+  await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'false');
+  await card.evaluate(el => { for (const node of [el, ...el.querySelectorAll<HTMLElement>('*')]) node.scrollTop = node.scrollHeight; });
+  const above = await history.evaluate(el => el.scrollTop);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeGreaterThan(above);
+  await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
+});

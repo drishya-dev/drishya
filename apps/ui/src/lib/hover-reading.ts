@@ -101,20 +101,20 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
     const wheel = (event: WheelEvent) => {
       const card = active?.card;
       if (!card || !(event.target instanceof Element) || !card.contains(event.target)) return;
-      // Let a real nested result consume the wheel; at its boundary return to history.
+      // At a result boundary, scroll history without tearing down the reading surface.
       for (let node: Element | null = event.target; node && node !== card; node = node.parentElement) {
         if (!(node instanceof HTMLElement)) continue;
         const style = getComputedStyle(node);
         if (/auto|scroll/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1 &&
             (event.deltaY < 0 ? node.scrollTop > 0 : node.scrollTop + node.clientHeight < node.scrollHeight - 1)) return;
       }
-      event.preventDefault(); event.stopPropagation(); reset();
+      event.preventDefault(); event.stopPropagation(); clearTimers();
       root.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: event.deltaY, deltaX: event.deltaX, deltaMode: event.deltaMode }));
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? root.clientHeight : 1;
       root.scrollBy({ top: event.deltaY * unit, left: event.deltaX * unit });
     };
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') reset(); };
-    const scroll = () => { if (active || focuses.size) reset(); };
+    const scroll = () => { if (active && !active.card.matches(':hover') && !getSelection()?.toString()) close(active); };
     const unsubscribe = useApp.subscribe(() => { if (!permitted()) reset(); });
     const observer = new MutationObserver(() => { for (const focus of [...focuses]) if (!focus.card.isConnected) close(focus, true); });
     observer.observe(root, { childList: true, subtree: true });

@@ -76,9 +76,9 @@ export function settleArrival(element: HTMLElement, start: DOMRect, flight: Anim
     delete element.dataset.materialSettling;
   };
   const interrupt = () => { interrupted = true; clearTimeout(timer); growth?.cancel(); restore(); cleanup(); };
-  const cleanup = () => { history?.removeEventListener('wheel', interrupt); history?.removeEventListener('pointerdown', interrupt); window.removeEventListener('keydown', interrupt); unsubscribe(); };
+  const cleanup = () => { history?.removeEventListener('pointerdown', interrupt); window.removeEventListener('keydown', interrupt); unsubscribe(); };
   const history = element.closest('.history');
-  history?.addEventListener('wheel', interrupt, { passive: true }); history?.addEventListener('pointerdown', interrupt); window.addEventListener('keydown', interrupt);
+  history?.addEventListener('pointerdown', interrupt); window.addEventListener('keydown', interrupt);
   unsubscribe = useApp.subscribe(state => { if (!state.motion || state.lowResource || state.explore) interrupt(); });
   void flight.finished.then(() => {
     if (interrupted) return;
