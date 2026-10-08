@@ -89,6 +89,41 @@ test('selected workspace folders read current files separately from the exact hi
   await expect(page.locator('.history')).toBeVisible();
 });
 
+test('composer attaches code and pasted screenshots, removes chips and sends them through the native API', async ({ page }) => {
+  await page.goto(server.launchUrl); await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
+  if (await enable.count()) await enable.click();
+  await composer.locator('input[aria-label="Choose prompt files"]').setInputFiles([
+    { name: 'source.ts', mimeType: 'text/plain', buffer: Buffer.from('export const selectedSource = true;') },
+    { name: 'remove.txt', mimeType: 'text/plain', buffer: Buffer.from('Remove this attachment') }
+  ]);
+  await expect(composer.getByRole('button', { name: 'Remove attachment source.ts' })).toBeVisible();
+  await composer.getByRole('button', { name: 'Remove attachment remove.txt' }).click();
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+  await composer.getByRole('textbox').evaluate((el, image) => {
+    const clipboardData = new DataTransfer();
+    clipboardData.items.add(new File([Uint8Array.from(atob(image), char => char.charCodeAt(0))], 'screenshot.png', { type: 'image/png' }));
+    el.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData }));
+  }, png);
+  await expect(composer.getByRole('img', { name: 'Preview screenshot.png' })).toBeVisible();
+  let sent: any;
+  await page.route('**/controller/prompt', async route => { sent = route.request().postDataJSON(); await route.continue(); });
+  await composer.getByRole('textbox').fill('Review the attached source and screenshot');
+  await composer.getByRole('button', { name: 'Send prompt', exact: true }).click();
+  await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
+  await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();
+  await expect(composer).toContainText('approval requested');
+  expect(sent.attachments.map((a: any) => a.name)).toEqual(['source.ts', 'screenshot.png']);
+  expect(sent.attachments[1].data).toBe(png);
+  await expect(composer.locator('.attachment-chip')).toHaveCount(0);
+  await composer.getByRole('button', { name: 'Stop turn', exact: true }).click();
+  await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeVisible();
+  await composer.locator('input[aria-label="Choose prompt folder"]').setInputFiles(join(dir, 'session-repository'));
+  await expect(composer.locator('.attachment-chip')).not.toHaveCount(0);
+  if (process.env.DRISHYA_REVIEW_SHOTS) await page.screenshot({ path: resolve('.local/attachment-composer.png') });
+});
+
 test('the composer submits through the real API transport, handles one approval and keeps session ownership visible',async({page})=>{
   await page.goto(server.launchUrl); await page.getByRole('button',{name:/Connected workspace synthetic session/}).click();
   await expect(page.getByRole('textbox',{name:'Prompt for selected harness session'})).toBeVisible();
@@ -96,7 +131,7 @@ test('the composer submits through the real API transport, handles one approval 
   await expect(composer).toContainText('session-repository');
   const box = await composer.boundingBox();
   expect(Math.abs(box!.x + box!.width / 2 - page.viewportSize()!.width / 2)).toBeLessThan(2);
-  await expect(composer.getByRole('button', { name: 'Add files or folders (coming later)' })).toBeDisabled();
+  await expect(composer.getByRole('button', { name: 'Add files or folders' })).toBeEnabled();
 
   const enable=composer.getByRole('button',{name:'Enable this workspace',exact:true});
   if (await enable.count()) await enable.click();
@@ -209,11 +244,12 @@ test('a large repository groups spatial density and reveals files at the zoomed 
   await expect.poll(() => page.locator('.map-group').count()).toBeGreaterThan(0);
   expect(await page.locator('.map-group').count()).toBeLessThan(48);
   await expect(page.locator('.map-legend')).toContainText('180 files');
+  await expect(page.locator('.map')).toHaveAttribute('data-map-depth', 'spatial-3d');
   await page.evaluate(() => {
-    const context = document.querySelector<HTMLCanvasElement>('.map canvas')!.getContext('2d')!;
-    const clear = context.clearRect.bind(context);
+    const context = document.querySelector<HTMLCanvasElement>('[data-spatial-renderer]')!.getContext('webgl')!;
+    const clear = context.clear.bind(context);
     (window as any).mapPaints = 0;
-    context.clearRect = (...args: Parameters<CanvasRenderingContext2D['clearRect']>) => { (window as any).mapPaints++; clear(...args); };
+    context.clear = (...args: Parameters<WebGLRenderingContext['clear']>) => { (window as any).mapPaints++; clear(...args); };
   });
   await page.locator('.map-group').first().click();
   await expect.poll(() => page.evaluate(() => (window as any).mapPaints)).toBeGreaterThan(3);

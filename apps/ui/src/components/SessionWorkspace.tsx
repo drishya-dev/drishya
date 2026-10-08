@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type CurrentFile } from '../api.ts';
+import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type CurrentFile, type PromptAttachment } from '../api.ts';
+import { promptFiles } from '../lib/prompt-files.ts';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -8,7 +9,7 @@ import type { Scene } from '@drishya/scene';
 import { FileIcon } from './FileIcon.tsx';
 
 interface Connection {
-  submitting?: boolean; submit: (prompt: string, exclusive: boolean) => Promise<void>;
+  submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[]) => Promise<void>;
   workspace?: WorkspaceStatus; controller?: ControllerStatus; error?: string;
   refresh: () => Promise<void>; approve: () => Promise<void>;
 }
@@ -57,11 +58,11 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     if (useApp.getState().recordingId !== id) return;
     setWorkspace(w); useApp.setState({ graph });
   };
-  const submit = async (prompt: string, exclusive: boolean) => {
+  const submit = async (prompt: string, exclusive: boolean, attachments?: PromptAttachment[]) => {
     if (!eligible) return;
     setSubmitting(true);
     ++revision.current;
-    try { const state = await workspaceApi.prompt(id!, prompt, exclusive); if (useApp.getState().recordingId === id) { ++revision.current; setController(state); } }
+    try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments); if (useApp.getState().recordingId === id) { ++revision.current; setController(state); } }
     finally { if (useApp.getState().recordingId === id) setSubmitting(false); }
   };
   return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve }}>{children}</SessionContext.Provider>;
@@ -79,12 +80,12 @@ export function NativeTurn({ projection }: { projection: Projection }) {
   const capturedIds = new Set(projection.timeline.flatMap(item => item.type === 'prose' && item.sequence > (controller?.afterSequence ?? 0) ? [item.proseId] : []));
   const captured = preview && projection.prose.some(p => capturedIds.has(p.id) && p.text.trim() === preview.text.trim());
   const prompt = controller?.submittedPrompt;
-  const promptCaptured = prompt && projection.timeline.some(p => p.type === 'turn' && p.sequence > (controller?.afterSequence ?? 0) && p.prompt?.trim() === prompt.trim());
+  const promptCaptured = prompt && projection.timeline.some(p => p.type === 'turn' && p.sequence > (controller?.afterSequence ?? 0) && (p.prompt?.trim() === prompt.trim() || !!controller?.attachments?.length && p.prompt?.startsWith(prompt + '\n\n[Attached file: ')));
   const visible = preview && !captured && (preview.role !== 'reasoning' || detail !== 'hidden');
   if (!submitting && !running && !visible && (!prompt || promptCaptured)) return null;
   const phase = submitting ? 'Sending prompt…' : controller?.state === 'connecting' ? 'Connecting to native session…' : controller?.state === 'approval' ? 'Waiting for your approval' : controller?.phase === 'thinking' ? 'Thinking…' : controller?.phase === 'responding' ? 'Receiving response…' : controller?.phase === 'tool' ? 'Working with tools…' : 'Waiting for the agent…';
   return <section className="native-live-work" aria-label="Native turn progress">
-    {prompt && !promptCaptured && <div className="turn"><div className="turn-text"><small className="muted">Submitted here</small><p>{prompt}</p></div></div>}
+    {prompt && !promptCaptured && <div className="turn"><div className="turn-text"><small className="muted">Submitted here</small><p>{prompt}</p>{!!controller?.attachments?.length && <small>{controller.attachments.map(a => a.name).join(' · ')}</small>}</div></div>}
     {(submitting || running) && <p className="native-phase" role="status">{phase}</p>}
     {visible && <div className="prose" data-native-preview={preview.id}><small className="muted">Live from harness · {preview.role === 'reasoning' ? preview.exposure === 'summary' ? 'reasoning summary' : 'exposed thinking' : 'response'}</small>{preview.role === 'reasoning' && detail === 'collapsed' ? <details><summary>Read exposed reasoning</summary><pre>{preview.text}</pre></details> : <pre>{preview.text}</pre>}</div>}
   </section>;
@@ -186,6 +187,18 @@ export function PromptComposer() {
   const element = useRef<HTMLElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const [confirmSend, setConfirmSend] = useState(false);
+  const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
+  const fileLoading = useRef(false);
+  const attach = async (files: File[]) => {
+    if (!files.length || fileLoading.current || busy || controller && ['connecting', 'running', 'approval'].includes(controller.state)) return;
+    fileLoading.current = true; setLoadingFiles(true); setError(undefined); setAddOpen(false); setConfirmSend(false); setExclusive(false);
+    try { setAttachments(await promptFiles(files, attachments)); } catch (e) { setError((e as Error).message); }
+    finally { fileLoading.current = false; setLoadingFiles(false); }
+  };
   useLayoutEffect(() => {
     const node = input.current;
     if (node) { node.style.height = 'auto'; node.style.height = `${Math.min(88, node.scrollHeight)}px`; }
@@ -209,9 +222,13 @@ export function PromptComposer() {
     <div className="composer-target sr-only"><small title={workspace?.root}>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'} · {controller?.state ?? 'checking'}</small></div>
       {!workspace?.approved && <button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(approve)}>Enable this workspace</button>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
-      <form onSubmit={e => { e.preventDefault(); if (running || busy || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive); setPrompt(''); setExclusive(false); setConfirmSend(false); }); }}>
-        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={1} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
-        <div className="composer-actions"><button type="button" className="composer-add" aria-label="Add files or folders (coming later)" title="File and folder attachments are planned; not available yet" disabled>+</button>{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title="Send prompt" disabled={busy || !prompt.trim() || !workspace?.approved || !controller?.available}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></button>}</div>
+      <input hidden ref={fileInput} type="file" multiple aria-label="Choose prompt files" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
+      <input hidden ref={folderInput} type="file" multiple {...{ webkitdirectory: '' }} aria-label="Choose prompt folder" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
+      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments); setPrompt(''); setAttachments([]); setExclusive(false); setConfirmSend(false); }); }}>
+        {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<span>{a.name}</span><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { setAttachments(items => items.filter((_, i) => i !== index)); setExclusive(false); setConfirmSend(false); }}>×</button></span>)}</div>}
+        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={1} onPaste={e => { const files = [...e.clipboardData.items].filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => !!file); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
+        <div className="composer-actions"><button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={() => setAddOpen(!addOpen)}>+</button>{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title="Send prompt" disabled={busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></button>}</div>
+        {addOpen && <div className="composer-add-menu"><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}
         {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || busy}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
       </form>
       <details className="permission-policy"><summary>Ask permission</summary><p>Workspace access with native approval requests. Each Allow once applies only to that request. Full access is not supported by this connector yet.</p></details>

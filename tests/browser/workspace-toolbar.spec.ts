@@ -86,8 +86,8 @@ test.afterAll(async () => {
 });
 
 test('workspace navigation stays readable and hit-testable through scrolling, comparison and narrow layouts', async ({ page }) => {
-  for (const width of [1920, 1440, 1024, 768, 390]) {
-    await page.setViewportSize({ width, height: 900 });
+  for (const [width, height] of [[1920, 900], [1440, 900], [1024, 900], [768, 900], [390, 900], [2560, 1080], [1280, 720], [1024, 600], [900, 500], [844, 390], [390, 844]]) {
+    await page.setViewportSize({ width: width!, height: height! });
     await page.goto(new URL('/?demo', server.launchUrl).href);
     const nav = page.getByRole('navigation', { name: 'Workspace views' });
     const visibleControls = nav.locator('button:visible, summary:visible');
@@ -107,7 +107,7 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
     const history = page.locator('.history');
     const historyBox = (await history.boundingBox())!;
     // The left content gutter avoids the native scrollbar and nested material scrollers.
-    await page.mouse.move(historyBox.x + 4, 500);
+    await page.mouse.move(historyBox.x + 4, Math.min(height! - 90, 500));
     await expect.poll(async () => {
       // Virtualized passages acquire their real heights while scrolling toward the start.
       await page.mouse.wheel(0, -100_000);

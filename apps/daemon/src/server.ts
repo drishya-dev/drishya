@@ -249,8 +249,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));
       if (sub === 'controller' && !subId && m === 'GET') return json(res, controller.status(id));
       if (sub === 'controller' && subId === 'prompt' && m === 'POST') {
-        const body = await readJson(req);
-        return json(res, await controller.start(id, body.prompt, body.exclusive));
+        const body = await readJson(req, 9 * 1024 * 1024);
+        return json(res, await controller.start(id, body.prompt, body.exclusive, body.attachments));
       }
       if (sub === 'controller' && subId === 'approval' && m === 'POST') {
         const body = await readJson(req);

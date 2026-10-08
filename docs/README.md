@@ -1,5 +1,8 @@
 # Drishya documentation — map and precedence
 
+
+**Latest spatial/composer correction — 8 October:** [37](review/37-spatial-map-composer.md) supersedes shallow perspective and deferred attachments: real spatial WebGL points/edges, yaw/pitch orbit and pan, default gentle rotation resuming 12 seconds after camera movement, steady unnamed background geometry, slightly wider rails and shared card bounds. File/folder-content selection, screenshot paste, previews/removal and native text/image transport are implemented with explicit limits and text redaction. Effective native-policy synchronization and broader release checks remain separate; full access is still unsupported. Local checks only; no hosted CI.
+
 **Latest native/depth direction — 8 October:** [36](review/36-native-progress-depth-map.md) governs native progress/exposed reasoning and the optional depth-map orbit; it preserves the complete attachment/settings/sync/native/release backlog. This supersedes no-loop wording only for explicitly enabled background orbit. Local checks only; no hosted CI.
 
 **Latest scroll refinement — 8 October:** [35 — Scrolling preserves motion](review/35-scroll-preserved-reading.md) supersedes wheel cancellation/hover dismissal in 34: finite motion continues through scrolling, hover boundaries forward to history without closing the reader, prompt navigation is an independent chapter rail with an active mark, native response duplicates are removed, send/stop use compact icons and search enters at its final corner. Upward-only Follow, native consent, provenance and publishing-only hosted CI remain.

@@ -97,7 +97,7 @@
 }
 
 /* Stable centred stage: utility visibility never reallocates the reading column. */
-.connected-workspace { --crown-h: 54px; --workspace-h: 0px; --stage-rail: clamp(180px, 16vw, 220px); }
+.connected-workspace { --crown-h: 54px; --workspace-h: 0px; --stage-rail: clamp(192px, 17vw, 236px); --dock-w: 188px; }
 .connected-workspace.multi-agent { --crown-h: 78px; }
 .connected-workspace .main { grid-column: 1 / -1; }
 .connected-workspace .history { left: var(--stage-rail); right: var(--stage-rail); padding-inline: 0; }
@@ -123,12 +123,12 @@
 .prompt-composer textarea { padding: 8px; background: transparent; }
 .prompt-composer .send-prompt { margin-left: auto; }
 @media (max-width: 1100px) and (min-width: 821px) {
-  .connected-workspace { --stage-rail: 164px; }
+  .connected-workspace { --stage-rail: 176px; --dock-w: 164px; }
   .connected-workspace .workspace-toggles { gap: 5px; }
   .workspace-toggles button { font-size: 9px; }
 }
 @media (max-width: 820px) {
-  .connected-workspace { --crown-h: 68px; --stage-rail: 0px; }
+  .connected-workspace { --crown-h: 68px; --stage-rail: 0px; --dock-w: 0px; }
   .connected-workspace.multi-agent { --crown-h: 92px; }
   .connected-workspace .crown { grid-template-columns: 86px minmax(0, 1fr); grid-template-rows: 28px 24px; padding-inline: 12px; }
   .connected-workspace.multi-agent .crown { grid-template-rows: 28px 24px 24px; }
@@ -202,6 +202,29 @@
 
 .connected-workspace .history .op-head > .op-kind { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* The preview body may shrink; its header must not. Earlier theme rules wrap
+   paths, which lets flex squeeze a multiline title through the top edge. */
+.connected-workspace .history .op-head { flex: 0 0 auto; overflow: hidden; }
+.connected-workspace .history .op-head .op-title {
+  flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  overflow-wrap: normal; line-height: 1.6;
+}
+.connected-workspace .history .op-head > .op-expand,
+.connected-workspace .history .op-head > .state { flex-shrink: 0; }
+.connected-workspace .history .op > .material-context,
+.connected-workspace .history .op > .op-foot { flex: 0 0 auto; padding: 4px 8px; margin: 0; }
+.connected-workspace .history .request-fields,
+.connected-workspace .history .result-fields,
+.connected-workspace .history .request-fields > div,
+.connected-workspace .history .result-fields > div,
+.connected-workspace .history .request-fields dd,
+.connected-workspace .history .result-fields dd { min-width: 0; overflow-wrap: anywhere; }
+.connected-workspace .history .structured-result { min-width: 0; max-width: 100%; }
+.connected-workspace .history .structured-result table { min-width: 0; width: 100%; table-layout: fixed; }
+.connected-workspace .history .structured-result th,
+.connected-workspace .history .structured-result td { overflow-wrap: anywhere; }
+.connected-workspace .history .op-body { overflow-wrap: anywhere; }
+
 @media(max-width: 820px) { .connected-workspace .dock { display: none; } .connected-workspace.catalog-open .dock { display: flex; } }
 
 /* Work spans the world; the edge veils sample actual content beneath the chrome. */
@@ -227,6 +250,14 @@
 }
 .prompt-composer form, .prompt-composer .composer-actions, .prompt-composer textarea { min-width: 0; max-width: 100%; }
 .prompt-composer .composer-actions { flex-wrap: wrap; }
+.prompt-attachments { display: flex; flex-wrap: wrap; gap: 5px; max-height: 88px; overflow: auto; padding: 3px 5px; }
+.attachment-chip { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 220px; padding: 3px 6px; border: 1px solid var(--line-2); border-radius: 6px; font-size: 11px; background: var(--s2); }
+.attachment-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-chip img { width: 28px; height: 28px; object-fit: contain; border-radius: 3px; }
+.attachment-chip button { flex: none; padding: 2px 4px; }
+.composer-add-menu { position: absolute; bottom: calc(100% + 8px); left: 0; width: min(300px, 100%); padding: 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--s1); box-shadow: 0 8px 24px #0004; z-index: 3; }
+.composer-add-menu button { display: block; padding: 7px 8px; width: 100%; text-align: left; font-size: 12px; }
+.composer-add-menu small { display: block; padding: 5px 8px; color: var(--t3); font-size: 10px; line-height: 1.5; }
 .prompt-composer .composer-actions label { min-width: 0; overflow-wrap: anywhere; }
 .prompt-composer > * { position: relative; z-index: 1; }
 .connected-workspace .prompt-composer textarea { font-size: 15px; line-height: 1.65; }
@@ -298,6 +329,8 @@
 .connected-workspace .map-legend { top: auto; bottom: 22px; left: 16px; right: auto; align-items: flex-start; max-width: calc(100% - 120px); }
 .map-zoom { position: absolute; right: 16px; bottom: 22px; z-index: 5; display: flex; gap: 3px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--bg) 70%, transparent); }
 .map-zoom .btn { padding: 5px 8px; font-size: 11px; }
+.map-camera-hint { align-self: center; color: var(--t3); font-size: 10px; padding-inline: 6px; }
+@media(max-width: 600px) { .map-camera-hint { display: none; } }
 .connected-workspace.map-reading .map-tools { top: calc(var(--crown-h) + 16px); bottom: auto; }
 @media(max-width: 820px) {
   .connected-workspace .map-tools { top: calc(var(--crown-h) + 10px); right: 12px; width: min(230px, calc(100% - 24px)); }

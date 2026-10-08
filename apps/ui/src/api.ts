@@ -103,7 +103,9 @@ export interface ReaderRecording extends RecordingSummary { sourceBytes?: number
 
 export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace' }
 export interface CurrentFile { path: string; scope: 'current-workspace'; text: string; start: number; totalLines: number; returnedLines: number; hasMore: boolean; redacted: boolean; modifiedAt: string }
+export interface PromptAttachment { name: string; type: 'text' | 'image'; data: string; mime?: string }
 export interface ControllerStatus {
+  attachments?: { name: string; type: 'text' | 'image' }[];
   submittedPrompt?: string;
   afterSequence?: number;
   phase?: 'waiting' | 'thinking' | 'responding' | 'tool';
@@ -119,7 +121,7 @@ export const workspaceApi = {
   approve: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {} }),
   file: (id: string, path: string, start: number) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/file?${new URLSearchParams({ path, start: String(start), count: '200' })}`),
   controller: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller`),
-  prompt: (id: string, prompt: string, exclusive: boolean) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/prompt`, { method: 'POST', json: { prompt, exclusive } }),
+  prompt: (id: string, prompt: string, exclusive: boolean, attachments?: PromptAttachment[]) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/prompt`, { method: 'POST', json: { prompt, exclusive, attachments } }),
   decide: (id: string, runId: string, approvalId: string, allow: boolean) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/approval`, { method: 'POST', json: { runId, approvalId, allow } }),
   stop: (id: string, runId: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/stop`, { method: 'POST', json: { runId } }),
 };
