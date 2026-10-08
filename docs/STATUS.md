@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Smooth follow and workspace navigation #47 merged on main (`e1ca4d3`), following replay/prompt #46 (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **Compact connected workspace and upward-only Follow candidate (review 34), after connector fix `8296135` and smooth follow #47 (`e1ca4d3`), following replay/prompt #46 (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -64,10 +64,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 8 October 2026; post-merge connector fill regression fix following PR #47.
-- **Delivered:** builder screenshot showed black wedges covering edit cards. PR #47 moved SVG connector paths inside a group; the legacy direct-child CSS selector no longer applied `fill: none` or stroke styles. Corrected selectors for grouped connector paths while preserving filled arrowheads. Added a regression assertion for no-fill/stroked connectors and reviewed the rendered integrated frame. The review initially missed this styling regression; tests previously checked path presence only.
-- **Checks:** Production UI build, affected connected-action desktop/mobile browser journey and clean diff passed locally. Earlier complete #47 review passed 289 units and 54 browser journeys after the camera endpoint fix; the selector correction has focused coverage. No hosted CI.
-- **Next:** Human preference review of the denser header, existing native/physical/platform release checks, shared later matrix in 30. Unrelated package-manager edits preserved.
+- **When:** 8 October 2026; compact connected workspace and upward-only Follow correction, on `codex/compact-connected-workspace`.
+- **Delivered:** ordinary clicks/selection/typing and downward scrolling preserve Follow. Upward main-history scrolling or the explicit switch turns it off; nested result scrolling stays local. Old-action/prompt navigation keeps its destination until new evidence arrives without changing Follow, and measured height changes restore that destination after layout commits. Visible arrivals/reflow run independently of Follow. Hover cards release the wheel to history at their local boundary. Removed the second toolbar and Activity widget; one Follow control, compact neutral search, bounded numbered runtime tools. Native composer resets after submission, keeps receipts outside its height, uses a Stop icon and send-time mandatory idle-client confirmation. Native CLI discovery checks known Windows installations without shell shims or editing PATH/credentials. Full-access switching is explicitly unsupported.
+- **Checks:** Local typechecks + 292 units, production UI build, complete browser suite (56 passed, two opt-in skips), isolated offline packed install/import/API/restart, clean diff and integrated rendered composer review passed. Long synthetic reading result is recorded in review 34. No hosted CI.
+- **Next:** Human preference review, genuine native/version and physical/platform release acceptance; attachments/full access/multi-agent matrix remain in review 30. Unrelated package-manager edits preserved.
 
 ## Next up
 
@@ -111,6 +111,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **8 October — upward-only Follow and compact native work:** latest builder direction overrides click-to-detach rules. Ordinary clicks and downward scrolling preserve camera preference; upward main-history scrolling or explicit off detaches it. Navigation destinations hold until actual new captured work, not measurement changes. New visible motion is independent of following/capture. Compact prompt/receipts, one right-side Follow switch, no second toolbar, known-native-install discovery; conservative native approvals and send-time idle consent remain mandatory. See review/34. Local tests only, no hosted CI.
 
 - **7 October — native continuation explicitly authorized:** the builder requested an actual prompt input and session-correct workspace now, superseding observe-only product scope. Keep passive capture independent and read-only, use separate opt-in supported native protocols, conservative approval/sandbox policy, root consent and idle-client acknowledgement. No arbitrary terminal injection or schema fabrication. Details/limits: review/26.
 - **7 October — developer density and graph detail:** use tinted window chrome, content-sized centred/wrapping materials, extension/folder icons, ordinary prompt input and quiet utilities. Current maps derive folder groups before individual files, exclude private `.local` caches, and aggregate only actual imports. Captured model names supersede generic names; usage is native reported data only. Paragraph fades do not delay capture or type characters. Preserve `layout.total` outside padding while virtual runs change; animate growth clip, never virtual layout height.

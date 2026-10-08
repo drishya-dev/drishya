@@ -75,7 +75,10 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await page.locator(`article[data-op-id="${sourceId}"] .code .ln-tx`).filter({ hasText: /\S/ }).first().click({ clickCount: 3 });
   await expect.poll(() => page.evaluate(() => window.getSelection()?.toString().trim().length ?? 0)).toBeGreaterThan(0);
   await expect(page.getByRole('complementary', { name: 'Operation detail' })).toHaveCount(0);
-  await expect(latest).toBeVisible(); // selecting source holds the reader, not the capture.
+  await expect(latest).toHaveCount(0); // Selection keeps Follow on; only scrolling upward holds it.
+  await pointAtHistory(page, history);
+  await page.mouse.wheel(0, -300);
+  await expect(latest).toBeVisible();
   await latest.click();
   await expect(latest).toHaveCount(0);
 
@@ -273,7 +276,8 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await pinned.getByRole('button', { name: /Pinned source/ }).click();
   await expect(pinned.getByRole('button', { name: 'Minimize reference' })).toBeFocused();
   await expect(pinned.getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toHaveText('201// bounded reader line 201202// bounded reader line 202203// bounded reader line 203');
-  await page.getByRole('button', { name: /Back to latest/ }).click();
+  await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('switch', { name: 'Automatically follow new work' }).click();
   await pinned.getByRole('region', { name: 'Content of src/checkout/guard.ts' }).click();
   const heldAt = await history.evaluate((el) => el.scrollTop);
   const pinnedSteps = Number((await steps.innerText()).match(/\d+/)?.[0]);

@@ -1,12 +1,12 @@
 // Opt-in supported harness clients. Passive capture never calls this module.
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { delimiter, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { redactText, sanitize } from '@drishya/privacy';
 import { App, HttpError } from './app.ts';
 import { WorkspaceAccess } from './workspace.ts';
+import { executable } from './native-executable.ts';
+export { executable } from './native-executable.ts';
 
 type RecordValue = Record<string, any>;
 export interface ControllerState {
@@ -36,14 +36,6 @@ interface Run {
   turnId?: string;
   threadId: string;
   sequence: number;
-}
-export function executable(name: string): string | undefined {
-  const suffix = process.platform === 'win32' ? '.exe' : '';
-  for (const dir of (process.env.PATH ?? '').split(delimiter)) {
-    const file = join(dir.replace(/^"|"$/g, ''), name + suffix);
-    if (existsSync(file)) return file;
-  }
-  return undefined;
 }
 
 export class HarnessController {

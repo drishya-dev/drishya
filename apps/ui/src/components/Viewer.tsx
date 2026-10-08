@@ -114,7 +114,7 @@ function WorkspaceViewer() {
 
   return (
     <div style={{ '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
-      <WorkspaceHeader scene={scene} projection={projection} />
+      <WorkspaceHeader scene={scene} projection={projection} /><WorkspaceBar />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
         {mapVisible && <MapCanvas graph={graph} heat={scene.heat} passagePaths={passagePaths} readingRect={reading} />}
@@ -125,7 +125,7 @@ function WorkspaceViewer() {
         <CurrentFileReader />
       </div>
       <Dock scene={scene} />
-      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); useApp.setState({ follow: false }); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
+      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
       <PromptComposer key={recordingId} />
       <Inspector projection={historical} />
@@ -155,7 +155,7 @@ function WorkspaceHeader({ scene, projection }: { scene: Scene; projection: Proj
     viewer.addEventListener('scroll', scroll, true);
     return () => { observer.disconnect(); viewer.removeEventListener('scroll', scroll, true); viewer.style.removeProperty('--workspace-header-h'); };
   }, []);
-  return <div ref={header} className="workspace-header"><Crown scene={scene} projection={projection} /><WorkspaceBar scene={scene} /></div>;
+  return <div ref={header} className="workspace-header"><Crown scene={scene} projection={projection} /></div>;
 }
 
 function Crown({ scene, projection }: { scene: Scene; projection: Projection }) {
@@ -207,7 +207,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
         })}
       </div>}
       <div className="crown-actions"><UsagePeek />
-        <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, follow: false })}>Settings</button>
+        <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true })}>Settings</button>
         <button className="btn ghost search-open" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
           {exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}
@@ -223,13 +223,16 @@ function LiveWatch() {
   const recording = useApp(s => s.recording);
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
-  const [live, setLive] = useState(recording?.live ?? false);
-  useEffect(() => setLive(recording?.live ?? false), [recording?.live]);
-  if (source?.kind !== 'daemon' || !id || id.includes('+')) return null;
-  return <button className={`btn ghost live${live ? ' on' : ''}`} onClick={async () => {
-    try { const on = await source.setLive(id, !live); if (useApp.getState().recordingId === id) setLive(on); }
-    catch (error) { useApp.setState({ error: (error as Error).message }); }
-  }} title="Observe new session activity"><span className="live-dot" />{live ? 'Live' : 'Watch live'}</button>;
+  const follow = useApp(s => s.follow);
+  const mode = useApp(s => s.mode);
+  return <button className={`btn ghost live workspace-follow${follow ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={follow} onClick={async () => {
+    const on = !useApp.getState().follow;
+    useApp.setState({ follow: on });
+    if (on && source?.kind === 'daemon' && id && !id.includes('+') && !recording?.live) {
+      try { await source.setLive(id, true); }
+      catch (error) { useApp.setState({ error: (error as Error).message }); }
+    }
+  }} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${follow ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow live'}</button>;
 }
 
 function UsagePeek() {
@@ -247,7 +250,7 @@ function Dock({ scene }: { scene: Scene }) {
     <aside id="observed-tools" className="dock" aria-label="Tools" title="Tools observed in this recording; connected runtime inventory is listed separately">
       <div className="dock-head">Tools</div>
 
-      {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary>{controller.tools.map(t => <div key={t}>{t}</div>)}{controller.tools.length === 0 && <small>No MCP tools reported by this runtime</small>}</details>}
+      {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary><ol>{controller.tools.map(t => <li key={t}>{t}</li>)}</ol>{controller.tools.length === 0 && <small>No MCP tools reported by this runtime</small>}</details>}
       {scene.dock.native.map((d) => (
         <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
           <span className={`op-kind k-${d.kind}`}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span>{KIND_LABEL[d.kind]}</span>
@@ -389,7 +392,7 @@ function PromptNavigation({ scene, projection }: { scene: Scene; projection: Pro
   const open = async (step: number) => {
     const state = useApp.getState();
     if (state.mode !== 'history') state.showHistory();
-    state.set({ promptStep: step, follow: false, playing: false, held: true, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined });
+    state.set({ promptStep: step, playing: false, held: true, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined });
     if (page) {
       try { await state.loadHistoryWindow({ promptStep: step, count: 32 }); }
       catch (e) { if (useApp.getState().recordingId === recordingId) state.set({ error: (e as Error).message }); }
@@ -607,13 +610,13 @@ function Search({ projection }: { projection: Projection }) {
   }, [q, open, source, recordingId]);
   const go = (obs: string) => {
     if (useApp.getState().historyPage) {
-      set({ focusObservationId: obs, follow: false, playing: false, held: true, selectedOp: undefined, searchOpen: false });
+      set({ focusObservationId: obs, playing: false, held: true, selectedOp: undefined, searchOpen: false });
       void useApp.getState().loadHistoryWindow({ observationId: obs }).catch((error) => set({ error: error.message }));
       return;
     }
     const s = stepOfObservation(projection, obs);
     if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
-    else set({ focusObservationId: obs, follow: false });
+    else set({ focusObservationId: obs });
     const op = projection.operations.find((o) => o.observationIds.includes(obs));
     if (op) select(op.id);
     else select(undefined);

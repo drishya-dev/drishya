@@ -56,7 +56,7 @@ test('source preview opens the exact stored range and keeps pending replay evide
   await range.focus();
   await range.press('Enter');
   await expect(read).toHaveClass(/expanded/);
-  expect((await read.boundingBox())!.width).toBeGreaterThan(600);
+  await expect.poll(async () => (await read.boundingBox())!.width).toBeGreaterThan(600);
   await expect(read.getByRole('button', { name: /Close .* in history/ })).toBeFocused();
   await expect(read.locator('.snapshot-provenance')).toContainText('Excerpt · lines 81–94');
   await expect(read.getByRole('textbox', { name: 'Go to stored source line' })).toBeHidden();
@@ -210,6 +210,7 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   await expect(operation).toContainText('export function', { timeout: 10_000 });
   expect(await operation.getAttribute('data-op-id')).toBe(id);
   const settings = page.getByRole('button', { name: 'Workspace settings', exact: true });
+  await page.getByRole('switch', { name: 'Automatically follow new work' }).click();
   await settings.click();
   const beforeScroll = await page.locator('.history').evaluate(el => el.scrollTop);
   const before = Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0]);
@@ -235,6 +236,7 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
 test('workspace settings persist, respect the OS, restore focus and work on a narrow screen', async ({ page }) => {
   await page.goto(demoUrl());
   const settings = page.getByRole('button', { name: 'Workspace settings', exact: true });
+  await page.getByRole('switch', { name: 'Automatically follow new work' }).click();
   await settings.click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await dialog.getByRole('button', { name: 'Light', exact: true }).click();
@@ -467,7 +469,7 @@ test('prompt chapters review captured work without movie controls and resize det
   await navigation.getByRole('button',{name:'Follow from prompt'}).click();
   await expect(page.getByRole('button',{name:'Full history',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Pause',exact:true})).toHaveCount(0);
-  await page.locator('.history').dispatchEvent('pointerdown');
+  await page.locator('.history').dispatchEvent('wheel', { deltaY: -200 });
   await page.getByRole('button', {name:/Back to latest/}).click();
   await expect(page.getByRole('button',{name:'Full history',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Full history',exact:true}).click();
@@ -570,6 +572,12 @@ test('hover reading lifts the same material, keeps its slot and switches without
   expect(await first.evaluate(el => el.getAnimations().filter(a => a.id.startsWith('reading-focus-')).length)).toBe(0);
   await page.mouse.move(1400, 850);
   await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
+  await first.hover();
+  await expect(first).toHaveAttribute('data-hover-reading', 'focused');
+  await first.locator('.op-head').hover();
+  await page.mouse.wheel(0, 240);
+  await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  await expect(first).not.toHaveAttribute('data-hover-reading', 'focused');
 });
 
 

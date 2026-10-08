@@ -30,6 +30,30 @@ test('the growing demo follows long prose and a completed burst without manual s
   await page.screenshot({ path: resolve('.local/live-follow-updated.png') });
 });
 
+test('clicks and downward scrolling preserve Follow; only upward scrolling or the switch holds it', async ({ page }) => {
+  await page.goto(new URL('/?demo', server.launchUrl).href);
+  const follow = page.getByRole('switch', { name: 'Automatically follow new work' });
+  const history = page.locator('.history');
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.workspace-activity')).toHaveCount(0);
+  await expect(page.locator('.workspace-header .workspace-bar')).toHaveCount(0);
+  await page.locator('.prose').last().click();
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Close Workspace settings' }).click();
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  const bounds = (await history.boundingBox())!;
+  await page.mouse.move(bounds.x + 4, bounds.y + bounds.height / 2);
+  await page.mouse.wheel(0, 250);
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  await page.mouse.wheel(0, -250);
+  await expect(follow).toHaveAttribute('aria-checked', 'false');
+  await page.mouse.wheel(0, 250);
+  await expect(follow).toHaveAttribute('aria-checked', 'false');
+  await follow.click();
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+});
+
 test('map scope filters captured file locations and direct imports navigate exact files', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(new URL('/?demo', server.launchUrl).href);
@@ -70,10 +94,10 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
     await expect(nav).toBeVisible();
     for (const control of await visibleControls.all()) {
       const box = (await control.boundingBox())!;
-      expect(box.height).toBeGreaterThanOrEqual(36);
+      expect(box.height).toBeGreaterThanOrEqual(28);
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(width);
-      expect(await control.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(13);
+      expect(await control.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(11);
       expect(await control.evaluate(el => {
         const r = el.getBoundingClientRect();
         return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));

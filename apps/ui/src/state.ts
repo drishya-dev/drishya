@@ -221,7 +221,7 @@ export const useApp = create<State>((set, get) => ({
 
   select(opId) {
     const clockRunning = get().mode === 'replay' && get().playing;
-    set({ selectedOp: opId, promptStep: undefined, ...(opId ? { expandedOp: undefined, ...(!clockRunning ? { playing: false, held: true } : {}), follow: false, inspectorTab: 'detail' } : {}) });
+    set({ selectedOp: opId, promptStep: undefined, ...(opId ? { expandedOp: undefined, ...(!clockRunning ? { playing: false, held: true } : {}), inspectorTab: 'detail' } : {}) });
     if (opId && get().historyPage && !get().projection?.operations.some((op) => op.id === opId)) void get().loadHistoryWindow({ selectedOperationId: opId }).catch((error) => set({ error: error.message }));
   },
 
@@ -236,7 +236,7 @@ export const useApp = create<State>((set, get) => ({
   },
 
   setFilter(f) {
-    set({ filter: f, ...(f ? { follow: false } : {}) });
+    set({ filter: f });
     if (get().historyPage) void get().loadHistoryWindow({ start: get().historyPage?.start }).catch((error) => set({ error: error.message }));
   },
 }));

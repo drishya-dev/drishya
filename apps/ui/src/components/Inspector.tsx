@@ -234,7 +234,7 @@ function Evidence({ op, links, projection }: { op: Operation; links: EvidenceLin
     const reference = historyPage?.references[id];
     if (reference) {
       const state = useApp.getState();
-      state.set({ mode: 'replay', step: reference.step, selectedOp: id, held: true, playing: false, follow: false });
+      state.set({ mode: 'replay', step: reference.step, selectedOp: id, held: true, playing: false });
       void state.loadHistoryWindow({ selectedOperationId: id, step: reference.step }).catch((error) => state.set({ error: error.message }));
       return;
     }

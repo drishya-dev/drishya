@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -26,7 +26,7 @@ const send=v=>process.stdout.write(JSON.stringify(v)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{
   const v=JSON.parse(line);
   if(v.type==='control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{}}});
-  if(v.type==='user') {send({type:'system',subtype:'init',tools:['Read','Edit','mcp__docs__lookup']});send({type:'control_request',request_id:'one',request:{subtype:'can_use_tool',tool_name:'Edit',input:{file_path:'src/actual.ts',new_string:'export const value = 43;'}}});}
+  if(v.type==='user') {send({type:'system',subtype:'init',tools:['Read','Edit','mcp__docs__lookup',...Array.from({length:90},(_,n)=>'mcp__synthetic__tool'+n)]});send({type:'control_request',request_id:'one',request:{subtype:'can_use_tool',tool_name:'Edit',input:{file_path:'src/actual.ts',new_string:'export const value = 43;'}}});}
   if(v.type==='control_response')send({type:'result',is_error:false,result:'Synthetic native transport completed the submitted prompt.'});
 });`);
   app = new App(join(dir,'store')); await app.ingest.importSource('claude-code',journal);
@@ -93,21 +93,62 @@ test('the composer submits through the real API transport, handles one approval 
 
   const enable=composer.getByRole('button',{name:'Enable this workspace',exact:true});
   if (await enable.count()) await enable.click();
-  await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Please explain the selected workspace');
-  await expect(composer.getByRole('button',{name:'Send prompt ↗'})).toBeDisabled();
+  const promptInput = composer.getByRole('textbox',{name:'Prompt for selected harness session'});
+  await promptInput.fill('Please explain the selected workspace\n' + 'More context\n'.repeat(12));
+  const expandedHeight = (await promptInput.boundingBox())!.height;
+  await expect(composer.getByRole('button',{name:'Send prompt ↗'})).toBeEnabled();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).press('Enter');
-  await expect(composer.getByRole('textbox',{name:'Prompt for selected harness session'})).toHaveValue('Please explain the selected workspace');
+  await expect(promptInput).not.toHaveValue('');
   await expect(composer.locator('.tool-approval')).toHaveCount(0);
   await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).press('Enter');
   await expect(composer).toContainText('Edit · approval requested');
+  await expect(promptInput).toHaveValue('');
+  expect((await promptInput.boundingBox())!.height).toBeLessThan(expandedHeight);
+  expect((await composer.boundingBox())!.height).toBeLessThan(150);
+  await expect(composer.getByRole('button', { name: 'Stop turn' }).locator('svg')).toHaveCount(1);
   await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
+  const inventory = page.locator('.runtime-tools');
+  await inventory.locator('summary').click();
+  await inventory.locator('ol').evaluate(el => el.scrollTop = el.scrollHeight);
+  await expect(inventory.locator('summary')).toBeInViewport();
+  await inventory.locator('summary').click();
   await composer.getByRole('button',{name:'Allow once',exact:true}).click();
   await expect(composer.locator('.controller-receipt')).toContainText('completed');
   await composer.locator('.controller-receipt summary').click();
   await expect(composer).toContainText('Synthetic native transport completed the submitted prompt.');
+  expect((await composer.boundingBox())!.height).toBeLessThan(150);
   await expect(page.getByRole('complementary',{name:'Session folders'})).toHaveCount(1);
   if(process.env.DRISHYA_REVIEW_SHOTS==='1') await page.screenshot({path:resolve('.local/connected-composer.png')});
+});
+
+test('visible new material animates with Follow off without moving the reading position', async ({ page }) => {
+  const root = join(dir, 'session-repository');
+  const journal = join(dir, 'independent-motion.jsonl');
+  const base = { sessionId: '88888888-8888-4888-8888-888888888888', cwd: root, timestamp: '2026-10-08T12:00:00Z' };
+  writeFileSync(journal, JSON.stringify({ ...base, type: 'user', uuid: 'motion-user', message: { role: 'user', content: 'Independent motion synthetic session' } }) + '\n');
+  const { recordingId } = await app.ingest.importSource('claude-code', journal);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Independent motion synthetic session/ }).click();
+  await page.getByRole('switch', { name: 'Automatically follow new work' }).click();
+  await page.evaluate(() => {
+    (window as any).independentArrivals = [];
+    const animate = HTMLElement.prototype.animate;
+    HTMLElement.prototype.animate = function(...args) {
+      const animation = animate.apply(this, args);
+      queueMicrotask(() => { if (animation.id.startsWith('surface-')) (window as any).independentArrivals.push(this.dataset.opId); });
+      return animation;
+    };
+  });
+  const top = await page.locator('.history').evaluate(el => el.scrollTop);
+  appendFileSync(journal, JSON.stringify({ ...base, type: 'assistant', uuid: 'motion-tool', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'independent-shell', name: 'Bash', input: { command: 'echo synthetic motion' } }] } }) + '\n');
+  await app.ingest.sync(recordingId);
+  const operation = page.locator('article.op-shell');
+  await expect(operation).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as any).independentArrivals)).toContain(`${recordingId}.independent-shell`);
+  expect(await page.locator('.history').evaluate(el => el.scrollTop)).toBe(top);
+  await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'false');
 });
 
 test('connected action flow and agent switches replace tabs without inventing causal edges',async({page})=>{

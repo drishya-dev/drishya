@@ -7,7 +7,7 @@ import { useApp } from '../state.ts';
 export function RepositoryContext({ context, graph }: { context: Context; graph?: RepoGraph }) {
   const set = useApp((state) => state.set);
   const neighbors = useMemo(() => repositoryNeighbors(graph, context.path), [graph, context.path]);
-  const openFile = (path: string) => set({ filePanel: path, follow: false });
+  const openFile = (path: string) => set({ filePanel: path });
   const group = (label: string, paths: string[]) => paths.length ? <div className="repo-relations"><span>{label}</span>{paths.slice(0, 2).map((path) => <button key={path} title={path} onClick={() => openFile(path)}>{path}</button>)}{paths.length > 2 && <small>{paths.length - 2} more · explore map</small>}</div> : null;
   return <section className="repository-context" aria-label="Repository reading context">
     <div className="repo-context-scope">{context.scope === 'reading' ? 'Reading here' : context.scope === 'selected' ? 'Selected action' : 'Latest file reference'}</div>
