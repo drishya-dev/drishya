@@ -188,7 +188,10 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       const gap = target - el.scrollTop;
       const elapsed = Math.min(48, Math.max(1, time - previousTime)); previousTime = time;
       programmatic.current = true;
-      el.scrollTop = Math.abs(gap) < 1 ? target : el.scrollTop + gap * (1 - Math.exp(-elapsed / 45));
+      // Native scroll offsets may round subpixel writes to the same pixel at high
+      // refresh rates. Guarantee progress so the finite camera actually settles.
+      const advance = Math.sign(gap) * Math.max(1, Math.abs(gap) * (1 - Math.exp(-elapsed / 45)));
+      el.scrollTop = Math.abs(gap) < 1 ? target : el.scrollTop + advance;
       lastScrollTop.current = el.scrollTop;
       // Virtualization needs window updates, not a React render on every camera frame.
       setViewport(old => Math.abs(old.top - el.scrollTop) > 120 || Math.abs(gap) < 1 ? { top: el.scrollTop, height: el.clientHeight } : old);
