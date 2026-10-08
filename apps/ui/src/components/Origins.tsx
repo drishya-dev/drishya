@@ -66,7 +66,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
     let motionTarget: Element | undefined;
     let raf = 0;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const animate = motion && (follow || stagedArrival) && !document.hidden && !preference.matches;
+    const animate = motion && !document.hidden && !preference.matches;
     if (animate) for (const article of history.querySelectorAll<HTMLElement>('article[data-op-id]')) {
       if (plan.arrivals.includes(article.dataset.opId!) && !preparedMaterials.current.has(article)) {
         // Avoid a full-size flash before the post-follow measurement starts the arrival.
@@ -319,7 +319,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       // Its follow adjustment must land before testing an arrival's visibility.
       raf = requestAnimationFrame(() => {
         raf = 0;
-        draw(useApp.getState().follow || stagedArrival);
+        draw(true);
         // A synchronous hover/layout update can replace this effect before its first frame.
         // Consume the semantic change only after measuring it, rather than losing its arrival.
         previous.current = frameOf(scene);

@@ -101,7 +101,6 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     {error && <p className="bad small" role="alert">{error}</p>}
     <div className="folder-tree" role="tree" aria-label="Workspace files">
       {tree.slice(page * 120, (page + 1) * 120).map(row => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-level={row.depth + 1} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12 }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
-        useApp.setState({ follow: false });
         if (row.folder) setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); return next; });
         else useApp.setState(workspace?.approved ? { currentFile: row.path } : { filePanel: row.path });
       }}><span className="folder-disclosure" aria-hidden="true">{row.folder ? opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span>{row.name}</span></button>)}
@@ -144,6 +143,12 @@ export function PromptComposer() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const element = useRef<HTMLElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const [confirmSend, setConfirmSend] = useState(false);
+  useLayoutEffect(() => {
+    const node = input.current;
+    if (node) { node.style.height = 'auto'; node.style.height = `${Math.min(88, node.scrollHeight)}px`; }
+  }, [prompt]);
   useLayoutEffect(() => {
     const node = element.current;
     const viewer = node?.closest<HTMLElement>('.viewer');
@@ -162,15 +167,18 @@ export function PromptComposer() {
   return <section ref={element} className="prompt-composer open" aria-label="Harness prompt">
     <div className="composer-target sr-only"><small title={workspace?.root}>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'} · {controller?.state ?? 'checking'}</small></div>
       {!workspace?.approved && <button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(approve)}>Enable this workspace</button>}
-      {controller && !controller.available && <p className="muted small">Install the native {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI and sign in there, then restart Drishya.</p>}
-      <form onSubmit={e => { e.preventDefault(); if (running || busy || !prompt.trim() || !workspace?.approved || !controller?.available || !exclusive) return; void act(async () => { await workspaceApi.prompt(id, prompt, exclusive); setPrompt(''); }); }}>
-        <textarea aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={1} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => { setPrompt(e.target.value); e.currentTarget.style.height = 'auto'; e.currentTarget.style.height = `${Math.min(120, e.currentTarget.scrollHeight)}px`; }} onFocus={() => useApp.setState({ follow: false })} />
-        <div className="composer-actions"><button type="button" className="composer-add" aria-label="Add files or folders (coming later)" title="File and folder attachments are planned; not available yet" disabled>+</button>{!!prompt.trim() && <label title="Finish the turn in other native clients before submitting here"><input type="checkbox" checked={exclusive} disabled={!!running} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))}>Stop turn</button> : <button type="submit" className="send-prompt" disabled={busy || !prompt.trim() || !workspace?.approved || !controller?.available || !exclusive}>Send prompt ↗</button>}</div>
+      {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
+      <form onSubmit={e => { e.preventDefault(); if (running || busy || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await workspaceApi.prompt(id, prompt, exclusive); setPrompt(''); setExclusive(false); setConfirmSend(false); }); }}>
+        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={1} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
+        <div className="composer-actions"><button type="button" className="composer-add" aria-label="Add files or folders (coming later)" title="File and folder attachments are planned; not available yet" disabled>+</button>{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button> : <button type="submit" className="send-prompt" disabled={busy || !prompt.trim() || !workspace?.approved || !controller?.available}>Send prompt ↗</button>}</div>
+        {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || busy}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
       </form>
-      <span className="composer-note">Native session · conservative permissions</span>
+      <details className="permission-policy"><summary>Ask permission</summary><p>Workspace access with native approval requests. Each Allow once applies only to that request. Full access is not supported by this connector yet.</p></details>
+      <div className="native-turn-details">
       {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}</p>}
       {controller?.promptRedacted && <p className="muted small">Detected secrets were removed before sending this prompt.</p>}
       {controller?.approvals.map(p => <div className="tool-approval" key={p.id}><strong>{p.name} · approval requested</strong><pre>{p.detail}</pre><button disabled={busy} onClick={() => void act(() => workspaceApi.decide(id, controller.runId!, p.id, false))}>Decline</button><button disabled={busy} onClick={() => void act(() => workspaceApi.decide(id, controller.runId!, p.id, true))}>Allow once</button></div>)}
       {controller?.output && <details className="controller-receipt"><summary>Native response · {controller.state}</summary><pre>{controller.output}</pre></details>}
+      </div>
   </section>;
 }

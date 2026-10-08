@@ -244,7 +244,7 @@ test('reduced motion keeps captured history and suppresses relationship animatio
   await page.goto(demo.href);
   await expect(page.locator('article.op-edit').last()).toBeVisible();
   await expect(page.locator('.origins')).toBeHidden();
-  expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
+  await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length), { message: 'Finite visible arrivals settle even while Follow is off' }).toBe(0);
 });
 
 test('file relationships start at measured renderer nodes and fall back when the map is hidden', async ({ page }) => {
@@ -509,9 +509,10 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   const scrollHistory = async (delta: number) => {
-    const r = (await history.boundingBox())!;
     await pointAtHistory(page, history);
     await page.mouse.wheel(0, delta);
+    // Wheel delivery precedes native scrolling; measure the settled reader, not the old frame.
+    await history.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   };
   await scrollHistory(-100_000);
   const read = history.locator('article.op-read').first();
@@ -554,7 +555,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     const nodes = await page.evaluate(() => document.querySelectorAll('*').length);
     peakNodes = Math.max(peakNodes, nodes);
     expect(nodes).toBeLessThan(2500);
-    expect(await page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
+    await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length), { message: 'Finite visible arrivals settle even while Follow is off' }).toBe(0);
     await page.getByRole('button', { name: /Back to latest/ }).click();
     await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight)), { message: `Round ${rounds}: explicit return reaches the latest captured work` }).toBeLessThan(2);
     rounds++;

@@ -79,7 +79,7 @@ export function settleArrival(element: HTMLElement, start: DOMRect, flight: Anim
   const cleanup = () => { history?.removeEventListener('wheel', interrupt); history?.removeEventListener('pointerdown', interrupt); window.removeEventListener('keydown', interrupt); unsubscribe(); };
   const history = element.closest('.history');
   history?.addEventListener('wheel', interrupt, { passive: true }); history?.addEventListener('pointerdown', interrupt); window.addEventListener('keydown', interrupt);
-  unsubscribe = useApp.subscribe(state => { if (!state.motion || state.lowResource || !state.follow || state.explore) interrupt(); });
+  unsubscribe = useApp.subscribe(state => { if (!state.motion || state.lowResource || state.explore) interrupt(); });
   void flight.finished.then(() => {
     if (interrupted) return;
     timer = setTimeout(() => {

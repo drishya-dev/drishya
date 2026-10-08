@@ -1,0 +1,29 @@
+# 34 — Compact connected workspace and explicit Follow
+
+8 October 2026. Latest builder correction; supersedes conflicting toolbar, click-to-hold, prompt font and Live/Follow descriptions in 29–33. Older records remain implementation history. Hosted CI stays manual and reserved for publishing; development uses local verification.
+
+## Interaction contract
+
+Follow is camera preference, separate from passive capture and the optional replay clock. Ordinary clicks, text selection, typing, folders, tools, settings and file readers do not turn it off. Only upward main-history scrolling (including upward keyboard navigation or scrollbar movement), or explicitly switching Follow off, detaches it. Clicking an older action/prompt keeps that destination visible until a genuinely new captured revision arrives; layout measurements alone cannot undo navigation. The preference remains on. Downward scrolling preserves its current state and never silently re-enables it. The latest arrow explicitly resumes following. Local scrolling inside overflowing captured material remains local; it does not disable Follow or pause an active replay. Explicit replay transport/seek still controls the replay clock.
+
+New visible actions and prose can animate while Follow is off. This must not force camera movement, animate every historical remount or delay ingest. Reduced motion, low-resource behavior and finite interruptible whole-material transforms remain. Hover origin tethers retain their real action identity during a popover lift, and clear on return when the cursor has left. Hover reading uses one real DOM material, not copied captured content. A hovered card accepts local wheel scrolling when its result can consume it; otherwise the gesture returns to history, restores the card, and applies the same upward-only Follow rule.
+
+## Workspace composition
+
+Only the main centered session header owns the bounded translucent edge treatment. No second full-width toolbar or Activity widget. Compact Folders/Map/Agents controls float at the upper left of the world; the explorer starts beneath those controls. A single Follow switch sits bottom right beside the existing return-to-latest arrow. Turning Follow off leaves passive observation running. Enabling it can start passive live observation for an eligible local recording. Offline evidence remains read-only.
+
+Search opens as a compact 360 px maximum top-right field with neutral focus. The native composer uses a 13 px draft font, a textarea capped at 88 px, and resets that height after clearing a submitted prompt. Future attachments retain the disabled + affordance. Stop uses a square icon with an accessible name. Native output and approvals have a separate absolutely positioned bounded reading area above the input, so they do not enlarge its measured history clearance.
+
+A draft does not display a permanent idle-client checkbox. Sending opens a compact explicit confirmation, still mandatory before any controller call. The acknowledgement resets after a successful send. Workspace approval and exact one-time native approval remain mandatory. Approval/output are ephemeral native receipts; normal captured history remains the canonical recording. The permission disclosure states the connector's current policy honestly. Full-access mode selection is not implemented: future work needs explicit consent, native protocol/version capability checks and both harness acceptance, never a cosmetic dropdown or silent policy weakening.
+
+The connected runtime inventory is an ordered, separately scrollable list capped at 34vh/280 px. Its disclosure remains above the list and can be closed without returning from a screen-length inventory. Runtime availability and observed tool usage stay distinct.
+
+## Native discovery and troubleshooting
+
+The daemon resolves native executables, never shell-interpolated prompts or npm cmd/PowerShell shims. PATH takes precedence. Windows fallback checks known npm native Codex vendor locations (x64/arm64), the desktop Codex version directories, and the native Claude user bin. It does not scan arbitrary folders recursively or edit PATH, configuration or credentials. Version-directory enumeration is capped at 64 and newest installed executable wins over the desktop's legacy root executable. Installed npm Codex can therefore be usable by Drishya even when a user's existing PowerShell cannot resolve `codex`.
+
+Missing Codex setup gives explicit official-package install/login commands, an npx login fallback and Check again. Temporary npx-only cache installations are not recursively searched or automatically installed by Drishya. Login remains in the native client; no credential entry in Drishya. Synthetic tests inject platform/env and native placeholders so discovery is not dependent on the reviewer's own installed CLI.
+
+## Validation and remaining scope
+
+Local validation passed: typechecks and 292 unit tests; production UI build; all 56 regular browser journeys (two opt-in cases skipped); isolated offline packed install, Claude/Codex import, authenticated API and persisted restart. A separate ten-minute synthetic live-reading exercise passed at 604,892 ms across 91 bursts, with 798 peak DOM nodes, preserved passage offsets and finite arrivals while Follow was off. This exercised the final production code; temporary diagnostic logging in the test was removed afterward. The integrated composer was also reviewed from its rendered frame. No hosted CI was dispatched. New regression cases cover upward/downward Follow, ordinary clicks, compact long-prompt submission, one-time consent, Stop icon, and large runtime inventory. Physical low-resource/platform/native-version and human preference acceptance remain release checks. Full access, attachments and genuine multi-agent/native-harness release validation remain explicit follow-ups in the request audit; do not claim them completed by this UI correction.

@@ -47,6 +47,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const readingAnchor = useRef<{ id: string; offset: number; atStart?: boolean } | undefined>(undefined);
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
+  const navigationBoundary = useRef<{ step: number; projection: Projection } | undefined>(undefined);
   const seenThrough = useRef(scene.total);
   const followFrame = useRef<number | undefined>(undefined);
   const followingStarted = useRef(false);
@@ -66,7 +67,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         const r = materialRect(card);
         const stored = new DOMRect(r.left, r.top + history.scrollTop, r.width, r.height);
         const before = materialPositions.current.get(id);
-        if (before && follow && useApp.getState().follow && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
+        if (before && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
           moveMaterial(card, new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), 300, 'surface-Reflow');
         }
         next.set(id, stored);
@@ -170,6 +171,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   };
 
   const followLatest = () => {
+    const boundary = navigationBoundary.current;
+    if (boundary?.step === scene.step && boundary.projection === projection) return;
     const el = ref.current;
     if (!el || !useApp.getState().follow || pointerFocus.current) return;
     if (!followingStarted.current || !motion || lowResource || matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -204,7 +207,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const restoreReading = () => {
     const el = ref.current;
     const anchor = readingAnchor.current;
-    if (!el || follow || !anchor || navigating.current) return;
+    const boundary = navigationBoundary.current;
+    const atDestination = boundary?.step === scene.step && boundary.projection === projection;
+    if (!el || follow && !atDestination || !anchor || navigating.current) return;
     // At the document start, late allocation changes must preserve the boundary,
     // rather than pull the reader down to an old first-passage pixel offset.
     if (anchor.atStart) { if (el.scrollTop > .5) setScrollTop(0); return; }
@@ -252,10 +257,10 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         if (pointerFocus.current) return;
         setMeasurementVersion((n) => n + 1);
         // A burst can detach follow before this observer's closure is replaced.
-        if (useApp.getState().follow) {
+        if (useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) {
           followLatest();
         }
-        else restoreReading();
+        else requestAnimationFrame(() => restoreReading());
       }
     });
     // The inner section repeats the same identity but has a different height. Measuring both
@@ -282,7 +287,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (targetId !== lastNavigation.current) {
       lastNavigation.current = targetId;
       pendingNavigation.current = targetId;
-      set({ follow: false });
+      navigationBoundary.current = { step: scene.step, projection };
       setScrollTop(layout.prefix[targetIndex]!);
       return;
     }
@@ -308,6 +313,12 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (!follow) { navigationBoundary.current = undefined; return; }
+    const boundary = navigationBoundary.current;
+    // A clicked destination stays readable until genuinely new captured work arrives.
+    // Keep the Follow preference on; layout measurements alone must not undo navigation.
+    if (boundary?.step === scene.step && boundary.projection === projection) return;
+    navigationBoundary.current = undefined;
     if (follow) {
       followLatest();
       seenThrough.current = scene.total;
@@ -353,14 +364,12 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (!selection || selection.isCollapsed || !el?.contains(selection.anchorNode) || !el.contains(selection.focusNode)) return;
     setMeasurementVersion((n) => n + 1);
     rememberReading();
-    if (follow) set({ follow: false });
   };
 
   return (
     <>
-    <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => { if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; } userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY !== 0) { rememberReading(); set({ follow: false }); } }} onPointerDown={(e) => { if (scrollsInsideMaterial(e.target)) return; if (e.target === ref.current) userScrollUntil.current = performance.now() + 750; if (follow && !(e.target as HTMLElement).closest('button, input, select, a') && (e.target === ref.current || (e.target as HTMLElement).closest('.op-body, .prose, .op-expanded'))) { rememberReading(); set({ follow: false }); } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
-      // Pointer focus must not reflow the button between press and release. Hold at
-      // activation instead; keyboard focus and text selection still hold immediately.
+    <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => { if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; } userScrollUntil.current = performance.now() + 750; if (follow && e.deltaY < 0) { rememberReading(); set({ follow: false }); } }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) userScrollUntil.current = performance.now() + 750; }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
+      // Pin the interacted material after activation without disabling Follow.
       if ((e.target as HTMLElement).closest('button, input, select, a')) {
         const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId;
         rememberReading();
@@ -370,10 +379,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
           if (!ref.current) return;
           setFocusedPassageId(id);
           setMeasurementVersion((n) => n + 1);
-          if (useApp.getState().follow) set({ follow: false });
         });
       }
-    }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { if (scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) return; if (pointerFocus.current && (e.target as HTMLElement).closest('button, input, select, a')) return; const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id && follow) { rememberReading(); set({ follow: false }); } }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
+    }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { if (scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) return; if (pointerFocus.current && (e.target as HTMLElement).closest('button, input, select, a')) return; const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id) rememberReading(); }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       {/* Keep the document extent stable while React replaces disjoint virtual runs.
           Otherwise removing a spacer can clamp native scroll to the pinned old work. */}
       <div className="history-inner"><div style={{ minHeight: layout.total }}>
@@ -394,15 +402,19 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     </div>
       {mode === 'history' && <nav className="history-prompt-marks" aria-label={onWindow ? 'Prompts in loaded history' : 'Prompt positions in history'}>
         {scene.passages.map((ps, index) => ({ ps, index })).filter(item => item.ps.turnPrompt).filter((_, index, items) => index % Math.max(1, Math.ceil(items.length / 60)) === 0).slice(0, 60).map(({ ps, index }) => <button key={ps.id} aria-label={`Go to prompt: ${ps.turnPrompt}`} title={ps.turnPrompt} style={{ top: `${Math.max(0, Math.min(100, layout.prefix[index]! / Math.max(1, layout.total) * 100))}%` }} onClick={() => {
-          set({ follow: false, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
+          set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
+          navigationBoundary.current = { step: scene.step, projection };
           setFocusedPassageId(ps.id);
           readingAnchor.current = { id: ps.id, offset: 0 };
           setScrollTop(layout.prefix[index]!);
         }} />)}
       </nav>}
-      {!follow && (
+      {(!follow || navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection) && (
         <button className="follow-pill" aria-label={`${mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest`} title="Back to latest" onClick={() => {
           userScrollUntil.current = 0;
+          navigationBoundary.current = undefined; readingAnchor.current = undefined;
+          setFocusedPassageId(undefined);
+          requestAnimationFrame(() => followLatest());
           set({ follow: true, selectedOp: undefined, focusObservationId: undefined, promptStep: undefined, held: false });
           // Return the camera to the current replay/live edge, without stopping its clock.
         }}>
@@ -453,7 +465,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   const prose = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const root = prose.current;
-    if (!root || !arriving || !useApp.getState().motion || !useApp.getState().follow || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!root || !arriving || !useApp.getState().motion || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const animations = [...root.querySelectorAll(':scope > p, :scope > ul, :scope > pre')].slice(0, 12).map((el, i) => el.animate([{ opacity: .12, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 400, delay: Math.min(480, i * 40), fill: 'backwards', easing: 'ease-out' }));
     const cancel = () => animations.forEach(a => a.cancel());
     const history = root.closest('.history'); history?.addEventListener('wheel', cancel, { passive: true });
@@ -464,13 +476,13 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   return (
     <div ref={prose} data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
-        <button className="prose-label" onClick={() => { setOpen((o) => !o); set({ follow: false }); }} aria-expanded={open}>
+        <button className="prose-label" onClick={() => { setOpen((o) => !o); }} aria-expanded={open}>
           {label}
           {open ? ' · collapse' : ' · show'}
         </button>
       )}
       {open && <Markdown text={pr.text} onPath={(p) => set({ hoveredPath: p })} />}
-      {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); set({ follow: false }); }}>{full ? 'Close full captured text' : 'Preview · read full captured text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
+      {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); }}>{full ? 'Close full captured text' : 'Preview · read full captured text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
     </div>
   );
 }
@@ -507,7 +519,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       }}
       onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && select(op.id)}
       onMouseEnter={() => set({ hoveredOp: op.id, hoveredPath: op.paths.find((p) => p.role !== 'search-hit')?.path })}
-      onMouseLeave={() => set({ hoveredOp: undefined, hoveredPath: undefined })}
+      onMouseLeave={e => { if (e.currentTarget.dataset.hoverReading !== 'focused') set({ hoveredOp: undefined, hoveredPath: undefined }); }}
       aria-label={op.title}
     >
       <header className="op-head">
@@ -518,7 +530,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {
             e.stopPropagation();
-            set({ expandedOp: expanded ? undefined : op.id, selectedOp: undefined, follow: false });
+            set({ expandedOp: expanded ? undefined : op.id, selectedOp: undefined });
           }}>{expanded ? 'Close' : 'Expand'}</button>
         )}
       </header>
@@ -629,7 +641,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
           <div className="query">{d.query}</div>
           <ResultArea state={op.status} resolving={resolving}>
             {d.hits.slice(0, 5).map((h, i) => (
-              <button key={i} className="hit search-bead" title={`Open recorded work on ${h.path}`} onClick={(e) => { e.stopPropagation(); set({ filePanel: h.path, follow: false }); }} onMouseEnter={() => set({ hoveredPath: h.path })}>
+              <button key={i} className="hit search-bead" title={`Open recorded work on ${h.path}`} onClick={(e) => { e.stopPropagation(); set({ filePanel: h.path }); }} onMouseEnter={() => set({ hoveredPath: h.path })}>
                 <span className="hit-path">{h.path}</span>
                 {h.line !== undefined && <span className="hit-line">:{h.line}</span>}
                 {h.text && <span className="hit-excerpt">{h.text.slice(0, 180)}</span>}
@@ -647,7 +659,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="test">
           <div className="cmd">$ {d.command}</div>
           <ResultArea state={op.status} resolving={resolving}>{s ? (
-            <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined, follow: false })} />
+            <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
             <div className="muted">exit {d.exitCode ?? '?'}</div>
           ) : <div className="muted">Waiting for output</div>}
@@ -748,7 +760,7 @@ function ReadPreview({ opId, artifactId, start, path, onSource }: { opId: string
       e.stopPropagation();
       // Keep keyboard focus on a control that survives this preview's replacement.
       e.currentTarget.closest('article')?.querySelector<HTMLButtonElement>('[data-expand-op]')?.focus({ preventScroll: true });
-      set({ expandedOp: opId, selectedOp: undefined, follow: false });
+      set({ expandedOp: opId, selectedOp: undefined });
     }} aria-label={`Read excerpt of ${path}`}>
       <span>Preview · lines {sourceStart}–{sourceStart + shownLines - 1}</span><span>Read excerpt ↗</span>
     </button>
