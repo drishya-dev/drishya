@@ -120,7 +120,7 @@ test('connected action flow and agent switches replace tabs without inventing ca
   await page.getByRole('switch',{name:'Filter by claude-opus-5 agent'}).click();
   await page.getByRole('button',{name:'Show session folders',exact:true}).click();
   await page.setViewportSize({width:1600,height:1000});
-  await expect(page.locator('.flow-connections > path')).not.toHaveCount(0);
+  await expect(page.locator('.flow-connections > g > path')).not.toHaveCount(0);
   await expect(page.locator('.flow-connections')).toContainText(/Recorded sequence|same-artifact/);
   const chrome = await page.locator('.history .op').evaluateAll(nodes => nodes.map(n => ({ error: n.classList.contains('st-error'), border: getComputedStyle(n).borderColor, header: getComputedStyle(n.querySelector('.op-head')!).backgroundColor })));
   expect(new Set(chrome.filter(n => !n.error).map(n => n.border)).size).toBe(1);

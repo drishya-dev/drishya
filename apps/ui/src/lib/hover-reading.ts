@@ -32,7 +32,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       focus.card.dataset.hoverReading = 'returning';
       focus.card.style.setProperty('--hover-left', `${to.left}px`); focus.card.style.setProperty('--hover-top', `${to.top}px`);
       focus.card.style.setProperty('--hover-width', `${to.width}px`); focus.card.style.setProperty('--hover-height', `${to.height}px`);
-      focus.animation = moveMaterial(focus.card, from, 780, 'reading-focus-return');
+      focus.animation = moveMaterial(focus.card, from, 320, 'reading-focus-return');
       const animation = focus.animation;
       const finish = () => { if (focus.returning && focus.animation === animation) restore(focus); };
       void animation.finished.then(finish, finish);
@@ -48,7 +48,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       const from = card.getBoundingClientRect();
       const viewport = root.getBoundingClientRect();
       if (from.bottom < viewport.top + 80 || from.top > viewport.bottom - 80) return;
-      const crown = document.querySelector('.crown')?.getBoundingClientRect();
+      const crown = document.querySelector('.workspace-header')?.getBoundingClientRect();
       const composer = document.querySelector('.prompt-composer.open')?.getBoundingClientRect();
       const top = Math.max(viewport.top + 16, (crown?.bottom ?? 0) + 16);
       const bottom = Math.min(viewport.bottom - 24, (composer?.top ?? innerHeight) - 16);
@@ -72,7 +72,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       card.style.setProperty('--hover-height', `${height}px`);
       card.style.setProperty('--hover-top', `${Math.max(top, Math.min(bottom - height, from.top + (from.height - height) / 2))}px`);
       const focus: Focus = previous ?? { card, slot, returning: false }; focus.returning = false; active = focus; focuses.add(focus);
-      if (useApp.getState().motion && !matchMedia('(prefers-reduced-motion: reduce)').matches) focus.animation = moveMaterial(card, from, 780, 'reading-focus-arrive');
+      if (useApp.getState().motion && !matchMedia('(prefers-reduced-motion: reduce)').matches) focus.animation = moveMaterial(card, from, 360, 'reading-focus-arrive');
       window.dispatchEvent(new Event('drishya-material-layout'));
     };
     const move = (event: PointerEvent) => {
@@ -91,7 +91,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
           if ((materialIsMoving(target) || target.dataset.materialSettling === 'true') && performance.now() - began < 2200) { dwell = setTimeout(attempt, 120); return; }
           candidate = undefined; open(target);
         };
-        dwell = setTimeout(attempt, 280);
+        dwell = setTimeout(attempt, 240);
       } else {
         clearTimeout(dwell); candidate = undefined;
         if (active && !leave && !getSelection()?.toString()) leave = setTimeout(() => { leave = undefined; if (active) close(active); }, 180);

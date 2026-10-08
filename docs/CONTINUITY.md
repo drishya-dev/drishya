@@ -1,6 +1,12 @@
 # Continue here — current handoff
 
+**Latest local correction — 8 October:** [33](review/33-smooth-follow-map.md) implements automatic live/replay following across bursts/late growth, faster compositor motion, a single translucent navbar tint, a visible Follow switch/activity disclosure, and observed-file/direct-import map navigation. It supersedes automatic readability camera holds and the slow-motion candidate in 32. Work is uncommitted on `harsh/fix-workspace-toolbar` for Harsh's local review. Preserve earlier uncommitted toolbar/browser-regression changes.
+
+Local evidence: typechecks/build + 289 units passed; ordinary browser journeys passed across full/focused runs. Ten-minute synthetic reading passed (604,858 ms, 103 rounds, 895 peak DOM nodes); final narrow fixes followed its start and have scoped checks. A 24-second 4× CPU demo probe improved p99 frames from 50 to 16.8 ms, with no automatic follow detachment; long-task time stayed similar. Heap counters are JavaScript-only, not total RAM. Review 33 for timing, resource caps and unmeasured physical/platform scope. Local synthetic preview remains at port 7878; no new branch/commit/PR/hosted CI.
+
 **Latest baseline:** PR #46 merged on main (`79e5d82`), local checks only; unrelated package-manager edits remain local.
+
+**Latest publishing authorization — 8 October:** Harsh requested a PR and Yash review after all local CI checks. The complete candidate passed frozen-lock install, typechecks + 289 units, full browser suite (54 passed, two opt-in skips), isolated offline package verification, unchanged regenerated demo bundle and diff checks. Fresh final-code ten-minute reading passed at 605,196 ms / 103 rounds / 895 peak DOM nodes. `harsh/fix-workspace-toolbar` includes the unmerged search-dismissal commit. Only source/tests/docs are committed; `.local` evidence and stores stay local. Hosted CI remains undispatched.
 
 **Latest playback/prompt correction:** [31](review/31-independent-replay-reading.md) keeps active replay advancing while the user hovers/reads above, independent of viewport follow, and keeps the compact native composer solid charcoal with contained decoration and no artificial scrollbars. This supersedes earlier automatic pause-on-reading rules; explicit transport controls and as-of evidence remain.
 

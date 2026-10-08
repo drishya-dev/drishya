@@ -1,3 +1,4 @@
+import { pointAtHistory } from './history-gestures.ts';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -327,7 +328,7 @@ test('MCP input and captured result can be read in the history passage', async (
   await expect(operation.locator('.op-expanded .output')).not.toBeEmpty();
 });
 
-test('a burst is captured immediately without fast-forwarding the reading camera', async ({ page }) => {
+test('a burst follows automatically and deliberate reading can hold and resume the camera', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const steps = page.locator('.reading-status');
@@ -337,9 +338,12 @@ test('a burst is captured immediately without fast-forwarding the reading camera
   }
   await app.ingest.sync(recordingId);
   await expect(steps).toContainText(`${before + 8} recorded steps`);
-  await expect(page.getByRole('button', { name: /8 new steps · Back to latest/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveCount(0);
   const history = page.locator('.history');
-  await expect.poll(() => history.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight)).toBeGreaterThan(2);
+  await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
+  await pointAtHistory(page);
+  await page.mouse.wheel(0, -240);
+  await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   // End a reading gesture outside history; an explicit return must still work.
   const bounds = (await history.boundingBox())!;
   await page.mouse.move(bounds.x + 20, bounds.y + bounds.height - 20);
@@ -506,7 +510,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   const scrollHistory = async (delta: number) => {
     const r = (await history.boundingBox())!;
-    await page.mouse.move(r.x + r.width - 2, r.y + 100);
+    await pointAtHistory(page, history);
     await page.mouse.wheel(0, delta);
   };
   await scrollHistory(-100_000);
@@ -566,8 +570,7 @@ test('replay clock advances independently while hovering, scrolling above and re
   await page.getByRole('combobox', { name: 'Speed', exact: true }).selectOption('0.5');
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const history = page.locator('.history');
-  const bounds = (await history.boundingBox())!;
-  await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 130);
+  await pointAtHistory(page, history);
   await page.mouse.wheel(0, -10000);
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
   const step = () => page.getByRole('slider', { name: 'Timeline' }).getAttribute('aria-valuenow').then(Number);
@@ -585,6 +588,7 @@ test('replay clock advances independently while hovering, scrolling above and re
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await expect.poll(() => history.evaluate(el => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(2);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
 });

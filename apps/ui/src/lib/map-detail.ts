@@ -42,6 +42,7 @@ function mapLevel(graph: RepoGraph, depth: number): { nodes: MapGroup[]; edges: 
 }
 
 const levels = new WeakMap<RepoGraph, Map<number, ReturnType<typeof mapLevel>>>();
+const sourceCounts = new WeakMap<RepoGraph, number>();
 function level(graph: RepoGraph, depth: number) {
   let cache = levels.get(graph);
   if (!cache) { cache = new Map(); levels.set(graph, cache); }
@@ -52,7 +53,8 @@ function level(graph: RepoGraph, depth: number) {
 
 /** Nested spatial bins split continuously; a group is navigation, not a source file. */
 export function mapDetail(graph: RepoGraph, zoom: number): ReturnType<typeof mapLevel> {
-  const count = graph.nodes.filter(n => !(graph.temporal === 'current' && n.path.startsWith('.local/'))).length;
+  let count = sourceCounts.get(graph);
+  if (count === undefined) { count = graph.nodes.filter(n => !(graph.temporal === 'current' && n.path.startsWith('.local/'))).length; sourceCounts.set(graph, count); }
   if (count <= 80 || zoom >= 8) return level(graph, 99);
   const position = Math.max(0, Math.log2(Math.max(1, zoom)));
   const index = Math.min(2, Math.floor(position));

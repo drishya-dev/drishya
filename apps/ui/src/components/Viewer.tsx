@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
 import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
@@ -35,6 +35,7 @@ function WorkspaceViewer() {
   const step = useApp((s) => s.step);
   const filter = useApp((s) => s.filter);
   const selectedOp = useApp((s) => s.selectedOp);
+  const readingPassageId = useApp(s => s.readingPassageId);
   const explore = useApp((s) => s.explore);
   const mapReading = useApp(s => !!(s.currentFile || s.filePanel));
   const compareAgents = useApp((s) => s.compareAgents);
@@ -47,6 +48,10 @@ function WorkspaceViewer() {
 
   const scene = useMemo(() => historyPage?.scene ?? (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [historyPage, projection, step, filter, selectedOp]);
   const historical = useMemo(() => historyPage?.projection ?? (projection ? asOfProjection(projection, step) : undefined), [historyPage, projection, step]);
+  const passagePaths = useMemo(() => {
+    const passage = scene?.passages.find(ps => selectedOp ? ps.ops.some(op => op.id === selectedOp) : ps.id === (readingPassageId ?? scene.focus?.passageId));
+    return [...new Set(passage?.ops.flatMap(op => op.paths) ?? [])];
+  }, [scene, selectedOp, readingPassageId]);
 
   useEffect(() => {
     if (!mapVisible || !projection || graph || !source || !recordingId) return;
@@ -96,23 +101,23 @@ function WorkspaceViewer() {
       if (!col) return;
       const a = el.getBoundingClientRect();
       const b = col.getBoundingClientRect();
-      setReading({ left: b.left - a.left, width: b.width });
+      const left = b.left - a.left, width = b.width;
+      setReading(old => old?.left === left && old.width === width ? old : { left, width });
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [projection]);
+  }, [!!projection, foldersHidden, explore, inspectorWidth]);
 
   if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
 
   return (
     <div style={{ '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
-      <Crown scene={scene} projection={projection} />
-      <WorkspaceBar />
+      <WorkspaceHeader scene={scene} projection={projection} />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
-        {mapVisible && <MapCanvas graph={graph} heat={scene.heat} readingRect={reading} />}
+        {mapVisible && <MapCanvas graph={graph} heat={scene.heat} passagePaths={passagePaths} readingRect={reading} />}
         <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />
         <AgentOverview scene={scene} projection={historical} />
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
@@ -132,6 +137,27 @@ function WorkspaceViewer() {
 
 // ─── crown: agents across the top ────────────────────────────────────────────────────────
 
+function WorkspaceHeader({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const header = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = header.current!;
+    const viewer = element.closest<HTMLElement>('.viewer')!;
+    // Wrapped controls and native font sizes own their clearance, not a fixed 28px strip.
+    const measure = () => viewer.style.setProperty('--workspace-header-h', `${element.getBoundingClientRect().height}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    const scroll = (event: Event) => {
+      if (event.target instanceof HTMLElement && event.target.matches('.history')) {
+        element.toggleAttribute('data-scrolled', event.target.scrollTop > 12);
+      }
+    };
+    viewer.addEventListener('scroll', scroll, true);
+    return () => { observer.disconnect(); viewer.removeEventListener('scroll', scroll, true); viewer.style.removeProperty('--workspace-header-h'); };
+  }, []);
+  return <div ref={header} className="workspace-header"><Crown scene={scene} projection={projection} /><WorkspaceBar scene={scene} /></div>;
+}
+
 function Crown({ scene, projection }: { scene: Scene; projection: Projection }) {
   const recording = useApp((s) => s.recording);
   const recordingId = useApp((s) => s.recordingId);
@@ -145,11 +171,11 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
 
   return (
     <header className="crown">
-      <button className="brand" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname) : (set({ screen: 'home', playing: false }), (location.hash = ''))} title="All recordings">
+      <div className="crown-identity"><button className="brand" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname) : (set({ screen: 'home', playing: false }), (location.hash = ''))} title="All recordings">
         <span className="brand-mark" />
         Drishya
       </button>
-      {source?.sample && <span className="crown-sample">Synthetic demo</span>}
+      {source?.sample && <span className="crown-sample">Synthetic demo</span>}</div>
       <div className="crown-title" title={projection.title}>
         {projection.title ?? recording?.title ?? 'Recording'}
         {source?.kind === 'bundle' && !source.sample && <span className="tag">offline bundle</span>}
@@ -182,7 +208,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
       </div>}
       <div className="crown-actions"><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true, follow: false })}>Settings</button>
-        <button className="btn ghost" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search</button>
+        <button className="btn ghost search-open" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
           {exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}
           <SinceMarkPill projection={projection} />
@@ -596,6 +622,7 @@ function Search({ projection }: { projection: Projection }) {
   return (
     <div ref={panel} id="recording-search" popover="auto" className="search" role="dialog" aria-label="Search this recording" onToggle={event => set({ searchOpen: event.newState === 'open' })}>
       <div className="search-field">
+        <svg className="search-symbol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg>
         <input autoFocus aria-label="Search prose, commands, paths" placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="search-close" aria-label="Close search" popoverTarget="recording-search" popoverTargetAction="hide">×</button>
       </div>

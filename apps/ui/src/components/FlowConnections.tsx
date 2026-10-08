@@ -1,5 +1,5 @@
 import { flowRoute } from '../lib/flow-route.ts';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { Projection } from '@drishya/contracts';
 import { createPortal } from 'react-dom';
 import { useApp } from '../state.ts';
@@ -11,15 +11,22 @@ export function FlowConnections({ projection }: { projection: Projection }) {
   const hovered = useApp(s => s.hoveredOp);
   const explore = useApp(s => s.explore);
   const lowResource = useApp(s => s.lowResource);
-  const [paths, setPaths] = useState<Connection[]>([]);
+  const group = useRef<SVGGElement>(null);
   const frame = useRef<number | undefined>(undefined);
   const evidence = useMemo(() => new Map(projection.links.filter(l => l.relation !== 'temporal-neighbor').map(l => [`${l.from}/${l.to}`, l])), [projection.links]);
   useLayoutEffect(() => {
     const history = document.querySelector<HTMLElement>('.history');
-    if (!history || explore || lowResource) { setPaths([]); return; }
+    const root = group.current;
+    if (!root) return;
+    if (!history || explore || lowResource) { root.replaceChildren(); return; }
+    const elements = new Map<string, SVGPathElement>();
+    root.replaceChildren();
     let deadline = performance.now() + 2400;
-    const measure = () => {
+    let lastMeasure = 0;
+    const measure = (time = performance.now()) => {
       frame.current = undefined;
+      if (time - lastMeasure < 32) { frame.current = requestAnimationFrame(measure); return; }
+      lastMeasure = time;
       const viewport = history.getBoundingClientRect();
       const visible = new Map<string, DOMRect>();
       for (const card of history.querySelectorAll<HTMLElement>('.op[data-op-id]')) {
@@ -41,7 +48,20 @@ export function FlowConnections({ projection }: { projection: Projection }) {
           result.push({ key: `${from}/${to}`, d, label: link ? `${link.relation}: ${link.explanation}` : 'Recorded sequence · order, not a causal link', strong: selected === from || selected === to || hovered === from || hovered === to });
         }
       }
-      setPaths(result);
+      // Geometry follows compositor motion without sending 60 React updates a second.
+      const keys = new Set(result.map(path => path.key));
+      for (const [key, element] of elements) if (!keys.has(key)) { element.remove(); elements.delete(key); }
+      for (const path of result) {
+        let element = elements.get(path.key);
+        if (!element) {
+          element = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          element.setAttribute('marker-end', 'url(#flow-arrow)');
+          const title = document.createElementNS('http://www.w3.org/2000/svg', 'title'); title.textContent = path.label; element.append(title);
+          root.append(element); elements.set(path.key, element);
+        }
+        if (element.getAttribute('d') !== path.d) element.setAttribute('d', path.d);
+        element.classList.toggle('focused', path.strong);
+      }
       if (performance.now() < deadline && [...history.querySelectorAll('.op[data-op-id]')].some(el => el.getAnimations().some(a => (a.id.startsWith('surface-') || a.id.startsWith('reading-focus-')) && a.playState === 'running'))) frame.current = requestAnimationFrame(measure);
     };
     const schedule = () => { deadline = performance.now() + 2400; if (frame.current === undefined) frame.current = requestAnimationFrame(measure); };
@@ -56,6 +76,6 @@ export function FlowConnections({ projection }: { projection: Projection }) {
     const timer = setTimeout(schedule, 1800);
     return () => { observer.disconnect(); history.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); window.removeEventListener('drishya-material-layout', schedule); clearTimeout(timer); if (frame.current !== undefined) cancelAnimationFrame(frame.current); frame.current = undefined; };
   }, [projection, selected, hovered, explore, lowResource]);
-  if (!paths.length || explore || lowResource) return null;
-  return createPortal(<svg className="flow-connections" aria-label="Connections in recorded order" role="img"><defs><marker id="flow-arrow" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5" /></marker></defs>{paths.map(path => <path key={path.key} d={path.d} className={path.strong ? 'focused' : ''} markerEnd="url(#flow-arrow)"><title>{path.label}</title></path>)}</svg>, document.body);
+  if (typeof document === 'undefined') return null;
+  return createPortal(<svg className="flow-connections" aria-label="Connections in recorded order" role="img"><defs><marker id="flow-arrow" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5" /></marker></defs><g ref={group} /></svg>, document.body);
 }

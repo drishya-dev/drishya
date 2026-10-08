@@ -1,3 +1,4 @@
+import { pointAtHistory } from './history-gestures.ts';
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -28,7 +29,7 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await expect(page.locator('.viewer')).toHaveClass(/still/);
     expect(requests.some((url) => url.endsWith('/projection'))).toBe(false);
     const history = page.locator('.history');
-    { const bounds = (await history.boundingBox())!; await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 100); }
+    await pointAtHistory(page, history);
     await page.mouse.wheel(0, -900);
     await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
     await history.evaluate((el) => { el.scrollTop = 0; });

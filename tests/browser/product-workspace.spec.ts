@@ -1,3 +1,4 @@
+import { pointAtHistory } from './history-gestures.ts';
 import { appendFileSync, copyFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -45,7 +46,7 @@ test('source preview opens the exact stored range and keeps pending replay evide
   await expect(history).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   const scrollBox = (await history.boundingBox())!;
-  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
+  await pointAtHistory(page);
   await page.mouse.wheel(0, -100_000);
   const read = history.locator(`article[data-op-id="${op.id}"]`);
   await read.scrollIntoViewIfNeeded();
@@ -123,7 +124,7 @@ test('source references reject oversized text, preserve derived provenance and c
   await expect(history).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   const scrollBox = (await history.boundingBox())!;
-  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
+  await pointAtHistory(page);
   await page.mouse.wheel(0, -100_000);
   const read = page.locator(`article[data-op-id="${op.id}"]`);
   await read.scrollIntoViewIfNeeded();
@@ -156,7 +157,7 @@ test('substantial external results retain structured evidence and adapt to narro
   await expect(history).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   const scrollBox = (await history.boundingBox())!;
-  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
+  await pointAtHistory(page);
   await page.mouse.wheel(0, -100_000);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   await expect(external).toBeAttached();
@@ -368,7 +369,7 @@ test('view and appearance changes keep the same captured passage under the reade
   await expect.poll(() => history.evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await expect.poll(() => history.evaluate(el => [...el.querySelectorAll('article')].flatMap(card => card.getAnimations()).filter(a => a.id.startsWith('surface-') && a.playState === 'running').length)).toBe(0);
   const scrollBox = (await history.boundingBox())!;
-  await page.mouse.move(scrollBox.x + scrollBox.width - 2, scrollBox.y + 100);
+  await pointAtHistory(page);
   await page.mouse.wheel(0, -1000);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));

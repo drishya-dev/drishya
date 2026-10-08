@@ -3,7 +3,7 @@ import type { Scene } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import { agentColor, agentName } from '../lib/identity.ts';
 
-export function WorkspaceBar() {
+export function WorkspaceBar({ scene }: { scene: Scene }) {
   const explore = useApp((s) => s.explore);
   const compare = useApp((s) => s.compareAgents);
   const source = useApp((s) => s.source);
@@ -11,10 +11,16 @@ export function WorkspaceBar() {
   const filter = useApp((s) => s.filter);
   const multipleAgents = useApp(s => (s.projection?.agents.length ?? 0) > 1);
   const foldersHidden = useApp(s => s.foldersHidden);
+  const follow = useApp(s => s.follow);
+  const mode = useApp(s => s.mode);
+  const recent = scene.passages.flatMap(passage => passage.ops).slice(-12);
   const foldersShown = foldersHidden === false || foldersHidden !== true && window.innerWidth > 820;
   return <nav className="workspace-bar" aria-label="Workspace views">
     <span className="workspace-context sr-only">{source?.sample === 'growing' ? recording?.live ? 'Synthetic live demonstration · Publishing sample events' : 'Synthetic live demonstration · Sample complete' : source?.sample ? 'Synthetic recording' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local recording'}</span>
-    <div className="workspace-toggles"><button aria-label="Show session folders" aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}>⌑ Folders</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ mapVisible: true, explore: !explore, selectedOp: undefined, expandedOp: undefined, follow: false })}>⌘ Map</button>{multipleAgents && <button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false, follow: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button>}</div>
+    <div className="workspace-toggles"><button aria-label="Show session folders" aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg>Folders</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ mapVisible: true, explore: !explore, selectedOp: undefined, expandedOp: undefined, follow: false })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7" /><circle cx="5" cy="5" r="3" /><circle cx="19" cy="5" r="3" /><circle cx="5" cy="19" r="3" /><circle cx="19" cy="19" r="3" /></svg>Map</button>{multipleAgents && <button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false, follow: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button>}</div>
+    <button className="workspace-follow" role="switch" aria-label="Automatically follow new work" aria-checked={follow} onClick={() => useApp.setState({ follow: !follow, ...(!follow ? { selectedOp: undefined, expandedOp: undefined, promptStep: undefined, focusObservationId: undefined, explore: false } : {}) })}>{mode === 'replay' ? 'Follow replay' : 'Follow live'}<span className={`mini-switch${follow ? ' on' : ''}`} /></button>
+    <details className="workspace-activity"><summary aria-label="Recent actions in recorded order"><span>Activity</span><span className="activity-beads" aria-hidden="true">{recent.map(op => <i key={op.id} className={`activity-bead state-${op.state}`} />)}</span><span aria-hidden="true">⌄</span></summary><div className="activity-list"><small>Recent actions · recorded order</small>{recent.map(op => <button key={op.id} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); useApp.getState().select(op.id); }}><span>{op.title}</span><small className={`state-${op.state}`}>{op.state}</small></button>)}{!recent.length && <p>Waiting for captured actions.</p>}</div></details>
+    {source?.sample === 'growing' && <span className={`sample-state${recording?.live ? ' live' : ''}`}><i aria-hidden="true" />{recording?.live ? 'Live demo' : 'Demo complete'}</span>}
     {source?.sample === 'growing' && recording?.live && <button className="btn ghost sample-complete" onClick={() => source.completeSample?.()}>Show complete sample</button>}
     {(source?.sample === 'recorded' || source?.sample === 'growing' && !recording?.live) && <button className="btn ghost sample-watch" onClick={() => location.assign(`${location.pathname}?demo=live`)}>{source.sample === 'growing' ? 'Watch demo again' : 'Watch live demo'}</button>}
     {filter && <button className="btn ghost clear-workspace-filter" onClick={() => useApp.getState().setFilter(undefined)}>Clear focus</button>}

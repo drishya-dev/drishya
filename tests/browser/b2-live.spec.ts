@@ -1,3 +1,4 @@
+import { pointAtHistory } from './history-gestures.ts';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -87,7 +88,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   for (const width of [1440, 900, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
-    { const bounds = (await history.boundingBox())!; await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 100); }
+    await pointAtHistory(page, history);
     await page.mouse.wheel(0, -900);
     await expect(latest).toBeVisible();
     // Wheel dispatch can return before the browser applies the scroll. Measure a stationary
@@ -110,7 +111,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
     })).toMatchObject({ id: anchor.id, offset: anchor.offset });
 
     // Reaching the bottom by scrolling is not consent to resume following.
-    { const bounds = (await history.boundingBox())!; await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 100); }
+    await pointAtHistory(page, history);
     await page.mouse.wheel(0, 100_000);
     await expect(latest).toBeVisible();
     await latest.click();
@@ -132,13 +133,15 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
 });
 
 test('long history mounts only nearby work while selected evidence and live updates survive', async ({ page }) => {
-  page.on('console', msg => { if(msg.text().includes('SCROLLTRACE')) console.log(msg.text()); });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const history = page.locator('.history');
   const steps = page.locator('.reading-status');
   const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
-  { const bounds = (await history.boundingBox())!; await page.mouse.move(bounds.x + bounds.width - 2, bounds.y + 100); }
+  // Initial allocation is asynchronous; start the long-history journey at its
+  // measured live edge before asking a single wheel gesture to reach the start.
+  await expect.poll(() => history.evaluate(el => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(2);
+  await pointAtHistory(page, history);
   await page.mouse.wheel(0, -100_000);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   await expect.poll(() => history.evaluate((el) => el.scrollTop)).toBe(0);
