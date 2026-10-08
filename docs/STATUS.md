@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Compact connected workspace and upward-only Follow #48 merged on main (`2de25da`, review 34), after connector fix `8296135` and smooth follow #47 (`e1ca4d3`), following replay/prompt #46 (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | **Scroll-preserved motion/prompt rail #49 merged (`e34ee14`, review 35), following compact connected workspace and upward-only Follow #48 merged on main (`2de25da`, review 34), after connector fix `8296135` and smooth follow #47 (`e1ca4d3`), following replay/prompt #46 (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -64,7 +64,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 8 October 2026; scroll-preserved motion and prompt rail, branch `codex/scroll-preserved-reading`.
+- **When:** 8 October 2026; scroll-preserved motion and prompt rail, merged as [PR #49](https://github.com/drishya-dev/drishya/pull/49), main `e34ee14`.
 - **Delivered:** wheel input no longer cancels arrivals/reflow/settlement/prose. Hover result boundaries forward to history without closing the real enlarged card; the source passage stays pinned. Follow remains upward-only. Gesture/React layout timing now preserves the new reading position, including an independent document-start boundary when virtualization temporarily has no mounted passage. Native response duplicate removed; errors/approvals retained. Compact arrow/square send/stop controls. Search entrance starts at the final corner. Prompt navigation uses bounded equal-rank chapters with active white tick and captured prompt hover/focus preview, separately from the scrollbar. See review 35.
 - **Checks:** Local typechecks, 292 units, production UI/isolated packed install/API/restart and 57 regular browser journeys passed (two opt-ins skipped); hover/start regression repeated three times. Rendered prompt rail/search/composer reviewed. Final-code ten-minute synthetic reading passed: 603,879 ms, 92 bursts, 804 peak DOM nodes; see review 35. No hosted CI.
 - **Next:** Human preference and native/physical/platform acceptance remain separate; attachments/full access/multi-agent matrix stays in review 30. Unrelated package-manager edits preserved.
