@@ -61,7 +61,7 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     if (!eligible) return;
     setSubmitting(true);
     ++revision.current;
-    try { const state = await workspaceApi.prompt(id!, prompt, exclusive); if (useApp.getState().recordingId === id) setController(state); }
+    try { const state = await workspaceApi.prompt(id!, prompt, exclusive); if (useApp.getState().recordingId === id) { ++revision.current; setController(state); } }
     finally { if (useApp.getState().recordingId === id) setSubmitting(false); }
   };
   return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve }}>{children}</SessionContext.Provider>;

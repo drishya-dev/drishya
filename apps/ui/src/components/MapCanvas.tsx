@@ -135,7 +135,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   useEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0, last = 0;
-    const enabled = () => depth && orbit && motion && !lowResource && !explore && !reading && !hoveredOp && !hoveredPath && document.visibilityState === 'visible' && !preference.matches && displayNodes.length <= 1500;
+    const enabled = () => displayNodes.length > 0 && depth && orbit && motion && !lowResource && !explore && !reading && !hoveredOp && !hoveredPath && document.visibilityState === 'visible' && !preference.matches && displayNodes.length <= 1500;
     const tick = (time: number) => {
       if (!enabled()) { frame = 0; last = 0; return; }
       if (last && time - last >= 1000 / 15) { const elapsed = Math.min(100, time - last); setYaw(value => (value + elapsed * .000035) % (Math.PI * 2)); last = time; }
