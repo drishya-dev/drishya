@@ -110,10 +110,14 @@ function WorkspaceViewer() {
     return () => ro.disconnect();
   }, [!!projection, foldersHidden, explore, inspectorWidth]);
 
-  if (!projection || !scene || !historical || (historyPage && scene.step !== step)) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
+  if (!projection || !scene || !historical) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
+  // Keep the viewport and finite arrivals alive across paged forward steps.
+  // A backward seek must conceal later evidence until its as-of page arrives.
+  const awaitingEarlierPage = !!historyPage && scene.step > step;
 
   return (
-    <div style={{ '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <>
+    <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <WorkspaceHeader scene={scene} projection={projection} /><WorkspaceBar />
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
@@ -132,6 +136,8 @@ function WorkspaceViewer() {
       <Briefing projection={projection} />
       <Search projection={projection} />
     </div>
+    {awaitingEarlierPage && <div className="center notice" style={{ position: 'absolute', inset: 0 }} role="status">{error ? <><p role="alert">History update failed: {error}</p><button className="btn" onClick={() => void useApp.getState().loadHistoryWindow({ step }).catch(failure => useApp.setState({ error: failure.message }))}>Retry</button><button className="btn" onClick={() => useApp.setState({ screen: 'home', playing: false })}>Back to sessions</button></> : 'Loading captured history…'}</div>}
+    </>
   );
 }
 

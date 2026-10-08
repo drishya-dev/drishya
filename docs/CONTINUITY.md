@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Latest replay fix:** review 37 records paged-step continuity: keep History mounted during forward loading; hide/inert later evidence during backward loading without discarding camera state. Delayed page and live/replay camera regressions pass. No hosted CI.
+
 **Latest same-day refinement:** review 37 now records brighter foreground/background white maps and title-strip-only hover entry. Preview scrolling does not start enlargement; the already enlarged whole card retains hover and existing scroll behavior. Panel scale and prompt border-aware/responsive autosizing are committed on main. Local checks only.
 
 

@@ -224,6 +224,7 @@ test('terminal folding is reversible and keyboard map search targets a real file
   await page.getByPlaceholder('Search prose, commands, paths…').fill('git diff');
   await page.locator('.search-results button').first().click();
   const shell = page.locator('article.op-shell');
+  await expect.poll(() => shell.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
   await shell.getByRole('button', { name: /captured lines between/ }).click();
   await expect(shell).toContainText('missing-total');
   await shell.getByRole('button', { name: 'Fold captured preview' }).click();
@@ -249,6 +250,13 @@ test('reduced motion keeps captured history and suppresses relationship animatio
 
 test('file relationships start at measured renderer nodes and fall back when the map is hidden', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  // This fixture asserts fixed planar coordinates; orbit and reader enlargement
+  // have separate tests and would deliberately move/occlude this reference.
+  await page.addInitScript(() => {
+    localStorage.setItem('drishya.hoverReading', '0');
+    localStorage.setItem('drishya.mapDepth', 'false');
+    localStorage.setItem('drishya.mapOrbit', 'false');
+  });
   // Synthetic fixture placement exposes one real rendered node in the reading margin.
   // The application does not move or invent a node to make a tether possible.
   await page.route('**/demo/bundle.json', async (route) => {
@@ -577,7 +585,7 @@ test('replay clock advances independently while hovering, scrolling above and re
   const step = () => page.getByRole('slider', { name: 'Timeline' }).getAttribute('aria-valuenow').then(Number);
   const before = await step();
   const read = page.locator('article.op-read').first();
-  await read.hover();
+  await read.locator('.op-head .op-title').hover();
   await expect(read).toHaveAttribute('data-hover-reading', 'focused');
   await expect.poll(step, { timeout: 15000 }).toBeGreaterThan(before);
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
@@ -592,4 +600,98 @@ test('replay clock advances independently while hovering, scrolling above and re
   await expect.poll(() => history.evaluate(el => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(2);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+});
+
+test('following completed arrivals does not bounce the history camera backward', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  append({ type: 'assistant', message: { id: 'camera-intro', role: 'assistant', content: [{ type: 'text', text: Array.from({ length: 35 }, (_, i) => `Synthetic camera context ${i}: previous captured work remains above this arriving tool.`).join('\n\n') }] } });
+  await app.ingest.sync(recordingId);
+  const history = page.locator('.history');
+  await expect.poll(() => history.evaluate(el => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(2);
+  await page.mouse.move(5, 650);
+  await page.evaluate(() => {
+    const samples: { top: number; extent: number; layout: number }[] = [];
+    (window as any).cameraSamples = samples;
+    const end = performance.now() + 3000;
+    const sample = () => {
+      const el = document.querySelector<HTMLElement>('.history')!;
+      samples.push({ top: el.scrollTop, extent: el.scrollHeight, layout: el.querySelector<HTMLElement>('.history-inner')!.offsetHeight });
+      if (performance.now() < end) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  const id = 'camera-burst-call';
+  append({ type: 'assistant', message: { id: 'camera-burst', role: 'assistant', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'printf synthetic-camera-burst' } }] } });
+  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 50 }, (_, i) => `Synthetic output line ${i}`).join('\n') }] } });
+  await app.ingest.sync(recordingId);
+  await expect(page.locator('article.op-shell').filter({ hasText: 'synthetic-camera-burst' })).toBeVisible();
+  await page.waitForTimeout(3200);
+  const samples = await page.evaluate(() => (window as any).cameraSamples as { top: number; extent: number; layout: number }[]);
+  const reverse = Math.max(0, ...samples.slice(1).map((sample, i) => samples[i]!.top - sample.top));
+  expect(reverse, JSON.stringify(samples.filter((_, i) => i % 5 === 0))).toBeLessThan(3);
+});
+test('sequence replay arrivals keep a steady forward camera', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(new URL('/?demo&at=1', server.launchUrl).href);
+  await page.getByRole('combobox', { name: 'Speed', exact: true }).selectOption('4');
+  await page.mouse.move(5, 650);
+  await page.evaluate(() => {
+    const samples: { top: number; extent: number; layout: number; step: string | null }[] = [];
+    (window as any).replayCameraSamples = samples;
+    const end = performance.now() + 8000;
+    const sample = () => {
+      const el = document.querySelector<HTMLElement>('.history')!;
+      samples.push({ top: el.scrollTop, extent: el.scrollHeight, layout: el.querySelector<HTMLElement>('.history-inner')!.offsetHeight, step: document.querySelector('[aria-label="Timeline"]')?.getAttribute('aria-valuenow') ?? null });
+      if (performance.now() < end) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.waitForTimeout(8200);
+  const samples = await page.evaluate(() => (window as any).replayCameraSamples as { top: number; extent: number; layout: number; step: string | null }[]);
+  const reverse = Math.max(0, ...samples.slice(1).map((sample, i) => samples[i]!.top - sample.top));
+  expect(reverse, JSON.stringify(samples.filter((_, i) => i % 5 === 0))).toBeLessThan(3);
+});
+test('paged replay retains its history and camera while the next captured page loads', async ({ page }) => {
+  await page.route('**/v1/recordings', async route => {
+    const response = await route.fetch();
+    const body = await response.json();
+    for (const recording of body.recordings) recording.sourceBytes = 34 * 1024 * 1024;
+    await route.fulfill({ response, json: body });
+  });
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(page.locator('.history')).toBeVisible();
+  await page.evaluate(() => { (window as any).originalReplayHistory = document.querySelector('.history'); });
+  let release!: () => void;
+  let requested = false;
+  let gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/history', async route => { requested = true; await gate; await route.continue(); });
+  await page.getByRole('button', { name: 'Step forward', exact: true }).click();
+  await expect.poll(() => requested).toBe(true);
+  try {
+    expect(await page.evaluate(() => (window as any).originalReplayHistory.isConnected)).toBe(true);
+    await expect(page.locator('.history')).toBeVisible();
+  } finally { release(); }
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+  await expect(page.locator('.viewer')).toHaveAttribute('aria-busy', 'false');
+  expect(await page.evaluate(() => (window as any).originalReplayHistory === document.querySelector('.history'))).toBe(true);
+  requested = false;
+  gate = new Promise<void>(resolve => { release = resolve; });
+  await page.getByRole('button', { name: 'Step back', exact: true }).click();
+  await expect.poll(() => requested).toBe(true);
+  try {
+    expect(await page.evaluate(() => (window as any).originalReplayHistory.isConnected)).toBe(true);
+    await expect(page.locator('.viewer')).toHaveAttribute('inert', '');
+    await expect(page.locator('.history')).toBeHidden();
+    await expect(page.getByRole('status')).toContainText('Loading captured history');
+  } finally { release(); }
+  await expect(page.locator('.viewer')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.history')).toBeVisible();
 });
