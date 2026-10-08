@@ -3,7 +3,6 @@ import type { Agent, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
-import { stageIncomingWork, stageViewportGrowth } from '../lib/live-pacing.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
 import { useApp } from '../state.ts';
@@ -45,13 +44,12 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const scrollFrame = useRef<number | undefined>(undefined);
   const navigationFrame = useRef<number | undefined>(undefined);
   const navigating = useRef(false);
-  const readingAnchor = useRef<{ id: string; offset: number } | undefined>(undefined);
+  const readingAnchor = useRef<{ id: string; offset: number; atStart?: boolean } | undefined>(undefined);
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
   const seenThrough = useRef(scene.total);
-  const presented = useRef<{ step: number; top: number; extent: number; anchor?: { id: string; offset: number } } | undefined>(undefined);
-  const watchLiveGrowth = useRef(false);
-  const stagedArrivalStep = useRef<number | undefined>(undefined);
+  const followFrame = useRef<number | undefined>(undefined);
+  const followingStarted = useRef(false);
   const requestedWindow = useRef('');
   const motion = useApp(s => s.motion);
   const materialPositions = useRef(new Map<string, DOMRect>());
@@ -61,14 +59,15 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (!history) return;
     const measure = () => {
       const next = new Map<string, DOMRect>();
+      const viewportBounds = history.getBoundingClientRect();
       for (const card of history.querySelectorAll<HTMLElement>('article[data-op-id]')) {
         if (card.dataset.hoverReading) continue;
         const id = card.dataset.opId!;
         const r = materialRect(card);
         const stored = new DOMRect(r.left, r.top + history.scrollTop, r.width, r.height);
         const before = materialPositions.current.get(id);
-        if (before && follow && useApp.getState().follow && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > history.getBoundingClientRect().top && r.top < history.getBoundingClientRect().bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
-          moveMaterial(card, new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), 720, 'surface-Reflow');
+        if (before && follow && useApp.getState().follow && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
+          moveMaterial(card, new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), 300, 'surface-Reflow');
         }
         next.set(id, stored);
         if (next.size >= 80) break;
@@ -82,7 +81,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const cancel = (event: WheelEvent) => { const local = scrollsInsideMaterial(event.target); const own = (event.target as Element)?.closest('article[data-op-id]'); for (const card of history.querySelectorAll('article[data-op-id]')) if (!local || card === own) for (const a of card.getAnimations()) if (a.id.startsWith('surface-')) a.cancel(); };
     history.addEventListener('wheel', cancel, { passive: true });
     return () => { observer.disconnect(); history.removeEventListener('wheel', cancel); };
-  });
+  }, [scene.passages, follow, lowResource, measurementVersion, viewport.height]);
 
   useLayoutEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
@@ -151,7 +150,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       const bounds = item.getBoundingClientRect();
       return bounds.bottom > viewport.top + 1 && bounds.top < viewport.bottom;
     });
-    readingAnchor.current = node?.dataset.passageId ? { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top } : undefined;
+    readingAnchor.current = node?.dataset.passageId ? { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top, atStart: el.scrollTop < 1 } : undefined;
     if (useApp.getState().readingPassageId !== readingAnchor.current?.id) set({ readingPassageId: readingAnchor.current?.id });
   };
 
@@ -160,6 +159,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // Focus can pin a passage and trigger measurements during a pointer press.
     // Never move its control before release has delivered the activation.
     if (!el || pointerFocus.current) return;
+    if (followFrame.current !== undefined) cancelAnimationFrame(followFrame.current);
+    followFrame.current = undefined;
     programmatic.current = true;
     el.scrollTop = top;
     lastScrollTop.current = el.scrollTop;
@@ -168,32 +169,59 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     scrollFrame.current = requestAnimationFrame(() => { programmatic.current = false; scrollFrame.current = undefined; });
   };
 
+  const followLatest = () => {
+    const el = ref.current;
+    if (!el || !useApp.getState().follow || pointerFocus.current) return;
+    if (!followingStarted.current || !motion || lowResource || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      followingStarted.current = true;
+      setScrollTop(el.scrollHeight);
+      return;
+    }
+    if (followFrame.current !== undefined) return;
+    if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
+    scrollFrame.current = undefined;
+    let previousTime = performance.now();
+    const tick = (time: number) => {
+      followFrame.current = undefined;
+      if (!ref.current || !useApp.getState().follow || pointerFocus.current) { programmatic.current = false; return; }
+      const target = Math.max(0, el.scrollHeight - el.clientHeight);
+      const gap = target - el.scrollTop;
+      const elapsed = Math.min(48, Math.max(1, time - previousTime)); previousTime = time;
+      programmatic.current = true;
+      // Native scroll offsets may round subpixel writes to the same pixel at high
+      // refresh rates. Guarantee progress so the finite camera actually settles.
+      const advance = Math.sign(gap) * Math.max(1, Math.abs(gap) * (1 - Math.exp(-elapsed / 45)));
+      el.scrollTop = Math.abs(gap) < 1 ? target : el.scrollTop + advance;
+      lastScrollTop.current = el.scrollTop;
+      // Virtualization needs window updates, not a React render on every camera frame.
+      setViewport(old => Math.abs(old.top - el.scrollTop) > 120 || Math.abs(gap) < 1 ? { top: el.scrollTop, height: el.clientHeight } : old);
+      if (Math.abs(gap) >= 1) followFrame.current = requestAnimationFrame(tick);
+      else scrollFrame.current = requestAnimationFrame(() => { programmatic.current = false; scrollFrame.current = undefined; });
+    };
+    followFrame.current = requestAnimationFrame(tick);
+  };
+
   const restoreReading = () => {
     const el = ref.current;
     const anchor = readingAnchor.current;
     if (!el || follow || !anchor || navigating.current) return;
+    // At the document start, late allocation changes must preserve the boundary,
+    // rather than pull the reader down to an old first-passage pixel offset.
+    if (anchor.atStart) { if (el.scrollTop > .5) setScrollTop(0); return; }
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
     if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
   };
 
-  const holdPresented = (previous: NonNullable<typeof presented.current>) => {
-    stagedArrivalStep.current = scene.total;
-    seenThrough.current = previous.step;
-    setScrollTop(previous.top);
-    readingAnchor.current = previous.anchor;
-    if (!readingAnchor.current) rememberReading();
-    set({ follow: false, readingPassageId: readingAnchor.current?.id });
-  };
-
   useLayoutEffect(() => {
     if (follow) {
       readingAnchor.current = undefined;
-      // Initial session load and explicit Return to latest still reach the latest edge.
-      watchLiveGrowth.current = false;
-      stagedArrivalStep.current = undefined;
-    } else if (!readingAnchor.current) rememberReading();
+    } else {
+      if (followFrame.current !== undefined) cancelAnimationFrame(followFrame.current);
+      followFrame.current = undefined;
+      if (!readingAnchor.current) rememberReading();
+    }
   }, [follow]);
 
   // A late record can insert steps ahead of the reader. Restore the same captured passage
@@ -225,9 +253,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         setMeasurementVersion((n) => n + 1);
         // A burst can detach follow before this observer's closure is replaced.
         if (useApp.getState().follow) {
-          const previous = presented.current;
-          if (mode === 'history' && watchLiveGrowth.current && previous && stageViewportGrowth(previous.extent, el.scrollHeight, el.clientHeight)) holdPresented(previous);
-          else setScrollTop(el.scrollHeight);
+          followLatest();
         }
         else restoreReading();
       }
@@ -277,31 +303,21 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     pendingNavigation.current = undefined;
   }, [targetId, targetIndex, layout, selectedOp]);
 
-  // Small arrivals follow naturally. A burst or a long result is captured and rendered at once,
-  // but the camera stops at its beginning instead of fast-forwarding past what the user could read.
+  // Follow remains active across bursts and late artifacts. Only deliberate reading
+  // detaches it; live capture and the replay clock advance independently.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const previous = presented.current;
     if (follow) {
-      const incoming = mode === 'history' && previous && scene.total > previous.step;
-      if (incoming) watchLiveGrowth.current = true;
-      const timelineStart = onWindow ? Math.max(0, scene.total - projection.timeline.length) : 0;
-      if (incoming && stageIncomingWork(projection, previous.step, scene.total, timelineStart)) {
-        holdPresented(previous);
-      } else {
-        setScrollTop(el.scrollHeight);
-        seenThrough.current = scene.total;
-      }
+      followLatest();
+      seenThrough.current = scene.total;
     }
-    const bounds = el.getBoundingClientRect();
-    const first = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((node) => node.getBoundingClientRect().bottom > bounds.top + 1);
-    presented.current = { step: scene.total, top: el.scrollTop, extent: el.scrollHeight, anchor: first?.dataset.passageId ? { id: first.dataset.passageId, offset: first.getBoundingClientRect().top - bounds.top } : undefined };
   }, [scene.step, follow, layout.total, mode, projection]);
 
   useLayoutEffect(() => () => {
     if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
     if (navigationFrame.current !== undefined) cancelAnimationFrame(navigationFrame.current);
+    if (followFrame.current !== undefined) cancelAnimationFrame(followFrame.current);
   }, []);
 
   const onScroll = () => {
@@ -309,8 +325,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (!el) return;
     // Even a programmatic scroll changes the required data window. A reader can scroll
     // again before its one-frame guard clears; skipping the viewport leaves unloaded work.
-    setViewport((old) => old.top === el.scrollTop && old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight });
+    setViewport((old) => old.height !== el.clientHeight || Math.abs(old.top - el.scrollTop) > (programmatic.current ? 120 : .5) ? { top: el.scrollTop, height: el.clientHeight } : old);
     if (programmatic.current && Math.abs(el.scrollTop - lastScrollTop.current) < 0.5) return;
+    if (follow && performance.now() >= userScrollUntil.current) return;
     navigating.current = true;
     rememberReading();
     const movedUp = el.scrollTop < lastScrollTop.current - 1;
@@ -372,7 +389,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
       </div>
-      <Origins scene={scene} projection={projection} stagedArrival={stagedArrivalStep.current === scene.total} isProgrammaticScroll={isProgrammaticScroll} />
+      <Origins scene={scene} projection={projection} isProgrammaticScroll={isProgrammaticScroll} />
       <FlowConnections projection={projection} />
     </div>
       {mode === 'history' && <nav className="history-prompt-marks" aria-label={onWindow ? 'Prompts in loaded history' : 'Prompt positions in history'}>
@@ -437,7 +454,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   useLayoutEffect(() => {
     const root = prose.current;
     if (!root || !arriving || !useApp.getState().motion || !useApp.getState().follow || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const animations = [...root.querySelectorAll(':scope > p, :scope > ul, :scope > pre')].slice(0, 12).map((el, i) => el.animate([{ opacity: .12, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 480, delay: Math.min(660, i * 60), fill: 'backwards', easing: 'ease-out' }));
+    const animations = [...root.querySelectorAll(':scope > p, :scope > ul, :scope > pre')].slice(0, 12).map((el, i) => el.animate([{ opacity: .12, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 400, delay: Math.min(480, i * 40), fill: 'backwards', easing: 'ease-out' }));
     const cancel = () => animations.forEach(a => a.cancel());
     const history = root.closest('.history'); history?.addEventListener('wheel', cancel, { passive: true });
     root.addEventListener('pointerdown', cancel); window.addEventListener('keydown', cancel);

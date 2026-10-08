@@ -9,6 +9,7 @@ import { useApp } from '../state.ts';
 import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
 import { mapDetail, type MapGroup } from '../lib/map-detail.ts';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
+import { importConnections, observedGraph } from '../lib/map-focus.ts';
 
 interface Cam {
   x: number;
@@ -56,13 +57,14 @@ function MapActions({ graph }: { graph: RepoGraph }) {
   );
 }
 
-export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; heat: HeatCell[]; readingRect?: { left: number; width: number } }) {
+export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { graph?: RepoGraph; heat: HeatCell[]; passagePaths?: string[]; readingRect?: { left: number; width: number } }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const explore = useApp((s) => s.explore);
   const motion = useApp(s => s.motion);
+  const lowResource = useApp(s => s.lowResource);
   const { workspace } = useSessionWorkspace();
-  useResolvedTheme();
+  const resolvedTheme = useResolvedTheme();
   const hoveredPath = useApp((s) => s.hoveredPath);
   const set = useApp((s) => s.set);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -77,7 +79,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
     if (!useApp.getState().motion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setCam(target); return; }
     const start = camera.current, began = performance.now();
     const tick = (time: number) => {
-      const fraction = Math.min(1, (time - began) / 360);
+      const fraction = Math.min(1, (time - began) / 300);
       const t = 1 - (1 - fraction) ** 3;
       setCam({ x: start.x + (target.x - start.x) * t, y: start.y + (target.y - start.y) * t, k: start.k + (target.k - start.k) * t });
       if (fraction < 1) cameraFrame.current = requestAnimationFrame(tick);
@@ -98,7 +100,23 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
   };
   const [tip, setTip] = useState<{ node: MapGroup; x: number; y: number }>();
   const [query, setQuery] = useState('');
-  const detail = useMemo(() => graph ? mapDetail(graph, cam.k) : undefined, [graph, cam.k]);
+  const [observedOnly, setObservedOnly] = useState(false);
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
+  const [connectionFile, setConnectionFile] = useState<string>();
+  const [connectionPage, setConnectionPage] = useState(0);
+  const observedKey = heat.map(cell => cell.path).join('\0');
+  const observedPaths = useMemo(() => new Set(observedKey ? observedKey.split('\0') : []), [observedKey]);
+  const observedCount = useMemo(() => graph?.nodes.filter(node => observedPaths.has(node.id)).length ?? 0, [graph, observedPaths]);
+  const viewGraph = useMemo(() => graph && observedOnly ? observedGraph(graph, observedPaths) : graph, [graph, observedOnly, observedPaths]);
+  const detail = useMemo(() => viewGraph ? mapDetail(viewGraph, cam.k) : undefined, [viewGraph, cam.k]);
+  const connections = useMemo(() => graph && connectionsOpen && connectionFile ? importConnections(graph, connectionFile) : undefined, [graph, connectionsOpen, connectionFile]);
+  const passageFiles = useMemo(() => graph?.nodes.filter(node => passagePaths.includes(node.id)).slice(0, 12) ?? [], [graph, passagePaths]);
+  const focusFile = (node: GraphNode) => {
+    setConnectionFile(node.id); setConnectionPage(0);
+    set({ hoveredPath: node.id });
+    const k = Math.max(cam.k, graph && graph.nodes.length > 80 ? 4 : 1.5);
+    animateCam({ k, x: size.w / 2 - (fit.ox + node.x * fit.sx) * k, y: size.h / 2 - (fit.oy + node.y * fit.sy) * k });
+  };
   const zoomGroup = (node: MapGroup) => {
     const k = Math.min(8, Math.max(2, cam.k * 2));
     const x = 48 + node.x * Math.max(40, size.w - 96);
@@ -133,7 +151,9 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
   const draw = () => {
     const c = canvas.current;
     if (!c || !graph) return false;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // A full-screen 2x canvas reserves four pixels per CSS pixel. Keep the
+    // repository sharp enough while bounding the backing store on local GPUs.
+    const dpr = Math.min(lowResource ? 1 : 1.5, window.devicePixelRatio || 1);
     if (c.width !== Math.round(size.w * dpr) || c.height !== Math.round(size.h * dpr)) {
       c.width = size.w * dpr;
       c.height = size.h * dpr;
@@ -166,6 +186,17 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       if (++drawnEdges >= edgeBudget) break;
     }
     g.globalAlpha = 1;
+
+    if (explore && connections?.root) {
+      const origin = project(connections.root);
+      g.strokeStyle = colours.focus; g.lineWidth = 1.5;
+      g.beginPath();
+      for (const { node } of connections.neighbors) { const p = project(node); g.moveTo(origin.x, origin.y); g.lineTo(p.x, p.y); }
+      g.stroke();
+      for (const node of [connections.root, ...connections.neighbors.map(item => item.node)]) {
+        const p = project(node); g.beginPath(); g.arc(p.x, p.y, node.id === connectionFile ? 5 : 3, 0, Math.PI * 2); g.fillStyle = colours.focus; g.fill();
+      }
+    }
 
     if (hoveredPath) {
       g.beginPath();
@@ -213,7 +244,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
 
   // Paint the camera's committed frame; scheduling another RAF here can cancel
   // every intermediate paint while React commits the next camera position.
-  useLayoutEffect(() => { draw(); });
+  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections]);
 
   // ── interaction (explore mode) ────────────────────────────────────────────
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | undefined>(undefined);
@@ -247,22 +278,23 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       if (p.x < 6 || p.y < 70 || p.x + width > size.w || p.y > size.h - 50) continue;
       if (accepted.some(a => Math.abs(a.y - p.y) < 24 && p.x < a.x + a.width && p.x + width > a.x)) continue;
       accepted.push({ node, ...p, width });
-      if (accepted.length >= 48) break;
+      // Reserve at most nine labels for the explicit import-path working set.
+      if (accepted.length >= (connections?.root ? 39 : 48)) break;
     }
     return accepted;
-  }, [detail, explore, cam, size, hoveredPath, heatMap]);
+  }, [detail, explore, cam, size, hoveredPath, heatMap, connections]);
 
   // Share exact renderer coordinates for a bounded working set, never a guessed graph origin.
   const anchors = [...heat].sort((a, b) => b.heat - a.heat).slice(0, 63).map((h) => h.path);
   if (hoveredPath && !anchors.includes(hoveredPath)) anchors.push(hoveredPath);
-  const matches = query.trim() && graph ? graph.nodes.filter((node) => !(graph.temporal === 'current' && node.path.startsWith('.local/')) && node.path.toLowerCase().includes(query.trim().toLowerCase())) : [];
+  const matches = query.trim() && viewGraph ? viewGraph.nodes.filter((node) => !(viewGraph.temporal === 'current' && node.path.startsWith('.local/')) && node.path.toLowerCase().includes(query.trim().toLowerCase())) : [];
 
   return (
     <div
       ref={wrap}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
         if (!explore) return;
         const r = wrap.current!.getBoundingClientRect();
         const mx = e.clientX - r.left;
@@ -273,13 +305,13 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       }}
       onPointerDown={(e) => {
         if (!explore) return;
-        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
         cancelAnimationFrame(cameraFrame.current);
         drag.current = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false };
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
         const r = wrap.current!.getBoundingClientRect();
         if (drag.current && explore) {
           const dx = e.clientX - drag.current.x;
@@ -291,11 +323,13 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         }
         if (!explore) return;
         const n = nearest(e.clientX - r.left, e.clientY - r.top);
-        setTip(n ? { node: n, ...project(n) } : undefined);
-        set({ hoveredPath: n?.id });
+        const point = n ? project(n) : undefined;
+        setTip(current => current?.node.id === n?.id && current?.x === point?.x && current?.y === point?.y
+          ? current : n && point ? { node: n, ...point } : undefined);
+        if (useApp.getState().hoveredPath !== n?.id) set({ hoveredPath: n?.id });
       }}
       onPointerUp={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
         const d = drag.current;
         drag.current = undefined;
         if (!explore || (d && d.moved)) return;
@@ -304,7 +338,8 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
         if (n?.members) {
           zoomGroup(n); return;
         }
-        if (n) set(workspace?.approved ? { currentFile: n.path, filePanel: undefined } : { filePanel: n.id, currentFile: undefined });
+        if (n && connectionsOpen) focusFile(n);
+        else if (n) set(workspace?.approved ? { currentFile: n.path, filePanel: undefined } : { filePanel: n.id, currentFile: undefined });
       }}
       onPointerLeave={() => explore && (setTip(undefined), set({ hoveredPath: undefined }))}
       aria-hidden={!explore}
@@ -312,19 +347,37 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       <canvas ref={canvas} style={{ width: size.w, height: size.h }} />
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
-        <input aria-label="Find a file on the map" placeholder="Find a file on the map…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find a file on the map" placeholder="Find a file…" value={query} onChange={(e) => setQuery(e.target.value)} />{query && <button aria-label="Clear map search" onClick={() => setQuery('')}>×</button>}</label>
+        <div className="map-scope" role="group" aria-label="Files shown on the map"><button aria-pressed={!observedOnly} onClick={() => setObservedOnly(false)}>All files</button><button aria-pressed={observedOnly} onClick={() => setObservedOnly(true)}>Observed <small>{observedCount}</small></button></div>
+        <button className="map-connections-toggle" role="switch" aria-checked={connectionsOpen} onClick={() => {
+          setConnectionsOpen(!connectionsOpen);
+          if (!connectionsOpen && graph) { const node = graph.nodes.find(n => n.id === hoveredPath) ?? passageFiles[0] ?? graph.nodes.find(n => observedPaths.has(n.id)); if (node) focusFile(node); }
+        }}>Import paths <span className={`mini-switch${connectionsOpen ? ' on' : ''}`} /></button>
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
             const x = fit.ox + node.x * fit.sx; const y = fit.oy + node.y * fit.sy;
             const k = graph && graph.nodes.length > 80 ? 6 : 2;
             animateCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
             setTip({ node, x: size.w / 2, y: size.h / 2 });
+            setConnectionFile(node.id); setConnectionPage(0);
             set({ hoveredPath: node.id, follow: false });
           }}>{node.path}</button>)}
           <span className="muted small">{matches.length} matched files{matches.length > 30 ? ' · first 30 shown; refine the query' : ''}</span>
           {tip && <button className="btn" onClick={() => { set({ filePanel: tip.node.id, currentFile: undefined }); }}>Open recorded work on this file</button>}
         </div>}
       </div>}
+      {explore && observedOnly && !viewGraph?.nodes.length && <p className="map-empty">No captured file locations in this view yet.</p>}
+      {explore && connectionsOpen && <section className="map-connections" aria-label="Direct import connections">
+        <header><strong>Direct imports</strong><button className="icon-btn" aria-label="Close import paths" onClick={() => setConnectionsOpen(false)}>×</button></header>
+        <p className="muted small">{graph?.temporal === 'current' ? 'Current repository imports' : 'Imports from the saved map'} · static relationships</p>
+        {!!passageFiles.length && <div className="map-passage-files" aria-label="Files in the current passage"><small>Current passage</small>{passageFiles.map(node => <button key={node.id} aria-pressed={connectionFile === node.id} onClick={() => focusFile(node)}>{node.path}</button>)}</div>}
+        {connections?.root ? <><code className="map-connection-root">{connections.root.path}</code><div className="map-neighbors">{connections.neighbors.slice(connectionPage * 12, connectionPage * 12 + 12).map(({ node, direction }, i) => <button key={`${direction}/${node.id}/${i}`} onClick={() => focusFile(node)}><small>{direction}</small><span>{node.path}</span><span aria-hidden="true">↗</span></button>)}</div>
+          {!connections.total && <p className="muted small">No resolved direct imports on this map.</p>}
+          {connections.neighbors.length > 12 && <div className="folder-pages"><button disabled={!connectionPage} onClick={() => setConnectionPage(p => p - 1)}>Previous</button><span>{connectionPage + 1} / {Math.ceil(connections.neighbors.length / 12)}</span><button disabled={(connectionPage + 1) * 12 >= connections.neighbors.length} onClick={() => setConnectionPage(p => p + 1)}>Next</button></div>}
+          {connections.total > 64 && <p className="muted small">First 64 of {connections.total} direct imports shown.</p>}
+          <button className="btn" onClick={() => set({ filePanel: connections.root!.id, currentFile: undefined })}>Open recorded work</button>
+        </> : <p className="muted small">Choose a file using the map or search.</p>}
+      </section>}
       {explore && <div className="map-zoom" aria-label="Repository zoom">
         <button className="btn ghost" aria-label="Zoom into repository" onClick={() => zoomCamera(1.25)}>+</button>
         <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => zoomCamera(1 / 1.25)}>−</button>
@@ -348,6 +401,11 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       {labels.map(({ node, x, y }) => node.members
         ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} title={`${node.members.length} spatially grouped files · zoom to reveal`} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>
         : <span className="map-file-label" key={node.id} title={node.path} style={{ left: x + 8, top: y - 9, opacity: node.opacity ?? 1 }}>{node.path}</span>)}
+      {explore && connections?.root && [connections.root, ...connections.neighbors.slice(0, 8).map(item => item.node)].filter((node, i, nodes) => nodes.findIndex(n => n.id === node.id) === i && !labels.some(label => label.node.id === node.id)).map(node => {
+        const p = project(node);
+        if (p.x < 6 || p.y < 6 || p.x > size.w - 180 || p.y > size.h - 24) return null;
+        return <span className="map-file-label" key={`connected/${node.id}`} style={{ left: p.x + 8, top: p.y - 9 }}>{node.path}</span>;
+      })}
       {tip && (
         <div className="map-tip" style={{ left: tip.x + 12, top: tip.y + 8 }}>
           <div className="map-tip-path">{tip.node.path}</div>
@@ -359,7 +417,7 @@ export function MapCanvas({ graph, heat, readingRect }: { graph?: RepoGraph; hea
       )}
       {graph && explore && (
         <div className="map-legend">
-          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{graph.nodes.length} files · {graph.edges.length} imports</span>
+          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} observed files · ${viewGraph?.edges.length} shown imports` : `${graph.nodes.length} files · ${graph.edges.length} imports`}</span>
 
           <MapActions graph={graph} />
         </div>

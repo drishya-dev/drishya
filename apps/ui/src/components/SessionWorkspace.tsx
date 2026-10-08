@@ -96,7 +96,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   if (hidden) return null;
   return <aside className="folder-explorer spine" aria-label="Session folders">
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label="Minimize folders" onClick={() => useApp.setState({ foldersHidden: true })}>‹</button></header>
-    <input aria-label="Find session files" placeholder="Find files…" value={query} onChange={e => setQuery(e.target.value)} />
+    <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find session files" placeholder="Find files…" value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" onClick={() => void approve().catch(e => setError(e.message))}>Enable workspace reading<small>Read current files in this folder</small></button>}
     {error && <p className="bad small" role="alert">{error}</p>}
     <div className="folder-tree" role="tree" aria-label="Workspace files">

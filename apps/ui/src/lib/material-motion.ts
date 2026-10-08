@@ -18,32 +18,31 @@ export function moveMaterial(element: HTMLElement, from: DOMRect, duration: numb
   const animation = element.animate(frames(from, destination), { duration, easing: 'cubic-bezier(.22,.65,.18,1)', fill: 'both' });
   animation.id = name; active.set(element, animation);
   const deadline = performance.now() + duration;
-  let previous = from;
-  const history = element.closest<HTMLElement>('.history');
-  let scroll = history?.scrollTop ?? 0;
-  let frame: number;
-  const tick = () => {
+  let frame = 0;
+  const retarget = () => {
+    frame = 0;
     if (!element.isConnected || animation.playState !== 'running') return;
+    const source = element.getBoundingClientRect();
     const next = materialRect(element);
-    const scrollNow = history?.scrollTop ?? 0;
-    const scrollDelta = scroll - scrollNow;
-    const moved = Math.abs(next.left - destination.left) > .5 || Math.abs(next.top - destination.top - scrollDelta) > .5 || Math.abs(next.width - destination.width) > .5 || Math.abs(next.height - destination.height) > .5;
+    const moved = Math.abs(next.left - destination.left) > .5 || Math.abs(next.top - destination.top) > .5 || Math.abs(next.width - destination.width) > .5 || Math.abs(next.height - destination.height) > .5;
     if (moved && deadline - performance.now() > 40) {
-      // Continue from the last visible rectangle, never restart at the origin or snap
-      // into the resized final box. Native scrolling remains immediate.
-      const source = new DOMRect(previous.left, previous.top + scrollDelta, previous.width, previous.height);
+      // Rebase only on real allocation changes. The compositor owns intermediate
+      // frames; scrolling carries the DOM and its transform together.
       const effect = animation.effect as KeyframeEffect;
       effect.setKeyframes(frames(source, next));
       effect.updateTiming({ duration: Math.max(40, deadline - performance.now()) });
       animation.currentTime = 0;
     }
-    destination = next; scroll = scrollNow;
-    previous = element.getBoundingClientRect();
-    frame = requestAnimationFrame(tick);
+    destination = next;
   };
-  frame = requestAnimationFrame(tick);
-  const release = () => { cancelAnimationFrame(frame); if (active.get(element) === animation) active.delete(element); animation.cancel(); };
+  const schedule = () => { if (!frame) frame = requestAnimationFrame(retarget); };
+  const observer = new ResizeObserver(schedule);
+  observer.observe(element);
+  const row = element.parentElement; if (row) observer.observe(row);
+  window.addEventListener('drishya-material-layout', schedule);
+  const release = () => { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('drishya-material-layout', schedule); if (active.get(element) === animation) active.delete(element); animation.cancel(); };
   void animation.finished.then(release, release);
+  window.dispatchEvent(new Event('drishya-material-layout'));
   return animation;
 }
 
@@ -88,13 +87,12 @@ export function settleArrival(element: HTMLElement, start: DOMRect, flight: Anim
       const from = element.getBoundingClientRect(); restore();
       const to = materialRect(element);
       if (Math.abs(from.width - to.width) < 1 && Math.abs(from.height - to.height) < 1 || matchMedia('(prefers-reduced-motion: reduce)').matches || !useApp.getState().motion || useApp.getState().lowResource) { cleanup(); return; }
-      const frame = (r: DOMRect) => ({ width: `${r.width}px`, height: `${r.height}px`, flexBasis: `${r.width}px` });
       element.dataset.materialSettling = 'true';
-      growth = element.animate([frame(from), frame(to)], { duration: 780, easing: 'cubic-bezier(.22,.65,.18,1)' });
-      growth.id = 'surface-Settle'; active.set(element, growth);
-      window.dispatchEvent(new Event('drishya-material-layout'));
+      // Allocate once, then animate the real material's transform. Animating
+      // width/height here used to trigger history measurement on every frame.
+      growth = moveMaterial(element, from, 340, 'surface-Settle');
       const finish = () => { delete element.dataset.materialSettling; if (active.get(element) === growth) active.delete(element); cleanup(); };
       void growth.finished.then(finish, finish);
-    }, 280);
+    }, 60);
   }, interrupt);
 }

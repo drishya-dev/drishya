@@ -95,7 +95,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       // Readable material arrival, not an icon race. Large reading spaces unfold longer;
       // evidence is already mounted and no capture or presentation queue waits for this.
       const area = motionTarget?.getBoundingClientRect();
-      const scale = area ? Math.min(2.1, 1.6 + Math.min(1, area.width * Math.min(area.height, 420) / 240_000) * .5) : 1.6;
+      const scale = area ? Math.min(1.55, 1.25 + Math.min(1, area.width * Math.min(area.height, 420) / 240_000) * .3) : 1.25;
       const animation = el.animate(frames, { duration: Math.round(duration * scale), easing, fill: 'forwards' });
       runningMotion.current.set(animation, { element: el, target: motionTarget, rect: motionTarget ? restingRect(motionTarget) : undefined });
       const release = () => { runningMotion.current.delete(animation); el.remove(); };
@@ -120,7 +120,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       const r = restingRect(target); const a = origin.getBoundingClientRect();
       const dx = a.left + a.width / 2 - (r.left + r.width / 2);
       const dy = a.top + a.height / 2 - (r.top + Math.min(22, r.height / 2));
-      const duration = Math.round(1400 + Math.min(250, r.width * r.height / 1000));
+      const duration = Math.round(620 + Math.min(120, r.width * r.height / 1800));
       // The builder requested whole-material zoom: one real selectable DOM surface,
       // including its content, grows continuously into its final reading allocation.
       while (runningMotion.current.size >= 36) {
