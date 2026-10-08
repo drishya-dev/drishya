@@ -64,10 +64,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 8 October 2026; independent review of Harsh's [PR #47](https://github.com/drishya-dev/drishya/pull/47), merged as `e1ca4d3`. The implementation is documented in [33](review/33-smooth-follow-map.md); #46 remains the prior baseline.
-- **Delivered:** pulled and reviewed smooth follow, compositor-only material motion, bounded SVG updates, responsive header/search, observed graph scope and static direct/reverse imports. Found high-refresh subpixel rounding that left follow 2–4 px short and caused six existing browser failures. Guaranteed one-pixel endpoint progress without weakening test assertions; the native-session probe now reaches the exact edge. Preserve Harsh's implementation and attribution. Solid compact prompt and independent replay reading remain intact.
-- **Checks:** Post-correction typechecks and 289 unit tests, production UI build, isolated offline package install/import/API/restart, unchanged generated demo and clean diff passed locally. Full browser rerun passed 54 journeys with two expected opt-ins skipped. Reviewed desktop/mobile integrated frames. Harsh's final ten-minute reading evidence predates the small reviewer correction; do not describe it as a fresh post-correction soak. No hosted CI.
-- **Next:** Human preference review of the denser header plus existing physical/platform/native release acceptance. Shared later matrix remains in 30. Three unrelated package-manager edits remain local.
+- **When:** 8 October 2026; post-merge connector fill regression fix following PR #47.
+- **Delivered:** builder screenshot showed black wedges covering edit cards. PR #47 moved SVG connector paths inside a group; the legacy direct-child CSS selector no longer applied `fill: none` or stroke styles. Corrected selectors for grouped connector paths while preserving filled arrowheads. Added a regression assertion for no-fill/stroked connectors and reviewed the rendered integrated frame. The review initially missed this styling regression; tests previously checked path presence only.
+- **Checks:** Production UI build, affected connected-action desktop/mobile browser journey and clean diff passed locally. Earlier complete #47 review passed 289 units and 54 browser journeys after the camera endpoint fix; the selector correction has focused coverage. No hosted CI.
+- **Next:** Human preference review of the denser header, existing native/physical/platform release checks, shared later matrix in 30. Unrelated package-manager edits preserved.
 
 ## Next up
 

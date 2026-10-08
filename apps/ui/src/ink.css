@@ -223,8 +223,8 @@
 .connected-workspace .history .material-change .add { background: var(--pass-wash); }
 .connected-workspace .history .material-change .del { background: var(--fail-wash); }
 .flow-connections { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; overflow: visible; color: var(--source); }
-.flow-connections > path { fill: none; stroke: var(--source); stroke-width: 1.3; opacity: .45; }
-.flow-connections > path.focused { opacity: 1; stroke-width: 1.6; }
+.flow-connections > g > path { fill: none; stroke: var(--source); stroke-width: 1.3; opacity: .45; }
+.flow-connections > g > path.focused { opacity: 1; stroke-width: 1.6; }
 .flow-connections marker path { fill: var(--source); }
 .flow-order-label { color: var(--t3); font-size: 9px; margin-left: 4px; }
 .current-file-reader { width: min(1200px, calc(100vw - 28px)); }

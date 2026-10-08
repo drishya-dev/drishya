@@ -121,6 +121,12 @@ test('connected action flow and agent switches replace tabs without inventing ca
   await page.getByRole('button',{name:'Show session folders',exact:true}).click();
   await page.setViewportSize({width:1600,height:1000});
   await expect(page.locator('.flow-connections > g > path')).not.toHaveCount(0);
+  const routes = page.locator('.flow-connections > g > path');
+  for (const route of await routes.all()) {
+    await expect(route).toHaveCSS('fill', 'none');
+    expect(await route.evaluate(el => getComputedStyle(el).stroke)).not.toBe('none');
+  }
+
   await expect(page.locator('.flow-connections')).toContainText(/Recorded sequence|same-artifact/);
   const chrome = await page.locator('.history .op').evaluateAll(nodes => nodes.map(n => ({ error: n.classList.contains('st-error'), border: getComputedStyle(n).borderColor, header: getComputedStyle(n.querySelector('.op-head')!).backgroundColor })));
   expect(new Set(chrome.filter(n => !n.error).map(n => n.border)).size).toBe(1);
