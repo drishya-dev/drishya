@@ -602,3 +602,29 @@ test('full-height world sits beneath progressive edge chrome and prompt typograp
   await time.focus();
   await expect.poll(() => time.locator('.captured-clock').evaluate(el => getComputedStyle(el).opacity)).toBe('1');
 });
+
+test('optional depth orbit pauses for exploration and reduced motion; reasoning detail is a local display preference', async ({ page }) => {
+  await page.goto(demoUrl());
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'Workspace settings' });
+  await settings.getByRole('checkbox', { name: /^Depth map/ }).check();
+  await settings.getByRole('checkbox', { name: /^Slow background orbit/ }).check();
+  await settings.getByRole('combobox', { name: 'Exposed reasoning detail' }).selectOption('collapsed');
+  await settings.getByRole('button', { name: 'Close Workspace settings' }).click();
+  await page.mouse.move(10, 800);
+  const map = page.locator('.map');
+  await expect(map).toHaveAttribute('data-map-depth', 'perspective');
+  const first = await map.getAttribute('data-map-yaw');
+  await expect.poll(() => map.getAttribute('data-map-yaw')).not.toBe(first);
+  await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
+  const stopped = await map.getAttribute('data-map-yaw');
+  await page.waitForTimeout(300);
+  expect(await map.getAttribute('data-map-yaw')).toBe(stopped);
+  await page.getByRole('button', { name: 'Back to work', exact: true }).click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const reduced = await map.getAttribute('data-map-yaw');
+  await page.waitForTimeout(300);
+  expect(await map.getAttribute('data-map-yaw')).toBe(reduced);
+  expect(await page.evaluate(() => localStorage.getItem('drishya.reasoningDetail'))).toBe('collapsed');
+  if (process.env.DRISHYA_REVIEW_SHOTS) await page.screenshot({ path: '.local/depth-map-review.png' });
+});

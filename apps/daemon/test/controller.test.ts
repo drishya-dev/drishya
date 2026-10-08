@@ -29,6 +29,15 @@ createInterface({ input: process.stdin }).on('line', line => {
   if (v.type === 'control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{}}});
   else if (v.type === 'user') {
     prompt = v.message.content;
+    if (prompt === 'STREAM') {
+      send({type:'stream_event',event:{type:'content_block_start',index:0,content_block:{type:'thinking',thinking:''}}});
+      send({type:'stream_event',event:{type:'content_block_delta',index:0,delta:{type:'thinking_delta',thinking:'Inspect source sk-proj-abcdefghij'}}});
+      setTimeout(() => {
+        send({type:'stream_event',event:{type:'content_block_delta',index:0,delta:{type:'thinking_delta',thinking:'klmnopqrstuvw0123456789 then verify.'}}});
+        send({type:'stream_event',event:{type:'content_block_stop',index:0}});
+      }, 500);
+      return;
+    }
     if (prompt === 'BACKGROUND') {
       send({type:'system',subtype:'session_state_changed',state:'running'});
       send({type:'system',subtype:'task_started',task_id:'agent1',task_type:'local_agent'});
@@ -50,6 +59,15 @@ createInterface({ input: process.stdin }).on('line', line => {
   else if (v.method === 'turn/start') {
     prompt = v.params.input[0].text;
     send({id:v.id,result:{turn:{id:'turn1'}}});
+    if (prompt === 'STREAM') {
+      send({method:'item/reasoning/summaryTextDelta',params:{threadId:'wrong-thread',itemId:'wrong',delta:'Never show this'}});
+      send({method:'item/reasoning/summaryTextDelta',params:{threadId:v.params.threadId,turnId:'turn1',itemId:'r1',delta:'Inspect source sk-proj-abcdefghij',summaryIndex:0}});
+      setTimeout(() => {
+        send({method:'item/reasoning/summaryTextDelta',params:{threadId:v.params.threadId,turnId:'turn1',itemId:'r1',delta:'klmnopqrstuvw0123456789 then verify.',summaryIndex:0}});
+        send({method:'item/completed',params:{threadId:v.params.threadId,turnId:'turn1',item:{id:'r1',type:'reasoning',summary:[]}}});
+      },500);
+      return;
+    }
     send({id:99,method:'item/commandExecution/requestApproval',params:{threadId:v.params.threadId,command:'echo synthetic',cwd:process.cwd()}});
   } else if (v.method === 'turn/interrupt') {
     send({id:v.id,result:{}});
@@ -125,4 +143,19 @@ it('requests a native Codex turn interrupt before closing its owned connection',
   const before = Date.now();
   expect((await controller.stop(codexId, run.runId)).state).toBe('stopped');
   expect(Date.now() - before).toBeLessThan(1000);
+});
+for (const harness of ['claude', 'codex'] as const) it(`${harness} exposes genuine thinking state before text and redacts a credential split across native deltas`, async () => {
+  const id = harness === 'claude' ? claudeId : codexId;
+  const run = await controller.start(id, 'STREAM', true);
+  await expect.poll(() => controller.status(id).phase).toBe('thinking');
+  expect(controller.status(id).preview).toBeUndefined();
+  await expect.poll(() => controller.status(id).preview?.text).toContain('then verify.');
+  const preview = controller.status(id).preview!;
+  expect(preview.text).toContain('[REDACTED:');
+  expect(preview.text).not.toContain('abcdefghij');
+  expect(preview.text).not.toContain('Never show');
+  expect(preview.role).toBe('reasoning');
+  expect(preview.exposure).toBe(harness === 'claude' ? 'full' : 'summary');
+  if (harness === 'claude') expect(launches.at(-1)!.args).toContain('--include-partial-messages');
+  await controller.stop(id, run.runId);
 });

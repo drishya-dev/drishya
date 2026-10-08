@@ -18,6 +18,7 @@ import { FlowConnections } from './FlowConnections.tsx';
 import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-motion.ts';
 import { useHoverReading } from '../lib/hover-reading.ts';
 import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
+import { NativeTurn } from './SessionWorkspace.tsx';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
@@ -422,6 +423,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         ])}
         {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
+      <NativeTurn projection={projection} />
       </div>
       <Origins scene={scene} projection={projection} isProgrammaticScroll={isProgrammaticScroll} />
       <FlowConnections projection={projection} />
@@ -486,7 +488,9 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
 
 function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agent?: Agent }) {
   const set = useApp((s) => s.set);
+  const detail = useApp(s => s.reasoningDetail);
   const [open, setOpen] = useState(true);
+  useEffect(() => setOpen(detail === 'expanded'), [detail]);
   const [full, setFull] = useState(false);
   const prose = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -498,6 +502,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
     return () => { cancel(); root.removeEventListener('pointerdown', cancel); window.removeEventListener('keydown', cancel); };
   }, [arriving, pr.id]);
   const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
+  if (label && detail === 'hidden') return null;
   return (
     <div ref={prose} data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (

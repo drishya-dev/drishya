@@ -63,6 +63,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const explore = useApp((s) => s.explore);
   const motion = useApp(s => s.motion);
   const lowResource = useApp(s => s.lowResource);
+  const depth = useApp(s => s.mapDepth);
+  const orbit = useApp(s => s.mapOrbit);
+  const reading = useApp(s => !!(s.selectedOp || s.expandedOp || s.currentFile || s.filePanel || s.settingsOpen || s.searchOpen));
+  const hoveredOp = useApp(s => s.hoveredOp);
+  const [yaw, setYaw] = useState(.25);
   const { workspace } = useSessionWorkspace();
   const resolvedTheme = useResolvedTheme();
   const hoveredPath = useApp((s) => s.hoveredPath);
@@ -115,16 +120,32 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     setConnectionFile(node.id); setConnectionPage(0);
     set({ hoveredPath: node.id });
     const k = Math.max(cam.k, graph && graph.nodes.length > 80 ? 4 : 1.5);
-    animateCam({ k, x: size.w / 2 - (fit.ox + node.x * fit.sx) * k, y: size.h / 2 - (fit.oy + node.y * fit.sy) * k });
+    const p = spatial(node);
+    animateCam({ k, x: size.w / 2 - (fit.ox + p.x * fit.sx) * k, y: size.h / 2 - (fit.oy + p.y * fit.sy) * k });
   };
   const zoomGroup = (node: MapGroup) => {
     const k = Math.min(8, Math.max(2, cam.k * 2));
-    const x = 48 + node.x * Math.max(40, size.w - 96);
-    const y = 48 + node.y * Math.max(40, size.h - 96);
+    const p = spatial(node);
+    const x = 48 + p.x * Math.max(40, size.w - 96);
+    const y = 48 + p.y * Math.max(40, size.h - 96);
     animateCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
     setTip(undefined);
   };
   const displayNodes = detail?.nodes ?? [];
+  useEffect(() => {
+    const preference = matchMedia('(prefers-reduced-motion: reduce)');
+    let frame = 0, last = 0;
+    const enabled = () => depth && orbit && motion && !lowResource && !explore && !reading && !hoveredOp && !hoveredPath && document.visibilityState === 'visible' && !preference.matches && displayNodes.length <= 1500;
+    const tick = (time: number) => {
+      if (!enabled()) { frame = 0; last = 0; return; }
+      if (last && time - last >= 1000 / 15) { const elapsed = Math.min(100, time - last); setYaw(value => (value + elapsed * .000035) % (Math.PI * 2)); last = time; }
+      if (!last) last = time;
+      frame = requestAnimationFrame(tick);
+    };
+    const resume = () => { cancelAnimationFrame(frame); frame = 0; last = 0; if (enabled()) frame = requestAnimationFrame(tick); };
+    resume(); document.addEventListener('visibilitychange', resume); preference.addEventListener('change', resume);
+    return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', resume); preference.removeEventListener('change', resume); };
+  }, [depth, orbit, motion, lowResource, explore, reading, hoveredOp, hoveredPath, displayNodes.length]);
   const displayById = useMemo(() => new Map(displayNodes.map(n => [n.id, n])), [detail]);
   const heatMap = useMemo(() => new Map(heat.map((h) => [h.path, h])), [heat]);
 
@@ -146,7 +167,18 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     const pad = 48;
     return { sx: Math.max(40, size.w - pad * 2), sy: Math.max(40, size.h - pad * 2), ox: pad, oy: pad };
   }, [size]);
-  const project = (n: { x: number; y: number }) => ({ x: (fit.ox + n.x * fit.sx) * cam.k + cam.x, y: (fit.oy + n.y * fit.sy) * cam.k + cam.y });
+  // Canvas projects the geometry; DOM labels and arrival anchors share it exactly.
+  // This shallow depth is a spatial layout, never dependency strength or execution.
+  const spatial = (n: { x: number; y: number }) => {
+    if (!depth || lowResource) return n;
+    const x = n.x - .5, y = n.y - .5;
+    const z = Math.sin(n.x * 11 + n.y * 7) * .16;
+    const rx = x * Math.cos(yaw) + z * Math.sin(yaw);
+    const rz = -x * Math.sin(yaw) + z * Math.cos(yaw);
+    const perspective = 1.5 / (1.5 - rz);
+    return { x: .5 + rx * perspective, y: .5 + y * perspective };
+  };
+  const project = (n: { x: number; y: number }) => { const p = spatial(n); return { x: (fit.ox + p.x * fit.sx) * cam.k + cam.x, y: (fit.oy + p.y * fit.sy) * cam.k + cam.y }; };
 
   const draw = () => {
     const c = canvas.current;
@@ -244,7 +276,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
 
   // Paint the camera's committed frame; scheduling another RAF here can cancel
   // every intermediate paint while React commits the next camera position.
-  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections]);
+  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections, depth, yaw]);
 
   // ── interaction (explore mode) ────────────────────────────────────────────
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | undefined>(undefined);
@@ -282,7 +314,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       if (accepted.length >= (connections?.root ? 39 : 48)) break;
     }
     return accepted;
-  }, [detail, explore, cam, size, hoveredPath, heatMap, connections]);
+  }, [detail, explore, cam, size, hoveredPath, heatMap, connections, depth, yaw, lowResource]);
 
   // Share exact renderer coordinates for a bounded working set, never a guessed graph origin.
   const anchors = [...heat].sort((a, b) => b.heat - a.heat).slice(0, 63).map((h) => h.path);
@@ -292,6 +324,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   return (
     <div
       ref={wrap}
+      data-map-depth={depth && !lowResource ? 'perspective' : 'flat'}
+      data-map-yaw={yaw.toFixed(5)}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
         if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
@@ -355,7 +389,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         }}>Import paths <span className={`mini-switch${connectionsOpen ? ' on' : ''}`} /></button>
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
-            const x = fit.ox + node.x * fit.sx; const y = fit.oy + node.y * fit.sy;
+            const point = spatial(node);
+            const x = fit.ox + point.x * fit.sx; const y = fit.oy + point.y * fit.sy;
             const k = graph && graph.nodes.length > 80 ? 6 : 2;
             animateCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
             setTip({ node, x: size.w / 2, y: size.h / 2 });

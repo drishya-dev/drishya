@@ -8,10 +8,11 @@ import type { Scene } from '@drishya/scene';
 import { FileIcon } from './FileIcon.tsx';
 
 interface Connection {
+  submitting?: boolean; submit: (prompt: string, exclusive: boolean) => Promise<void>;
   workspace?: WorkspaceStatus; controller?: ControllerStatus; error?: string;
   refresh: () => Promise<void>; approve: () => Promise<void>;
 }
-const SessionContext = createContext<Connection>({ refresh: async () => {}, approve: async () => {} });
+const SessionContext = createContext<Connection>({ refresh: async () => {}, approve: async () => {}, submit: async () => {} });
 export const useSessionWorkspace = () => useContext(SessionContext);
 
 export function SessionWorkspaceProvider({ children }: { children: ReactNode }) {
@@ -20,25 +21,35 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
   const [workspace, setWorkspace] = useState<WorkspaceStatus>();
   const [controller, setController] = useState<ControllerStatus>();
   const [error, setError] = useState<string>();
+  const [submitting, setSubmitting] = useState(false);
+  const currentController = useRef(controller); currentController.current = controller;
+  const revision = useRef(0);
+  const wake = useRef<(() => void) | undefined>(undefined);
   const eligible = source?.kind === 'daemon' && !!id && !id.includes('+');
   const refresh = async () => {
     if (!eligible) return;
+    const request = ++revision.current;
     const [w, c] = await Promise.all([workspaceApi.status(id!), workspaceApi.controller(id!)]);
-    if (useApp.getState().recordingId !== id) return;
+    if (useApp.getState().recordingId !== id || request !== revision.current) return;
     setWorkspace(w); setController(c); setError(undefined);
   };
   useEffect(() => {
-    setWorkspace(undefined); setController(undefined); setError(undefined);
-    let active = true; let busy = false;
+    setWorkspace(undefined); setController(undefined); setError(undefined); setSubmitting(false);
+    let active = true; let busy = false; let timer: ReturnType<typeof setTimeout>;
     const load = async () => {
-      if (!active || busy || document.visibilityState === 'hidden') return;
+      if (!active || busy) return;
       busy = true;
-      try { await refresh(); } catch (e) { if (active) setError((e as Error).message); } finally { busy = false; }
+      try { if (document.visibilityState !== 'hidden') await refresh(); } catch (e) { if (active) setError((e as Error).message); } finally {
+        busy = false;
+        const running = ['connecting', 'running', 'approval'].includes(currentController.current?.state ?? '');
+        if (active) timer = setTimeout(() => void load(), running ? 500 : 1800);
+      }
     };
+    wake.current = () => { clearTimeout(timer); void load(); };
     void load();
-    const timer = setInterval(() => void load(), 1800);
-    return () => { active = false; clearInterval(timer); };
+    return () => { active = false; clearTimeout(timer); revision.current++; wake.current = undefined; };
   }, [id, source]);
+  useEffect(() => { if (['connecting', 'running', 'approval'].includes(controller?.state ?? '')) wake.current?.(); }, [controller?.state]);
   const approve = async () => {
     if (!eligible) return;
     const w = await workspaceApi.approve(id!);
@@ -46,7 +57,37 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     if (useApp.getState().recordingId !== id) return;
     setWorkspace(w); useApp.setState({ graph });
   };
-  return <SessionContext.Provider value={{ workspace, controller, error, refresh, approve }}>{children}</SessionContext.Provider>;
+  const submit = async (prompt: string, exclusive: boolean) => {
+    if (!eligible) return;
+    setSubmitting(true);
+    ++revision.current;
+    try { const state = await workspaceApi.prompt(id!, prompt, exclusive); if (useApp.getState().recordingId === id) setController(state); }
+    finally { if (useApp.getState().recordingId === id) setSubmitting(false); }
+  };
+  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve }}>{children}</SessionContext.Provider>;
+}
+
+/** Native live receipt is separate from persisted evidence and disappears on capture. */
+export function NativeTurn({ projection }: { projection: Projection }) {
+  const { controller, submitting } = useSessionWorkspace();
+  const mode = useApp(s => s.mode);
+  const detail = useApp(s => s.reasoningDetail);
+  if (mode !== 'history') return null;
+  const running = controller && ['connecting', 'running', 'approval'].includes(controller.state);
+  const preview = controller?.preview;
+  // Prose.sequence is a timeline step; receipt boundaries use observation order.
+  const capturedIds = new Set(projection.timeline.flatMap(item => item.type === 'prose' && item.sequence > (controller?.afterSequence ?? 0) ? [item.proseId] : []));
+  const captured = preview && projection.prose.some(p => capturedIds.has(p.id) && p.text.trim() === preview.text.trim());
+  const prompt = controller?.submittedPrompt;
+  const promptCaptured = prompt && projection.timeline.some(p => p.type === 'turn' && p.sequence > (controller?.afterSequence ?? 0) && p.prompt?.trim() === prompt.trim());
+  const visible = preview && !captured && (preview.role !== 'reasoning' || detail !== 'hidden');
+  if (!submitting && !running && !visible && (!prompt || promptCaptured)) return null;
+  const phase = submitting ? 'Sending prompt…' : controller?.state === 'connecting' ? 'Connecting to native session…' : controller?.state === 'approval' ? 'Waiting for your approval' : controller?.phase === 'thinking' ? 'Thinking…' : controller?.phase === 'responding' ? 'Receiving response…' : controller?.phase === 'tool' ? 'Working with tools…' : 'Waiting for the agent…';
+  return <section className="native-live-work" aria-label="Native turn progress">
+    {prompt && !promptCaptured && <div className="turn"><div className="turn-text"><small className="muted">Submitted here</small><p>{prompt}</p></div></div>}
+    {(submitting || running) && <p className="native-phase" role="status">{phase}</p>}
+    {visible && <div className="prose" data-native-preview={preview.id}><small className="muted">Live from harness · {preview.role === 'reasoning' ? preview.exposure === 'summary' ? 'reasoning summary' : 'exposed thinking' : 'response'}</small>{preview.role === 'reasoning' && detail === 'collapsed' ? <details><summary>Read exposed reasoning</summary><pre>{preview.text}</pre></details> : <pre>{preview.text}</pre>}</div>}
+  </section>;
 }
 
 /** Directory structure from this session's indexed root, never the daemon's own checkout. */
@@ -137,7 +178,7 @@ export function PromptComposer() {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId);
   const recording = useApp(s => s.recording);
-  const { workspace, controller, error: connectionError, approve, refresh } = useSessionWorkspace();
+  const { workspace, controller, error: connectionError, approve, refresh, submit } = useSessionWorkspace();
   const [prompt, setPrompt] = useState('');
   const [exclusive, setExclusive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -168,7 +209,7 @@ export function PromptComposer() {
     <div className="composer-target sr-only"><small title={workspace?.root}>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'} · {controller?.state ?? 'checking'}</small></div>
       {!workspace?.approved && <button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(approve)}>Enable this workspace</button>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
-      <form onSubmit={e => { e.preventDefault(); if (running || busy || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await workspaceApi.prompt(id, prompt, exclusive); setPrompt(''); setExclusive(false); setConfirmSend(false); }); }}>
+      <form onSubmit={e => { e.preventDefault(); if (running || busy || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive); setPrompt(''); setExclusive(false); setConfirmSend(false); }); }}>
         <textarea ref={input} aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={1} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
         <div className="composer-actions"><button type="button" className="composer-add" aria-label="Add files or folders (coming later)" title="File and folder attachments are planned; not available yet" disabled>+</button>{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title="Send prompt" disabled={busy || !prompt.trim() || !workspace?.approved || !controller?.available}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></button>}</div>
         {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || busy}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
