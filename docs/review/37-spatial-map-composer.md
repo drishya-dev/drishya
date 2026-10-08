@@ -27,3 +27,7 @@ Keep the uncompleted matrix from review 36: effective native model/effort/approv
 ## Validation
 
 Typecheck, 299 unit tests and isolated packed CLI installation/import/API/restart passed. Browser results are recorded in STATUS after the final affected suite completes. Coverage includes multi-axis camera movement and real cooldown expiry, discrete density zoom, screenshot paste/file removal/folder selection/API submission, native image frames for both harnesses, protected/oversized inputs and eleven card kinds in compact/hover/expanded views. No hosted Actions were dispatched.
+
+## Same-day visibility and composer refinement
+
+The builder asked for 100% display to feel like the previous 110% panel scale. Rails now use 212–260 px with a 208 px dock; intermediate layouts use 194/180 px, and narrow overlays remain. Primary folder/tool text and icons grow about 10%. Background nodes and lines use the same steady .46 opacity rather than .28; exploration remains unchanged. Textarea fitting accounts for borders plus subpixel rounding and recalculates on width changes. Fitting inputs have no scrollbar; genuinely long input stays scrollable within the compact 88 px ceiling. Local typecheck/build and targeted composer plus eleven-viewport navigation checks pass; no hosted CI.

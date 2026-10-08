@@ -25,6 +25,13 @@
 .connected-workspace.exploring .folder-explorer { animation: none; opacity: 0; pointer-events: none; }
 .folder-explorer header .icon-btn { height: 22px; }
 .connected-workspace .dock { background: linear-gradient(to left, var(--bg), color-mix(in srgb, var(--bg) 75%, transparent)); }
+.connected-workspace .folder-explorer .spine-name { font-size: 12px; }
+.connected-workspace .folder-tree button { font-size: 12px; padding-block: 5px; }
+.connected-workspace .folder-explorer .file-icon { width: 17px; height: 17px; }
+.connected-workspace .dock .instrument .op-kind { font-size: 11px; }
+.connected-workspace .dock .inst-tools, .connected-workspace .dock .server-tool, .connected-workspace .runtime-tools { font-size: 10px; }
+.connected-workspace .dock .server-name { font-size: 11px; }
+.connected-workspace .dock .tool-mark { width: 21px; height: 21px; }
 .dock .instrument:hover, .dock .server-tool:hover, .dock .instrument.on { border-color: transparent; outline: none; background: #ffffff07; }
 .dock .instrument:focus-visible, .dock .server-tool:focus-visible { outline: 1px solid var(--t2); outline-offset: -1px; }
 .dock .instrument:hover .op-kind, .dock .server-tool:hover { color: var(--t1); }
@@ -97,7 +104,7 @@
 }
 
 /* Stable centred stage: utility visibility never reallocates the reading column. */
-.connected-workspace { --crown-h: 54px; --workspace-h: 0px; --stage-rail: clamp(192px, 17vw, 236px); --dock-w: 188px; }
+.connected-workspace { --crown-h: 54px; --workspace-h: 0px; --stage-rail: clamp(212px, 18.7vw, 260px); --dock-w: 208px; }
 .connected-workspace.multi-agent { --crown-h: 78px; }
 .connected-workspace .main { grid-column: 1 / -1; }
 .connected-workspace .history { left: var(--stage-rail); right: var(--stage-rail); padding-inline: 0; }
@@ -123,7 +130,7 @@
 .prompt-composer textarea { padding: 8px; background: transparent; }
 .prompt-composer .send-prompt { margin-left: auto; }
 @media (max-width: 1100px) and (min-width: 821px) {
-  .connected-workspace { --stage-rail: 176px; --dock-w: 164px; }
+  .connected-workspace { --stage-rail: 194px; --dock-w: 180px; }
   .connected-workspace .workspace-toggles { gap: 5px; }
   .workspace-toggles button { font-size: 9px; }
 }

@@ -201,7 +201,23 @@ export function PromptComposer() {
   };
   useLayoutEffect(() => {
     const node = input.current;
-    if (node) { node.style.height = 'auto'; node.style.height = `${Math.min(88, node.scrollHeight)}px`; }
+    if (!node) return;
+    const fit = () => {
+      node.style.overflowY = 'hidden';
+      node.style.height = 'auto';
+      const style = getComputedStyle(node);
+      // scrollHeight excludes borders; rounding otherwise leaves a needless one-pixel scrollbar.
+      const required = node.scrollHeight + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 1;
+      node.style.height = `${Math.min(88, Math.ceil(required))}px`;
+      node.style.overflowY = required > 88 ? 'auto' : 'hidden';
+    };
+    fit();
+    let width = node.clientWidth;
+    const resize = new ResizeObserver(() => {
+      if (node.clientWidth !== width) { width = node.clientWidth; fit(); }
+    });
+    resize.observe(node);
+    return () => resize.disconnect();
   }, [prompt]);
   useLayoutEffect(() => {
     const node = element.current;

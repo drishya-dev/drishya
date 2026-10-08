@@ -326,6 +326,13 @@ test('compact native composer contains its decoration and narrow form without ar
   await page.getByRole('button', { name: /Glass proof synthetic session/ }).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   await expect(composer).toBeVisible();
+  const field = composer.locator('textarea');
+  for (const value of ['', 'A short prompt', 'First line\nSecond line']) {
+    await field.fill(value);
+    await expect.poll(() => field.evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(0);
+    expect(await field.evaluate(el => getComputedStyle(el).overflowY)).toBe('hidden');
+  }
+  await field.fill('');
   await page.locator('.history').dispatchEvent('wheel', { deltaY: -100 });
   await page.locator('.history').evaluate(el => { el.scrollTop = 300; });
   const glass = await composer.evaluate(el => {
@@ -347,6 +354,13 @@ test('compact native composer contains its decoration and narrow form without ar
   await composer.locator('textarea').fill('a-long-prompt-token-' .repeat(30));
   await expect.poll(() => composer.evaluate(el => el.scrollWidth - el.clientWidth)).toBe(0);
   await expect.poll(() => composer.evaluate(el => el.scrollHeight - el.clientHeight)).toBe(0);
+  await field.fill('A prompt that wraps across a couple of lines in a narrow window but fits comfortably when the window is wider.');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect.poll(() => field.evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(0);
+  expect(await field.evaluate(el => getComputedStyle(el).overflowY)).toBe('hidden');
+  await field.fill(Array.from({ length: 12 }, (_, i) => `Long prompt line ${i}`).join('\n'));
+  await expect.poll(() => field.evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(0);
+  expect(await field.evaluate(el => getComputedStyle(el).overflowY)).toBe('auto');
 
 });
 
