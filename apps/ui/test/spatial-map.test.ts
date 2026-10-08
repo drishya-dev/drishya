@@ -21,4 +21,3 @@ describe('spatial repository camera', () => {
     }
   });
 });
-
