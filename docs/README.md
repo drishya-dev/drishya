@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Windows antivirus diagnostic — 8–9 October:** [38](review/38-windows-antivirus-audit.md) records process-attributed Codex background scripting, the independent Drishya launcher audit, newer-runtime verification limits and a sanitized upstream report. This is a local diagnostic record, not a confirmed false-positive classification or product-wide antivirus certification.
+
 
 **Latest spatial/composer correction — 8 October:** [37](review/37-spatial-map-composer.md) supersedes shallow perspective and deferred attachments: real spatial WebGL points/edges, yaw/pitch orbit and pan, default gentle rotation resuming 12 seconds after camera movement, steady unnamed background geometry, slightly wider rails and shared card bounds. File/folder-content selection, screenshot paste, previews/removal and native text/image transport are implemented with explicit limits and text redaction. Effective native-policy synchronization and broader release checks remain separate; full access is still unsupported. Local checks only; no hosted CI.
 

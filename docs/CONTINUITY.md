@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Windows antivirus audit (8–9 October):** [38](review/38-windows-antivirus-audit.md) attributes the captured 22:57 alert to the Codex-managed 0.160.0 app-server launching PowerShell, not Drishya's Corepack/pnpm server or --stdio controller. Packaged verification passed without a new detection during the test. The app is now 26.1007.2314.0 with active runtime 0.162.0-alpha.17.2; the old daemon is absent, but nine minutes without an alert does not prove the hourly recurrence fixed. Payload/false-positive classification remain unknown. Preserve native-harness antivirus release acceptance; no exclusions, policy weakening or binary/config changes. Sanitized upstream report is prepared, not submitted.
+
 **Latest replay fix:** review 37 records paged-step continuity: keep History mounted during forward loading; hide/inert later evidence during backward loading without discarding camera state. Delayed page and live/replay camera regressions pass. No hosted CI.
 
 **Latest same-day refinement:** review 37 now records brighter foreground/background white maps and title-strip-only hover entry. Preview scrolling does not start enlargement; the already enlarged whole card retains hover and existing scroll behavior. Panel scale and prompt border-aware/responsive autosizing are committed on main. Local checks only.

@@ -1,0 +1,42 @@
+# Windows antivirus attribution audit
+
+8 October 2026. Builder supplied a local McAfee detection log and requested identifying whether development or the shipped product causes recurring script alerts. Host checks are read-only. No antivirus exclusions, policy changes, quarantine restoration or uploads were performed. Raw host logs and script contents are not committed.
+
+## Established evidence
+
+- The supplied file is a detection record, not a script that pushes alerts. Initially it contained 28 records: two April detections of another project's CMake compiler-probe binaries and 26 October detections named `Real Protect-PSFL!A9CD92EAEB70`.
+- October records name Windows PowerShell 5.1 (`powershell.exe`), sensor `IAntiMalware`, and an in-memory target of 88,248 bytes with no backing file. They do not supply script text, a useful file hash, a PID or a parent process. The repeated signature/size does not prove that every command has identical contents, nor establish benignness or infection independently of the antivirus verdict.
+- The six 8 October records available at the start of the audit occurred 1.61–2.81 seconds after Windows PowerShell event 400 recorded a process executing a standard-input wrapper: `-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command try { Invoke-Expression ([Console]::In.ReadToEnd()) } catch { Write-Error $_; exit 1 }`. This is a strong timing correlation, not parent attribution. The alert times were 16:57:32 through 21:57:47 IST, roughly hourly. Source timestamps are UTC; preserve the timezone when parsing. Casting an already parsed UTC DateTime to a string and reparsing drops the offset.
+- Available script-block events did not expose the blocked payload; available process-creation audit records did not identify its parent. Unrelated PowerShell WMI polling also exists on this machine and must not be conflated with the detected wrapper.
+
+## Captured parent attribution
+
+A bounded read-only process trace caught the next wrapper launch at 22:57:49 IST. PowerShell PID 7848 had parent PID 44580, `codex.exe`, running from the Codex-managed `app-server-daemon/releases/0.160.0-x86_64-pc-windows-msvc/bin` directory. Windows event 400 independently records PID 7848 launching that same stdin wrapper at 22:57:48.753. McAfee appended the matching signature/size at 22:57:50.552. The builder's 22:57 screenshot matches this observed event. The parent process was an app-server, not the controller's `--stdio` invocation.
+
+This identifies the launch source of that event as the Codex-managed app-server. It does not identify the private script contents, establish a false positive, or retroactively prove parent attribution for all previous alerts. An already-running terminal/Corepack/pnpm server is not the parent of this particular blocked wrapper. No Drishya code change can honestly be presented as fixing an external daemon's script behavior. Preserve this as an upstream diagnostic, with no antivirus weakening or native binary/configuration modification. Connected users may still encounter a native-harness antivirus conflict and need clear diagnostics.
+
+## Product code audit
+
+The controller resolves native executable files and launches them with argument arrays, `shell: false`, hidden windows and stdio pipes. It does not execute captured shell text or wrap submitted prompts in PowerShell. Passive capture reads journals. The Windows browser launcher uses `cmd /c start` to open a local URL, not an in-memory PowerShell wrapper. Source inspection found no matching wrapper or hourly PowerShell/scheduled-task installation in Drishya. Native harnesses may themselves invoke shell tools under their own permissions; that is a separate child boundary.
+
+The actual packaged CLI verification passed during this audit: isolated offline installation, synthetic Claude/Codex imports, demo bundle, authenticated API and persisted restart. The supplied detection log had no new record during that test. This observation is not broad antivirus certification and does not test every agent-generated command or native installer.
+
+## Release handling
+
+Keep a Windows antivirus acceptance check before publication: packaged launch/import/live observation, opted-in native turn and installer/CLI discovery, with actual detected process and parent attribution if an alert occurs. If our own launcher is identified, fix that launch path and rerun. If a native harness/development environment is identified, document the boundary and supported setup; do not change protection policy as a workaround. If a verified clean distributable is misclassified, use [McAfee's detection dispute process](https://www.mcafee.com/en-us/consumer-support/dispute-detection-allowlisting.html) with the user's explicit approval for any external submission. No private journals, credentials, screenshots or prompts should be submitted automatically.
+
+Do not infer a Drishya defect or a false positive from the signature alone. The observed parent attribution establishes Codex-side script launch for the latest event; a supported upstream fix or vendor classification still needs verification. Raw payloads and personal recordings remain private.
+
+## Remediation check — 9 October
+
+Read-only inspection at approximately 20:15 IST finds the installed app at `26.1007.2314.0` (package status `Ok`), with the active native runtime reporting `0.162.0-alpha.17.2`. The previously captured managed `0.160.0` app-server is no longer running. The current app-server started at 20:06:47; the McAfee detection log still ends at 8 October 22:57:50. This is only about nine minutes of the new run, shorter than the observed hourly interval. The newer installation is already present; this audit did not install or update it and does not establish that its version fixes the detection.
+
+The old daemon stderr log also contains repeated model-refresh `401` / `token_revoked` errors. Those are authentication errors on a different cadence; they do not identify the blocked PowerShell payload and must not be presented as its cause. Desktop diagnostics inspected around the old event do not establish the script's purpose. Do not patch cached executables, disable sandbox setup, change execution policy, delete the Codex home, or add antivirus exclusions as a speculative repair.
+
+The next bounded acceptance check is to use the current installation normally across at least two of the previously observed hourly intervals, recording any new alert's timestamp and process chain. If it recurs, compare a period with the desktop app fully exited while the independently started Drishya server stays running; ensure no active native turn is interrupted, and do not indiscriminately kill processes. These are diagnostic comparisons, not a promised permanent fix. No ongoing monitor was installed by this audit.
+
+If the newer runtime still reproduces the alert, the supported escalation is Codex feedback or an upstream issue with a sanitized reproduction. [Official troubleshooting guidance](https://learn.chatgpt.com/docs/reference/troubleshooting#feedback-and-logs) describes feedback/issue reporting and reviewing logs for sensitive information. External submission requires the builder's explicit instruction. McAfee classification review is appropriate only after the actual payload is verified clean; a trusted parent name alone is insufficient.
+
+Sanitized report ready for review:
+
+> Windows 11, Codex desktop package 26.1002.7124.0 and managed app-server 0.160.0: recurring roughly hourly McAfee Real Protect-PSFL!A9CD92EAEB70 detection against an 88,248-byte PowerShell in-memory target. At 2026-10-08 22:57:48.753 IST, Windows event 400 recorded PowerShell PID 7848 executing a stdin/Invoke-Expression wrapper. Live process capture attributed its parent to the Codex-managed app-server PID 44580; McAfee logged the matching detection at 22:57:50.552 IST. This was not Drishya's controller --stdio process or its Corepack/pnpm server. Script contents are unavailable, so false-positive status is unconfirmed. On 9 October the desktop package is 26.1007.2314.0 with runtime 0.162.0-alpha.17.2; recurrence under the newer runtime is not yet established. Please identify the periodic script and supported remediation without disabling antivirus protection.
