@@ -1,5 +1,5 @@
 import { pointAtHistory } from './history-gestures.ts';
-import { appendFileSync, copyFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { appendFileSync, copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
@@ -556,6 +556,38 @@ test('a write with an after-state and no patch opens its actual source instead o
 });
 
 
+test('paged prompt rail spans the full session and loads an older chapter on selection', async ({ page }) => {
+  const journal = join(dir, 'prompt-rail.jsonl');
+  const timestamp = '2026-10-09T00:00:00Z';
+  const rows = [JSON.stringify({ timestamp, type: 'session_meta', payload: { id: 'rail-session', cwd: '/home/dev/shop' } })];
+  for (let i = 0; i < 70; i++) {
+    rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: `Rail prompt ${i}` }] } }));
+    rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: `Rail response ${i}` }] } }));
+  }
+  writeFileSync(journal, rows.join('\n') + '\n');
+  const { recordingId } = await app.ingest.importSource('codex', journal);
+  // Exercise paged navigation without fabricating ten thousand prompt bodies.
+  await page.route('**/v1/recordings', async route => {
+    const response = await route.fetch();
+    const data = await response.json();
+    for (const recording of data.recordings) if (recording.id === recordingId) recording.observationCount = 10001;
+    await route.fulfill({ response, json: data });
+  });
+  await page.addInitScript(() => localStorage.setItem('drishya.lowResource', '1'));
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(new URL(`/#/r/${recordingId}`, server.launchUrl).href);
+  const rail = page.getByRole('navigation', { name: 'Prompt positions in history' });
+  await expect(rail.getByRole('button').first()).toHaveAttribute('aria-label', 'Go to prompt: Rail prompt 0');
+  await expect(rail.getByRole('button').last()).toHaveAttribute('aria-label', 'Go to prompt: Rail prompt 69');
+  await rail.getByRole('button').first().click();
+  await expect(page.locator('.turn').first()).toContainText('Rail prompt 0');
+  await expect(page.locator('.turn').first()).toBeInViewport();
+  await expect(rail.getByRole('button').first()).toHaveAttribute('aria-current', 'location');
+  await rail.getByRole('button').first().hover();
+  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 3).map(node => parseFloat(getComputedStyle(node).width)))).toEqual([24, 16, 8]);
+});
+
 test('prompt marks jump to captured prompt starts without starting a native turn', async ({ page }) => {
   await page.goto(demoUrl());
   const rail = page.getByRole('navigation', { name: 'Prompt positions in history' });
@@ -564,6 +596,10 @@ test('prompt marks jump to captured prompt starts without starting a native turn
   await rail.getByRole('button').first().hover();
   await expect(rail.locator('.prompt-rail-preview').first()).toBeVisible();
   await expect(rail.locator('.prompt-rail-preview').first()).toContainText('Prompt 1');
+  await expect(rail.getByRole('button').first()).toHaveAttribute('data-proximity', 'current');
+  await expect(rail.getByRole('button').nth(1)).toHaveAttribute('data-proximity', 'near');
+  // Wait for the finite width easing before asserting the three visual ranks.
+  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 2).map(node => parseFloat(getComputedStyle(node).width)))).toEqual([24, 16]);
   await expect(page.locator('.turn').first()).toBeInViewport({ ratio: .5 });
   await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveText('↓');
   await expect(page.locator('.history-transport .prompt-menu')).toHaveCount(0);

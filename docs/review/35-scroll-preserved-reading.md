@@ -1,5 +1,7 @@
 # 35 — Scrolling preserves motion and reading
 
+**9 October prompt-rail correction:** Paged history now retains captured prompt excerpts (at most 240 characters plus an ellipsis for unloaded passages) across the complete as-of scene. Action/prose bodies remain paged; no evidence schema change. The rail samples the full chapter range rather than only loaded recent prompts, includes first/last/current/neighbour marks, and shows the original ordinal and total. Current or hovered ticks expand to 24 px, adjacent visible ticks to 16 px, others remain 8 px, with finite easing. Clicking an unloaded mark requests its page and adopts that projection as the navigation boundary so Follow cannot mistake the fetch for new captured work. Active position uses the first visible passage, avoiding short-passage off-by-one highlights. Long sessions retain a bounded sampled rail, not one DOM control per turn. Local worker, normal/paged rail and B4 navigation regressions pass; no hosted CI.
+
 8 October 2026. Latest builder correction, superseding the wheel cancellation and hover-boundary dismissal in 34. Local verification only; hosted CI is reserved for publishing.
 
 ## Reader contract

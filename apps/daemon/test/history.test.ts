@@ -17,13 +17,21 @@ describe('worker-owned history pages', () => {
     const timestamp = '2026-10-07T00:00:00Z';
     const rows = [JSON.stringify({ timestamp, type: 'session_meta', payload: { id: 'prompt-reader', cwd: '/home/dev/shop' } })];
     for (let i = 0; i < 70; i++) {
-      rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'message', role: 'user', content: [{type:'input_text',text:`Prompt chapter ${i}`}] } }));
+      rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'message', role: 'user', content: [{type:'input_text',text:`Prompt chapter ${i}${i === 1 ? ' synthetic long label'.repeat(100) : ''}`}] } }));
       rows.push(JSON.stringify({ timestamp, type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{type:'output_text',text:`Captured response ${i}`}] } }));
     }
     (await import('node:fs')).writeFileSync(journal, rows.join('\n') + '\n');
     app = new App(join(dir, 'data'));
     const { recordingId } = await app.ingest.importSource('codex', journal);
     const latest = await app.history.page(recordingId, { count: 2 });
+    // Navigation spans older unloaded chapters without loading their responses.
+    const chapters = latest.scene.passages.filter(p => p.turnPrompt);
+    expect(chapters).toHaveLength(70);
+    expect(chapters[0]!.turnPrompt).toBe('Prompt chapter 0');
+    expect(chapters[0]!.unloaded).toBe(true);
+    expect(chapters[1]!.turnPrompt).toHaveLength(241);
+    expect(chapters[1]!.turnPrompt).toMatch(/…$/);
+    expect(chapters.at(-1)!.turnPrompt).toBe('Prompt chapter 69');
     const turn = latest.markers.find(m => m.type === 'turn')!;
     const earlier = await app.history.page(recordingId, { count: 2, promptStep: turn.step });
     expect(earlier.scene.total).toBe(latest.scene.total);

@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**9 October full-history prompt rail:** Review 35 records bounded global prompt excerpts across paged scenes, full-range sampled chapter navigation and 24/16/8 px current/near/normal tick lengths (also following hover). Older chapter loads preserve the navigation boundary instead of jumping back to live. Full bodies remain paged; no event schema change. Local typechecks/build, worker history and normal/paged rail plus B4 navigation checks pass; hosted CI stays publishing-only.
+
 **Windows antivirus audit (8–9 October):** [38](review/38-windows-antivirus-audit.md) attributes the captured 22:57 alert to the Codex-managed 0.160.0 app-server launching PowerShell, not Drishya's Corepack/pnpm server or --stdio controller. Packaged verification passed without a new detection during the test. The app is now 26.1007.2314.0 with active runtime 0.162.0-alpha.17.2; the old daemon is absent, but nine minutes without an alert does not prove the hourly recurrence fixed. Payload/false-positive classification remain unknown. Preserve native-harness antivirus release acceptance; no exclusions, policy weakening or binary/config changes. Sanitized upstream report is prepared, not submitted.
 
 **Latest replay fix:** review 37 records paged-step continuity: keep History mounted during forward loading; hide/inert later evidence during backward loading without discarding camera state. Delayed page and live/replay camera regressions pass. No hosted CI.

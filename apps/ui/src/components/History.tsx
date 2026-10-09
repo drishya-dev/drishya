@@ -38,6 +38,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const [viewport, setViewport] = useState({ top: 0, height: 900 });
   const [measurementVersion, setMeasurementVersion] = useState(0);
   const [focusedPassageId, setFocusedPassageId] = useState<string | undefined>();
+  const [hoveredPrompt, setHoveredPrompt] = useState<string | undefined>();
   const measurements = useRef(new Map<string, number>());
   const programmatic = useRef(false);
   const lastScrollTop = useRef(0);
@@ -51,6 +52,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
   const navigationBoundary = useRef<{ step: number; projection: Projection } | undefined>(undefined);
+  const chapterNavigation = useRef<{ id: string; step: number } | undefined>(undefined);
   const seenThrough = useRef(scene.total);
   const followFrame = useRef<number | undefined>(undefined);
   const followingStarted = useRef(false);
@@ -100,6 +102,16 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
   const agents = useMemo(() => new Map(projection.agents.map((a) => [a.id, a])), [projection]);
+
+  useLayoutEffect(() => {
+    const destination = chapterNavigation.current;
+    if (!destination) return;
+    if (scene.step !== destination.step) { chapterNavigation.current = undefined; return; }
+    // Fetching an older chapter replaces the projection without adding work.
+    // Adopt that page before Follow can mistake it for a new live result.
+    navigationBoundary.current = { step: scene.step, projection };
+    if (scene.passages.some(ps => ps.id === destination.id && !ps.unloaded)) chapterNavigation.current = undefined;
+  }, [scene.passages, scene.step, projection]);
 
   const targetIndex = scene.passages.findIndex((ps) =>
     selectedOp ? ps.ops.some((op) => op.id === selectedOp) : focusObservationId ?
@@ -364,9 +376,15 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   };
 
   const prompts = scene.passages.flatMap((ps, index) => ps.turnPrompt ? [{ ps, index }] : []);
-  const readingIndex = Math.max(0, layout.prefix.findIndex((_, index) => index < scene.passages.length && layout.prefix[index + 1]! > viewport.top + 80));
+  const readingIndex = Math.max(0, layout.prefix.findIndex((_, index) => index < scene.passages.length && layout.prefix[index + 1]! > viewport.top + 1));
   const activePrompt = prompts.findLast(item => item.index <= readingIndex)?.ps.id ?? prompts[0]?.ps.id;
-  const railPrompts = prompts.filter((item, index) => item.ps.id === activePrompt || index % Math.max(1, Math.ceil(prompts.length / 60)) === 0 || index === prompts.length - 1);
+  const activePromptIndex = prompts.findIndex(item => item.ps.id === activePrompt);
+  const hoveredPromptIndex = prompts.findIndex(item => item.ps.id === hoveredPrompt);
+  const nearestPromptIndex = hoveredPromptIndex >= 0 ? hoveredPromptIndex : activePromptIndex;
+  // Sample the whole recording, always retaining the current chapter and its
+  // neighbours. Thousands of turns must not become thousands of DOM buttons.
+  const railPrompts = prompts.map((item, ordinal) => ({ ...item, ordinal })).filter((item) => Math.abs(item.ordinal - activePromptIndex) <= 1 || item.ps.id === hoveredPrompt || item.ordinal % Math.max(1, Math.ceil(prompts.length / 60)) === 0 || item.ordinal === prompts.length - 1);
+  const nearestRailIndex = railPrompts.findIndex(item => item.ordinal === nearestPromptIndex);
 
   const holdForSelection = (event: React.SyntheticEvent) => {
     if ((event.target as HTMLElement).closest('button, input, select, a')) return;
@@ -428,14 +446,16 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       <Origins scene={scene} projection={projection} isProgrammaticScroll={isProgrammaticScroll} />
       <FlowConnections projection={projection} />
     </div>
-      {mode === 'history' && prompts.length > 0 && <nav className="history-prompt-marks" aria-label={onWindow ? 'Prompts in loaded history' : 'Prompt positions in history'}>
-        {railPrompts.map(({ ps, index }) => <button key={ps.id} aria-label={`Go to prompt: ${ps.turnPrompt}`} aria-current={ps.id === activePrompt ? 'location' : undefined} onClick={() => {
+      {mode === 'history' && prompts.length > 0 && <nav className="history-prompt-marks" aria-label="Prompt positions in history" onMouseLeave={() => setHoveredPrompt(undefined)}>
+        {railPrompts.map(({ ps, index, ordinal }, railIndex) => <button key={ps.id} data-proximity={Math.abs(railIndex - nearestRailIndex) === 0 ? 'current' : Math.abs(railIndex - nearestRailIndex) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${ps.turnPrompt}`} aria-current={ps.id === activePrompt ? 'location' : undefined} onMouseEnter={() => setHoveredPrompt(ps.id)} onFocus={() => setHoveredPrompt(ps.id)} onBlur={() => setHoveredPrompt(undefined)} onClick={() => {
           set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
           navigationBoundary.current = { step: scene.step, projection };
+          chapterNavigation.current = onWindow && ps.unloaded ? { id: ps.id, step: scene.step } : undefined;
           setFocusedPassageId(ps.id);
           readingAnchor.current = { id: ps.id, offset: 0 }; readingAtStart.current = false;
           setScrollTop(layout.prefix[index]!);
-        }}><span className="prompt-rail-tick" aria-hidden="true" /><span className="prompt-rail-preview"><small>Prompt {prompts.findIndex(item => item.ps.id === ps.id) + 1}</small><span>{ps.turnPrompt}</span></span></button>)}
+          if (onWindow && ps.unloaded) void onWindow({ start: Math.max(0, index - 8), count: 32, pinnedPassageIds: [ps.id] }).catch(error => set({ error: error.message }));
+        }}><span className="prompt-rail-tick" aria-hidden="true" /><span className="prompt-rail-preview"><small>Prompt {ordinal + 1} of {prompts.length}</small><span>{ps.turnPrompt}</span></span></button>)}
       </nav>}
       {(!follow || navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection) && (
         <button className="follow-pill" aria-label={`${mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest`} title="Back to latest" onClick={() => {

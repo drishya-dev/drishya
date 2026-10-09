@@ -157,8 +157,9 @@ function page(id: string, query: HistoryQuery): HistoryPage {
     passages: historical.passages.filter((ps) => selected.has(ps.id)),
     timeline: full.timeline.slice(Math.max(0, step - 128), step),
   };
-  // Only stable passage metadata crosses the boundary for unloaded work. Content loads on demand.
-  scene.passages = scene.passages.map((ps) => selected.has(ps.id) ? ps : { ...ps, ops: [], prose: [], turnPrompt: undefined, unloaded: true });
+  // Keep a bounded captured chapter label across the full history, not just the
+  // loaded window. Full prompt/material content still loads on demand.
+  scene.passages = scene.passages.map((ps) => selected.has(ps.id) ? ps : { ...ps, ops: [], prose: [], turnPrompt: ps.turnPrompt && (ps.turnPrompt.length > 240 ? `${ps.turnPrompt.slice(0, 240)}…` : ps.turnPrompt), unloaded: true });
   const allMarkers = markers(full);
   const stride = Math.max(1, Math.ceil(allMarkers.length / 500));
   return { projection, scene, start, operationCount: historical.operations.length, summary: historySummary(historical), references, loadedPassageIds: passages.map((ps) => ps.id), revisions,
