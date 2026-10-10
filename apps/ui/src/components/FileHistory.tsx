@@ -22,6 +22,7 @@ export function FileHistory({ projection }: { projection: Projection }) {
 }
 
 function FileWorkspace({ path, projection }: { path: string; projection: Projection }) {
+  const focusChange = useApp(s => s.filePanelFocus === 'change');
   const explore = useApp(s => s.explore);
   const { workspace, approve } = useSessionWorkspace();
   const [diskError, setDiskError] = useState<string>();
@@ -67,9 +68,9 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
     }
     return items;
   }, [page, path, compare, left, right]);
-  const first = choices.find((item) => item.key === left?.key) ?? choices[0];
+  const first = choices.find((item) => item.key === left?.key) ?? (focusChange ? choices.find(item => item.patch) ?? choices.find(item => item.operation.kind === 'write' || item.operation.kind === 'edit') : undefined) ?? choices[0];
   const second = choices.find((item) => item.key === right?.key) ?? choices.at(-1);
-  const close = () => useApp.setState({ filePanel: undefined });
+  const close = () => useApp.setState({ filePanel: undefined, filePanelFocus: undefined });
   return <ReadingDialog title={`Work on ${path}`} close={close} className="file-workspace" modeless={explore}>
     <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}</span></div>
     <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>

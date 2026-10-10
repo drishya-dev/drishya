@@ -3,6 +3,8 @@ import type { Hunk } from '@drishya/contracts';
 import { CodeView, DiffView, Output, ProvenanceBadge, useArtifact } from './common.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
 import { useReadingReference } from './ReadingReference.tsx';
+import { SourceFind } from './SourceFind.tsx';
+import { firstChangeOffset } from '../lib/change-preview.ts';
 
 /** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
 export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false }: {
@@ -18,6 +20,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const [retry, setRetry] = useState(0);
   const [copied, setCopied] = useState<string>();
   const [query, setQuery] = useState('');
+  const [wrap, setWrap] = useState(false);
   const [activeLine, setActiveLine] = useState<number>();
   const [lineInput, setLineInput] = useState('');
   const [lineError, setLineError] = useState<string>();
@@ -87,15 +90,10 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
     else reveal(line);
   };
   return (
-    <div className="artifact-reader" ref={reader}>
+    <div className={`artifact-reader${kind === 'code' ? ` source-reading${wrap ? ' wrap-source' : ''}` : ''}`} ref={reader}>
       {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.range ? `${view.artifact.kind === 'excerpt' ? 'Excerpt' : 'Historical source'} · lines ${view.artifact.range.start}–${view.artifact.range.end}` : 'Historical artifact'}</span></div>}
-      <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span><button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>
-      {kind === 'code' && <div className="source-find">
-        <input type="search" aria-label="Find in loaded source page" placeholder="Find in this page" maxLength={200} value={query} onChange={(e) => { setQuery(e.target.value); setActiveLine(undefined); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); moveMatch(e.shiftKey ? -1 : 1); } }} />
-        <button className="btn ghost small" disabled={!matches.length} onClick={() => moveMatch(-1)}>Previous match</button>
-        <button className="btn ghost small" disabled={!matches.length} onClick={() => moveMatch(1)}>Next match</button>
-        <span className="muted small" role="status">{loading ? 'Opening stored source page…' : query ? `${matchingLines.size} matching ${matchingLines.size === 1 ? 'line' : 'lines'} in this page${matches.includes(activeLine ?? -1) ? ` · ${matches.indexOf(activeLine!) + 1} of ${matches.length}` : ''}` : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'}</span>
-      </div>}
+      <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span>{kind === 'code' && <button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button>}<button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>
+      {kind === 'code' && <SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in loaded source page" idleLabel={loading ? 'Opening stored source page…' : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'} />}
       {kind === 'code' && <details className="source-utilities">
         <summary>Source tools · go to line, copy & pin range</summary>
       <form className="source-go" onSubmit={(e) => { e.preventDefault(); goToLine(); }}>
@@ -139,18 +137,19 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
 }
 
 export function DiffReader({ hunks, path }: { hunks: Hunk[]; path?: string }) {
-  const [page, setPage] = useState(0);
+  const [offset, setOffset] = useState(() => firstChangeOffset(hunks));
   const [layout, setLayout] = useState<'unified' | 'split'>('unified');
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
   return <div className={`artifact-reader diff-reader diff-${layout}`}>
     <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button></div>
-    <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={page * pageSize} maxLines={pageSize} /></div>
-    <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={page * pageSize} maxLines={pageSize} /></div>
-    {total > pageSize && <nav className="reader-pages" aria-label="Captured change pages">
-      <button className="btn" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous change lines</button>
-      <span className="muted small">{page * pageSize + 1}–{Math.min(total, (page + 1) * pageSize)} of {total} captured lines</span>
-      <button className="btn" disabled={(page + 1) * pageSize >= total} onClick={() => setPage(page + 1)}>Next change lines</button>
+    {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
+    <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} /></div>
+    <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} /></div>
+    {(offset > 0 || total > pageSize) && <nav className="reader-pages" aria-label="Captured change pages">
+      <button className="btn" disabled={offset === 0} onClick={() => setOffset(n => Math.max(0, n - pageSize))}>Previous change lines</button>
+      <span className="muted small">{offset + 1}–{Math.min(total, offset + pageSize)} of {total} captured lines</span>
+      <button className="btn" disabled={offset + pageSize >= total} onClick={() => setOffset(n => n + pageSize)}>Next change lines</button>
     </nav>}
   </div>;
 }

@@ -49,6 +49,43 @@ createInterface({input:process.stdin}).on('line',line=>{
 });
 test.afterAll(async()=>{ await server?.close(); await app?.close(); if (dir) {if (!resolve(dir).startsWith(resolve(tmpdir())+sep)) throw new Error('unsafe test cleanup'); rmSync(dir,{recursive:true,force:true});} });
 
+test('current source reading finds, navigates and wraps bounded disk pages without replacing captured evidence', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  const folders = page.getByRole('complementary', { name: 'Session folders' });
+  const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
+  if (await enable.count()) await enable.click();
+  await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
+  const reader = page.getByRole('dialog', { name: 'src/actual.ts', exact: true });
+  const resize = reader.getByRole('separator', { name: 'Resize current source reading space' });
+  await resize.press('ArrowLeft');
+  await expect(resize).toHaveAttribute('aria-valuenow', '1072');
+  await reader.getByRole('textbox', { name: 'Go to current source line' }).fill('9999');
+  await reader.getByRole('button', { name: 'Go to line', exact: true }).click();
+  await expect(reader.locator('.source-go')).toContainText('251');
+  await reader.getByRole('searchbox', { name: 'Find in current source page' }).fill('fromSelectedWorkspace');
+  await expect(reader.locator('.source-find')).toContainText('1 matching line');
+  await reader.getByRole('button', { name: 'Next match', exact: true }).click();
+  await expect(reader.locator('[data-source-line="1"]')).toHaveAttribute('aria-current', 'location');
+  await reader.getByRole('textbox', { name: 'Go to current source line' }).fill('205');
+  await reader.getByRole('button', { name: 'Go to line', exact: true }).click();
+  await expect(reader).toContainText('Lines 201–251 of 251');
+  await expect(reader.locator('[data-source-line="205"]')).toHaveAttribute('aria-current', 'location');
+  await reader.getByRole('button', { name: 'Wrap lines', exact: true }).click();
+  await expect(reader.locator('.current-file-code')).toHaveClass(/wrap-source/);
+  await page.screenshot({ path: resolve('.local/source-reader-desktop.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(reader.getByRole('button', { name: 'Next lines' })).toBeVisible();
+  const bounds = await reader.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: resolve('.local/source-reader-narrow.png') });
+  await reader.getByRole('button', { name: 'Recorded work on this file' }).click();
+  const historical = page.getByRole('dialog', { name: 'Work on src/actual.ts' });
+  await expect(historical).toContainText('recorded historical bytes');
+  await expect(historical).not.toContainText('fromSelectedWorkspace');
+});
+
 test('native model settings and attachment menus dismiss outside without detaching Follow', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
@@ -87,7 +124,8 @@ test('selected workspace folders read current files separately from the exact hi
   expect(folderBox!.height).toBeGreaterThan(page.viewportSize()!.height * .75);
   await expect(page.locator('.passage-agent')).toHaveCount(0);
 
-  await folder.getByRole('button',{name:/Enable workspace reading/}).click();
+  const enableReading = folder.getByRole('button',{name:/Enable workspace reading/});
+  if (await enableReading.count()) await enableReading.click();
   await expect(folder.getByRole('button',{name:/Enable workspace reading/})).toHaveCount(0);
   await folder.getByRole('treeitem',{name:'actual.ts',exact:true}).click();
   const reader=page.getByRole('dialog',{name:'src/actual.ts',exact:true});
@@ -118,6 +156,8 @@ test('composer attaches code and pasted screenshots, removes chips and sends the
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
   if (await enable.count()) await enable.click();
+  // The real picker is unavailable while workspace consent is being refreshed.
+  await expect(composer.getByRole('button', { name: 'Add files or folders' })).toBeEnabled();
   await composer.locator('input[aria-label="Choose prompt files"]').setInputFiles([
     { name: 'source.ts', mimeType: 'text/plain', buffer: Buffer.from('export const selectedSource = true;') },
     { name: 'remove.txt', mimeType: 'text/plain', buffer: Buffer.from('Remove this attachment') }

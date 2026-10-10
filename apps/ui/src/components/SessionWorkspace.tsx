@@ -7,6 +7,8 @@ import { ReadingDialog } from './ProductShell.tsx';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { FileIcon } from './FileIcon.tsx';
+import { SourceFind } from './SourceFind.tsx';
+import { ReadingResize } from './ReadingResize.tsx';
 
 interface Connection {
   submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => Promise<void>;
@@ -169,14 +171,52 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
   const [file, setFile] = useState<CurrentFile>();
   const [error, setError] = useState<string>();
   const [retry, setRetry] = useState(0);
+  const [query, setQuery] = useState('');
+  const [activeLine, setActiveLine] = useState<number>();
+  const [lineInput, setLineInput] = useState('');
+  const [lineError, setLineError] = useState<string>();
+  const [wrap, setWrap] = useState(false);
+  const [width, setWidth] = useState(1040);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [copied, setCopied] = useState('');
+  const code = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let active = true; setFile(undefined); setError(undefined);
     void workspaceApi.file(id, path, start).then(f => { if (active) setFile(f); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
   }, [id, path, start, retry]);
-  return <ReadingDialog title={path} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader" modeless={explore}>
+  useEffect(() => { setFrom(''); setTo(''); setCopied(''); }, [start, retry]);
+  useLayoutEffect(() => { if (activeLine !== undefined) code.current?.querySelector(`[data-source-line="${activeLine}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' }); }, [activeLine, file]);
+  const lines = file?.text.replace(/\n$/, '').split('\n') ?? [];
+  const matches = query ? lines.flatMap((line, index) => line.toLowerCase().includes(query.toLowerCase()) ? [start + index + 1] : []) : [];
+  const moveMatch = (direction: 1 | -1) => {
+    if (!matches.length) return;
+    const current = matches.indexOf(activeLine ?? -1);
+    setActiveLine(matches[current < 0 ? direction === 1 ? 0 : matches.length - 1 : (current + direction + matches.length) % matches.length]);
+  };
+  const go = () => {
+    const line = Number(lineInput);
+    if (!file || !/^\d+$/.test(lineInput) || !Number.isSafeInteger(line) || line < 1 || line > file.totalLines) { setLineError(`Choose a line from 1 to ${file?.totalLines ?? 0}`); return; }
+    setLineError(undefined); setActiveLine(line);
+    if (line <= start || line > start + file.returnedLines) setStart(Math.floor((line - 1) / 200) * 200);
+  };
+  const copy = async (range = false) => {
+    if (!file) return;
+    const first = from ? Number(from) : start + 1;
+    const last = to ? Number(to) : start + file.returnedLines;
+    if (range && ((from && !/^\d+$/.test(from)) || (to && !/^\d+$/.test(to)) || !Number.isSafeInteger(first) || !Number.isSafeInteger(last) || first < start + 1 || last > start + file.returnedLines || last < first)) { setCopied('Choose a range within the loaded page.'); return; }
+    try { await navigator.clipboard.writeText(range ? lines.slice(first - start - 1, last - start).join('\n') : file.text); setCopied(range ? `Copied lines ${first}–${last}` : 'Copied visible page'); }
+    catch { setCopied('Copy unavailable · select the text to copy.'); }
+  };
+  return <ReadingDialog title={path} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader" modeless={explore} style={explore ? undefined : { width: `min(${width}px, calc(100vw - 28px))` }}>
+    {!explore && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} label="Resize current source reading space" fromRight />}
     <div className="current-file-meta"><span className="tag" title="Current disk · not a historical snapshot">On disk</span><button className="btn ghost" onClick={() => setRetry(r => r + 1)}>Refresh</button><button className="btn ghost" onClick={() => useApp.setState({ currentFile: undefined, filePanel: path })}>Recorded work on this file</button></div>
-    {error ? <p className="bad" role="alert">{error}</p> : !file ? <p className="muted">Reading current file…</p> : <><div className="current-file-code"><CodeView text={file.text} path={path} startLine={file.start + 1} /></div><footer><span>Lines {file.start + 1}–{file.start + file.returnedLines} of {file.totalLines}{file.redacted ? ' · secrets redacted' : ''}</span><button disabled={!start} onClick={() => setStart(s => Math.max(0, s - 200))}>Previous lines</button><button disabled={!file.hasMore} onClick={() => setStart(s => s + 200)}>Next lines</button><button onClick={() => void navigator.clipboard.writeText(file.text)}>Copy visible page</button></footer></>}
+    <div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source page" />
+      <form className="source-go" onSubmit={e => { e.preventDefault(); go(); }}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e => { setLineInput(e.target.value); setLineError(undefined); }} /><button className="btn ghost small" disabled={!file}>Go to line</button><button type="button" className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button><span role="status">{lineError}</span></form>
+      <details className="source-utilities"><summary>Copy source range</summary><div className="source-range"><input aria-label="Current source range start" placeholder="From" inputMode="numeric" maxLength={16} value={from} onChange={e => setFrom(e.target.value)} /><input aria-label="Current source range end" placeholder="To" inputMode="numeric" maxLength={16} value={to} onChange={e => setTo(e.target.value)} /><button className="btn ghost small" disabled={!file} onClick={() => void copy(true)}>Copy range</button><span role="status">{copied || 'Loaded page only'}</span></div></details>
+    </div>
+    {error ? <p className="bad" role="alert">{error}</p> : !file ? <p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><CodeView text={file.text} path={path} startLine={file.start + 1} highlightLines={new Set(matches)} activeLine={activeLine} /></div><footer><span title={`Current file version: ${file.modifiedAt}`}>Lines {file.start + 1}–{file.start + file.returnedLines} of {file.totalLines}{file.redacted ? ' · secrets redacted' : ''}</span><button disabled={!start} onClick={() => { setActiveLine(undefined); setStart(s => Math.max(0, s - 200)); }}>Previous lines</button><button disabled={!file.hasMore} onClick={() => { setActiveLine(undefined); setStart(s => s + 200); }}>Next lines</button><button onClick={() => void copy()}>Copy visible page</button></footer></>}
   </ReadingDialog>;
 }
 

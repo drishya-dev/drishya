@@ -71,6 +71,7 @@ interface State {
   readingPassageId?: string;
   /** A file whose operations are listed (from the spine or the map). */
   filePanel?: string;
+  filePanelFocus?: 'change';
   filter?: ComposeInput['filter'];
   inspectorTab: 'detail' | 'evidence' | 'explain';
   inspectorWidth: number;
@@ -143,7 +144,7 @@ export const useApp = create<State>((set, get) => ({
   async openRecording(id, opts = {}) {
     const src = get().source;
     if (!src) return;
-    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, filePanel: undefined, explore: false, compareAgents: false });
+    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, filePanel: undefined, filePanelFocus: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     try {

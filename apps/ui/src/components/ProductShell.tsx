@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode, type CSSProperties } from 'react';
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
 
-export function ReadingDialog({ title, close, children, className = '', modeless = false }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean }) {
+export function ReadingDialog({ title, close, children, className = '', modeless = false, style }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -10,7 +10,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     if (modeless) dialog.show(); else dialog.showModal();
     return () => { dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
   }, [modeless]);
-  return <dialog ref={ref} className={`product-dialog ${className}${modeless ? " map-reader" : ""}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
+  return <dialog ref={ref} style={style} className={`product-dialog ${className}${modeless ? " map-reader" : ""}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
     <header><h2 id={titleId}>{title}</h2><button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></header>
     {children}
   </dialog>;
