@@ -34,6 +34,36 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('returning from an authenticated demo retains local workspace access', async ({ page }) => {
+  const url = new URL(demoUrl());
+  url.hash = new URL(server.launchUrl).hash;
+  await page.goto(url.href);
+  await expect(page.locator('.brand')).toBeVisible();
+  await page.locator('.brand').click();
+  await expect(page.locator('.home')).toBeVisible();
+  await expect(page.getByText('Open Drishya from its launch link')).toHaveCount(0);
+});
+
+test('wrapped Codex file creations and edits render as source changes instead of shell-only work', async ({ page }) => {
+  const patch = '*** Begin Patch\n*** Add File: created.ts\n+export const created = true;\n*** Update File: edited.ts\n@@\n-old\n+replacement\n*** End Patch';
+  const journal = join(dir, 'wrapped-capture.jsonl');
+  writeFileSync(journal, [
+    { type: 'session_meta', payload: { id: 'wrapped-capture', cwd: '/repo' } },
+    { type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Create and edit the source' }] } },
+    { type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Applying the source changes.' }] } },
+    { type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', call_id: 'wrapped', input: `text(await tools.apply_patch(${JSON.stringify(patch)}));` } },
+    { type: 'response_item', payload: { type: 'custom_tool_call_output', call_id: 'wrapped', output: '{}' } },
+  ].map(r => JSON.stringify(r)).join('\n') + '\n');
+  const { recordingId } = await app.ingest.importSource('codex', journal);
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(new URL(`/#/r/${recordingId}`, server.launchUrl).href);
+  await expect(page.locator('article.op-write')).toContainText('created.ts');
+  await expect(page.locator('article.op-edit')).toContainText('edited.ts');
+  await expect(page.locator('article.op-edit')).toContainText('replacement');
+  await expect(page.locator('.prose')).toContainText('Applying the source changes.');
+});
+
 test('long paths and MCP fields stay inside shared card headers and reading bounds', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
   const long = 'C:/Users/synthetic/.claude/projects/' + 'long-project-segment-'.repeat(12) + '/memory/project_state.md';
@@ -523,6 +553,7 @@ test('prompt chapters review captured work without movie controls and resize det
   await expect.poll(async() => (await inspector.boundingBox())!.width).toBeGreaterThan(before);
   await inspector.getByRole('button',{name:'Close',exact:true}).click();
   await page.getByLabel('More workspace options').click();
+  await page.locator('.prompt-menu > summary').click();
   await navigation.locator('.prompt-chapters button').first().click();
   await navigation.getByRole('button',{name:'Follow from prompt'}).click();
   await expect(page.getByRole('button',{name:'Full history',exact:true})).toBeVisible();
@@ -578,8 +609,13 @@ test('paged prompt rail spans the full session and loads an older chapter on sel
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(new URL(`/#/r/${recordingId}`, server.launchUrl).href);
   const rail = page.getByRole('navigation', { name: 'Prompt positions in history' });
-  await expect(rail.getByRole('button').first()).toHaveAttribute('aria-label', 'Go to prompt: Rail prompt 0');
+  await rail.hover();
+  await rail.evaluate(node => { node.scrollTop = node.scrollHeight; });
   await expect(rail.getByRole('button').last()).toHaveAttribute('aria-label', 'Go to prompt: Rail prompt 69');
+  await rail.evaluate(node => { node.scrollTop = 35 * 16; });
+  await expect(rail.getByRole('button', { name: 'Go to prompt: Rail prompt 35', exact: true })).toBeVisible();
+  await rail.evaluate(node => { node.scrollTop = 0; });
+  await expect(rail.getByRole('button').first()).toHaveAttribute('aria-label', 'Go to prompt: Rail prompt 0');
   await rail.getByRole('button').first().click();
   await expect(page.locator('.turn').first()).toContainText('Rail prompt 0');
   await expect(page.locator('.turn').first()).toBeInViewport();
@@ -594,8 +630,8 @@ test('prompt marks jump to captured prompt starts without starting a native turn
   await rail.getByRole('button').first().click();
   await expect(rail.getByRole('button').first()).toHaveAttribute('aria-current', 'location');
   await rail.getByRole('button').first().hover();
-  await expect(rail.locator('.prompt-rail-preview').first()).toBeVisible();
-  await expect(rail.locator('.prompt-rail-preview').first()).toContainText('Prompt 1');
+  await expect(page.locator('.prompt-rail-preview').first()).toBeVisible();
+  await expect(page.locator('.prompt-rail-preview').first()).toContainText('Prompt 1');
   await expect(rail.getByRole('button').first()).toHaveAttribute('data-proximity', 'current');
   await expect(rail.getByRole('button').nth(1)).toHaveAttribute('data-proximity', 'near');
   // Wait for the finite width easing before asserting the three visual ranks.

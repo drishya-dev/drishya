@@ -1,5 +1,7 @@
 # Codebase — the system as built
 
+**10 October native completeness:** [39](review/39-native-workspace-completeness.md) records `capture-core/code-mode.ts` for bounded static patch extraction, reducer `r3` for legacy wrapper recovery, `native-settings.ts`/pure `native-types.ts`, consented `POST …/controller/settings`, `options: { model?, effort? }` on native prompts, stable Codex stdio/resume and native compaction. Wrapper patch status remains unknown when its nested outcome is not exposed; proposed bytes never become a trusted reconstruction base. `PromptRail.tsx` virtualizes every chapter without sampling; `dismiss-menus.ts` handles utility light dismissal. Current catalogs were probed on both installed CLIs; this does not certify native model-turn/account/platform acceptance. Local checks only; no hosted CI.
+
 
 **Latest spatial/composer correction — 8 October:** [37](review/37-spatial-map-composer.md) supersedes shallow perspective and deferred attachments: real spatial WebGL points/edges, yaw/pitch orbit and pan, default gentle rotation resuming 12 seconds after camera movement, steady unnamed background geometry, slightly wider rails and shared card bounds. File/folder-content selection, screenshot paste, previews/removal and native text/image transport are implemented with explicit limits and text redaction. Effective native-policy synchronization and broader release checks remain separate; full access is still unsupported. Local checks only; no hosted CI.
 

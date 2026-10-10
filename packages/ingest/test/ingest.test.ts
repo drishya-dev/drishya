@@ -40,6 +40,26 @@ function claudeLine(rec: Record<string, unknown>) {
 }
 
 describe('import', () => {
+  it('projects wrapped Codex creations and edits, including previously stored shell-shaped calls', async () => {
+    const patch = '*** Begin Patch\n*** Add File: new.ts\n+export const n = 1;\n*** Update File: old.ts\n@@\n-old\n+new\n*** End Patch';
+    const source = `text(await tools.apply_patch(${JSON.stringify(patch)}));`;
+    const journal = join(dir, 'wrapped.jsonl');
+    writeFileSync(journal, [
+      { type: 'session_meta', payload: { id: 'wrapped', cwd: '/w' } },
+      { type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', call_id: 'patch1', input: source } },
+      { type: 'response_item', payload: { type: 'custom_tool_call_output', call_id: 'patch1', output: '{}' } },
+    ].map(r => JSON.stringify(r)).join('\n') + '\n');
+    const { recordingId } = await ingest.importSource('codex', journal);
+    const observations = store.observations(recordingId);
+    const projection = ingest.projection(recordingId);
+    expect(projection.operations.map(o => [o.kind, o.title])).toEqual([['write', 'Create new.ts'], ['edit', 'Edit old.ts']]);
+    expect(projection.operations.every(o => o.status === 'unknown' && o.classification.kind === 'derived')).toBe(true);
+    const legacy = observations.map(o => o.kind === 'tool.call' ? { ...o, payload: { ...o.payload, intent: { kind: 'shell', command: source } } } : o);
+    const rebuilt = reduce(recordingId, legacy, store.blobs, { adapters: ingest.descriptors });
+    expect(rebuilt.operations.map(o => [o.kind, o.title])).toEqual(projection.operations.map(o => [o.kind, o.title]));
+    expect(store.blobs.get(rebuilt.artifacts.find(a => a.kind === 'patch')!.blob!)).toBe(patch);
+    expect(store.observations(recordingId)).toEqual(observations);
+  });
   it('keeps a combined view across worktrees without claiming one map root', async () => {
     const a = await ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
     const b = await ingest.importSource('codex', join(fixtures, 'codex/rollout-checkout-review.jsonl'));

@@ -12,6 +12,7 @@ import {
   parseMcpName,
   textOf,
   touchesProtectedFile,
+  literalPatch,
   type Adapter,
   type ParseContext,
   type RawObservation,
@@ -104,9 +105,14 @@ export function intentOf(name: string, args: Rec, namespace?: string): ToolInten
     case 'container.exec':
     case 'local_shell':
       return { kind: 'shell', command: commandText(args.command ?? args.cmd), cwd: typeof args.workdir === 'string' ? args.workdir : undefined };
-    case 'exec':
+    case 'functions.exec':
+    case 'exec': {
       // Codex "code mode": the model runs a script that calls tools. Shown as code it ran.
-      return { kind: 'shell', command: typeof args.raw === 'string' ? args.raw : '' };
+      const source = typeof args.raw === 'string' ? args.raw : typeof args.code === 'string' ? args.code : '';
+      const patch = literalPatch(source);
+      return patch ? { kind: 'patch', patch } : { kind: 'shell', command: source };
+    }
+    case 'functions.apply_patch':
     case 'apply_patch':
       return { kind: 'patch', patch: typeof args.raw === 'string' ? args.raw : typeof args.input === 'string' ? args.input : '' };
     case 'update_plan':

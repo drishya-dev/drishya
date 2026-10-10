@@ -7,15 +7,17 @@ import { App, HttpError } from './app.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { executable } from './native-executable.ts';
 import { attachmentText, prepareAttachments, type PromptAttachment } from './prompt-attachments.ts';
+import { inspectNative, turnOptions, type NativeSettings, type TurnOptions, type NativeUsage } from './native-settings.ts';
 export { executable } from './native-executable.ts';
 
 type RecordValue = Record<string, any>;
 export interface ControllerState {
+  settings?: NativeSettings;
   submittedPrompt?: string;
   afterSequence?: number;
   phase?: 'waiting' | 'thinking' | 'responding' | 'tool';
   preview?: { id: string; role: 'response' | 'reasoning'; exposure?: 'summary' | 'full'; text: string };
-  usage?: { input: number; output: number; cached: number; costUsd?: number };
+  usage?: NativeUsage;
   runId?: string;
   state: 'idle' | 'connecting' | 'running' | 'approval' | 'completed' | 'failed' | 'stopped';
   harness: string;
@@ -49,6 +51,8 @@ interface Run {
 export class HarnessController {
   private runs = new Map<string, Run>();
   private starting = new Set<string>();
+  private settings = new Map<string, NativeSettings>();
+  private inspecting = new Set<string>();
   private app: App;
   private workspaces: WorkspaceAccess;
   private options: { launch?: typeof spawn; resolveExecutable?: typeof executable; timeoutMs?: number };
@@ -60,7 +64,29 @@ export class HarnessController {
   status(id: string): ControllerState {
     const rec = this.app.recording(id);
     const name = rec.harness === 'claude-code' ? 'claude' : rec.harness === 'codex' ? 'codex' : undefined;
-    return this.runs.get(id)?.state ?? { state: 'idle', harness: rec.harness, available: !!name && !!(this.options.resolveExecutable ?? executable)(name), output: '', tools: [], inventory: 'unknown', approvals: [] };
+    return this.runs.get(id)?.state ?? { state: 'idle', harness: rec.harness, available: !!name && !!(this.options.resolveExecutable ?? executable)(name), output: '', tools: [], inventory: 'unknown', approvals: [], settings: this.settings.get(id) };
+  }
+
+  async inspect(id: string): Promise<ControllerState> {
+    if (this.inspecting.has(id) || this.inspecting.size >= 2) throw new HttpError(409, 'a native settings check is already in progress');
+    this.inspecting.add(id);
+    try {
+      const root = await this.workspaces.root(id);
+      const rec = this.app.recording(id);
+      const name = rec.harness === 'claude-code' ? 'claude' : rec.harness === 'codex' ? 'codex' : undefined;
+      if (!name) throw new HttpError(409, 'this harness has no native connector');
+      const bin = (this.options.resolveExecutable ?? executable)(name);
+      if (!bin) throw new HttpError(409, 'install the native CLI and sign in before reading settings');
+      if (this.starting.has(id)) throw new HttpError(409, 'wait for the current connection');
+      const current = this.runs.get(id);
+      if (current && ['connecting', 'running', 'approval'].includes(current.state.state)) return current.state;
+      const settings = await inspectNative(bin, name, root, this.options.launch ?? spawn);
+      await this.workspaces.root(id);
+      if (this.settings.size >= 16) this.settings.delete(this.settings.keys().next().value!);
+      this.settings.set(id, settings);
+      if (current) current.state.settings = settings;
+      return this.status(id);
+    } finally { this.inspecting.delete(id); }
   }
 
   private write(run: Run, data: unknown) {
@@ -106,13 +132,14 @@ export class HarnessController {
     run.state.state = 'approval';
   }
 
-  async start(id: string, prompt: unknown, exclusive: unknown, attachments?: unknown): Promise<ControllerState> {
-    if (this.starting.has(id)) throw new HttpError(409, 'this session is already connecting');
+  async start(id: string, prompt: unknown, exclusive: unknown, attachments?: unknown, options?: unknown): Promise<ControllerState> {
+    if (this.starting.has(id) || this.inspecting.has(id)) throw new HttpError(409, 'this session is already connecting');
     this.starting.add(id);
-    try { return await this.startTurn(id, prompt, exclusive, attachments); } finally { this.starting.delete(id); }
+    try { return await this.startTurn(id, prompt, exclusive, attachments, options); } finally { this.starting.delete(id); }
   }
 
-  private async startTurn(id: string, prompt: unknown, exclusive: unknown, attachments?: unknown): Promise<ControllerState> {
+  private async startTurn(id: string, prompt: unknown, exclusive: unknown, attachments?: unknown, options?: unknown): Promise<ControllerState> {
+    const selected = turnOptions(options);
     if (id.includes('+')) throw new HttpError(400, 'choose one harness session');
     if (typeof prompt !== 'string' || !prompt.trim() || Buffer.byteLength(prompt) > 64 * 1024) throw new HttpError(400, 'prompt must be 1–65536 bytes');
     if (exclusive !== true) throw new HttpError(400, 'confirm this session is idle in its other harness clients');
@@ -138,11 +165,16 @@ export class HarnessController {
     if (!sessionId || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(sessionId)) throw new HttpError(409, 'no resumable native session ID in this journal');
     const safe = redactText(prompt);
     const prepared = prepareAttachments(attachments);
+    const nativeCommand = /^\/([\w-]+)(?:\s|$)/.exec(safe.text.trim());
+    if (name === 'codex' && nativeCommand && nativeCommand[1] !== 'compact') throw new HttpError(400, 'this Codex command is not supported here; use native settings or the native CLI');
+    if (name === 'codex' && nativeCommand && (safe.text.trim() !== '/compact' || prepared.attachments.length || Object.keys(selected).length)) throw new HttpError(400, '/compact takes no prompt attachments or turn overrides');
     const inputPrompt = attachmentText(safe.text, prepared.attachments);
-    const args = name === 'claude' ? ['-p', '--resume', sessionId, '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-mode', 'manual', '--permission-prompts', 'host'] : ['app-server', '--stdio'];
+    const args = name === 'claude' ? ['-p', '--resume', sessionId, '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-mode', 'manual', '--permission-prompts', 'host'] : ['app-server', '--listen', 'stdio://'];
+    if (name === 'claude') { if (selected.model) args.push('--model', selected.model); if (selected.effort) args.push('--effort', selected.effort); }
     const child = (this.options.launch ?? spawn)(bin, args, { cwd: root, shell: false, windowsHide: true, stdio: 'pipe', env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', CLAUDE_CODE_SDK_READS_SESSION_STATE: '1' } }) as ChildProcessWithoutNullStreams;
     const state: ControllerState = { runId: randomUUID(), state: 'connecting', submittedPrompt: safe.text, afterSequence: rec.observationCount - 1, harness: rec.harness, available: true, output: '', tools: [], inventory: 'unknown', approvals: [], promptRedacted: safe.hits.length > 0 };
     state.attachments = prepared.attachments.map(a => ({ name: a.name, type: a.type }));
+    state.settings = this.settings.get(id);
     state.promptRedacted ||= prepared.redacted;
     const run: Run = { state, child, pending: new Map(), requests: new Map(), blocks: new Map(), claudeTasks: new Set(), claudeResult: false, threadId: sessionId, sequence: 0, timer: setTimeout(() => this.finish(run, 'failed', 'harness turn exceeded the connection time limit'), this.options.timeoutMs ?? 30 * 60_000) };
     // Retain a bounded set of recent connection receipts, no raw journals or auth material.
@@ -175,20 +207,26 @@ export class HarnessController {
       run.prompt = inputPrompt;
       run.attachments = prepared.attachments.filter(a => a.type === 'image');
     } else {
-      void this.connectCodex(run, root, inputPrompt, prepared.attachments).catch(e => this.finish(run, 'failed', e.message));
+      void this.connectCodex(run, root, inputPrompt, prepared.attachments, selected).catch(e => this.finish(run, 'failed', e.message));
     }
     return state;
   }
 
-  private async connectCodex(run: Run, root: string, prompt: string, attachments: PromptAttachment[]) {
+  private async connectCodex(run: Run, root: string, prompt: string, attachments: PromptAttachment[], selected: TurnOptions) {
     await this.rpc(run, 'initialize', { clientInfo: { name: 'drishya', version: '0.1.0', title: 'Drishya' }, capabilities: { experimentalApi: false } });
     this.write(run, { method: 'initialized' });
-    const resumed = await this.rpc(run, 'thread/resume', { threadId: run.threadId, cwd: root, approvalPolicy: 'untrusted', sandbox: 'workspace-write', excludeTurns: true });
+    const resumed = await this.rpc(run, 'thread/resume', { threadId: run.threadId, cwd: root, approvalPolicy: 'untrusted', sandbox: 'workspace-write' });
     if (resumed.thread?.status?.type === 'active') throw new Error('native thread is already active; finish its other turn first');
-    const result = await this.rpc(run, 'turn/start', { threadId: run.threadId, input: [{ type: 'text', text: prompt, text_elements: [] }, ...attachments.filter(a => a.type === 'image').map(a => ({ type: 'image', url: `data:${a.mime};base64,${a.data}` }))] });
+    run.state.settings = sanitize({ models: run.state.settings?.models ?? [], commands: ['compact'], scope: 'connected-session', model: String(resumed.model ?? selected.model ?? '') || undefined, effort: resumed.reasoningEffort ?? selected.effort, permission: typeof resumed.approvalPolicy === 'string' ? resumed.approvalPolicy : 'untrusted', sandbox: resumed.sandbox?.type ?? 'workspaceWrite' }).value as NativeSettings;
+    const result = prompt.trim() === '/compact'
+      ? await this.rpc(run, 'thread/compact/start', { threadId: run.threadId })
+      : await this.rpc(run, 'turn/start', { threadId: run.threadId, ...selected, input: [{ type: 'text', text: prompt, text_elements: [] }, ...attachments.filter(a => a.type === 'image').map(a => ({ type: 'image', url: `data:${a.mime};base64,${a.data}` }))] });
+    if (selected.model) run.state.settings.model = selected.model;
+    if (selected.effort) run.state.settings.effort = selected.effort;
     attachments = []; // Release image bytes before the optional inventory queries.
     run.turnId = result.turn?.id;
     if (run.state.state === 'connecting') run.state.state = 'running';
+    if (['completed', 'failed', 'stopped'].includes(run.state.state)) return;
     // Inventory is the actual resumed thread runtime, not a global guessed MCP configuration.
     try {
       const tools: string[] = []; let cursor: string | undefined;
@@ -217,6 +255,7 @@ export class HarnessController {
         if (v.request?.subtype === 'can_use_tool') this.approval(run, v.request_id, 'claude-permission', String(v.request.tool_name), v.request.input);
         else this.write(run, { type: 'control_response', response: { subtype: 'error', request_id: v.request_id, error: 'unsupported controller request' } });
       } else if (v.type === 'system' && v.subtype === 'init') {
+        run.state.settings = sanitize({ models: run.state.settings?.models ?? [], commands: Array.isArray(v.slash_commands) ? v.slash_commands.filter((c: unknown) => typeof c === 'string').slice(0, 100) : [], scope: 'connected-session', model: v.model, permission: v.permissionMode }).value as NativeSettings;
         run.state.tools = sanitize((v.tools ?? []).filter((t: unknown) => typeof t === 'string').slice(0, 500)).value;
         run.state.inventory = 'runtime';
       } else if (v.type === 'system' && v.subtype === 'session_state_changed') {
@@ -295,6 +334,11 @@ export class HarnessController {
     if (v.method === 'thread/tokenUsage/updated') {
       const u = v.params?.tokenUsage?.last;
       if (u && [u.inputTokens, u.outputTokens, u.cachedInputTokens].every(n => Number.isSafeInteger(n) && n >= 0)) run.state.usage = { input: u.inputTokens, output: u.outputTokens, cached: u.cachedInputTokens };
+      if (run.state.usage && u) {
+        const reported = v.params.tokenUsage;
+        const fields = { contextWindow: reported.modelContextWindow, contextInput: reported.modelContextWindow ? u.inputTokens : undefined, threadTotal: reported.total?.totalTokens, reasoningOutput: u.reasoningOutputTokens };
+        for (const [key, value] of Object.entries(fields)) if (Number.isSafeInteger(value) && value >= 0) (run.state.usage as unknown as Record<string, number>)[key] = value;
+      }
     }
     if (v.method === 'turn/started') run.turnId = v.params?.turn?.id;
     if (v.method === 'item/completed' && v.params?.item?.type === 'agentMessage') this.output(run, String(v.params.item.text) + '\n');
@@ -341,7 +385,7 @@ export class HarnessController {
     }
     return run.state;
   }
-  async forget(id: string) { const run = this.runs.get(id); if (run) await this.stop(id, run.state.runId); this.runs.delete(id); }
+  async forget(id: string) { const run = this.runs.get(id); if (run) await this.stop(id, run.state.runId); this.runs.delete(id); this.settings.delete(id); }
   async close() {
     await Promise.all([...this.runs.entries()].map(async ([id, run]) => {
       if (run.child.exitCode !== null || run.child.signalCode !== null) return;

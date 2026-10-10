@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type CurrentFile, type PromptAttachment } from '../api.ts';
+import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type CurrentFile, type PromptAttachment, type TurnOptions } from '../api.ts';
 import { promptFiles } from '../lib/prompt-files.ts';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
@@ -9,9 +9,9 @@ import type { Scene } from '@drishya/scene';
 import { FileIcon } from './FileIcon.tsx';
 
 interface Connection {
-  submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[]) => Promise<void>;
+  submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => Promise<void>;
   workspace?: WorkspaceStatus; controller?: ControllerStatus; error?: string;
-  refresh: () => Promise<void>; approve: () => Promise<void>;
+  refresh: () => Promise<void>; approve: () => Promise<void>; inspect?: () => Promise<void>;
 }
 const SessionContext = createContext<Connection>({ refresh: async () => {}, approve: async () => {}, submit: async () => {} });
 export const useSessionWorkspace = () => useContext(SessionContext);
@@ -58,14 +58,19 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     if (useApp.getState().recordingId !== id) return;
     setWorkspace(w); useApp.setState({ graph });
   };
-  const submit = async (prompt: string, exclusive: boolean, attachments?: PromptAttachment[]) => {
+  const inspect = async () => {
+    if (!eligible) return;
+    const state = await workspaceApi.settings(id!);
+    if (useApp.getState().recordingId === id) { ++revision.current; setController(state); }
+  };
+  const submit = async (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => {
     if (!eligible) return;
     setSubmitting(true);
     ++revision.current;
-    try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments); if (useApp.getState().recordingId === id) { ++revision.current; setController(state); } }
+    try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments, options); if (useApp.getState().recordingId === id) { ++revision.current; setController(state); } }
     finally { if (useApp.getState().recordingId === id) setSubmitting(false); }
   };
-  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve }}>{children}</SessionContext.Provider>;
+  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect }}>{children}</SessionContext.Provider>;
 }
 
 /** Native live receipt is separate from persisted evidence and disappears on capture. */
@@ -179,7 +184,9 @@ export function PromptComposer() {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId);
   const recording = useApp(s => s.recording);
-  const { workspace, controller, error: connectionError, approve, refresh, submit } = useSessionWorkspace();
+  const { workspace, controller, error: connectionError, approve, refresh, submit, inspect } = useSessionWorkspace();
+  const [options, setOptions] = useState<TurnOptions>({});
+  useEffect(() => { setOptions({}); }, [id]);
   const [prompt, setPrompt] = useState('');
   const [exclusive, setExclusive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -192,6 +199,14 @@ export function PromptComposer() {
   const [addOpen, setAddOpen] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!addOpen) return;
+    const dismiss = (event: PointerEvent) => { if (!(event.target instanceof Element) || !event.target.closest('.composer-add, .composer-add-menu')) setAddOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setAddOpen(false); };
+    document.addEventListener('pointerdown', dismiss, true);
+    document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', dismiss, true); document.removeEventListener('keydown', escape); };
+  }, [addOpen]);
   const fileLoading = useRef(false);
   const attach = async (files: File[]) => {
     if (!files.length || fileLoading.current || busy || controller && ['connecting', 'running', 'approval'].includes(controller.state)) return;
@@ -240,14 +255,21 @@ export function PromptComposer() {
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
       <input hidden ref={fileInput} type="file" multiple aria-label="Choose prompt files" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <input hidden ref={folderInput} type="file" multiple {...{ webkitdirectory: '' }} aria-label="Choose prompt folder" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
-      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments); setPrompt(''); setAttachments([]); setExclusive(false); setConfirmSend(false); }); }}>
+      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); setAttachments([]); setExclusive(false); setConfirmSend(false); }); }}>
         {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<span>{a.name}</span><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { setAttachments(items => items.filter((_, i) => i !== index)); setExclusive(false); setConfirmSend(false); }}>×</button></span>)}</div>}
         <textarea ref={input} aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={1} onPaste={e => { const files = [...e.clipboardData.items].filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => !!file); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
         <div className="composer-actions"><button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={() => setAddOpen(!addOpen)}>+</button>{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title="Send prompt" disabled={busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></button>}</div>
         {addOpen && <div className="composer-add-menu"><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}
         {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || busy}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
       </form>
-      <details className="permission-policy"><summary>Ask permission</summary><p>Workspace access with native approval requests. Each Allow once applies only to that request. Full access is not supported by this connector yet.</p></details>
+      <details className="permission-policy native-options"><summary>{controller?.settings?.model ?? 'Native settings'} · Ask permission</summary><div className="native-options-menu">
+        <button disabled={!!running || busy || !workspace?.approved} onClick={() => inspect && void act(inspect)}>Read native settings</button>
+        {!!controller?.settings && <><small>{controller.settings.scope === 'connected-session' ? 'Connected session' : 'Workspace defaults'} · {controller.settings.permission ?? 'Policy reported after connecting'}{controller.settings.sandbox && ` · ${controller.settings.sandbox}`}</small>
+          <label>Model<select disabled={!!running || busy} value={options.model ?? ''} onChange={e => { setOptions(e.target.value ? { model: e.target.value } : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>
+          <label>Effort<select disabled={!!running || busy} value={options.effort ?? ''} onChange={e => { setOptions({ ...options, effort: e.target.value || undefined }); setExclusive(false); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select></label>
+        </>}
+        <small>Each Allow once applies only to its native request. Full access and global settings remain in the native CLI.</small>
+      </div></details>
       <div className="native-turn-details">
       {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}</p>}
       {controller?.promptRedacted && <p className="muted small">Detected secrets were removed before sending this prompt.</p>}

@@ -104,13 +104,16 @@ export interface ReaderRecording extends RecordingSummary { sourceBytes?: number
 export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace' }
 export interface CurrentFile { path: string; scope: 'current-workspace'; text: string; start: number; totalLines: number; returnedLines: number; hasMore: boolean; redacted: boolean; modifiedAt: string }
 export interface PromptAttachment { name: string; type: 'text' | 'image'; data: string; mime?: string }
+export type { TurnOptions, NativeSettings } from '../../daemon/src/native-types.ts';
+import type { TurnOptions, NativeSettings, NativeUsage } from '../../daemon/src/native-types.ts';
 export interface ControllerStatus {
+  settings?: NativeSettings;
   attachments?: { name: string; type: 'text' | 'image' }[];
   submittedPrompt?: string;
   afterSequence?: number;
   phase?: 'waiting' | 'thinking' | 'responding' | 'tool';
   preview?: { id: string; role: 'response' | 'reasoning'; exposure?: 'summary' | 'full'; text: string };
-  usage?: { input: number; output: number; cached: number; costUsd?: number };
+  usage?: NativeUsage;
   runId?: string; state: 'idle' | 'connecting' | 'running' | 'approval' | 'completed' | 'failed' | 'stopped';
   harness: string; available: boolean; output: string; error?: string; tools: string[]; inventory: 'unknown' | 'runtime';
   approvals: { id: string; name: string; detail: string }[]; promptRedacted?: boolean;
@@ -121,7 +124,8 @@ export const workspaceApi = {
   approve: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {} }),
   file: (id: string, path: string, start: number) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/file?${new URLSearchParams({ path, start: String(start), count: '200' })}`),
   controller: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller`),
-  prompt: (id: string, prompt: string, exclusive: boolean, attachments?: PromptAttachment[]) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/prompt`, { method: 'POST', json: { prompt, exclusive, attachments } }),
+  settings: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/settings`, { method: 'POST', json: {} }),
+  prompt: (id: string, prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/prompt`, { method: 'POST', json: { prompt, exclusive, attachments, options } }),
   decide: (id: string, runId: string, approvalId: string, allow: boolean) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/approval`, { method: 'POST', json: { runId, approvalId, allow } }),
   stop: (id: string, runId: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/stop`, { method: 'POST', json: { runId } }),
 };

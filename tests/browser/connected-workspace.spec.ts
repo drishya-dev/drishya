@@ -25,7 +25,7 @@ test.beforeAll(async () => {
 const send=v=>process.stdout.write(JSON.stringify(v)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{
   const v=JSON.parse(line);
-  if(v.type==='control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{}}});
+  if(v.type==='control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{models:[{value:'synthetic-model',displayName:'Synthetic model',supportedEffortLevels:['low','high']}],commands:[{name:'compact'}]}}});
   if(v.type==='user') {
     if(v.message.content === 'THINK') {
       send({type:'stream_event',event:{type:'content_block_start',index:0,content_block:{type:'thinking',thinking:''}}});
@@ -48,6 +48,30 @@ createInterface({input:process.stdin}).on('line',line=>{
   server = await startServer({app,port:0,token:'synthetic-connected-test',controllerFactory:(a,w)=>new HarnessController(a,w,{resolveExecutable:()=>process.execPath,launch:((_bin:string,_args:string[],opts:any)=>spawn(process.execPath,[transport],opts)) as typeof spawn})});
 });
 test.afterAll(async()=>{ await server?.close(); await app?.close(); if (dir) {if (!resolve(dir).startsWith(resolve(tmpdir())+sep)) throw new Error('unsafe test cleanup'); rmSync(dir,{recursive:true,force:true});} });
+
+test('native model settings and attachment menus dismiss outside without detaching Follow', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
+  if (await enable.count()) await enable.click();
+  const policy = composer.locator('.permission-policy');
+  await policy.locator('summary').click();
+  await policy.getByRole('button', { name: 'Read native settings' }).click();
+  await policy.getByLabel('Model').selectOption('synthetic-model');
+  await policy.getByLabel('Effort').selectOption('high');
+  await page.locator('.crown-title').click({ force: true });
+  await expect(policy).not.toHaveAttribute('open', '');
+  await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'true');
+  await composer.getByRole('button', { name: 'Add files or folders' }).click();
+  await expect(composer.locator('.composer-add-menu')).toBeVisible();
+  await page.locator('.crown-title').click({ force: true });
+  await expect(composer.locator('.composer-add-menu')).toHaveCount(0);
+  const menu = page.locator('.workspace-menu');
+  await menu.locator(':scope > summary').click();
+  await page.locator('.crown-title').click({ force: true });
+  await expect(menu).not.toHaveAttribute('open', '');
+});
 
 test('selected workspace folders read current files separately from the exact historical source',async({page})=>{
   await page.goto(server.launchUrl); await page.getByRole('button',{name:/Connected workspace synthetic session/}).click();
