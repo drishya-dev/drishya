@@ -1,5 +1,7 @@
 # Visual developer workspace — direction and staged backlog
 
+**10 October ordering after independent critique:** [41](review/41-developer-angles-and-reading-plan.md) audits the actual reader and maps developer jobs across visualization, return/review, source comprehension, Git/native workflow and reliability. R1 useful evidence entry/previews and R2 coherent current/historical reading are the next bounded slices, reusing existing W1/W5 services. R3–R6 order repository focus, native acceptance, read-only Git review/progress and handoff; they supplement the W1–W6 capability groups below rather than restarting completed work. Native actual-turn acceptance remains a parallel release prerequisite. No implementation is claimed by this plan.
+
 **Latest, implemented 7 October:** [26](review/26-connected-workspace.md) delivers bounded session folders, separately consented current-file reading, map zoom/file tiles and real native prompt continuation. The original folder/current-reader proposals below are now implemented to the stated limits; symbols, tabs/breadcrumbs, LSP, arbitrary file editing and IDE execution remain future work. The new explicit controller scope supersedes older observe-only exclusions.
 
 6 October 2026 · Latest builder expansion · **Proposed work, not an implementation inventory**

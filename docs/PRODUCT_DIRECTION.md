@@ -1,5 +1,7 @@
 # Product direction — work you can follow, evidence you can revisit
 
+**10 October developer-angle expansion:** [41](review/41-developer-angles-and-reading-plan.md) maps the two independent reviews to developer jobs and audits implemented versus missing utility. Visualization remains central, but adoption requires useful return/review, coherent source reading, discoverable linked evidence and proven native work. Next: R1 evidence entry/useful previews and R2 coherent reading; then meaningful repository focus, real-turn acceptance, read-only Git review/progress and handoff. These are planned increments, not new implementation claims. Theme variants follow usability; the source/evidence reader is part of the core visual product, not an afterthought.
+
 
 **Latest spatial/composer correction — 8 October:** [37](review/37-spatial-map-composer.md) supersedes shallow perspective and deferred attachments: real spatial WebGL points/edges, yaw/pitch orbit and pan, default gentle rotation resuming 12 seconds after camera movement, steady unnamed background geometry, slightly wider rails and shared card bounds. File/folder-content selection, screenshot paste, previews/removal and native text/image transport are implemented with explicit limits and text redaction. Effective native-policy synchronization and broader release checks remain separate; full access is still unsupported. Local checks only; no hosted CI.
 
