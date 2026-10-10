@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Evidence reading — 10 October:** [42](review/42-evidence-reading-design.md) records the first R1/R2 implementation: visible whole-recording review, changed-line previews, shared source find and practical current-file reading. It preserves skill precedence, evidence boundaries and publishing-only hosted CI.
+
 **Developer-angle plan — 10 October:** [41](review/41-developer-angles-and-reading-plan.md) distinguishes firsthand review findings from source-audited coverage and proposed work. It orders useful evidence entry, coherent reading, repository focus, native acceptance, Git review and handoff, and defines a broader neutral critical-review protocol. PRODUCT_DIRECTION and DEVELOPER_WORKSPACE incorporate this plan; it does not supersede evidence/security constraints or certify implementation.
 
 **Independent product review — 10 October:** [40](review/40-independent-product-review.md) records two fresh firsthand synthetic-demo reviews, adoption verdicts, interaction findings and prioritized evidence/navigation/map iterations. It is product feedback, not native or public-release certification.

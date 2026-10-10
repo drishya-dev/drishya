@@ -14,6 +14,7 @@ import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
+import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
 import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-motion.ts';
 import { useHoverReading } from '../lib/hover-reading.ts';
@@ -94,9 +95,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const changed = () => { if (preference.matches) cancel(); };
     preference.addEventListener('change', changed);
     const history = ref.current;
-    history?.addEventListener('pointerdown', cancel);
+    // Cancel after hit testing; mouse-down cancellation can move the chosen
+    // control before mouse-up and lose its click during a reflow.
+    history?.addEventListener('click', cancel, true);
     history?.addEventListener('keydown', cancel);
-    return () => { preference.removeEventListener('change', changed); history?.removeEventListener('pointerdown', cancel); history?.removeEventListener('keydown', cancel); };
+    return () => { preference.removeEventListener('change', changed); history?.removeEventListener('click', cancel, true); history?.removeEventListener('keydown', cancel); };
   }, [motion, lowResource]);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
@@ -675,7 +678,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       return <>
         <div className="request-line">{op.status === 'running' ? 'Patch request · awaiting recorded outcome' : op.status === 'unknown' && op.classification.kind === 'derived' ? 'Captured patch input · nested outcome not exposed' : `Captured patch${d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}`}</div>
         {op.status === 'running' && <PatchRequest op={op} path={d.path} />}
-        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={14} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ReadPreview opId={op.id} artifactId={op.artifactIds.find(id => id.endsWith('_after'))} start={1} path={d.path} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No source bytes or patch captured.'}</div>}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <><div className="material-context">Changed lines · selected preview{firstChangeOffset(d.hunks) > 0 ? ' · earlier context omitted' : ''}</div><DiffView hunks={d.hunks} path={d.path} skipLines={firstChangeOffset(d.hunks)} maxLines={14} /></> : op.artifactIds.some(id => id.endsWith('_after')) ? <ReadPreview opId={op.id} artifactId={op.artifactIds.find(id => id.endsWith('_after'))} start={1} path={d.path} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No source bytes or patch captured.'}</div>}</ResultArea>
       </>;
     case 'search':
       return (

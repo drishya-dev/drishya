@@ -346,11 +346,11 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
     const materials = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); });
     materials.observe(history, { childList: true, subtree: true });
     history.addEventListener('scroll', scroll, { passive: true });
-    viewer.addEventListener('pointerdown', interrupt, { passive: true });
+    viewer.addEventListener('click', interrupt, true);
     viewer.addEventListener('keydown', interrupt);
     document.addEventListener('visibilitychange', interrupt);
     preference.addEventListener('change', interrupt);
-    return () => { resize.disconnect(); materials.disconnect(); history.removeEventListener('scroll', scroll); viewer.removeEventListener('pointerdown', interrupt); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
+    return () => { resize.disconnect(); materials.disconnect(); history.removeEventListener('scroll', scroll); viewer.removeEventListener('click', interrupt, true); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
   }, [scene, projection, motion, hoveredOp, selectedOp, mapVisible, explore, follow, paged, theme, compareAgents, settingsOpen, filePanel, mode, stagedArrival, isProgrammaticScroll]);
   return typeof document === 'undefined' ? null : createPortal(<svg className="origins" ref={svg} aria-hidden="true" />, document.body);
 }

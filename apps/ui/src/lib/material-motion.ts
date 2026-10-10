@@ -76,9 +76,12 @@ export function settleArrival(element: HTMLElement, start: DOMRect, flight: Anim
     delete element.dataset.materialSettling;
   };
   const interrupt = () => { interrupted = true; clearTimeout(timer); growth?.cancel(); restore(); cleanup(); };
-  const cleanup = () => { history?.removeEventListener('pointerdown', interrupt); window.removeEventListener('keydown', interrupt); unsubscribe(); };
+  const cleanup = () => { history?.removeEventListener('click', interrupt, true); window.removeEventListener('keydown', interrupt); unsubscribe(); };
   const history = element.closest('.history');
-  history?.addEventListener('pointerdown', interrupt); window.addEventListener('keydown', interrupt);
+  // Restoring allocation on mouse-down can move Expand out from under mouse-up.
+  // A click has already chosen its target, so interrupt before handling that
+  // action without shifting its hit area between the two pointer events.
+  history?.addEventListener('click', interrupt, true); window.addEventListener('keydown', interrupt);
   unsubscribe = useApp.subscribe(state => { if (!state.motion || state.lowResource || state.explore) interrupt(); });
   void flight.finished.then(() => {
     if (interrupted) return;

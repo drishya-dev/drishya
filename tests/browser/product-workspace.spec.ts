@@ -34,6 +34,34 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('first-visit evidence review opens exact file work without a reading mark and hides future review in replay', async ({ page }) => {
+  await page.goto(demoUrl());
+  await page.getByRole('button', { name: 'Review work', exact: true }).click();
+  const review = page.getByRole('dialog', { name: 'Review work', exact: true });
+  await expect(review.getByRole('region', { name: 'Files with captured changes' })).toBeVisible();
+  await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
+  await expect(review).toContainText('recorded order, not test coverage');
+  await page.screenshot({ path: resolve('.local/evidence-review-desktop.png') });
+  await review.getByRole('button', { name: /src\/checkout\/guard.ts/ }).click();
+  const file = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  await expect(file).toBeVisible();
+  await expect(file).toContainText('Historical evidence');
+  await expect(file).toContainText('Test runs after this change');
+  await expect(file.locator('.file-evidence-material')).toContainText('== null');
+  await page.screenshot({ path: resolve('.local/evidence-change-reader.png') });
+  await file.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Review work', exact: true }).click();
+  await expect(review).toBeVisible();
+  const bounds = await review.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: resolve('.local/evidence-review-narrow.png') });
+  await review.getByRole('button', { name: 'Close Review work' }).click();
+  await page.goto(new URL('/?demo&at=1', server.launchUrl).href);
+  await expect(page.getByRole('button', { name: 'Review work', exact: true })).toBeDisabled();
+});
+
 test('returning from an authenticated demo retains local workspace access', async ({ page }) => {
   const url = new URL(demoUrl());
   url.hash = new URL(server.launchUrl).hash;
