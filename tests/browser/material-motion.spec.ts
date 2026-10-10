@@ -117,7 +117,7 @@ test('hover reading preserves live follow and safely releases when new captured 
   const latest = page.getByRole('button', { name: /Back to latest/ });
   if (await latest.isVisible()) await latest.click();
   await expect(latest).toHaveCount(0);
-  await card.hover();
+  await card.locator('.op-head .op-title').hover();
   await expect(card).toHaveAttribute('data-hover-reading', 'focused');
   await expect(latest).toHaveCount(0);
   append({ type: 'assistant', message: { id: 'hover-follow-next', role: 'assistant', content: [{ type: 'text', text: 'Captured work keeps arriving during hover.' }] } });
@@ -141,7 +141,7 @@ test('hover result boundaries scroll history without dismissing the same reading
   const history = page.locator('.history');
   await expect(card).toContainText('Captured documentation');
   await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
-  await card.hover();
+  await card.locator('.op-head .op-title').hover();
   await expect(card).toHaveAttribute('data-hover-reading', 'focused');
   await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
   const focusedBounds = (await card.boundingBox())!;

@@ -1,5 +1,9 @@
 # Drishya documentation — map and precedence
 
+**Independent product review — 10 October:** [40](review/40-independent-product-review.md) records two fresh firsthand synthetic-demo reviews, adoption verdicts, interaction findings and prioritized evidence/navigation/map iterations. It is product feedback, not native or public-release certification.
+
+**Native completeness — 10 October:** [39](review/39-native-workspace-completeness.md) records wrapped Codex patch capture and existing-recording rebuild, actual native model/settings discovery and turn controls, all-prompt scrollable navigation, utility dismissal and the fresh-review/release plan. It supersedes the sampled prompt rail and the earlier complete deferral of model/effort synchronization. Full access remains unsupported; native acceptance is not inferred from catalog access. Local checks only; hosted CI stays publishing-only.
+
 **Windows antivirus diagnostic — 8–9 October:** [38](review/38-windows-antivirus-audit.md) records process-attributed Codex background scripting, the independent Drishya launcher audit, newer-runtime verification limits and a sanitized upstream report. This is a local diagnostic record, not a confirmed false-positive classification or product-wide antivirus certification.
 
 

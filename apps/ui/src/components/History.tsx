@@ -19,6 +19,7 @@ import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-mo
 import { useHoverReading } from '../lib/hover-reading.ts';
 import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { NativeTurn } from './SessionWorkspace.tsx';
+import { PromptRail } from './PromptRail.tsx';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
@@ -38,7 +39,6 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const [viewport, setViewport] = useState({ top: 0, height: 900 });
   const [measurementVersion, setMeasurementVersion] = useState(0);
   const [focusedPassageId, setFocusedPassageId] = useState<string | undefined>();
-  const [hoveredPrompt, setHoveredPrompt] = useState<string | undefined>();
   const measurements = useRef(new Map<string, number>());
   const programmatic = useRef(false);
   const lastScrollTop = useRef(0);
@@ -378,13 +378,6 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const prompts = scene.passages.flatMap((ps, index) => ps.turnPrompt ? [{ ps, index }] : []);
   const readingIndex = Math.max(0, layout.prefix.findIndex((_, index) => index < scene.passages.length && layout.prefix[index + 1]! > viewport.top + 1));
   const activePrompt = prompts.findLast(item => item.index <= readingIndex)?.ps.id ?? prompts[0]?.ps.id;
-  const activePromptIndex = prompts.findIndex(item => item.ps.id === activePrompt);
-  const hoveredPromptIndex = prompts.findIndex(item => item.ps.id === hoveredPrompt);
-  const nearestPromptIndex = hoveredPromptIndex >= 0 ? hoveredPromptIndex : activePromptIndex;
-  // Sample the whole recording, always retaining the current chapter and its
-  // neighbours. Thousands of turns must not become thousands of DOM buttons.
-  const railPrompts = prompts.map((item, ordinal) => ({ ...item, ordinal })).filter((item) => Math.abs(item.ordinal - activePromptIndex) <= 1 || item.ps.id === hoveredPrompt || item.ordinal % Math.max(1, Math.ceil(prompts.length / 60)) === 0 || item.ordinal === prompts.length - 1);
-  const nearestRailIndex = railPrompts.findIndex(item => item.ordinal === nearestPromptIndex);
 
   const holdForSelection = (event: React.SyntheticEvent) => {
     if ((event.target as HTMLElement).closest('button, input, select, a')) return;
@@ -446,8 +439,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       <Origins scene={scene} projection={projection} isProgrammaticScroll={isProgrammaticScroll} />
       <FlowConnections projection={projection} />
     </div>
-      {mode === 'history' && prompts.length > 0 && <nav className="history-prompt-marks" aria-label="Prompt positions in history" onMouseLeave={() => setHoveredPrompt(undefined)}>
-        {railPrompts.map(({ ps, index, ordinal }, railIndex) => <button key={ps.id} data-proximity={Math.abs(railIndex - nearestRailIndex) === 0 ? 'current' : Math.abs(railIndex - nearestRailIndex) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${ps.turnPrompt}`} aria-current={ps.id === activePrompt ? 'location' : undefined} onMouseEnter={() => setHoveredPrompt(ps.id)} onFocus={() => setHoveredPrompt(ps.id)} onBlur={() => setHoveredPrompt(undefined)} onClick={() => {
+      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index }))} activeId={activePrompt} open={({ id, index }) => {
+          const ps = scene.passages[index]!;
           set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
           navigationBoundary.current = { step: scene.step, projection };
           chapterNavigation.current = onWindow && ps.unloaded ? { id: ps.id, step: scene.step } : undefined;
@@ -455,8 +448,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
           readingAnchor.current = { id: ps.id, offset: 0 }; readingAtStart.current = false;
           setScrollTop(layout.prefix[index]!);
           if (onWindow && ps.unloaded) void onWindow({ start: Math.max(0, index - 8), count: 32, pinnedPassageIds: [ps.id] }).catch(error => set({ error: error.message }));
-        }}><span className="prompt-rail-tick" aria-hidden="true" /><span className="prompt-rail-preview"><small>Prompt {ordinal + 1} of {prompts.length}</small><span>{ps.turnPrompt}</span></span></button>)}
-      </nav>}
+        }} />}
       {(!follow || navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection) && (
         <button className="follow-pill" aria-label={`${mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest`} title="Back to latest" onClick={() => {
           userScrollUntil.current = 0;
@@ -681,7 +673,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       </>;
     case 'edit':
       return <>
-        <div className="request-line">{op.status === 'running' ? 'Patch request · awaiting recorded outcome' : `Captured patch${d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}`}</div>
+        <div className="request-line">{op.status === 'running' ? 'Patch request · awaiting recorded outcome' : op.status === 'unknown' && op.classification.kind === 'derived' ? 'Captured patch input · nested outcome not exposed' : `Captured patch${d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}`}</div>
         {op.status === 'running' && <PatchRequest op={op} path={d.path} />}
         <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <DiffView hunks={d.hunks} path={d.path} maxLines={14} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ReadPreview opId={op.id} artifactId={op.artifactIds.find(id => id.endsWith('_after'))} start={1} path={d.path} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No source bytes or patch captured.'}</div>}</ResultArea>
       </>;

@@ -49,4 +49,33 @@ describe('Codex adapter', () => {
   it('keeps unknown record kinds visible', () => {
     expect(createParser(ctx).parse({ type: 'response_item', payload: { type: 'hologram' } })[0]!.kind).toBe('unknown');
   });
+
+  it('captures file creation and edits inside a literal code-mode patch call', () => {
+    const patch = '*** Begin Patch\n*** Add File: src/new.ts\n+export const value = 1;\n*** Update File: src/old.ts\n@@\n-old\n+new\n*** End Patch';
+    const p = createParser(ctx);
+    const source = `text(await tools.apply_patch(${JSON.stringify(patch)}));`;
+    const [call] = p.parse({ type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', input: source, call_id: 'wrapped' } });
+    expect(call!.payload).toMatchObject({ intent: { kind: 'patch', patch } });
+    const [result] = p.parse({ type: 'response_item', payload: { type: 'custom_tool_call_output', call_id: 'wrapped', output: '{}' } });
+    expect(result!.operationId).toBe(call!.operationId);
+    expect(result!.payload).toMatchObject({ text: '{}', outcome: { kind: 'other' } });
+    expect(intentOf('functions.apply_patch', { raw: patch })).toEqual({ kind: 'patch', patch });
+    expect(intentOf('functions.exec', { code: source })).toEqual({ kind: 'patch', patch });
+  });
+
+  it('does not execute code or turn dynamic, deferred and quoted patches into edits', () => {
+    const patch = '*** Begin Patch\n*** Add File: a.ts\n+a\n*** End Patch';
+    const call = `await tools.apply_patch(${JSON.stringify(patch)})`;
+    for (const source of [JSON.stringify(call), `// ${call}`, `if (false) { ${call} }`, `const f = () => ${call}`, 'await tools.apply_patch(patch)', 'await tools.apply_patch(`*** Begin Patch\n${value}\n*** End Patch`)', `${call}; ${call}`]) {
+      expect(intentOf('exec', { raw: source }).kind).toBe('shell');
+    }
+    expect(intentOf('exec', { raw: `text(${call.replace(JSON.stringify(patch), '`' + patch + '`')});` }).kind).toBe('patch');
+  });
+
+  it('omits protected patch contents even when nested in code-mode input', () => {
+    const patch = '*** Begin Patch\n*** Add File: .env\n+SECRET=value\n*** End Patch';
+    const [call] = createParser(ctx).parse({ type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', input: `text(await tools.apply_patch(${JSON.stringify(patch)}));`, call_id: 'secret' } });
+    expect(call!.denyContent).toBe(true);
+    expect(call!.contentKeys).toEqual(['input', 'intent']);
+  });
 });

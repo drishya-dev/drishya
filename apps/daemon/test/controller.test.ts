@@ -27,7 +27,7 @@ const send = value => process.stdout.write(JSON.stringify(value) + '\\n');
 let prompt = '';
 createInterface({ input: process.stdin }).on('line', line => {
   const v = JSON.parse(line);
-  if (v.type === 'control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{}}});
+  if (v.type === 'control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{models:[{value:'native-model',displayName:'Native model',supportedEffortLevels:['low','high']}],commands:[{name:'compact'}]}}});
   else if (v.type === 'user') {
     prompt = v.message.content;
     if (prompt === 'STREAM') {
@@ -55,6 +55,9 @@ createInterface({ input: process.stdin }).on('line', line => {
     send({type:'control_request',request_id:'permission1',request:{subtype:'can_use_tool',tool_name:'Edit',input:{file_path:'a.ts',new_string:'const a = 2;'}}});
   } else if (v.type === 'control_response') send({type:'result',is_error:false,result:v.response.response.behavior + ' ' + prompt,usage:{input_tokens:120,output_tokens:30,cache_read_input_tokens:50},total_cost_usd:0.012});
   else if (v.method === 'initialize') send({id:v.id,result:{}});
+  else if (v.method === 'config/read') send({id:v.id,result:{config:{model:'native-model',model_reasoning_effort:'high',approval_policy:'on-request',sandbox_mode:'read-only',api_key:'PRIVATE_CONFIG_VALUE'}}});
+  else if (v.method === 'model/list') send({id:v.id,result:{data:[{model:'native-model',displayName:'Native model',supportedReasoningEfforts:[{reasoningEffort:'low'},{reasoningEffort:'high'}],inputModalities:['text','image']}],nextCursor:null}});
+  else if (v.method === 'thread/compact/start') { send({id:v.id,result:{}}); send({method:'turn/completed',params:{turn:{status:'completed'}}}); }
   else if (v.method === 'thread/resume') send({id:v.id,result:{thread:{status:{type:'idle'}}}});
   else if (v.method === 'mcpServerStatus/list') send({id:v.id,result:{data:[{name:'docs',tools:{lookup:{}}}],nextCursor:null}});
   else if (v.method === 'turn/start') {
@@ -91,7 +94,17 @@ const wait = async (id: string, state: string) => {
 it('requires workspace consent and an idle-session acknowledgement', async () => {
   await expect(controller.start(claudeId, 'test', false)).rejects.toMatchObject({ status: 400 });
   await expect(controller.start(claudeId, 'test', true)).rejects.toMatchObject({ status: 403 });
+  await expect(controller.inspect(codexId)).rejects.toMatchObject({ status: 403 });
   await access.approve(claudeId); await access.approve(codexId);
+});
+it('reads native settings without a prompt, resume or exposing private config', async () => {
+  const begin = frames.length;
+  const codex = await controller.inspect(codexId);
+  expect(codex.settings).toMatchObject({ scope: 'workspace-config', model: 'native-model', effort: 'high', permission: 'on-request', sandbox: 'read-only', models: [{ id: 'native-model', efforts: ['low', 'high'], images: true }] });
+  expect(JSON.stringify(codex)).not.toContain('PRIVATE_CONFIG_VALUE');
+  const claude = await controller.inspect(claudeId);
+  expect(claude.settings).toMatchObject({ models: [{ id: 'native-model', efforts: ['low', 'high'] }], commands: ['compact'] });
+  expect(frames.slice(begin).some(f => f.method === 'thread/resume' || f.method === 'turn/start' || f.type === 'user')).toBe(false);
 });
 it('resumes Claude over structured stdin, exposes real tool inventory and applies one exact approval', async () => {
   const prompt = 'literal $(echo nope) `echo nope`\nsecond line';
@@ -102,8 +115,9 @@ it('resumes Claude over structured stdin, exposes real tool inventory and applie
   controller.decide(claudeId, started.runId, waiting.approvals[0]!.id, true);
   const completed = await wait(claudeId, 'completed'); expect(completed.output).toBe('allow ' + prompt);
   expect(completed.usage).toEqual({ input: 120, output: 30, cached: 50, costUsd: 0.012 });
-  expect(launches[0]!.args).toContain('--resume'); expect(launches[0]!.args).not.toContain(prompt);
-  expect(launches[0]!.cwd).toBe(root); expect(launches[0]!.shell).toBe(false);
+  const launch = launches.find(l => l.args.includes('--resume'))!;
+  expect(launch.args).not.toContain(prompt);
+  expect(launch.cwd).toBe(root); expect(launch.shell).toBe(false);
   expect(() => controller.decide(claudeId, started.runId, 'permission1', true)).toThrow('already answered');
 });
 it('resumes Codex using RPC and returns an actual decline under conservative session permissions', async () => {
@@ -131,6 +145,27 @@ it('refuses empty/oversized prompts and combined session targets', async () => {
   await expect(controller.start(claudeId, '', true)).rejects.toMatchObject({ status: 400 });
   await expect(controller.start(claudeId, 'x'.repeat(65537), true)).rejects.toMatchObject({ status: 400 });
   await expect(controller.start(`${claudeId}+${codexId}`, 'test', true)).rejects.toMatchObject({ status: 400 });
+});
+it('routes model and effort through native controls without changing permission policy', async () => {
+  const claude = await controller.start(claudeId, 'settings', true, undefined, { model: 'native-model', effort: 'high' });
+  await wait(claudeId, 'approval');
+  expect(launches.at(-1)!.args.slice(-4)).toEqual(['--model', 'native-model', '--effort', 'high']);
+  await controller.stop(claudeId, claude.runId);
+  const codex = await controller.start(codexId, 'settings', true, undefined, { model: 'native-model', effort: 'high' });
+  await wait(codexId, 'approval');
+  expect(frames.findLast(f => f.method === 'turn/start').params).toMatchObject({ model: 'native-model', effort: 'high' });
+  expect(frames.findLast(f => f.method === 'thread/resume').params).toMatchObject({ approvalPolicy: 'untrusted', sandbox: 'workspace-write' });
+  expect(launches.at(-1)!.args).toEqual(['app-server', '--listen', 'stdio://']);
+  await controller.stop(codexId, codex.runId);
+  await expect(controller.start(codexId, 'unsafe', true, undefined, { approvalPolicy: 'never' })).rejects.toMatchObject({ status: 400 });
+});
+it('compacts through the native protocol instead of treating a CLI command as model text', async () => {
+  const first = frames.length;
+  await controller.start(codexId, '/compact', true);
+  await wait(codexId, 'completed');
+  expect(frames.slice(first).some(f => f.method === 'thread/compact/start')).toBe(true);
+  expect(frames.slice(first).some(f => f.method === 'turn/start')).toBe(false);
+  await expect(controller.start(codexId, '/unknown', true)).rejects.toMatchObject({ status: 400 });
 });
 
 it('keeps Claude background agent work alive until the final result and idle state', async () => {

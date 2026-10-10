@@ -26,12 +26,13 @@ import type {
 } from '@drishya/contracts';
 import { isBlobText } from '@drishya/contracts';
 import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
+import { literalPatch, touchesProtectedFile } from '@drishya/capture-core';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch } from './patch.ts';
 import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
 
-export const REDUCER_VERSION = 'r2';
+export const REDUCER_VERSION = 'r3';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -56,6 +57,7 @@ const TITLE_RULE = 'title-v1';
 type Rec = Record<string, any>;
 
 interface OpState {
+  nestedPatch?: boolean;
   op: Operation;
   intent: ToolIntent;
   cwd?: string;
@@ -291,10 +293,17 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         case 'tool.call': {
           ensureAgent(o);
           // Long strings (heredoc commands, big edits) were moved to the blob store at ingest.
-          const intent = resolveBlobs((p.intent ?? { kind: 'other' }) as ToolIntent, text);
+          let intent = resolveBlobs((p.intent ?? { kind: 'other' }) as ToolIntent, text);
+          // Older captures retained code-mode source as a shell command. Rebuild
+          // its literal patch without changing stored observations or journals.
+          if (o.source.adapterId === 'codex' && (p.tool === 'exec' || p.tool === 'functions.exec') && intent.kind === 'shell') {
+            const patch = literalPatch(text(intent.command as TextValue) ?? '');
+            if (patch && !touchesProtectedFile({ kind: 'patch', patch })) intent = { kind: 'patch', patch };
+          }
           const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
           if (ops.has(baseId)) break; // duplicate call record
           if (intent.kind === 'patch') {
+            const nestedPatch = o.source.adapterId === 'codex' && (p.tool === 'exec' || p.tool === 'functions.exec');
             const patchText = text(intent.patch as TextValue) ?? '';
             const files = parseApplyPatch(patchText);
             if (!files.length) {
@@ -306,6 +315,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             files.forEach((f, i) => {
               const id = files.length === 1 ? baseId : `${baseId}#${i}`;
               const st = newOp(o, id, { kind: 'edit', path: f.path, edits: [] }, String(p.tool));
+              st.nestedPatch = nestedPatch;
+              if (nestedPatch) st.op.classification = derived('codex-literal-patch-v1', [o.id]);
               const path = rel(f.moveTo ?? f.path, st.cwd);
               const base = knownFull.get(fileKey(o.recordingId, path));
               let hunks = f.hunks;
@@ -313,16 +324,16 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               if (f.op === 'add') {
                 const content = f.hunks.flatMap((h) => h.lines.filter((l) => l.startsWith('+')).map((l) => l.slice(1))).join('\n');
                 hunks = [{ oldStart: 0, oldLines: 0, newStart: 1, newLines: content.split('\n').length, lines: content.split('\n').map((l) => '+' + l) }];
-                st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content, note: 'content of a file created by the patch' }));
-                knownFull.set(fileKey(o.recordingId, path), content);
+                st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: nestedPatch ? derived('codex-literal-patch-v1', [o.id]) : { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content, note: nestedPatch ? 'proposed file content decoded from the captured script; nested execution outcome not exposed' : 'content of a file created by the patch' }));
+                if (!nestedPatch) knownFull.set(fileKey(o.recordingId, path), content);
                 reconstruction = 'complete';
               } else if (base !== undefined && f.op === 'update') {
                 const applied = applyHunks(base, f.hunks);
                 if (applied) {
                   hunks = applied.hunks;
                   reconstruction = 'complete';
-                  st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: derived('apply-hunks-verified-v1', [o.id]), redacted: o.redactions.length > 0, content: applied.text, note: 'reconstructed by applying the patch to content captured earlier in this recording' }));
-                  knownFull.set(fileKey(o.recordingId, path), applied.text);
+                  st.op.artifactIds.push(addArtifact({ id: `art_${id}_after`, kind: 'snapshot', path, observedAtSequence: step(), availability: 'complete', provenance: derived('apply-hunks-verified-v1', [o.id]), redacted: o.redactions.length > 0, content: applied.text, note: st.nestedPatch ? 'proposed content reconstructed from the captured script and earlier content; nested execution outcome not exposed' : 'reconstructed by applying the patch to content captured earlier in this recording' }));
+                  if (!nestedPatch) knownFull.set(fileKey(o.recordingId, path), applied.text);
                 }
               }
               st.op.artifactIds.push(addArtifact({ id: `art_${id}_patch`, kind: 'patch', path, observedAtSequence: step(), availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: patchText }));
@@ -333,6 +344,10 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
                 : 'The patch context does not match the captured base.';
               if (reconstruction !== 'complete' && f.op !== 'add') knownFull.delete(fileKey(o.recordingId, path));
               st.op.detail = { kind: 'edit', path, hunks, created: f.op === 'add', reconstruction, reconstructionNote };
+              if (nestedPatch) {
+                st.op.detail.reconstructionNote = 'Patch input captured; individual nested-tool outcome not exposed.';
+                knownFull.delete(fileKey(o.recordingId, path));
+              }
               st.op.paths.push({ path, role: 'write', basis: 'captured' });
               st.op.title = f.op === 'add' ? `Create ${path}` : f.op === 'delete' ? `Delete ${path}` : `Edit ${path}`;
               timeline.push({ type: 'op-start', id: `s_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
@@ -369,7 +384,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             st.op.observationIds.push(o.id);
             st.op.endSequence = step();
             st.op.endTime = o.sourceTime;
-            st.op.status = p.isError ? 'error' : 'ok';
+            st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
             completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
             link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: 'source-id', sourceObservationIds: [st.callObservationId ?? o.id, o.id], explanation: 'The harness recorded this result for this call id.' });
             // Completed calls no longer need their potentially large edit/command input.

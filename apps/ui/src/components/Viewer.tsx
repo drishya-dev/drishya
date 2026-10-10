@@ -17,6 +17,7 @@ import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 import { ReadingReferenceProvider } from './ReadingReference.tsx';
 import { sampleActivity } from '../lib/activity.ts';
 import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComposer, useSessionWorkspace } from './SessionWorkspace.tsx';
+import { useDismissMenus } from '../lib/dismiss-menus.ts';
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
@@ -24,6 +25,7 @@ export function Viewer() {
 }
 
 function WorkspaceViewer() {
+  useDismissMenus();
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
   const historyPage = useApp((s) => s.historyPage);
@@ -177,7 +179,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
 
   return (
     <header className="crown">
-      <div className="crown-identity"><button className="brand" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname) : (set({ screen: 'home', playing: false }), (location.hash = ''))} title="All recordings">
+      <div className="crown-identity"><button className="brand" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (set({ screen: 'home', playing: false }), (location.hash = ''))} title="All recordings">
         <span className="brand-mark" />
         Drishya
       </button>
@@ -243,7 +245,8 @@ function LiveWatch() {
 
 function UsagePeek() {
   const { controller } = useSessionWorkspace();
-  return <details className="usage-peek"><summary>Usage</summary><div><strong>Connected turn</strong><dl><dt>Input tokens</dt><dd>{controller?.usage?.input ?? 'Not reported'}</dd><dt>Output tokens</dt><dd>{controller?.usage?.output ?? 'Not reported'}</dd><dt>Cached input</dt><dd>{controller?.usage?.cached ?? 'Not reported'}</dd><dt>Cost (USD)</dt><dd>{controller?.usage?.costUsd ?? 'Not reported'}</dd></dl><small>Native runtime values only. Historical token accounting is not captured; subscription usage is not a per-turn bill.</small></div></details>;
+  const usage = controller?.usage;
+  return <details className="usage-peek"><summary>Usage</summary><div><strong>{controller?.harness === 'codex' ? 'Last model request' : 'Connected turn'}</strong><dl><dt>Input tokens</dt><dd>{usage?.input ?? 'Not reported'}</dd><dt>Output tokens</dt><dd>{usage?.output ?? 'Not reported'}</dd><dt>Cached input</dt><dd>{usage?.cached ?? 'Not reported'}</dd><dt>Cost (USD)</dt><dd>{usage?.costUsd ?? 'Not reported'}</dd>{usage?.contextWindow !== undefined && <><dt>Context input / capacity</dt><dd>{usage.contextInput ?? 'Unknown'} / {usage.contextWindow}</dd></>}{usage?.threadTotal !== undefined && <><dt>Thread tokens so far</dt><dd>{usage.threadTotal}</dd></>}{usage?.reasoningOutput !== undefined && <><dt>Reasoning output tokens</dt><dd>{usage.reasoningOutput}</dd></>}</dl><small>Native runtime values only. Thread totals are cumulative usage, not occupied context. Historical accounting and subscription billing are not inferred.</small></div></details>;
 }
 
 // ─── dock: native instruments, then MCP servers by name ──────────────────────────────────

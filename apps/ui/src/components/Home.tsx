@@ -81,7 +81,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
           <span className="brand-mark" />
           Drishya
         </div>
-        <span className="muted">See what your coding agents did — replayed on your own code. Observe only.</span>
+        <span className="muted">See your coding agents work on your own code. Connect a native session when you want to continue.</span>
         <button className="btn ghost" onClick={() => set({ settingsOpen: true })}>Settings</button>
       </header>
       {usage && <p className={usage.overBudget ? 'bad small' : 'muted small'}>Local store · {(usage.bytes / 1024 ** 3).toFixed(2)} GiB of {(usage.budgetBytes / 1024 ** 3).toFixed(0)} GiB advisory budget{usage.overBudget ? ' · budget exceeded' : ''}. Nothing is deleted automatically. Remove selected recordings with <code>drishya forget &lt;recording&gt;</code>.</p>}
