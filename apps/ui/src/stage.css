@@ -601,3 +601,14 @@
   .crown-actions .search-open kbd { display: none; }
   .connected-workspace .workspace-header .crown-actions .review-open { font-size: 12px; }
 }
+.import-context { margin: 8px 12px; flex: 0 0 auto; max-height: 210px; overflow: auto; border-block: 1px solid var(--line); font-size: 12px; }
+.import-context summary { cursor: pointer; padding: 8px 0; color: var(--t2); }
+.import-context summary span { margin-left: 6px; font-variant-numeric: tabular-nums; color: var(--t3); }
+.import-context > button:not(.btn) { display: flex; align-items: center; gap: 8px; text-align: left; width: 100%; min-width: 0; padding: 6px 2px; }
+.import-context > button > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-context > button > small { color: var(--t3); flex-shrink: 0; }
+.import-context nav { display: flex; justify-content: space-between; padding-block: 8px; }
+.search-scopes { display: flex; gap: 6px; padding: 6px 10px 0; }
+.search-scopes button { padding: 5px 8px; border: 1px solid transparent; border-radius: 5px; font-size: 12px; color: var(--t2); }
+.search-scopes button[aria-pressed="true"] { border-color: var(--line); background: var(--s2); color: var(--t1); }
+.search-scope-note { padding: 0 14px; font-size: 11px; color: var(--t3); }

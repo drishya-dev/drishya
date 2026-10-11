@@ -34,6 +34,44 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('recording search separates captured work from indexed file navigation', async ({ page }) => {
+  await page.goto(demoUrl());
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  const search = page.getByRole('dialog', { name: 'Search this recording' });
+  await search.getByRole('textbox').fill('guard');
+  await expect(search.locator('.search-results button').first()).toBeVisible();
+  await search.getByRole('button', { name: 'Indexed files', exact: true }).click();
+  await expect(search.locator('.search-scope-note')).toContainText('names only');
+  await expect(search.locator('.search-results')).toContainText('src/checkout/guard.ts');
+  await search.locator('.search-results button').first().click();
+  await expect(page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' })).toBeVisible();
+  await page.goto(new URL('/?demo&at=1', server.launchUrl).href);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill('missing-total');
+  await expect(page.locator('.search-scope-note')).toContainText('this replay step');
+  await expect(page.locator('.search-results')).toContainText('No matches at this replay step');
+});
+
+test('failed shell preview surfaces buried captured errors and preserves the full preview', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const shell = sample.projection.operations.find((op: { detail: { kind: string } }) => op.detail.kind === 'shell');
+  shell.status = 'error'; shell.detail.exitCode = 1;
+  shell.detail.outputPreview = [...Array.from({ length: 30 }, (_, n) => `build step ${n}`), 'TypeError: cannot read cart.total', '  at checkout.ts:42', ...Array(12).fill('cleanup')].join('\n');
+  for (const entry of sample.projection.timeline) if (entry.type === 'op-end' && entry.operationId === shell.id) entry.status = 'error';
+  await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.goto(demoUrl());
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByPlaceholder('Search prose, commands, paths…').fill(shell.title);
+  await page.locator('.search-results button').first().click();
+  await page.getByRole('complementary', { name: 'Operation detail' }).getByRole('button', { name: 'Close', exact: true }).click();
+  const action = page.locator(`article[data-op-id="${shell.id}"]`);
+  await expect(action).toContainText('Captured error excerpt');
+  await expect(action).toContainText('TypeError: cannot read cart.total');
+  await expect(action).not.toContainText('build step 0');
+  await action.getByRole('button', { name: 'Show captured preview', exact: true }).click();
+  await expect(action).toContainText('build step 0');
+});
+
 test('first-visit evidence review opens exact file work without a reading mark and hides future review in replay', async ({ page }) => {
   await page.goto(demoUrl());
   await page.getByRole('button', { name: 'Review work', exact: true }).click();

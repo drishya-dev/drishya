@@ -8,7 +8,7 @@ import { useApp } from '../state.ts';
 import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
 import { mapDetail, type MapGroup } from '../lib/map-detail.ts';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
-import { importConnections, observedGraph } from '../lib/map-focus.ts';
+import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
 import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
 
 interface Cam {
@@ -124,21 +124,36 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [connectionFile, setConnectionFile] = useState<string>();
   const [connectionPage, setConnectionPage] = useState(0);
+  const [neighborhood, setNeighborhood] = useState(false);
+  const requestedFocus = useApp(s => s.mapFocusPath);
   const observedKey = heat.map(cell => cell.path).join('\0');
   const observedPaths = useMemo(() => new Set(observedKey ? observedKey.split('\0') : []), [observedKey]);
   const observedCount = useMemo(() => graph?.nodes.filter(node => observedPaths.has(node.id)).length ?? 0, [graph, observedPaths]);
-  const viewGraph = useMemo(() => graph && observedOnly ? observedGraph(graph, observedPaths) : graph, [graph, observedOnly, observedPaths]);
+  const viewGraph = useMemo(() => graph && explore && connectionsOpen && neighborhood && connectionFile ? neighborhoodGraph(graph, connectionFile) : graph && observedOnly ? observedGraph(graph, observedPaths) : graph, [graph, explore, connectionsOpen, neighborhood, connectionFile, observedOnly, observedPaths]);
   const detail = useMemo(() => viewGraph ? mapDetail(viewGraph, cam.k) : undefined, [viewGraph, cam.k]);
   const connections = useMemo(() => graph && connectionsOpen && connectionFile ? importConnections(graph, connectionFile) : undefined, [graph, connectionsOpen, connectionFile]);
   const passageFiles = useMemo(() => graph?.nodes.filter(node => passagePaths.includes(node.id)).slice(0, 12) ?? [], [graph, passagePaths]);
-  const focusFile = (node: GraphNode) => {
+  const focusFile = (node: GraphNode, bounded = neighborhood) => {
     holdOrientation();
     setConnectionFile(node.id); setConnectionPage(0);
     set({ hoveredPath: node.id });
-    const k = Math.max(cam.k, graph && graph.nodes.length > 80 ? 4 : 1.5);
-    const p = spatial(node);
-    animateCam({ k, x: size.w / 2 - (fit.ox + p.x * fit.sx) * k, y: size.h / 2 - (fit.oy + p.y * fit.sy) * k });
+    const related = graph && bounded ? importConnections(graph, node.id).neighbors.map(item => item.node) : [];
+    const points = [node, ...related].map(spatial);
+    const minX = Math.min(...points.map(p => p.x)), maxX = Math.max(...points.map(p => p.x));
+    const minY = Math.min(...points.map(p => p.y)), maxY = Math.max(...points.map(p => p.y));
+    // Leave real space for the existing connection drawer and map controls.
+    // Labels need space beyond their dot; fitting the world alone hides endpoints.
+    const usableWidth = Math.max(180, size.w - (size.w > 900 ? 820 : 120));
+    const usableHeight = Math.max(180, size.h - 220);
+    const k = related.length ? Math.max(.5, Math.min(4, usableWidth / Math.max(80, (maxX - minX) * fit.sx), usableHeight / Math.max(80, (maxY - minY) * fit.sy))) : Math.max(cam.k, graph && graph.nodes.length > 80 ? 4 : 1.5);
+    animateCam({ k, x: (related.length && size.w > 900 ? size.w / 2 - 70 : size.w / 2) - (fit.ox + (minX + maxX) / 2 * fit.sx) * k, y: size.h / 2 + (related.length ? 30 : 0) - (fit.oy + (minY + maxY) / 2 * fit.sy) * k });
   };
+  useEffect(() => {
+    if (!explore || !requestedFocus || !graph || !size.w || !size.h) return;
+    const node = graph.nodes.find(node => node.id === requestedFocus);
+    set({ mapFocusPath: undefined });
+    if (node) { setConnectionsOpen(true); setObservedOnly(false); setNeighborhood(true); focusFile(node, true); }
+  }, [explore, requestedFocus, graph, size.w, size.h]);
   const zoomGroup = (node: MapGroup) => {
     holdOrientation();
     const k = Math.min(8, Math.max(2, cam.k * 2));
@@ -345,7 +360,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   // Share exact renderer coordinates for a bounded working set, never a guessed graph origin.
   const anchors = [...heat].sort((a, b) => b.heat - a.heat).slice(0, 63).map((h) => h.path);
   if (hoveredPath && !anchors.includes(hoveredPath)) anchors.push(hoveredPath);
-  const matches = query.trim() && viewGraph ? viewGraph.nodes.filter((node) => !(viewGraph.temporal === 'current' && node.path.startsWith('.local/')) && node.path.toLowerCase().includes(query.trim().toLowerCase())) : [];
+  const matches = query.trim() && graph ? graph.nodes.filter((node) => !(graph.temporal === 'current' && node.path.startsWith('.local/')) && node.path.toLowerCase().includes(query.trim().toLowerCase())) : [];
 
   return (
     <div
@@ -353,6 +368,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       data-map-depth={spatialActive ? 'spatial-3d' : 'flat'}
       data-map-yaw={yaw.toFixed(5)}
       data-map-pitch={pitch.toFixed(5)}
+      data-map-scope={explore && connectionsOpen && neighborhood ? 'direct-neighborhood' : observedOnly ? 'observed' : 'all'}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
         if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
@@ -416,7 +432,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
         <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find a file on the map" placeholder="Find a file…" value={query} onChange={(e) => setQuery(e.target.value)} />{query && <button aria-label="Clear map search" onClick={() => setQuery('')}>×</button>}</label>
-        <div className="map-scope" role="group" aria-label="Files shown on the map"><button aria-pressed={!observedOnly} onClick={() => setObservedOnly(false)}>All files</button><button aria-pressed={observedOnly} onClick={() => setObservedOnly(true)}>Observed <small>{observedCount}</small></button></div>
+        <div className="map-scope" role="group" aria-label="Files shown on the map"><button aria-pressed={!observedOnly && !neighborhood} onClick={() => { setObservedOnly(false); setNeighborhood(false); }}>All files</button><button aria-pressed={observedOnly && !neighborhood} onClick={() => { setObservedOnly(true); setNeighborhood(false); }}>Observed <small>{observedCount}</small></button></div>
         <button className="map-connections-toggle" role="switch" aria-checked={connectionsOpen} onClick={() => {
           setConnectionsOpen(!connectionsOpen);
           if (!connectionsOpen && graph) { const node = graph.nodes.find(n => n.id === hoveredPath) ?? passageFiles[0] ?? graph.nodes.find(n => observedPaths.has(n.id)); if (node) focusFile(node); }
@@ -442,6 +458,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         <p className="muted small">{graph?.temporal === 'current' ? 'Current repository imports' : 'Imports from the saved map'} · static relationships</p>
         {!!passageFiles.length && <div className="map-passage-files" aria-label="Files in the current passage"><small>Current passage</small>{passageFiles.map(node => <button key={node.id} aria-pressed={connectionFile === node.id} onClick={() => focusFile(node)}>{node.path}</button>)}</div>}
         {connections?.root ? <><code className="map-connection-root">{connections.root.path}</code><div className="map-neighbors">{connections.neighbors.slice(connectionPage * 12, connectionPage * 12 + 12).map(({ node, direction }, i) => <button key={`${direction}/${node.id}/${i}`} onClick={() => focusFile(node)}><small>{direction}</small><span>{node.path}</span><span aria-hidden="true">↗</span></button>)}</div>
+          <button className="btn ghost small" aria-pressed={neighborhood} onClick={() => { setNeighborhood(!neighborhood); if (!neighborhood) focusFile(connections.root!, true); }}>{neighborhood ? 'Show full map' : 'Focus direct neighborhood'}</button>
           {!connections.total && <p className="muted small">No resolved direct imports on this map.</p>}
           {connections.neighbors.length > 12 && <div className="folder-pages"><button disabled={!connectionPage} onClick={() => setConnectionPage(p => p - 1)}>Previous</button><span>{connectionPage + 1} / {Math.ceil(connections.neighbors.length / 12)}</span><button disabled={(connectionPage + 1) * 12 >= connections.neighbors.length} onClick={() => setConnectionPage(p => p + 1)}>Next</button></div>}
           {connections.total > 64 && <p className="muted small">First 64 of {connections.total} direct imports shown.</p>}
@@ -480,7 +497,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       )}
       {graph && explore && (
         <div className="map-legend">
-          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} observed files · ${viewGraph?.edges.length} shown imports` : `${graph.nodes.length} files · ${graph.edges.length} imports`}</span>
+          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{connectionsOpen && neighborhood ? `${viewGraph?.nodes.length} neighborhood files · ${viewGraph?.edges.length} shown imports` : observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} observed files · ${viewGraph?.edges.length} shown imports` : `${graph.nodes.length} files · ${graph.edges.length} imports`}</span>
 
           <MapActions graph={graph} />
         </div>

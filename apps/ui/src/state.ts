@@ -66,6 +66,8 @@ interface State {
   /** Reading navigation, independent of the capture/replay cursor. */
   promptStep?: number;
   hoveredPath?: string;
+  /** Explicit repository navigation, independent of hover and captured identity. */
+  mapFocusPath?: string;
   hoveredOp?: string;
   /** The held reader's first visible passage; presentation context, not a capture cursor. */
   readingPassageId?: string;
@@ -144,7 +146,7 @@ export const useApp = create<State>((set, get) => ({
   async openRecording(id, opts = {}) {
     const src = get().source;
     if (!src) return;
-    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, filePanel: undefined, filePanelFocus: undefined, explore: false, compareAgents: false });
+    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, filePanel: undefined, filePanelFocus: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     try {

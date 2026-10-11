@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Output } from './common.tsx';
+import { failurePreview } from '../lib/failure-preview.ts';
 
 /** Fold only captured lines. Full output remains in the paged operation reader. */
-export function TerminalPreview({ text }: { text: string }) {
+export function TerminalPreview({ text, failed = false }: { text: string; failed?: boolean }) {
   const [open, setOpen] = useState(false);
   const lines = text.replace(/\n$/, '').split('\n');
+  const selected = failed && !open && lines.length > 8 ? failurePreview(text) : undefined;
+  if (selected) return <div className="terminal-preview"><div className="material-context">Captured error excerpt · output lines {selected.start}–{selected.end} of {selected.total}</div><Output text={selected.text} /><button className="terminal-fold" onClick={e => { e.stopPropagation(); setOpen(true); }}>Show captured preview</button></div>;
   if (lines.length <= 8 || open) return <div className="terminal-preview"><Output text={text} />{lines.length > 8 && <button className="material-more" onClick={(e) => { e.stopPropagation(); setOpen(false); }}>Fold captured preview</button>}</div>;
   return <div className="terminal-preview">
     <Output text={lines.slice(0, 3).join('\n')} />

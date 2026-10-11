@@ -9,6 +9,7 @@ import type { Scene } from '@drishya/scene';
 import { FileIcon } from './FileIcon.tsx';
 import { SourceFind } from './SourceFind.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
+import { ImportContext } from './ImportContext.tsx';
 
 interface Connection {
   submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => Promise<void>;
@@ -216,6 +217,7 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
       <form className="source-go" onSubmit={e => { e.preventDefault(); go(); }}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e => { setLineInput(e.target.value); setLineError(undefined); }} /><button className="btn ghost small" disabled={!file}>Go to line</button><button type="button" className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button><span role="status">{lineError}</span></form>
       <details className="source-utilities"><summary>Copy source range</summary><div className="source-range"><input aria-label="Current source range start" placeholder="From" inputMode="numeric" maxLength={16} value={from} onChange={e => setFrom(e.target.value)} /><input aria-label="Current source range end" placeholder="To" inputMode="numeric" maxLength={16} value={to} onChange={e => setTo(e.target.value)} /><button className="btn ghost small" disabled={!file} onClick={() => void copy(true)}>Copy range</button><span role="status">{copied || 'Loaded page only'}</span></div></details>
     </div>
+    <ImportContext path={path} current />
     {error ? <p className="bad" role="alert">{error}</p> : !file ? <p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><CodeView text={file.text} path={path} startLine={file.start + 1} highlightLines={new Set(matches)} activeLine={activeLine} /></div><footer><span title={`Current file version: ${file.modifiedAt}`}>Lines {file.start + 1}–{file.start + file.returnedLines} of {file.totalLines}{file.redacted ? ' · secrets redacted' : ''}</span><button disabled={!start} onClick={() => { setActiveLine(undefined); setStart(s => Math.max(0, s - 200)); }}>Previous lines</button><button disabled={!file.hasMore} onClick={() => { setActiveLine(undefined); setStart(s => s + 200); }}>Next lines</button><button onClick={() => void copy()}>Copy visible page</button></footer></>}
   </ReadingDialog>;
 }
