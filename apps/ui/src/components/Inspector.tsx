@@ -234,14 +234,14 @@ function Evidence({ op, links, projection }: { op: Operation; links: EvidenceLin
     const reference = historyPage?.references[id];
     if (reference) {
       const state = useApp.getState();
-      state.set({ mode: 'replay', step: reference.step, selectedOp: id, held: true, playing: false });
-      void state.loadHistoryWindow({ selectedOperationId: id, step: reference.step }).catch((error) => state.set({ error: error.message }));
+      state.set({ selectedOp: id, held: true });
+      void state.loadHistoryWindow({ selectedOperationId: id }).catch((error) => state.set({ error: error.message }));
       return;
     }
     const other = projection.operations.find((o) => o.id === id);
     if (!other) return;
     const s = stepOfOperation(projection, id);
-    if (s !== undefined) seek(s, { hold: true });
+    if (s !== undefined && useApp.getState().mode === 'replay') seek(s, { hold: true });
     select(id);
   };
   if (!links.length) return <p className="muted">No typed relationships recorded for this operation.</p>;

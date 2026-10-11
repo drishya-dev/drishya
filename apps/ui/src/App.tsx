@@ -81,7 +81,7 @@ export function App() {
       return (
         <div className="center notice">
           <h2>Open Drishya from its launch link</h2>
-          <p className="muted">This page needs the launch link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p>
+          <p className="muted">This page needs the launch link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p><button className="btn" onClick={() => location.assign(`${location.pathname}?demo`)}>Open sample workspace</button>
         </div>
       );
     if (screen === 'no-daemon')

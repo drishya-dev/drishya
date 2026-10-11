@@ -614,6 +614,13 @@
 .search-scope-note { padding: 0 14px; font-size: 11px; color: var(--t3); }
 .preview-pages { display: flex; justify-content: space-between; align-items: center; gap: 8px; position: sticky; bottom: 0; background: var(--s1); border-top: 1px solid var(--line); padding: 8px 0; font-size: 10px; }
 .preview-pages button { padding: 5px; }
+.connected-workspace.exploring > .workspace-bar > :not(.workspace-toggles) { display: none; }
+.connected-workspace .map-connections { top: calc(var(--workspace-header-h, 140px) + 68px); max-height: calc(100% - var(--workspace-header-h, 140px) - 152px); }
+.connected-workspace .map-file-label { pointer-events: auto; cursor: pointer; border: 0; padding: 4px 6px; min-height: 24px; text-align: left; }
+.connected-workspace .agent-overview { top: calc(var(--workspace-header-h, 140px) + 132px); }
+@media (max-width: 600px) {
+  .connected-workspace .map-connections { top: auto; bottom: 76px; max-height: 34dvh; }
+}
 .history .change-preview .diff { max-height: none; overflow: visible; }
 .git-review-dialog { width: min(1200px, calc(100vw - 40px)); }
 .git-review-dialog > section, .git-review-dialog > p { padding: 16px 24px; }

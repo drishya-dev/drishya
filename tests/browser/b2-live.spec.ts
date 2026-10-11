@@ -205,7 +205,7 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   const read = history.locator(`article.op-read[data-op-id="${readId}"]`);
   const content = read.getByRole('region', { name: 'Content of src/checkout/guard.ts' });
   const range = read.getByRole('button', { name: 'Read excerpt of src/checkout/guard.ts' });
-  await expect(range).toContainText('Preview · lines 1–12');
+  await expect(range).toContainText('Preview · lines 1–200');
   await range.click();
   await expect(read).toHaveClass(/expanded/);
   await expect(read.getByRole('button', { name: /Close .* in history/ })).toBeFocused();

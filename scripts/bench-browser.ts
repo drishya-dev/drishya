@@ -67,7 +67,7 @@ try {
   await page.locator('.home .row-main.link').first().waitFor({ timeout: 30_000 });
   const openAt = performance.now();
   await page.locator('.home .row-main.link').first().click();
-  await page.locator('.reading-status').waitFor({ timeout: 30_000 });
+  await page.locator('.reading-status').waitFor({ state: 'attached', timeout: 30_000 });
   if (map) await page.locator('.map canvas').waitFor({ timeout: 30_000 });
   const openMs = performance.now() - openAt;
   const timings: number[] = [];

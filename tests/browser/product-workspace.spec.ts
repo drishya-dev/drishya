@@ -34,6 +34,47 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+test('completed evidence links keep full history and the chosen live-demo design', async ({ page }) => {
+  await page.goto(`${demoUrl()}&experience=classic`);
+  await page.getByRole('button', { name: 'Review work', exact: true }).click();
+  await page.getByRole('region', { name: 'Failures', exact: true }).getByRole('button').first().click();
+  const detail = page.getByRole('complementary', { name: 'Operation detail' });
+  await detail.getByRole('tab', { name: /^Evidence/ }).click();
+  await detail.locator('.link-row').filter({ hasText: 'Read test/checkout.test.ts' }).click();
+  await expect(detail).toContainText('canCheckout');
+  await expect(detail).not.toContainText('Result has not arrived');
+  await expect(page.getByRole('button', { name: 'Review work', exact: true })).toBeEnabled();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Watch live demo', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
+  await expect(page).toHaveURL(/experience=classic/);
+});
+
+test('Studio phone history starts below the header and floating workspace controls', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${demoUrl()}&experience=studio`);
+  await expect(page.locator('article.op-test').last()).toBeVisible();
+  const history = (await page.locator('.history').boundingBox())!;
+  const header = (await page.locator('.workspace-header').boundingBox())!;
+  const views = (await page.getByRole('navigation', { name: 'Workspace views' }).boundingBox())!;
+  expect(history.y).toBeGreaterThanOrEqual(header.y + header.height);
+  expect(history.y).toBeGreaterThanOrEqual(views.y + views.height);
+  expect(history.height).toBeGreaterThan(300);
+});
+
+test('map file labels are keyboard reading targets beneath header clearance', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`${demoUrl()}&experience=studio`);
+  await page.getByRole('button', { name: 'Explore repository map' }).click();
+  const file = page.locator('button.map-file-label').first();
+  await expect(file).toBeVisible();
+  const path = await file.textContent();
+  const header = (await page.locator('.workspace-header').boundingBox())!;
+  expect((await file.boundingBox())!.y).toBeGreaterThanOrEqual(header.y + header.height);
+  await file.press('Enter');
+  await expect(page.getByRole('dialog', { name: `Work on ${path}` })).toBeVisible();
+});
+
 for (const experience of ['classic', 'studio']) {
   test(`${experience}: long captured changes remain scrollable and hover expands both dimensions`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });

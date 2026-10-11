@@ -61,11 +61,11 @@ test('map scope filters captured file locations and direct imports navigate exac
   const search = page.getByRole('textbox', { name: 'Find a file on the map' });
   await page.getByRole('button', { name: /^Observed/ }).click();
   await search.fill('src/api/server.ts');
-  await expect(page.getByRole('button', { name: 'src/api/server.ts', exact: true })).toHaveCount(0);
+  await expect(page.locator('.map-matches').getByRole('button', { name: 'src/api/server.ts', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'All files', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'src/api/server.ts', exact: true })).toBeVisible();
+  await expect(page.locator('.map-matches').getByRole('button', { name: 'src/api/server.ts', exact: true })).toBeVisible();
   await search.fill('src/checkout/guard.ts');
-  await page.getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
+  await page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
   await page.getByRole('switch', { name: 'Import paths' }).click();
   const connections = page.getByRole('region', { name: 'Direct import connections' });
   await expect(connections.locator('.map-connection-root')).toHaveText('src/checkout/guard.ts');

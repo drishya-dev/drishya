@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Working Studio and fresh review — 11 October:** [45](review/45-studio-working-experience.md) defines the second integrated working design, preserved Classic and complete scrollable previews; [46](review/46-studio-independent-review.md) records three fresh firsthand verdicts, concrete fixes and explicit remaining acceptance/utility. [44](review/44-current-git-review.md) defines separately consented current Git inspection and browser-local exact-content progress/handoff. These do not supersede security, capture truth or release gates.
+
 **Developer navigation — 11 October:** [43](review/43-developer-feedback-navigation.md) records useful search/error previews, linked current-import reading and bounded map neighborhoods. It preserves remaining native/Git/handoff scope and the separately authorized redesign with current UI retained as backup.
 
 **Evidence reading — 10 October:** [42](review/42-evidence-reading-design.md) records the first R1/R2 implementation: visible whole-recording review, changed-line previews, shared source find and practical current-file reading. It preserves skill precedence, evidence boundaries and publishing-only hosted CI.
