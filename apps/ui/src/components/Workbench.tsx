@@ -77,12 +77,29 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
   return <div className="workbench-station">
     <section className="workbench-review" aria-label="Evidence desk"><span className="desk-caption">Evidence desk</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /></div><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Captured changes and checks. Current Git stays separate.'}</p></section>
     <div className="workbench-runtime"><span className="runtime-dot" /><span>{scene.agents.length > 1 ? `${scene.agents.length} recorded agents` : agentName(primary)}<small>{scene.agents.filter(a => a.state === 'active').length ? 'Captured activity in progress' : 'Recorded work'}</small></span></div>
-    {scene.agents.length > 1 && <div className="station-agents" role="group" aria-label="Recorded agents">{scene.agents.map(state => {
-      const agent = projection.agents.find(a => a.id === state.id);
-      const parent = projection.agents.find(a => a.id === state.parentId);
-      const description = `${agent?.harness ?? 'Harness'} · ${state.state}${parent ? ` · child of ${agentName(parent)}` : ''}. Focus this agent; surrounding history stays visible. Click again to show everyone.`;
-      return <button key={state.id} data-agent-id={state.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === state.id} title={description} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(filter?.agentId === state.id ? undefined : { agentId: state.id })}><span className="agent-dot" /><span>{agentName(agent)}<small>{state.state}</small></span></button>;
-    })}</div>}
+    {scene.agents.length > 1 && <details className="station-agent-menu"><summary>Agents <span>{scene.agents.length}{filter?.agentId ? ' · focused' : ''}</span></summary><AgentFamilies projection={projection} scene={scene} /></details>}
     {children}
   </div>;
+}
+
+/** Only captured family links create nesting. Missing parents remain independent roots. */
+function AgentFamilies({ projection, scene }: { projection: Projection; scene: Scene }) {
+  const filter = useApp(s => s.filter);
+  const visible = new Set(scene.agents.map(a => a.id));
+  const rendered = new Set<string>();
+  const render = (state: Scene['agents'][number]): ReactNode => {
+    if (rendered.has(state.id)) return null;
+    rendered.add(state.id);
+    const agent = projection.agents.find(a => a.id === state.id);
+    const parent = projection.agents.find(a => a.id === state.parentId);
+    const children = scene.agents.filter(a => a.parentId === state.id && !rendered.has(a.id));
+    const description = `${agent?.harness ?? 'Harness'} · ${state.state}${parent ? ` · child of ${agentName(parent)}` : ''}. Focus this agent; surrounding history stays visible. Click again to show everyone.`;
+    const row = <button data-agent-id={state.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === state.id} title={description} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(filter?.agentId === state.id ? undefined : { agentId: state.id })}><span className="agent-dot" /><span>{agentName(agent)}<small>{state.state}</small></span></button>;
+    return <div key={state.id} className="station-agent-family">{row}{children.length > 0 && <details className="station-subagents"><summary>Subagents <span>{children.length}</span></summary><div>{children.map(render)}</div></details>}</div>;
+  };
+  const roots = scene.agents.filter(a => !a.parentId || !visible.has(a.parentId));
+  const families = roots.map(render);
+  // Malformed cyclic ancestry must not hide a captured identity or recurse forever.
+  for (const state of scene.agents) if (!rendered.has(state.id)) families.push(render(state));
+  return <div className="station-agents" role="group" aria-label="Recorded agents">{families}{filter?.agentId && <button className="btn ghost" onClick={() => useApp.getState().setFilter(undefined)}>Show all agents</button>}</div>;
 }

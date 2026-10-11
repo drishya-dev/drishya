@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Latest Classic correction:** [49](review/49-classic-disclosures-and-critical-review.md) adds inline Usage and expandable agent families plus precise captured search reading, mobile/session/keyboard repairs. It supplements 48; native acceptance and remaining developer jobs are not declared complete.
+
 **Latest Classic consolidation — 11 October:** [48](review/48-classic-evidence-workspace.md) supersedes 47's parallel-design plan: Classic is active, Studio's right Evidence desk/roster/tools is incorporated, explorer is larger and continuously scrollable, themes explicit, and the fresh developer critique owns the next utility/acceptance priorities. Backups remain; backend truth/release gates are unchanged.
 
 **11 October design correction:** [47](review/47-studio-workbench.md) promotes the first Studio to Classic, preserves Legacy, and implements a distinct source/work/evidence Studio composition plus local real-recording preview. This supersedes 45’s experience names/default, not backend truth or 46’s pending acceptance.

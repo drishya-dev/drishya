@@ -51,6 +51,10 @@ test('Classic evidence and agent rail, explicit palettes and map reading work ac
   await expect(page.locator('.workbench-station')).toBeVisible();
   await expect(page.locator('.workspace-header [data-agent-id]')).toHaveCount(0);
   await expect(page.getByRole('switch', { name: 'Agent overview', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('switch', { name: 'Filter by Explore agent', exact: true })).toBeHidden();
+  await page.locator('.station-agent-menu > summary').click();
+  await expect(page.getByRole('switch', { name: 'Filter by Explore agent', exact: true })).toBeHidden();
+  await page.locator('.station-subagents > summary').click();
   const agent = page.getByRole('switch', { name: 'Filter by Explore agent', exact: true });
   await expect(agent).toHaveAttribute('title', /surrounding history stays visible/);
   await agent.click(); await expect(agent).toHaveAttribute('aria-checked', 'true');
@@ -91,6 +95,46 @@ test('Classic evidence and agent rail, explicit palettes and map reading work ac
   const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await expect(reader.locator('.file-workspace-layout')).toHaveClass(/trail-hidden/);
   await expect(reader.locator('.code .ln').first()).toBeInViewport();
+});
+
+test('usage expands inside the utility menu without clipping at narrow widths', async ({ page }) => {
+  await page.goto(url());
+  for (const [width, height] of [[1440, 900], [900, 500], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    await page.getByLabel('More workspace options', { exact: true }).click();
+    await page.locator('.workspace-menu .usage-peek > summary').click();
+    const panel = page.locator('.workspace-menu .usage-peek > div');
+    await expect(panel).toBeVisible();
+    const box = (await panel.boundingBox())!;
+    const menu = (await page.locator('.workspace-menu > div').boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(menu.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(menu.x + menu.width + 1);
+    expect(menu.x).toBeGreaterThanOrEqual(0);
+    expect(menu.x + menu.width).toBeLessThanOrEqual(width);
+    expect(await panel.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual(Math.ceil(box.width));
+    await expect(panel).toContainText('Native runtime values only');
+    expect(await page.locator('.workspace-menu .usage-peek > summary').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);
+    if (width === 1440) await page.screenshot({ path: resolve('.local/classic-usage-fixed.png') });
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+  }
+});
+
+test('a captured search hit opens its exact line instead of a no-source dead end', async ({ page }) => {
+  await page.goto(url());
+  await page.getByRole('button', { name: "src/payments/charge.ts:8 if (!amount) throw new Error('amount required');", exact: true }).click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/payments/charge.ts' });
+  await expect(reader).toContainText('Exact captured search result');
+  await expect(reader.locator('.file-evidence-material [data-source-line="8"]')).toContainText("if (!amount) throw new Error('amount required');");
+  await expect(reader.getByRole('combobox', { name: 'First evidence' })).toContainText('Captured search match');
+  await expect(reader).not.toContainText('No source bytes or patch were captured');
+  await page.keyboard.press('Escape');
+  await page.locator('body').click({ position: { x: 3, y: 350 } });
+  const before = await page.locator('html').getAttribute('data-motion');
+  await page.keyboard.press('Control+m');
+  expect(await page.locator('html').getAttribute('data-motion')).toBe(before);
+  await page.keyboard.press('Control+x');
+  await expect(page.getByRole('button', { name: 'Back to work', exact: true })).toHaveCount(0);
 });
 
 test('expanding a distant folder preserves its scroll anchor and sibling positions', async ({ page }) => {

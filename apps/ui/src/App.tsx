@@ -148,6 +148,7 @@ function useKeyboard() {
       const s = useApp.getState();
       const t = e.target as HTMLElement;
       if (s.screen !== 'viewer') return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
       const k = e.key;
       if (k === 'Escape') {
         if (s.settingsOpen) s.set({ settingsOpen: false });

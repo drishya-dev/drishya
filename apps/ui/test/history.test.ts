@@ -10,6 +10,13 @@ const source = bundleSource(bundle);
 beforeEach(() => useApp.setState({ source, recordingId: undefined, projection: undefined, mode: 'history', playing: false, follow: true, selectedOp: undefined }));
 
 describe('normal history and optional replay', () => {
+  it('clears current disk and captured selection when opening a session', async () => {
+    useApp.setState({ currentFile: 'old-root/file.ts', filePanel: 'old.ts', filePanelEvidence: 'old/hit' });
+    await useApp.getState().openRecording(bundle.recording.id);
+    expect(useApp.getState().currentFile).toBeUndefined();
+    expect(useApp.getState().filePanel).toBeUndefined();
+    expect(useApp.getState().filePanelEvidence).toBeUndefined();
+  });
   it('opens an imported recording with all captured work visible', async () => {
     await useApp.getState().openRecording(bundle.recording.id);
     expect(useApp.getState().mode).toBe('history');

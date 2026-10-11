@@ -463,6 +463,7 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   await expect(page.locator('.transport')).not.toContainText('Pause');
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect(page.locator('article.op-test').last()).toContainText('7 passed');
+  await page.locator('.station-agent-menu > summary').click();
   await expect(page.getByRole('switch', { name: 'Filter by gpt-5-codex agent' })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/material-live-complete.png') });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -571,6 +572,14 @@ test('distant file moments compare across bounded trail pages', async ({ page })
   await page.locator('.spine-file[title="src/distant.ts"]').click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/distant.ts' });
   await expect(dialog.locator('.file-trail-item')).toHaveCount(24);
+  const single = dialog.getByLabel('First evidence');
+  const initial = await single.inputValue();
+  await dialog.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(dialog.locator('.file-trail-item')).toHaveCount(2);
+  await expect(single).toHaveValue(initial);
+  await expect(dialog.locator('.file-evidence-column').first()).toContainText('captured distant moment 0');
+  await dialog.getByRole('button', { name: 'Previous', exact: true }).click();
+  await expect(dialog.locator('.file-trail-item')).toHaveCount(24);
   await dialog.getByRole('button', { name: 'Compare evidence' }).click();
   const first = dialog.getByLabel('First evidence');
   const selected = await first.inputValue();
@@ -625,6 +634,8 @@ test('view and appearance changes keep the same captured passage under the reade
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.dataset.passageId === anchor.id);
     return node ? Math.abs(node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset) : Infinity;
   }, anchor);
+  await page.locator('.station-agent-menu > summary').click();
+  await page.locator('.station-subagents > summary').click();
   await page.getByRole('switch', { name: 'Filter by Explore agent', exact: true }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();

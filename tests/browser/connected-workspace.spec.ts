@@ -325,6 +325,7 @@ test('connected action flow and agent switches replace tabs without inventing ca
   await page.goto(new URL('/?demo',server.launchUrl).href);
   await page.locator('.history').evaluate(el=>{el.scrollTop=0;});
   await expect(page.locator('.workspace-views')).toHaveCount(0);
+  await page.locator('.station-agent-menu > summary').click();
   await expect(page.getByRole('switch',{name:'Filter by claude-opus-5 agent'})).toBeVisible();
   await page.getByRole('switch',{name:'Filter by claude-opus-5 agent'}).click();
   await expect(page.getByRole('switch',{name:'Filter by claude-opus-5 agent'})).toBeChecked();

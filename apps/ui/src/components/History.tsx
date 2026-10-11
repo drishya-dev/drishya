@@ -687,7 +687,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
           <div className="query">{d.query}</div>
           <ResultArea state={op.status} resolving={resolving}>
             {d.hits.slice(0, 5).map((h, i) => (
-              <button key={i} className="hit search-bead" title={`Open recorded work on ${h.path}`} onClick={(e) => { e.stopPropagation(); set({ filePanel: h.path }); }} onMouseEnter={() => set({ hoveredPath: h.path })}>
+              <button key={i} className="hit search-bead" title={`Open captured match on ${h.path}`} onClick={(e) => { e.stopPropagation(); set({ filePanel: h.path, filePanelEvidence: `${op.id}/search/${i}`, filePanelFocus: undefined, currentFile: undefined }); }} onMouseEnter={() => set({ hoveredPath: h.path })}>
                 <span className="hit-path">{h.path}</span>
                 {h.line !== undefined && <span className="hit-line">:{h.line}</span>}
                 {h.text && <span className="hit-excerpt">{h.text.slice(0, 180)}</span>}
