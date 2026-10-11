@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Agent, Operation, Projection, Prose } from '@drishya/contracts';
+import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
@@ -20,6 +20,7 @@ import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-mo
 import { useHoverReading } from '../lib/hover-reading.ts';
 import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { NativeTurn } from './SessionWorkspace.tsx';
+import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
 
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
@@ -535,6 +536,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
 // ─── operation cards ─────────────────────────────────────────────────────────────────────
 
 const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operation; index: number }) {
+  const experience = useExperience();
   const card = useRef<HTMLElement>(null);
   const selected = useApp((s) => s.selectedOp === op.id);
   const expanded = useApp((s) => s.expandedOp === op.id);
@@ -569,8 +571,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
     >
       <header className="op-head">
         <MaterialGlyph material={presentation.material} />
-        <span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span>
-        <span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span>
+        {experience === 'studio' ? <span className="studio-action-identity"><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
         <StateMark state={so.state} />
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {
@@ -678,7 +679,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       return <>
         <div className="request-line">{op.status === 'running' ? 'Patch request · awaiting recorded outcome' : op.status === 'unknown' && op.classification.kind === 'derived' ? 'Captured patch input · nested outcome not exposed' : `Captured patch${d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}`}</div>
         {op.status === 'running' && <PatchRequest op={op} path={d.path} />}
-        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <><div className="material-context">Changed lines · selected preview{firstChangeOffset(d.hunks) > 0 ? ' · earlier context omitted' : ''}</div><DiffView hunks={d.hunks} path={d.path} skipLines={firstChangeOffset(d.hunks)} maxLines={14} /></> : op.artifactIds.some(id => id.endsWith('_after')) ? <ReadPreview opId={op.id} artifactId={op.artifactIds.find(id => id.endsWith('_after'))} start={1} path={d.path} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No source bytes or patch captured.'}</div>}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <><div className="material-context">Captured changes · scroll to read</div><ChangePreview hunks={d.hunks} path={d.path} /></> : op.artifactIds.some(id => id.endsWith('_after')) ? <ReadPreview opId={op.id} artifactId={op.artifactIds.find(id => id.endsWith('_after'))} start={1} path={d.path} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No source bytes or patch captured.'}</div>}</ResultArea>
       </>;
     case 'search':
       return (
@@ -778,6 +779,20 @@ function RequestFields({ input }: { input: unknown }) {
   return <><dl className="request-fields">{keys.slice(0, 6).map((key) => <div key={key}><dt>{key}</dt><dd>{summarizeInput((input as Record<string, unknown>)[key])}</dd></div>)}</dl>{keys.length > 6 && <p className="muted">{keys.length - 6} more arguments · expand for full captured input</p>}</>;
 }
 
+/** All captured changes are reachable; large patches page explicitly rather than disappearing. */
+function ChangePreview({ hunks, path }: { hunks: Hunk[]; path: string }) {
+  const total = hunks.reduce((n, h) => n + h.lines.length, 0);
+  const paged = total > 600;
+  const [page, setPage] = useState(() => paged ? Math.floor(firstChangeOffset(hunks) / 120) : 0);
+  const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const body = root.current?.closest<HTMLElement>('.op-body');
+    const changed = root.current?.querySelector<HTMLElement>('.add,.del');
+    if (body && changed) body.scrollTop = Math.max(0, changed.offsetTop - body.offsetTop - 48);
+  }, [hunks, page]);
+  return <div ref={root} className="change-preview"><DiffView hunks={hunks} path={path} skipLines={paged ? page * 120 : 0} maxLines={paged ? 120 : undefined} showRemaining={false} />{paged && <nav className="preview-pages" aria-label="Captured patch pages"><button disabled={!page} onClick={e => { e.stopPropagation(); setPage(p => p - 1); }}>Previous lines</button><span>Page {page + 1} of {Math.ceil(total / 120)}</span><button disabled={(page + 1) * 120 >= total} onClick={e => { e.stopPropagation(); setPage(p => p + 1); }}>Next lines</button></nav>}</div>;
+}
+
 function PendingResult() {
   return <div className="pending-result"><span aria-hidden="true">···</span><span>Request observed. Result has not arrived.</span></div>;
 }
@@ -790,7 +805,8 @@ function PatchRequest({ op, path }: { op: Operation; path: string }) {
 }
 
 function ReadPreview({ opId, artifactId, start, path, onSource }: { opId: string; artifactId?: string; start: number; path: string; onSource?: (text: string) => void }) {
-  const { text, artifact, error, unavailable } = useArtifact(artifactId, { scope: 'preview' });
+  const [page, setPage] = useState(0);
+  const { text, artifact, error, unavailable, hasMore, start: offset = 0 } = useArtifact(artifactId, { scope: 'preview', start: page * 200, count: 200 });
   useEffect(() => { if (text !== undefined) onSource?.(text); }, [text, onSource]);
   const set = useApp((s) => s.set);
   if (!artifactId) return <div className="muted">Content not captured</div>;
@@ -798,8 +814,8 @@ function ReadPreview({ opId, artifactId, start, path, onSource }: { opId: string
   if (unavailable) return <div className="muted">{unavailable}</div>;
   if (text === undefined) return <div className="skeleton" />;
   if (!text) return <div className="muted">Empty</div>;
-  const sourceStart = artifact?.range?.start ?? start;
-  const shownLines = Math.min(12, text.replace(/\n$/, '').split('\n').length);
+  const sourceStart = (artifact?.range?.start ?? start) + offset;
+  const shownLines = text.replace(/\n$/, '').split('\n').length;
   return <div className="read-preview">
     <button className="captured-range" onClick={(e) => {
       e.stopPropagation();
@@ -809,7 +825,8 @@ function ReadPreview({ opId, artifactId, start, path, onSource }: { opId: string
     }} aria-label={`Read excerpt of ${path}`}>
       <span>Preview · lines {sourceStart}–{sourceStart + shownLines - 1}</span><span>Read excerpt ↗</span>
     </button>
-    <CodeView text={text} startLine={sourceStart} path={path} maxLines={12} />
+    <CodeView text={text} startLine={sourceStart} path={path} />
+    {(page > 0 || hasMore) && <nav className="preview-pages" aria-label="Captured source pages"><button disabled={!page} onClick={e => { e.stopPropagation(); setPage(p => p - 1); }}>Previous lines</button><span>Page {page + 1}</span><button disabled={!hasMore} onClick={e => { e.stopPropagation(); setPage(p => p + 1); }}>Next lines</button></nav>}
   </div>;
 }
 

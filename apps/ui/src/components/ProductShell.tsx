@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode, type CSSProperties } from 'react';
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
+import { useExperience, setExperience } from '../lib/experience.ts';
 
 export function ReadingDialog({ title, close, children, className = '', modeless = false, style }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -44,6 +45,7 @@ const THEMES = [
 ] as const;
 
 function Settings() {
+  const experience = useExperience();
   const theme = useApp((s) => s.theme);
   const motion = useApp((s) => s.motion);
   const map = useApp((s) => s.mapVisible);
@@ -55,6 +57,7 @@ function Settings() {
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
+    <section><h3>Workspace design</h3><div className="experience-options" aria-label="Workspace design"><button className="btn" aria-pressed={experience === 'studio'} onClick={() => setExperience('studio')}>Studio <small>Continuous work canvas · focused reading</small></button><button className="btn" aria-pressed={experience === 'classic'} onClick={() => setExperience('classic')}>Classic <small>Original workspace, preserved</small></button></div></section>
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
       <div className="theme-options" aria-label="Colour theme">{THEMES.map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
     </section>

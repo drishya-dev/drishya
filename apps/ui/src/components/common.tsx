@@ -85,7 +85,7 @@ export function CodeView({ text, startLine = 1, path, maxLines, highlightLines, 
   );
 }
 
-export function DiffView({ hunks, path, maxLines, skipLines = 0 }: { hunks: Hunk[]; path?: string; maxLines?: number; skipLines?: number }) {
+export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining = true }: { hunks: Hunk[]; path?: string; maxLines?: number; skipLines?: number; showRemaining?: boolean }) {
   const lang = langOf(path);
   let lineIndex = 0;
   const total = hunks.reduce((s, h) => s + h.lines.length, 0);
@@ -126,7 +126,7 @@ export function DiffView({ hunks, path, maxLines, skipLines = 0 }: { hunks: Hunk
           </div>
         );
       })}
-      {maxLines && total > end && <div className="ln-more">{total - end} more lines</div>}
+      {showRemaining && maxLines && total > end && <div className="ln-more">{total - end} more lines</div>}
     </div>
   );
 }

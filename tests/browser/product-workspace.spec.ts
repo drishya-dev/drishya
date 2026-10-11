@@ -34,6 +34,47 @@ test.afterAll(async () => {
 });
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
+for (const experience of ['classic', 'studio']) {
+  test(`${experience}: long captured changes remain scrollable and hover expands both dimensions`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+    const op = [...sample.projection.operations].reverse().find((item: { detail: { kind: string } }) => item.detail.kind === 'edit');
+    op.detail.hunks = [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 76, lines: [' const unchanged = true;', ...Array.from({ length: 75 }, (_, n) => `+export const capturedChange${n + 1} = ${n + 1};`)] }];
+    await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+    await page.goto(`${demoUrl()}&experience=${experience}`);
+    const card = page.locator(`article[data-op-id="${op.id}"]`);
+    await card.scrollIntoViewIfNeeded();
+    await expect(card.locator('.ln-more')).toHaveCount(0);
+    await expect(card.locator('.change-preview')).toContainText('capturedChange75');
+    await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+    const before = (await card.boundingBox())!;
+    await card.locator('.op-title').hover();
+    await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+    await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+    const after = (await card.boundingBox())!;
+    expect(after.width).toBeGreaterThan(before.width);
+    expect(after.height).toBeGreaterThan(before.height + 20);
+    const body = card.locator('.op-body');
+    expect(await body.evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(100);
+    await body.evaluate(el => el.scrollTop = el.scrollHeight);
+    await expect(card.locator('.ln-tx').last()).toBeInViewport();
+  });
+}
+
+test('the two working designs switch without resetting the recording or reading mode', async ({ page }) => {
+  await page.goto(`${demoUrl()}&experience=studio`);
+  const title = await page.locator('.studio-session h1').textContent();
+  await page.getByRole('button', { name: 'Workspace settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Workspace settings' });
+  await settings.getByRole('button', { name: 'Classic Original workspace, preserved' }).click();
+  await expect(page.locator('.studio-header')).toHaveCount(0);
+  await expect(page.locator('.crown-title')).toContainText(title!);
+  await settings.getByRole('button', { name: 'Studio Continuous work canvas · focused reading' }).click();
+  await expect(page.locator('.studio-session h1')).toHaveText(title!);
+  await settings.getByRole('button', { name: 'Close Workspace settings' }).click();
+  await expect(page.locator('.history')).toBeVisible();
+});
+
 test('recording search separates captured work from indexed file navigation', async ({ page }) => {
   await page.goto(demoUrl());
   await page.getByRole('button', { name: 'Search', exact: true }).click();
@@ -204,7 +245,9 @@ test('source preview opens the exact stored range and keeps pending replay evide
   const read = history.locator(`article[data-op-id="${op.id}"]`);
   await read.scrollIntoViewIfNeeded();
   const range = read.getByRole('button', { name: `Read excerpt of ${op.detail.path}` });
-  await expect(range).toContainText('Preview · lines 81–92');
+  await expect(range).toContainText('Preview · lines 81–94');
+  await expect(read.locator('.code .ln-no').last()).toHaveText('94');
+  await expect(read.locator('.ln-more')).toHaveCount(0);
   await expect(read.locator('.code .ln-no').first()).toHaveText('81');
   await range.focus();
   await range.press('Enter');
@@ -559,7 +602,7 @@ test('view and appearance changes keep the same captured passage under the reade
 
 
 test('history activity timeline opens recorded failures and edits; named palettes switch', async ({ page }) => {
-  await page.goto(demoUrl());
+  await page.goto(`${demoUrl()}&experience=classic`);
   await page.getByLabel('More workspace options').click();
   await page.locator('.prompt-menu > summary').click();
   const timeline = page.getByRole('group', { name: 'Recorded activity' });

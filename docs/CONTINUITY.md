@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**11 October Studio:** [45](review/45-studio-working-experience.md) implements a separate working Studio composition (default), with Classic preserved under Workspace design. Complete captured source/patch previews use real scrolling or bounded pages; hover grows both dimensions with one measured real material transform, fixing the Studio resting-height cap. 317 units/typechecks/build and focused browser journeys pass locally. Fresh neutral reviews and long-reading remeasurement follow before broad acceptance. Hosted CI remains publishing-only; unrelated package-manager edits stay local.
+
 **11 October current Git:** [44](review/44-current-git-review.md) implements separately consented current Git patches, exact-content browser-local review marks/redacted notes and privacy-previewed local handoff. Four repository units and one browser journey, typechecks/build pass locally. No hosted CI. Branch `codex/developer-review-completion`; unrelated root package-manager edits stay local. Next: distinct working redesign retaining Classic, then fresh reviews/fixes; R4 actual native acceptance and wider R6 remain unverified.
 
 **Current merge:** [PR #54](https://github.com/drishya-dev/drishya/pull/54) squash-merged as `02480ec`; local main updated. Review 43 is implemented. Local checks only; unrelated package-manager edits remain local.

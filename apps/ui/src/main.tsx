@@ -7,6 +7,7 @@ import './product.css';
 import './polish.css';
 import './ink.css';
 import './stage.css';
+import './studio.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

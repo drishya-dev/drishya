@@ -80,8 +80,10 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       const style = getComputedStyle(card);
       // scrollHeight omits the border: allocating it verbatim leaves a tiny
       // overflow and an unnecessary scrollbar even when all content fits.
-      const needed = Math.ceil(card.scrollHeight + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 2);
-      const height = Math.min(bottom - top, innerHeight * .72, Math.max(from.height, needed));
+      const body = card.querySelector<HTMLElement>('.op-body');
+      const bodyOverflow = body ? Math.max(0, body.scrollHeight - body.clientHeight) : 0;
+      const needed = Math.ceil(card.scrollHeight + bodyOverflow + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 2);
+      const height = Math.min(bottom - top, innerHeight * .72, Math.max(from.height * 1.12, needed));
       card.style.setProperty('--hover-height', `${height}px`);
       card.style.setProperty('--hover-top', `${Math.max(top, Math.min(bottom - height, from.top + (from.height - height) / 2))}px`);
       const focus: Focus = previous ?? { card, slot, returning: false, scrollTop: root.scrollTop }; focus.returning = false; focus.scrollTop = root.scrollTop; active = focus; focuses.add(focus);
