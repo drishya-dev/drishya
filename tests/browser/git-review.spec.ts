@@ -19,14 +19,19 @@ test.beforeAll(async () => {
   server = await startServer({ app, port: 0, token: 'synthetic-git-browser' });
 });
 test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); });
-test('separate consent, exact review progress, stale changes and privacy-reviewed handoff', async ({ page }) => {
-  await page.goto(`${server.url}/#token=${server.token}`);
+for (const experience of ['classic', 'studio']) test(`${experience}: separate consent, exact review progress, stale changes and privacy-reviewed handoff`, async ({ page }) => {
+  writeFileSync(join(root, 'source.ts'), 'export const total = 2;\n');
+  await page.goto(`${server.url}/?experience=${experience}#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
-  await page.goto(`${server.url}/#/r/${id}`);
+  await page.goto(`${server.url}/?experience=${experience}#/r/${id}`);
   await page.getByRole('button', { name: 'Git review', exact: true }).click();
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
-  await reader.getByRole('button', { name: 'Approve current workspace' }).click();
-  await reader.getByRole('button', { name: 'Approve read-only Git' }).click();
+  await expect(reader).toBeVisible();
+  const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
+  if (await workspaceConsent.count()) await workspaceConsent.click();
+  const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
+  if (await gitConsent.count()) await gitConsent.click();
+  else await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.locator('.git-patch')).toContainText('total = 2');
   await reader.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
   await reader.getByRole('textbox', { name: 'Local review note' }).fill('Inspected the total');

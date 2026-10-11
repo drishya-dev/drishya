@@ -25,7 +25,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash / Codex | Promote Studio baseline to Classic; genuinely distinct working Studio redesign | apps/ui/src, affected browser tests, docs/review/47 and continuity |
 
 ---
 
@@ -65,10 +64,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Watch out for:** a map now needs one approval click per recording whose root was not set with `--workspace`. Old data still needs re-import if tagged "older privacy policy".
 
 ### Codex review
-- **When:** 11 October 2026, branch `codex/developer-review-completion`.
-- **Delivered:** [44](review/44-current-git-review.md): separately consented current Git status/HEAD/staged/worktree patches, exact-content local marks/notes and privacy-previewed local handoff (`2060712`). [45](review/45-studio-working-experience.md): separate integrated Studio (default) with Classic backup, complete scrollable/paged read/edit previews and two-dimensional measured hover (`5bc4858`). [46](review/46-studio-independent-review.md): three fresh independent firsthand developer/design/workflow reviews and concrete navigation/layout/map/accessibility fixes. Reviewers prefer Studio but still use it as a review companion; scores are before fixes, not market validation.
-- **Checked:** 317 units, typechecks/build, isolated offline packaging/install/import/authenticated API/restart. All 80 regular browser journeys pass across the full run and corrected/new targeted checks; two opt-ins (real-session and ten-minute reader) were not run. Screenshots inspected; short hover source fits without a spurious scrollbar, long changed content scrolls in both designs, complete-history evidence stays complete, mobile clearance and keyboard map labels checked. Hosted CI remains undispatched. Unrelated root package-manager edits preserved locally.
-- **Remaining:** actual Claude/Codex account/version/attachment/approval/reconnect/compaction journeys; fresh ten-minute/physical low-resource/platform/multi-agent acceptance. Wider utility: review return trail, unresolved decisions/bookmarks, assertion-to-source resolution, semantic navigation, curated historical packets and narrow-reader scroll simplification. No broad release or native-chat replacement claim. The fresh reviewer's post-fix browser recheck was unavailable; automated browser checks are separate evidence.
+- **When:** 2026-10-11.
+- **Did:** Current Git consent/review/progress/handoff (44), fuller captured previews (45), independent-review navigation fixes (46), promoted prior Studio to default Classic and built distinct source/work/evidence Studio plus local real-preview references (47). Pre-Studio Legacy remains an advanced backup. Branch `codex/developer-review-completion`.
+- **Validation:** 317 units/typechecks/build/isolated package passed; 85 regular browser journeys pass across full/focused runs. Git reviewed/stale/handoff passes in both designs; Studio attachments/approval/source uses synthetic native transport. Five Studio aspect ratios checked. Real-session and ten-minute opt-ins not run this pass; earlier bounded 100k/map-off probe is in 46.
+- **Remaining:** Actual native account/version/platform/physical-resource/multi-agent/assistive-tech and human visual acceptance; review continuity/unresolved decisions/historical handoff/diagnostic-source/symbol utilities from 41/46. Prior reviewer scores do not rate new Studio.
+- **Watch out:** Hosted CI publishing-only. Root package-manager edits are unrelated/local and excluded. Real preview stores only an imported recording ID; private journals never enter committed demo fixtures.
 
 ## Next up
 
@@ -280,3 +280,6 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2026-10-08 | Expose honest native progress before captured output; keep reasoning detail local | Builder reported a blank initial turn. Show immediate submitting/connection receipts and genuine native phases; buffer arbitrary token fragments until complete-block redaction and hand receipts to journal evidence using zero-based observation order. Never promise hidden reasoning or silently alter model effort/policy. | review/36 |
 | 2026-10-08 | Permit optional bounded perspective orbit, static default | Builder explicitly requested evaluating a rotating 3D background. Reuse canvas projection, white dots, density groups and shared DOM origins; cap redraws and freeze while interacting/reduced motion/low resources. Native permissions/settings synchronization and attachments remain separate next-stage work. | review/36 |
 | 2026-10-08 | True spatial map and bounded native attachments | Builder corrected shallow perspective to multi-axis spatial navigation and requested file/folder/screenshot inputs. Use shared GPU/DOM camera math, 12-second manual hold, private inline image transport, text redaction and explicit limits. Conservative native policy remains. | review/37 |
+
+
+**11 October design decision:** Prior Studio becomes default Classic; a distinct Studio organizes captured working files, continuous materials and an evidence/tool desk. Legacy preserves the older design. Backend evidence/controller engines stay shared; a local real-preview reference never publishes private journals or substitutes synthetic evidence. See [47](review/47-studio-workbench.md).

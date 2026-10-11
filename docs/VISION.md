@@ -1,5 +1,7 @@
 # Drishya — Vision & Creative Direction
 
+**11 October latest builder correction:** The first Studio was too similar to Classic. Promote it to Classic, keep its palette, restore translucent header and centered materials/Tools naming, and build a distinct Studio from concept and developer jobs. [47](review/47-studio-workbench.md) records the actual new composition and local real-session preview; prior reviewer scores apply only to the prior UI.
+
 **11 October builder direction:** After developer-feedback improvements are committed, create a distinct design from scratch using the loaded Emil skills. Preserve the product concepts and backend, and retain the current UI as an explicit backup. Reconsider composition, typography, material treatment, controls, reading and meaningful motion together; a palette-only pass is not the requested redesign. The evidence, native permission and independent-capture boundaries remain. See [43](review/43-developer-feedback-navigation.md) for the implemented feedback increment and remaining developer/release scope.
 
 

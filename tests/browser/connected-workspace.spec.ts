@@ -49,6 +49,30 @@ createInterface({input:process.stdin}).on('line',line=>{
 });
 test.afterAll(async()=>{ await server?.close(); await app?.close(); if (dir) {if (!resolve(dir).startsWith(resolve(tmpdir())+sep)) throw new Error('unsafe test cleanup'); rmSync(dir,{recursive:true,force:true});} });
 
+test('Studio native workspace connects its composer, attachments, approval and evidence readers', async ({ page }) => {
+  await page.goto(new URL('/?experience=studio', server.launchUrl).href + new URL(server.launchUrl).hash);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await expect(page.locator('.workbench-header')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Recorded agents' })).toHaveCount(0);
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
+  await expect(composer.getByRole('button', { name: 'Add files or folders' })).toBeEnabled();
+  await composer.locator('input[aria-label="Choose prompt files"]').setInputFiles({ name: 'source.ts', mimeType: 'text/plain', buffer: Buffer.from('export const attached = true;') });
+  await composer.getByRole('textbox', { name: 'Prompt for selected harness session' }).fill('Review the source attachment');
+  await composer.getByRole('button', { name: 'Send prompt', exact: true }).click();
+  await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
+  await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();
+  await expect(composer).toContainText('Edit · approval requested');
+  await expect(composer.locator('.attachment-chip')).toHaveCount(0);
+  await composer.getByRole('button', { name: 'Allow once', exact: true }).click();
+  await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeVisible();
+  await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
+  await page.getByRole('button', { name: 'Show session folders' }).click();
+  const folders = page.getByRole('complementary', { name: 'Session folders' });
+  await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'src/actual.ts', exact: true })).toContainText('fromSelectedWorkspace');
+});
+
 test('current source reading finds, navigates and wraps bounded disk pages without replacing captured evidence', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();

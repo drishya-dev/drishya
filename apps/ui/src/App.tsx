@@ -7,6 +7,7 @@ import { Viewer } from './components/Viewer.tsx';
 import { needsReload } from './lib/sync.ts';
 import { growingSample } from './lib/sample-source.ts';
 import { setMotion, useApp } from './state.ts';
+import { localPreviewId } from './lib/local-preview.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
 
@@ -16,7 +17,7 @@ function params() {
   const at = q.get('at');
   return {
     at: at === 'end' ? ('end' as const) : at ? Number(at) : undefined,
-    bundle: q.get('bundle') ?? (q.has('demo') ? DEMO_URL : undefined),
+    bundle: q.get('bundle') ?? (q.has('demo') && q.get('demo') !== 'local' ? DEMO_URL : undefined),
     motion: q.get('motion'),
     recording: /^#\/r\/(.+)$/.exec(location.hash)?.[1],
   };
@@ -44,11 +45,15 @@ export function App() {
         if (p.bundle) return await openBundle(p.bundle, new URLSearchParams(location.search).get('demo') === 'live');
         const auth = await signIn();
         if (auth === 'ok') {
-          useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings: await daemon.recordings() });
-          if (p.recording) await useApp.getState().openRecording(decodeURIComponent(p.recording), p.at === undefined ? undefined : { at: p.at });
+          const recordings = await daemon.recordings();
+          useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings });
+          const preview = new URLSearchParams(location.search).get('demo') === 'local' ? localPreviewId() : undefined;
+          const id = p.recording ? decodeURIComponent(p.recording) : recordings.some(r => r.id === preview) ? preview : undefined;
+          if (id) await useApp.getState().openRecording(id, p.at === undefined ? undefined : { at: p.at });
           return;
         }
         if (auth === 'signed-out') return useApp.setState({ screen: 'signed-out' });
+        if (new URLSearchParams(location.search).get('demo') === 'local') return useApp.setState({ screen: 'no-daemon' });
         // No daemon: this is the static hosted demo.
         await openBundle(DEMO_URL).catch(() => useApp.setState({ screen: 'no-daemon' }));
       } catch (e) {

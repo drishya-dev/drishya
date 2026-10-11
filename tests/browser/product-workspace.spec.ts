@@ -107,10 +107,11 @@ test('the two working designs switch without resetting the recording or reading 
   const title = await page.locator('.studio-session h1').textContent();
   await page.getByRole('button', { name: 'Workspace settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
-  await settings.getByRole('button', { name: 'Classic Original workspace, preserved' }).click();
-  await expect(page.locator('.studio-header')).toHaveCount(0);
+  await settings.getByRole('button', { name: 'Classic Refined original · centered materials' }).click();
+  await expect(page.locator('.workbench-header')).toHaveCount(0);
+  await expect(page.locator('.studio-header')).toBeVisible();
   await expect(page.locator('.crown-title')).toContainText(title!);
-  await settings.getByRole('button', { name: 'Studio Continuous work canvas · focused reading' }).click();
+  await settings.getByRole('button', { name: 'Studio Work canvas · evidence desk' }).click();
   await expect(page.locator('.studio-session h1')).toHaveText(title!);
   await settings.getByRole('button', { name: 'Close Workspace settings' }).click();
   await expect(page.locator('.history')).toBeVisible();
@@ -663,8 +664,8 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Jet is the signature default. No grain or full-screen decorative layer obscures text.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(9, 9, 9)');
-  expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toContain('repeating-linear-gradient');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(9, 11, 13)');
+  expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toBe('none');
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
@@ -880,9 +881,9 @@ test('full-height world sits beneath progressive edge chrome and prompt typograp
   await expect(page.locator('article.op-test').last()).toBeVisible();
   await page.getByRole('navigation', { name: 'Prompt positions in history' }).getByRole('button').first().click();
   await expect(page.locator('.turn-text').first()).toBeVisible();
-  const sizes = await page.evaluate(() => ({ prompt: getComputedStyle(document.querySelector('.turn-text')!).fontSize, response: getComputedStyle(document.querySelector('.prose')!).fontSize, blur: getComputedStyle(document.querySelector('.crown')!, '::before').backdropFilter, main: document.querySelector('.main')!.getBoundingClientRect().toJSON() }));
+  const sizes = await page.evaluate(() => ({ prompt: getComputedStyle(document.querySelector('.turn-text')!).fontSize, response: getComputedStyle(document.querySelector('.prose')!).fontSize, blur: getComputedStyle(document.querySelector('.workspace-header')!).backdropFilter, main: document.querySelector('.main')!.getBoundingClientRect().toJSON() }));
   expect(sizes.prompt).toBe('15px'); expect(sizes.response).toBe(sizes.prompt);
-  expect(sizes.blur).toBe('blur(10px)'); expect(sizes.main.y).toBe(0); expect(sizes.main.height).toBe(900);
+  expect(sizes.blur).toBe('blur(14px)'); expect(sizes.main.y).toBe(0); expect(sizes.main.height).toBe(900);
   const time = page.locator('.captured-time').first();
   await time.focus();
   await expect.poll(() => time.locator('.captured-clock').evaluate(el => getComputedStyle(el).opacity)).toBe('1');
@@ -919,4 +920,66 @@ test('spatial camera orbits both axes and resumes after manual navigation; reduc
   await page.waitForTimeout(300);
   expect(await map.getAttribute('data-map-yaw')).toBe(reduced);
   expect(await page.evaluate(() => localStorage.getItem('drishya.reasoningDetail'))).toBe('collapsed');
+});
+
+
+test('Studio working set opens captured changes and keeps explorer an explicit alternative', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${demoUrl()}&experience=studio`);
+  const sources = page.getByRole('complementary', { name: 'Working files', exact: true });
+  await expect(sources.getByRole('heading', { name: 'Working set' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Session folders' })).toHaveCount(0);
+  await sources.getByRole('textbox', { name: 'Filter working files' }).fill('guard.ts');
+  await sources.getByRole('button', { name: /guard.ts src\/checkout/ }).click();
+  const file = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  await expect(file.locator('.file-evidence-material')).toContainText('== null');
+  await file.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
+  await page.screenshot({ path: resolve('.local/studio-workbench.png') });
+  await sources.getByRole('button', { name: 'Show session folders' }).click();
+  await expect(page.getByRole('complementary', { name: 'Session folders' })).toBeVisible();
+  await expect(sources.getByRole('heading', { name: 'Working set' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Evidence desk' })).toBeVisible();
+});
+
+test('Studio keeps navigation, review and the canvas usable across aspect ratios', async ({ page }) => {
+  for (const [width, height] of [[1920, 1080], [1280, 720], [900, 500], [768, 900], [390, 844]]) {
+    await page.setViewportSize({ width: width!, height: height! });
+    await page.goto(`${demoUrl()}&experience=studio`);
+    await expect(page.locator('.history')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const header = (await page.locator('.workspace-header').boundingBox())!;
+    const nav = (await page.getByRole('navigation', { name: 'Workspace views' }).boundingBox())!;
+    expect(nav.y).toBeGreaterThanOrEqual(header.y + header.height);
+    const review = page.getByRole('button', { name: 'Review work', exact: true }).filter({ visible: true });
+    await review.click();
+    const dialog = page.getByRole('dialog', { name: 'Review work' });
+    await expect(dialog.getByRole('region', { name: 'Files with captured changes' })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Close Review work' }).click();
+    if (width! <= 820) {
+      await page.getByRole('button', { name: 'Tools', exact: true }).click();
+      await expect(page.getByRole('complementary', { name: 'Tools', exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Close tools', exact: true }).click();
+    }
+  }
+});
+
+test('local preview reopens actual imported evidence and never falls back to the synthetic sample', async ({ page }) => {
+  const recording = app.store.listRecordings()[0]!;
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(new URL(`/?experience=studio#/r/${recording.id}`, server.launchUrl).href);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.getByLabel('More workspace options').click();
+  await page.getByRole('button', { name: 'Use this session as local preview' }).click();
+  await expect(page.getByRole('button', { name: 'Local preview selected ✓' })).toBeVisible();
+  await page.getByRole('link', { name: 'Open local preview' }).click();
+  await expect(page).toHaveURL(/demo=local/);
+  await expect(page.locator('.history')).toBeVisible();
+  await expect(page.locator('.crown-sample')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('drishya-local-preview-v1'))).toBe(recording.id);
+  await page.evaluate(() => localStorage.setItem('drishya-local-preview-v1', 'missing-recording'));
+  await page.reload();
+  await expect(page.locator('.home')).toBeVisible();
+  await expect(page.getByText(/A missing or deleted recording/)).toBeVisible();
+  await expect(page.locator('.history')).toHaveCount(0);
 });

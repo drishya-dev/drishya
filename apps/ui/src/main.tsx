@@ -8,6 +8,7 @@ import './polish.css';
 import './ink.css';
 import './stage.css';
 import './studio.css';
+import './workbench.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
