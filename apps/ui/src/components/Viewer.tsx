@@ -603,6 +603,12 @@ function Search({ projection }: { projection: Projection }) {
   const seek = useApp((s) => s.seek);
   const select = useApp((s) => s.select);
   const [q, setQ] = useState('');
+  const [scope, setScope] = useState<'captured' | 'files'>('captured');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+  const graph = useApp(s => s.graph);
+  const mode = useApp(s => s.mode);
+  const step = useApp(s => s.step);
   const [hits, setHits] = useState<{ observationId: string; snippet: string }[]>([]);
   useEffect(() => {
     const element = panel.current;
@@ -613,11 +619,15 @@ function Search({ projection }: { projection: Projection }) {
     if (open) element.querySelector('input')?.focus({ preventScroll: true });
   }, [open]);
   useEffect(() => {
-    if (!open || !source || !recordingId || q.trim().length < 2) return setHits([]);
+    setHits([]); setError(undefined); setLoading(false);
+    if (!open || scope !== 'captured' || !source || !recordingId || q.trim().length < 2) return;
     let current = true;
-    const t = setTimeout(() => source.search(recordingId, q).then(result => { if (current) setHits(result); }).catch(() => { if (current) setHits([]); }), 160);
+    setLoading(true);
+    const t = setTimeout(() => source.search(recordingId, q).then(result => { if (current) { setHits(result); setLoading(false); } }).catch(() => { if (current) { setError('Search unavailable. Change the query or reopen search to retry.'); setLoading(false); } }), 160);
     return () => { current = false; clearTimeout(t); };
-  }, [q, open, source, recordingId]);
+  }, [q, scope, open, source, recordingId]);
+  const visibleHits = mode === 'replay' ? hits.filter(hit => { const at = stepOfObservation(projection, hit.observationId); return at !== undefined && at <= step; }) : hits;
+  const files = q.trim().length >= 2 ? graph?.nodes.filter(node => node.path.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 50) ?? [] : [];
   const go = (obs: string) => {
     if (useApp.getState().historyPage) {
       set({ focusObservationId: obs, playing: false, held: true, selectedOp: undefined, searchOpen: false });
@@ -639,13 +649,18 @@ function Search({ projection }: { projection: Projection }) {
         <input autoFocus aria-label="Search prose, commands, paths" placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="search-close" aria-label="Close search" popoverTarget="recording-search" popoverTargetAction="hide">×</button>
       </div>
+      <div className="search-scopes" role="group" aria-label="Search scope"><button aria-pressed={scope === 'captured'} onClick={() => setScope('captured')}>Captured work</button><button aria-pressed={scope === 'files'} onClick={() => setScope('files')}>Indexed files</button></div>
+      <p className="search-scope-note">{scope === 'captured' ? mode === 'replay' ? 'Captured work visible at this replay step' : 'Whole recording · up to 50 results per recording' : graph?.temporal === 'current' ? `Current index${graph.stale ? ' · out of date' : ''}${graph.truncated ? ' · partial' : ''} · first 50 matches · names only` : 'Captured file references · first 50 matches · names only'}</p>
       <div className="search-results">
-        {hits.map((h, i) => (
+        {scope === 'captured' && visibleHits.map((h, i) => (
           <button key={i} onClick={() => go(h.observationId)}>
             {h.snippet.split(/[«»]/).map((part, j) => (j % 2 ? <mark key={j}>{part}</mark> : part))}
           </button>
         ))}
-        {q.trim().length >= 2 && hits.length === 0 && <div className="muted">No matches</div>}
+        {scope === 'files' && files.map(file => <button key={file.id} onClick={() => set({ filePanel: file.id, filePanelFocus: undefined, currentFile: undefined, searchOpen: false })}>{file.path}<span aria-hidden="true"> ↗</span></button>)}
+        {loading && <div role="status">Searching captured work…</div>}
+        {error && <div role="alert">{error}</div>}
+        {q.trim().length >= 2 && !loading && !error && (scope === 'captured' ? visibleHits.length === 0 : files.length === 0) && <div className="muted">No matches{scope === 'captured' && mode === 'replay' ? ' at this replay step' : ''}</div>}
       </div>
     </div>
   );

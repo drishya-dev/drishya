@@ -724,7 +724,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
           <div className="cmd">$ {d.command.slice(0, 1200)}</div>
           {d.command.length > 1200 && <div className="material-context">First 1,200 captured characters · expand for full input</div>}
           <ResultArea state={op.status} resolving={resolving}>
-            {d.outputPreview ? <TerminalPreview text={d.outputPreview} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
+            {d.outputPreview ? <TerminalPreview text={d.outputPreview} failed={op.status === 'error'} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
             {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
           </ResultArea>
         </div>

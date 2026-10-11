@@ -9,6 +9,7 @@ import { VerificationPanel } from './Verification.tsx';
 import { CapturedTime } from './common.tsx';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
+import { ImportContext } from './ImportContext.tsx';
 
 /** Global bounded file history; the loaded passage window is never mistaken for the whole session. */
 export function FileHistory({ projection }: { projection: Projection }) {
@@ -94,6 +95,7 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
       <section className="file-evidence-reading" aria-label="File evidence">
         <div className="file-evidence-toolbar"><strong>Historical evidence</strong>{source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" title={workspace.root} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.setState({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}<button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button><button className="btn" aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{compare ? 'Single evidence' : 'Compare evidence'}</button></div>
 
+        <ImportContext path={path} />
         {diskError && <p className="bad" role="alert">{diskError}</p>}
         {choices.length > 0 ? <div className={`file-evidence-columns${compare ? ' paired' : ''}`}>
           <EvidenceColumn choices={choices} value={first} choose={(key) => setLeft(choices.find((item) => item.key === key))} label="First evidence" path={path} />

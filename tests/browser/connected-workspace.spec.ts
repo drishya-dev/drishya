@@ -86,6 +86,40 @@ test('current source reading finds, navigates and wraps bounded disk pages witho
   await expect(historical).not.toContainText('fromSelectedWorkspace');
 });
 
+test('source reading links qualified current imports to a bounded map neighborhood', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  const folders = page.getByRole('complementary', { name: 'Session folders' });
+  const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
+  if (await enable.count()) await enable.click();
+  await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
+  const approve = page.getByRole('button', { name: 'Map the whole repository', exact: true });
+  if (await approve.count()) await approve.click();
+  await expect(page.locator('.map-legend')).toContainText('2 files · 1 imports');
+  await page.getByRole('button', { name: 'Back to work' }).click();
+  await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
+  const reader = page.getByRole('dialog', { name: 'src/actual.ts', exact: true });
+  await reader.locator('.import-context summary').click();
+  await expect(reader.locator('.import-context')).toContainText('Current index');
+  await expect(reader.locator('.import-context')).toContainText('src/other.ts');
+  await expect(reader.locator('.import-context')).toContainText('Imported by');
+  await reader.locator('.import-context').getByRole('button', { name: /src\/other.ts/ }).click();
+  const neighbor = page.getByRole('dialog', { name: 'src/other.ts', exact: true });
+  await expect(neighbor).toContainText('On disk');
+  await expect(neighbor).toContainText("import { fromSelectedWorkspace }");
+  await neighbor.locator('.import-context summary').click();
+  await neighbor.locator('.import-context').getByRole('button', { name: /src\/actual.ts/ }).click();
+  await reader.locator('.import-context summary').click();
+  await reader.getByRole('button', { name: 'Focus on map' }).click();
+  await expect(page.locator('.map')).toHaveAttribute('data-map-scope', 'direct-neighborhood');
+  await expect(page.locator('.map-connections')).toContainText('src/actual.ts');
+  await expect(page.locator('.map-legend')).toContainText('2 neighborhood files · 1 shown imports');
+  await expect.poll(async () => (await page.locator('.map-file-label').filter({ hasText: 'src/actual.ts' }).first().boundingBox())?.y ?? 0).toBeGreaterThan(250);
+  await page.screenshot({ path: resolve('.local/feedback-neighborhood.png') });
+  await page.getByRole('button', { name: 'Show full map', exact: true }).click();
+  await expect(page.locator('.map')).toHaveAttribute('data-map-scope', 'all');
+});
+
 test('native model settings and attachment menus dismiss outside without detaching Follow', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
