@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Current merge:** [PR #54](https://github.com/drishya-dev/drishya/pull/54) squash-merged as `02480ec`; local main updated. Review 43 is implemented. Local checks only; unrelated package-manager edits remain local.
+
 **11 October feedback continuation:** [43](review/43-developer-feedback-navigation.md) implements scoped recording/indexed-file search, loading/errors and replay snippet cutoffs, buried captured error previews, current import context/neighbor reading and bounded direct-neighborhood map focus. 313 units, 38 affected browser journeys, typechecks/build/packaging pass locally. Native real-turn/platform acceptance and Git/progress/handoff/symbols remain separate R4–R6 work. Next builder direction: a distinct from-scratch design with the loaded Emil skills, retaining current UI as backup and preserving backend/evidence concepts. Do not present a palette change as that redesign. No hosted CI; root package-manager edits remain local.
 
 **Current merge:** [PR #53](https://github.com/drishya-dev/drishya/pull/53) squash-merged as `e397b95`; local main updated. Review 42 is implemented on main. Local checks only; unrelated package-manager edits remain uncommitted.

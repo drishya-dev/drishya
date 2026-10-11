@@ -1,5 +1,7 @@
 # Drishya — Vision & Creative Direction
 
+**11 October builder direction:** After developer-feedback improvements are committed, create a distinct design from scratch using the loaded Emil skills. Preserve the product concepts and backend, and retain the current UI as an explicit backup. Reconsider composition, typography, material treatment, controls, reading and meaningful motion together; a palette-only pass is not the requested redesign. The evidence, native permission and independent-capture boundaries remain. See [43](review/43-developer-feedback-navigation.md) for the implemented feedback increment and remaining developer/release scope.
+
 
 **Latest spatial/composer correction — 8 October:** [37](review/37-spatial-map-composer.md) supersedes shallow perspective and deferred attachments: real spatial WebGL points/edges, yaw/pitch orbit and pan, default gentle rotation resuming 12 seconds after camera movement, steady unnamed background geometry, slightly wider rails and shared card bounds. File/folder-content selection, screenshot paste, previews/removal and native text/image transport are implemented with explicit limits and text redaction. Effective native-policy synchronization and broader release checks remain separate; full access is still unsupported. Local checks only; no hosted CI.
 
