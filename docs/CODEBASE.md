@@ -1,5 +1,7 @@
 # Codebase — the system as built
 
+**11 October current Git:** `GitReview` uses separately consented fixed-argv read-only inspection through WorkspaceAccess; Git DTOs are separate from event contracts. `GitReview.tsx` provides patch review, redacted browser-local notes and privacy-previewed local Markdown packets. See [44](review/44-current-git-review.md) for bounds, races and unsupported scope.
+
 **11 October developer navigation:** `ImportContext.tsx` links qualified current static imports to current/captured reading and explicit map focus. `map-focus.ts` provides a bounded direct neighborhood; MapCanvas retains original coordinates and reports scoped counts. Recording search distinguishes captured evidence from indexed filenames and hides future replay snippets; `failure-preview.ts` selects literal error lines from captured previews. No backend/schema change; see [43](review/43-developer-feedback-navigation.md).
 
 **10 October evidence reading:** `EvidenceReview.tsx` uses the existing whole-recording since service (boundary -1), with bounded groups and replay disabled. `change-preview.ts` selects first-change context without modifying hunks. `SourceFind.tsx` shares page-local search between captured/current readers; current source adds line navigation, wrapping, bounded copying and width resizing. File history can initially focus captured changes. No schema/backend/dependency changes; see [42](review/42-evidence-reading-design.md).

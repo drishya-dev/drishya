@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**11 October current Git:** [44](review/44-current-git-review.md) implements separately consented current Git patches, exact-content browser-local review marks/redacted notes and privacy-previewed local handoff. Four repository units and one browser journey, typechecks/build pass locally. No hosted CI. Branch `codex/developer-review-completion`; unrelated root package-manager edits stay local. Next: distinct working redesign retaining Classic, then fresh reviews/fixes; R4 actual native acceptance and wider R6 remain unverified.
+
 **Current merge:** [PR #54](https://github.com/drishya-dev/drishya/pull/54) squash-merged as `02480ec`; local main updated. Review 43 is implemented. Local checks only; unrelated package-manager edits remain local.
 
 **11 October feedback continuation:** [43](review/43-developer-feedback-navigation.md) implements scoped recording/indexed-file search, loading/errors and replay snippet cutoffs, buried captured error previews, current import context/neighbor reading and bounded direct-neighborhood map focus. 313 units, 38 affected browser journeys, typechecks/build/packaging pass locally. Native real-turn/platform acceptance and Git/progress/handoff/symbols remain separate R4–R6 work. Next builder direction: a distinct from-scratch design with the loaded Emil skills, retaining current UI as backup and preserving backend/evidence concepts. Do not present a palette change as that redesign. No hosted CI; root package-manager edits remain local.

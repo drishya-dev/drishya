@@ -19,6 +19,7 @@ import { sampleActivity } from '../lib/activity.ts';
 import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComposer, useSessionWorkspace } from './SessionWorkspace.tsx';
 import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { EvidenceReview } from './EvidenceReview.tsx';
+import { GitReviewEntry } from './GitReview.tsx';
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
@@ -215,7 +216,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
           );
         })}
       </div>}
-      <div className="crown-actions"><EvidenceReview key={recordingId} projection={projection} /><UsagePeek />
+      <div className="crown-actions"><EvidenceReview key={recordingId} projection={projection} /><GitReviewEntry /><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true })}>Settings</button>
         <button className="btn ghost search-open" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>

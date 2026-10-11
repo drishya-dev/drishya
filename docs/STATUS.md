@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Codex / Yash | Developer review completion, then separate redesigned experience and fresh reviews | daemon Git service, UI review/experience components, local tests, docs |
 
 ---
 

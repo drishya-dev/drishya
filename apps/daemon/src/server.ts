@@ -26,6 +26,7 @@ import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 import { storageUsage } from './storage.ts';
 import { WorkspaceAccess } from './workspace.ts';
+import { GitReview } from './git-review.ts';
 import { HarnessController } from './controller.ts';
 
 export interface ServerOptions {
@@ -100,6 +101,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('Drishya binds to loopback only.');
   const app = opts.app ?? new App(opts.dataDir);
   const workspace = new WorkspaceAccess(app);
+  const gitReview = new GitReview(workspace);
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
   app.ingest.resetLiveFlags();
   const token = opts.token ?? randomBytes(24).toString('hex');
@@ -245,6 +247,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
       if (sub === 'workspace' && !subId && m === 'GET') return json(res, workspace.status(id));
+      if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
+      if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
+      if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id));
       if (sub === 'workspace' && subId === 'approve' && m === 'POST') return json(res, await workspace.approve(id));
       if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));
       if (sub === 'controller' && !subId && m === 'GET') return json(res, controller.status(id));
@@ -261,7 +266,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId), health: app.ingest.health(firstId) } });
       if (!sub && m === 'DELETE') {
         app.recording(firstId);
-        await controller.forget(firstId); workspace.revoke(firstId);
+        await controller.forget(firstId); workspace.revoke(firstId); gitReview.revoke(firstId);
         const removed = await app.forget(firstId);
         return json(res, { ok: true, ...removed });
       }
