@@ -107,11 +107,12 @@ test('the two working designs switch without resetting the recording or reading 
   const title = await page.locator('.studio-session h1').textContent();
   await page.getByRole('button', { name: 'Workspace settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
-  await settings.getByRole('button', { name: 'Classic Refined original · centered materials' }).click();
+  await settings.getByRole('button', { name: 'Classic Centered work · evidence desk' }).click();
   await expect(page.locator('.workbench-header')).toHaveCount(0);
   await expect(page.locator('.studio-header')).toBeVisible();
   await expect(page.locator('.crown-title')).toContainText(title!);
-  await settings.getByRole('button', { name: 'Studio Work canvas · evidence desk' }).click();
+  await settings.getByText('Earlier design backups', { exact: true }).click();
+  await settings.getByRole('button', { name: 'Studio backup' }).click();
   await expect(page.locator('.studio-session h1')).toHaveText(title!);
   await settings.getByRole('button', { name: 'Close Workspace settings' }).click();
   await expect(page.locator('.history')).toBeVisible();
@@ -472,22 +473,23 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   await expect.poll(async () => Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0])).toBeLessThan(45);
 });
 
-test('workspace settings persist, respect the OS, restore focus and work on a narrow screen', async ({ page }) => {
+test('explicit themes persist independently of the OS, restore focus and work on a narrow screen', async ({ page }) => {
   await page.goto(demoUrl());
   const settings = page.getByRole('button', { name: 'Workspace settings', exact: true });
   await page.getByRole('switch', { name: 'Automatically follow new work' }).click();
   await settings.click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
-  await dialog.getByRole('button', { name: 'Light', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Paper', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await settings.click();
-  await dialog.getByRole('button', { name: 'System', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'System', exact: true })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Jet Black', exact: true }).click();
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.emulateMedia({ colorScheme: 'light' });
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await dialog.getByRole('checkbox', { name: /^Low resource mode/ }).check();
   await expect(dialog.getByRole('checkbox', { name: /^Repository map/ })).not.toBeChecked();
   await expect(dialog.getByRole('checkbox', { name: /^Relationship motion/ })).not.toBeChecked();
@@ -541,7 +543,7 @@ test('file comparison reads real daemon artifacts and opens the same action in h
 });
 
 test('agent ownership shares one history, and replay file choices obey the historical boundary', async ({ page }) => {
-  await page.goto(demoUrl());
+  await page.goto(`${demoUrl()}&experience=legacy`);
   await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
   const overview = page.getByRole('region', { name: 'Agent comparison' });
   await expect(overview).toContainText('counts and files describe the work shown in this view');
@@ -623,20 +625,21 @@ test('view and appearance changes keep the same captured passage under the reade
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.dataset.passageId === anchor.id);
     return node ? Math.abs(node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset) : Infinity;
   }, anchor);
-  await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
+  await page.getByRole('switch', { name: 'Filter by Explore agent', exact: true }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
-  await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to work', exact: true }).click();
+  await page.getByRole('switch', { name: 'Filter by Explore agent', exact: true }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByRole('button', { name: 'Light', exact: true }).click();
+  await page.getByRole('button', { name: 'Paper', exact: true }).click();
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') {
     await page.screenshot({ path: resolve('.local/product-workspace-light.png') });
     await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-    await page.getByRole('button', { name: 'Jet', exact: true }).click();
+    await page.getByRole('button', { name: 'Jet Black', exact: true }).click();
     await page.getByRole('button', { name: 'Close Workspace settings' }).click();
     await page.screenshot({ path: resolve('.local/product-workspace.png') });
   }
@@ -664,17 +667,17 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Jet is the signature default. No grain or full-screen decorative layer obscures text.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(9, 11, 13)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(8, 8, 8)');
   expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toBe('none');
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await dialog.getByRole('button', { name: 'Midnight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(10, 10, 12)');
-  await dialog.getByRole('button', { name: 'Light', exact: true }).click();
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(9, 13, 22)');
+  await dialog.getByRole('button', { name: 'Paper', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'paper');
-  await dialog.getByRole('button', { name: 'Jet', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Jet Black', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
   await dialog.getByRole('checkbox', { name: /^Low resource mode/ }).check();
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
@@ -905,8 +908,20 @@ test('spatial camera orbits both axes and resumes after manual navigation; reduc
   const first = await map.getAttribute('data-map-yaw');
   await expect.poll(() => map.getAttribute('data-map-yaw')).not.toBe(first);
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
-  await page.mouse.move(600, 400); await page.mouse.down();
-  await page.mouse.move(710, 455, { steps: 12 }); await page.mouse.up();
+  await expect(map).toHaveClass(/exploring/);
+  // Labels move with camera/palette/layout. Drag actual canvas, not a hard-coded
+  // point that can now land on a file label and correctly decline camera input.
+  const drag = await map.evaluate(el => {
+    const r = el.getBoundingClientRect();
+    for (let y = Math.max(200, r.top + 80); y < r.bottom - 180; y += 70) {
+      for (let x = Math.max(300, r.left + 80); x < r.right - 160; x += 90) {
+        if (document.elementFromPoint(x, y)?.tagName === 'CANVAS') return { x, y };
+      }
+    }
+    throw new Error('No exposed canvas for camera drag');
+  });
+  await page.mouse.move(drag.x, drag.y); await page.mouse.down();
+  await page.mouse.move(drag.x + 110, drag.y + 55, { steps: 12 }); await page.mouse.up();
   const stopped = await map.getAttribute('data-map-yaw');
   expect(stopped).not.toBe(first);
   expect(Number(await map.getAttribute('data-map-pitch'))).toBeGreaterThan(.4);

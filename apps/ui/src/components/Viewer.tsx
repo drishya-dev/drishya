@@ -1,3 +1,4 @@
+import { BrandMark } from './BrandMark.tsx';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
@@ -130,12 +131,12 @@ function WorkspaceViewer() {
       <div className="main" ref={main}>
         {mapVisible && <MapCanvas graph={graph} heat={scene.heat} passagePaths={passagePaths} readingRect={reading} />}
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
-        <AgentOverview scene={scene} projection={historical} />
+        {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
         <FileHistory projection={historical} />
         <CurrentFileReader />
       </div>
-      {experience === 'studio' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : experience === 'classic' ? <StudioDock scene={scene} /> : <Dock scene={scene} />}
+      {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
       <PromptComposer key={recordingId} />
@@ -185,14 +186,13 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
   const connection = useApp(s => s.connection);
-  const filter = useApp(s => s.filter);
   const searchOpen = useApp(s => s.searchOpen);
   const exportUrl = id ? source?.exportUrl(id) : undefined;
   return <header className="studio-header crown">
-    <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><span className="brand-mark" /><span>Drishya</span></button>
+    <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>
     <div className="studio-session crown-title"><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title}>{projection.title ?? recording?.title ?? 'Recording'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
-    <div className="crown-actions studio-actions"><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}>⚙</button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
-    {scene.agents.length > 1 && <div className="studio-agents agents" role="group" aria-label="Recorded agents">{scene.agents.map(a => { const agent = projection.agents.find(x => x.id === a.id); return <button key={a.id} data-agent-id={a.id} className={`agent st-${a.state}`} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === a.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(filter?.agentId === a.id ? undefined : { agentId: a.id })}><span className="agent-dot" />{agentName(agent)}<small>{a.state}</small></button>; })}</div>}
+    <div className="crown-actions studio-actions"><span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}>⚙</button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
+
   </header>;
 }
 
@@ -223,7 +223,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
   return (
     <header className="crown">
       <div className="crown-identity"><button className="brand" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (set({ screen: 'home', playing: false }), (location.hash = ''))} title="All recordings">
-        <span className="brand-mark" />
+        <BrandMark />
         Drishya
       </button>
       {source?.sample && <span className="crown-sample">Synthetic demo</span>}</div>

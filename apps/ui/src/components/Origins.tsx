@@ -77,6 +77,17 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       const v = (inHistory ? history : viewer.querySelector('.main') ?? history).getBoundingClientRect();
       return r.width > 0 && r.height > 0 && r.bottom > v.top && r.top < v.bottom && r.right > v.left && r.left < v.right;
     };
+    const originVisible = (el: HTMLElement) => {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height || r.left < 0 || r.right > innerWidth || r.top < 0 || r.bottom > innerHeight) return false;
+      // The right station now owns scrolling. A clipped instrument/agent cannot
+      // be a visible motion origin merely because its dock extends offscreen.
+      for (const selector of ['.workbench-station', '.dock', '.spine', '.folder-tree']) {
+        const pane = el.closest(selector)?.getBoundingClientRect();
+        if (pane && (r.top < pane.top || r.bottom > pane.bottom || r.left < pane.left || r.right > pane.right)) return false;
+      }
+      return true;
+    };
     const node = (tag: 'path' | 'rect' | 'g' | 'circle', cls: string, move?: string) => {
       const el = document.createElementNS(NS, tag);
       el.setAttribute('class', cls);
@@ -119,7 +130,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       const r = restingRect(target); const a = origin.getBoundingClientRect();
       const dx = a.left + a.width / 2 - (r.left + r.width / 2);
       const dy = a.top + a.height / 2 - (r.top + Math.min(22, r.height / 2));
-      const duration = Math.round(620 + Math.min(120, r.width * r.height / 1800));
+      const duration = Math.round(700 + Math.min(120, r.width * r.height / 1800));
       // The builder requested whole-material zoom: one real selectable DOM surface,
       // including its content, grows continuously into its final reading allocation.
       while (runningMotion.current.size >= 36) {
@@ -237,7 +248,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           origin = [...viewer.querySelectorAll<HTMLElement>('[data-mcp-tool]')].find((el) => el.dataset.mcpServer === server && el.dataset.mcpTool === (operation?.origin.type === 'mcp' ? operation.origin.tool : undefined));
           const bounds = origin?.getBoundingClientRect();
           const dock = origin?.closest('.dock')?.getBoundingClientRect();
-          if (!bounds || !dock || bounds.top < dock.top || bounds.bottom > dock.bottom) origin = undefined;
+          if (!bounds || !dock || !origin || !originVisible(origin)) origin = undefined;
           label = origin ? 'MCP tool' : 'MCP server';
           origin ??= [...viewer.querySelectorAll<HTMLElement>('.server-name')].find((el) => el.textContent?.trim() === server);
         } else {
@@ -251,9 +262,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           label = 'Tool instrument';
         }
         if (!origin) continue;
-        const r = origin.getBoundingClientRect();
-        const pane = origin.closest('.dock, .spine')?.getBoundingClientRect();
-        if (r.width <= 0 || r.height <= 0 || r.top < 0 || r.bottom > innerHeight || (pane && (r.bottom <= pane.top || r.top >= pane.bottom))) continue;
+        if (!originVisible(origin)) continue;
         const materialOnly = ready.includes(op.id);
         const move = materialOnly ? 'Lift' : arrivals && animate && plan.arrivals.includes(op.id) && !emitted.has(`start:${op.id}`) ? op.origin.type === 'map' && label !== 'Tool instrument' ? 'Lift' : 'Emit' : undefined;
         if (move) emitted.add(`start:${op.id}`);
@@ -264,7 +273,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           const instrument = viewer.querySelector<HTMLElement>('.instrument.k-read');
           const bounds = instrument?.getBoundingClientRect();
           const dock = instrument?.closest('.dock')?.getBoundingClientRect();
-          if (instrument && bounds && dock && bounds.width > 0 && bounds.top >= dock.top && bounds.bottom <= dock.bottom) tether(instrument, target, 'Read instrument', 'Emit', true);
+          if (instrument && bounds && dock && originVisible(instrument)) tether(instrument, target, 'Read instrument', 'Emit', true);
         }
         tether(origin, target, label, move, op.origin.type !== 'map' || label === 'Tool instrument', materialOnly);
       }
@@ -282,11 +291,11 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       for (const id of plan.prose) {
         if (emitted.has(`prose:${id}`)) continue;
         const target = [...history.querySelectorAll<HTMLElement>('[data-prose-id]')].find((el) => el.dataset.proseId === id);
-        const agentOrigin = [...viewer.querySelectorAll<HTMLElement>('.crown [data-agent-id]')].find((el) => el.dataset.agentId === target?.dataset.agentId);
+        const agentOrigin = [...viewer.querySelectorAll<HTMLElement>('.crown [data-agent-id], .station-agents [data-agent-id], .workbench-agents [data-agent-id]')].find((el) => el.dataset.agentId === target?.dataset.agentId && originVisible(el));
         // Single-agent sessions omit the badge; their captured session title is the home.
         const origin = agentOrigin ?? (projection.agents.length === 1 ? viewer.querySelector<HTMLElement>('.crown-title') : undefined);
         const r = origin?.getBoundingClientRect();
-        if (target && origin && visible(target) && r && r.width > 0 && r.left >= 0 && r.right <= innerWidth) {
+        if (target && origin && visible(target) && r && originVisible(origin)) {
           motionTarget = target;
           emitted.add(`prose:${id}`);
           tether(origin, target, agentOrigin ? 'Agent presence' : 'Session presence', 'Surface');
@@ -345,12 +354,12 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
     // readiness, not text changes or animation frames; historical mounts never gain a cue.
     const materials = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); });
     materials.observe(history, { childList: true, subtree: true });
-    history.addEventListener('scroll', scroll, { passive: true });
+    viewer.addEventListener('scroll', scroll, { passive: true, capture: true });
     viewer.addEventListener('click', interrupt, true);
     viewer.addEventListener('keydown', interrupt);
     document.addEventListener('visibilitychange', interrupt);
     preference.addEventListener('change', interrupt);
-    return () => { resize.disconnect(); materials.disconnect(); history.removeEventListener('scroll', scroll); viewer.removeEventListener('click', interrupt, true); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
+    return () => { resize.disconnect(); materials.disconnect(); viewer.removeEventListener('scroll', scroll, true); viewer.removeEventListener('click', interrupt, true); viewer.removeEventListener('keydown', interrupt); document.removeEventListener('visibilitychange', interrupt); preference.removeEventListener('change', interrupt); cancelAnimationFrame(raf); for (const child of [...root.children]) if (!child.hasAttribute('data-move')) child.remove(); };
   }, [scene, projection, motion, hoveredOp, selectedOp, mapVisible, explore, follow, paged, theme, compareAgents, settingsOpen, filePanel, mode, stagedArrival, isProgrammaticScroll]);
   return typeof document === 'undefined' ? null : createPortal(<svg className="origins" ref={svg} aria-hidden="true" />, document.body);
 }

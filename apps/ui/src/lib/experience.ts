@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 export type Experience = 'classic' | 'studio' | 'legacy';
-const key = 'drishya-experience-v2';
+const key = 'drishya-experience-v3';
 const query = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('experience');
 let current: Experience = query === 'classic' || query === 'studio' || query === 'legacy' ? query : 'classic';
 if (!query) { try { const saved = localStorage.getItem(key); if (saved === 'classic' || saved === 'studio' || saved === 'legacy') current = saved; } catch { /* Private browsing still has a working default. */ } }

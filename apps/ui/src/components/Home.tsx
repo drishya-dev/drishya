@@ -1,3 +1,4 @@
+import { BrandMark } from './BrandMark.tsx';
 import { useEffect, useState } from 'react';
 import type { DiscoveredSource, RecordingSummary } from '@drishya/contracts';
 import type { DiscoveryError } from '../api.ts';
@@ -80,7 +81,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     <div className="home">
       <header className="home-head">
         <div className="brand static">
-          <span className="brand-mark" />
+          <BrandMark />
           Drishya
         </div>
         <span className="muted">See your coding agents work on your own code. Connect a native session when you want to continue.</span>

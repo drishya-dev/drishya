@@ -1,0 +1,118 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { App } from '../../apps/daemon/src/app.ts';
+import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+
+let dir: string, app: App, server: RunningServer;
+test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-classic-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-classic-test' }); });
+test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
+const url = () => new URL('/?demo&experience=classic', server.launchUrl).href;
+
+test('continuous explorer reaches every file with bounded rows and keyboard navigation', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const template = sample.graph.nodes[0];
+  const types = ['ts', 'tsx', 'js', 'json', 'py', 'md', 'css', 'svg', 'yml', 'rs'];
+  sample.graph.nodes = Array.from({ length: 600 }, (_, n) => ({ ...template, id: `file-${n}`, path: `file-${String(n).padStart(3, '0')}.${types[n % types.length]}` }));
+  sample.graph.edges = [];
+  await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url());
+  const tree = page.getByRole('tree', { name: 'Workspace files' });
+  await expect(tree.getByRole('treeitem').first()).toHaveAttribute('title', 'file-000.ts');
+  expect(await tree.getByRole('treeitem').count()).toBeLessThan(80);
+  await expect(page.locator('.folder-explorer .folder-pages')).toHaveCount(0);
+  expect(await tree.locator('.format-tsx').count()).toBeGreaterThan(0);
+  expect(await tree.locator('.format-py').first().evaluate(el => getComputedStyle(el).color)).not.toBe(await tree.locator('.format-ts').first().evaluate(el => getComputedStyle(el).color));
+  await tree.getByRole('treeitem').first().focus();
+  await page.keyboard.press('End');
+  await expect(tree.getByRole('treeitem').last()).toHaveAttribute('title', 'file-599.rs');
+  await expect(tree.getByRole('treeitem').last()).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(tree.getByRole('treeitem').first()).toBeFocused();
+  await page.mouse.move((await tree.boundingBox())!.x + 60, (await tree.boundingBox())!.y + 100);
+  await page.mouse.wheel(0, 2000);
+  await expect.poll(() => tree.evaluate(el => el.scrollTop)).toBeGreaterThan(1000);
+  expect(await tree.getByRole('treeitem').count()).toBeLessThan(80);
+  const offset = await tree.evaluate(el => el.scrollTop);
+  await page.getByRole('button', { name: 'Minimize folders' }).click();
+  await page.getByRole('button', { name: 'Show session folders' }).click();
+  await expect(tree).toBeVisible();
+  expect(await tree.evaluate(el => el.scrollTop)).toBeCloseTo(offset, 0);
+  await page.getByRole('textbox', { name: 'Find session files' }).fill('file-599');
+  await expect(tree.getByRole('treeitem')).toHaveCount(1);
+  await expect(tree.getByRole('treeitem')).toHaveAttribute('title', 'file-599.rs');
+});
+
+test('Classic evidence and agent rail, explicit palettes and map reading work across widths', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url());
+  await expect(page.locator('.workbench-station')).toBeVisible();
+  await expect(page.locator('.workspace-header [data-agent-id]')).toHaveCount(0);
+  await expect(page.getByRole('switch', { name: 'Agent overview', exact: true })).toHaveCount(0);
+  const agent = page.getByRole('switch', { name: 'Filter by Explore agent', exact: true });
+  await expect(agent).toHaveAttribute('title', /surrounding history stays visible/);
+  await agent.click(); await expect(agent).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.history .filtered-out').first()).toBeAttached();
+  await agent.click();
+  await page.getByRole('button', { name: 'Review work', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Review work' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  const settings = page.getByRole('button', { name: 'Workspace settings' });
+  expect(await settings.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(22);
+  await settings.click();
+  const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
+  await expect(dialog.getByRole('button', { name: 'System', exact: true })).toHaveCount(0);
+  for (const [name, palette, bg] of [['Midnight', 'midnight', 'rgb(9, 13, 22)'], ['Paper', 'paper', 'rgb(244, 245, 242)'], ['Jet Black', 'jet', 'rgb(8, 8, 8)']]) {
+    await dialog.getByRole('button', { name, exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-palette', palette);
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(bg);
+  }
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await dialog.getByRole('button', { name: 'Close Workspace settings' }).click();
+  for (const [width, height] of [[1920, 1080], [1280, 720], [900, 500], [768, 900], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    if (width <= 820) await page.getByRole('button', { name: 'Tools', exact: true }).click();
+    await expect(page.locator('.workbench-station')).toBeVisible();
+    const bounds = (await page.locator('.workbench-station').boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    await expect(page.getByRole('group', { name: 'Recorded agents' })).toBeVisible();
+    if (width <= 820) await page.getByRole('button', { name: 'Close tools', exact: true }).click();
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.screenshot({ path: resolve('.local/classic-evidence-desk.png') });
+  await page.getByRole('button', { name: 'Explore repository map' }).click();
+  await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('guard.ts');
+  await page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
+  await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  await expect(reader.locator('.file-workspace-layout')).toHaveClass(/trail-hidden/);
+  await expect(reader.locator('.code .ln').first()).toBeInViewport();
+});
+
+test('expanding a distant folder preserves its scroll anchor and sibling positions', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const template = sample.graph.nodes[0];
+  sample.graph.nodes = Array.from({ length: 160 }, (_, n) => ({ ...template, id: `folder-${n}/file.ts`, path: `folder-${String(n).padStart(3, '0')}/file.ts` })); sample.graph.edges = [];
+  await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(url());
+  const tree = page.getByRole('tree', { name: 'Workspace files' });
+  await tree.getByRole('treeitem').first().focus(); await page.keyboard.press('End');
+  const folder = tree.getByRole('treeitem', { name: /folder-159/ });
+  await expect(folder).toBeFocused();
+  const before = (await folder.boundingBox())!;
+  const top = await tree.evaluate(el => el.scrollTop);
+  await folder.click();
+  await expect(folder).toHaveAttribute('aria-expanded', 'true');
+  await expect(folder).toBeFocused();
+  expect(Math.abs((await folder.boundingBox())!.y - before.y)).toBeLessThan(2);
+  expect(await tree.evaluate(el => el.scrollTop)).toBeGreaterThanOrEqual(top - 2);
+  const child = tree.locator('[title="folder-159/file.ts"]');
+  await expect(child).toHaveAttribute('aria-posinset', '1');
+  await expect(child).toHaveAttribute('aria-setsize', '1');
+  await folder.click(); await expect(folder).toHaveAttribute('aria-expanded', 'false');
+  await expect(folder).toBeFocused();
+});

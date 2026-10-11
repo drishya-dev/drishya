@@ -117,10 +117,7 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
     await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeGreaterThan(20);
     const after = (await nav.boundingBox())!;
     expect(Math.abs(after.y - before.y)).toBeLessThan(1);
-    await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
-    const comparison = page.getByRole('region', { name: 'Agent comparison' });
-    await expect(comparison).toBeVisible();
-    expect((await comparison.boundingBox())!.y).toBeGreaterThanOrEqual(after.y + after.height);
+    await expect(page.getByRole('switch', { name: 'Agent overview', exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: 'Explore repository map' }).click();
     await expect(page.getByRole('button', { name: 'Back to work' })).toBeVisible();
     await page.getByRole('button', { name: 'Back to work' }).click();

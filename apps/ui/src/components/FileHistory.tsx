@@ -33,7 +33,8 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const step = useApp((s) => s.step);
   const revisions = useApp((s) => s.renderedRevisions);
   const [trailWidth, setTrailWidth] = useState(230);
-  const [trailHidden, setTrailHidden] = useState(false);
+  // The map's narrower modeless reader must show source on its first frame.
+  const [trailHidden, setTrailHidden] = useState(explore);
   const [query, setQuery] = useState('');
   const [start, setStart] = useState(0);
   const [retry, setRetry] = useState(0);

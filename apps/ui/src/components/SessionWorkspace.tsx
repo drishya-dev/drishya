@@ -117,7 +117,10 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     }
     return initial;
   });
-  const [page, setPage] = useState(0);
+  const treeElement = useRef<HTMLDivElement>(null);
+  const [treeScroll, setTreeScroll] = useState(0);
+  const [treeHeight, setTreeHeight] = useState(600);
+  const folderAnchor = useRef<{ path: string; offset: number } | undefined>(undefined);
   const [error, setError] = useState<string>();
   useEffect(() => {
     if (graph || !source || !id) return;
@@ -141,7 +144,40 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     }
     return rows;
   }, [paths, query, opened]);
-  useEffect(() => setPage(0), [query, opened]);
+  const siblingPositions = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    for (const row of tree) {
+      const parent = row.depth ? row.path.slice(0, row.path.lastIndexOf('/')) : '';
+      const group = groups.get(parent) ?? []; group.push(row.path); groups.set(parent, group);
+    }
+    const positions = new Map<string, { position: number; size: number }>();
+    for (const group of groups.values()) group.forEach((path, index) => positions.set(path, { position: index + 1, size: group.length }));
+    return positions;
+  }, [tree]);
+  // One continuous scrollbar; a bounded DOM window keeps large repositories cheap.
+  const rowHeight = 32;
+  const firstRow = Math.max(0, Math.floor(treeScroll / rowHeight) - 10);
+  const lastRow = Math.min(tree.length, firstRow + Math.ceil(treeHeight / rowHeight) + 24);
+  useLayoutEffect(() => {
+    const el = treeElement.current;
+    if (!el) return;
+    // Hiding the explorer unmounts its scroller, not its retained window state.
+    // Restore the real offset before paint so reopening cannot show a blank spacer.
+    el.scrollTop = treeScroll; setTreeScroll(el.scrollTop);
+    const measure = () => setTreeHeight(el.clientHeight);
+    measure();
+    const observer = new ResizeObserver(measure); observer.observe(el);
+    return () => observer.disconnect();
+  }, [hidden]);
+  useLayoutEffect(() => { treeElement.current?.scrollTo({ top: 0 }); setTreeScroll(0); }, [query]);
+  useLayoutEffect(() => {
+    const el = treeElement.current; if (!el) return;
+    const anchor = folderAnchor.current; folderAnchor.current = undefined;
+    const index = anchor ? tree.findIndex(row => row.path === anchor.path) : -1;
+    const top = index >= 0 ? index * rowHeight - anchor!.offset : el.scrollTop;
+    el.scrollTop = Math.max(0, Math.min(top, tree.length * rowHeight - el.clientHeight));
+    setTreeScroll(el.scrollTop);
+  }, [tree]);
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
   if (hidden) return null;
   return <aside className="folder-explorer spine" aria-label="Session folders">
@@ -149,14 +185,27 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find session files" placeholder="Find files…" value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" onClick={() => void approve().catch(e => setError(e.message))}>Enable workspace reading<small>Read current files in this folder</small></button>}
     {error && <p className="bad small" role="alert">{error}</p>}
-    <div className="folder-tree" role="tree" aria-label="Workspace files">
-      {tree.slice(page * 120, (page + 1) * 120).map(row => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-level={row.depth + 1} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12 }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
-        if (row.folder) setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); return next; });
+    <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-tree-index]');
+      if (!target || !tree.length) return;
+      e.preventDefault();
+      const index = Number(target.dataset.treeIndex);
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? tree.length - 1 : Math.max(0, Math.min(tree.length - 1, index + (e.key === 'ArrowDown' ? 1 : -1)));
+      const el = treeElement.current!;
+      if (next * rowHeight < el.scrollTop) el.scrollTop = next * rowHeight;
+      else if ((next + 1) * rowHeight > el.scrollTop + el.clientHeight) el.scrollTop = (next + 1) * rowHeight - el.clientHeight;
+      setTreeScroll(el.scrollTop);
+      requestAnimationFrame(() => el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true }));
+    }}>
+      <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
+      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
+        if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); return next; }); }
         else useApp.setState(workspace?.approved ? { currentFile: row.path } : { filePanel: row.path });
       }}><span className="folder-disclosure" aria-hidden="true">{row.folder ? opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span>{row.name}</span></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : 'No relative paths captured yet'}</p>}
+      <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>
-    {tree.length > 120 && <div className="folder-pages"><button disabled={!page} onClick={() => setPage(p => p - 1)}>Previous</button><span>{page + 1} / {Math.ceil(tree.length / 120)}</span><button disabled={(page + 1) * 120 >= tree.length} onClick={() => setPage(p => p + 1)}>Next</button></div>}
   </aside>;
 }
 

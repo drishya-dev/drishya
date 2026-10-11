@@ -30,8 +30,10 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
   if (await workspaceConsent.count()) await workspaceConsent.click();
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
-  if (await gitConsent.count()) await gitConsent.click();
-  else await reader.getByRole('button', { name: 'Refresh changes' }).click();
+  const refresh = reader.getByRole('button', { name: 'Refresh changes' });
+  await expect(gitConsent.or(refresh)).toBeVisible();
+  if (await gitConsent.isVisible()) await gitConsent.click();
+  else await refresh.click();
   await expect(reader.locator('.git-patch')).toContainText('total = 2');
   await reader.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
   await reader.getByRole('textbox', { name: 'Local review note' }).fill('Inspected the total');

@@ -1,3 +1,4 @@
+import { BrandMark } from './BrandMark.tsx';
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
@@ -30,7 +31,7 @@ export function WorkbenchHeader({ projection, scene, children }: { projection: P
   const agents = projection.agents.filter(a => scene.agents.some(shown => shown.id === a.id));
   const harnesses = [...new Set(agents.map(a => a.harness))];
   return <header className="workbench-header">
-    <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><span className="brand-mark" />Drishya<span className="workbench-edition">STUDIO</span></button>
+    <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark />Drishya<span className="workbench-edition">STUDIO</span></button>
     <div className="workbench-session studio-session crown-title"><h1 title={projection.title}>{projection.title ?? recording?.title ?? 'Recording'}</h1><span className={source?.sample ? 'crown-sample' : ''}>{source?.sample ? 'Synthetic sample' : source?.kind === 'bundle' ? 'Offline recording' : harnesses.join(' + ')}</span>{connection === 'reconnecting' && <span role="status">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
     <div className="workbench-utilities">{children}</div>
     {agents.length > 1 && <div className="workbench-agents" role="group" aria-label="Recorded agents">{agents.map(agent => <button key={agent.id} data-agent-id={agent.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === agent.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(filter?.agentId === agent.id ? undefined : { agentId: agent.id })}><span className="agent-dot" />{agentName(agent)}</button>)}</div>}
@@ -72,9 +73,16 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
   const id = useApp(s => s.recordingId);
   const mode = useApp(s => s.mode);
   const primary = projection.agents.find(a => scene.agents.some(shown => shown.id === a.id) && !a.parentId);
+  const filter = useApp(s => s.filter);
   return <div className="workbench-station">
     <section className="workbench-review" aria-label="Evidence desk"><span className="desk-caption">Evidence desk</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /></div><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Captured changes and checks. Current Git stays separate.'}</p></section>
     <div className="workbench-runtime"><span className="runtime-dot" /><span>{scene.agents.length > 1 ? `${scene.agents.length} recorded agents` : agentName(primary)}<small>{scene.agents.filter(a => a.state === 'active').length ? 'Captured activity in progress' : 'Recorded work'}</small></span></div>
+    {scene.agents.length > 1 && <div className="station-agents" role="group" aria-label="Recorded agents">{scene.agents.map(state => {
+      const agent = projection.agents.find(a => a.id === state.id);
+      const parent = projection.agents.find(a => a.id === state.parentId);
+      const description = `${agent?.harness ?? 'Harness'} · ${state.state}${parent ? ` · child of ${agentName(parent)}` : ''}. Focus this agent; surrounding history stays visible. Click again to show everyone.`;
+      return <button key={state.id} data-agent-id={state.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === state.id} title={description} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(filter?.agentId === state.id ? undefined : { agentId: state.id })}><span className="agent-dot" /><span>{agentName(agent)}<small>{state.state}</small></span></button>;
+    })}</div>}
     {children}
   </div>;
 }
