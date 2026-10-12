@@ -80,6 +80,32 @@
 .workspace-menu .usage-peek dd { text-align: right; }
 .evidence-navigation { display: flex; gap: 4px; padding: 3px 0 8px; flex: none; }
 .evidence-navigation button { min-height: 30px; }
+.connected-workspace .prompt-composer .composer-target { display: flex; align-items: center; gap: 10px; padding: 0 2px 7px; font-size: 10px; line-height: 1.4; color: var(--t3); }
+.composer-target > span { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.composer-target strong { color: var(--t2); font-size: 11px; flex: none; }
+.connected-workspace .prompt-composer .composer-target strong { display: inline; }
+:root[data-experience=classic] .connected-workspace .prompt-composer form,
+:root[data-experience=studio] .connected-workspace .prompt-composer form { display: block; }
+:root[data-experience=classic] .connected-workspace .prompt-composer .composer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.composer-target .composer-workspace { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-target code { color: var(--t3); font-size: 9px; flex: none; background: none; padding: 0; }
+.composer-target > small { flex: none; font-size: 10px; margin-left: auto; }
+.connected-workspace .prompt-composer { padding: 12px 14px; }
+.connected-workspace .prompt-composer .composer-actions { margin-top: 6px; min-height: 34px; }
+.connected-workspace .prompt-composer .composer-actions :is(.send-prompt,.stop-turn) { width: 34px; height: 34px; }
+.connected-workspace .prompt-composer .composer-add { width: 32px; min-height: 32px; border-radius: 7px; }
+.connected-workspace .prompt-composer .composer-add:hover { background: var(--s2); }
+.connected-workspace .prompt-composer .native-options { position: absolute; left: 54px; bottom: 20px; margin: 0; max-width: calc(100% - 120px); }
+.prompt-composer .native-options > summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 5px; font-size: 10px; }
+.prompt-composer .native-options-menu { max-height: min(420px, 60dvh); overflow: auto; width: min(310px, calc(100vw - 80px)); }
+.prompt-composer .composer-add-menu { max-height: 50dvh; overflow: auto; }
+.connected-workspace .prompt-composer .attachment-chip { max-width: min(240px, 100%); }
+.connected-workspace .prompt-composer .send-confirmation { text-align: left; }
+@media (max-width: 600px) {
+  .composer-target code { display: none; }
+  .connected-workspace .prompt-composer { padding: 10px; }
+  .connected-workspace .prompt-composer .native-options { left: 48px; bottom: 17px; }
+}
 .import-destination { padding: 7px 0; border-bottom: 1px solid var(--line); }
 .import-destination > div:first-child { display: flex; align-items: center; gap: 7px; }
 .import-destination > div:first-child > span { min-width: 0; overflow-wrap: anywhere; flex: 1; font: 12px/1.5 var(--mono); }

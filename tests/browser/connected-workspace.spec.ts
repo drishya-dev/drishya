@@ -275,6 +275,11 @@ test('the composer submits through the real API transport, handles one approval 
   expect((await promptInput.boundingBox())!.height).toBeLessThan(expandedHeight);
   expect((await composer.boundingBox())!.height).toBeLessThan(150);
   await expect(composer.getByRole('button', { name: 'Stop turn' }).locator('svg')).toHaveCount(1);
+  await expect(promptInput).toBeEnabled();
+  await promptInput.fill('Draft the next turn without sending it');
+  await promptInput.press('Enter');
+  await expect(composer.locator('.tool-approval')).toHaveCount(1);
+  await expect(promptInput).toHaveValue('Draft the next turn without sending it');
   await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
   const inventory = page.locator('.runtime-tools');
   await inventory.locator('summary').click();
@@ -285,9 +290,28 @@ test('the composer submits through the real API transport, handles one approval 
   await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeVisible();
   await expect(composer.locator('.controller-receipt')).toHaveCount(0);
   await expect(composer).not.toContainText('Synthetic native transport completed the submitted prompt.');
+  await expect(promptInput).toHaveValue('Draft the next turn without sending it');
   expect((await composer.boundingBox())!.height).toBeLessThan(150);
   await expect(page.getByRole('complementary',{name:'Session folders'})).toHaveCount(1);
   if(process.env.DRISHYA_REVIEW_SHOTS==='1') await page.screenshot({path:resolve('.local/connected-composer.png')});
+});
+
+test('composer text drafts survive returning to the same recording without persisting attachments', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  const input = composer.getByRole('textbox', { name: 'Prompt for selected harness session' });
+  await input.fill('Keep this local draft');
+  await expect(composer.locator('.composer-target')).toContainText('Claude Code');
+  await expect(composer.locator('.composer-target strong')).toBeVisible();
+  const field = (await input.boundingBox())!;
+  const add = (await composer.getByRole('button', { name: 'Add files or folders' }).boundingBox())!;
+  expect(add.y).toBeGreaterThanOrEqual(field.y + field.height);
+  await page.getByRole('button', { name: 'Drishya', exact: true }).click();
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await expect(input).toHaveValue('Keep this local draft');
+  await expect(composer.locator('.prompt-attachments')).toHaveCount(0);
+  await page.screenshot({ path: resolve('.local/professional-composer.png') });
 });
 
 test('visible new material animates with Follow off without moving the reading position', async ({ page }) => {

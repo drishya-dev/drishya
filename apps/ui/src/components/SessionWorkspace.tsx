@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type CurrentFile, type PromptAttachment, type TurnOptions } from '../api.ts';
 import { promptFiles } from '../lib/prompt-files.ts';
+import { promptDrafts } from '../lib/prompt-drafts.ts';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -281,10 +282,11 @@ export function PromptComposer() {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId);
   const recording = useApp(s => s.recording);
-  const { workspace, controller, error: connectionError, approve, refresh, submit, inspect } = useSessionWorkspace();
+  const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect } = useSessionWorkspace();
   const [options, setOptions] = useState<TurnOptions>({});
   useEffect(() => { setOptions({}); }, [id]);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, updatePrompt] = useState(() => source && id ? promptDrafts(source).get(id) : '');
+  const setPrompt = (text: string) => { if (source && id) promptDrafts(source).set(id, text); updatePrompt(text); };
   const [exclusive, setExclusive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -342,24 +344,25 @@ export function PromptComposer() {
   }, [source, id]);
   if (source?.kind !== 'daemon' || !id || id.includes('+')) return null;
   const running = controller && ['connecting', 'running', 'approval'].includes(controller.state);
+  const statusLabel = submitting ? 'Sending…' : busy ? 'Working…' : !controller ? 'Checking…' : !controller.available ? 'CLI unavailable' : !workspace?.approved ? 'Workspace access required' : controller.state === 'failed' ? 'Turn failed' : controller.state === 'stopped' ? 'Stopped' : controller.state === 'approval' ? 'Approval needed' : controller.state === 'connecting' ? 'Connecting…' : controller.state === 'running' ? controller.phase === 'thinking' ? 'Thinking…' : 'Running here' : 'Ready';
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true); setError(undefined);
     try { await fn(); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   return <section ref={element} className="prompt-composer open" aria-label="Harness prompt">
-    <div className="composer-target sr-only"><small title={workspace?.root}>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'} · {controller?.state ?? 'checking'}</small></div>
+    <div className="composer-target"><span title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><strong>{recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness ?? 'Native harness'}</strong><span className="composer-workspace">{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'}</span><code>{id.slice(-8)}</code></span><small role="status">{statusLabel}</small></div>
       {!workspace?.approved && <button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(approve)}>Enable this workspace</button>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
       <input hidden ref={fileInput} type="file" multiple aria-label="Choose prompt files" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <input hidden ref={folderInput} type="file" multiple {...{ webkitdirectory: '' }} aria-label="Choose prompt folder" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); setAttachments([]); setExclusive(false); setConfirmSend(false); }); }}>
         {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<span>{a.name}</span><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { setAttachments(items => items.filter((_, i) => i !== index)); setExclusive(false); setConfirmSend(false); }}>×</button></span>)}</div>}
-        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder="Ask your agent…" rows={1} onPaste={e => { const files = [...e.clipboardData.items].filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => !!file); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={!!running || busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
+        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : 'Ask your agent…'} rows={1} onPaste={e => { const files = [...e.clipboardData.items].filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => !!file); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
         <div className="composer-actions"><button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={() => setAddOpen(!addOpen)}>+</button>{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title="Send prompt" disabled={busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></button>}</div>
         {addOpen && <div className="composer-add-menu"><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}
         {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || busy}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
       </form>
-      <details className="permission-policy native-options"><summary>{controller?.settings?.model ?? 'Native settings'} · Ask permission</summary><div className="native-options-menu">
+      <details className="permission-policy native-options"><summary>{options.model ?? controller?.settings?.model ?? 'Native settings'} · {controller?.settings?.permission ?? 'Native policy'}</summary><div className="native-options-menu">
         <button disabled={!!running || busy || !workspace?.approved} onClick={() => inspect && void act(inspect)}>Read native settings</button>
         {!!controller?.settings && <><small>{controller.settings.scope === 'connected-session' ? 'Connected session' : 'Workspace defaults'} · {controller.settings.permission ?? 'Policy reported after connecting'}{controller.settings.sandbox && ` · ${controller.settings.sandbox}`}</small>
           <label>Model<select disabled={!!running || busy} value={options.model ?? ''} onChange={e => { setOptions(e.target.value ? { model: e.target.value } : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>

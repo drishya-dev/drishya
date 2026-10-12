@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**12 October composer increment:** [53](review/53-professional-composer.md) implements the first composer part of 52: visible target, compact input/footer, truthful native policy summary and bounded memory-only text drafts. Shared interaction craft and Home grouping remain planned.
+
 **12 October reading increment:** [51](review/51-evidence-reading-navigation.md) implements bounded evidence Back/Forward and explicit captured/current dependency destinations. [52](review/52-composer-interactions-recordings-plan.md) adds the planned composer, interaction and workspace/time Home work; it is not an implementation claim. Classic, evidence truth and native/release gates remain unchanged.
 
 **Latest Classic correction:** [49](review/49-classic-disclosures-and-critical-review.md) adds inline Usage and expandable agent families plus precise captured search reading, mobile/session/keyboard repairs. It supplements 48; native acceptance and remaining developer jobs are not declared complete.
