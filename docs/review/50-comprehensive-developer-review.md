@@ -1,5 +1,7 @@
 # Classic comprehensive developer, daily-user and design review
 
+**Builder additions, 12 October:** [52](52-composer-interactions-recordings-plan.md) adds an explicit professional prompt-composer pass, a whole-product click/menu/focus/motion audit and recordings Home organization by actual workspace and time. These are planned tasks, not completed features. Each coherent implementation is to have its own verified commit. Installed design/motion skills apply to UI work.
+
 **Implementation annotation:** [49](49-classic-disclosures-and-critical-review.md) records same-pass corrections and regression checks. Findings 1 and 3, the mobile duplicate-icon/global modified-hotkey defects, Usage clipping and agent disclosure are fixed. Finding 7 (single-evidence selection lost on action paging) was also fixed after this report's final recheck, with the distant-evidence browser regression passing. All other recommendations retain their evidence/priority; an acceptance gap is not a demonstrated native bug.
 
 11 October 2026. Independent read-only review for the current builder session. No source mutations, native prompts, uploads, account turns, CI dispatch or installs. Only this local report was written.
