@@ -19,7 +19,6 @@ import { ReadingReferenceProvider } from './ReadingReference.tsx';
 import { EvidenceNavigationProvider } from './EvidenceNavigation.tsx';
 import { sampleActivity } from '../lib/activity.ts';
 import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComposer, useSessionWorkspace } from './SessionWorkspace.tsx';
-import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
 import { useExperience } from '../lib/experience.ts';
@@ -32,7 +31,6 @@ export function Viewer() {
 
 function WorkspaceViewer() {
   const experience = useExperience();
-  useDismissMenus();
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
   const historyPage = useApp((s) => s.historyPage);

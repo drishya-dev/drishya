@@ -161,7 +161,7 @@ function useKeyboard() {
         else if (s.filter) s.setFilter(undefined);
         return;
       }
-      if (t.closest('input, textarea, select, button, a, [role="slider"], [role="dialog"], .op-expanded') || t.isContentEditable) return;
+      if (t.closest('input, textarea, select, button, a, summary, [role="slider"], [role="dialog"], .op-expanded') || t.isContentEditable) return;
       if (!document.querySelector('.t-controls') && [' ', 'ArrowRight', 'ArrowLeft', 'Home', 'End', 'e', 'E', 'f', 'F'].includes(k)) return;
       if (k === ' ') {
         e.preventDefault();

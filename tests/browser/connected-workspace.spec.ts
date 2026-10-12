@@ -152,6 +152,7 @@ test('native model settings and attachment menus dismiss outside without detachi
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
+  await expect(composer.locator('.composer-target')).not.toContainText('Checking…');
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
   if (await enable.count()) await enable.click();
   const policy = composer.locator('.permission-policy');
@@ -164,8 +165,13 @@ test('native model settings and attachment menus dismiss outside without detachi
   await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'true');
   await composer.getByRole('button', { name: 'Add files or folders' }).click();
   await expect(composer.locator('.composer-add-menu')).toBeVisible();
+  await composer.locator('.composer-add-menu').getByRole('button', { name: 'Files or images' }).focus();
+  await page.keyboard.press('Escape');
+  await expect(composer.locator('.composer-add-menu')).toBeHidden();
+  await expect(composer.getByRole('button', { name: 'Add files or folders' })).toBeFocused();
+  await composer.getByRole('button', { name: 'Add files or folders' }).click();
   await page.locator('.crown-title').click({ force: true });
-  await expect(composer.locator('.composer-add-menu')).toHaveCount(0);
+  await expect(composer.locator('.composer-add-menu')).toBeHidden();
   const menu = page.locator('.workspace-menu');
   await menu.locator(':scope > summary').click();
   await page.locator('.crown-title').click({ force: true });
