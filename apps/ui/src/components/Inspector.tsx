@@ -9,6 +9,7 @@ import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { summarizeInput } from './History.tsx';
 import { VerificationPanel } from './Verification.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
+import { EvidenceNavigation } from './EvidenceNavigation.tsx';
 
 export function Inspector({ projection }: { projection: Projection }) {
   const width = useApp(s => s.inspectorWidth);
@@ -37,6 +38,7 @@ export function Inspector({ projection }: { projection: Projection }) {
       <h2 className="insp-title">
         <span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{KIND_LABEL[op.kind]}</span> {op.title}
       </h2>
+      <EvidenceNavigation />
       <div className="insp-status">
         <span className={`pill st-${op.status}`}>{op.status === 'ok' ? 'Succeeded' : op.status === 'error' ? 'Failed' : op.status === 'running' ? 'Running' : 'Outcome not captured'}</span>
         <ProvenanceBadge p={op.classification} />
@@ -195,7 +197,7 @@ function EditDetail({ op, after, afterProv }: { op: Operation; after?: string; a
   const d = op.detail;
   if (d.kind !== 'edit') return null;
   return <>
-    {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : after ? <>
+    {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} navigationKey={op.id} /> : after ? <>
       {afterProv && <ProvenanceBadge artifact={afterProv} />}
       {afterProv?.note && <p className="insp-note">{afterProv.note}</p>}
       <ArtifactCode id={after} path={d.path} />

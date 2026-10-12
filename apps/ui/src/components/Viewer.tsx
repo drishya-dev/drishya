@@ -16,6 +16,7 @@ import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
 import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 import { ReadingReferenceProvider } from './ReadingReference.tsx';
+import { EvidenceNavigationProvider } from './EvidenceNavigation.tsx';
 import { sampleActivity } from '../lib/activity.ts';
 import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComposer, useSessionWorkspace } from './SessionWorkspace.tsx';
 import { useDismissMenus } from '../lib/dismiss-menus.ts';
@@ -26,7 +27,7 @@ import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry 
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
-  return <ReadingReferenceProvider><SessionWorkspaceProvider key={id}><WorkspaceViewer /></SessionWorkspaceProvider></ReadingReferenceProvider>;
+  return <ReadingReferenceProvider><SessionWorkspaceProvider key={id}><EvidenceNavigationProvider><WorkspaceViewer /></EvidenceNavigationProvider></SessionWorkspaceProvider></ReadingReferenceProvider>;
 }
 
 function WorkspaceViewer() {

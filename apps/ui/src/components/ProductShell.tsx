@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef, type ReactNode, type CSSProperties } from 'react';
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
 import { useExperience, setExperience } from '../lib/experience.ts';
+import { useEvidenceScroll } from './EvidenceNavigation.tsx';
 
 export function ReadingDialog({ title, close, children, className = '', modeless = false, style }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties }) {
   const ref = useRef<HTMLDialogElement>(null);
+  useEvidenceScroll(ref, `dialog/${className}`);
   const titleId = useId();
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;

@@ -127,12 +127,16 @@ test('source reading links qualified current imports to a bounded map neighborho
   await expect(reader.locator('.import-context')).toContainText('Current index');
   await expect(reader.locator('.import-context')).toContainText('src/other.ts');
   await expect(reader.locator('.import-context')).toContainText('Imported by');
-  await reader.locator('.import-context').getByRole('button', { name: /src\/other.ts/ }).click();
+  await reader.locator('.import-context').getByRole('button', { name: 'Read current file src/other.ts' }).click();
   const neighbor = page.getByRole('dialog', { name: 'src/other.ts', exact: true });
   await expect(neighbor).toContainText('On disk');
   await expect(neighbor).toContainText("import { fromSelectedWorkspace }");
+  await neighbor.getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await expect(reader).toContainText('On disk');
+  await reader.getByRole('button', { name: 'Forward in reading history', exact: true }).click();
+  await expect(neighbor).toContainText("import { fromSelectedWorkspace }");
   await neighbor.locator('.import-context summary').click();
-  await neighbor.locator('.import-context').getByRole('button', { name: /src\/actual.ts/ }).click();
+  await neighbor.locator('.import-context').getByRole('button', { name: 'Read current file src/actual.ts' }).click();
   await reader.locator('.import-context summary').click();
   await reader.getByRole('button', { name: 'Focus on map' }).click();
   await expect(page.locator('.map')).toHaveAttribute('data-map-scope', 'direct-neighborhood');

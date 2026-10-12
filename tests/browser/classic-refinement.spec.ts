@@ -137,6 +137,65 @@ test('a captured search hit opens its exact line instead of a no-source dead end
   await expect(page.getByRole('button', { name: 'Back to work', exact: true })).toHaveCount(0);
 });
 
+test('reading Back restores a captured page, search, selected line, wrap and scroll after a dependency detour', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const read = sample.projection.operations.find((op: any) => op.detail.kind === 'read' && op.detail.path === 'src/checkout/guard.ts');
+  const artifact = sample.projection.artifacts.find((item: any) => item.id === read.detail.excerptArtifactId);
+  sample.artifactText[artifact.id] = Array.from({ length: 800 }, (_, n) => `export const line_${n + 1} = ${n + 1};`).join('\n');
+  artifact.range = { start: 1, end: 800 };
+  await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(url());
+  await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  await reader.getByRole('button', { name: 'Next lines', exact: true }).click();
+  await expect(reader.locator('[data-source-line="201"]')).toBeVisible();
+  await reader.getByRole('searchbox', { name: 'Find in loaded source page' }).fill('line_210');
+  await reader.getByRole('button', { name: 'Next match', exact: true }).click();
+  await reader.getByRole('button', { name: 'Wrap lines', exact: true }).click();
+  await expect(reader.locator('[data-source-line="210"]')).toHaveAttribute('aria-current', 'location');
+  await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
+  const selected = await reader.getByRole('combobox', { name: 'First evidence' }).inputValue();
+  await reader.locator('.import-context > summary').click();
+  await reader.getByRole('button', { name: 'Captured work on src/cart/types.ts', exact: true }).click();
+  const destination = page.getByRole('dialog', { name: 'Work on src/cart/types.ts' });
+  await expect(destination).toContainText('Exact captured search result');
+  await expect(destination.getByRole('button', { name: /Read current file/ })).toHaveCount(0);
+  await destination.getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await expect(reader.getByRole('combobox', { name: 'First evidence' })).toHaveValue(selected);
+  await expect(reader.locator('[data-source-line="201"]')).toBeAttached();
+  await expect(reader.getByRole('searchbox', { name: 'Find in loaded source page' })).toHaveValue('line_210');
+  await expect(reader.getByRole('button', { name: 'Wrap lines', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(reader.locator('[data-source-line="210"]')).toHaveAttribute('aria-current', 'location');
+  await reader.getByRole('button', { name: 'Forward in reading history', exact: true }).click();
+  await expect(destination).toBeVisible();
+  await destination.getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
+  await expect.poll(() => reader.locator('.file-evidence-reading').evaluate(el => el.scrollTop)).toBeGreaterThan(300);
+  await reader.getByRole('button', { name: 'Close Work on src/checkout/guard.ts', exact: true }).click();
+  await page.locator('.workbench-review').getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await expect.poll(() => reader.locator('.file-evidence-reading').evaluate(el => el.scrollTop)).toBeCloseTo(330, 0);
+  await page.screenshot({ path: resolve('.local/evidence-reading-navigation.png') });
+});
+
+test('change to check to Back restores the same patch and comparison layout', async ({ page }) => {
+  await page.goto(url());
+  await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  const choice = reader.getByRole('combobox', { name: 'First evidence' });
+  const patch = await choice.locator('option').evaluateAll(options => options.find(option => option.textContent?.includes('Captured patch'))?.getAttribute('value'));
+  expect(patch).toBeTruthy();
+  await choice.selectOption(patch!);
+  await reader.getByRole('button', { name: 'Side by side', exact: true }).click();
+  await reader.locator('.verify-open').first().click();
+  const check = page.getByRole('complementary', { name: 'Operation detail' });
+  await expect(check).toContainText('npm test');
+  await check.getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await expect(choice).toHaveValue(patch!);
+  await expect(reader.getByRole('button', { name: 'Side by side', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(reader).toContainText('cart.total == null');
+});
+
 test('expanding a distant folder preserves its scroll anchor and sibling positions', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
   const template = sample.graph.nodes[0];

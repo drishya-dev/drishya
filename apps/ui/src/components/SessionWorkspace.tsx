@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type CurrentFile, type PromptAttachment, type TurnOptions } from '../api.ts';
 import { promptFiles } from '../lib/prompt-files.ts';
 import { useApp } from '../state.ts';
@@ -217,20 +218,23 @@ export function CurrentFileReader() {
 }
 function CurrentDocument({ id, path }: { id: string; path: string }) {
   const explore = useApp(s => s.explore);
-  const [start, setStart] = useState(0);
+  const [start, setStart] = useEvidenceState('disk/start', 0);
   const [file, setFile] = useState<CurrentFile>();
+  const [readingVersion, setReadingVersion] = useEvidenceState<string | undefined>('disk/version', undefined);
   const [error, setError] = useState<string>();
   const [retry, setRetry] = useState(0);
-  const [query, setQuery] = useState('');
-  const [activeLine, setActiveLine] = useState<number>();
-  const [lineInput, setLineInput] = useState('');
+  const [query, setQuery] = useEvidenceState('disk/query', '');
+  const [activeLine, setActiveLine] = useEvidenceState<number | undefined>('disk/line', undefined);
+  const [lineInput, setLineInput] = useEvidenceState('disk/lineInput', '');
   const [lineError, setLineError] = useState<string>();
-  const [wrap, setWrap] = useState(false);
-  const [width, setWidth] = useState(1040);
+  const [wrap, setWrap] = useEvidenceState('disk/wrap', false);
+  const [width, setWidth] = useEvidenceState('disk/width', 1040);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [copied, setCopied] = useState('');
   const code = useRef<HTMLDivElement>(null);
+  useEvidenceScroll(code, `disk/${start}`, !!file);
+  useEffect(() => { if (file && !readingVersion) setReadingVersion(file.modifiedAt); }, [file, readingVersion]);
   useEffect(() => {
     let active = true; setFile(undefined); setError(undefined);
     void workspaceApi.file(id, path, start).then(f => { if (active) setFile(f); }).catch(e => { if (active) setError(e.message); });
@@ -260,6 +264,8 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
     catch { setCopied('Copy unavailable · select the text to copy.'); }
   };
   return <ReadingDialog title={path} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader" modeless={explore} style={explore ? undefined : { width: `min(${width}px, calc(100vw - 28px))` }}>
+    <EvidenceNavigation />
+    {file && readingVersion && file.modifiedAt !== readingVersion && <p className="small" role="status">File changed since this reading location · showing current disk content.</p>}
     {!explore && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} label="Resize current source reading space" fromRight />}
     <div className="current-file-meta"><span className="tag" title="Current disk · not a historical snapshot">On disk</span><button className="btn ghost" onClick={() => setRetry(r => r + 1)}>Refresh</button><button className="btn ghost" onClick={() => useApp.setState({ currentFile: undefined, filePanel: path })}>Recorded work on this file</button></div>
     <div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source page" />

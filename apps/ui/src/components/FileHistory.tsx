@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import { fileEvidence, type FileEvidence } from '../lib/file-evidence.ts';
@@ -11,6 +11,7 @@ import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 import { CodeView, Output } from './common.tsx';
+import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 
 /** Global bounded file history; the loaded passage window is never mistaken for the whole session. */
 export function FileHistory({ projection }: { projection: Projection }) {
@@ -34,17 +35,19 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const mode = useApp((s) => s.mode);
   const step = useApp((s) => s.step);
   const revisions = useApp((s) => s.renderedRevisions);
-  const [trailWidth, setTrailWidth] = useState(230);
+  const [trailWidth, setTrailWidth] = useEvidenceState('file/trailWidth', 230);
   // The map's narrower modeless reader must show source on its first frame.
-  const [trailHidden, setTrailHidden] = useState(explore);
-  const [query, setQuery] = useState('');
-  const [start, setStart] = useState(0);
+  const [trailHidden, setTrailHidden] = useEvidenceState('file/trailHidden', explore);
+  const [query, setQuery] = useEvidenceState('file/query', '');
+  const [start, setStart] = useEvidenceState('file/start', 0);
   const [retry, setRetry] = useState(0);
   const [response, setResponse] = useState<{ key: string; operations: Operation[]; total: number }>();
   const [failure, setFailure] = useState<{ key: string; message: string }>();
-  const [left, setLeft] = useState<FileEvidence>();
-  const [right, setRight] = useState<FileEvidence>();
-  const [compare, setCompare] = useState(false);
+  const [left, setLeft] = useEvidenceState<FileEvidence | undefined>('file/left', undefined);
+  const [right, setRight] = useEvidenceState<FileEvidence | undefined>('file/right', undefined);
+  const [compare, setCompare] = useEvidenceState('file/compare', false);
+  const trail = useRef<HTMLElement>(null);
+  const reading = useRef<HTMLElement>(null);
   const key = `${recordingId}/${path}/${start}/${query}/${mode === 'replay' ? step : 'all'}/${JSON.stringify(revisions)}`;
   useEffect(() => {
     if (!source?.fileOperations) return;
@@ -63,6 +66,8 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   }, [source, projection, path, query, start]);
   const page = local ?? (response?.key === key ? response : undefined);
   const error = failure?.key === key ? failure.message : undefined;
+  useEvidenceScroll(trail, 'file/trail', !!page);
+  useEvidenceScroll(reading, 'file/reading', !!page);
   const choices = useMemo(() => {
     const items = page?.operations.flatMap((op) => fileEvidence(op, path)) ?? [];
     // A clicked hit is already in the current as-of evidence window. Keep that one
@@ -79,12 +84,14 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   }, [page, path, compare, left, right, preferred, projection]);
   const first = choices.find((item) => item.key === left?.key) ?? choices.find(item => item.key === preferred) ?? (focusChange ? choices.find(item => item.patch) ?? choices.find(item => item.operation.kind === 'write' || item.operation.kind === 'edit') : undefined) ?? choices[0];
   const second = choices.find((item) => item.key === right?.key) ?? choices.at(-1);
+  useEffect(() => { if (!left && first) setLeft(first); }, [left, first]);
   const close = () => useApp.setState({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
   return <ReadingDialog title={`Work on ${path}`} close={close} className="file-workspace" modeless={explore}>
+    <EvidenceNavigation />
     <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}</span></div>
     <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
       {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} label="Resize file action history" />}
-      <nav className="file-trail" aria-label="File action history">
+      <nav ref={trail} className="file-trail" aria-label="File action history">
         <input className="file-filter" aria-label="Filter actions on this file" placeholder="Find a recorded action" value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); setLeft(undefined); setRight(undefined); }} />
         {error && <p role="alert" className="bad">{error} <button className="btn" onClick={() => { setFailure(undefined); setRetry((n) => n + 1); }}>Retry</button></p>}
         {!page && !error && <p className="muted" role="status">Loading captured actions…</p>}
@@ -100,7 +107,7 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
         })}
         {page && page.total > 24 && <div className="file-pagination"><button className="btn" disabled={start === 0} onClick={() => { setLeft(first); setStart(Math.max(0, start - 24)); }}>Previous</button><span>{start + 1}–{Math.min(start + 24, page.total)} / {page.total}</span><button className="btn" disabled={start + 24 >= page.total} onClick={() => { setLeft(first); setStart(start + 24); }}>Next</button></div>}
       </nav>
-      <section className="file-evidence-reading" aria-label="File evidence">
+      <section ref={reading} className="file-evidence-reading" aria-label="File evidence">
         <div className="file-evidence-toolbar"><strong>Historical evidence</strong>{source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" title={workspace.root} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.setState({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}<button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button><button className="btn" aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{compare ? 'Single evidence' : 'Compare evidence'}</button></div>
 
         <ImportContext path={path} />
@@ -121,7 +128,7 @@ function EvidenceColumn({ choices, value, choose, label, path }: { choices: File
       {value.snippet !== undefined ? <>
         <p className="muted small">Exact captured search result · surrounding file was not captured by this result{value.startLine === undefined ? ' · line number not reported' : ''}</p>
         {value.startLine === undefined ? <Output text={value.snippet} /> : <CodeView text={value.snippet} path={path} startLine={value.startLine} />}
-      </> : value.patch && value.operation.detail.kind === 'edit' ? <DiffReader hunks={value.operation.detail.hunks} path={path} /> : <ArtifactReader id={value.artifactId} kind="code" path={path} startLine={value.startLine} provenance />}
+      </> : value.patch && value.operation.detail.kind === 'edit' ? <DiffReader hunks={value.operation.detail.hunks} path={path} navigationKey={`${label}/${value.key}`} /> : <ArtifactReader id={value.artifactId} kind="code" path={path} startLine={value.startLine} navigationSlot={label} provenance />}
       {value.operation.kind === 'edit' && <VerificationPanel op={value.operation} onOpen={(id) => { const state = useApp.getState(); state.select(id); state.set({ filePanel: undefined, explore: false }); }} />}
     </div>}
   </section>;
