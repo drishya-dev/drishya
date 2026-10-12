@@ -89,6 +89,7 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 - **Settled decisions go in the decisions log, with the reason.** This is what stops four agents re-litigating the same argument next week.
 
 **Rules of the codebase**
+- **UI work uses the installed design skills.** Apply `emil-design-eng` for interface composition and polish, and the relevant animation/review skill when changing motion. Preserve this repo's evidence/creative doctrine when generic skill guidance conflicts. Commit each coherent, verified increment separately so the builders can backtrack; do not combine unrelated UI tasks into one commit. Builder direction, 12 October.
 - **The event schema changes only by agreement between both builders.** It is the seam between capture and rendering.
 - **Golden tests from the first composer commit.**
 - **No new feature while a performance gate is red, unless the builder explicitly narrows the supported range and records the decision.** Current status: the builder resumed B4 and reference-machine long-session probes now pass their measured gates. Physical low-resource/lower-core and platform acceptance remain release checks. Preserve the paged projection/data-source boundary; do not claim broad release or unmeasured workload readiness. See `docs/review/08-b4-history-reader.md`, [`docs/STATUS.md`](docs/STATUS.md) and [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §7.

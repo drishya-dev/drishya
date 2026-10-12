@@ -49,6 +49,30 @@ createInterface({input:process.stdin}).on('line',line=>{
 });
 test.afterAll(async()=>{ await server?.close(); await app?.close(); if (dir) {if (!resolve(dir).startsWith(resolve(tmpdir())+sep)) throw new Error('unsafe test cleanup'); rmSync(dir,{recursive:true,force:true});} });
 
+test('Studio native workspace connects its composer, attachments, approval and evidence readers', async ({ page }) => {
+  await page.goto(new URL('/?experience=studio', server.launchUrl).href + new URL(server.launchUrl).hash);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await expect(page.locator('.workbench-header')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Recorded agents' })).toHaveCount(0);
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
+  await expect(composer.getByRole('button', { name: 'Add files or folders' })).toBeEnabled();
+  await composer.locator('input[aria-label="Choose prompt files"]').setInputFiles({ name: 'source.ts', mimeType: 'text/plain', buffer: Buffer.from('export const attached = true;') });
+  await composer.getByRole('textbox', { name: 'Prompt for selected harness session' }).fill('Review the source attachment');
+  await composer.getByRole('button', { name: 'Send prompt', exact: true }).click();
+  await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
+  await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();
+  await expect(composer).toContainText('Edit · approval requested');
+  await expect(composer.locator('.attachment-chip')).toHaveCount(0);
+  await composer.getByRole('button', { name: 'Allow once', exact: true }).click();
+  await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeVisible();
+  await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
+  await page.getByRole('button', { name: 'Show session folders' }).click();
+  const folders = page.getByRole('complementary', { name: 'Session folders' });
+  await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'src/actual.ts', exact: true })).toContainText('fromSelectedWorkspace');
+});
+
 test('current source reading finds, navigates and wraps bounded disk pages without replacing captured evidence', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
@@ -103,12 +127,16 @@ test('source reading links qualified current imports to a bounded map neighborho
   await expect(reader.locator('.import-context')).toContainText('Current index');
   await expect(reader.locator('.import-context')).toContainText('src/other.ts');
   await expect(reader.locator('.import-context')).toContainText('Imported by');
-  await reader.locator('.import-context').getByRole('button', { name: /src\/other.ts/ }).click();
+  await reader.locator('.import-context').getByRole('button', { name: 'Read current file src/other.ts' }).click();
   const neighbor = page.getByRole('dialog', { name: 'src/other.ts', exact: true });
   await expect(neighbor).toContainText('On disk');
   await expect(neighbor).toContainText("import { fromSelectedWorkspace }");
+  await neighbor.getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await expect(reader).toContainText('On disk');
+  await reader.getByRole('button', { name: 'Forward in reading history', exact: true }).click();
+  await expect(neighbor).toContainText("import { fromSelectedWorkspace }");
   await neighbor.locator('.import-context summary').click();
-  await neighbor.locator('.import-context').getByRole('button', { name: /src\/actual.ts/ }).click();
+  await neighbor.locator('.import-context').getByRole('button', { name: 'Read current file src/actual.ts' }).click();
   await reader.locator('.import-context summary').click();
   await reader.getByRole('button', { name: 'Focus on map' }).click();
   await expect(page.locator('.map')).toHaveAttribute('data-map-scope', 'direct-neighborhood');
@@ -247,6 +275,11 @@ test('the composer submits through the real API transport, handles one approval 
   expect((await promptInput.boundingBox())!.height).toBeLessThan(expandedHeight);
   expect((await composer.boundingBox())!.height).toBeLessThan(150);
   await expect(composer.getByRole('button', { name: 'Stop turn' }).locator('svg')).toHaveCount(1);
+  await expect(promptInput).toBeEnabled();
+  await promptInput.fill('Draft the next turn without sending it');
+  await promptInput.press('Enter');
+  await expect(composer.locator('.tool-approval')).toHaveCount(1);
+  await expect(promptInput).toHaveValue('Draft the next turn without sending it');
   await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
   const inventory = page.locator('.runtime-tools');
   await inventory.locator('summary').click();
@@ -257,9 +290,28 @@ test('the composer submits through the real API transport, handles one approval 
   await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeVisible();
   await expect(composer.locator('.controller-receipt')).toHaveCount(0);
   await expect(composer).not.toContainText('Synthetic native transport completed the submitted prompt.');
+  await expect(promptInput).toHaveValue('Draft the next turn without sending it');
   expect((await composer.boundingBox())!.height).toBeLessThan(150);
   await expect(page.getByRole('complementary',{name:'Session folders'})).toHaveCount(1);
   if(process.env.DRISHYA_REVIEW_SHOTS==='1') await page.screenshot({path:resolve('.local/connected-composer.png')});
+});
+
+test('composer text drafts survive returning to the same recording without persisting attachments', async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  const input = composer.getByRole('textbox', { name: 'Prompt for selected harness session' });
+  await input.fill('Keep this local draft');
+  await expect(composer.locator('.composer-target')).toContainText('Claude Code');
+  await expect(composer.locator('.composer-target strong')).toBeVisible();
+  const field = (await input.boundingBox())!;
+  const add = (await composer.getByRole('button', { name: 'Add files or folders' }).boundingBox())!;
+  expect(add.y).toBeGreaterThanOrEqual(field.y + field.height);
+  await page.getByRole('button', { name: 'Drishya', exact: true }).click();
+  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await expect(input).toHaveValue('Keep this local draft');
+  await expect(composer.locator('.prompt-attachments')).toHaveCount(0);
+  await page.screenshot({ path: resolve('.local/professional-composer.png') });
 });
 
 test('visible new material animates with Follow off without moving the reading position', async ({ page }) => {
@@ -301,6 +353,7 @@ test('connected action flow and agent switches replace tabs without inventing ca
   await page.goto(new URL('/?demo',server.launchUrl).href);
   await page.locator('.history').evaluate(el=>{el.scrollTop=0;});
   await expect(page.locator('.workspace-views')).toHaveCount(0);
+  await page.locator('.station-agent-menu > summary').click();
   await expect(page.getByRole('switch',{name:'Filter by claude-opus-5 agent'})).toBeVisible();
   await page.getByRole('switch',{name:'Filter by claude-opus-5 agent'}).click();
   await expect(page.getByRole('switch',{name:'Filter by claude-opus-5 agent'})).toBeChecked();

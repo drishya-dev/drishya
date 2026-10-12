@@ -144,9 +144,10 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     // Leave real space for the existing connection drawer and map controls.
     // Labels need space beyond their dot; fitting the world alone hides endpoints.
     const usableWidth = Math.max(180, size.w - (size.w > 900 ? 820 : 120));
-    const usableHeight = Math.max(180, size.h - 220);
+    const top = (document.querySelector('.workspace-header')?.getBoundingClientRect().height ?? 64) + 80;
+    const usableHeight = Math.max(120, size.h - top - 100);
     const k = related.length ? Math.max(.5, Math.min(4, usableWidth / Math.max(80, (maxX - minX) * fit.sx), usableHeight / Math.max(80, (maxY - minY) * fit.sy))) : Math.max(cam.k, graph && graph.nodes.length > 80 ? 4 : 1.5);
-    animateCam({ k, x: (related.length && size.w > 900 ? size.w / 2 - 70 : size.w / 2) - (fit.ox + (minX + maxX) / 2 * fit.sx) * k, y: size.h / 2 + (related.length ? 30 : 0) - (fit.oy + (minY + maxY) / 2 * fit.sy) * k });
+    animateCam({ k, x: (related.length && size.w > 900 ? size.w / 2 - 70 : size.w / 2) - (fit.ox + (minX + maxX) / 2 * fit.sx) * k, y: top + usableHeight / 2 - (fit.oy + (minY + maxY) / 2 * fit.sy) * k });
   };
   useEffect(() => {
     if (!explore || !requestedFocus || !graph || !size.w || !size.h) return;
@@ -198,9 +199,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   // All hit tests, search destinations and motion origins share this same projection.
   const fit = useMemo(() => {
     const pad = 48;
-    if (spatialActive) { const span = Math.max(40, Math.min(size.w, size.h) - pad * 2); return { sx: span, sy: span, ox: (size.w - span) / 2, oy: (size.h - span) / 2 }; }
-    return { sx: Math.max(40, size.w - pad * 2), sy: Math.max(40, size.h - pad * 2), ox: pad, oy: pad };
-  }, [size, spatialActive]);
+    const top = explore ? (document.querySelector('.workspace-header')?.getBoundingClientRect().height ?? 64) + 80 : pad;
+    const height = Math.max(40, size.h - top - (explore ? 100 : pad));
+    if (spatialActive) { const span = Math.max(40, Math.min(size.w - pad * 2, height)); return { sx: span, sy: span, ox: (size.w - span) / 2, oy: top + (height - span) / 2 }; }
+    return { sx: Math.max(40, size.w - pad * 2), sy: height, ox: pad, oy: top };
+  }, [size, spatialActive, explore]);
   // GPU geometry, DOM labels, picking and arrivals share the same 3D camera.
   const spatial = (n: { id: string; x: number; y: number }) => {
     if (!spatialActive) return { ...n, z: 0, scale: 1 };
@@ -360,7 +363,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   // Share exact renderer coordinates for a bounded working set, never a guessed graph origin.
   const anchors = [...heat].sort((a, b) => b.heat - a.heat).slice(0, 63).map((h) => h.path);
   if (hoveredPath && !anchors.includes(hoveredPath)) anchors.push(hoveredPath);
-  const matches = query.trim() && graph ? graph.nodes.filter((node) => !(graph.temporal === 'current' && node.path.startsWith('.local/')) && node.path.toLowerCase().includes(query.trim().toLowerCase())) : [];
+  const matches = query.trim() && viewGraph ? viewGraph.nodes.filter((node) => !(viewGraph.temporal === 'current' && node.path.startsWith('.local/')) && node.path.toLowerCase().includes(query.trim().toLowerCase())) : [];
 
   return (
     <div
@@ -371,7 +374,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       data-map-scope={explore && connectionsOpen && neighborhood ? 'direct-neighborhood' : observedOnly ? 'observed' : 'all'}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-file-label, .map-connections')) return;
         if (!explore) return;
         holdOrientation();
         const r = wrap.current!.getBoundingClientRect();
@@ -383,14 +386,14 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       }}
       onPointerDown={(e) => {
         if (!explore) return;
-        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-file-label, .map-connections')) return;
         cancelAnimationFrame(cameraFrame.current);
         holdOrientation();
         drag.current = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, yaw, pitch, rotate: spatialActive && !e.shiftKey && e.button !== 1, moved: false };
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-file-label, .map-connections')) return;
         const r = wrap.current!.getBoundingClientRect();
         if (drag.current && explore) {
           const dx = e.clientX - drag.current.x;
@@ -410,7 +413,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         if (useApp.getState().hoveredPath !== n?.id) set({ hoveredPath: n?.id });
       }}
       onPointerUp={(e) => {
-        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-connections')) return;
+        if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-file-label, .map-connections')) return;
         const d = drag.current;
         drag.current = undefined;
         if (d) holdOrientation();
@@ -469,7 +472,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         {spatialActive && <span className="map-camera-hint">Drag orbit · Shift drag pan</span>}
         <button className="btn ghost" aria-label="Zoom into repository" onClick={() => zoomCamera(1.25)}>+</button>
         <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => zoomCamera(1 / 1.25)}>−</button>
-        <button className="btn ghost" onClick={() => { holdOrientation(); setYaw(.25); setPitch(.18); animateCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
+        <button className="btn ghost" onClick={() => { if (neighborhood && connections?.root) { focusFile(connections.root, true); return; } holdOrientation(); setYaw(.25); setPitch(.18); animateCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
       </div>}
       {anchors.map((path) => {
         const node = displayById.get(path);
@@ -480,11 +483,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       })}
       {labels.map(({ node, x, y }) => node.members
         ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} title={`${node.members.length} spatially grouped files · zoom to reveal`} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>
-        : <span className="map-file-label" key={node.id} title={node.path} style={{ left: x + 8, top: y - 9, opacity: node.opacity ?? 1 }}>{node.path}</span>)}
+        : <button className="map-file-label" key={node.id} title={node.path} onClick={() => set(workspace?.approved ? { currentFile: node.path, filePanel: undefined } : { filePanel: node.id, currentFile: undefined })} style={{ left: x + 8, top: y - 9, opacity: node.opacity ?? 1 }}>{node.path}</button>)}
       {explore && connections?.root && [connections.root, ...connections.neighbors.slice(0, 8).map(item => item.node)].filter((node, i, nodes) => nodes.findIndex(n => n.id === node.id) === i && !labels.some(label => label.node.id === node.id)).map(node => {
         const p = project(node);
         if (p.x < 6 || p.y < 6 || p.x > size.w - 180 || p.y > size.h - 24) return null;
-        return <span className="map-file-label" key={`connected/${node.id}`} style={{ left: p.x + 8, top: p.y - 9 }}>{node.path}</span>;
+        return <button className="map-file-label" onClick={() => set(workspace?.approved ? { currentFile: node.path, filePanel: undefined } : { filePanel: node.id, currentFile: undefined })} key={`connected/${node.id}`} style={{ left: p.x + 8, top: p.y - 9 }}>{node.path}</button>;
       })}
       {explore && tip && (
         <div className="map-tip" style={{ left: tip.x + 12, top: tip.y + 8 }}>

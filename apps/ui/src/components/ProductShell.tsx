@@ -1,8 +1,11 @@
 import { useEffect, useId, useRef, type ReactNode, type CSSProperties } from 'react';
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
+import { useExperience, setExperience } from '../lib/experience.ts';
+import { useEvidenceScroll } from './EvidenceNavigation.tsx';
 
 export function ReadingDialog({ title, close, children, className = '', modeless = false, style }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties }) {
   const ref = useRef<HTMLDialogElement>(null);
+  useEvidenceScroll(ref, `dialog/${className}`);
   const titleId = useId();
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -23,27 +26,25 @@ export function ProductShell({ children }: { children: ReactNode }) {
   // Low resource mode also drops the decorative grain/vignette layers.
   useEffect(() => { document.documentElement.toggleAttribute('data-low-resource', lowResource); }, [lowResource]);
   useEffect(() => {
-    const media = matchMedia('(prefers-color-scheme: light)');
     const apply = () => {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
-      const scheme = theme === 'system' ? media.matches ? 'light' : 'dark' : theme === 'light' ? 'light' : 'dark';
+      const scheme = theme === 'light' ? 'light' : 'dark';
       document.documentElement.dataset.theme = scheme;
       document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'midnight' ? 'midnight' : 'jet';
     };
-    apply(); media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
+    apply();
   }, [theme]);
   return <>{children}{open && <Settings />}</>;
 }
 
 const THEMES = [
-  ['dark', 'Jet', 'Black, fine charcoal weave'],
-  ['midnight', 'Midnight', 'Near-black, cool contrast'],
-  ['light', 'Light', 'Paper and stone'],
-  ['system', 'System', 'Jet or Light'],
+  ['dark', 'Jet Black', 'Neutral black · mint accents'],
+  ['midnight', 'Midnight', 'Ink blue · iris accents'],
+  ['light', 'Paper', 'Soft white · forest accents'],
 ] as const;
 
 function Settings() {
+  const experience = useExperience();
   const theme = useApp((s) => s.theme);
   const motion = useApp((s) => s.motion);
   const map = useApp((s) => s.mapVisible);
@@ -55,6 +56,7 @@ function Settings() {
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
+    <section><h3>Workspace design</h3><button className="btn" aria-pressed={experience === 'classic'} onClick={() => setExperience('classic')}>Classic <small>Centered work · evidence desk</small></button><details className="legacy-design"><summary>Earlier design backups</summary><div className="experience-options"><button className="btn" aria-pressed={experience === 'studio'} onClick={() => setExperience('studio')}>Studio backup</button><button className="btn" aria-pressed={experience === 'legacy'} onClick={() => setExperience('legacy')}>Legacy backup</button></div></details></section>
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
       <div className="theme-options" aria-label="Colour theme">{THEMES.map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
     </section>

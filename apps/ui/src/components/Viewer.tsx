@@ -1,3 +1,4 @@
+import { BrandMark } from './BrandMark.tsx';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
@@ -15,17 +16,22 @@ import { WorkspaceBar, AgentOverview } from './Workspace.tsx';
 import { SinceMarkPill, SinceMarkSection } from './SinceMark.tsx';
 import type { HistorySummary } from '../../../../packages/scene/src/history.ts';
 import { ReadingReferenceProvider } from './ReadingReference.tsx';
+import { EvidenceNavigationProvider } from './EvidenceNavigation.tsx';
 import { sampleActivity } from '../lib/activity.ts';
 import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComposer, useSessionWorkspace } from './SessionWorkspace.tsx';
 import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { EvidenceReview } from './EvidenceReview.tsx';
+import { GitReviewEntry } from './GitReview.tsx';
+import { useExperience } from '../lib/experience.ts';
+import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry } from './Workbench.tsx';
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
-  return <ReadingReferenceProvider><SessionWorkspaceProvider key={id}><WorkspaceViewer /></SessionWorkspaceProvider></ReadingReferenceProvider>;
+  return <ReadingReferenceProvider><SessionWorkspaceProvider key={id}><EvidenceNavigationProvider><WorkspaceViewer /></EvidenceNavigationProvider></SessionWorkspaceProvider></ReadingReferenceProvider>;
 }
 
 function WorkspaceViewer() {
+  const experience = useExperience();
   useDismissMenus();
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
@@ -111,7 +117,7 @@ function WorkspaceViewer() {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [!!projection, foldersHidden, explore, inspectorWidth]);
+  }, [!!projection, foldersHidden, explore, inspectorWidth, experience]);
 
   if (!projection || !scene || !historical) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
   // Keep the viewport and finite arrivals alive across paged forward steps.
@@ -121,17 +127,17 @@ function WorkspaceViewer() {
   return (
     <>
     <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
-      <WorkspaceHeader scene={scene} projection={projection} /><WorkspaceBar />
+      <WorkspaceHeader scene={scene} projection={projection} />{experience === 'studio' ? <WorkbenchSources projection={historical} /> : <WorkspaceBar />}
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
         {mapVisible && <MapCanvas graph={graph} heat={scene.heat} passagePaths={passagePaths} readingRect={reading} />}
-        <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />
-        <AgentOverview scene={scene} projection={historical} />
+        {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
+        {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
         <FileHistory projection={historical} />
         <CurrentFileReader />
       </div>
-      <Dock scene={scene} />
+      {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
       <PromptComposer key={recordingId} />
@@ -147,6 +153,7 @@ function WorkspaceViewer() {
 // ─── crown: agents across the top ────────────────────────────────────────────────────────
 
 function WorkspaceHeader({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const experience = useExperience();
   const header = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const element = header.current!;
@@ -164,7 +171,43 @@ function WorkspaceHeader({ scene, projection }: { scene: Scene; projection: Proj
     viewer.addEventListener('scroll', scroll, true);
     return () => { observer.disconnect(); viewer.removeEventListener('scroll', scroll, true); viewer.style.removeProperty('--workspace-header-h'); };
   }, []);
-  return <div ref={header} className="workspace-header"><Crown scene={scene} projection={projection} /></div>;
+  return <div ref={header} className="workspace-header">{experience === 'studio' ? <WorkbenchHeader projection={projection} scene={scene}><span className="workbench-mobile-review"><EvidenceReview projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" title="Search (/)">Search <kbd>/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => useApp.setState({ settingsOpen: true })}>Settings</button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><WorkbenchExport /><LocalPreviewEntry /><SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><ActivityTimeline scene={scene} projection={projection} /></div></details></div></details></WorkbenchHeader> : experience === 'classic' ? <StudioHeader scene={scene} projection={projection} /> : <Crown scene={scene} projection={projection} />}</div>;
+}
+
+function WorkbenchExport() {
+  const id = useApp(s => s.recordingId);
+  const source = useApp(s => s.source);
+  const url = id ? source?.exportUrl(id) : undefined;
+  return url ? <a className="btn ghost" href={url} download>Export recording</a> : null;
+}
+
+/** A task-oriented shell; evidence and native capabilities stay in shared functional readers. */
+function StudioHeader({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const recording = useApp(s => s.recording);
+  const id = useApp(s => s.recordingId);
+  const source = useApp(s => s.source);
+  const connection = useApp(s => s.connection);
+  const searchOpen = useApp(s => s.searchOpen);
+  const exportUrl = id ? source?.exportUrl(id) : undefined;
+  return <header className="studio-header crown">
+    <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>
+    <div className="studio-session crown-title"><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title}>{projection.title ?? recording?.title ?? 'Recording'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
+    <div className="crown-actions studio-actions"><span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}>⚙</button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
+
+  </header>;
+}
+
+function StudioDock({ scene }: { scene: Scene }) {
+  const { controller } = useSessionWorkspace();
+  const filter = useApp(s => s.filter);
+  const setFilter = useApp(s => s.setFilter);
+  return <aside id="observed-tools" className="dock studio-dock" aria-label="Tools" title="Tools observed in this recording"><div className="studio-dock-title">Tools <span>{scene.dock.native.filter(d => d.uses).length}</span></div>
+    <div className="studio-instruments">{scene.dock.native.map(d => <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span><span className="studio-instrument-name">{KIND_LABEL[d.kind]}<small>{d.tools.join(' · ')}</small></span><span className="inst-uses">{d.uses || '—'}</span></button>)}</div>
+    {scene.dock.mcp.length > 0 && <div className="studio-dock-title">MCP servers <span>{scene.dock.mcp.length}</span></div>}
+    {scene.dock.mcp.map(server => <section key={server.server} className={`server catalogued${server.open ? ' open' : ''}`}><button className="server-name" aria-pressed={filter?.server === server.server} onClick={() => setFilter(filter?.server === server.server ? undefined : { server: server.server })}><span className="server-dot" />{server.server}</button><div className="drawer">{server.tools.map(t => <button key={t.tool} className={`server-tool${t.active ? ' active' : ''}`} data-mcp-server={server.server} data-mcp-tool={t.tool} aria-pressed={filter?.server === server.server && filter?.tool === t.tool} disabled={!t.uses} onClick={() => setFilter(filter?.server === server.server && filter?.tool === t.tool ? undefined : { server: server.server, tool: t.tool })}><span className="server-tool-identity"><span className="tool-mark"><MaterialGlyph material="external" /></span><span>{t.tool}</span></span><span className="inst-uses">{t.uses || '—'}</span></button>)}</div></section>)}
+    {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary><ol>{controller.tools.map(t => <li key={t}>{t}</li>)}</ol></details>}
+    {filter && <button className="btn ghost clear-filter" onClick={() => setFilter(undefined)}>Show everything <Kbd>Esc</Kbd></button>}
+  </aside>;
 }
 
 function Crown({ scene, projection }: { scene: Scene; projection: Projection }) {
@@ -181,7 +224,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
   return (
     <header className="crown">
       <div className="crown-identity"><button className="brand" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (set({ screen: 'home', playing: false }), (location.hash = ''))} title="All recordings">
-        <span className="brand-mark" />
+        <BrandMark />
         Drishya
       </button>
       {source?.sample && <span className="crown-sample">Synthetic demo</span>}</div>
@@ -215,9 +258,9 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
           );
         })}
       </div>}
-      <div className="crown-actions"><EvidenceReview key={recordingId} projection={projection} /><UsagePeek />
+      <div className="crown-actions"><EvidenceReview key={recordingId} projection={projection} /><GitReviewEntry /><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true })}>Settings</button>
-        <button className="btn ghost search-open" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button>
+        <button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
           {exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}
           <SinceMarkPill projection={projection} />
@@ -357,6 +400,10 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
           seek(at(e.clientX), { hold: true });
         }}
         onPointerMove={(e) => e.buttons === 1 && seek(at(e.clientX), { hold: true })}
+        onKeyDown={e => {
+          const target = e.key === 'Home' ? 0 : e.key === 'End' ? scene.total : e.key === 'ArrowRight' ? Math.min(scene.total, scene.step + 1) : e.key === 'ArrowLeft' ? Math.max(0, scene.step - 1) : undefined;
+          if (target !== undefined) { e.preventDefault(); e.stopPropagation(); seek(target, { hold: true }); }
+        }}
         role="slider"
         aria-label="Timeline"
         aria-valuemin={0}
@@ -630,7 +677,7 @@ function Search({ projection }: { projection: Projection }) {
   const files = q.trim().length >= 2 ? graph?.nodes.filter(node => node.path.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 50) ?? [] : [];
   const go = (obs: string) => {
     if (useApp.getState().historyPage) {
-      set({ focusObservationId: obs, playing: false, held: true, selectedOp: undefined, searchOpen: false });
+      set({ focusObservationId: obs, held: true, selectedOp: undefined, searchOpen: false });
       void useApp.getState().loadHistoryWindow({ observationId: obs }).catch((error) => set({ error: error.message }));
       return;
     }

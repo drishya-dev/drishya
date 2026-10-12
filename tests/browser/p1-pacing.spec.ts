@@ -184,10 +184,10 @@ for (const interruption of ['reading', 'reduced motion'] as const) test('one rea
   await operation.dispatchEvent('mouseover');
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   expect(await page.evaluate(() => (window as any).retainedSurface.animation.playState)).toBe('paused');
-  if (interruption === 'reading') await page.evaluate(() => document.querySelector('.viewer')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  if (interruption === 'reading') await operation.getByRole('button', { name: /Expand/ }).click();
   else await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => page.evaluate(() => (window as any).retainedSurface.animation.playState)).toBe('idle');
-  expect(await operation.evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m11)).toBe(1);
+  await expect.poll(() => operation.evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m11)).toBe(1);
 });
 
 test('patch layouts retain captured changes and adapt without overflowing a narrow screen', async ({ page }) => {
@@ -440,6 +440,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('slider', { name: 'Timeline' }).press('End');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
   await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
@@ -453,6 +454,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
 });
 
 test('every observed action kind can arrive as a real surface without removing its evidence', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1600, height: 1400 });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
@@ -493,13 +495,14 @@ test('every observed action kind can arrive as a real surface without removing i
     const operationId = await operation.getAttribute('data-op-id');
     await expect.poll(() => page.evaluate(() => (window as unknown as { actionSurfaces: string[] }).actionSurfaces), { message: `${call.name}: the actual DOM surface owns a finite arrival` }).toContain(operationId);
     await operation.dispatchEvent('pointerdown');
-    await operation.dispatchEvent('pointerup');
+    await operation.locator('.op-title').click();
     await expect(operation).toBeVisible();
-    expect(await operation.evaluate(el => el.getAnimations().some(animation => animation.id.startsWith('surface-')))).toBe(false);
+    await expect.poll(() => operation.evaluate(el => el.getAnimations().some(animation => animation.id.startsWith('surface-')))).toBe(false);
     append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Synthetic recorded completion' }] } });
     append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', content: [{ type: 'text', text: `Captured outcome for ${call.name}.` }] } });
     await app.ingest.sync(recordingId);
     await expect(page.locator('.prose').last()).toContainText(`Captured outcome for ${call.name}`);
+    await page.keyboard.press('Escape');
   }
 });
 

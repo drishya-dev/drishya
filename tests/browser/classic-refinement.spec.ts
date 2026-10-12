@@ -1,0 +1,221 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { App } from '../../apps/daemon/src/app.ts';
+import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+
+let dir: string, app: App, server: RunningServer;
+test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-classic-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-classic-test' }); });
+test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
+const url = () => new URL('/?demo&experience=classic', server.launchUrl).href;
+
+test('continuous explorer reaches every file with bounded rows and keyboard navigation', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const template = sample.graph.nodes[0];
+  const types = ['ts', 'tsx', 'js', 'json', 'py', 'md', 'css', 'svg', 'yml', 'rs'];
+  sample.graph.nodes = Array.from({ length: 600 }, (_, n) => ({ ...template, id: `file-${n}`, path: `file-${String(n).padStart(3, '0')}.${types[n % types.length]}` }));
+  sample.graph.edges = [];
+  await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url());
+  const tree = page.getByRole('tree', { name: 'Workspace files' });
+  await expect(tree.getByRole('treeitem').first()).toHaveAttribute('title', 'file-000.ts');
+  expect(await tree.getByRole('treeitem').count()).toBeLessThan(80);
+  await expect(page.locator('.folder-explorer .folder-pages')).toHaveCount(0);
+  expect(await tree.locator('.format-tsx').count()).toBeGreaterThan(0);
+  expect(await tree.locator('.format-py').first().evaluate(el => getComputedStyle(el).color)).not.toBe(await tree.locator('.format-ts').first().evaluate(el => getComputedStyle(el).color));
+  await tree.getByRole('treeitem').first().focus();
+  await page.keyboard.press('End');
+  await expect(tree.getByRole('treeitem').last()).toHaveAttribute('title', 'file-599.rs');
+  await expect(tree.getByRole('treeitem').last()).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(tree.getByRole('treeitem').first()).toBeFocused();
+  await page.mouse.move((await tree.boundingBox())!.x + 60, (await tree.boundingBox())!.y + 100);
+  await page.mouse.wheel(0, 2000);
+  await expect.poll(() => tree.evaluate(el => el.scrollTop)).toBeGreaterThan(1000);
+  expect(await tree.getByRole('treeitem').count()).toBeLessThan(80);
+  const offset = await tree.evaluate(el => el.scrollTop);
+  await page.getByRole('button', { name: 'Minimize folders' }).click();
+  await page.getByRole('button', { name: 'Show session folders' }).click();
+  await expect(tree).toBeVisible();
+  expect(await tree.evaluate(el => el.scrollTop)).toBeCloseTo(offset, 0);
+  await page.getByRole('textbox', { name: 'Find session files' }).fill('file-599');
+  await expect(tree.getByRole('treeitem')).toHaveCount(1);
+  await expect(tree.getByRole('treeitem')).toHaveAttribute('title', 'file-599.rs');
+});
+
+test('Classic evidence and agent rail, explicit palettes and map reading work across widths', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(url());
+  await expect(page.locator('.workbench-station')).toBeVisible();
+  await expect(page.locator('.workspace-header [data-agent-id]')).toHaveCount(0);
+  await expect(page.getByRole('switch', { name: 'Agent overview', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('switch', { name: 'Filter by Explore agent', exact: true })).toBeHidden();
+  await page.locator('.station-agent-menu > summary').click();
+  await expect(page.getByRole('switch', { name: 'Filter by Explore agent', exact: true })).toBeHidden();
+  await page.locator('.station-subagents > summary').click();
+  const agent = page.getByRole('switch', { name: 'Filter by Explore agent', exact: true });
+  await expect(agent).toHaveAttribute('title', /surrounding history stays visible/);
+  await agent.click(); await expect(agent).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.history .filtered-out').first()).toBeAttached();
+  await agent.click();
+  await page.getByRole('button', { name: 'Review work', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Review work' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  const settings = page.getByRole('button', { name: 'Workspace settings' });
+  expect(await settings.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(22);
+  await settings.click();
+  const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
+  await expect(dialog.getByRole('button', { name: 'System', exact: true })).toHaveCount(0);
+  for (const [name, palette, bg] of [['Midnight', 'midnight', 'rgb(9, 13, 22)'], ['Paper', 'paper', 'rgb(244, 245, 242)'], ['Jet Black', 'jet', 'rgb(8, 8, 8)']]) {
+    await dialog.getByRole('button', { name, exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-palette', palette);
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(bg);
+  }
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await dialog.getByRole('button', { name: 'Close Workspace settings' }).click();
+  for (const [width, height] of [[1920, 1080], [1280, 720], [900, 500], [768, 900], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    if (width <= 820) await page.getByRole('button', { name: 'Tools', exact: true }).click();
+    await expect(page.locator('.workbench-station')).toBeVisible();
+    const bounds = (await page.locator('.workbench-station').boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    await expect(page.getByRole('group', { name: 'Recorded agents' })).toBeVisible();
+    if (width <= 820) await page.getByRole('button', { name: 'Close tools', exact: true }).click();
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.screenshot({ path: resolve('.local/classic-evidence-desk.png') });
+  await page.getByRole('button', { name: 'Explore repository map' }).click();
+  await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('guard.ts');
+  await page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
+  await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  await expect(reader.locator('.file-workspace-layout')).toHaveClass(/trail-hidden/);
+  await expect(reader.locator('.code .ln').first()).toBeInViewport();
+});
+
+test('usage expands inside the utility menu without clipping at narrow widths', async ({ page }) => {
+  await page.goto(url());
+  for (const [width, height] of [[1440, 900], [900, 500], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    await page.getByLabel('More workspace options', { exact: true }).click();
+    await page.locator('.workspace-menu .usage-peek > summary').click();
+    const panel = page.locator('.workspace-menu .usage-peek > div');
+    await expect(panel).toBeVisible();
+    const box = (await panel.boundingBox())!;
+    const menu = (await page.locator('.workspace-menu > div').boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(menu.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(menu.x + menu.width + 1);
+    expect(menu.x).toBeGreaterThanOrEqual(0);
+    expect(menu.x + menu.width).toBeLessThanOrEqual(width);
+    expect(await panel.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual(Math.ceil(box.width));
+    await expect(panel).toContainText('Native runtime values only');
+    expect(await page.locator('.workspace-menu .usage-peek > summary').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);
+    if (width === 1440) await page.screenshot({ path: resolve('.local/classic-usage-fixed.png') });
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+  }
+});
+
+test('a captured search hit opens its exact line instead of a no-source dead end', async ({ page }) => {
+  await page.goto(url());
+  await page.getByRole('button', { name: "src/payments/charge.ts:8 if (!amount) throw new Error('amount required');", exact: true }).click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/payments/charge.ts' });
+  await expect(reader).toContainText('Exact captured search result');
+  await expect(reader.locator('.file-evidence-material [data-source-line="8"]')).toContainText("if (!amount) throw new Error('amount required');");
+  await expect(reader.getByRole('combobox', { name: 'First evidence' })).toContainText('Captured search match');
+  await expect(reader).not.toContainText('No source bytes or patch were captured');
+  await page.keyboard.press('Escape');
+  await page.locator('body').click({ position: { x: 3, y: 350 } });
+  const before = await page.locator('html').getAttribute('data-motion');
+  await page.keyboard.press('Control+m');
+  expect(await page.locator('html').getAttribute('data-motion')).toBe(before);
+  await page.keyboard.press('Control+x');
+  await expect(page.getByRole('button', { name: 'Back to work', exact: true })).toHaveCount(0);
+});
+
+test('reading Back restores a captured page, search, selected line, wrap and scroll after a dependency detour', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const read = sample.projection.operations.find((op: any) => op.detail.kind === 'read' && op.detail.path === 'src/checkout/guard.ts');
+  const artifact = sample.projection.artifacts.find((item: any) => item.id === read.detail.excerptArtifactId);
+  sample.artifactText[artifact.id] = Array.from({ length: 800 }, (_, n) => `export const line_${n + 1} = ${n + 1};`).join('\n');
+  artifact.range = { start: 1, end: 800 };
+  await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(url());
+  await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  await reader.getByRole('button', { name: 'Next lines', exact: true }).click();
+  await expect(reader.locator('[data-source-line="201"]')).toBeVisible();
+  await reader.getByRole('searchbox', { name: 'Find in loaded source page' }).fill('line_210');
+  await reader.getByRole('button', { name: 'Next match', exact: true }).click();
+  await reader.getByRole('button', { name: 'Wrap lines', exact: true }).click();
+  await expect(reader.locator('[data-source-line="210"]')).toHaveAttribute('aria-current', 'location');
+  await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
+  const selected = await reader.getByRole('combobox', { name: 'First evidence' }).inputValue();
+  await reader.locator('.import-context > summary').click();
+  await reader.getByRole('button', { name: 'Captured work on src/cart/types.ts', exact: true }).click();
+  const destination = page.getByRole('dialog', { name: 'Work on src/cart/types.ts' });
+  await expect(destination).toContainText('Exact captured search result');
+  await expect(destination.getByRole('button', { name: /Read current file/ })).toHaveCount(0);
+  await destination.getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await expect(reader.getByRole('combobox', { name: 'First evidence' })).toHaveValue(selected);
+  await expect(reader.locator('[data-source-line="201"]')).toBeAttached();
+  await expect(reader.getByRole('searchbox', { name: 'Find in loaded source page' })).toHaveValue('line_210');
+  await expect(reader.getByRole('button', { name: 'Wrap lines', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(reader.locator('[data-source-line="210"]')).toHaveAttribute('aria-current', 'location');
+  await reader.getByRole('button', { name: 'Forward in reading history', exact: true }).click();
+  await expect(destination).toBeVisible();
+  await destination.getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
+  await expect.poll(() => reader.locator('.file-evidence-reading').evaluate(el => el.scrollTop)).toBeGreaterThan(300);
+  await reader.getByRole('button', { name: 'Close Work on src/checkout/guard.ts', exact: true }).click();
+  await page.locator('.workbench-review').getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await expect.poll(() => reader.locator('.file-evidence-reading').evaluate(el => el.scrollTop)).toBeCloseTo(330, 0);
+  await page.screenshot({ path: resolve('.local/evidence-reading-navigation.png') });
+});
+
+test('change to check to Back restores the same patch and comparison layout', async ({ page }) => {
+  await page.goto(url());
+  await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
+  const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
+  const choice = reader.getByRole('combobox', { name: 'First evidence' });
+  const patch = await choice.locator('option').evaluateAll(options => options.find(option => option.textContent?.includes('Captured patch'))?.getAttribute('value'));
+  expect(patch).toBeTruthy();
+  await choice.selectOption(patch!);
+  await reader.getByRole('button', { name: 'Side by side', exact: true }).click();
+  await reader.locator('.verify-open').first().click();
+  const check = page.getByRole('complementary', { name: 'Operation detail' });
+  await expect(check).toContainText('npm test');
+  await check.getByRole('button', { name: 'Back in reading history', exact: true }).click();
+  await expect(choice).toHaveValue(patch!);
+  await expect(reader.getByRole('button', { name: 'Side by side', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(reader).toContainText('cart.total == null');
+});
+
+test('expanding a distant folder preserves its scroll anchor and sibling positions', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const template = sample.graph.nodes[0];
+  sample.graph.nodes = Array.from({ length: 160 }, (_, n) => ({ ...template, id: `folder-${n}/file.ts`, path: `folder-${String(n).padStart(3, '0')}/file.ts` })); sample.graph.edges = [];
+  await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(url());
+  const tree = page.getByRole('tree', { name: 'Workspace files' });
+  await tree.getByRole('treeitem').first().focus(); await page.keyboard.press('End');
+  const folder = tree.getByRole('treeitem', { name: /folder-159/ });
+  await expect(folder).toBeFocused();
+  const before = (await folder.boundingBox())!;
+  const top = await tree.evaluate(el => el.scrollTop);
+  await folder.click();
+  await expect(folder).toHaveAttribute('aria-expanded', 'true');
+  await expect(folder).toBeFocused();
+  expect(Math.abs((await folder.boundingBox())!.y - before.y)).toBeLessThan(2);
+  expect(await tree.evaluate(el => el.scrollTop)).toBeGreaterThanOrEqual(top - 2);
+  const child = tree.locator('[title="folder-159/file.ts"]');
+  await expect(child).toHaveAttribute('aria-posinset', '1');
+  await expect(child).toHaveAttribute('aria-setsize', '1');
+  await folder.click(); await expect(folder).toHaveAttribute('aria-expanded', 'false');
+  await expect(folder).toBeFocused();
+});

@@ -5,34 +5,37 @@ import { ChangeColumns } from './ChangeColumns.tsx';
 import { useReadingReference } from './ReadingReference.tsx';
 import { SourceFind } from './SourceFind.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
+import { useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 
 /** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
-export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false }: {
+export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false, navigationSlot = 'source' }: {
   id?: string;
   kind: 'code' | 'output';
   path?: string;
   startLine?: number;
   fallback?: string;
   provenance?: boolean;
+  navigationSlot?: string;
 }) {
-  const [pages, setPages] = useState([0]);
-  const [index, setIndex] = useState(0);
+  const scope = `${navigationSlot}/artifact/${id}`;
+  const [pages, setPages] = useEvidenceState(`${scope}/pages`, [0]);
+  const [index, setIndex] = useEvidenceState(`${scope}/index`, 0);
   const [retry, setRetry] = useState(0);
   const [copied, setCopied] = useState<string>();
-  const [query, setQuery] = useState('');
-  const [wrap, setWrap] = useState(false);
-  const [activeLine, setActiveLine] = useState<number>();
-  const [lineInput, setLineInput] = useState('');
+  const [query, setQuery] = useEvidenceState(`${scope}/query`, '');
+  const [wrap, setWrap] = useEvidenceState(`${scope}/wrap`, false);
+  const [activeLine, setActiveLine] = useEvidenceState<number | undefined>(`${scope}/line`, undefined);
+  const [lineInput, setLineInput] = useEvidenceState(`${scope}/lineInput`, '');
   const [lineError, setLineError] = useState<string>();
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
   const [rangeStatus, setRangeStatus] = useState('');
   const reference = useReadingReference();
   const reader = useRef<HTMLDivElement>(null);
-  useEffect(() => { setPages([0]); setIndex(0); setQuery(''); setActiveLine(undefined); setLineInput(''); setLineError(undefined); }, [id]);
   const pageStart = pages[index] ?? 0;
   useEffect(() => { setRangeFrom(''); setRangeTo(''); setRangeStatus(''); }, [id, pageStart]);
   const view = useArtifact(id, { scope: 'reader', start: pageStart, count: 200, retry });
+  useEvidenceScroll(reader, `${scope}/${pageStart}`, view.text !== undefined);
   useEffect(() => setCopied(undefined), [id, pageStart]);
   const reveal = (line: number) => reader.current?.querySelector<HTMLElement>(`[data-source-line="${line}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
   useLayoutEffect(() => { if (activeLine !== undefined && view.text !== undefined) reveal(activeLine); }, [activeLine, pageStart, view.text]);
@@ -136,12 +139,14 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   );
 }
 
-export function DiffReader({ hunks, path }: { hunks: Hunk[]; path?: string }) {
-  const [offset, setOffset] = useState(() => firstChangeOffset(hunks));
-  const [layout, setLayout] = useState<'unified' | 'split'>('unified');
+export function DiffReader({ hunks, path, navigationKey = path ?? 'patch' }: { hunks: Hunk[]; path?: string; navigationKey?: string }) {
+  const [offset, setOffset] = useEvidenceState(`diff/${navigationKey}/offset`, () => firstChangeOffset(hunks));
+  const [layout, setLayout] = useEvidenceState<'unified' | 'split'>(`diff/${navigationKey}/layout`, 'unified');
+  const reader = useRef<HTMLDivElement>(null);
+  useEvidenceScroll(reader, `diff/${navigationKey}/${offset}`);
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
-  return <div className={`artifact-reader diff-reader diff-${layout}`}>
+  return <div ref={reader} className={`artifact-reader diff-reader diff-${layout}`}>
     <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button></div>
     {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
     <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} /></div>

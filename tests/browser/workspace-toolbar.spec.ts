@@ -61,11 +61,11 @@ test('map scope filters captured file locations and direct imports navigate exac
   const search = page.getByRole('textbox', { name: 'Find a file on the map' });
   await page.getByRole('button', { name: /^Observed/ }).click();
   await search.fill('src/api/server.ts');
-  await expect(page.getByRole('button', { name: 'src/api/server.ts', exact: true })).toHaveCount(0);
+  await expect(page.locator('.map-matches').getByRole('button', { name: 'src/api/server.ts', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'All files', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'src/api/server.ts', exact: true })).toBeVisible();
+  await expect(page.locator('.map-matches').getByRole('button', { name: 'src/api/server.ts', exact: true })).toBeVisible();
   await search.fill('src/checkout/guard.ts');
-  await page.getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
+  await page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
   await page.getByRole('switch', { name: 'Import paths' }).click();
   const connections = page.getByRole('region', { name: 'Direct import connections' });
   await expect(connections.locator('.map-connection-root')).toHaveText('src/checkout/guard.ts');
@@ -117,10 +117,7 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
     await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeGreaterThan(20);
     const after = (await nav.boundingBox())!;
     expect(Math.abs(after.y - before.y)).toBeLessThan(1);
-    await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
-    const comparison = page.getByRole('region', { name: 'Agent comparison' });
-    await expect(comparison).toBeVisible();
-    expect((await comparison.boundingBox())!.y).toBeGreaterThanOrEqual(after.y + after.height);
+    await expect(page.getByRole('switch', { name: 'Agent overview', exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: 'Explore repository map' }).click();
     await expect(page.getByRole('button', { name: 'Back to work' })).toBeVisible();
     await page.getByRole('button', { name: 'Back to work' }).click();

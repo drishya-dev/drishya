@@ -1,8 +1,10 @@
+import { BrandMark } from './BrandMark.tsx';
 import { useEffect, useState } from 'react';
 import type { DiscoveredSource, RecordingSummary } from '@drishya/contracts';
 import type { DiscoveryError } from '../api.ts';
 import { useApp } from '../state.ts';
 import { relTime } from './common.tsx';
+import { localPreviewId } from '../lib/local-preview.ts';
 
 const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
 
@@ -34,6 +36,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const [shownSources, setShownSources] = useState(60);
   const [usage, setUsage] = useState<{ bytes: number; budgetBytes: number; overBudget: boolean }>();
   const resetShown = () => { setShownRecordings(60); setShownSources(60); };
+  const preview = recordings.find(r => r.id === localPreviewId());
 
   const refresh = async () => {
     if (!source) return;
@@ -78,7 +81,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     <div className="home">
       <header className="home-head">
         <div className="brand static">
-          <span className="brand-mark" />
+          <BrandMark />
           Drishya
         </div>
         <span className="muted">See your coding agents work on your own code. Connect a native session when you want to continue.</span>
@@ -87,6 +90,8 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
       {usage && <p className={usage.overBudget ? 'bad small' : 'muted small'}>Local store · {(usage.bytes / 1024 ** 3).toFixed(2)} GiB of {(usage.budgetBytes / 1024 ** 3).toFixed(0)} GiB advisory budget{usage.overBudget ? ' · budget exceeded' : ''}. Nothing is deleted automatically. Remove selected recordings with <code>drishya forget &lt;recording&gt;</code>.</p>}
 
       <div className="home-intro"><span className="home-kicker">YOUR LOCAL AGENT WORKSPACE</span><h1>See the work.<br />Know what changed.</h1><p>Choose a Claude Code or Codex session. Follow its captured source, changes and results, or return to earlier work at your own pace.</p><div className="home-intro-actions"><button className="btn primary" onClick={() => openDemo(true)}>Watch the live demo</button><button className="btn" onClick={() => openDemo()}>Explore the synthetic demo</button><button className="btn" disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}>Refresh local sessions</button></div><div className="home-principles"><span>Local storage</span><span>Read-only observation</span><span>No telemetry</span></div></div>
+      {!preview && new URLSearchParams(location.search).get('demo') === 'local' && <p className="notice">Choose a local recording, then use More → Use this session as local preview. A missing or deleted recording is never replaced with a synthetic conversation.</p>}
+      {preview && <div className="local-preview-card"><strong>Your local preview</strong><span>{preview.title ?? 'Selected recording'}</span><button className="btn" onClick={() => { location.hash = `#/r/${preview.id}`; void openRecording(preview.id); }}>Open real recording</button><small>Already-redacted local evidence. Nothing is published or copied into the synthetic sample.</small></div>}
       <div className="home-filters">
         <input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => { setQ(e.target.value); resetShown(); }} />
         <select aria-label="Harness" value={harness} onChange={(e) => { setHarness(e.target.value); resetShown(); }}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>

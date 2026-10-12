@@ -6,6 +6,18 @@ import { fileEvidence } from '../src/lib/file-evidence.ts';
 
 const bundle = JSON.parse(readFileSync(new URL('../public/demo/bundle.json', import.meta.url), 'utf8')) as ReplayBundle;
 describe('file evidence choices', () => {
+  it('keeps captured search lines independent without inventing surrounding source', () => {
+    const search = bundle.projection.operations.find(op => op.detail.kind === 'search')!;
+    if (search.detail.kind !== 'search') throw new Error('fixture search missing');
+    const hit = search.detail.hits[0]!;
+    const choices = fileEvidence(search, hit.path);
+    expect(choices[0]!.snippet).toBe(hit.text);
+    expect(choices[0]!.startLine).toBe(hit.line);
+    expect(choices[0]!.artifactId).toBeUndefined();
+    expect(fileEvidence(search, 'unrelated.ts')).toEqual([]);
+    const start = bundle.projection.timeline.findIndex(entry => entry.type === 'op-start' && entry.operationId === search.id) + 1;
+    expect(fileEvidence(asOfProjection(bundle.projection, start).operations.find(op => op.id === search.id)!, hit.path)).toEqual([]);
+  });
   it('does not promote an earlier read to the before-state of an edit', () => {
     const edit = bundle.projection.operations.find((op) => op.detail.kind === 'edit')!;
     if (edit.detail.kind !== 'edit') throw new Error('fixture edit missing');

@@ -206,6 +206,6 @@ test('hover result boundaries scroll history without dismissing the same reading
   // A stationary cursor can leave the moving rectangle through scrolling alone.
   await page.mouse.wheel(0, -10000);
   await expect.poll(() => history.evaluate(el => el.scrollTop)).toBe(0);
-  await expect(card).not.toHaveAttribute('data-hover-reading', 'focused');
+  await expect(page.locator('article[data-hover-reading=focused]')).toHaveCount(0);
   await expect(page.locator('.hover-reading-slot')).toHaveCount(0);
 });

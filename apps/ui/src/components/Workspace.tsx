@@ -1,9 +1,23 @@
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
+import { useLayoutEffect, useRef } from 'react';
 import { useApp } from '../state.ts';
+import { useExperience } from '../lib/experience.ts';
 import { agentColor, agentName } from '../lib/identity.ts';
 
 export function WorkspaceBar() {
+  const bar = useRef<HTMLElement>(null);
+  const experience = useExperience();
+  useLayoutEffect(() => {
+    const element = bar.current;
+    const viewer = element?.closest<HTMLElement>('.viewer');
+    if (!element || !viewer || experience !== 'classic') return;
+    // Demo controls and focus controls can wrap; the explorer must start below them.
+    const measure = () => viewer.style.setProperty('--workspace-tools-bottom', `${element.getBoundingClientRect().bottom - viewer.getBoundingClientRect().top + 12}px`);
+    const observer = new ResizeObserver(measure);
+    observer.observe(element); measure();
+    return () => { observer.disconnect(); viewer.style.removeProperty('--workspace-tools-bottom'); };
+  }, [experience]);
   const explore = useApp((s) => s.explore);
   const compare = useApp((s) => s.compareAgents);
   const source = useApp((s) => s.source);
@@ -11,13 +25,13 @@ export function WorkspaceBar() {
   const filter = useApp((s) => s.filter);
   const multipleAgents = useApp(s => (s.projection?.agents.length ?? 0) > 1);
   const foldersHidden = useApp(s => s.foldersHidden);
-  const foldersShown = foldersHidden === false || foldersHidden !== true && window.innerWidth > 820;
-  return <nav className="workspace-bar" aria-label="Workspace views">
+  const foldersShown = foldersHidden === false || experience !== 'studio' && foldersHidden !== true && window.innerWidth > 820;
+  return <nav ref={bar} className="workspace-bar" aria-label="Workspace views">
     <span className="workspace-context sr-only">{source?.sample === 'growing' ? recording?.live ? 'Synthetic live demonstration · Publishing sample events' : 'Synthetic live demonstration · Sample complete' : source?.sample ? 'Synthetic recording' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local recording'}</span>
-    <div className="workspace-toggles"><button aria-label="Show session folders" aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg>Folders</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ mapVisible: true, explore: !explore, selectedOp: undefined, expandedOp: undefined })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7" /><circle cx="5" cy="5" r="3" /><circle cx="19" cy="5" r="3" /><circle cx="5" cy="19" r="3" /><circle cx="19" cy="19" r="3" /></svg>Map</button>{multipleAgents && <button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button>}</div>
+    <div className="workspace-toggles"><button aria-label="Show session folders" aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg>Folders</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ mapVisible: true, explore: !explore, selectedOp: undefined, expandedOp: undefined })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7" /><circle cx="5" cy="5" r="3" /><circle cx="19" cy="5" r="3" /><circle cx="5" cy="19" r="3" /><circle cx="19" cy="19" r="3" /></svg>Map</button>{experience === 'legacy' && multipleAgents && <button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button>}</div>
     {source?.sample === 'growing' && <span className={`sample-state${recording?.live ? ' live' : ''}`}><i aria-hidden="true" />{recording?.live ? 'Live demo' : 'Demo complete'}</span>}
     {source?.sample === 'growing' && recording?.live && <button className="btn ghost sample-complete" onClick={() => source.completeSample?.()}>Show complete sample</button>}
-    {(source?.sample === 'recorded' || source?.sample === 'growing' && !recording?.live) && <button className="btn ghost sample-watch" onClick={() => location.assign(`${location.pathname}?demo=live`)}>{source.sample === 'growing' ? 'Watch demo again' : 'Watch live demo'}</button>}
+    {(source?.sample === 'recorded' || source?.sample === 'growing' && !recording?.live) && <button className="btn ghost sample-watch" onClick={() => { const next = new URL(location.href); next.searchParams.set('demo', 'live'); next.searchParams.delete('at'); next.hash = ''; location.assign(next.href); }}>{source.sample === 'growing' ? 'Watch demo again' : 'Watch live demo'}</button>}
     {filter && <button className="btn ghost clear-workspace-filter" onClick={() => useApp.getState().setFilter(undefined)}>Clear focus</button>}
   </nav>;
 }

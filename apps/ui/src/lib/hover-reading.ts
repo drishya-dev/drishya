@@ -33,7 +33,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       focus.card.dataset.hoverReading = 'returning';
       focus.card.style.setProperty('--hover-left', `${to.left}px`); focus.card.style.setProperty('--hover-top', `${to.top}px`);
       focus.card.style.setProperty('--hover-width', `${to.width}px`); focus.card.style.setProperty('--hover-height', `${to.height}px`);
-      focus.animation = moveMaterial(focus.card, from, 320, 'reading-focus-return');
+      focus.animation = moveMaterial(focus.card, from, 350, 'reading-focus-return');
       const animation = focus.animation;
       const finish = () => { if (focus.returning && focus.animation === animation) restore(focus); };
       void animation.finished.then(finish, finish);
@@ -80,12 +80,14 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       const style = getComputedStyle(card);
       // scrollHeight omits the border: allocating it verbatim leaves a tiny
       // overflow and an unnecessary scrollbar even when all content fits.
-      const needed = Math.ceil(card.scrollHeight + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 2);
-      const height = Math.min(bottom - top, innerHeight * .72, Math.max(from.height, needed));
+      const body = card.querySelector<HTMLElement>('.op-body');
+      const bodyOverflow = body ? Math.max(0, body.scrollHeight - body.clientHeight) : 0;
+      const needed = Math.ceil(card.scrollHeight + bodyOverflow + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 2);
+      const height = Math.min(bottom - top, innerHeight * .72, Math.max(from.height * 1.12, needed));
       card.style.setProperty('--hover-height', `${height}px`);
       card.style.setProperty('--hover-top', `${Math.max(top, Math.min(bottom - height, from.top + (from.height - height) / 2))}px`);
       const focus: Focus = previous ?? { card, slot, returning: false, scrollTop: root.scrollTop }; focus.returning = false; focus.scrollTop = root.scrollTop; active = focus; focuses.add(focus);
-      if (useApp.getState().motion && !matchMedia('(prefers-reduced-motion: reduce)').matches) focus.animation = moveMaterial(card, from, 360, 'reading-focus-arrive');
+      if (useApp.getState().motion && !matchMedia('(prefers-reduced-motion: reduce)').matches) focus.animation = moveMaterial(card, from, 400, 'reading-focus-arrive');
       window.dispatchEvent(new Event('drishya-material-layout'));
     };
     const move = (event: PointerEvent) => {

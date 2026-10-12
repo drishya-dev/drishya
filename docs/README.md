@@ -1,5 +1,17 @@
 # Drishya documentation — map and precedence
 
+**12 October composer increment:** [53](review/53-professional-composer.md) implements the first composer part of 52: visible target, compact input/footer, truthful native policy summary and bounded memory-only text drafts. Shared interaction craft and Home grouping remain planned.
+
+**12 October reading increment:** [51](review/51-evidence-reading-navigation.md) implements bounded evidence Back/Forward and explicit captured/current dependency destinations. [52](review/52-composer-interactions-recordings-plan.md) adds the planned composer, interaction and workspace/time Home work; it is not an implementation claim. Classic, evidence truth and native/release gates remain unchanged.
+
+**Latest Classic correction:** [49](review/49-classic-disclosures-and-critical-review.md) adds inline Usage and expandable agent families plus precise captured search reading, mobile/session/keyboard repairs. It supplements 48; native acceptance and remaining developer jobs are not declared complete.
+
+**Latest Classic consolidation — 11 October:** [48](review/48-classic-evidence-workspace.md) supersedes 47's parallel-design plan: Classic is active, Studio's right Evidence desk/roster/tools is incorporated, explorer is larger and continuously scrollable, themes explicit, and the fresh developer critique owns the next utility/acceptance priorities. Backups remain; backend truth/release gates are unchanged.
+
+**11 October design correction:** [47](review/47-studio-workbench.md) promotes the first Studio to Classic, preserves Legacy, and implements a distinct source/work/evidence Studio composition plus local real-recording preview. This supersedes 45’s experience names/default, not backend truth or 46’s pending acceptance.
+
+**Working Studio and fresh review — 11 October:** [45](review/45-studio-working-experience.md) defines the second integrated working design, preserved Classic and complete scrollable previews; [46](review/46-studio-independent-review.md) records three fresh firsthand verdicts, concrete fixes and explicit remaining acceptance/utility. [44](review/44-current-git-review.md) defines separately consented current Git inspection and browser-local exact-content progress/handoff. These do not supersede security, capture truth or release gates.
+
 **Developer navigation — 11 October:** [43](review/43-developer-feedback-navigation.md) records useful search/error previews, linked current-import reading and bounded map neighborhoods. It preserves remaining native/Git/handoff scope and the separately authorized redesign with current UI retained as backup.
 
 **Evidence reading — 10 October:** [42](review/42-evidence-reading-design.md) records the first R1/R2 implementation: visible whole-recording review, changed-line previews, shared source find and practical current-file reading. It preserves skill precedence, evidence boundaries and publishing-only hosted CI.
