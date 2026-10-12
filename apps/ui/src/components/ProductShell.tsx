@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode, type CSSProperties } from 're
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
 import { useExperience, setExperience } from '../lib/experience.ts';
 import { useEvidenceScroll } from './EvidenceNavigation.tsx';
+import { useDismissMenus } from '../lib/dismiss-menus.ts';
 
 export function ReadingDialog({ title, close, children, className = '', modeless = false, style }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -20,6 +21,9 @@ export function ReadingDialog({ title, close, children, className = '', modeless
 }
 
 export function ProductShell({ children }: { children: ReactNode }) {
+  useDismissMenus();
+  const motion = useApp(s => s.motion);
+  useEffect(() => { document.documentElement.toggleAttribute('data-ui-motion', motion); }, [motion]);
   const theme = useApp((s) => s.theme);
   const open = useApp((s) => s.settingsOpen);
   const lowResource = useApp((s) => s.lowResource);

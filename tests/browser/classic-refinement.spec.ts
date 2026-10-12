@@ -117,7 +117,43 @@ test('usage expands inside the utility menu without clipping at narrow widths', 
     if (width === 1440) await page.screenshot({ path: resolve('.local/classic-usage-fixed.png') });
     await page.keyboard.press('Escape');
     await expect(panel).toBeHidden();
+    await expect(page.locator('.workspace-menu .usage-peek > summary')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.getByLabel('More workspace options', { exact: true })).toBeFocused();
   }
+});
+
+test('utility menus restore nested focus, stay bounded and keep keyboard/reduced motion immediate', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 360 });
+  await page.goto(url());
+  const menu = page.locator('.workspace-menu');
+  const trigger = page.getByLabel('More workspace options', { exact: true });
+  await trigger.focus(); await trigger.press('m');
+  await expect(page.locator('html')).toHaveAttribute('data-ui-motion', '');
+  await trigger.focus(); await trigger.press('Enter');
+  await expect(menu).toHaveAttribute('open', '');
+  await expect(menu).not.toHaveAttribute('data-pointer-menu', '');
+  const bounds = (await menu.locator(':scope > div').boundingBox())!;
+  expect(bounds.y).toBeGreaterThanOrEqual(0);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(360);
+  const usage = menu.locator('.usage-peek > summary');
+  await usage.focus(); await usage.press('Enter');
+  await usage.press('Escape');
+  await expect(usage).toBeFocused();
+  await expect(menu).toHaveAttribute('open', '');
+  await trigger.focus(); await trigger.press('Escape');
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await expect(menu).toHaveAttribute('data-pointer-menu', '');
+  await page.getByRole('button', { name: 'Show session folders', exact: true }).focus();
+  await expect(menu).not.toHaveAttribute('open', '');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await trigger.click();
+  await expect(menu).not.toHaveAttribute('data-pointer-menu', '');
+  await expect(menu.locator(':scope > div')).toBeVisible();
+  await page.screenshot({ path: resolve('.local/utility-menu-polish.png') });
+  await trigger.press('Escape');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
 });
 
 test('a captured search hit opens its exact line instead of a no-source dead end', async ({ page }) => {
