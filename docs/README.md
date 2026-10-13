@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**13 October Git consistency:** [60](review/60-git-consistent-inspection.md) closes the demonstrated unchanged-status mid-inspection race with bounded patch/index/worktree comparisons. Inspection stays a current optimistic sample with Refresh, not a locked atomic snapshot; native/release gates remain separate.
+
 **13 October independent review:** [59](review/59-pr57-review.md) records PR #57 review, repeated-counter correction and independently repeated local checks. The implemented Home/outcome/recovery increments preserve native and broader release acceptance gaps.
 
 **13 October local candidate:** [56](review/56-home-workspace-time.md) implements Home workspace/local-time grouping; [57](review/57-captured-test-outcomes.md) implements bounded wrapped runner outcomes; [58](review/58-ui-craft-local-candidate.md) records the UI source/rule sweep, recovery/focus fixes and validation boundaries. Native/physical/platform/human acceptance and review 50's broader utility backlog remain separate.

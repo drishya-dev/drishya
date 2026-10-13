@@ -1,5 +1,7 @@
 # Classic comprehensive developer, daily-user and design review
 
+**13 October correction:** Finding 24's demonstrated concurrent-content race is addressed in [60](60-git-consistent-inspection.md), with repeated raw patch/index/worktree/branch checks and seven regression cases. Current Git remains an optimistic sample rather than an atomic filesystem snapshot. Findings 25–29 remain separate work; do not mark all Git review recommendations complete.
+
 **Builder additions, 12 October:** [52](52-composer-interactions-recordings-plan.md) adds an explicit professional prompt-composer pass, a whole-product click/menu/focus/motion audit and recordings Home organization by actual workspace and time. These are planned tasks, not completed features. Each coherent implementation is to have its own verified commit. Installed design/motion skills apply to UI work.
 
 **Implementation annotation:** [49](49-classic-disclosures-and-critical-review.md) records same-pass corrections and regression checks. Findings 1 and 3, the mobile duplicate-icon/global modified-hotkey defects, Usage clipping and agent disclosure are fixed. Finding 7 (single-evidence selection lost on action paging) was also fixed after this report's final recheck, with the distant-evidence browser regression passing. All other recommendations retain their evidence/priority; an acceptance gap is not a demonstrated native bug.
