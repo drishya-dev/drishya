@@ -2,10 +2,10 @@ import type { Hunk } from '@drishya/contracts';
 import { splitDiffRows } from '../lib/split-diff.ts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
 
-export function ChangeColumns({ hunks, path, skipLines, maxLines }: { hunks: Hunk[]; path?: string; skipLines: number; maxLines: number }) {
+export function ChangeColumns({ hunks, path, skipLines, maxLines, scope = 'captured' }: { hunks: Hunk[]; path?: string; skipLines: number; maxLines: number; scope?: 'captured' | 'current-git' }) {
   const rows = splitDiffRows(hunks, skipLines, maxLines);
   const lang = langOf(path);
-  return <div className="change-columns" role="region" aria-label="Captured patch side by side">
+  return <div className="change-columns" role="region" aria-label={scope === 'captured' ? 'Captured patch side by side' : 'Current Git patch side by side'}>
     <div className="change-column-labels"><span>Before patch</span><span>After patch</span></div>
     <div className="change-column-scroll">
       {rows.map((row, i) => <div className="change-row" key={i}>
@@ -15,6 +15,6 @@ export function ChangeColumns({ hunks, path, skipLines, maxLines }: { hunks: Hun
         </div>)}
       </div>)}
     </div>
-    <div className="material-context">Captured patch only · columns aligned by patch order</div>
+    <div className="material-context">{scope === 'captured' ? 'Captured patch only' : 'Current Git patch only'} · columns aligned by patch order</div>
   </div>;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Hunk } from '@drishya/contracts';
 import { CodeView, DiffView, Output, ProvenanceBadge, useArtifact } from './common.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
@@ -139,21 +139,36 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   );
 }
 
-export function DiffReader({ hunks, path, navigationKey = path ?? 'patch' }: { hunks: Hunk[]; path?: string; navigationKey?: string }) {
+export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope = 'captured' }: { hunks: Hunk[]; path?: string; navigationKey?: string; scope?: 'captured' | 'current-git' }) {
   const [offset, setOffset] = useEvidenceState(`diff/${navigationKey}/offset`, () => firstChangeOffset(hunks));
   const [layout, setLayout] = useEvidenceState<'unified' | 'split'>(`diff/${navigationKey}/layout`, 'unified');
+  const [query, setQuery] = useEvidenceState(`diff/${navigationKey}/query`, '');
+  const [wrap, setWrap] = useEvidenceState(`diff/${navigationKey}/wrap`, false);
+  const [active, setActive] = useEvidenceState<number | undefined>(`diff/${navigationKey}/match`, undefined);
+  const lines = useMemo(() => hunks.flatMap(h => h.lines), [hunks]);
+  const matches = useMemo(() => query ? lines.flatMap((line, n) => line.slice(1).toLowerCase().includes(query.toLowerCase()) ? [n] : []) : [], [lines, query]);
+  const starts = useMemo(() => { let n = 0; return hunks.map(h => { const start = n; n += h.lines.length; return start; }); }, [hunks]);
+  const move = (direction: 1 | -1) => {
+    if (!matches.length) return;
+    const current = matches.indexOf(active ?? -1);
+    const next = matches[current < 0 ? direction === 1 ? 0 : matches.length - 1 : (current + direction + matches.length) % matches.length]!;
+    setActive(next); setOffset(next);
+  };
   const reader = useRef<HTMLDivElement>(null);
   useEvidenceScroll(reader, `diff/${navigationKey}/${offset}`);
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
-  return <div ref={reader} className={`artifact-reader diff-reader diff-${layout}`}>
-    <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button></div>
+  return <div ref={reader} className={`artifact-reader diff-reader diff-${layout}${wrap ? ' reader-wrap' : ''}`}>
+    <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button><button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(value => !value)}>Wrap lines</button>
+      <label className="patch-hunk-jump">Hunk <input type="number" aria-label="Jump to patch hunk" min={1} max={hunks.length} value={Math.max(0, starts.findLastIndex(start => start <= offset)) + 1} onChange={e => { const index = Number(e.target.value) - 1; if (Number.isInteger(index) && index >= 0 && index < starts.length) { setOffset(starts[index]!); setActive(undefined); } }} /> of {hunks.length}</label>
+    </div>
+    <SourceFind query={query} change={value => { setQuery(value); setActive(undefined); }} matches={matches} activeLine={active} move={move} label="Find in patch" idleLabel="Whole loaded patch" scopeLabel="this patch" />
     {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
-    <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} /></div>
-    <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} /></div>
-    {(offset > 0 || total > pageSize) && <nav className="reader-pages" aria-label="Captured change pages">
+    <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} activeOffset={active} showRemaining={false} /></div>
+    <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} scope={scope} /></div>
+    {(offset > 0 || total > pageSize) && <nav className="reader-pages" aria-label={scope === 'captured' ? 'Captured change pages' : 'Current Git change pages'}>
       <button className="btn" disabled={offset === 0} onClick={() => setOffset(n => Math.max(0, n - pageSize))}>Previous change lines</button>
-      <span className="muted small">{offset + 1}–{Math.min(total, offset + pageSize)} of {total} captured lines</span>
+      <span className="muted small">{offset + 1}–{Math.min(total, offset + pageSize)} of {total} patch lines</span>
       <button className="btn" disabled={offset + pageSize >= total} onClick={() => setOffset(n => n + pageSize)}>Next change lines</button>
     </nav>}
   </div>;

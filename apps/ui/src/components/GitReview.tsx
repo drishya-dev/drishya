@@ -5,7 +5,7 @@ import type { GitSnapshot } from '../../../daemon/src/git-types.ts';
 import { useApp } from '../state.ts';
 import { ReadingDialog } from './ProductShell.tsx';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
-import { CodeView } from './common.tsx';
+import { GitPatchReader } from './GitPatchReader.tsx';
 import { FileIcon } from './FileIcon.tsx';
 import { readReviewMarks, previousReviewNote, updateReviewMark, type ReviewMark } from '../lib/git-review-marks.ts';
 
@@ -67,7 +67,7 @@ function GitReader({ close }: { close: () => void }) {
           </aside>
           <section>{file && <>
             <header><strong>{file.path}</strong><button className="btn" onClick={() => { close(); useApp.setState({ currentFile: file.path }); }}>Open on disk</button><button className="btn" onClick={() => { close(); useApp.setState({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button></header>
-            <div className="git-patch"><CodeView text={file.patch} path={file.path} /></div>
+            <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} /></div>
             {file.status !== '??' && <footer>
               <label><input type="checkbox" checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label>
               <textarea aria-label="Local review note" placeholder="Review note (local, separate from agent evidence)" maxLength={2000} value={exact ? mark?.note ?? '' : ''} onChange={e => update({ note: e.target.value })} />

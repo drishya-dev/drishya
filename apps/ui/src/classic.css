@@ -196,3 +196,10 @@
 .git-previous-note summary { cursor: pointer; color: var(--t2); font-size: 12px; padding: 6px 0; }
 .git-previous-note p { color: var(--t3); font-size: 12px; line-height: 1.5; }
 .git-previous-note textarea { margin-bottom: 8px; }
+.git-patch-reader { min-width: 0; }
+.git-patch-reader .code { font-size: 13px; line-height: 1.7; }
+.patch-hunk-jump { display: inline-flex; align-items: center; gap: 6px; font: 11px var(--mono); color: var(--t2); }
+.patch-hunk-jump input { width: 58px; padding: 4px; }
+.diff-reader.reader-wrap .ln-tx, .diff-reader.reader-wrap .change-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.diff-reader .patch-match { outline: 1px solid var(--line-2); outline-offset: -1px; background: var(--s2); }
+.git-patch-reader .reader-tools { flex-wrap: wrap; }
