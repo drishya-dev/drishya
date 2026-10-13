@@ -120,7 +120,9 @@ test('a single delayed read result keeps its request readable in a bounded mater
     const viewport = await history.boundingBox();
     expect(header!.y).toBeGreaterThanOrEqual(viewport!.y);
     expect(header!.y).toBeLessThan(viewport!.y + viewport!.height);
-    expect((await read.boundingBox())!.height).toBeLessThanOrEqual(280);
+    // Captured text mounts before the finite transform settles. Assert the same
+    // allocation ceiling once it lands, rather than a subpixel intermediate frame.
+    await expect.poll(async () => (await read.boundingBox())!.height).toBeLessThanOrEqual(280);
     await expect.poll(() => page.evaluate(() => (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold)).toBe(true);
     if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/late-source-reading.png') });
   } finally { release(); await page.unroute('**/artifacts/**'); }

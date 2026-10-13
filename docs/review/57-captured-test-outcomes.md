@@ -14,4 +14,6 @@ Supports complete Vitest/Jest totals, pytest categories, Cargo result counters a
 
 Named `runner-summary-v1` is a presentation derivation over already-redacted captured previews. No adapter/reducer/schema/API change, no wrapper evaluation, no operation reclassification, no effect on test verification/coverage claims. Results are absent before the existing as-of result boundary. Limits: 128 KiB raw input, 64 KiB per extracted child, eight child outputs/summaries, depth six and 256 visited values. This does not promise parsing every runner or recovering summaries beyond stored preview cuts. Unsupported direct runners retain the existing summary/rendering fallback.
 
+Each section is a separately printed summary. Multiple summaries within one child output do not establish independent run boundaries or a combined total; nothing aggregates them or counts typecheck exit success as tests.
+
 Local unit/browser checks cover the builder's synthetic mixed wrapped Vitest/typecheck example, multiple runner outputs, ANSI, warnings, contradictory/partial summaries, six-figure counts, raw expansion and 390 px geometry. Existing failure assertion navigation passes. Complete candidate verification follows in STATUS; real-account/platform acceptance remains separate.
