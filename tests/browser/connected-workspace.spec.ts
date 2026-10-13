@@ -113,6 +113,8 @@ test('current source reading finds, navigates and wraps bounded disk pages witho
 test('source reading links qualified current imports to a bounded map neighborhood', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await expect(page.locator('.composer-target')).toBeVisible();
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   const folders = page.getByRole('complementary', { name: 'Session folders' });
   const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
   if (await enable.count()) await enable.click();
@@ -454,6 +456,9 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('actual.ts');
   await page.locator('.map-matches').getByRole('button', { name: 'src/actual.ts', exact: true }).click();
+  const selectedPoint = page.locator('.map-origin-point[data-origin-file="src/actual.ts"]');
+  await expect(selectedPoint).toHaveAttribute('data-origin-visible', 'true');
+  await expect.poll(async () => { const point = (await selectedPoint.boundingBox())!, world = (await page.locator('.map').boundingBox())!; return Math.round((point.x + point.width / 2 - world.x) / world.width * 100); }).toBe(50);
   await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
   const reader = page.getByRole('dialog', { name: 'Work on src/actual.ts' });
   await expect(reader).toContainText('recorded historical bytes');
@@ -461,6 +466,8 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
   const graph = await page.locator('.map').boundingBox();
   const reading = await reader.boundingBox();
   expect(graph!.x + graph!.width).toBeLessThan(reading!.x);
+  await expect(selectedPoint).toHaveAttribute('data-origin-visible', 'true');
+  await expect.poll(async () => { const point = (await selectedPoint.boundingBox())!, world = (await page.locator('.map').boundingBox())!; return Math.round((point.x + point.width / 2 - world.x) / world.width * 100); }).toBe(50);
   await page.getByRole('button', { name: 'Zoom into repository' }).click();
   await reader.getByRole('button', { name: 'Close Work on src/actual.ts' }).focus();
   await page.keyboard.press('Escape');

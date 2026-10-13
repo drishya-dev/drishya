@@ -1,4 +1,13 @@
 export interface FitRect { left: number; top: number; right: number; bottom: number }
+export interface MapFrame { w: number; h: number; sx: number; sy: number; ox: number; oy: number }
+/** A reader reallocates the canvas, not the user's chosen location in the world. */
+export function rebaseMapCamera(camera: { x: number; y: number; k: number }, before: MapFrame, after: MapFrame, anchor?: { x: number; y: number }) {
+  if (![before.w, before.h, before.sx, before.sy, after.w, after.h].every(value => value > 0)) return camera;
+  const point = anchor ?? { x: ((before.w / 2 - camera.x) / camera.k - before.ox) / before.sx, y: ((before.h / 2 - camera.y) / camera.k - before.oy) / before.sy };
+  const xRatio = ((before.ox + point.x * before.sx) * camera.k + camera.x) / before.w;
+  const yRatio = ((before.oy + point.y * before.sy) * camera.k + camera.y) / before.h;
+  return { k: camera.k, x: xRatio * after.w - (after.ox + point.x * after.sx) * camera.k, y: yRatio * after.h - (after.oy + point.y * after.sy) * camera.k };
+}
 /** Largest usable axis-aligned region after removing measured visible chrome. */
 export function mapReadingArea(bounds: FitRect, obstacles: FitRect[]): FitRect {
   let areas = [bounds];

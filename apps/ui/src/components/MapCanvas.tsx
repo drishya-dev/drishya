@@ -10,7 +10,7 @@ import { mapDetail, type MapGroup } from '../lib/map-detail.ts';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
 import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
-import { fitProjectedMap, mapReadingArea } from '../lib/map-fit.ts';
+import { fitProjectedMap, mapReadingArea, rebaseMapCamera, type MapFrame } from '../lib/map-fit.ts';
 
 interface Cam {
   x: number;
@@ -211,6 +211,15 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     return spatialProject({ ...n, z: depths.get(n.id) ?? fileDepth(n.id) }, yaw, pitch);
   };
   const project = (n: { id: string; x: number; y: number }) => { const p = spatial(n); return { x: (fit.ox + p.x * fit.sx) * cam.k + cam.x, y: (fit.oy + p.y * fit.sy) * cam.k + cam.y, z: p.z, scale: p.scale }; };
+  const previousFrame = useRef<(MapFrame & { explore: boolean }) | undefined>(undefined);
+  useLayoutEffect(() => {
+    const next = { ...fit, ...size, explore }, before = previousFrame.current;
+    previousFrame.current = next;
+    if (!explore || !before?.explore || before.w === next.w && before.h === next.h) return;
+    const selected = graph?.nodes.find(node => node.id === connectionFile);
+    // Pixel offsets from the full canvas otherwise move the selected file off the smaller map.
+    animateCam(rebaseMapCamera(camera.current, before, next, selected ? spatial(selected) : undefined), true);
+  }, [size.w, size.h, explore]);
   const fitWorld = (immediate = false) => {
     if (!viewGraph?.nodes.length || !wrap.current) return;
     holdOrientation();

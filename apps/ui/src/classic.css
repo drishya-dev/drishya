@@ -278,6 +278,7 @@
 :root { --control-radius: 8px; --reading-radius: 14px; }
 .product-dialog { border-color: var(--line); border-radius: var(--reading-radius); box-shadow: 0 24px 80px -24px #000b; scrollbar-width: thin; }
 .product-dialog > header { padding: 18px 24px; background: var(--s1); }
+.product-dialog > header { border-radius: var(--reading-radius) var(--reading-radius) 0 0; }
 .product-dialog h2 { font-size: 15px; letter-spacing: -.02em; font-weight: 600; }
 .product-dialog .icon-btn { width: 32px; height: 32px; border-radius: var(--control-radius); font-size: 16px; }
 .product-dialog .btn { border-color: var(--line); border-radius: var(--control-radius); background: var(--s2); min-height: 32px; }
@@ -364,6 +365,17 @@
 .home .row { padding-block: 14px; }
 .home .row-title { font-weight: 500; line-height: 1.5; }
 .home .demo-card { border-color: var(--line); border-radius: 12px; }
+.connected-workspace .map-tools { border-color: var(--line); border-radius: 12px; padding: 10px; background: var(--s1); }
+.connected-workspace .map-tools > .btn { border-color: transparent; border-radius: 7px; background: var(--s2); }
+.connected-workspace .map-tools .ux-search { border-color: transparent; border-radius: 8px; background: var(--bg); }
+.connected-workspace .map-scope { border: 0; background: var(--bg); border-radius: 8px; }
+.connected-workspace .map-scope button { border-radius: 6px; }
+.connected-workspace .map-scope button[aria-pressed=true] { border-color: transparent; background: var(--s2); }
+.connected-workspace .map-zoom { border-color: var(--line); border-radius: 10px; }
+.connected-workspace .map-zoom .btn { border-color: transparent; border-radius: 6px; }
+.connected-workspace .map-camera-hint { color: var(--t3); }
+.connected-workspace .map-legend { z-index: 4; }
+.connected-workspace .map-legend > button { pointer-events: auto; }
 @media (hover: hover) and (pointer: fine) {
   .product-dialog .btn:hover:not(:disabled), :root[data-experience=classic] .workbench-review .btn:hover:not(:disabled) { background: var(--s3); border-color: transparent; }
   :root[data-experience=classic] .workbench-station .instrument:hover { background: var(--s2); }
