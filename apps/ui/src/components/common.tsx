@@ -103,7 +103,7 @@ export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining =
         }
         return (
           <div key={hi} className="hunk">
-            {hunkVisible && h.oldStart > 0 && <div className="hunk-head">@@ −{h.oldStart},{h.oldLines} +{h.newStart},{h.newLines} @@</div>}
+            {hunkVisible && (h.oldStart > 0 || h.newStart > 0) && <div className="hunk-head">@@ −{h.oldStart},{h.oldLines} +{h.newStart},{h.newLines} @@</div>}
             {h.lines.map((l, i) => {
               const t = l[0];
               const cls = t === '+' ? 'add' : t === '-' ? 'del' : 'ctx';

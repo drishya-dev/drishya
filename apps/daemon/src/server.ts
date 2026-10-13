@@ -249,7 +249,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'workspace' && !subId && m === 'GET') return json(res, workspace.status(id));
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
-      if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id));
+      if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
       if (sub === 'workspace' && subId === 'approve' && m === 'POST') return json(res, await workspace.approve(id));
       if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));
       if (sub === 'controller' && !subId && m === 'GET') return json(res, controller.status(id));

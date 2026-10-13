@@ -32,9 +32,9 @@ function GitReader({ close }: { close: () => void }) {
   const [marks, setMarks] = useState(() => readMarks(key));
   const [packet, setPacket] = useState<string>();
   useEffect(() => { let active = true; void workspaceApi.gitStatus(id).then(s => { if (active) setConsent(s.approved); }).catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [id]);
-  const refresh = async () => {
+  const refresh = async (start = snapshot?.pageStart ?? 0) => {
     setBusy(true); setError(undefined); setPacket(undefined);
-    try { const next = await workspaceApi.gitSnapshot(id); setSnapshot(next); setSelected(path => next.files.some(f => f.path === path) ? path : next.files[0]?.path ?? ''); }
+    try { const next = await workspaceApi.gitSnapshot(id, start); setSnapshot(next); setSelected(path => next.files.some(f => f.path === path) ? path : next.files[0]?.path ?? ''); }
     catch (e) { setError((e as Error).message); setSnapshot(undefined); }
     finally { setBusy(false); }
   };
@@ -58,12 +58,19 @@ function GitReader({ close }: { close: () => void }) {
     {!workspace?.approved ? <section><p>Inspect the selected workspace first. Git access has separate consent.</p><button className="btn" disabled={busy} onClick={() => { setBusy(true); void approve().catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve current workspace</button></section> : !consent ? <section><p>Read branch, status and bounded staged / working-tree patches from this repository. No repository writes. This is current Git, separate from captured history.</p><button className="btn" onClick={() => { setBusy(true); void workspaceApi.approveGit(id).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve read-only Git</button></section> : <>
       <nav className="git-review-toolbar"><span>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span><button className="btn" disabled={busy} onClick={() => void refresh()}>{busy ? 'Inspecting…' : 'Refresh changes'}</button><button className="btn" disabled={!snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint)} onClick={preview}>Preview handoff</button></nav>
       {snapshot && <>
-        <p className="git-scope-note">Current sampled patches · Refresh to detect changes. Reviewed marks apply to exact displayed content. Untracked content is read separately; submodule details are unavailable.</p>
+        <p className="git-scope-note">Current Git sample · Refresh before sharing. Reviewed marks apply to this exact patch.</p>
+        {snapshot.totalAllowed !== undefined && snapshot.totalAllowed > snapshot.limit && <nav className="reader-pages git-file-pages" aria-label="Git file pages">
+          <button className="btn" disabled={busy || !snapshot.pageStart} onClick={() => void refresh(Math.max(0, (snapshot.pageStart ?? 0) - snapshot.limit))}>Previous files</button>
+          <span>{(snapshot.pageStart ?? 0) + 1}–{Math.min((snapshot.pageStart ?? 0) + snapshot.limit, snapshot.totalAllowed)} of {snapshot.totalAllowed} eligible paths</span>
+          <button className="btn" disabled={busy || (snapshot.pageStart ?? 0) + snapshot.limit >= snapshot.totalAllowed} onClick={() => void refresh((snapshot.pageStart ?? 0) + snapshot.limit)}>Next files</button>
+        </nav>}
         <div className="git-review-layout">
           <aside aria-label="Git changed files">
             {snapshot.files.map(f => <button key={f.path} aria-pressed={f.path === selected} onClick={() => { setSelected(f.path); setPacket(undefined); }}><FileIcon path={f.path} /><span>{f.path}</span><small>{marks[f.path]?.fingerprint === f.fingerprint && marks[f.path]?.reviewed ? 'Reviewed' : marks[f.path] ? 'Changed' : f.status}</small></button>)}
             {!snapshot.files.length && <p>No visible changes.</p>}
-            {snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
+            {!!snapshot.protectedCount && <p>{snapshot.protectedCount} protected paths excluded.</p>}
+            {snapshot.omissions?.map(item => <div className="git-omission" key={item.path}><strong>{item.path}</strong><span>{item.reason === 'content-limit' ? 'Patch exceeds remaining 1 MiB response budget' : 'Patch exceeds the Git process output limit'}</span><button className="btn ghost small" onClick={() => { close(); useApp.setState({ currentFile: item.path }); }}>Open current file instead</button></div>)}
+            {snapshot.totalAllowed === undefined && snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
           </aside>
           <section>{file && <>
             <header><strong>{file.path}</strong><button className="btn" onClick={() => { close(); useApp.setState({ currentFile: file.path }); }}>Open on disk</button><button className="btn" onClick={() => { close(); useApp.setState({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button></header>

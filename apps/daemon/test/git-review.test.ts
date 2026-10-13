@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:
 import { join, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { App } from '../src/app.ts';
+import { App, HttpError } from '../src/app.ts';
 import { WorkspaceAccess } from '../src/workspace.ts';
 import { GitReview, parseStatus, readGit } from '../src/git-review.ts';
 
@@ -168,4 +168,44 @@ it('bounds readers to four and preserves status order and the fifty-file limit a
   expect(snapshot.files.map(file => file.path)).toEqual(paths.slice(0, 50));
   expect(snapshot.omitted).toBe(11);
   expect(peak).toBe(4); expect(active).toBe(0); expect(reads).toBe(200);
+});
+
+it('skips an oversized patch without hiding later files and pages all eligible paths', async () => {
+  const paths = Array.from({ length: 60 }, (_, n) => `paged-${n}.ts`);
+  const paged = new GitReview(access, async (approvedRoot, args) => {
+    if (args[0] === 'rev-parse') return args.includes('--show-toplevel') ? approvedRoot : 'head';
+    if (args[0] === 'symbolic-ref') return 'branch';
+    if (args[0] === 'status') return ['.env', ...paths].map(path => ` M ${path}\0`).join('');
+    if (args[0] === 'ls-files') return 'index';
+    if (args[0] === 'diff') return args.includes('--cached') ? '' : args.at(-1) === paths[0] ? 'x'.repeat(1024 * 1024 + 1) : `small patch ${args.at(-1)}`;
+    throw new Error('unexpected command');
+  });
+  await access.approve(id); await paged.approve(id);
+  const first = await paged.snapshot(id);
+  expect(first.files.map(file => file.path)).toEqual(paths.slice(1, 50));
+  expect(first.omissions).toEqual([{ path: paths[0], reason: 'content-limit' }]);
+  expect(first.protectedCount).toBe(1); expect(first.totalAllowed).toBe(60);
+  const next = await paged.snapshot(id, 50);
+  expect(next.files.map(file => file.path)).toEqual(paths.slice(50));
+  expect(next.pageStart).toBe(50);
+  expect((await paged.snapshot(id, 5000)).pageStart).toBe(50);
+  await expect(paged.snapshot(id, -1)).rejects.toMatchObject({ status: 400 });
+});
+
+it('reports a per-file process content limit but never swallows an ordinary Git failure', async () => {
+  let failStatus = 413;
+  const limited = new GitReview(access, async (approvedRoot, args) => {
+    if (args[0] === 'rev-parse') return args.includes('--show-toplevel') ? approvedRoot : 'head';
+    if (args[0] === 'symbolic-ref') return 'branch';
+    if (args[0] === 'status') return ' M large.ts\0 M small.ts\0';
+    if (args[0] === 'ls-files') return 'index';
+    if (args[0] === 'diff') { if (args.at(-1) === 'large.ts') throw new HttpError(failStatus, 'synthetic limit'); return 'small'; }
+    throw new Error('unexpected command');
+  });
+  await access.approve(id); await limited.approve(id);
+  const snapshot = await limited.snapshot(id);
+  expect(snapshot.files.map(file => file.path)).toEqual(['small.ts']);
+  expect(snapshot.omissions).toEqual([{ path: 'large.ts', reason: 'process-limit' }]);
+  failStatus = 422;
+  await expect(limited.snapshot(id)).rejects.toMatchObject({ status: 422 });
 });

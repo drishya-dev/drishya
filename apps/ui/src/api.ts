@@ -122,7 +122,7 @@ export interface ControllerStatus {
 export const workspaceApi = {
   gitStatus: (id: string) => req<{ approved: boolean; scope: 'current-git' }>(`/v1/recordings/${encodeURIComponent(id)}/git`),
   approveGit: (id: string) => req<{ approved: boolean; scope: 'current-git' }>(`/v1/recordings/${encodeURIComponent(id)}/git/approve`, { method: 'POST', json: {} }),
-  gitSnapshot: (id: string) => req<import('../../daemon/src/git-types.ts').GitSnapshot>(`/v1/recordings/${encodeURIComponent(id)}/git/snapshot`),
+  gitSnapshot: (id: string, start = 0) => req<import('../../daemon/src/git-types.ts').GitSnapshot>(`/v1/recordings/${encodeURIComponent(id)}/git/snapshot?start=${encodeURIComponent(start)}`),
   status: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace`),
   approve: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {} }),
   file: (id: string, path: string, start: number) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/file?${new URLSearchParams({ path, start: String(start), count: '200' })}`),

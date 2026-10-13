@@ -18,7 +18,7 @@ export function GitPatchReader({ file }: { file: GitFile }) {
     </nav>
     {section?.partial && !raw && <p className="material-context">Some patch hunks could not be parsed safely. Raw patch retains the complete loaded output.</p>}
     {structured ? <DiffReader key={section.name} hunks={section.hunks} path={file.path} scope="current-git" navigationKey={`git/${file.fingerprint}/${section.name}`} /> : <>
-      <CodeView text={lines.slice(page, page + 120).join('\n')} path={file.path} />
+      <CodeView text={lines.slice(page, page + 120).join('\n')} startLine={page + 1} path={file.path} />
       {lines.length > 120 && <nav className="reader-pages" aria-label="Raw Git patch pages"><button className="btn" disabled={!page} onClick={() => setPage(n => Math.max(0, n - 120))}>Previous patch lines</button><span>{page + 1}–{Math.min(page + 120, lines.length)} of {lines.length}</span><button className="btn" disabled={page + 120 >= lines.length} onClick={() => setPage(n => n + 120)}>Next patch lines</button></nav>}
     </>}
   </div>;

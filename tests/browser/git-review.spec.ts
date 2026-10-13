@@ -54,6 +54,7 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   expect(await reader.locator('.code .ln').count()).toBeLessThanOrEqual(120);
   await expect(reader.getByRole('navigation', { name: 'Raw Git patch pages' })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(reader).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: resolve('.local/git-patch-reader.png') });
 });
@@ -94,7 +95,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   await expect(reader.getByRole('textbox', { name: 'Local review note' })).toHaveValue('Inspected the total');
   await expect(reader.getByRole('checkbox', { name: 'Reviewed displayed patch' })).not.toBeChecked();
   let conflict = true;
-  await page.route('**/v1/recordings/*/git/snapshot', route => conflict
+  await page.route('**/v1/recordings/*/git/snapshot*', route => conflict
     ? route.fulfill({ status: 409, json: { error: 'Repository changed during inspection. Refresh before reviewing.' } })
     : route.continue());
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
@@ -105,4 +106,27 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.locator('.git-patch')).toContainText('total = 3');
   await expect(reader.getByRole('alert')).toHaveCount(0);
+});
+
+test('Git file pages reach paths past fifty through the authenticated local API', async ({ page }) => {
+  for (let n = 0; n < 55; n++) writeFileSync(join(root, `extra-${n}.ts`), 'synthetic\n');
+  await page.goto(`${server.url}/?experience=classic#token=${server.token}`);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=classic#/r/${id}`);
+  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
+  const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
+  const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
+  const refresh = reader.getByRole('button', { name: 'Refresh changes' });
+  await expect(workspaceConsent.or(gitConsent).or(refresh)).toBeVisible();
+  if (await workspaceConsent.isVisible()) await workspaceConsent.click();
+  await expect(gitConsent.or(refresh)).toBeVisible();
+  if (await gitConsent.isVisible()) await gitConsent.click(); else await refresh.click();
+  await expect(reader.getByRole('navigation', { name: 'Git file pages' })).toContainText('1–50 of 56');
+  await reader.getByRole('button', { name: 'Next files', exact: true }).click();
+  await expect(reader.getByRole('navigation', { name: 'Git file pages' })).toContainText('51–56 of 56');
+  await expect(reader.getByRole('complementary', { name: 'Git changed files' })).toContainText('extra-9.ts');
+  await expect(reader.getByRole('button', { name: 'Next files', exact: true })).toBeDisabled();
+  await reader.getByRole('button', { name: 'Previous files', exact: true }).click();
+  await expect(reader.getByRole('navigation', { name: 'Git file pages' })).toContainText('1–50 of 56');
 });

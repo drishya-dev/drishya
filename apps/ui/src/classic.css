@@ -203,3 +203,7 @@
 .diff-reader.reader-wrap .ln-tx, .diff-reader.reader-wrap .change-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
 .diff-reader .patch-match { outline: 1px solid var(--line-2); outline-offset: -1px; background: var(--s2); }
 .git-patch-reader .reader-tools { flex-wrap: wrap; }
+.git-file-pages { padding: 8px 18px; flex-wrap: wrap; }
+.git-omission { display: grid; gap: 6px; padding: 10px 4px; font-size: 11px; overflow-wrap: anywhere; border-top: 1px solid var(--line); }
+.git-omission strong { font: 11px var(--mono); }
+.git-omission span { color: var(--t3); line-height: 1.5; }

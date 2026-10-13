@@ -6,7 +6,7 @@ import { isDeniedPath, redactText } from '@drishya/privacy';
 import { HttpError } from './app.ts';
 import type { WorkspaceAccess } from './workspace.ts';
 
-import type { GitFile, GitSnapshot } from './git-types.ts';
+import type { GitFile, GitSnapshot, GitOmission } from './git-types.ts';
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
 const safe = (path: string) => !!path && !path.startsWith('.local/') && !path.startsWith('/') && !path.includes('\\') && !path.split('/').some(p => p === '..' || p === '.git') && !isDeniedPath(path);
 
@@ -16,7 +16,8 @@ export function readGit(root: string, args: string[]): Promise<string> {
   // Ambient override variables must not redirect this reader to a different worktree/config.
   for (const key of Object.keys(env)) if (/^GIT_(?:DIR|WORK_TREE|INDEX_FILE|CONFIG.*|EXTERNAL_DIFF|DIFF_OPTS)$/.test(key)) delete (env as Record<string, string | undefined>)[key];
   return new Promise((yes, no) => execFile('git', ['--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {
-    if (error) no(new HttpError(422, 'Git inspection failed or exceeded its time/content limit. Check Git installation and repository state.'));
+    if (error && String(error.code) === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') no(new HttpError(413, 'Git output exceeds the inspection content limit.'));
+    else if (error) no(new HttpError(422, 'Git inspection failed or exceeded its time/content limit. Check Git installation and repository state.'));
     else yes(stdout);
   }));
 }
@@ -69,7 +70,8 @@ export class GitReview {
   revoke(id: string) { this.grants.delete(id); }
   status(id: string) { return { approved: this.grants.has(id), scope: 'current-git' as const }; }
   async approve(id: string) { await this.workspace.root(id); this.grants.add(id); return this.status(id); }
-  async snapshot(id: string): Promise<GitSnapshot> {
+  async snapshot(id: string, start = 0): Promise<GitSnapshot> {
+    if (!Number.isSafeInteger(start) || start < 0) throw new HttpError(400, 'Invalid Git page.');
     if (!this.grants.has(id)) throw new HttpError(403, 'Approve read-only Git inspection separately.');
     if (this.busy.has(id)) throw new HttpError(409, 'Git inspection is already running.');
     this.busy.add(id);
@@ -82,24 +84,30 @@ export class GitReview {
       const branch = redactText(branchRef).text;
       const raw = await git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=none']);
       const entries = parseStatus(raw); const allowed = entries.filter(f => safe(f.path) && (!f.previousPath || safe(f.previousPath)));
-      const candidates = allowed.slice(0, 50);
+      const pageStart = allowed.length ? Math.min(start, Math.floor((allowed.length - 1) / 50) * 50) : 0;
+      const candidates = allowed.slice(pageStart, pageStart + 50);
+      const omissions: GitOmission[] = [];
       const paths = [...new Set(candidates.flatMap(item => item.previousPath ? [item.previousPath, item.path] : [item.path]))];
       const indexMarker = async () => paths.length ? digest(await git(root, ['ls-files', '--stage', '-z', '--', ...paths])) : '';
       const startIndex = await indexMarker();
       const startMarkers = await fileMarkers(root, paths);
       const checks: { item: typeof candidates[number]; fingerprint: string }[] = [];
       const files: GitFile[] = []; let budget = 1024 * 1024;
-      collect: for (let i = 0; i < candidates.length; i += 4) {
+      for (let i = 0; i < candidates.length; i += 4) {
         const batch = candidates.slice(i, i + 4);
         const results = await Promise.allSettled(batch.map(item => patchFor(git, root, item)));
         // Consume in status order, independently of subprocess completion order.
         for (const [offset, result] of results.entries()) {
-          if (result.status === 'rejected') throw result.reason;
-          const item = batch[offset]!, patch = result.value;
+          const item = batch[offset]!;
+          if (result.status === 'rejected') {
+            if (result.reason instanceof HttpError && result.reason.status === 413) { omissions.push({ path: redactText(item.path).text, reason: 'process-limit' }); continue; }
+            throw result.reason;
+          }
+          const patch = result.value;
           const fingerprint = digest(head + '\0' + item.path + '\0' + item.status + '\0' + patch);
           const clean = redactText(patch).text;
           const bytes = Buffer.byteLength(clean);
-          if (bytes > budget) break collect;
+          if (bytes > budget) { omissions.push({ path: redactText(item.path).text, reason: 'content-limit' }); continue; }
           budget -= bytes;
           checks.push({ item, fingerprint: digest(patch) });
           files.push({ ...item, path: redactText(item.path).text, previousPath: item.previousPath ? redactText(item.previousPath).text : undefined, fingerprint, patch: clean });
@@ -120,7 +128,7 @@ export class GitReview {
       const endHead = await git(root, ['rev-parse', '--verify', 'HEAD']).then(s => s.trim()).catch(() => 'unborn');
       const endBranch = (await git(root, ['symbolic-ref', '--short', '-q', 'HEAD']).catch(() => 'detached')).trim();
       if (end !== raw || head !== endHead || branchRef !== endBranch || startIndex !== await indexMarker() || startMarkers !== await fileMarkers(root, paths)) throw changed();
-      return { scope: 'current-git', head, branch, fingerprint: digest(head + raw + files.map(f => f.fingerprint).join()), files, omitted: entries.length - files.length, limit: 50 };
+      return { scope: 'current-git', head, branch, fingerprint: digest(head + raw + files.map(f => f.fingerprint).join()), files, omitted: entries.length - files.length, limit: 50, pageStart, totalAllowed: allowed.length, protectedCount: entries.length - allowed.length, omissions };
     } finally { this.busy.delete(id); }
   }
 }
