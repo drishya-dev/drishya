@@ -23,7 +23,7 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   const lines = Array.from({ length: 350 }, (_, n) => `export const line${n} = ${n};`);
   writeFileSync(join(root, 'source.ts'), lines.join('\n') + '\n');
   execFileSync('git', ['add', 'source.ts'], { cwd: root, windowsHide: true });
-  lines[8] = 'export const line8 = 1008;'; lines[300] = 'export const needleLate = 300;';
+  lines[8] = `export const line8 = '${'longCapturedValue'.repeat(80)}';`; lines[300] = 'export const needleLate = 300;';
   writeFileSync(join(root, 'source.ts'), lines.join('\n') + '\n');
   await page.goto(`${server.url}/?experience=classic#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
@@ -39,6 +39,16 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   await expect(gitConsent.or(refresh)).toBeVisible();
   if (await gitConsent.isVisible()) await gitConsent.click(); else await refresh.click();
   await expect(reader.getByRole('button', { name: 'Working tree', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const content = reader.getByRole('region', { name: 'Patch content', exact: true });
+  await expect(content).toBeVisible();
+  expect(await content.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+  await content.evaluate(el => { el.scrollTop = 40; el.scrollLeft = 40; });
+  expect(await content.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
+  await reader.getByRole('button', { name: 'Staged', exact: true }).click();
+  expect(await content.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await content.evaluate(el => { el.scrollTop = 80; el.scrollLeft = 30; });
+  expect(await content.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  await reader.getByRole('button', { name: 'Working tree', exact: true }).click();
   await reader.getByRole('spinbutton', { name: 'Jump to patch hunk' }).fill('2');
   await expect(reader.locator('.unified-change')).toContainText('needleLate');
   await reader.getByRole('searchbox', { name: 'Find in patch' }).fill('needleLate');

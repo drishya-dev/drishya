@@ -206,8 +206,10 @@ export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope
     </div>
     <SourceFind query={query} change={value => { setQuery(value); setActive(undefined); }} matches={matches} activeLine={active} move={move} label="Find in patch" idleLabel="Whole loaded patch" scopeLabel="this patch" />
     {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
-    <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} activeOffset={active} showRemaining={false} /></div>
-    <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} scope={scope} /></div>
+    <div className="diff-scroll" tabIndex={0} role="region" aria-label="Patch content">
+      <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} activeOffset={active} showRemaining={false} /></div>
+      <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} scope={scope} /></div>
+    </div>
     {(offset > 0 || total > pageSize) && <nav className="reader-pages" aria-label={scope === 'captured' ? 'Captured change pages' : 'Current Git change pages'}>
       <button className="btn" disabled={offset === 0} onClick={() => setOffset(n => Math.max(0, n - pageSize))}>Previous change lines</button>
       <span className="muted small">{offset + 1}–{Math.min(total, offset + pageSize)} of {total} patch lines</span>

@@ -191,7 +191,7 @@
 .map-recovery { position: absolute; z-index: 6; top: 12px; left: 12px; max-width: min(360px, calc(100% - 24px)); padding: 12px; border: 1px solid var(--line-2); background: var(--s1); color: var(--t2); font-size: 12px; overflow-wrap: anywhere; }
 .map-recovery .btn { display: block; margin-top: 8px; }
 .verification-tile.deselected, .verification-tile.xfailed, .verification-tile.xpassed { background: var(--t3); }
-.connected-workspace :is(.search input, .prompt-composer textarea):focus-visible { outline: 2px solid var(--t2); outline-offset: 2px; }
+.connected-workspace :is(.search input, .prompt-composer textarea):focus-visible { outline: none; }
 .git-previous-note { width: 100%; padding-top: 10px; border-top: 1px solid var(--line); }
 .git-previous-note summary { cursor: pointer; color: var(--t2); font-size: 12px; padding: 6px 0; }
 .git-previous-note p { color: var(--t3); font-size: 12px; line-height: 1.5; }
@@ -233,3 +233,33 @@
 .workspace-navigation-open { display: flex; justify-content: space-between; gap: 8px; width: 100%; font-size: 11px; }
 .workspace-navigation-open kbd { color: var(--t3); font: 10px var(--mono); }
 .product-dialog :is(input, textarea, select):focus-visible, .home :is(input, select):focus-visible { outline: 2px solid var(--t2); outline-offset: 2px; }
+
+/* Integrated reading: one viewport owns both axes, not a scrollbar under 120 lines. */
+.git-review-dialog .git-patch { max-height: none; overflow: visible; padding: 8px 20px 16px; }
+.git-patch :is(.diff-scroll,.git-raw-scroll) { max-height: clamp(180px, 38dvh, 440px); overflow: auto; scrollbar-gutter: stable; scrollbar-width: thin; border-radius: 6px; }
+.git-patch .git-raw-scroll > .code { overflow: visible; }
+.git-patch .diff-scroll .code { overflow: visible; }
+.git-patch .diff-scroll .ln { min-width: max-content; }
+.git-patch .reader-wrap .diff-scroll .ln { min-width: 0; }
+.git-patch .diff-scroll .change-row { min-width: 660px; }
+.git-patch .reader-wrap .diff-scroll .change-row { min-width: 0; }
+.git-patch .diff-scroll:focus-visible, .git-raw-scroll:focus-visible { outline: 1px solid var(--line-3); outline-offset: 2px; }
+.git-patch .reader-tools { gap: 6px; }
+.git-review-layout footer textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--t1); resize: vertical; }
+.git-review-layout aside { scrollbar-width: thin; }
+.git-review-layout aside button > span { overflow-wrap: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.git-review-layout aside button { min-height: 38px; padding: 8px; }
+.git-review-layout section > header { gap: 8px; }
+.git-review-layout section > header strong { min-width: 140px; }
+/* Input focus belongs to the whole material; avoid a second frame inside it. */
+.connected-workspace .prompt-composer:focus-within { border-color: var(--line-3); }
+.connected-workspace .prompt-composer textarea { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.connected-workspace .prompt-composer textarea:focus { outline: none; box-shadow: none; }
+.connected-workspace .search:focus-within { border-color: var(--line-3); }
+.connected-workspace .search input:focus { outline: none; box-shadow: none; }
+:root[data-experience=classic] .studio-actions .settings-open { display: inline-flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+.settings-glyph { display: block; flex: none; }
+@media (max-width: 700px) {
+  .git-review-dialog .git-patch { padding-inline: 12px; }
+  .git-patch :is(.diff-scroll,.git-raw-scroll) { max-height: 34dvh; }
+}
