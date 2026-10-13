@@ -14,6 +14,7 @@ import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
+import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
 import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-motion.ts';
@@ -616,7 +617,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
         <div className="cmd">$ {d.command}</div>
         {input && <ArtifactReader id={input} kind="code" />}
-        {d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>}
+        <CapturedOutcomes output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
         {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
       </div>;
@@ -624,6 +625,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
         <div className="cmd">$ {d.command}</div>
         {input && <ArtifactReader id={input} kind="code" />}
+        <CapturedOutcomes output={d.outputPreview} />
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
         <div className="muted small">Exit {d.exitCode ?? 'not captured'}</div>
       </div>;
@@ -704,11 +706,12 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       return (
         <div className="test">
           <div className="cmd">$ {d.command}</div>
-          <ResultArea state={op.status} resolving={resolving}>{s ? (
+          <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes output={d.outputPreview} fallback={s ? (
             <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
             <div className="muted">exit {d.exitCode ?? '?'}</div>
-          ) : <div className="muted">Waiting for output</div>}
+          ) : <div className="muted">Waiting for output</div>} />
+          {s && s.failed > 0 && <button className="bad" onClick={e => { e.stopPropagation(); set({ expandedOp: op.id, selectedOp: undefined }); }}>{s.failed} failed · inspect assertions</button>}
           {s?.failures[0] && (
             <div className="failure">
               <div className="failure-name">{s.failures[0].name}</div>
@@ -725,6 +728,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
           <div className="cmd">$ {d.command.slice(0, 1200)}</div>
           {d.command.length > 1200 && <div className="material-context">First 1,200 captured characters · expand for full input</div>}
           <ResultArea state={op.status} resolving={resolving}>
+            <CapturedOutcomes output={d.outputPreview} />
             {d.outputPreview ? <TerminalPreview text={d.outputPreview} failed={op.status === 'error'} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
             {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
           </ResultArea>

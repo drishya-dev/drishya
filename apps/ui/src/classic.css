@@ -184,3 +184,7 @@
 .home .workspace-group-count { color: var(--t2); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
 .home .session-time-section h3 { font-size: 11px; font-weight: 500; color: var(--t3); margin: 0; padding: 12px 14px 5px; }
 .home .session-more { margin: 10px 14px; max-width: calc(100% - 28px); height: auto; white-space: normal; }
+.captured-outcomes > section { margin: 10px 0; min-width: 0; }
+.captured-outcomes .verification-caption { flex-wrap: wrap; }
+.verification-tile.cancelled, .verification-tile.unknown { background: var(--t3); opacity: .7; }
+.verification-tile.errors { background: var(--bad); }

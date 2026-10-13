@@ -104,14 +104,14 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
       return (
         <>
           <div className="cmd">$ {d.command}</div>
-          {s ? (
+          <CapturedOutcomes output={d.outputPreview} fallback={s ? (
             <p className="insp-note">
               {s.framework}: <span className="bad">{s.failed} failed</span>, <span className="good">{s.passed} passed</span>
               {s.skipped ? `, ${s.skipped} skipped` : ''}. <span className="muted">Counts read from the runner's output (derived).</span>
             </p>
           ) : (
             <p className="insp-note">Exit code {d.exitCode ?? 'unknown'}. The output did not contain a summary Drishya recognises.</p>
-          )}
+          )} />
           {s?.failures.map((f, i) => (
             <div key={i} className="failure big">
               <div className="failure-name">{f.name}</div>
@@ -134,6 +134,7 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
           <pre className="cmd block">$ {d.command}</pre>
           {op.artifactIds.find((id) => id.endsWith('_input')) && <ArtifactReader id={op.artifactIds.find((id) => id.endsWith('_input'))} kind="code" />}
           <p className="insp-note">Exit code {d.exitCode ?? 'unknown'}</p>
+          <CapturedOutcomes output={d.outputPreview} />
           <OutputBlock artifactId={d.outputArtifactId} preview={d.outputPreview} />
         </>
       );
@@ -381,3 +382,4 @@ export function ExplanationView({ r }: { r: Explanation }) {
     </div>
   );
 }
+import { CapturedOutcomes } from './CapturedOutcomes.tsx';
