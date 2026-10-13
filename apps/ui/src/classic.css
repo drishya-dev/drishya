@@ -208,3 +208,15 @@
 .git-omission strong { font: 11px var(--mono); }
 .git-omission span { color: var(--t3); line-height: 1.5; }
 .stored-source-find { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 4px 0 10px; }
+.review-question-editor { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.review-question-editor summary, .resolved-questions summary { cursor: pointer; font-size: 12px; padding: 8px 0; }
+.review-question-editor p, .review-question-scope { color: var(--t3); font-size: 12px; line-height: 1.6; }
+.review-question-editor textarea, .question-export textarea { width: 100%; min-height: 90px; padding: 10px; font-size: 13px; line-height: 1.6; }
+.review-question-editor input { width: 100%; margin: 8px 0; padding: 8px; font-size: 12px; }
+.review-question-editor [role=status] { display: block; color: var(--t2); font-size: 12px; margin-top: 8px; }
+.review-questions-dialog > :not(header) { margin: 16px 24px; }
+.review-question-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.review-question-row p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
+.review-question-row small, .question-cap { display: block; color: var(--t3); font-size: 11px; margin: 8px 0; }
+.question-target { color: var(--read); text-align: left; font-size: 12px; overflow-wrap: anywhere; }
+.question-export textarea { max-height: 240px; }

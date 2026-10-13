@@ -34,7 +34,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const source = useApp(s => s.source), recordingId = useApp(s => s.recordingId);
   const [finding, setFinding] = useState(false), [findStatus, setFindStatus] = useState('');
   const scan = useRef<{ identity: string; matches: number[]; cursor?: string; started: boolean; finished: boolean; skipped: number }>({ identity: '', matches: [], started: false, finished: false, skipped: 0 });
-  const searchIdentity = `${recordingId}/${id}/${query}`;
+  const searchIdentity = JSON.stringify([recordingId, id, query]);
   const latestSearch = useRef(searchIdentity); latestSearch.current = searchIdentity;
   useEffect(() => {
     scan.current = { identity: searchIdentity, matches: [], started: false, finished: false, skipped: 0 };
@@ -86,8 +86,8 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
         if (state.finished) break;
       }
       setFindStatus(state.finished ? `No more stored matches${state.skipped ? ` · ${state.skipped} oversized lines not searched` : ''}` : 'No match in this scan · continue through stored content');
-    } catch { if (latestSearch.current === identity) { state.started = false; state.cursor = undefined; setFindStatus('Stored search failed · retry'); } }
-    finally { if (latestSearch.current === identity) setFinding(false); }
+    } catch { if (latestSearch.current === identity && useApp.getState().source === selectedSource) { state.started = false; state.cursor = undefined; setFindStatus('Stored search failed · retry'); } }
+    finally { if (latestSearch.current === identity && useApp.getState().source === selectedSource) setFinding(false); }
   };
   const sourceEnd = view.totalLines === undefined ? undefined : Math.min(sourceBase + view.totalLines - 1, view.artifact?.range?.end ?? Infinity);
   const sourceLines = text ? text.replace(/\n$/, '').split('\n') : [];

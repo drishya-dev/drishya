@@ -1,0 +1,43 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { App } from '../../apps/daemon/src/app.ts';
+import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+
+let dir: string, app: App, server: RunningServer;
+test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-questions-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-questions' }); });
+test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
+
+test('review questions survive reload, return to the captured action and resolve only explicitly', async ({ page }) => {
+  await page.goto(new URL('/?demo&experience=classic', server.launchUrl).href);
+  const op = page.locator('article.op-edit').first();
+  await op.getByRole('button', { name: /Expand/ }).click();
+  await op.getByRole('button', { name: 'Open provenance and file states' }).click();
+  const inspector = page.getByRole('complementary', { name: 'Operation detail' });
+  const targetTitle = await inspector.locator('.insp-title').innerText();
+  await inspector.getByText('Leave a review question', { exact: true }).click();
+  await inspector.getByRole('textbox', { name: 'Review question', exact: true }).fill('Check the zero-total path before approving');
+  await inspector.getByRole('textbox', { name: 'Question owner' }).fill('Reviewer');
+  await inspector.getByRole('button', { name: 'Save question', exact: true }).click();
+  await expect(inspector).toContainText('Saved locally');
+  await page.reload();
+  await page.getByRole('button', { name: 'Review questions · 1', exact: true }).click();
+  const queue = page.getByRole('dialog', { name: 'Review questions', exact: true });
+  await expect(queue).toContainText('Check the zero-total path');
+  await queue.getByRole('button', { name: 'Preview open questions' }).click();
+  await expect(queue.getByRole('textbox', { name: 'Question handoff preview' })).toHaveValue(/Captured action reference:/);
+  await queue.locator('.question-target').click();
+  await expect(inspector.locator('.insp-title')).toHaveText(targetTitle);
+  await inspector.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('button', { name: 'Review questions · 1', exact: true }).click();
+  await queue.getByRole('button', { name: 'Resolve question', exact: true }).click();
+  await expect(queue.getByRole('region', { name: 'Open review questions' })).toContainText('No open review questions');
+  await queue.getByText('Resolved questions · 1', { exact: true }).click();
+  await expect(queue).toContainText('Check the zero-total path');
+  await queue.getByRole('button', { name: 'Reopen question' }).click();
+  await expect(queue.locator('section[aria-label="Open review questions"]')).toContainText('Check the zero-total path');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(queue).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
