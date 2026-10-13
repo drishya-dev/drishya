@@ -6,6 +6,7 @@ import { useReadingReference } from './ReadingReference.tsx';
 import { SourceFind } from './SourceFind.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
+import { useApp } from '../state.ts';
 
 /** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
 export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false, navigationSlot = 'source' }: {
@@ -30,6 +31,15 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
   const [rangeStatus, setRangeStatus] = useState('');
+  const source = useApp(s => s.source), recordingId = useApp(s => s.recordingId);
+  const [finding, setFinding] = useState(false), [findStatus, setFindStatus] = useState('');
+  const scan = useRef<{ identity: string; matches: number[]; cursor?: string; started: boolean; finished: boolean; skipped: number }>({ identity: '', matches: [], started: false, finished: false, skipped: 0 });
+  const searchIdentity = `${recordingId}/${id}/${query}`;
+  const latestSearch = useRef(searchIdentity); latestSearch.current = searchIdentity;
+  useEffect(() => {
+    scan.current = { identity: searchIdentity, matches: [], started: false, finished: false, skipped: 0 };
+    setFinding(false); setFindStatus('');
+  }, [searchIdentity, source]);
   const reference = useReadingReference();
   const reader = useRef<HTMLDivElement>(null);
   const pageStart = pages[index] ?? 0;
@@ -48,6 +58,37 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const pageLabel = loading ? 'Opening stored page' : view.artifact?.provenance.kind === 'derived' ? 'Derived page' : view.artifact?.provenance.kind === 'generated' ? 'Generated page' : 'Captured page';
   const sourceStart = (view.artifact?.range?.start ?? startLine) + pageStart;
   const sourceBase = view.artifact?.range?.start ?? startLine;
+  const findStored = async () => {
+    const find = source?.artifactFind;
+    if (!source || !find || !recordingId || !query || finding) return;
+    const identity = searchIdentity, selectedSource = source;
+    const state = scan.current;
+    const choose = () => {
+      const offset = state.matches.shift();
+      if (offset === undefined) return false;
+      const line = sourceBase + offset;
+      setActiveLine(line); setPages([offset]); setIndex(0);
+      setFindStatus(`Stored match · source line ${line}${state.skipped ? ` · ${state.skipped} oversized lines not searched` : ''}`);
+      return true;
+    };
+    if (choose()) return;
+    if (state.finished) { setFindStatus(`End of stored search${state.skipped ? ` · ${state.skipped} oversized lines not searched` : ''}`); return; }
+    setFinding(true);
+    try {
+      // Yield between worker batches; a click never starts an unbounded scan or
+      // blocks capture. Most ordinary source searches finish within three batches.
+      for (let batch = 0; batch < 3; batch++) {
+        const result = await find.call(selectedSource, recordingId, id, query, state.started ? 0 : pageStart, state.cursor);
+        if (latestSearch.current !== identity || useApp.getState().source !== selectedSource) return;
+        if (!result.available) { state.started = false; state.cursor = undefined; setFindStatus(result.reason === 'continuation-expired' ? 'Search expired · start again' : 'Stored content unavailable for search'); return; }
+        state.matches = result.matches; state.cursor = result.continuation; state.started = true; state.finished = !result.continuation; state.skipped += result.skippedLines;
+        if (choose()) return;
+        if (state.finished) break;
+      }
+      setFindStatus(state.finished ? `No more stored matches${state.skipped ? ` · ${state.skipped} oversized lines not searched` : ''}` : 'No match in this scan · continue through stored content');
+    } catch { if (latestSearch.current === identity) { state.started = false; state.cursor = undefined; setFindStatus('Stored search failed · retry'); } }
+    finally { if (latestSearch.current === identity) setFinding(false); }
+  };
   const sourceEnd = view.totalLines === undefined ? undefined : Math.min(sourceBase + view.totalLines - 1, view.artifact?.range?.end ?? Infinity);
   const sourceLines = text ? text.replace(/\n$/, '').split('\n') : [];
   const loadedEnd = Math.min(sourceStart + sourceLines.length - 1, sourceEnd ?? Infinity);
@@ -97,6 +138,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
       {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.range ? `${view.artifact.kind === 'excerpt' ? 'Excerpt' : 'Historical source'} · lines ${view.artifact.range.start}–${view.artifact.range.end}` : 'Historical artifact'}</span></div>}
       <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span>{kind === 'code' && <button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button>}<button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>
       {kind === 'code' && <SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in loaded source page" idleLabel={loading ? 'Opening stored source page…' : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'} />}
+      {kind === 'code' && source?.artifactFind && query && <div className="stored-source-find"><button className="btn ghost small" disabled={finding || loading} onClick={() => void findStored()}>{finding ? 'Searching stored content…' : 'Find next stored match'}</button><span className="muted small" role="status">{findStatus || 'Literal search from this page through the stored artifact'}</span></div>}
       {kind === 'code' && <details className="source-utilities">
         <summary>Source tools · go to line, copy & pin range</summary>
       <form className="source-go" onSubmit={(e) => { e.preventDefault(); goToLine(); }}>

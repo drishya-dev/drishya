@@ -59,10 +59,15 @@ const LINE_STRIDE = 256;
 const READ_CHUNK = 64 * 1024;
 const MAX_LINE_INDEXES = 128;
 
+import type { BlobSearchResult } from './search-types.ts';
+export type { BlobSearchResult } from './search-types.ts';
+interface BlobSearchState { sha: string; needle: string; first: number; line: number; position: number; chunks: Buffer[]; length: number; oversized: boolean }
+
 export class BlobStore {
   /** Bytes read from blob files by line reads; tests use it to prove reads are bounded. */
   readonly stats = { bytesRead: 0 };
   private lineIndexes = new Map<string, LineIndex>();
+  private searches = new Map<string, BlobSearchState>();
   readonly dir: string;
   constructor(dir: string) {
     this.dir = dir;
@@ -156,6 +161,62 @@ export class BlobStore {
     }
     const text = lines.map((l) => l.toString('utf8')).join('\n');
     return { text, totalLines: index.totalLines, totalBytes: index.bytes, returnedLines: lines.length, truncated, hasMore: first + lines.length < index.totalLines };
+  }
+
+  /** Literal find over immutable redacted content, resumed by a single-use opaque
+   * cursor. Each worker task scans <=4 MiB/10k lines, returns <=50 locations and
+   * retains <=256 KiB of one unfinished line in an eight-cursor LRU. */
+  findLines(sha: string, query: string, start = 0, continuation?: string): BlobSearchResult | undefined {
+    if (!this.has(sha)) return undefined;
+    if (!query || query.length > 200 || /[\r\n]/.test(query) || !Number.isSafeInteger(start) || start < 0) throw new RangeError('Invalid stored search');
+    const index = this.lineIndex(sha), needle = query.toLowerCase();
+    let state = continuation ? this.searches.get(continuation) : undefined;
+    if (continuation && (!state || state.sha !== sha || state.needle !== needle)) return { matches: [], totalLines: index.totalLines, scannedThrough: start, skippedLines: 0, available: false, reason: 'continuation-expired' };
+    if (continuation) this.searches.delete(continuation);
+    if (!state) {
+      const first = Math.min(start, index.totalLines), line = Math.floor(first / LINE_STRIDE) * LINE_STRIDE;
+      state = { sha, needle, first, line, position: index.offsets[line / LINE_STRIDE] ?? index.bytes, chunks: [], length: 0, oversized: false };
+    }
+    const cursor = state, matches: number[] = [];
+    let scanned = 0, skippedLines = 0, read = 0;
+    const finish = () => {
+      if (cursor.line >= cursor.first) {
+        scanned++;
+        if (cursor.oversized) skippedLines++;
+        else if (Buffer.concat(cursor.chunks).toString('utf8').toLowerCase().includes(needle)) matches.push(cursor.line);
+      }
+      cursor.line++; cursor.chunks = []; cursor.length = 0; cursor.oversized = false;
+    };
+    const fd = openSync(this.pathOf(sha), 'r');
+    try {
+      const buffer = Buffer.alloc(READ_CHUNK);
+      while (cursor.position < index.bytes && read < 4 * 1024 * 1024 && scanned < 10_000 && matches.length < 50) {
+        const base = cursor.position;
+        const n = readSync(fd, buffer, 0, Math.min(buffer.length, index.bytes - base, 4 * 1024 * 1024 - read), base);
+        this.stats.bytesRead += n; read += n;
+        if (!n) break;
+        let offset = 0;
+        while (offset < n && scanned < 10_000 && matches.length < 50) {
+          const newline = buffer.indexOf(10, offset);
+          const end = newline < 0 || newline >= n ? n : newline;
+          if (cursor.line >= cursor.first && !cursor.oversized) {
+            cursor.length += end - offset;
+            if (cursor.length > 256 * 1024) { cursor.oversized = true; cursor.chunks = []; }
+            else cursor.chunks.push(Buffer.from(buffer.subarray(offset, end)));
+          }
+          cursor.position = base + (end === n ? n : end + 1);
+          if (end === n) break;
+          finish(); offset = end + 1;
+        }
+      }
+      if (cursor.position >= index.bytes && cursor.line < index.totalLines && scanned < 10_000 && matches.length < 50) finish();
+    } finally { closeSync(fd); }
+    let next: string | undefined;
+    if (cursor.line < index.totalLines) {
+      next = randomUUID(); this.searches.set(next, cursor);
+      if (this.searches.size > 8) this.searches.delete(this.searches.keys().next().value!);
+    }
+    return { matches, totalLines: index.totalLines, scannedThrough: cursor.line, continuation: next, skippedLines, available: true };
   }
 
   private lineIndex(sha: string): LineIndex {

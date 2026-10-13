@@ -12,6 +12,36 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-store-'));
   store = new Store(dir);
 });
+
+it('finds beyond a source page with bounded locations and single-use immutable cursors', () => {
+  const { sha } = store.blobs.put(Array.from({ length: 30_000 }, (_, n) => `line ${n}${n === 22_345 ? ' distant NEEDLE' : ''}`).join('\n'));
+  let result = store.blobs.findLines(sha, 'needle')!;
+  expect(result.matches).toEqual([]); expect(result.continuation).toBeDefined();
+  const used = result.continuation!;
+  result = store.blobs.findLines(sha, 'needle', 0, used)!;
+  expect(store.blobs.findLines(sha, 'needle', 0, used)?.reason).toBe('continuation-expired');
+  result = store.blobs.findLines(sha, 'needle', 0, result.continuation)!;
+  expect(result.matches).toEqual([22_345]); expect(result.continuation).toBeUndefined();
+});
+
+it('resumes an oversized line without unbounded memory or pretending it was searched completely', () => {
+  const { sha } = store.blobs.put('x'.repeat(5 * 1024 * 1024) + '\nneedle after a huge line\n');
+  const first = store.blobs.findLines(sha, 'needle')!;
+  expect(first.matches).toEqual([]); expect(first.continuation).toBeDefined();
+  const next = store.blobs.findLines(sha, 'needle', 0, first.continuation)!;
+  expect(next.matches).toEqual([1]); expect(next.skippedLines).toBe(1);
+  expect(next.continuation).toBeUndefined();
+});
+
+it('bounds match batches and rejects a cursor used for another blob/query', () => {
+  const first = store.blobs.put('needle\n'.repeat(120)), second = store.blobs.put('other\n');
+  const result = store.blobs.findLines(first.sha, 'needle')!;
+  expect(result.matches).toHaveLength(50);
+  expect(store.blobs.findLines(second.sha, 'needle', 0, result.continuation)?.available).toBe(false);
+  expect(store.blobs.findLines(first.sha, 'other', 0, result.continuation)?.available).toBe(false);
+  expect(store.blobs.findLines(first.sha, 'needle', 0, result.continuation)?.matches[0]).toBe(50);
+  expect(() => store.blobs.findLines(first.sha, '', 0)).toThrow('Invalid stored search');
+});
 afterEach(() => {
   store.close();
   rmSync(dir, { recursive: true, force: true });

@@ -302,6 +302,13 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         return json(res, { observations: app.store.observations(firstId, after, limit) });
       }
       if (sub === 'artifacts' && subId && m === 'GET') {
+        if (url.searchParams.has('find')) {
+          for (const key of id.split('+')) app.recording(key);
+          const query = url.searchParams.get('find') ?? '', continuation = url.searchParams.get('cursor') ?? undefined;
+          if (!query || query.length > 200 || /[\r\n]/.test(query) || (continuation && !/^[a-f0-9-]{36}$/.test(continuation))) throw new HttpError(400, 'Invalid stored search.');
+          const result = await app.history.artifactFind(id, subId, query, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), continuation);
+          return json(res, result ?? { matches: [], totalLines: 0, scannedThrough: 0, skippedLines: 0, available: false });
+        }
         const start = intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER);
         const count = intParam(url, 'count', 20_000, 0, 20_000);
         if (app.paged(id)) return json(res, await app.history.artifact(id, subId, start, count));

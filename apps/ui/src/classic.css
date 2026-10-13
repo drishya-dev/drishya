@@ -207,3 +207,4 @@
 .git-omission { display: grid; gap: 6px; padding: 10px 4px; font-size: 11px; overflow-wrap: anywhere; border-top: 1px solid var(--line); }
 .git-omission strong { font: 11px var(--mono); }
 .git-omission span { color: var(--t3); line-height: 1.5; }
+.stored-source-find { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 4px 0 10px; }

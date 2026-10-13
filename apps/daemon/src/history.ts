@@ -1,5 +1,6 @@
 import { Worker } from 'node:worker_threads';
 import type { ArtifactSlice, Operation } from '@drishya/contracts';
+import type { BlobSearchResult } from '@drishya/store';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { Marker } from '@drishya/scene';
 import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
@@ -50,6 +51,7 @@ export class HistoryService {
   since(id: string, after: number) { return this.request<SinceSnapshot>('since', { id, after }); }
   verification(id: string, operationId: string) { return this.request<VerificationTrail | null>('verification', { id, operationId }); }
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }
+  artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) { return this.request<BlobSearchResult | undefined>('artifact-find', { id, artifactId, query, start, continuation }); }
   file(id: string, path: string, start = 0, count = 100, step?: number, query = '') { return this.request<{ operations: Operation[]; total: number }>('file', { id, path, start, count, step, query }); }
   prepare(id: string, task: string, model: ModelConfig, body: Record<string, unknown>) { return this.request<Prepared>('prepare', { id, task, model: { ...model, apiKey: undefined }, body }); }
   marker(id: string, step: number, types: Marker['type'][], direction: 1 | -1) { return this.request<number | undefined>('marker', { id, step, types, direction }); }

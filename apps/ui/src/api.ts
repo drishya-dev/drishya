@@ -7,6 +7,7 @@ import { verificationFor, type VerificationTrail } from '../../../packages/scene
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { Marker } from '@drishya/scene';
 import type { Operation } from '@drishya/contracts';
+import type { BlobSearchResult } from '../../../packages/store/src/search-types.ts';
 
 /** The reader's mark: the last observation sequence they marked as seen, and the one before it. */
 export interface ReadingBoundary {
@@ -74,6 +75,7 @@ export interface DataSource {
   /** Approves scanning the recording's captured root for the map, and returns the full map. */
   approveGraph(id: string): Promise<RepoGraph>;
   artifact(id: string, artifactId: string, range?: { start: number; count: number }): Promise<ArtifactSlice>;
+  artifactFind?(id: string, artifactId: string, query: string, start: number, continuation?: string): Promise<BlobSearchResult>;
   search(id: string, q: string): Promise<{ observationId: string; snippet: string }[]>;
   setLive(id: string, on: boolean): Promise<boolean>;
   /** Without `consent`, returns the preview. With the preview's digest as `consent`, sends exactly that request. */
@@ -196,6 +198,7 @@ export const daemon: DataSource = {
   graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
   approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
+  artifactFind: (id, art, query, start, continuation) => req<BlobSearchResult>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?${new URLSearchParams({ find: query, start: String(start), ...(continuation ? { cursor: continuation } : {}) })}`),
   search: async (id, q) => (await req<{ hits: { observationId: string; snippet: string }[] }>(`/v1/recordings/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`)).hits,
   setLive: async (id, on) => (await req<{ live: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/live`, { method: 'POST', json: { on } })).live,
   explain: (id, operationId, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/explain`, { method: 'POST', json: { operationId, consent } }),
@@ -257,6 +260,19 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     // A bundle carries the whole projection, so freshness is computed here exactly as the worker would.
     verification: async (_id, operationId) => verificationFor(bundle.projection, operationId) ?? null,
     importSource: unsupported,
+    artifactFind: async (_id, art, query, start, continuation) => {
+      const text = bundle.artifactText[art];
+      if (text === undefined) return { available: false, matches: [], totalLines: 0, scannedThrough: start, skippedLines: 0 };
+      const lines = text.split('\n'), matches: number[] = [];
+      let cursor = continuation ? Number(continuation) : start, scanned = 0, skippedLines = 0;
+      if (!query || query.length > 200 || !Number.isSafeInteger(cursor) || cursor < 0) throw new Error('Invalid stored search');
+      for (; cursor < lines.length && scanned < 10_000 && matches.length < 50; cursor++, scanned++) {
+        const line = lines[cursor]!;
+        if (line.length > 256 * 1024) { skippedLines++; continue; }
+        if (line.toLowerCase().includes(query.toLowerCase())) matches.push(cursor);
+      }
+      return { available: true, matches, totalLines: lines.length, scannedThrough: cursor, skippedLines, continuation: cursor < lines.length ? String(cursor) : undefined };
+    },
     projection: async () => bundle.projection,
     graph: async () => bundle.graph,
     approveGraph: unsupported,
