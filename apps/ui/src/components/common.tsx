@@ -85,7 +85,7 @@ export function CodeView({ text, startLine = 1, path, maxLines, highlightLines, 
   );
 }
 
-export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining = true }: { hunks: Hunk[]; path?: string; maxLines?: number; skipLines?: number; showRemaining?: boolean }) {
+export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining = true, activeOffset }: { hunks: Hunk[]; path?: string; maxLines?: number; skipLines?: number; showRemaining?: boolean; activeOffset?: number }) {
   const lang = langOf(path);
   let lineIndex = 0;
   const total = hunks.reduce((s, h) => s + h.lines.length, 0);
@@ -103,7 +103,7 @@ export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining =
         }
         return (
           <div key={hi} className="hunk">
-            {hunkVisible && h.oldStart > 0 && <div className="hunk-head">@@ −{h.oldStart},{h.oldLines} +{h.newStart},{h.newLines} @@</div>}
+            {hunkVisible && (h.oldStart > 0 || h.newStart > 0) && <div className="hunk-head">@@ −{h.oldStart},{h.oldLines} +{h.newStart},{h.newLines} @@</div>}
             {h.lines.map((l, i) => {
               const t = l[0];
               const cls = t === '+' ? 'add' : t === '-' ? 'del' : 'ctx';
@@ -113,7 +113,7 @@ export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining =
               lineIndex++;
               if (!visible) return null;
               return (
-                <div key={i} className={`ln ${cls}`}>
+                <div key={i} className={`ln ${cls}${lineIndex - 1 === activeOffset ? ' patch-match' : ''}`}>
                   <span className="ln-no">{oldNo}</span>
                   <span className="ln-no">{newNo}</span>
                   <span className="ln-sign">{t === ' ' ? '' : t === '-' ? '−' : t}</span>

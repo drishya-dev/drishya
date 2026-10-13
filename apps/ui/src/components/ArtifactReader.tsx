@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Hunk } from '@drishya/contracts';
 import { CodeView, DiffView, Output, ProvenanceBadge, useArtifact } from './common.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
@@ -6,6 +6,7 @@ import { useReadingReference } from './ReadingReference.tsx';
 import { SourceFind } from './SourceFind.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
+import { useApp } from '../state.ts';
 
 /** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
 export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false, navigationSlot = 'source' }: {
@@ -30,6 +31,15 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
   const [rangeStatus, setRangeStatus] = useState('');
+  const source = useApp(s => s.source), recordingId = useApp(s => s.recordingId);
+  const [finding, setFinding] = useState(false), [findStatus, setFindStatus] = useState('');
+  const scan = useRef<{ identity: string; matches: number[]; cursor?: string; started: boolean; finished: boolean; skipped: number }>({ identity: '', matches: [], started: false, finished: false, skipped: 0 });
+  const searchIdentity = JSON.stringify([recordingId, id, query]);
+  const latestSearch = useRef(searchIdentity); latestSearch.current = searchIdentity;
+  useEffect(() => {
+    scan.current = { identity: searchIdentity, matches: [], started: false, finished: false, skipped: 0 };
+    setFinding(false); setFindStatus('');
+  }, [searchIdentity, source]);
   const reference = useReadingReference();
   const reader = useRef<HTMLDivElement>(null);
   const pageStart = pages[index] ?? 0;
@@ -48,6 +58,37 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const pageLabel = loading ? 'Opening stored page' : view.artifact?.provenance.kind === 'derived' ? 'Derived page' : view.artifact?.provenance.kind === 'generated' ? 'Generated page' : 'Captured page';
   const sourceStart = (view.artifact?.range?.start ?? startLine) + pageStart;
   const sourceBase = view.artifact?.range?.start ?? startLine;
+  const findStored = async () => {
+    const find = source?.artifactFind;
+    if (!source || !find || !recordingId || !query || finding) return;
+    const identity = searchIdentity, selectedSource = source;
+    const state = scan.current;
+    const choose = () => {
+      const offset = state.matches.shift();
+      if (offset === undefined) return false;
+      const line = sourceBase + offset;
+      setActiveLine(line); setPages([offset]); setIndex(0);
+      setFindStatus(`Stored match · source line ${line}${state.skipped ? ` · ${state.skipped} oversized lines not searched` : ''}`);
+      return true;
+    };
+    if (choose()) return;
+    if (state.finished) { setFindStatus(`End of stored search${state.skipped ? ` · ${state.skipped} oversized lines not searched` : ''}`); return; }
+    setFinding(true);
+    try {
+      // Yield between worker batches; a click never starts an unbounded scan or
+      // blocks capture. Most ordinary source searches finish within three batches.
+      for (let batch = 0; batch < 3; batch++) {
+        const result = await find.call(selectedSource, recordingId, id, query, state.started ? 0 : pageStart, state.cursor);
+        if (latestSearch.current !== identity || useApp.getState().source !== selectedSource) return;
+        if (!result.available) { state.started = false; state.cursor = undefined; setFindStatus(result.reason === 'continuation-expired' ? 'Search expired · start again' : 'Stored content unavailable for search'); return; }
+        state.matches = result.matches; state.cursor = result.continuation; state.started = true; state.finished = !result.continuation; state.skipped += result.skippedLines;
+        if (choose()) return;
+        if (state.finished) break;
+      }
+      setFindStatus(state.finished ? `No more stored matches${state.skipped ? ` · ${state.skipped} oversized lines not searched` : ''}` : 'No match in this scan · continue through stored content');
+    } catch { if (latestSearch.current === identity && useApp.getState().source === selectedSource) { state.started = false; state.cursor = undefined; setFindStatus('Stored search failed · retry'); } }
+    finally { if (latestSearch.current === identity && useApp.getState().source === selectedSource) setFinding(false); }
+  };
   const sourceEnd = view.totalLines === undefined ? undefined : Math.min(sourceBase + view.totalLines - 1, view.artifact?.range?.end ?? Infinity);
   const sourceLines = text ? text.replace(/\n$/, '').split('\n') : [];
   const loadedEnd = Math.min(sourceStart + sourceLines.length - 1, sourceEnd ?? Infinity);
@@ -97,6 +138,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
       {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.range ? `${view.artifact.kind === 'excerpt' ? 'Excerpt' : 'Historical source'} · lines ${view.artifact.range.start}–${view.artifact.range.end}` : 'Historical artifact'}</span></div>}
       <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span>{kind === 'code' && <button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button>}<button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>
       {kind === 'code' && <SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in loaded source page" idleLabel={loading ? 'Opening stored source page…' : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'} />}
+      {kind === 'code' && source?.artifactFind && query && <div className="stored-source-find"><button className="btn ghost small" disabled={finding || loading} onClick={() => void findStored()}>{finding ? 'Searching stored content…' : 'Find next stored match'}</button><span className="muted small" role="status">{findStatus || 'Literal search from this page through the stored artifact'}</span></div>}
       {kind === 'code' && <details className="source-utilities">
         <summary>Source tools · go to line, copy & pin range</summary>
       <form className="source-go" onSubmit={(e) => { e.preventDefault(); goToLine(); }}>
@@ -139,21 +181,36 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   );
 }
 
-export function DiffReader({ hunks, path, navigationKey = path ?? 'patch' }: { hunks: Hunk[]; path?: string; navigationKey?: string }) {
+export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope = 'captured' }: { hunks: Hunk[]; path?: string; navigationKey?: string; scope?: 'captured' | 'current-git' }) {
   const [offset, setOffset] = useEvidenceState(`diff/${navigationKey}/offset`, () => firstChangeOffset(hunks));
   const [layout, setLayout] = useEvidenceState<'unified' | 'split'>(`diff/${navigationKey}/layout`, 'unified');
+  const [query, setQuery] = useEvidenceState(`diff/${navigationKey}/query`, '');
+  const [wrap, setWrap] = useEvidenceState(`diff/${navigationKey}/wrap`, false);
+  const [active, setActive] = useEvidenceState<number | undefined>(`diff/${navigationKey}/match`, undefined);
+  const lines = useMemo(() => hunks.flatMap(h => h.lines), [hunks]);
+  const matches = useMemo(() => query ? lines.flatMap((line, n) => line.slice(1).toLowerCase().includes(query.toLowerCase()) ? [n] : []) : [], [lines, query]);
+  const starts = useMemo(() => { let n = 0; return hunks.map(h => { const start = n; n += h.lines.length; return start; }); }, [hunks]);
+  const move = (direction: 1 | -1) => {
+    if (!matches.length) return;
+    const current = matches.indexOf(active ?? -1);
+    const next = matches[current < 0 ? direction === 1 ? 0 : matches.length - 1 : (current + direction + matches.length) % matches.length]!;
+    setActive(next); setOffset(next);
+  };
   const reader = useRef<HTMLDivElement>(null);
   useEvidenceScroll(reader, `diff/${navigationKey}/${offset}`);
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
-  return <div ref={reader} className={`artifact-reader diff-reader diff-${layout}`}>
-    <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button></div>
+  return <div ref={reader} className={`artifact-reader diff-reader diff-${layout}${wrap ? ' reader-wrap' : ''}`}>
+    <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button><button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(value => !value)}>Wrap lines</button>
+      <label className="patch-hunk-jump">Hunk <input type="number" aria-label="Jump to patch hunk" min={1} max={hunks.length} value={Math.max(0, starts.findLastIndex(start => start <= offset)) + 1} onChange={e => { const index = Number(e.target.value) - 1; if (Number.isInteger(index) && index >= 0 && index < starts.length) { setOffset(starts[index]!); setActive(undefined); } }} /> of {hunks.length}</label>
+    </div>
+    <SourceFind query={query} change={value => { setQuery(value); setActive(undefined); }} matches={matches} activeLine={active} move={move} label="Find in patch" idleLabel="Whole loaded patch" scopeLabel="this patch" />
     {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
-    <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} /></div>
-    <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} /></div>
-    {(offset > 0 || total > pageSize) && <nav className="reader-pages" aria-label="Captured change pages">
+    <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} activeOffset={active} showRemaining={false} /></div>
+    <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} scope={scope} /></div>
+    {(offset > 0 || total > pageSize) && <nav className="reader-pages" aria-label={scope === 'captured' ? 'Captured change pages' : 'Current Git change pages'}>
       <button className="btn" disabled={offset === 0} onClick={() => setOffset(n => Math.max(0, n - pageSize))}>Previous change lines</button>
-      <span className="muted small">{offset + 1}–{Math.min(total, offset + pageSize)} of {total} captured lines</span>
+      <span className="muted small">{offset + 1}–{Math.min(total, offset + pageSize)} of {total} patch lines</span>
       <button className="btn" disabled={offset + pageSize >= total} onClick={() => setOffset(n => n + pageSize)}>Next change lines</button>
     </nav>}
   </div>;

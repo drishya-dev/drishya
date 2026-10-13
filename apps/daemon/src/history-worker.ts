@@ -177,6 +177,16 @@ function artifact(id: string, artifactId: string, start: number, count: number):
   return slice ? { artifact, available: true, start, ...slice } : { ...empty, available: false, reason: 'no-longer-stored' };
 }
 
+function artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) {
+  current(id);
+  const row = db.prepare("SELECT body FROM items WHERE view_id=? AND kind='artifacts' AND id=?").get(id, artifactId) as { body: string } | undefined;
+  if (!row) throw new Error('Artifact not found');
+  const item = JSON.parse(row.body) as Projection['artifacts'][number];
+  if (!item.blob) return undefined;
+  const store = source.blobs.has(item.blob) ? source.blobs : blobs;
+  return store.findLines(item.blob, query, start, continuation);
+}
+
 function file(id: string, path: string, start: number, count: number, step?: number, query = '') {
   const full = current(id).projection;
   const historical = step === undefined ? full : asOfProjection(full, step);
@@ -190,6 +200,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     let value: unknown;
     if (message.method === 'page') value = page(a.id, a.query);
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
+    else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
     else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after);

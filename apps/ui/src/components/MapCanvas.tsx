@@ -10,6 +10,7 @@ import { mapDetail, type MapGroup } from '../lib/map-detail.ts';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
 import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
+import { fitProjectedMap, mapReadingArea } from '../lib/map-fit.ts';
 
 interface Cam {
   x: number;
@@ -92,10 +93,10 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const cameraFrame = useRef(0);
   const cameraTarget = useRef(cam);
   camera.current = cam;
-  const animateCam = (target: Cam) => {
+  const animateCam = (target: Cam, immediate = false) => {
     cancelAnimationFrame(cameraFrame.current);
     cameraTarget.current = target;
-    if (!useApp.getState().motion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setCam(target); return; }
+    if (immediate || !useApp.getState().motion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setCam(target); return; }
     const start = camera.current, began = performance.now();
     const tick = (time: number) => {
       const fraction = Math.min(1, (time - began) / 300);
@@ -115,7 +116,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   }, [motion]);
   const zoomCamera = (factor: number) => {
     holdOrientation();
-    const c = cameraTarget.current, k = Math.max(.5, Math.min(8, c.k * factor));
+    const c = cameraTarget.current, k = Math.max(.1, Math.min(8, c.k * factor));
     animateCam({ k, x: size.w / 2 - (size.w / 2 - c.x) * k / c.k, y: size.h / 2 - (size.h / 2 - c.y) * k / c.k });
   };
   const [tip, setTip] = useState<{ node: MapGroup; x: number; y: number }>();
@@ -210,6 +211,20 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     return spatialProject({ ...n, z: depths.get(n.id) ?? fileDepth(n.id) }, yaw, pitch);
   };
   const project = (n: { id: string; x: number; y: number }) => { const p = spatial(n); return { x: (fit.ox + p.x * fit.sx) * cam.k + cam.x, y: (fit.oy + p.y * fit.sy) * cam.k + cam.y, z: p.z, scale: p.scale }; };
+  const fitWorld = (immediate = false) => {
+    if (!viewGraph?.nodes.length || !wrap.current) return;
+    holdOrientation();
+    const world = wrap.current.getBoundingClientRect();
+    const obstacles = [...document.querySelectorAll<HTMLElement>('.workspace-header, .map-tools, .map-zoom, .map-legend, .map-connections, .folder-explorer, .prompt-composer, .map-reader')].flatMap(element => {
+      const rect = element.getBoundingClientRect();
+      if (!rect.width || !rect.height || getComputedStyle(element).visibility === 'hidden') return [];
+      return [{ left: rect.left - world.left - 8, right: rect.right - world.left + 8, top: rect.top - world.top - 8, bottom: rect.bottom - world.top + 8 }];
+    });
+    const area = mapReadingArea({ left: 20, top: 20, right: size.w - 20, bottom: size.h - 20 }, obstacles);
+    const points = viewGraph.nodes.map(node => { const point = spatial(node); return { x: fit.ox + point.x * fit.sx, y: fit.oy + point.y * fit.sy }; });
+    animateCam(fitProjectedMap(points, area), immediate);
+    setTip(undefined); setQuery(''); set({ hoveredPath: undefined });
+  };
 
   const draw = () => {
     const c = canvas.current;
@@ -381,7 +396,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         const mx = e.clientX - r.left;
         const my = e.clientY - r.top;
         const c = cameraTarget.current;
-        const k = Math.max(0.5, Math.min(8, c.k * Math.exp(-e.deltaY * 0.0015)));
+        const k = Math.max(0.1, Math.min(8, c.k * Math.exp(-e.deltaY * 0.0015)));
         animateCam({ k, x: mx - ((mx - c.x) * k) / c.k, y: my - ((my - c.y) * k) / c.k });
       }}
       onPointerDown={(e) => {
@@ -472,7 +487,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         {spatialActive && <span className="map-camera-hint">Drag orbit · Shift drag pan</span>}
         <button className="btn ghost" aria-label="Zoom into repository" onClick={() => zoomCamera(1.25)}>+</button>
         <button className="btn ghost" aria-label="Zoom out of repository" onClick={() => zoomCamera(1 / 1.25)}>−</button>
-        <button className="btn ghost" onClick={() => { if (neighborhood && connections?.root) { focusFile(connections.root, true); return; } holdOrientation(); setYaw(.25); setPitch(.18); animateCam({ x: 0, y: 0, k: 1 }); setTip(undefined); setQuery(''); set({ hoveredPath: undefined }); }}>Fit</button>
+        <button className="btn ghost" onClick={event => fitWorld(event.detail === 0)}>Fit</button>
       </div>}
       {anchors.map((path) => {
         const node = displayById.get(path);

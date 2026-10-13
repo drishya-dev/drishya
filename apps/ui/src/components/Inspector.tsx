@@ -10,6 +10,7 @@ import { summarizeInput } from './History.tsx';
 import { VerificationPanel } from './Verification.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { EvidenceNavigation } from './EvidenceNavigation.tsx';
+import { ReviewQuestionEditor } from './ReviewQuestions.tsx';
 
 export function Inspector({ projection }: { projection: Projection }) {
   const width = useApp(s => s.inspectorWidth);
@@ -51,7 +52,7 @@ export function Inspector({ projection }: { projection: Projection }) {
         ))}
       </nav>
       <div className="insp-body">
-        {tab === 'detail' && <><Detail op={op} projection={projection} /><VerificationPanel op={op} /></>}
+        {tab === 'detail' && <><Detail op={op} projection={projection} /><VerificationPanel op={op} /><ReviewQuestionEditor key={op.id} op={op} /></>}
         {tab === 'evidence' && <Evidence op={op} links={links} projection={projection} />}
 
       </div>
@@ -165,7 +166,7 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
             Delegated to <strong>{d.agentType ?? 'a subagent'}</strong>: {d.description}
           </p>
           {child && (
-            <button className="btn" onClick={() => useApp.getState().setFilter({ agentId: child.id })}>
+            <button className="btn" onClick={() => useApp.getState().setFilter({ ...useApp.getState().filter, agentId: child.id })}>
               Follow {agentName(child)}'s work
             </button>
           )}

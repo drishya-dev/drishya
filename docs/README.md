@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Latest builder checkpoint, 13 October:** Functional developer-workspace continuation is documented in [61](review/61-git-review-reading.md)–[68](review/68-compound-workspace-focus.md). The final UI/theme/animation pass is paused for builder clarification; Classic remains active. This does not supersede evidence, consent, privacy or native/physical/platform release gates.
+
 **13 October Git consistency:** [60](review/60-git-consistent-inspection.md) closes the demonstrated unchanged-status mid-inspection race with bounded patch/index/worktree comparisons. Inspection stays a current optimistic sample with Refresh, not a locked atomic snapshot; native/release gates remain separate.
 
 **13 October independent review:** [59](review/59-pr57-review.md) records PR #57 review, repeated-counter correction and independently repeated local checks. The implemented Home/outcome/recovery increments preserve native and broader release acceptance gaps.

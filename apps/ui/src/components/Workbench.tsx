@@ -1,3 +1,4 @@
+import { focusAgent } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Projection } from '@drishya/contracts';
@@ -7,6 +8,7 @@ import { FileIcon } from './FileIcon.tsx';
 import { WorkspaceBar } from './Workspace.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
+import { ReviewQuestionsEntry } from './ReviewQuestions.tsx';
 import { agentColor, agentName } from '../lib/identity.ts';
 import { localPreviewId, saveLocalPreview } from '../lib/local-preview.ts';
 import { HealthTag } from './Home.tsx';
@@ -35,7 +37,7 @@ export function WorkbenchHeader({ projection, scene, children }: { projection: P
     <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark />Drishya<span className="workbench-edition">STUDIO</span></button>
     <div className="workbench-session studio-session crown-title"><h1 title={projection.title}>{projection.title ?? recording?.title ?? 'Recording'}</h1><span className={source?.sample ? 'crown-sample' : ''}>{source?.sample ? 'Synthetic sample' : source?.kind === 'bundle' ? 'Offline recording' : harnesses.join(' + ')}</span>{connection === 'reconnecting' && <span role="status">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
     <div className="workbench-utilities">{children}</div>
-    {agents.length > 1 && <div className="workbench-agents" role="group" aria-label="Recorded agents">{agents.map(agent => <button key={agent.id} data-agent-id={agent.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === agent.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(filter?.agentId === agent.id ? undefined : { agentId: agent.id })}><span className="agent-dot" />{agentName(agent)}</button>)}</div>}
+    {agents.length > 1 && <div className="workbench-agents" role="group" aria-label="Recorded agents">{agents.map(agent => <button key={agent.id} data-agent-id={agent.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === agent.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, agent.id))}><span className="agent-dot" />{agentName(agent)}</button>)}</div>}
   </header>;
 }
 
@@ -76,7 +78,8 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
   const primary = projection.agents.find(a => scene.agents.some(shown => shown.id === a.id) && !a.parentId);
   const filter = useApp(s => s.filter);
   return <div className="workbench-station">
-    <section className="workbench-review" aria-label="Evidence desk"><span className="desk-caption">Evidence desk</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Captured changes and checks. Current Git stays separate.'}</p></section>
+    <section className="workbench-review" aria-label="Evidence desk"><span className="desk-caption">Evidence desk</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><ReviewQuestionsEntry key={id} /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Captured changes and checks. Current Git stays separate.'}</p></section>
+    <button className="btn ghost workspace-navigation-open" onClick={() => window.dispatchEvent(new Event('drishya-navigate-workspace'))}>Navigate workspace <kbd>Ctrl/⌘ K</kbd></button>
     <div className="workbench-runtime"><span className="runtime-dot" /><span>{scene.agents.length > 1 ? `${scene.agents.length} recorded agents` : agentName(primary)}<small>{scene.agents.filter(a => a.state === 'active').length ? 'Captured activity in progress' : 'Recorded work'}</small></span></div>
     {scene.agents.length > 1 && <details className="station-agent-menu"><summary>Agents <span>{scene.agents.length}{filter?.agentId ? ' · focused' : ''}</span></summary><AgentFamilies projection={projection} scene={scene} /></details>}
     {children}
@@ -95,12 +98,12 @@ function AgentFamilies({ projection, scene }: { projection: Projection; scene: S
     const parent = projection.agents.find(a => a.id === state.parentId);
     const children = scene.agents.filter(a => a.parentId === state.id && !rendered.has(a.id));
     const description = `${agent?.harness ?? 'Harness'} · ${state.state}${parent ? ` · child of ${agentName(parent)}` : ''}. Focus this agent; surrounding history stays visible. Click again to show everyone.`;
-    const row = <button data-agent-id={state.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === state.id} title={description} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(filter?.agentId === state.id ? undefined : { agentId: state.id })}><span className="agent-dot" /><span>{agentName(agent)}<small>{state.state}</small></span></button>;
+    const row = <button data-agent-id={state.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === state.id} title={description} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}<small>{state.state}</small></span></button>;
     return <div key={state.id} className="station-agent-family">{row}{children.length > 0 && <details className="station-subagents"><summary>Subagents <span>{children.length}</span></summary><div>{children.map(render)}</div></details>}</div>;
   };
   const roots = scene.agents.filter(a => !a.parentId || !visible.has(a.parentId));
   const families = roots.map(render);
   // Malformed cyclic ancestry must not hide a captured identity or recurse forever.
   for (const state of scene.agents) if (!rendered.has(state.id)) families.push(render(state));
-  return <div className="station-agents" role="group" aria-label="Recorded agents">{families}{filter?.agentId && <button className="btn ghost" onClick={() => useApp.getState().setFilter(undefined)}>Show all agents</button>}</div>;
+  return <div className="station-agents" role="group" aria-label="Recorded agents">{families}{filter?.agentId && <button className="btn ghost" onClick={() => useApp.getState().setFilter(focusAgent(filter))}>Show all agents</button>}</div>;
 }

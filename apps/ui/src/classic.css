@@ -192,3 +192,44 @@
 .map-recovery .btn { display: block; margin-top: 8px; }
 .verification-tile.deselected, .verification-tile.xfailed, .verification-tile.xpassed { background: var(--t3); }
 .connected-workspace :is(.search input, .prompt-composer textarea):focus-visible { outline: 2px solid var(--t2); outline-offset: 2px; }
+.git-previous-note { width: 100%; padding-top: 10px; border-top: 1px solid var(--line); }
+.git-previous-note summary { cursor: pointer; color: var(--t2); font-size: 12px; padding: 6px 0; }
+.git-previous-note p { color: var(--t3); font-size: 12px; line-height: 1.5; }
+.git-previous-note textarea { margin-bottom: 8px; }
+.git-patch-reader { min-width: 0; }
+.git-patch-reader .code { font-size: 13px; line-height: 1.7; }
+.patch-hunk-jump { display: inline-flex; align-items: center; gap: 6px; font: 11px var(--mono); color: var(--t2); }
+.patch-hunk-jump input { width: 58px; padding: 4px; }
+.diff-reader.reader-wrap .ln-tx, .diff-reader.reader-wrap .change-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.diff-reader .patch-match { outline: 1px solid var(--line-2); outline-offset: -1px; background: var(--s2); }
+.git-patch-reader .reader-tools { flex-wrap: wrap; }
+.git-file-pages { padding: 8px 18px; flex-wrap: wrap; }
+.git-omission { display: grid; gap: 6px; padding: 10px 4px; font-size: 11px; overflow-wrap: anywhere; border-top: 1px solid var(--line); }
+.git-omission strong { font: 11px var(--mono); }
+.git-omission span { color: var(--t3); line-height: 1.5; }
+.stored-source-find { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 4px 0 10px; }
+.review-question-editor { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+.review-question-editor summary, .resolved-questions summary { cursor: pointer; font-size: 12px; padding: 8px 0; }
+.review-question-editor p, .review-question-scope { color: var(--t3); font-size: 12px; line-height: 1.6; }
+.review-question-editor textarea, .question-export textarea { width: 100%; min-height: 90px; padding: 10px; font-size: 13px; line-height: 1.6; }
+.review-question-editor input { width: 100%; margin: 8px 0; padding: 8px; font-size: 12px; }
+.review-question-editor [role=status] { display: block; color: var(--t2); font-size: 12px; margin-top: 8px; }
+.review-questions-dialog > :not(header) { margin: 16px 24px; }
+.review-question-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.review-question-row p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
+.review-question-row small, .question-cap { display: block; color: var(--t3); font-size: 11px; margin: 8px 0; }
+.question-target { color: var(--read); text-align: left; font-size: 12px; overflow-wrap: anywhere; }
+.question-export textarea { max-height: 240px; }
+.workspace-navigation { width: min(640px, calc(100vw - 32px)); }
+.workspace-navigation-query { width: calc(100% - 32px); margin: 16px; padding: 12px; font-size: 15px; }
+.workspace-navigation-results { max-height: min(420px, 52dvh); overflow: auto; overscroll-behavior: contain; padding: 0 8px; }
+.workspace-navigation-results > button { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 12px; border-radius: 6px; }
+.workspace-navigation-results > button[aria-selected=true] { background: var(--s2); }
+.workspace-navigation-results strong, .workspace-navigation-results small { display: block; overflow-wrap: anywhere; }
+.workspace-navigation-results strong { font-size: 13px; font-weight: 500; }
+.workspace-navigation-results small, .workspace-navigation-help { color: var(--t3); font-size: 11px; line-height: 1.5; }
+.workspace-navigation-help { padding: 10px 20px; margin: 0; border-top: 1px solid var(--line); }
+.navigation-command-icon { color: var(--t2); width: 20px; flex-shrink: 0; }
+.workspace-navigation-open { display: flex; justify-content: space-between; gap: 8px; width: 100%; font-size: 11px; }
+.workspace-navigation-open kbd { color: var(--t3); font: 10px var(--mono); }
+.product-dialog :is(input, textarea, select):focus-visible, .home :is(input, select):focus-visible { outline: 2px solid var(--t2); outline-offset: 2px; }

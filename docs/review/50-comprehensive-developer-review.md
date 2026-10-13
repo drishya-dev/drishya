@@ -1,5 +1,7 @@
 # Classic comprehensive developer, daily-user and design review
 
+**13 October bounded implementation annotation:** Reviews 61–68 add stale-note retention, staged/worktree hunk/find reading, Git file continuation with explicit omission reasons, stored-source forward find, local captured-action review questions, projected map Fit, keyboard workspace destinations and compound agent/action focus. These address portions of findings 26–29, 30, 32, 37 and 42. They do not establish repository-wide/cross-device review durability, arbitrary full-size patch export, semantic navigation, real native-account behavior or human/platform acceptance. Final UI/theme/animation changes are on hold for builder clarification.
+
 **13 October correction:** Finding 24's demonstrated concurrent-content race is addressed in [60](60-git-consistent-inspection.md), with repeated raw patch/index/worktree/branch checks and seven regression cases. Current Git remains an optimistic sample rather than an atomic filesystem snapshot. Findings 25–29 remain separate work; do not mark all Git review recommendations complete.
 
 **Builder additions, 12 October:** [52](52-composer-interactions-recordings-plan.md) adds an explicit professional prompt-composer pass, a whole-product click/menu/focus/motion audit and recordings Home organization by actual workspace and time. These are planned tasks, not completed features. Each coherent implementation is to have its own verified commit. Installed design/motion skills apply to UI work.

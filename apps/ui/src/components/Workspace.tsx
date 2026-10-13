@@ -1,3 +1,4 @@
+import { focusAgent } from '../lib/compound-focus.ts';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { useLayoutEffect, useRef } from 'react';
@@ -49,7 +50,7 @@ export function AgentOverview({ scene, projection }: { scene: Scene; projection:
       const ops = projection.operations.filter((op) => op.agentId === state.id);
       const files = [...new Set(ops.flatMap((op) => op.paths.map((ref) => ref.path)))];
       const parent = projection.agents.find((item) => item.id === state.parentId);
-      return <button key={state.id} className="agent-work" aria-pressed={filter?.agentId === state.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(filter?.agentId === state.id ? undefined : { agentId: state.id })}>
+      return <button key={state.id} className="agent-work" aria-pressed={filter?.agentId === state.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}>
         <strong><i />{agentName(agent)}<small>{state.state}</small></strong><span className="agent-family">{parent ? `Captured child of ${agentName(parent)}` : `${agent?.harness ?? 'Harness'} session`}</span>
         <div className="agent-work-counts"><span>{ops.length} shown actions</span><span>{ops.filter((op) => op.kind === 'edit' || op.kind === 'write').length} changes</span><span>{ops.filter((op) => op.status === 'error').length} failures</span></div>
         <div className="agent-work-files">{files.slice(0, 3).map((path) => <code key={path}>{path}</code>)}{files.length > 3 && <span>+{files.length - 3} more files</span>}{files.length === 0 && <span>No file locations in shown work</span>}</div>
