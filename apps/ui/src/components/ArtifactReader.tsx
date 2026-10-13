@@ -42,10 +42,12 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   }, [searchIdentity, source]);
   const reference = useReadingReference();
   const reader = useRef<HTMLDivElement>(null);
+  const sourceViewport = useRef<HTMLDivElement>(null);
   const pageStart = pages[index] ?? 0;
   useEffect(() => { setRangeFrom(''); setRangeTo(''); setRangeStatus(''); }, [id, pageStart]);
   const view = useArtifact(id, { scope: 'reader', start: pageStart, count: 200, retry });
   useEvidenceScroll(reader, `${scope}/${pageStart}`, view.text !== undefined);
+  useEvidenceScroll(sourceViewport, `${scope}/${pageStart}/content`, view.text !== undefined);
   useEffect(() => setCopied(undefined), [id, pageStart]);
   const reveal = (line: number) => reader.current?.querySelector<HTMLElement>(`[data-source-line="${line}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
   useLayoutEffect(() => { if (activeLine !== undefined && view.text !== undefined) reveal(activeLine); }, [activeLine, pageStart, view.text]);
@@ -162,7 +164,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
         <span className="muted small" role="status">{rangeStatus || 'Loaded page only · one temporary reference'}</span>
       </div>}
       </details>}
-      {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <Output text={text} />}
+      {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView scrollRef={sourceViewport} text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <Output text={text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(pageStart > 0 || next) && (
         <nav className="reader-pages" aria-label="Captured content pages">
@@ -197,7 +199,9 @@ export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope
     setActive(next); setOffset(next);
   };
   const reader = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
   useEvidenceScroll(reader, `diff/${navigationKey}/${offset}`);
+  useEvidenceScroll(viewport, `diff/${navigationKey}/${offset}/content`);
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
   return <div ref={reader} className={`artifact-reader diff-reader diff-${layout}${wrap ? ' reader-wrap' : ''}`}>
@@ -206,7 +210,7 @@ export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope
     </div>
     <SourceFind query={query} change={value => { setQuery(value); setActive(undefined); }} matches={matches} activeLine={active} move={move} label="Find in patch" idleLabel="Whole loaded patch" scopeLabel="this patch" />
     {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
-    <div className="diff-scroll" tabIndex={0} role="region" aria-label="Patch content">
+    <div ref={viewport} className="diff-scroll" tabIndex={0} role="region" aria-label="Patch content">
       <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} activeOffset={active} showRemaining={false} /></div>
       <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} scope={scope} /></div>
     </div>

@@ -239,6 +239,17 @@
 .git-patch :is(.diff-scroll,.git-raw-scroll) { max-height: clamp(180px, 38dvh, 440px); overflow: auto; scrollbar-gutter: stable; scrollbar-width: thin; border-radius: 6px; }
 .git-patch .git-raw-scroll > .code { overflow: visible; }
 .git-patch .diff-scroll .code { overflow: visible; }
+.source-find { gap: 6px; align-items: center; }
+.source-find input { min-height: 32px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--t1); background: var(--bg); font: 12px var(--sans); }
+.artifact-reader .reader-tools .btn { border-color: transparent; background: transparent; border-radius: 7px; font: 11px var(--sans); padding-inline: 9px; }
+.artifact-reader .reader-tools .btn[aria-pressed=true] { background: var(--s2); color: var(--t1); }
+.artifact-reader .patch-hunk-jump input { border: 1px solid var(--line); border-radius: 5px; color: var(--t1); background: var(--bg); font: 11px var(--mono); }
+:is(.product-dialog,.inspector,.history .op.expanded) .diff-scroll { max-height: min(48dvh, 520px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; border-radius: 6px; }
+.diff-scroll :is(.code,.change-column-scroll) { overflow: visible; }
+:is(.product-dialog,.inspector,.history .op.expanded) .source-reading > .code,
+.current-file-code.source-reading { max-height: min(48dvh, 520px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; }
+.current-file-code.source-reading > .code { max-height: none; overflow: visible; }
+.source-reading > .code:focus-visible { outline: 1px solid var(--line-3); outline-offset: 2px; }
 .git-patch .diff-scroll .ln { min-width: max-content; }
 .git-patch .reader-wrap .diff-scroll .ln { min-width: 0; }
 .git-patch .diff-scroll .change-row { min-width: 660px; }

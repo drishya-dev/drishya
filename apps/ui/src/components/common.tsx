@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode, type Ref } from 'react';
 import type { Artifact, ArtifactSlice, Hunk, Provenance } from '@drishya/contracts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
 import { materialCache, type MaterialScope } from '../lib/artifact-cache.ts';
@@ -66,12 +66,12 @@ export function useArtifact(artifactId: string | undefined, opts: { scope?: Mate
 
 // ─── code ────────────────────────────────────────────────────────────────────────────────
 
-export function CodeView({ text, startLine = 1, path, maxLines, highlightLines, activeLine }: { text: string; startLine?: number; path?: string; maxLines?: number; highlightLines?: Set<number>; activeLine?: number }) {
+export function CodeView({ text, startLine = 1, path, maxLines, highlightLines, activeLine, scrollRef }: { text: string; startLine?: number; path?: string; maxLines?: number; highlightLines?: Set<number>; activeLine?: number; scrollRef?: Ref<HTMLDivElement> }) {
   const lang = langOf(path);
   const all = text.replace(/\n$/, '').split('\n');
   const lines = maxLines ? all.slice(0, maxLines) : all;
   return (
-    <div className="code" role="region" aria-label={path ? `Content of ${path}` : 'Code'}>
+    <div ref={scrollRef} tabIndex={scrollRef ? 0 : undefined} className="code" role="region" aria-label={path ? `Content of ${path}` : 'Code'}>
       {lines.map((l, i) => (
         <div key={i} data-source-line={startLine + i} aria-current={activeLine === startLine + i ? 'location' : undefined} className={`ln${highlightLines?.has(startLine + i) ? ' ln-hi' : ''}${activeLine === startLine + i ? ' ln-current' : ''}`}>
           <span className="ln-no">{startLine + i}</span>

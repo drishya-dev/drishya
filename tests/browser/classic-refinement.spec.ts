@@ -190,6 +190,9 @@ test('reading Back restores a captured page, search, selected line, wrap and scr
   await reader.getByRole('button', { name: 'Next match', exact: true }).click();
   await reader.getByRole('button', { name: 'Wrap lines', exact: true }).click();
   await expect(reader.locator('[data-source-line="210"]')).toHaveAttribute('aria-current', 'location');
+  const sourceContent = reader.locator('.source-reading > .code');
+  await sourceContent.evaluate(el => { el.scrollTop = 100; });
+  await expect.poll(() => sourceContent.evaluate(el => el.scrollTop)).toBe(100);
   await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
   const selected = await reader.getByRole('combobox', { name: 'First evidence' }).inputValue();
   await reader.locator('.import-context > summary').click();
@@ -202,6 +205,7 @@ test('reading Back restores a captured page, search, selected line, wrap and scr
   await expect(reader.locator('[data-source-line="201"]')).toBeAttached();
   await expect(reader.getByRole('searchbox', { name: 'Find in loaded source page' })).toHaveValue('line_210');
   await expect(reader.getByRole('button', { name: 'Wrap lines', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => sourceContent.evaluate(el => el.scrollTop)).toBeCloseTo(100, 0);
   await expect(reader.locator('[data-source-line="210"]')).toHaveAttribute('aria-current', 'location');
   await reader.getByRole('button', { name: 'Forward in reading history', exact: true }).click();
   await expect(destination).toBeVisible();
