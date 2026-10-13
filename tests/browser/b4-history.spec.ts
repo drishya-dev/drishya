@@ -50,6 +50,7 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await page.locator('.search-results button').first().click();
     await expect(page.locator(`[data-op-id="${recordingId}.call-5999"]`)).toBeVisible();
     await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+    await page.getByText('Sequence diagnostics', { exact: true }).click();
     await page.getByRole('button', { name: 'Replay sequence' }).click();
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
     await page.getByRole('button', { name: 'Step forward', exact: true }).click();
