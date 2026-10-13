@@ -59,19 +59,29 @@ export function capturedOutcomes(raw: string): OutcomeReport {
       }
       const pytest = /^\s*(?:=+\s*)?((?:\d+\s+(?:passed|failed|skipped|errors?|xfailed|xpassed|deselected)[, ]*)+)\s+in\s+[\d.]+s\b.*$/i.exec(line);
       if (pytest) {
-        const counts = empty(); for (const match of pytest[1]!.matchAll(/(\d+)\s+(passed|failed|skipped|errors?|xfailed|xpassed|deselected)\b/gi)) counts[states[match[2]!.toLowerCase()]!] += Number(match[1]);
-        add('pytest', index + 1, counts, undefined, 'tests');
+        const counts = empty(), seen = new Set<OutcomeState>(); let duplicate = false;
+        for (const match of pytest[1]!.matchAll(/(\d+)\s+(passed|failed|skipped|errors?|xfailed|xpassed|deselected)\b/gi)) {
+          const state = states[match[2]!.toLowerCase()]!;
+          if (seen.has(state)) duplicate = true;
+          seen.add(state); counts[state] += Number(match[1]);
+        }
+        if (duplicate) notes.push('Repeated outcome counters retained as raw output.');
+        else add('pytest', index + 1, counts, undefined, 'tests');
       }
       const cargo = /^\s*test result: \w+\.\s+(\d+) passed;\s+(\d+) failed;\s+(\d+) ignored;/.exec(line);
       if (cargo) add('Cargo', index + 1, { ...empty(), passed: Number(cargo[1]), failed: Number(cargo[2]), skipped: Number(cargo[3]) }, undefined, 'tests');
     }
     // TAP/node:test totals are distinct from suite lines; avoid inferring cases from nested ok lines.
     if (/^TAP version \d+\s*$/m.test(text)) {
-      const counts = empty(); let total: number | undefined;
+      const counts = empty(), seen = new Set<string>(); let total: number | undefined;
       for (const line of text.split('\n')) {
         const m = /^# (tests|pass|fail|skipped|todo|cancelled|suites) (\d+)\s*$/.exec(line);
         if (!m) continue;
-        if (m[1] === 'tests') { if (total !== undefined) { notes.push('Repeated TAP totals retained as raw output.'); return; } total = Number(m[2]); }
+        // A repeated counter is not evidence of additional tests, even when its
+        // accumulated value happens to fit the reported total.
+        if (seen.has(m[1]!)) { notes.push('Repeated TAP totals retained as raw output.'); return; }
+        seen.add(m[1]!);
+        if (m[1] === 'tests') total = Number(m[2]);
         else if (m[1] === 'suites') suites = `${m[2]} suites reported`;
         else counts[states[m[1]!]!] += Number(m[2]);
       }

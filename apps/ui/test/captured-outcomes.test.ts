@@ -47,6 +47,15 @@ describe('bounded captured outcome presentation', () => {
     const complete = asOfProjection(bundle.projection, bundle.projection.timeline.length).operations.find(op => op.id === original.id)!;
     if (complete.detail.kind === 'shell') expect(capturedOutcomes(complete.detail.outputPreview ?? '').runs).toHaveLength(1);
   });
+  it('rejects repeated TAP and pytest categories instead of inventing combined totals', () => {
+    const tap = capturedOutcomes('TAP version 13\n# tests 2\n# pass 1\n# pass 1\n# fail 0');
+    expect(tap.runs).toHaveLength(0);
+    expect(tap.notes).toContain('Repeated TAP totals retained as raw output.');
+    const pytest = capturedOutcomes('=== 1 passed, 1 passed, 1 error, 1 errors in 1.2s ===');
+    expect(pytest.runs).toHaveLength(0);
+    expect(pytest.notes).toContain('Repeated outcome counters retained as raw output.');
+    expect(capturedOutcomes('=== 1 error, 1 errors in 1.2s ===').runs).toHaveLength(0);
+  });
   it('bounds nested inputs and repeated six-figure summaries', () => {
     const raw = JSON.stringify(Array.from({ length: 30 }, () => ({ output: 'Tests 100000 passed (100000)' })));
     expect(capturedOutcomes(raw).runs).toHaveLength(8);
