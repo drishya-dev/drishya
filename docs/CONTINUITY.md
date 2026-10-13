@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Merged, 13 October:** Git consistency PR [#58](https://github.com/drishya-dev/drishya/pull/58) squash-merged as `725b005`; local `main` updated. Original implementation `4abed08` is in PR history. Review 60 and STATUS contain validation/limits. Next: Git reading/hunks/find, stale notes and omission clarity. No hosted CI or user-owned package/artwork changes.
+
 **13 October Git consistency:** [60](review/60-git-consistent-inspection.md) implements review 50 item 24: repeat raw-patch fingerprints plus scoped index/worktree markers and branch/status/HEAD checks, 409/Refresh on mismatch, four-reader batches in deterministic status order. 342 units, final 11 Git regressions, both typechecks and two Classic/Studio Git browser journeys pass locally; 50-file single-machine sample 7,136 ms before / 7,375 ms after. No atomic snapshot claim, schema/dependency change or hosted CI. Next bounded work: Git diff/hunk/find, stale notes and omission clarity; native/physical/platform/human release checks remain open. User artwork/root package-manager changes preserved.
 
 **Merged, 13 October:** PR #57 squash-merged as `90de09e`; local `main` fast-forwarded. Original Harsh commits plus separate reviewer fix `78a9df9` and review handoff `8ed352c` remain on local `codex/review-home-outcomes` for backtracking. Validation/limitations are in 59. Next: Git concurrent-content consistency; no hosted CI or user-owned file changes.
