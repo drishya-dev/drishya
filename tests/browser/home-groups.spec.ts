@@ -9,6 +9,24 @@ let dir: string, app: App, server: RunningServer;
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-home-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-home' }); });
 test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
 
+test('source discovery shows loading rather than an empty inventory and refresh recovers from failure', async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let failed = true;
+  await page.route('**/v1/sources', async route => { await gate; await route.fulfill(failed ? { status: 503, json: { error: 'Synthetic discovery temporarily unavailable' } } : { json: { sources: [], errors: [] } }); });
+  await page.goto(server.launchUrl);
+  const sources = page.locator('.home-grid > section').nth(1);
+  await expect(sources).toContainText('Finding local sessions…');
+  await expect(sources).not.toContainText('0 matching');
+  release();
+  await expect(sources).toContainText('Discovery unavailable');
+  await expect(sources.locator('.skeleton')).toHaveCount(0);
+  failed = false;
+  await page.getByRole('button', { name: 'Refresh local sessions' }).click();
+  await expect(sources).toContainText('0 matching');
+  await expect(sources).not.toContainText('Discovery unavailable');
+});
+
 test('Home groups complete matching metadata and bounds rows, with keyboard/narrow access', async ({ page }) => {
   const today = new Date().toISOString();
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);

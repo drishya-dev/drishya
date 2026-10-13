@@ -40,6 +40,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     const [recordings, found, storage] = await Promise.all([source.recordings(), source.sources(), source.storage?.()]);
     if (useApp.getState().source !== source) return;
     setNow(new Date());
+    setErr(undefined);
     set({ recordings }); setUsage(storage); setSources(found.sources); setSourceErrors(found.errors);
   };
   useEffect(() => {
@@ -122,7 +123,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
         <section>
           <div className="sec-head">
             <h2>Sessions on this machine</h2>
-            <span className="muted small">{filteredSources.length} matching</span>
+            <span className="muted small" role="status">{sources ? `${filteredSources.length} matching` : err ? 'Discovery unavailable' : 'Finding local sessions…'}</span>
           </div>
           <p className="muted small">Read-only: Drishya copies what it needs into its own store and never changes these files. Secrets are redacted before anything is saved.</p>
           {err && <p className="bad">{err}</p>}
@@ -131,7 +132,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
               Could not read {HARNESS_LABEL[e.adapterId] ?? e.adapterId} sessions ({e.code === 'permission-denied' ? 'permission denied' : e.code}): {e.message}
             </p>
           ))}
-          {!sources && <div className="skeleton tall" />}
+          {!sources && !err && <div className="skeleton tall" role="status" aria-label="Finding local sessions" />}
           {sources && filteredSources.length === 0 && <p className="muted">{sources.length ? 'No sessions match these filters.' : 'No Claude Code or Codex journals were found in their standard local directories. Start a session in your harness, then refresh. For a journal stored elsewhere, use drishya import --help.'}</p>}
           <SessionGroups key={`sources:${q}:${harness}:${days}`} items={filteredSources} rootOf={s => s.cwd} timeOf={s => s.modifiedAt} now={now} render={s => (
               <div key={s.path} className="row source">
