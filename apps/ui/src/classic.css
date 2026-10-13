@@ -192,3 +192,7 @@
 .map-recovery .btn { display: block; margin-top: 8px; }
 .verification-tile.deselected, .verification-tile.xfailed, .verification-tile.xpassed { background: var(--t3); }
 .connected-workspace :is(.search input, .prompt-composer textarea):focus-visible { outline: 2px solid var(--t2); outline-offset: 2px; }
+.git-previous-note { width: 100%; padding-top: 10px; border-top: 1px solid var(--line); }
+.git-previous-note summary { cursor: pointer; color: var(--t2); font-size: 12px; padding: 6px 0; }
+.git-previous-note p { color: var(--t3); font-size: 12px; line-height: 1.5; }
+.git-previous-note textarea { margin-bottom: 8px; }

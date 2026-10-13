@@ -7,10 +7,10 @@ import { ReadingDialog } from './ProductShell.tsx';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { CodeView } from './common.tsx';
 import { FileIcon } from './FileIcon.tsx';
+import { readReviewMarks, previousReviewNote, updateReviewMark, type ReviewMark } from '../lib/git-review-marks.ts';
 
-interface Mark { fingerprint: string; note: string; reviewed: boolean }
-function readMarks(key: string): Record<string, Mark> {
-  try { const value = JSON.parse(localStorage.getItem(key) ?? '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; } catch { return {}; }
+function readMarks(key: string): Record<string, ReviewMark> {
+  try { return readReviewMarks(localStorage.getItem(key) ?? '{}'); } catch { return {}; }
 }
 
 export function GitReviewEntry() {
@@ -41,9 +41,10 @@ function GitReader({ close }: { close: () => void }) {
   const file = snapshot?.files.find(f => f.path === selected);
   const mark = file ? marks[file.path] : undefined;
   const exact = !!file && mark?.fingerprint === file.fingerprint;
-  const update = (patch: Partial<Mark>) => {
+  const previous = file ? previousReviewNote(mark, file.fingerprint) : undefined;
+  const update = (patch: Partial<Pick<ReviewMark, 'note' | 'reviewed'>>) => {
     if (!file || file.status === '??') return;
-    const next = { ...marks, [file.path]: { fingerprint: file.fingerprint, note: exact ? mark?.note ?? '' : '', reviewed: exact ? !!mark?.reviewed : false, ...patch } };
+    const next = Object.fromEntries(Object.entries({ ...marks, [file.path]: updateReviewMark(mark, file.fingerprint, patch) }).slice(-100));
     setMarks(next);
     try { localStorage.setItem(key, JSON.stringify(Object.fromEntries(Object.entries(next).slice(-100)))); } catch { setError('Review progress could not be saved in this browser.'); }
   };
@@ -56,7 +57,30 @@ function GitReader({ close }: { close: () => void }) {
   return <ReadingDialog title="Git review" close={close} className="git-review-dialog">
     {!workspace?.approved ? <section><p>Inspect the selected workspace first. Git access has separate consent.</p><button className="btn" disabled={busy} onClick={() => { setBusy(true); void approve().catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve current workspace</button></section> : !consent ? <section><p>Read branch, status and bounded staged / working-tree patches from this repository. No repository writes. This is current Git, separate from captured history.</p><button className="btn" onClick={() => { setBusy(true); void workspaceApi.approveGit(id).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve read-only Git</button></section> : <>
       <nav className="git-review-toolbar"><span>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span><button className="btn" disabled={busy} onClick={() => void refresh()}>{busy ? 'Inspecting…' : 'Refresh changes'}</button><button className="btn" disabled={!snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint)} onClick={preview}>Preview handoff</button></nav>
-      {snapshot && <><p className="git-scope-note">Current sampled patches · Refresh to detect changes. Reviewed marks apply to exact displayed content. Untracked content is read separately; submodule details are unavailable.</p><div className="git-review-layout"><aside aria-label="Git changed files">{snapshot.files.map(f => <button key={f.path} aria-pressed={f.path === selected} onClick={() => { setSelected(f.path); setPacket(undefined); }}><FileIcon path={f.path} /><span>{f.path}</span><small>{marks[f.path]?.fingerprint === f.fingerprint && marks[f.path]?.reviewed ? 'Reviewed' : marks[f.path] ? 'Changed' : f.status}</small></button>)}{!snapshot.files.length && <p>No visible changes.</p>}{snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}</aside><section>{file && <><header><strong>{file.path}</strong><button className="btn" onClick={() => { close(); useApp.setState({ currentFile: file.path }); }}>Open on disk</button><button className="btn" onClick={() => { close(); useApp.setState({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button></header><div className="git-patch"><CodeView text={file.patch} path={file.path} /></div>{file.status !== '??' && <footer><label><input type="checkbox" checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label><textarea aria-label="Local review note" placeholder="Review note (local, separate from agent evidence)" maxLength={2000} value={exact ? mark?.note ?? '' : ''} onChange={e => update({ note: redactText(e.target.value).text })} /></footer>}</>}</section></div></>}
+      {snapshot && <>
+        <p className="git-scope-note">Current sampled patches · Refresh to detect changes. Reviewed marks apply to exact displayed content. Untracked content is read separately; submodule details are unavailable.</p>
+        <div className="git-review-layout">
+          <aside aria-label="Git changed files">
+            {snapshot.files.map(f => <button key={f.path} aria-pressed={f.path === selected} onClick={() => { setSelected(f.path); setPacket(undefined); }}><FileIcon path={f.path} /><span>{f.path}</span><small>{marks[f.path]?.fingerprint === f.fingerprint && marks[f.path]?.reviewed ? 'Reviewed' : marks[f.path] ? 'Changed' : f.status}</small></button>)}
+            {!snapshot.files.length && <p>No visible changes.</p>}
+            {snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
+          </aside>
+          <section>{file && <>
+            <header><strong>{file.path}</strong><button className="btn" onClick={() => { close(); useApp.setState({ currentFile: file.path }); }}>Open on disk</button><button className="btn" onClick={() => { close(); useApp.setState({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button></header>
+            <div className="git-patch"><CodeView text={file.patch} path={file.path} /></div>
+            {file.status !== '??' && <footer>
+              <label><input type="checkbox" checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label>
+              <textarea aria-label="Local review note" placeholder="Review note (local, separate from agent evidence)" maxLength={2000} value={exact ? mark?.note ?? '' : ''} onChange={e => update({ note: e.target.value })} />
+              {previous?.note && <details className="git-previous-note" key={`${file.path}:${previous.fingerprint}`}>
+                <summary>Previous note · changed patch</summary>
+                <p>This note belongs to an earlier patch. Reusing it does not mark this change reviewed.</p>
+                <textarea aria-label="Previous patch review note" value={previous.note} readOnly />
+                <button className="btn ghost" onClick={() => update({ note: previous.note, reviewed: false })}>Use previous note as draft</button>
+              </details>}
+            </footer>}
+          </>}</section>
+        </div>
+      </>}
     </>}
     {error && <p role="alert">{error}</p>}
     {packet && <section className="handoff-preview"><h3>Review this text before sharing</h3><p>Only explicitly reviewed patches and their notes are included. Pattern redaction is best effort.</p><textarea aria-label="Handoff preview" value={packet} readOnly /><button className="btn" onClick={() => { const url = URL.createObjectURL(new Blob([packet], { type: 'text/markdown' })); const link = document.createElement('a'); link.href = url; link.download = 'drishya-review.md'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}>Save handoff</button></section>}
