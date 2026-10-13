@@ -12,6 +12,20 @@ type Tok = { t: 'kw' | 'str' | 'com' | 'num' | 'fn' | 'type' | 'property' | 'pla
 const RE = /(\/\/.*$|#(?![!{[]).*$|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|(\b\d[\d_.]*(?:e[+-]?\d+)?\b)|([A-Za-z_$][\w$]*)(?=\s*\()|([A-Za-z_$][\w$]*)/gm;
 
 export function tokenize(line: string, lang?: string): Tok[] {
+  // Document prose is not programming syntax: English “for/from/return” must stay prose.
+  if (lang === 'md' || lang === 'mdx' || lang === 'markdown') {
+    const out: Tok[] = [];
+    let end = 0;
+    for (const match of line.matchAll(/(^\s{0,3}#{1,6}\s|`[^`]*`|\[[^\]]*\]\([^)]*\)|^\s*(?:[-*+] |\d+\. ))/g)) {
+      const start = match.index!;
+      if (start > end) out.push({ t: 'plain', s: line.slice(end, start) });
+      out.push({ t: match[0].startsWith('`') ? 'str' : 'property', s: match[0] });
+      end = start + match[0].length;
+    }
+    if (end < line.length) out.push({ t: 'plain', s: line.slice(end) });
+    return out;
+  }
+  if (lang === 'txt' || lang === 'text' || lang === 'log') return [{ t: 'plain', s: line }];
   const out: Tok[] = [];
   let last = 0;
   const hashComments = lang === 'python' || lang === 'shell' || lang === 'yaml' || lang === 'toml' || lang === 'ruby';
