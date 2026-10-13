@@ -113,6 +113,8 @@ test('current source reading finds, navigates and wraps bounded disk pages witho
 test('source reading links qualified current imports to a bounded map neighborhood', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await expect(page.locator('.composer-target')).toBeVisible();
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   const folders = page.getByRole('complementary', { name: 'Session folders' });
   const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
   if (await enable.count()) await enable.click();
@@ -454,6 +456,9 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('actual.ts');
   await page.locator('.map-matches').getByRole('button', { name: 'src/actual.ts', exact: true }).click();
+  const selectedPoint = page.locator('.map-origin-point[data-origin-file="src/actual.ts"]');
+  await expect(selectedPoint).toHaveAttribute('data-origin-visible', 'true');
+  await expect.poll(async () => { const point = (await selectedPoint.boundingBox())!, world = (await page.locator('.map').boundingBox())!; return Math.round((point.x + point.width / 2 - world.x) / world.width * 100); }).toBe(50);
   await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
   const reader = page.getByRole('dialog', { name: 'Work on src/actual.ts' });
   await expect(reader).toContainText('recorded historical bytes');
@@ -461,6 +466,8 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
   const graph = await page.locator('.map').boundingBox();
   const reading = await reader.boundingBox();
   expect(graph!.x + graph!.width).toBeLessThan(reading!.x);
+  await expect(selectedPoint).toHaveAttribute('data-origin-visible', 'true');
+  await expect.poll(async () => { const point = (await selectedPoint.boundingBox())!, world = (await page.locator('.map').boundingBox())!; return Math.round((point.x + point.width / 2 - world.x) / world.width * 100); }).toBe(50);
   await page.getByRole('button', { name: 'Zoom into repository' }).click();
   await reader.getByRole('button', { name: 'Close Work on src/actual.ts' }).focus();
   await page.keyboard.press('Escape');
@@ -468,6 +475,20 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
   await expect(page.locator('.map')).toHaveClass(/exploring/);
 });
 
+
+test('a recording without a captured workspace has a compact read-only state instead of dead prompt controls', async ({ page }) => {
+  const journal = join(dir, 'no-workspace.jsonl');
+  writeFileSync(journal, JSON.stringify({ type: 'user', uuid: 'no-workspace-user', sessionId: '99999999-9999-4999-8999-999999999999', message: { role: 'user', content: 'Captured recording without workspace' } }) + '\n');
+  await app.ingest.importSource('claude-code', journal);
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Captured recording without workspace/ }).click();
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  await expect(composer).toContainText('Read-only here');
+  await expect(composer.locator('textarea')).toHaveCount(0);
+  await expect(composer.getByRole('button', { name: 'Send prompt' })).toHaveCount(0);
+  await composer.getByRole('button', { name: 'Choose session' }).click();
+  await expect(page.locator('.home')).toBeVisible();
+});
 
 test('compact native composer contains its decoration and narrow form without artificial scrollbars', async ({ page }) => {
   const root = join(dir, 'session-repository');
@@ -484,6 +505,9 @@ test('compact native composer contains its decoration and narrow form without ar
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   await expect(composer).toBeVisible();
   const field = composer.locator('textarea');
+  await field.click();
+  expect(await field.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
+  expect(await field.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('0px');
   for (const value of ['', 'A short prompt', 'First line\nSecond line']) {
     await field.fill(value);
     await expect.poll(() => field.evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(0);

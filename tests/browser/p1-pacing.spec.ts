@@ -443,6 +443,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
   await app.ingest.sync(recordingId);
   await expect(panel).toContainText('npm test -- p1-live-verification');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByText('Sequence diagnostics', { exact: true }).click();
   await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await page.getByRole('slider', { name: 'Timeline' }).press('End');
@@ -672,6 +673,7 @@ test('paged replay retains its history and camera while the next captured page l
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByText('Sequence diagnostics', { exact: true }).click();
   await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();

@@ -38,13 +38,16 @@ test('map and verification failures offer local retry without replacing captured
   await expect(page.locator('.history')).toHaveAttribute('data-recovery-reference', firstHistory!);
 });
 
-test('keyboard search has a neutral visible focus ring with reduced motion', async ({ page }) => {
+test('keyboard search has one neutral container focus boundary with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(new URL('/?demo&experience=classic', server.launchUrl).href);
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   const input = page.getByPlaceholder('Search prose, commands, paths…');
   await input.focus();
-  expect(await input.evaluate(element => getComputedStyle(element).outlineWidth)).toBe('2px');
+  await expect(input).toBeFocused();
+  expect(await input.evaluate(element => getComputedStyle(element).outlineStyle)).toBe('none');
+  const frame = page.getByRole('dialog', { name: 'Search this recording' });
+  expect(await frame.evaluate(element => element.matches(':focus-within') && parseFloat(getComputedStyle(element).borderTopWidth) >= 1 && getComputedStyle(element).borderTopColor !== 'rgba(0, 0, 0, 0)')).toBe(true);
   await page.keyboard.press('Escape');
   await expect(input).toBeHidden();
 });

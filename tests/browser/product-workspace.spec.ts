@@ -102,20 +102,19 @@ for (const experience of ['classic', 'studio']) {
   });
 }
 
-test('the two working designs switch without resetting the recording or reading mode', async ({ page }) => {
+test('retained design backups remain addressable but are absent from product settings', async ({ page }) => {
   await page.goto(`${demoUrl()}&experience=studio`);
   const title = await page.locator('.studio-session h1').textContent();
   await page.getByRole('button', { name: 'Workspace settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
-  await settings.getByRole('button', { name: 'Classic Centered work · evidence desk' }).click();
-  await expect(page.locator('.workbench-header')).toHaveCount(0);
-  await expect(page.locator('.studio-header')).toBeVisible();
-  await expect(page.locator('.crown-title')).toContainText(title!);
-  await settings.getByText('Earlier design backups', { exact: true }).click();
-  await settings.getByRole('button', { name: 'Studio backup' }).click();
+  await expect(settings.getByText('Earlier design backups', { exact: true })).toHaveCount(0);
+  await expect(settings.getByRole('button', { name: 'Studio backup' })).toHaveCount(0);
   await expect(page.locator('.studio-session h1')).toHaveText(title!);
   await settings.getByRole('button', { name: 'Close Workspace settings' }).click();
   await expect(page.locator('.history')).toBeVisible();
+  await page.goto(`${demoUrl()}&experience=classic`);
+  await expect(page.locator('.studio-header')).toBeVisible();
+  await expect(page.locator('.crown-title')).toContainText(title!);
 });
 
 test('recording search separates captured work from indexed file navigation', async ({ page }) => {
@@ -342,6 +341,7 @@ test('source preview opens the exact stored range and keeps pending replay evide
   await pinned.getByRole('button', { name: 'Minimize reference' }).press('Escape');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByText('Sequence diagnostics', { exact: true }).click();
   await page.getByRole('button', { name: 'Replay sequence' }).click();
   await expect(pinned).toHaveCount(0);
   // The result exists in the offline bundle, but has not landed at this replay boundary.
@@ -786,7 +786,7 @@ test('paged prompt rail spans the full session and loads an older chapter on sel
   await expect(page.locator('.turn').first()).toBeInViewport();
   await expect(rail.getByRole('button').first()).toHaveAttribute('aria-current', 'location');
   await rail.getByRole('button').first().hover();
-  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 3).map(node => parseFloat(getComputedStyle(node).width)))).toEqual([24, 16, 8]);
+  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 3).map(node => Math.round(node.getBoundingClientRect().width)))).toEqual([24, 16, 8]);
 });
 
 test('prompt marks jump to captured prompt starts without starting a native turn', async ({ page }) => {
@@ -799,8 +799,8 @@ test('prompt marks jump to captured prompt starts without starting a native turn
   await expect(page.locator('.prompt-rail-preview').first()).toContainText('Prompt 1');
   await expect(rail.getByRole('button').first()).toHaveAttribute('data-proximity', 'current');
   await expect(rail.getByRole('button').nth(1)).toHaveAttribute('data-proximity', 'near');
-  // Wait for the finite width easing before asserting the three visual ranks.
-  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 2).map(node => parseFloat(getComputedStyle(node).width)))).toEqual([24, 16]);
+  // Assert visible lengths, including the finite scale easing, rather than layout widths.
+  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 2).map(node => Math.round(node.getBoundingClientRect().width)))).toEqual([24, 16]);
   await expect(page.locator('.turn').first()).toBeInViewport({ ratio: .5 });
   await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveText('↓');
   await expect(page.locator('.history-transport .prompt-menu')).toHaveCount(0);
