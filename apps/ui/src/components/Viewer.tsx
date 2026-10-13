@@ -52,6 +52,8 @@ function WorkspaceViewer() {
   const main = useRef<HTMLDivElement>(null);
   const [reading, setReading] = useState<{ left: number; width: number }>();
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [mapError, setMapError] = useState<string>();
+  const [mapRetry, setMapRetry] = useState(0);
 
   const scene = useMemo(() => historyPage?.scene ?? (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [historyPage, projection, step, filter, selectedOp]);
   const historical = useMemo(() => historyPage?.projection ?? (projection ? asOfProjection(projection, step) : undefined), [historyPage, projection, step]);
@@ -63,11 +65,12 @@ function WorkspaceViewer() {
   useEffect(() => {
     if (!mapVisible || !projection || graph || !source || !recordingId) return;
     let active = true;
+    setMapError(undefined);
     source.graph(recordingId).then((loaded) => {
-      if (active && useApp.getState().recordingId === recordingId && useApp.getState().mapVisible) useApp.setState({ graph: loaded });
-    }).catch(() => undefined);
+      if (active && useApp.getState().source === source && useApp.getState().recordingId === recordingId && useApp.getState().mapVisible) useApp.setState({ graph: loaded });
+    }).catch(error => { if (active && useApp.getState().source === source && useApp.getState().recordingId === recordingId) setMapError(error.message ?? 'Map unavailable'); });
     return () => { active = false; };
-  }, [mapVisible, projection, graph, source, recordingId]);
+  }, [mapVisible, !!projection, graph, source, recordingId, mapRetry]);
 
   useEffect(() => {
     if (!mapVisible || source?.kind !== 'daemon' || !recordingId || graph?.temporal !== 'current') return;
@@ -129,6 +132,7 @@ function WorkspaceViewer() {
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       <div className="main" ref={main}>
         {mapVisible && <MapCanvas graph={graph} heat={scene.heat} passagePaths={passagePaths} readingRect={reading} />}
+        {mapVisible && mapError && <div className="map-recovery" role="alert">Repository map unavailable: {mapError}<button className="btn" onClick={() => setMapRetry(n => n + 1)}>Retry repository map</button></div>}
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
         {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />

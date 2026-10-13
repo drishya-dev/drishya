@@ -304,7 +304,10 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
 });
 
 test('B3 navigation keeps the combined synthetic story while filtering tools', async ({ page }) => {
-  await page.goto(server.launchUrl);
+  // This regression exercises the retained Legacy crown/dock composition;
+  // Classic's right-hand agent families have separate browser coverage.
+  const launch = new URL(server.launchUrl); launch.search = '?experience=legacy';
+  await page.goto(launch.href);
   await page.getByRole('button', { name: 'Open demo' }).click();
   await expect(page.locator('.viewer')).toBeVisible();
   await expect(page.locator('.agents .agent')).toHaveCount(3);

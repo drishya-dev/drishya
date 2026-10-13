@@ -30,6 +30,7 @@ export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (ope
   const open = onOpen ?? select;
   const [trail, setTrail] = useState<VerificationTrail | null>();
   const [error, setError] = useState<string>();
+  const [retry, setRetry] = useState(0);
   // The daemon computes this per recording; a bundle computes it locally on its whole (possibly
   // combined) projection, so a combined bundle view is fine.
   const supported = (op.kind === 'edit' || op.kind === 'write') && !!source?.verification && !!recordingId && (source.kind === 'bundle' || !recordingId.includes('+'));
@@ -43,11 +44,11 @@ export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (ope
     return () => {
       live = false;
     };
-  }, [supported, source, recordingId, op.id, mode, revision]);
+  }, [supported, source, recordingId, op.id, mode, revision, retry]);
 
   if (!supported) return null;
   if (mode === 'replay') return <section className="verify" aria-label="Test runs after this change"><h4>Test runs after this change</h4><p className="muted small">This view uses the full recording. Return to history to inspect its test runs; future results are hidden during sequence replay.</p></section>;
-  if (error) return <section className="verify"><p className="muted small">Could not load test runs after this change: {error}</p></section>;
+  if (error) return <section className="verify" aria-label="Test runs after this change"><p className="muted small" role="alert">Could not load test runs after this change: {error}</p><button className="btn" onClick={() => setRetry(n => n + 1)}>Retry test verification</button></section>;
   if (trail === undefined) return <section className="verify"><div className="skeleton" /></section>;
   if (trail === null) return null;
 
