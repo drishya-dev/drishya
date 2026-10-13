@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**13 October local candidate:** [56](review/56-home-workspace-time.md) implements Home workspace/local-time grouping; [57](review/57-captured-test-outcomes.md) implements bounded wrapped runner outcomes; [58](review/58-ui-craft-local-candidate.md) records the UI source/rule sweep, recovery/focus fixes and validation boundaries. Native/physical/platform/human acceptance and review 50's broader utility backlog remain separate.
+
 **12 October shared interactions:** [55](review/55-shared-menu-interactions.md) adds nested utility dismissal/focus, viewport bounds and pointer-only finite menu/control motion. It is not the pending full UI audit in 54; Home organization and adaptive outcomes remain next work.
 
 **12 October composer increment:** [53](review/53-professional-composer.md) implements the first composer part of 52: visible target, compact input/footer, truthful native policy summary and bounded memory-only text drafts. Shared interaction craft and Home grouping remain planned.

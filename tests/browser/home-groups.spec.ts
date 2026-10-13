@@ -23,6 +23,7 @@ test('Home groups complete matching metadata and bounds rows, with keyboard/narr
   await expect(recordings).toContainText('/two/shop');
   await expect(recordings).toContainText('Time unavailable');
   expect(await recordings.locator('.row').count()).toBe(22);
+  await page.screenshot({ path: resolve('.local/home-workspace-groups.png'), fullPage: true });
   const first = recordings.locator('.workspace-group-heading').first();
   await first.focus(); await page.keyboard.press('Enter');
   await expect(first).toHaveAttribute('aria-expanded', 'false');

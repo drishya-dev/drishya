@@ -25,6 +25,7 @@ test('wrapped test facts appear inside Shell, stay bounded and keep raw evidence
   await expect(card).toContainText('1 failed');
   await expect(card.locator('.captured-outcomes > section')).toHaveCount(2);
   expect(await card.locator('.verification-tile').count()).toBeLessThan(80);
+  await page.screenshot({ path: resolve('.local/wrapped-test-outcomes.png') });
   await card.getByRole('button', { name: /Expand/ }).click();
   await expect(card).toContainText('"exit_code":1');
   await page.setViewportSize({ width: 390, height: 844 });

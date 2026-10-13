@@ -27,6 +27,14 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const [usage, setUsage] = useState<{ bytes: number; budgetBytes: number; overBudget: boolean }>();
   const preview = recordings.find(r => r.id === localPreviewId());
 
+  useEffect(() => {
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timer = window.setTimeout(() => setNow(new Date()), Math.max(1, midnight.getTime() - Date.now()));
+    const visible = () => { if (document.visibilityState === 'visible') setNow(new Date()); };
+    document.addEventListener('visibilitychange', visible);
+    return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', visible); };
+  }, [now]);
+
   const refresh = async () => {
     if (!source) return;
     const [recordings, found, storage] = await Promise.all([source.recordings(), source.sources(), source.storage?.()]);
@@ -37,7 +45,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   useEffect(() => {
     refresh().catch((e) => setErr(e.message));
     let active = true;
-    const stop = source?.subscribe(() => { void source.recordings().then((r) => { if (active) set({ recordings: r }); }).catch((e) => { if (active) setErr(e.message); }); });
+    const stop = source?.subscribe(() => { void source.recordings().then((r) => { if (active && useApp.getState().source === source) set({ recordings: r }); }).catch((e) => { if (active && useApp.getState().source === source) setErr(e.message); }); });
     return () => { active = false; stop?.(); };
   }, [source]);
 

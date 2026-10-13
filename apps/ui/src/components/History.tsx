@@ -706,12 +706,11 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       return (
         <div className="test">
           <div className="cmd">$ {d.command}</div>
-          <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes output={d.outputPreview} fallback={s ? (
+          <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} fallback={s ? (
             <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
             <div className="muted">exit {d.exitCode ?? '?'}</div>
           ) : <div className="muted">Waiting for output</div>} />
-          {s && s.failed > 0 && <button className="bad" onClick={e => { e.stopPropagation(); set({ expandedOp: op.id, selectedOp: undefined }); }}>{s.failed} failed · inspect assertions</button>}
           {s?.failures[0] && (
             <div className="failure">
               <div className="failure-name">{s.failures[0].name}</div>
@@ -728,7 +727,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
           <div className="cmd">$ {d.command.slice(0, 1200)}</div>
           {d.command.length > 1200 && <div className="material-context">First 1,200 captured characters · expand for full input</div>}
           <ResultArea state={op.status} resolving={resolving}>
-            <CapturedOutcomes output={d.outputPreview} />
+            <CapturedOutcomes output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
             {d.outputPreview ? <TerminalPreview text={d.outputPreview} failed={op.status === 'error'} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
             {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
           </ResultArea>

@@ -263,7 +263,8 @@ test('file relationships start at measured renderer nodes and fall back when the
     const response = await route.fetch();
     const bundle = await response.json();
     const node = bundle.graph.nodes.find((node: { path: string }) => node.path === 'test/checkout.test.ts');
-    node.x = .86; node.y = .35;
+    // Classic's wider right rail covers the previous .86 fixture position.
+    node.x = .76; node.y = .35;
     await route.fulfill({ response, json: bundle });
   });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
@@ -408,6 +409,8 @@ test('the dock keeps observed identities readable at rest and remains accessible
   await page.locator('.search-results button').first().click();
   await page.locator('.inspector').getByRole('button', { name: 'Close', exact: true }).click();
   const call = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
+  // The current evidence desk scrolls; a clipped instrument is not a true origin.
+  await dock.locator('[data-mcp-tool="get-library-docs"]').scrollIntoViewIfNeeded();
   await call.hover();
   const tether = page.locator('.origin-thread[data-origin-type="MCP tool"]');
   await expect(tether).toHaveCount(1);
