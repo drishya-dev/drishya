@@ -220,3 +220,16 @@
 .review-question-row small, .question-cap { display: block; color: var(--t3); font-size: 11px; margin: 8px 0; }
 .question-target { color: var(--read); text-align: left; font-size: 12px; overflow-wrap: anywhere; }
 .question-export textarea { max-height: 240px; }
+.workspace-navigation { width: min(640px, calc(100vw - 32px)); }
+.workspace-navigation-query { width: calc(100% - 32px); margin: 16px; padding: 12px; font-size: 15px; }
+.workspace-navigation-results { max-height: min(420px, 52dvh); overflow: auto; overscroll-behavior: contain; padding: 0 8px; }
+.workspace-navigation-results > button { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 12px; border-radius: 6px; }
+.workspace-navigation-results > button[aria-selected=true] { background: var(--s2); }
+.workspace-navigation-results strong, .workspace-navigation-results small { display: block; overflow-wrap: anywhere; }
+.workspace-navigation-results strong { font-size: 13px; font-weight: 500; }
+.workspace-navigation-results small, .workspace-navigation-help { color: var(--t3); font-size: 11px; line-height: 1.5; }
+.workspace-navigation-help { padding: 10px 20px; margin: 0; border-top: 1px solid var(--line); }
+.navigation-command-icon { color: var(--t2); width: 20px; flex-shrink: 0; }
+.workspace-navigation-open { display: flex; justify-content: space-between; gap: 8px; width: 100%; font-size: 11px; }
+.workspace-navigation-open kbd { color: var(--t3); font: 10px var(--mono); }
+.product-dialog :is(input, textarea, select):focus-visible, .home :is(input, select):focus-visible { outline: 2px solid var(--t2); outline-offset: 2px; }

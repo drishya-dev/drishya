@@ -72,7 +72,7 @@ export function ReviewQuestionsEntry() {
     <button className="btn ghost small" onClick={() => update({ ...item, status: item.status === 'open' ? 'resolved' : 'open', updatedAt: new Date().toISOString() })}>{item.status === 'open' ? 'Resolve question' : 'Reopen question'}</button>
     {item.status === 'resolved' && <button className="btn ghost small" onClick={() => remove(item.id)}>Remove resolved question</button>}
   </article>);
-  return <><button className="btn ghost" disabled={mode === 'replay'} onClick={() => setOpen(true)}>Review questions{mode !== 'replay' && unresolved.length ? ` · ${unresolved.length}` : ''}</button>
+  return <><button className="btn ghost" data-review-questions disabled={mode === 'replay'} onClick={() => setOpen(true)}>Review questions{mode !== 'replay' && unresolved.length ? ` · ${unresolved.length}` : ''}</button>
     {open && mode !== 'replay' && <ReadingDialog title="Review questions" close={() => setOpen(false)} className="review-questions-dialog">
       <p className="review-question-scope">Your local questions for this recording. Resolve decisions explicitly; agent activity never resolves them automatically.</p>
       {error && <p role="alert">{error}</p>}

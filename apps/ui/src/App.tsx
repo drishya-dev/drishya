@@ -8,6 +8,7 @@ import { needsReload } from './lib/sync.ts';
 import { growingSample } from './lib/sample-source.ts';
 import { setMotion, useApp } from './state.ts';
 import { localPreviewId } from './lib/local-preview.ts';
+import { WorkspaceNavigation } from './components/WorkspaceNavigation.tsx';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
 
@@ -116,7 +117,7 @@ export function App() {
     if (screen === 'home') return <Home openDemo={(growing = false) => openBundle(DEMO_URL, growing).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
     return <Viewer />;
   };
-  return <ProductShell>{render()}</ProductShell>;
+  return <ProductShell>{render()}<WorkspaceNavigation /></ProductShell>;
 }
 
 /** The playback clock. The composer never reads time; only this hook does. */
@@ -149,6 +150,9 @@ function useKeyboard() {
       const t = e.target as HTMLElement;
       if (s.screen !== 'viewer') return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      // Native dialogs own their keyboard/escape behavior. Closing one must not
+      // also clear the captured reader or map underneath it.
+      if (t.closest('dialog[open]')) return;
       const k = e.key;
       if (k === 'Escape') {
         if (s.settingsOpen) s.set({ settingsOpen: false });
