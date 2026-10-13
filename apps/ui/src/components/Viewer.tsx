@@ -1,3 +1,4 @@
+import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
@@ -204,9 +205,9 @@ function StudioDock({ scene }: { scene: Scene }) {
   const filter = useApp(s => s.filter);
   const setFilter = useApp(s => s.setFilter);
   return <aside id="observed-tools" className="dock studio-dock" aria-label="Tools" title="Tools observed in this recording"><div className="studio-dock-title">Tools <span>{scene.dock.native.filter(d => d.uses).length}</span></div>
-    <div className="studio-instruments">{scene.dock.native.map(d => <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span><span className="studio-instrument-name">{KIND_LABEL[d.kind]}<small>{d.tools.join(' · ')}</small></span><span className="inst-uses">{d.uses || '—'}</span></button>)}</div>
+    <div className="studio-instruments">{scene.dock.native.map(d => <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} onClick={() => setFilter(focusKind(filter, d.kind))}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span><span className="studio-instrument-name">{KIND_LABEL[d.kind]}<small>{d.tools.join(' · ')}</small></span><span className="inst-uses">{d.uses || '—'}</span></button>)}</div>
     {scene.dock.mcp.length > 0 && <div className="studio-dock-title">MCP servers <span>{scene.dock.mcp.length}</span></div>}
-    {scene.dock.mcp.map(server => <section key={server.server} className={`server catalogued${server.open ? ' open' : ''}`}><button className="server-name" aria-pressed={filter?.server === server.server} onClick={() => setFilter(filter?.server === server.server ? undefined : { server: server.server })}><span className="server-dot" />{server.server}</button><div className="drawer">{server.tools.map(t => <button key={t.tool} className={`server-tool${t.active ? ' active' : ''}`} data-mcp-server={server.server} data-mcp-tool={t.tool} aria-pressed={filter?.server === server.server && filter?.tool === t.tool} disabled={!t.uses} onClick={() => setFilter(filter?.server === server.server && filter?.tool === t.tool ? undefined : { server: server.server, tool: t.tool })}><span className="server-tool-identity"><span className="tool-mark"><MaterialGlyph material="external" /></span><span>{t.tool}</span></span><span className="inst-uses">{t.uses || '—'}</span></button>)}</div></section>)}
+    {scene.dock.mcp.map(server => <section key={server.server} className={`server catalogued${server.open ? ' open' : ''}`}><button className="server-name" aria-pressed={filter?.server === server.server} onClick={() => setFilter(focusMcp(filter, server.server))}><span className="server-dot" />{server.server}</button><div className="drawer">{server.tools.map(t => <button key={t.tool} className={`server-tool${t.active ? ' active' : ''}`} data-mcp-server={server.server} data-mcp-tool={t.tool} aria-pressed={filter?.server === server.server && filter?.tool === t.tool} disabled={!t.uses} onClick={() => setFilter(focusMcp(filter, server.server, t.tool))}><span className="server-tool-identity"><span className="tool-mark"><MaterialGlyph material="external" /></span><span>{t.tool}</span></span><span className="inst-uses">{t.uses || '—'}</span></button>)}</div></section>)}
     {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary><ol>{controller.tools.map(t => <li key={t}>{t}</li>)}</ol></details>}
     {filter && <button className="btn ghost clear-filter" onClick={() => setFilter(undefined)}>Show everything <Kbd>Esc</Kbd></button>}
   </aside>;
@@ -250,7 +251,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
               aria-checked={on}
               className={`agent st-${a.state}${on ? ' on' : ''}${a.parentId ? ' child' : ''}`}
               style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties}
-              onClick={() => setFilter(on ? undefined : { agentId: a.id })}
+              onClick={() => setFilter(focusAgent(filter, a.id))}
               title={`${agentName(agent)} — ${a.state}${a.activeOperationIds.length ? `, ${a.activeOperationIds.length} call in flight` : ''}. Click to follow only this agent.`}
             >
               <span className="agent-dot" />
@@ -307,7 +308,7 @@ function Dock({ scene }: { scene: Scene }) {
 
       {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary><ol>{controller.tools.map(t => <li key={t}>{t}</li>)}</ol>{controller.tools.length === 0 && <small>No MCP tools reported by this runtime</small>}</details>}
       {scene.dock.native.map((d) => (
-        <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(filter?.kind === d.kind ? undefined : { kind: d.kind })}>
+        <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(focusKind(filter, d.kind))}>
           <span className={`op-kind k-${d.kind}`}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span>{KIND_LABEL[d.kind]}</span>
           <span className="inst-tools">{d.tools.join(' · ')}</span>
           <span className="inst-uses">{d.uses || ''}</span>
@@ -318,13 +319,13 @@ function Dock({ scene }: { scene: Scene }) {
         const on = filter?.server === s.server;
         return (
           <div key={s.server} className={`server catalogued${s.open ? ' open' : ''}${on ? ' on' : ''}`}>
-            <button className="server-name" onClick={() => setFilter(on ? undefined : { server: s.server })} title="Follow only this server's calls">
+            <button className="server-name" onClick={() => setFilter(focusMcp(filter, s.server))} title="Follow only this server's calls">
               <span className="server-dot" />
               {s.server}
             </button>
             <div className="drawer">
               {s.tools.map((t) => (
-                <button key={t.tool} data-mcp-server={s.server} data-mcp-tool={t.tool} className={`server-tool${t.active ? ' active' : ''}${t.uses ? '' : ' unused'}`} disabled={!t.uses} aria-pressed={filter?.server === s.server && filter?.tool === t.tool} onClick={() => setFilter(filter?.server === s.server && filter?.tool === t.tool ? undefined : { server: s.server, tool: t.tool })}>
+                <button key={t.tool} data-mcp-server={s.server} data-mcp-tool={t.tool} className={`server-tool${t.active ? ' active' : ''}${t.uses ? '' : ' unused'}`} disabled={!t.uses} aria-pressed={filter?.server === s.server && filter?.tool === t.tool} onClick={() => setFilter(focusMcp(filter, s.server, t.tool))}>
                   <span className="server-tool-identity"><span className="tool-mark"><MaterialGlyph material="external" /></span><span>{t.tool}</span></span>
                   <span className="inst-uses">{t.uses || ''}</span>
                 </button>

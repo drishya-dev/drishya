@@ -166,7 +166,7 @@ function Detail({ op, projection }: { op: Operation; projection: Projection }) {
             Delegated to <strong>{d.agentType ?? 'a subagent'}</strong>: {d.description}
           </p>
           {child && (
-            <button className="btn" onClick={() => useApp.getState().setFilter({ agentId: child.id })}>
+            <button className="btn" onClick={() => useApp.getState().setFilter({ ...useApp.getState().filter, agentId: child.id })}>
               Follow {agentName(child)}'s work
             </button>
           )}
