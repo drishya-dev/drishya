@@ -469,6 +469,20 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
 });
 
 
+test('a recording without a captured workspace has a compact read-only state instead of dead prompt controls', async ({ page }) => {
+  const journal = join(dir, 'no-workspace.jsonl');
+  writeFileSync(journal, JSON.stringify({ type: 'user', uuid: 'no-workspace-user', sessionId: '99999999-9999-4999-8999-999999999999', message: { role: 'user', content: 'Captured recording without workspace' } }) + '\n');
+  await app.ingest.importSource('claude-code', journal);
+  await page.goto(server.launchUrl);
+  await page.getByRole('button', { name: /Captured recording without workspace/ }).click();
+  const composer = page.getByRole('region', { name: 'Harness prompt' });
+  await expect(composer).toContainText('Read-only here');
+  await expect(composer.locator('textarea')).toHaveCount(0);
+  await expect(composer.getByRole('button', { name: 'Send prompt' })).toHaveCount(0);
+  await composer.getByRole('button', { name: 'Choose session' }).click();
+  await expect(page.locator('.home')).toBeVisible();
+});
+
 test('compact native composer contains its decoration and narrow form without artificial scrollbars', async ({ page }) => {
   const root = join(dir, 'session-repository');
   const journal = join(dir, 'glass-proof.jsonl');
@@ -484,6 +498,9 @@ test('compact native composer contains its decoration and narrow form without ar
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   await expect(composer).toBeVisible();
   const field = composer.locator('textarea');
+  await field.click();
+  expect(await field.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
+  expect(await field.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('0px');
   for (const value of ['', 'A short prompt', 'First line\nSecond line']) {
     await field.fill(value);
     await expect.poll(() => field.evaluate(el => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(0);

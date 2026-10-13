@@ -513,7 +513,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   useLayoutEffect(() => {
     const root = prose.current;
     if (!root || !arriving || !useApp.getState().motion || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const animations = [...root.querySelectorAll(':scope > p, :scope > ul, :scope > pre')].slice(0, 12).map((el, i) => el.animate([{ opacity: .12, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 400, delay: Math.min(480, i * 40), fill: 'backwards', easing: 'ease-out' }));
+    const animations = [...root.querySelectorAll(':scope > p, :scope > ul, :scope > pre')].slice(0, 12).map((el, i) => el.animate([{ opacity: .4, transform: 'translateY(2px)' }, { opacity: 1, transform: 'none' }], { duration: 200, delay: Math.min(120, i * 30), fill: 'backwards', easing: 'cubic-bezier(.23,1,.32,1)' }));
     const cancel = () => animations.forEach(a => a.cancel());
     root.addEventListener('pointerdown', cancel); window.addEventListener('keydown', cancel);
     return () => { cancel(); root.removeEventListener('pointerdown', cancel); window.removeEventListener('keydown', cancel); };

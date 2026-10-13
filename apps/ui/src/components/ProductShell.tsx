@@ -12,7 +12,11 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     const previous = document.activeElement as HTMLElement | null;
     const dialog = ref.current!;
     if (modeless) dialog.show(); else dialog.showModal();
-    return () => { dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
+    const state = useApp.getState();
+    // Pointer-only feedback for an occasional modal. Keyboard reading/navigation is immediate.
+    const animate = !modeless && !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const arrival = animate ? dialog.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }) : undefined;
+    return () => { arrival?.cancel(); dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
   }, [modeless]);
   return createPortal(<dialog ref={ref} style={style} className={`product-dialog ${className}${modeless ? " map-reader" : ""}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
     <header><h2 id={titleId}>{title}</h2><button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></header>
