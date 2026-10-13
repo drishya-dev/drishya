@@ -5,19 +5,10 @@ import type { DiscoveryError } from '../api.ts';
 import { useApp } from '../state.ts';
 import { relTime } from './common.tsx';
 import { localPreviewId } from '../lib/local-preview.ts';
+import { SessionGroups } from './SessionGroups.tsx';
+import { timestamp } from '../lib/home-groups.ts';
 
 const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
-
-function byProject<T>(items: T[], rootOf: (item: T) => string | undefined): [string, T[]][] {
-  const groups = new Map<string, T[]>();
-  for (const item of items) {
-    const root = rootOf(item) || 'Unknown project';
-    const group = groups.get(root) ?? [];
-    group.push(item);
-    groups.set(root, group);
-  }
-  return [...groups];
-}
 
 export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const source = useApp((s) => s.source);
@@ -32,16 +23,15 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const [q, setQ] = useState('');
   const [harness, setHarness] = useState('all');
   const [days, setDays] = useState(0);
-  const [shownRecordings, setShownRecordings] = useState(60);
-  const [shownSources, setShownSources] = useState(60);
+  const [now, setNow] = useState(() => new Date());
   const [usage, setUsage] = useState<{ bytes: number; budgetBytes: number; overBudget: boolean }>();
-  const resetShown = () => { setShownRecordings(60); setShownSources(60); };
   const preview = recordings.find(r => r.id === localPreviewId());
 
   const refresh = async () => {
     if (!source) return;
     const [recordings, found, storage] = await Promise.all([source.recordings(), source.sources(), source.storage?.()]);
     if (useApp.getState().source !== source) return;
+    setNow(new Date());
     set({ recordings }); setUsage(storage); setSources(found.sources); setSourceErrors(found.errors);
   };
   useEffect(() => {
@@ -70,9 +60,9 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     const t = q.toLowerCase();
     return (harness === 'all' || adapter === harness) &&
       (!t || `${title ?? ''} ${root ?? ''}`.toLowerCase().includes(t)) &&
-      (!days || (time && Date.parse(time) >= Date.now() - days * 86_400_000));
+      (!days || (timestamp(time) !== undefined && timestamp(time)! >= now.getTime() - days * 86_400_000));
   };
-  const filteredRecordings = recordings.filter((r) => matches(r.title, r.workspaceRoot, r.harness, r.lastSourceTime ?? r.updatedAt));
+  const filteredRecordings = recordings.filter((r) => matches(r.title, r.workspaceRoot, r.harness, r.lastSourceTime));
   const filteredSources = (sources ?? []).filter((s) => matches(s.title, s.cwd, s.harness, s.modifiedAt));
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -93,15 +83,16 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
       {!preview && new URLSearchParams(location.search).get('demo') === 'local' && <p className="notice">Choose a local recording, then use More → Use this session as local preview. A missing or deleted recording is never replaced with a synthetic conversation.</p>}
       {preview && <div className="local-preview-card"><strong>Your local preview</strong><span>{preview.title ?? 'Selected recording'}</span><button className="btn" onClick={() => { location.hash = `#/r/${preview.id}`; void openRecording(preview.id); }}>Open real recording</button><small>Already-redacted local evidence. Nothing is published or copied into the synthetic sample.</small></div>}
       <div className="home-filters">
-        <input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => { setQ(e.target.value); resetShown(); }} />
-        <select aria-label="Harness" value={harness} onChange={(e) => { setHarness(e.target.value); resetShown(); }}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>
-        <select aria-label="Session age" value={days} onChange={(e) => { setDays(Number(e.target.value)); resetShown(); }}><option value={0}>Any date</option><option value={1}>Past day</option><option value={7}>Past week</option><option value={30}>Past month</option></select>
+        <input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select aria-label="Harness" value={harness} onChange={(e) => setHarness(e.target.value)}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>
+        <select aria-label="Session age" value={days} onChange={(e) => setDays(Number(e.target.value))}><option value={0}>Any date</option><option value={1}>Past day</option><option value={7}>Past week</option><option value={30}>Past month</option></select>
       </div>
 
       <div className="home-grid">
         <section>
           <div className="sec-head">
             <h2>Recordings</h2>
+            <span className="muted small">{filteredRecordings.length} matching · {picked.length} selected</span>
             {picked.length > 1 && (
               <button className="btn primary" onClick={() => ((location.hash = `#/r/${picked.join('+')}`), openRecording(picked.join('+')))}>
                 Open {picked.length} together
@@ -110,15 +101,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
           </div>
           {recordings.length === 0 && <p className="muted">Nothing imported yet. Open a session from this machine, or try the demo.</p>}
           {recordings.length > 0 && filteredRecordings.length === 0 && <p className="muted">No imported recordings match these filters.</p>}
-          <div className="rows">
-            {byProject(filteredRecordings.slice(0, shownRecordings), (r) => r.workspaceRoot).map(([root, group]) => (
-              <div className="project-group" key={root}>
-                <div className="project-heading" title={root}>{root}</div>
-                {group.map((r) => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />)}
-              </div>
-            ))}
-          </div>
-          {filteredRecordings.length > shownRecordings && <button className="btn" onClick={() => setShownRecordings((n) => n + 60)}>Show more recordings · {filteredRecordings.length - shownRecordings} remaining</button>}
+          <SessionGroups key={`recordings:${q}:${harness}:${days}`} items={filteredRecordings} rootOf={r => r.workspaceRoot} timeOf={r => r.lastSourceTime} now={now} render={r => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />} />
           <div className="demo-card">
             <div>
               <strong>Synthetic demo</strong>
@@ -142,19 +125,17 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
           ))}
           {!sources && <div className="skeleton tall" />}
           {sources && filteredSources.length === 0 && <p className="muted">{sources.length ? 'No sessions match these filters.' : 'No Claude Code or Codex journals were found in their standard local directories. Start a session in your harness, then refresh. For a journal stored elsewhere, use drishya import --help.'}</p>}
-          <div className="rows">
-            {byProject(filteredSources.slice(0, shownSources), (s) => s.cwd).map(([root, group]) => <div className="project-group" key={root}>
-              <div className="project-heading" title={root}>{root}</div>
-              {group.map((s) => (
+          <SessionGroups key={`sources:${q}:${harness}:${days}`} items={filteredSources} rootOf={s => s.cwd} timeOf={s => s.modifiedAt} now={now} render={s => (
               <div key={s.path} className="row source">
                 <div className="row-main">
                   <div className="row-title">{s.title?.replace(/\s+/g, ' ') || 'Untitled session'}</div>
                   <div className="row-sub">
                     <span className={`harness h-${s.harness}`}>{HARNESS_LABEL[s.harness] ?? s.harness}</span>
                     <span>{s.cwd ?? ''}</span>
-                    <span>{relTime(s.modifiedAt)}</span>
+                    <span title="Journal modified time">{timestamp(s.modifiedAt) === undefined ? 'Time unavailable' : relTime(s.modifiedAt)}</span>
                     <span>{(s.bytes / 1024 / 1024).toFixed(1)} MB</span>
                     {s.companions.length > 0 && <span>{s.companions.length} subagent{s.companions.length === 1 ? '' : 's'}</span>}
+                    {s.importedRecordingId && <span className="tag">Imported</span>}
                   </div>
                 </div>
                 <div className="row-actions">
@@ -162,10 +143,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
                   <button className="btn ghost" disabled={!!busy} onClick={() => open(s, true)} title="Follow new activity as the agent works">Watch live</button>
                 </div>
               </div>
-              ))}
-            </div>)}
-          </div>
-          {filteredSources.length > shownSources && <button className="btn" onClick={() => setShownSources((n) => n + 60)}>Show more sessions · {filteredSources.length - shownSources} remaining</button>}
+              )} />
         </section>
       </div>
     </div>
@@ -187,7 +165,7 @@ function RecordingRow({ r, picked, onPick }: { r: RecordingSummary; picked: bool
   const openRecording = useApp((s) => s.openRecording);
   return (
     <div className="row">
-      <input type="checkbox" checked={picked} onChange={onPick} aria-label="Select to open together" />
+      <input type="checkbox" checked={picked} onChange={onPick} aria-label={`Select ${r.title || 'Untitled'} to open together`} />
       <button className="row-main link" onClick={() => ((location.hash = `#/r/${r.id}`), openRecording(r.id))}>
         <div className="row-title">
           {r.title || 'Untitled'}
@@ -197,7 +175,7 @@ function RecordingRow({ r, picked, onPick }: { r: RecordingSummary; picked: bool
         <div className="row-sub">
           <span className={`harness h-${r.harness}`}>{HARNESS_LABEL[r.harness] ?? r.harness}</span>
           <span>{r.workspaceRoot ?? ''}</span>
-          <span>{relTime(r.lastSourceTime ?? r.updatedAt)}</span>
+          <span title="Last captured source time">{timestamp(r.lastSourceTime) === undefined ? 'Time unavailable' : relTime(r.lastSourceTime)}</span>
           <span>{r.observationCount} observations</span>
         </div>
       </button>

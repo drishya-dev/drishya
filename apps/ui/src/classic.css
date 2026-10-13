@@ -176,3 +176,11 @@
   :root[data-experience=classic] .studio-actions .search-open { font-size: 0; }
   :root[data-experience=classic] .studio-actions .settings-open::after { content: none; }
 }
+.home .session-group { min-width: 0; border-bottom: 1px solid var(--line); }
+.home .workspace-group-heading { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; text-align: left; background: var(--s1); color: var(--t1); border: 0; cursor: pointer; }
+.home .workspace-group-label { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.home .workspace-group-label strong { font-size: 13px; overflow-wrap: anywhere; }
+.home .workspace-group-label small { color: var(--t3); font: 11px var(--mono); overflow-wrap: anywhere; }
+.home .workspace-group-count { color: var(--t2); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
+.home .session-time-section h3 { font-size: 11px; font-weight: 500; color: var(--t3); margin: 0; padding: 12px 14px 5px; }
+.home .session-more { margin: 10px 14px; max-width: calc(100% - 28px); height: auto; white-space: normal; }
