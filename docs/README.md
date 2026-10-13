@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Latest UI direction, 13 October:** [69](review/69-interface-craft.md) supersedes the earlier final-UI hold: apply installed design/motion skills to the integrated frontend, inspect real Drishya/Skeletongraph sessions and use the supplied temporary logo. The normal Settings design gallery is retired; retained URL backups do not define the active product. Evidence, privacy, native consent and release acceptance are unchanged.
+
 **Latest builder checkpoint, 13 October:** Functional developer-workspace continuation is documented in [61](review/61-git-review-reading.md)–[68](review/68-compound-workspace-focus.md). The final UI/theme/animation pass is paused for builder clarification; Classic remains active. This does not supersede evidence, consent, privacy or native/physical/platform release gates.
 
 **13 October Git consistency:** [60](review/60-git-consistent-inspection.md) closes the demonstrated unchanged-status mid-inspection race with bounded patch/index/worktree comparisons. Inspection stays a current optimistic sample with Refresh, not a locked atomic snapshot; native/release gates remain separate.
