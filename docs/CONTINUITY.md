@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Merged functional checkpoint:** [PR #59](https://github.com/drishya-dev/drishya/pull/59) squash-merged as `93761a9`; local main updated. Separate implementation commits remain on local `codex/developer-review-tools` for backtracking. 358 units, both typechecks/build, 105 distinct browser passes/two opt-in skips and isolated packaged CLI verification passed locally. No hosted CI. Stop before the final UI pass pending the builder's clarification below.
+
 **Latest builder checkpoint, 13 October:** Continue functional work/testing/commits, but **stop before the final UI/theme/animation pass**; the builder has direction to clarify. Preserve Classic and the current visual design. Do not resume a redesign or final visual critic pass until that clarification arrives.
 
 **Developer workspace branch:** `codex/developer-review-tools` delivers [61](review/61-git-review-reading.md)–[68](review/68-compound-workspace-focus.md): retained previous Git notes, staged/worktree hunk/find readers, responsive reader portals, bounded Git pages/omission disclosure, forward stored-artifact find, local action-anchored review questions, measured orientation-preserving map Fit, keyboard workspace destinations and compound agent/tool focus. Native real-account, physical/platform/accessibility/human acceptance and the broader review-50 backlog remain separate. Do not describe this as all release work finished. No hosted CI; user package-manager/artwork edits remain local.
