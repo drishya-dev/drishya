@@ -1,5 +1,7 @@
 # Codebase — the system as built
 
+**13 October Git consistency:** [60](review/60-git-consistent-inspection.md) adds a second raw-patch fingerprint pass, scoped index identities, worktree change markers and branch/status/HEAD checks. Both passes use at most four readers with deterministic result order and existing output/response bounds. Mismatches return 409 and release the reader for Refresh; this remains an optimistic current sample, not an atomic filesystem snapshot. No captured schema/API DTO/dependency change.
+
 **12 October reading navigation:** [51](review/51-evidence-reading-navigation.md) adds `EvidenceTrail` and a scoped `EvidenceNavigationProvider`, with eight ephemeral visits/64 control slots per visit, existing selected evidence references and bounded async scroll restoration. File/current/operation readers share Back/Forward; source/diff controls survive detours. ImportContext explicitly distinguishes captured work/current disk and preserves consent. Replay boundary/source/session changes reset retained controls; no source responses are cached in the trail, persisted or added to capture contracts.
 
 **11 October current Git:** `GitReview` uses separately consented fixed-argv read-only inspection through WorkspaceAccess; Git DTOs are separate from event contracts. `GitReview.tsx` provides patch review, redacted browser-local notes and privacy-previewed local Markdown packets. See [44](review/44-current-git-review.md) for bounds, races and unsupported scope.

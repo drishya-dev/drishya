@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { realpath } from 'node:fs/promises';
+import { lstat, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { isDeniedPath, redactText } from '@drishya/privacy';
 import { HttpError } from './app.ts';
@@ -11,7 +11,7 @@ const digest = (text: string) => createHash('sha256').update(text).digest('hex')
 const safe = (path: string) => !!path && !path.startsWith('.local/') && !path.startsWith('/') && !path.includes('\\') && !path.split('/').some(p => p === '..' || p === '.git') && !isDeniedPath(path);
 
 /** No shell, hooks, filters, textconv, external diff, fsmonitor or lazy network fetch. */
-function git(root: string, args: string[]): Promise<string> {
+export function readGit(root: string, args: string[]): Promise<string> {
   const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', GIT_NO_LAZY_FETCH: '1' };
   // Ambient override variables must not redirect this reader to a different worktree/config.
   for (const key of Object.keys(env)) if (/^GIT_(?:DIR|WORK_TREE|INDEX_FILE|CONFIG.*|EXTERNAL_DIFF|DIFF_OPTS)$/.test(key)) delete (env as Record<string, string | undefined>)[key];
@@ -19,6 +19,33 @@ function git(root: string, args: string[]): Promise<string> {
     if (error) no(new HttpError(422, 'Git inspection failed or exceeded its time/content limit. Check Git installation and repository state.'));
     else yes(stdout);
   }));
+}
+
+type GitReader = typeof readGit;
+const diffFlags = ['--no-ext-diff', '--no-textconv', '--no-color', '--no-renames', '--ignore-submodules=all'];
+const changed = () => new HttpError(409, 'Repository changed during inspection. Refresh before reviewing.');
+
+async function fileMarkers(root: string, paths: string[]): Promise<string> {
+  const markers = [];
+  for (const path of paths) {
+    try {
+      // Metadata only: do not read untracked/protected content or follow a final symlink.
+      const stat = await lstat(resolve(root, path), { bigint: true });
+      markers.push(`${path}\0${stat.dev}:${stat.ino}:${stat.mode}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw changed();
+      markers.push(`${path}\0missing`);
+    }
+  }
+  return digest(markers.join('\0'));
+}
+
+async function patchFor(read: GitReader, root: string, item: { path: string; previousPath?: string; status: string }): Promise<string> {
+  if (item.status === '??') return 'Untracked file. Open on disk to inspect its content.';
+  const paths = item.previousPath ? [item.previousPath, item.path] : [item.path];
+  const staged = await read(root, ['diff', ...diffFlags, '--cached', '--', ...paths]);
+  const working = await read(root, ['diff', ...diffFlags, '--', ...paths]);
+  return `${staged ? 'Staged changes\n' + staged : ''}${working ? '\nWorking tree changes\n' + working : ''}` || 'No textual patch available (submodule, binary or metadata-only change).';
 }
 
 export function parseStatus(text: string): { path: string; previousPath?: string; status: string }[] {
@@ -37,7 +64,8 @@ export class GitReview {
   private grants = new Set<string>();
   private busy = new Set<string>();
   private workspace: WorkspaceAccess;
-  constructor(workspace: WorkspaceAccess) { this.workspace = workspace; }
+  private read: GitReader;
+  constructor(workspace: WorkspaceAccess, read: GitReader = readGit) { this.workspace = workspace; this.read = read; }
   revoke(id: string) { this.grants.delete(id); }
   status(id: string) { return { approved: this.grants.has(id), scope: 'current-git' as const }; }
   async approve(id: string) { await this.workspace.root(id); this.grants.add(id); return this.status(id); }
@@ -47,32 +75,51 @@ export class GitReview {
     this.busy.add(id);
     try {
       const root = await this.workspace.root(id);
+      const git = this.read;
       if (await realpath(resolve((await git(root, ['rev-parse', '--show-toplevel'])).trim())) !== root) throw new HttpError(403, 'The selected workspace must be the repository root.');
       const head = await git(root, ['rev-parse', '--verify', 'HEAD']).then(s => s.trim()).catch(() => 'unborn');
-      const branch = redactText((await git(root, ['symbolic-ref', '--short', '-q', 'HEAD']).catch(() => 'detached')).trim()).text;
+      const branchRef = (await git(root, ['symbolic-ref', '--short', '-q', 'HEAD']).catch(() => 'detached')).trim();
+      const branch = redactText(branchRef).text;
       const raw = await git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=none']);
       const entries = parseStatus(raw); const allowed = entries.filter(f => safe(f.path) && (!f.previousPath || safe(f.previousPath)));
+      const candidates = allowed.slice(0, 50);
+      const paths = [...new Set(candidates.flatMap(item => item.previousPath ? [item.previousPath, item.path] : [item.path]))];
+      const indexMarker = async () => paths.length ? digest(await git(root, ['ls-files', '--stage', '-z', '--', ...paths])) : '';
+      const startIndex = await indexMarker();
+      const startMarkers = await fileMarkers(root, paths);
+      const checks: { item: typeof candidates[number]; fingerprint: string }[] = [];
       const files: GitFile[] = []; let budget = 1024 * 1024;
-      for (const item of allowed.slice(0, 50)) {
-        // Untracked content remains behind the existing approved disk reader. Never execute a filter to read it.
-        let patch = item.status === '??' ? 'Untracked file. Open on disk to inspect its content.' : '';
-        if (!patch) {
-          const paths = item.previousPath ? [item.previousPath, item.path] : [item.path];
-          const flags = ['--no-ext-diff', '--no-textconv', '--no-color', '--no-renames', '--ignore-submodules=all'];
-          const staged = await git(root, ['diff', ...flags, '--cached', '--', ...paths]);
-          const working = await git(root, ['diff', ...flags, '--', ...paths]);
-          patch = `${staged ? 'Staged changes\n' + staged : ''}${working ? '\nWorking tree changes\n' + working : ''}` || 'No textual patch available (submodule, binary or metadata-only change).';
+      collect: for (let i = 0; i < candidates.length; i += 4) {
+        const batch = candidates.slice(i, i + 4);
+        const results = await Promise.allSettled(batch.map(item => patchFor(git, root, item)));
+        // Consume in status order, independently of subprocess completion order.
+        for (const [offset, result] of results.entries()) {
+          if (result.status === 'rejected') throw result.reason;
+          const item = batch[offset]!, patch = result.value;
+          const fingerprint = digest(head + '\0' + item.path + '\0' + item.status + '\0' + patch);
+          const clean = redactText(patch).text;
+          const bytes = Buffer.byteLength(clean);
+          if (bytes > budget) break collect;
+          budget -= bytes;
+          checks.push({ item, fingerprint: digest(patch) });
+          files.push({ ...item, path: redactText(item.path).text, previousPath: item.previousPath ? redactText(item.previousPath).text : undefined, fingerprint, patch: clean });
         }
-        const fingerprint = digest(head + '\0' + item.path + '\0' + item.status + '\0' + patch);
-        const clean = redactText(patch).text;
-        const bytes = Buffer.byteLength(clean);
-        if (bytes > budget) break;
-        budget -= bytes;
-        files.push({ ...item, path: redactText(item.path).text, previousPath: item.previousPath ? redactText(item.previousPath).text : undefined, fingerprint, patch: clean });
+      }
+      // Compare raw patches before redaction: two different secrets must not become
+      // the same apparent content. Keep only digests between passes, not raw copies.
+      // Four readers bound subprocess/buffer pressure while avoiding another fully
+      // serial pass across fifty files. Every started reader finishes before exit.
+      for (let i = 0; i < checks.length; i += 4) {
+        const results = await Promise.allSettled(checks.slice(i, i + 4).map(async check => {
+          if (digest(await patchFor(git, root, check.item)) !== check.fingerprint) throw changed();
+        }));
+        const failure = results.find(result => result.status === 'rejected');
+        if (failure?.status === 'rejected') throw failure.reason;
       }
       const end = await git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=none']);
       const endHead = await git(root, ['rev-parse', '--verify', 'HEAD']).then(s => s.trim()).catch(() => 'unborn');
-      if (end !== raw || head !== endHead) throw new HttpError(409, 'Repository changed during inspection. Refresh before reviewing.');
+      const endBranch = (await git(root, ['symbolic-ref', '--short', '-q', 'HEAD']).catch(() => 'detached')).trim();
+      if (end !== raw || head !== endHead || branchRef !== endBranch || startIndex !== await indexMarker() || startMarkers !== await fileMarkers(root, paths)) throw changed();
       return { scope: 'current-git', head, branch, fingerprint: digest(head + raw + files.map(f => f.fingerprint).join()), files, omitted: entries.length - files.length, limit: 50 };
     } finally { this.busy.delete(id); }
   }

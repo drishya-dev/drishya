@@ -48,4 +48,16 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.getByRole('checkbox', { name: 'Reviewed displayed patch' })).not.toBeChecked();
   await expect(reader.getByRole('button', { name: 'Preview handoff' })).toBeDisabled();
+  let conflict = true;
+  await page.route('**/v1/recordings/*/git/snapshot', route => conflict
+    ? route.fulfill({ status: 409, json: { error: 'Repository changed during inspection. Refresh before reviewing.' } })
+    : route.continue());
+  await reader.getByRole('button', { name: 'Refresh changes' }).click();
+  await expect(reader.getByRole('alert')).toContainText('Repository changed during inspection');
+  await expect(reader.locator('.git-patch')).toHaveCount(0);
+  await expect(reader.getByRole('button', { name: 'Preview handoff' })).toBeDisabled();
+  conflict = false;
+  await reader.getByRole('button', { name: 'Refresh changes' }).click();
+  await expect(reader.locator('.git-patch')).toContainText('total = 3');
+  await expect(reader.getByRole('alert')).toHaveCount(0);
 });

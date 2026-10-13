@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { App } from '../src/app.ts';
 import { WorkspaceAccess } from '../src/workspace.ts';
-import { GitReview, parseStatus } from '../src/git-review.ts';
+import { GitReview, parseStatus, readGit } from '../src/git-review.ts';
 
 let dir: string, root: string, id: string, app: App, access: WorkspaceAccess, review: GitReview;
-const git = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', windowsHide: true });
+const git = (...args: string[]) => execFileSync('git', ['-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, encoding: 'utf8', windowsHide: true });
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-git-')); root = join(dir, 'repo'); mkdirSync(root);
   git('init'); git('config', 'user.name', 'Synthetic'); git('config', 'user.email', 'synthetic@example.invalid');
@@ -49,4 +49,123 @@ it('changes the review content identity on an edit without changing HEAD', async
 });
 it('parses NUL-delimited rename paths and unusual filenames without whitespace splitting', () => {
   expect(parseStatus('R  new name.ts\0old name.ts\0?? odd\nfile.ts\0')).toEqual([{ path: 'new name.ts', previousPath: 'old name.ts', status: 'R ' }, { path: 'odd\nfile.ts', previousPath: undefined, status: '??' }]);
+});
+
+it('rejects a worktree edit during inspection even when status and HEAD stay identical, then allows retry', async () => {
+  const status = git('status', '--porcelain=v1'), head = git('rev-parse', 'HEAD');
+  let edited = false;
+  const concurrent = new GitReview(access, async (root, args) => {
+    const output = await readGit(root, args);
+    if (!edited && args[0] === 'diff' && !args.includes('--cached') && args.at(-1) === 'a.ts') {
+      edited = true; writeFileSync(join(root, 'a.ts'), 'export const a = 7;\n');
+    }
+    return output;
+  });
+  await access.approve(id); await concurrent.approve(id);
+  await expect(concurrent.snapshot(id)).rejects.toMatchObject({ status: 409 });
+  expect(git('status', '--porcelain=v1')).toBe(status); expect(git('rev-parse', 'HEAD')).toBe(head);
+  expect((await concurrent.snapshot(id)).files.find(f => f.path === 'a.ts')?.patch).toContain('a = 7');
+});
+
+it('rejects changed staged content even when index status and HEAD stay identical', async () => {
+  const status = git('status', '--porcelain=v1');
+  let edited = false;
+  const concurrent = new GitReview(access, async (root, args) => {
+    const output = await readGit(root, args);
+    if (!edited && args[0] === 'diff' && args.includes('--cached') && args.at(-1) === 'staged.ts') {
+      edited = true; writeFileSync(join(root, 'staged.ts'), 'different staged content\n'); git('add', 'staged.ts');
+    }
+    return output;
+  });
+  await access.approve(id); await concurrent.approve(id);
+  await expect(concurrent.snapshot(id)).rejects.toMatchObject({ status: 409 });
+  expect(git('status', '--porcelain=v1')).toBe(status);
+});
+
+it('compares raw patch identity even when different credentials have the same redacted display', async () => {
+  const first = 'const apiKey = "sk-proj-abcdefghijklmnopqrstuvw0123456789";\n';
+  const second = 'const apiKey = "sk-proj-zyxwvutsrqponmlkjihgfed0123456789";\n';
+  writeFileSync(join(root, 'a.ts'), first);
+  let reads = 0;
+  const concurrent = new GitReview(access, async (root, args) => {
+    const output = await readGit(root, args);
+    if (args[0] === 'diff' && !args.includes('--cached') && args.at(-1) === 'a.ts' && ++reads === 1) writeFileSync(join(root, 'a.ts'), second);
+    return output;
+  });
+  await access.approve(id); await concurrent.approve(id);
+  await expect(concurrent.snapshot(id)).rejects.toMatchObject({ status: 409 });
+  expect(reads).toBe(2);
+});
+
+it('detects a late edit after the last patch comparison through file change markers', async () => {
+  const status = git('status', '--porcelain=v1');
+  let reads = 0;
+  const concurrent = new GitReview(access, async (root, args) => {
+    const output = await readGit(root, args);
+    if (args[0] === 'diff' && !args.includes('--cached') && args.at(-1) === 'a.ts' && ++reads === 2) writeFileSync(join(root, 'a.ts'), 'export const a = 9;\n');
+    return output;
+  });
+  await access.approve(id); await concurrent.approve(id);
+  await expect(concurrent.snapshot(id)).rejects.toMatchObject({ status: 409 });
+  expect(git('status', '--porcelain=v1')).toBe(status);
+});
+
+it('detects a branch switch at the same HEAD', async () => {
+  const branch = git('symbolic-ref', '--short', 'HEAD').trim(), head = git('rev-parse', 'HEAD');
+  let switched = false;
+  const concurrent = new GitReview(access, async (root, args) => {
+    const output = await readGit(root, args);
+    if (!switched && args[0] === 'diff') { switched = true; git('checkout', '-b', 'synthetic-review-branch'); }
+    return output;
+  });
+  await access.approve(id); await concurrent.approve(id);
+  try {
+    await expect(concurrent.snapshot(id)).rejects.toMatchObject({ status: 409 });
+    expect(git('rev-parse', 'HEAD')).toBe(head);
+  } finally { git('checkout', branch); }
+});
+
+it('detects a staged blob replacement after patch verification without relying on worktree timestamps', async () => {
+  const blob = git('hash-object', '-w', '--stdin');
+  let reads = 0;
+  const concurrent = new GitReview(access, async (root, args) => {
+    const output = await readGit(root, args);
+    if (args[0] === 'diff' && !args.includes('--cached') && args.at(-1) === 'staged.ts' && ++reads === 2) {
+      // Updating only the index leaves the displayed status MM after both versions
+      // are staged against a separately modified worktree.
+      git('update-index', '--cacheinfo', `100644,${blob.trim()},staged.ts`);
+    }
+    return output;
+  });
+  writeFileSync(join(root, 'staged.ts'), 'unstaged worktree content\n');
+  const before = git('status', '--porcelain=v1');
+  await access.approve(id); await concurrent.approve(id);
+  await expect(concurrent.snapshot(id)).rejects.toMatchObject({ status: 409 });
+  expect(git('status', '--porcelain=v1')).toBe(before);
+});
+
+it('bounds readers to four and preserves status order and the fifty-file limit across both passes', async () => {
+  const paths = Array.from({ length: 60 }, (_, n) => `bounded-${n}.ts`);
+  let active = 0, peak = 0, reads = 0;
+  const bounded = new GitReview(access, async (approvedRoot, args) => {
+    switch (args[0]) {
+      case 'rev-parse': return args.includes('--show-toplevel') ? approvedRoot : 'synthetic-head';
+      case 'symbolic-ref': return 'synthetic-branch';
+      case 'status': return ['.env', ...paths].map(path => ` M ${path}\0`).join('');
+      case 'ls-files': return 'synthetic-index';
+      case 'diff': {
+        active++; peak = Math.max(peak, active); reads++;
+        try {
+          await new Promise<void>(resolve => setImmediate(resolve));
+          return args.includes('--cached') ? '' : `synthetic patch ${args.at(-1)}`;
+        } finally { active--; }
+      }
+      default: throw new Error('unexpected reader command');
+    }
+  });
+  await access.approve(id); await bounded.approve(id);
+  const snapshot = await bounded.snapshot(id);
+  expect(snapshot.files.map(file => file.path)).toEqual(paths.slice(0, 50));
+  expect(snapshot.omitted).toBe(11);
+  expect(peak).toBe(4); expect(active).toBe(0); expect(reads).toBe(200);
 });
