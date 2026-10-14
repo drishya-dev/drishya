@@ -171,3 +171,20 @@ test('fresh reading has useful height and stays within desktop, phone and landsc
     expect(prompt.width).toBeLessThanOrEqual(width);
   }
 });
+
+test('UI versions switch between Workbench and Legacy while keeping the actual session', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
+  await page.getByRole('button', { name: /^Legacy/ }).click();
+  await expect(page).toHaveURL(new RegExp(`experience=classic.*${ids.codex}`));
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
+  await page.getByRole('button', { name: /^Workbench/ }).click();
+  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`experience=fresh.*${ids.codex}`));
+  await page.goto(`${server.url}/#/r/${ids.codex}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+});
