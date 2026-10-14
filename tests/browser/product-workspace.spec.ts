@@ -624,7 +624,20 @@ test('view and appearance changes keep the same captured passage under the reade
   await pointAtHistory(page);
   await page.mouse.wheel(0, -1000);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
-  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  // Wheel scrolling can expose a hover reader and late material measurements.
+  // Capture the baseline after the actual visible allocations settle, not two frames later.
+  let previous = '', settled = 0;
+  await expect.poll(async () => {
+    const position = await history.evaluate(el => {
+      const top = el.getBoundingClientRect().top, bottom = el.getBoundingClientRect().bottom;
+      return JSON.stringify([el.scrollTop, ...[...el.querySelectorAll<HTMLElement>('.passage-slot')].flatMap(node => {
+        const r = node.getBoundingClientRect();
+        return r.bottom > top && r.top < bottom ? [[node.dataset.passageId, r.top, r.bottom]] : [];
+      })]);
+    });
+    settled = position === previous ? settled + 1 : 0; previous = position;
+    return settled;
+  }, { intervals: [100] }).toBeGreaterThanOrEqual(3);
   const anchor = await history.evaluate((el) => {
     const top = el.getBoundingClientRect().top;
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.getBoundingClientRect().bottom > top + 1)!;
