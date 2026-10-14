@@ -218,7 +218,10 @@ html:has(.fresh-app),body:has(.fresh-app),#root:has(.fresh-app){margin:0;width:1
 .fr-stage-tabs button{font-size:12px}
 .fr-shelf-tabs button,.fr-file-search input{font-size:11px}
 .fr-file-tree strong{font-size:12px}.fr-file-tree small{font-size:10px}
-.fr-action>strong{font-size:13px}.fr-action-type{font-size:10px}
+.fr-action{min-width:min(240px,100%);flex-basis:260px;max-width:440px}
+.fr-action>strong{font-size:13px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.fr-action-type{font-size:10px}
+.fr-action>code,.fr-diff-mini{max-height:110px;overflow:auto;overscroll-behavior:contain}
+.fr-action footer>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fr-action>code,.fr-action-material pre,.fr-diff-mini{font-size:11px}
 .fr-action footer,.fr-read-range{font-size:10px}
 .fr-action-material{max-height:155px}

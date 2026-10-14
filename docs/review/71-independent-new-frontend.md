@@ -1,6 +1,6 @@
 # Independent frontend draft
 
-14 October 2026 · Yash with Codex · `codex/fresh-product-design`
+14 October 2026 · Yash with Codex · `codex/fresh-product-design` · [draft PR #62](https://github.com/drishya-dev/drishya/pull/62)
 
 ## Builder direction
 
@@ -54,6 +54,8 @@ Motion verdict: acceptable for an opt-in connected draft; not a human smoothness
 The independent route was inspected against the builder's actual Drishya Codex recording (8,068 observations / 4,118 operations / eight agents) and Skeletongraph Claude recording (6,946 observations / 2,215 operations). Private imports and screenshots stay in ignored `.local/` storage. No native prompt was sent and no real recording is committed.
 
 Actual-session review exposed two important allocation issues: offscreen previews initially requested too many artifacts, so preview retrieval now waits for near-viewport intersection; a long rootless Claude recording's graph endpoint can contain only the latest passage, so the paths-only view supplements it with files from the currently loaded history page. It does not invent a workspace root or static imports. Its captured-path inventory is bounded, not a complete repository index. Claude's missing canonical root correctly disables current-file/native prompting with an explicit explanation.
+
+Final Codex reading also exposed narrow tall command cards after inspector allocation. Cards now require at least 240 px where space permits, wrap into fewer columns and retain long commands/patch previews in bounded local scroll regions. Derived titles are compact previews; complete evidence remains in the inspector. Earlier-page navigation positions the reader at the new page's beginning rather than preserving a misleading bottom scroll position. The final eight-browser-journey rerun passes after this allocation correction.
 
 ## Remaining scope before promotion
 
