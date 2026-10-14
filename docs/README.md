@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**14 October independent frontend:** [71](review/71-independent-new-frontend.md) records the builder's request for a completely new design from concept and backend capabilities, without consulting existing frontend designs/code. It supersedes prior visual-layout decisions for the explicit new draft, preserves Classic, and leaves evidence/privacy/native security and publishing-only CI intact.
+
 **14 October current Git follow-up:** [70](review/70-revalidated-git-handoff.md) extends 60–63 with revalidated current-page handoff, sample timestamps, invocation-only filter suppression and a shared subprocess deadline. It supersedes the earlier manual-refresh-before-export behavior and clearing the reading context on inspection failure. Captured history, native consent and release gates are unchanged.
 
 **Latest UI direction, 13 October:** [69](review/69-interface-craft.md) supersedes the earlier final-UI hold: apply installed design/motion skills to the integrated frontend, inspect real Drishya/Skeletongraph sessions and use the supplied temporary logo. The normal Settings design gallery is retired; retained URL backups do not define the active product. Evidence, privacy, native consent and release acceptance are unchanged.

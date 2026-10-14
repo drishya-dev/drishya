@@ -1,0 +1,49 @@
+.fr-evidence-support { margin-top: 24px; display: grid; gap: 24px; }
+.fr-evidence-support section { min-width: 0; }
+.fr-evidence-support h3 { font-size: 13px; line-height: 1.5; margin: 0 0 10px; font-weight: 600; }
+.fr-evidence-support p { color: var(--fr-muted, #a6abb7); font-size: 12px; line-height: 1.6; margin: 6px 0 12px; overflow-wrap: anywhere; }
+.fr-evidence-support .fr-evidence-verdict { color: var(--fr-text, #eef0f5); }
+.fr-evidence-support .verdict-changed-after-last-check, .fr-evidence-error { color: #edb48d; }
+.fr-evidence-qualification { font-size: 11px !important; }
+.fr-evidence-link { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; border-radius: 7px; background: transparent; color: inherit; padding: 9px 5px; font: inherit; font-size: 12px; cursor: pointer; overflow-wrap: anywhere; }
+.fr-evidence-link > span:nth-child(2) { min-width: 0; flex: 1; }
+.fr-evidence-link strong { font-weight: 500; display: block; }
+.fr-evidence-link small { display: block; color: var(--fr-muted, #a6abb7); margin-top: 3px; line-height: 1.5; }
+.fr-evidence-outcome { width: 18px; flex: 0 0 18px; text-align: center; }
+.fr-evidence-outcome.status-ok { color: #79dcae; }
+.fr-evidence-outcome.status-error { color: #f18a96; }
+.fr-evidence-support details { margin-top: 12px; }
+.fr-evidence-support summary { cursor: pointer; color: var(--fr-muted, #a6abb7); font-size: 12px; }
+.fr-evidence-questions form { display: grid; gap: 8px; margin-top: 12px; }
+.fr-evidence-questions label { font-size: 12px; color: var(--fr-muted, #a6abb7); }
+.fr-evidence-questions textarea { min-height: 72px; width: 100%; resize: vertical; padding: 10px; border: 1px solid #303440; border-radius: 8px; background: #141720; color: inherit; font: inherit; font-size: 12px; line-height: 1.5; box-sizing: border-box; }
+.fr-evidence-questions form button, .fr-evidence-question button, .fr-evidence-retry { justify-self: end; padding: 6px 10px; font: inherit; font-size: 11px; color: inherit; border: 0; background: #252a35; border-radius: 6px; cursor: pointer; }
+.fr-evidence-question { padding: 8px 0; border-bottom: 1px solid #ffffff0b; }
+.fr-evidence-question.is-resolved p { color: var(--fr-muted, #a6abb7); text-decoration: line-through; }
+.fr-evidence-support button:disabled { opacity: .45; cursor: default; }
+.fr-evidence-support :focus-visible { outline: 2px solid #c5cedd; outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .fr-evidence-link:hover { background: #ffffff07; } }
+.fr-syntax-comment { color: #89998c; }
+.fr-syntax-string { color: #e6bb90; }
+.fr-syntax-keyword { color: #c7a9f5; }
+.fr-syntax-number { color: #80d6c9; }
+.fr-syntax-call { color: #91c7f3; }
+.fr-git-find { display: flex; gap: 8px; margin: 12px 0; }
+.fr-git-find input { min-width: 0; flex: 1; padding: 8px 10px; }
+.fr-git-review-note { display: grid; gap: 10px; margin: 16px 0; font-size: 12px; }
+.fr-git-review-note label { display: flex; align-items: center; gap: 8px; }
+.fr-git-review-note textarea { width: 100%; padding: 10px; font-size: 12px; }
+.fr-git-handoff { margin-top: 20px; }
+.fr-git-handoff h3 { margin-bottom: 10px; font-size: 14px; }
+.fr-git-handoff textarea { display: block; width: 100%; height: 160px; padding: 12px; margin: 12px 0; font-size: 12px; }
+.fr-replay-disclosure { flex: none; background: #15171b; }
+.fr-replay-disclosure > summary { padding: 5px 24px; cursor: pointer; font-size: 10px; color: #a6afbd; }
+.fr-code-material { max-height: min(38dvh, 480px); max-width: 100%; scrollbar-gutter: stable; }
+.fr-git-patch .fr-code-material { max-height: min(38dvh, 480px); }
+.fr-readonly-session { flex: none; display: flex; align-items: baseline; gap: 9px; padding: 13px 24px; background: #171a21; color: #a8b3c5; font-size: 11px; }
+.fr-readonly-session details { margin-left: auto; max-width: 380px; }
+.fr-readonly-session summary { cursor: pointer; }
+.fr-readonly-session p { font-size: 11px; line-height: 1.65; padding: 8px 0; }
+.fr-composer:focus-within { border-color: #7d8698; }
+.fr-composer textarea:focus-visible { outline: none; }
+.fr-composer:has(textarea:focus-visible) { outline: 2px solid #b9c4d5; outline-offset: 3px; }

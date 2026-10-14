@@ -1,0 +1,190 @@
+import { execFileSync } from 'node:child_process';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { App } from '../../apps/daemon/src/app.ts';
+import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+
+let dir: string, root: string, app: App, server: RunningServer;
+const ids: Record<string, string> = {};
+test.beforeAll(async () => {
+  dir = mkdtempSync(join(tmpdir(), 'drishya-fresh-')); root = join(dir, 'shop');
+  cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true });
+  git('init'); git('config', 'user.name', 'Synthetic'); git('config', 'user.email', 'synthetic@example.invalid');
+  git('add', '.'); git('commit', '-m', 'synthetic workspace');
+  writeFileSync(join(root, 'src/cart/total.ts'), 'export const total = 42;\n');
+  app = new App(join(dir, 'store'));
+  for (const [adapter, fixture] of [['claude-code', 'claude/checkout-fix.jsonl'], ['codex', 'codex/rollout-checkout-review.jsonl']]) {
+    const source = join(dir, `${adapter}.jsonl`);
+    writeFileSync(source, readFileSync(resolve(`fixtures/synthetic/${fixture}`), 'utf8').replaceAll('/home/dev/shop', root.replaceAll('\\', '/')));
+    ids[adapter!] = (await app.ingest.importSource(adapter!, source)).recordingId;
+  }
+  server = await startServer({ app, port: 0, token: 'synthetic-independent-design' });
+});
+test.afterAll(async () => {
+  if (server) await server.close(); if (app) await app.close();
+  if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('independent frontend authenticates without loading Classic and survives reload', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await expect(page.getByText('Free orders reach checkout', { exact: true }).first()).toBeVisible();
+  await expect(page).not.toHaveURL(/token=/);
+  expect(await page.evaluate(() => document.querySelectorAll('.workspace-header, .product-shell').length)).toBe(0);
+  expect(await page.evaluate(() => [...document.styleSheets].some(sheet => {
+    try { return [...sheet.cssRules].some(rule => rule.cssText.includes('.workspace-header')); } catch { return false; }
+  }))).toBe(false);
+  await page.reload(); await expect(page.locator('.fresh-app')).toBeVisible();
+  await expect(page.getByText('Free orders reach checkout', { exact: true }).first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+for (const adapter of ['claude-code', 'codex']) test(`fresh ${adapter}: actual imported history opens through a direct link`, async ({ page }) => {
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=fresh#/r/${ids[adapter]}`);
+  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toContainText(/checkout|discount|total/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('fresh native submission requires consent and a new idle acknowledgement for each turn', async ({ page }) => {
+  const native = { available: true, state: 'idle', harness: 'codex', tools: [], inventory: 'unknown', approvals: [], output: '' };
+  let submissions = 0;
+  await page.route('**/controller', route => route.fulfill({ json: native }));
+  await page.route('**/controller/prompt', async route => {
+    const body = route.request().postDataJSON();
+    expect(body.exclusive).toBe(true); expect(body.prompt).toBe('Inspect the checkout condition');
+    submissions++; await route.fulfill({ json: { ...native, state: 'completed', runId: 'synthetic-turn' } });
+  });
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
+  await page.getByRole('textbox', { name: 'Prompt to native agent' }).fill('Inspect the checkout condition');
+  const send = page.getByRole('button', { name: 'Send', exact: true });
+  await expect(send).toBeDisabled();
+  await page.getByRole('button', { name: 'Connection & permissions' }).click();
+  const grant = page.getByRole('button', { name: 'Allow workspace access', exact: true });
+  if (await grant.isVisible()) await grant.click();
+  const idle = page.getByRole('checkbox', { name: 'This session is idle in its other clients' });
+  await idle.check(); await expect(send).toBeEnabled(); await send.click();
+  await expect(idle).not.toBeChecked(); expect(submissions).toBe(1);
+  await page.getByRole('textbox', { name: 'Prompt to native agent' }).fill('Inspect the checkout condition');
+  await expect(send).toBeDisabled(); await idle.check(); await send.click();
+  await expect(idle).not.toBeChecked(); expect(submissions).toBe(2);
+});
+
+test('fresh captured material is readable and local action questions survive reopening', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.getByText('Free orders reach checkout', { exact: true }).first()).toBeVisible();
+  await page.goto(`${server.url}/?experience=fresh#/r/${ids['claude-code']}`);
+  await page.locator('.fr-action-read').first().click();
+  const inspector = page.locator('.fr-inspector');
+  await expect(inspector.locator('.fr-code-material').first()).toContainText(/export|function|const/);
+  const draft = inspector.getByRole('textbox', { name: 'Ask a question about this action' });
+  await draft.fill('Why was the total condition selected?');
+  await inspector.getByRole('button', { name: 'Save question' }).click();
+  await expect(inspector.getByText('Why was the total condition selected?', { exact: true })).toBeVisible();
+  await inspector.getByRole('button', { name: 'Mark resolved' }).click();
+  await expect(inspector.getByRole('button', { name: 'Reopen', exact: true })).toBeVisible();
+  await inspector.getByRole('button', { name: 'Close inspector' }).click();
+  await page.locator('.fr-action-read').first().click();
+  await expect(inspector.getByRole('button', { name: 'Reopen', exact: true })).toBeVisible();
+});
+
+test('fresh current Git handoff refuses a patch that changed after review', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
+  await page.getByRole('tab', { name: 'Git review', exact: true }).click();
+  const allowRoot = page.getByRole('button', { name: 'Allow this workspace', exact: true });
+  const allowGit = page.getByRole('button', { name: 'Allow read-only Git', exact: true });
+  const refresh = page.getByRole('button', { name: 'Refresh snapshot', exact: true });
+  await expect(allowRoot.or(allowGit).or(refresh)).toBeVisible();
+  if (await allowRoot.isVisible()) await allowRoot.click();
+  await expect(allowGit.or(refresh)).toBeVisible();
+  if (await allowGit.isVisible()) await allowGit.click();
+  await expect(page.getByRole('region', { name: 'Current Git patch' })).toContainText('total = 42');
+  await page.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
+  await page.getByRole('textbox', { name: 'Local Git review note' }).fill('Checked total');
+  await page.getByRole('button', { name: 'Preview handoff', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Git handoff preview' })).toHaveValue(/Checked total/);
+  writeFileSync(join(root, 'src/cart/total.ts'), 'export const total = 43;\n');
+  await page.getByRole('button', { name: 'Save checked handoff' }).click();
+  await expect(page.getByRole('alert')).toContainText('Repository changed');
+  await expect(page.getByRole('region', { name: 'Current Git patch' })).toContainText('total = 43');
+  await expect(page.getByRole('textbox', { name: 'Git handoff preview' })).toHaveCount(0);
+  await expect(page.getByRole('checkbox', { name: 'Reviewed displayed patch' })).not.toBeChecked();
+});
+
+test('fresh backward replay removes completed output and scopes file activity to the replay point', async ({ page }) => {
+  const id = ids['claude-code']!;
+  const full = app.projection(id);
+  const operation = full.operations.find(op => op.kind === 'read' && op.detail.kind === 'read' && op.detail.excerptArtifactId)!;
+  const step = operation.startSequence + 1;
+  const before = await app.history.page(id, { step, selectedOperationId: operation.id });
+  const pending = before.projection.operations.find(op => op.id === operation.id)!;
+  expect(pending.detail.kind === 'read' && pending.detail.excerptArtifactId).toBeFalsy();
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=fresh#/r/${id}`);
+  const card = page.locator('.fr-action-read').filter({ has: page.getByText(operation.title, { exact: true }) }).first();
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.locator('.fr-action-material pre')).toBeVisible();
+  await card.click();
+  await page.getByText('Sequence replay', { exact: true }).click();
+  const historyRequests: Record<string, unknown>[] = [];
+  page.on('request', request => { if (request.url().endsWith('/history') && request.method() === 'POST') historyRequests.push(request.postDataJSON()); });
+  const range = page.getByRole('slider', { name: 'Replay position' });
+  await range.focus(); await range.press('Home');
+  for (let n = 0; n < step; n++) await range.press('ArrowRight');
+  await expect(range).toHaveValue(String(step));
+  // A pending read's derived title has no completed range yet.
+  const pendingCard = page.locator('.fr-action-read').filter({ has: page.getByText(pending.title, { exact: true }) }).first();
+  await expect(pendingCard).toBeVisible();
+  await expect(pendingCard.locator('.fr-action-material pre')).toHaveCount(0);
+  expect(historyRequests.at(-1)?.step).toBe(step);
+  expect(historyRequests.at(-1)?.observationId).toBeUndefined();
+  const path = operation.paths[0]!.path;
+  const file = page.locator('.fr-file-tree button').filter({ has: page.getByText(path.split('/').at(-1)!, { exact: true }) }).first();
+  const response = page.waitForResponse(r => r.url().includes('/file-operations?') && r.url().includes(`step=${step}`));
+  await file.click();
+  expect((await (await response).json()).operations.every((op: { startSequence: number }) => op.startSequence < step)).toBe(true);
+});
+
+test('fresh reading has useful height and stays within desktop, phone and landscape bounds', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.getByText('Free orders reach checkout', { exact: true }).first()).toBeVisible();
+  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
+  const content = page.getByRole('region', { name: 'Captured work', exact: true });
+  for (const [width, height] of [[1440,900], [1280,720], [390,844], [844,390]]) {
+    await page.setViewportSize({ width, height }); await expect(content).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const bounds = (await content.boundingBox())!;
+    expect(bounds.height).toBeGreaterThan(height < 500 ? 70 : height * .32);
+    const prompt = (await page.getByRole('textbox', { name: 'Prompt to native agent' }).boundingBox())!;
+    expect(prompt.y + prompt.height).toBeLessThanOrEqual(height);
+    expect(prompt.width).toBeLessThanOrEqual(width);
+  }
+});
+
+test('UI versions switch between Workbench and Legacy while keeping the actual session', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
+  await page.getByRole('button', { name: /^Legacy/ }).click();
+  await expect(page).toHaveURL(new RegExp(`experience=classic.*${ids.codex}`));
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
+  await page.getByRole('button', { name: /^Workbench/ }).click();
+  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`experience=fresh.*${ids.codex}`));
+  await page.goto(`${server.url}/#/r/${ids.codex}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+});
