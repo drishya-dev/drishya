@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**14 October current Git follow-up:** [70](review/70-revalidated-git-handoff.md) extends 60–63 with revalidated current-page handoff, sample timestamps, invocation-only filter suppression and a shared subprocess deadline. It supersedes the earlier manual-refresh-before-export behavior and clearing the reading context on inspection failure. Captured history, native consent and release gates are unchanged.
+
 **Latest UI direction, 13 October:** [69](review/69-interface-craft.md) supersedes the earlier final-UI hold: apply installed design/motion skills to the integrated frontend, inspect real Drishya/Skeletongraph sessions and use the supplied temporary logo. The normal Settings design gallery is retired; retained URL backups do not define the active product. Evidence, privacy, native consent and release acceptance are unchanged.
 
 **Latest builder checkpoint, 13 October:** Functional developer-workspace continuation is documented in [61](review/61-git-review-reading.md)–[68](review/68-compound-workspace-focus.md). The final UI/theme/animation pass is paused for builder clarification; Classic remains active. This does not supersede evidence, consent, privacy or native/physical/platform release gates.

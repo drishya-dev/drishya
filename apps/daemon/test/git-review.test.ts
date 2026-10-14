@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, renameSync, readFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterAll, beforeAll, expect, it } from 'vitest';
@@ -33,7 +33,7 @@ it('requires separate Git and current-workspace consent', async () => {
 });
 it('returns bounded redacted staged/worktree changes without invoking helpers or protected content', async () => {
   const snapshot = await review.snapshot(id);
-  expect(snapshot.scope).toBe('current-git'); expect(snapshot.head).toMatch(/^[a-f0-9]{40}$/);
+  expect(Number.isFinite(Date.parse(snapshot.sampledAt))).toBe(true); expect(snapshot.scope).toBe('current-git'); expect(snapshot.head).toMatch(/^[a-f0-9]{40}$/);
   expect(snapshot.files.find(f => f.path === 'staged.ts')?.patch).toContain('Staged changes');
   expect(snapshot.files.find(f => f.path === 'a.ts')?.patch).toContain('[REDACTED:');
   expect(JSON.stringify(snapshot)).not.toContain('abcdefghijklmnopqrstuvw');
@@ -54,9 +54,9 @@ it('parses NUL-delimited rename paths and unusual filenames without whitespace s
 it('rejects a worktree edit during inspection even when status and HEAD stay identical, then allows retry', async () => {
   const status = git('status', '--porcelain=v1'), head = git('rev-parse', 'HEAD');
   let edited = false;
-  const concurrent = new GitReview(access, async (root, args) => {
-    const output = await readGit(root, args);
-    if (!edited && args[0] === 'diff' && !args.includes('--cached') && args.at(-1) === 'a.ts') {
+  const concurrent = new GitReview(access, async (root, args, signal) => {
+    const output = await readGit(root, args, signal);
+    if (!edited && args.includes('diff') && !args.includes('--cached') && args.at(-1) === 'a.ts') {
       edited = true; writeFileSync(join(root, 'a.ts'), 'export const a = 7;\n');
     }
     return output;
@@ -70,9 +70,9 @@ it('rejects a worktree edit during inspection even when status and HEAD stay ide
 it('rejects changed staged content even when index status and HEAD stay identical', async () => {
   const status = git('status', '--porcelain=v1');
   let edited = false;
-  const concurrent = new GitReview(access, async (root, args) => {
-    const output = await readGit(root, args);
-    if (!edited && args[0] === 'diff' && args.includes('--cached') && args.at(-1) === 'staged.ts') {
+  const concurrent = new GitReview(access, async (root, args, signal) => {
+    const output = await readGit(root, args, signal);
+    if (!edited && args.includes('diff') && args.includes('--cached') && args.at(-1) === 'staged.ts') {
       edited = true; writeFileSync(join(root, 'staged.ts'), 'different staged content\n'); git('add', 'staged.ts');
     }
     return output;
@@ -87,9 +87,9 @@ it('compares raw patch identity even when different credentials have the same re
   const second = 'const apiKey = "sk-proj-zyxwvutsrqponmlkjihgfed0123456789";\n';
   writeFileSync(join(root, 'a.ts'), first);
   let reads = 0;
-  const concurrent = new GitReview(access, async (root, args) => {
-    const output = await readGit(root, args);
-    if (args[0] === 'diff' && !args.includes('--cached') && args.at(-1) === 'a.ts' && ++reads === 1) writeFileSync(join(root, 'a.ts'), second);
+  const concurrent = new GitReview(access, async (root, args, signal) => {
+    const output = await readGit(root, args, signal);
+    if (args.includes('diff') && !args.includes('--cached') && args.at(-1) === 'a.ts' && ++reads === 1) writeFileSync(join(root, 'a.ts'), second);
     return output;
   });
   await access.approve(id); await concurrent.approve(id);
@@ -100,9 +100,9 @@ it('compares raw patch identity even when different credentials have the same re
 it('detects a late edit after the last patch comparison through file change markers', async () => {
   const status = git('status', '--porcelain=v1');
   let reads = 0;
-  const concurrent = new GitReview(access, async (root, args) => {
-    const output = await readGit(root, args);
-    if (args[0] === 'diff' && !args.includes('--cached') && args.at(-1) === 'a.ts' && ++reads === 2) writeFileSync(join(root, 'a.ts'), 'export const a = 9;\n');
+  const concurrent = new GitReview(access, async (root, args, signal) => {
+    const output = await readGit(root, args, signal);
+    if (args.includes('diff') && !args.includes('--cached') && args.at(-1) === 'a.ts' && ++reads === 2) writeFileSync(join(root, 'a.ts'), 'export const a = 9;\n');
     return output;
   });
   await access.approve(id); await concurrent.approve(id);
@@ -113,9 +113,9 @@ it('detects a late edit after the last patch comparison through file change mark
 it('detects a branch switch at the same HEAD', async () => {
   const branch = git('symbolic-ref', '--short', 'HEAD').trim(), head = git('rev-parse', 'HEAD');
   let switched = false;
-  const concurrent = new GitReview(access, async (root, args) => {
-    const output = await readGit(root, args);
-    if (!switched && args[0] === 'diff') { switched = true; git('checkout', '-b', 'synthetic-review-branch'); }
+  const concurrent = new GitReview(access, async (root, args, signal) => {
+    const output = await readGit(root, args, signal);
+    if (!switched && args.includes('diff')) { switched = true; git('checkout', '-b', 'synthetic-review-branch'); }
     return output;
   });
   await access.approve(id); await concurrent.approve(id);
@@ -128,9 +128,9 @@ it('detects a branch switch at the same HEAD', async () => {
 it('detects a staged blob replacement after patch verification without relying on worktree timestamps', async () => {
   const blob = git('hash-object', '-w', '--stdin');
   let reads = 0;
-  const concurrent = new GitReview(access, async (root, args) => {
-    const output = await readGit(root, args);
-    if (args[0] === 'diff' && !args.includes('--cached') && args.at(-1) === 'staged.ts' && ++reads === 2) {
+  const concurrent = new GitReview(access, async (root, args, signal) => {
+    const output = await readGit(root, args, signal);
+    if (args.includes('diff') && !args.includes('--cached') && args.at(-1) === 'staged.ts' && ++reads === 2) {
       // Updating only the index leaves the displayed status MM after both versions
       // are staged against a separately modified worktree.
       git('update-index', '--cacheinfo', `100644,${blob.trim()},staged.ts`);
@@ -152,6 +152,7 @@ it('bounds readers to four and preserves status order and the fifty-file limit a
       case 'rev-parse': return args.includes('--show-toplevel') ? approvedRoot : 'synthetic-head';
       case 'symbolic-ref': return 'synthetic-branch';
       case 'status': return ['.env', ...paths].map(path => ` M ${path}\0`).join('');
+      case 'config': return '';
       case 'ls-files': return 'synthetic-index';
       case 'diff': {
         active++; peak = Math.max(peak, active); reads++;
@@ -176,8 +177,9 @@ it('skips an oversized patch without hiding later files and pages all eligible p
     if (args[0] === 'rev-parse') return args.includes('--show-toplevel') ? approvedRoot : 'head';
     if (args[0] === 'symbolic-ref') return 'branch';
     if (args[0] === 'status') return ['.env', ...paths].map(path => ` M ${path}\0`).join('');
+    if (args[0] === 'config') return '';
     if (args[0] === 'ls-files') return 'index';
-    if (args[0] === 'diff') return args.includes('--cached') ? '' : args.at(-1) === paths[0] ? 'x'.repeat(1024 * 1024 + 1) : `small patch ${args.at(-1)}`;
+    if (args.includes('diff')) return args.includes('--cached') ? '' : args.at(-1) === paths[0] ? 'x'.repeat(1024 * 1024 + 1) : `small patch ${args.at(-1)}`;
     throw new Error('unexpected command');
   });
   await access.approve(id); await paged.approve(id);
@@ -198,8 +200,9 @@ it('reports a per-file process content limit but never swallows an ordinary Git 
     if (args[0] === 'rev-parse') return args.includes('--show-toplevel') ? approvedRoot : 'head';
     if (args[0] === 'symbolic-ref') return 'branch';
     if (args[0] === 'status') return ' M large.ts\0 M small.ts\0';
+    if (args[0] === 'config') return '';
     if (args[0] === 'ls-files') return 'index';
-    if (args[0] === 'diff') { if (args.at(-1) === 'large.ts') throw new HttpError(failStatus, 'synthetic limit'); return 'small'; }
+    if (args.includes('diff')) { if (args.at(-1) === 'large.ts') throw new HttpError(failStatus, 'synthetic limit'); return 'small'; }
     throw new Error('unexpected command');
   });
   await access.approve(id); await limited.approve(id);
@@ -208,4 +211,56 @@ it('reports a per-file process content limit but never swallows an ordinary Git 
   expect(snapshot.omissions).toEqual([{ path: 'large.ts', reason: 'process-limit' }]);
   failStatus = 422;
   await expect(limited.snapshot(id)).rejects.toMatchObject({ status: 422 });
+});
+
+it('rejects consent revoked while Git inspection is in progress', async () => {
+  let revoked = false;
+  let shared: AbortSignal | undefined;
+  const racing = new GitReview(access, async (cwd, args, signal) => {
+    const out = await readGit(cwd, args, signal);
+    expect(signal).toBeInstanceOf(AbortSignal);
+    shared ??= signal; expect(signal).toBe(shared);
+    if (!revoked && args.includes('diff')) { revoked = true; racing.revoke(id); }
+    return out;
+  });
+  await racing.approve(id);
+  await expect(racing.snapshot(id)).rejects.toMatchObject({ status: 409 });
+});
+
+it('rejects a file replaced with identical bytes during inspection', async () => {
+  let replaced = false;
+  const racing = new GitReview(access, async (cwd, args, signal) => {
+    const out = await readGit(cwd, args, signal);
+    if (!replaced && args.includes('diff') && !args.includes('--cached') && args.at(-1) === 'a.ts') {
+      replaced = true;
+      const path = join(root, 'a.ts'), old = join(root, 'a.ts.previous');
+      const bytes = readFileSync(path); renameSync(path, old); writeFileSync(path, bytes); rmSync(old);
+    }
+    return out;
+  });
+  await racing.approve(id);
+  await expect(racing.snapshot(id)).rejects.toMatchObject({ status: 409 });
+  expect(replaced).toBe(true);
+});
+
+it('changes snapshot identity when switching to another branch at the same commit', async () => {
+  const stable = new GitReview(access); await stable.approve(id);
+  const before = await stable.snapshot(id);
+  git('symbolic-ref', 'HEAD', 'refs/heads/synthetic-review'); git('update-ref', 'HEAD', before.head);
+  const after = await stable.snapshot(id);
+  expect(after.head).toBe(before.head); expect(after.branch).not.toBe(before.branch);
+  expect(after.fingerprint).not.toBe(before.fingerprint);
+  expect(after.files.map(f => f.fingerprint)).toEqual(before.files.map(f => f.fingerprint));
+});
+
+it('disables configured content filters for status and diff without modifying Git configuration', async () => {
+  const canary = join(dir, 'filter-ran');
+  const helper = `node -e "require('fs').writeFileSync('${canary.replace(/\\/g, '/')}', 'bad')"`;
+  writeFileSync(join(root, '.gitattributes'), 'a.ts filter=synthetic\n');
+  git('config', 'filter.synthetic.clean', helper); git('config', 'filter.synthetic.process', helper); git('config', 'filter.synthetic.required', 'true');
+  const config = git('config', '--list');
+  const filtered = new GitReview(access); await filtered.approve(id);
+  const snapshot = await filtered.snapshot(id);
+  expect(snapshot.files.find(f => f.path === 'a.ts')?.patch).toContain('export const a = 9');
+  expect(existsSync(canary)).toBe(false); expect(git('config', '--list')).toBe(config);
 });
