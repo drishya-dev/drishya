@@ -8,14 +8,14 @@ import type { WorkspaceAccess } from './workspace.ts';
 
 import type { GitFile, GitSnapshot, GitOmission } from './git-types.ts';
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
-const safe = (path: string) => !!path && !path.startsWith('.local/') && !path.startsWith('/') && !path.includes('\\') && !path.split('/').some(p => p === '..' || p === '.git') && !isDeniedPath(path);
+const safe = (path: string) => !!path && !path.startsWith('.local/') && !path.startsWith('/') && !path.includes('\\') && !path.split('/').some(p => p === '..' || p === '.git' || p.includes(':')) && !isDeniedPath(path);
 
-/** No shell, hooks, filters, textconv, external diff, fsmonitor or lazy network fetch. */
-export function readGit(root: string, args: string[]): Promise<string> {
+/** Fixed argv without a shell; snapshot also overrides configured content filters. */
+export function readGit(root: string, args: string[], signal?: AbortSignal): Promise<string> {
   const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', GIT_NO_LAZY_FETCH: '1' };
   // Ambient override variables must not redirect this reader to a different worktree/config.
   for (const key of Object.keys(env)) if (/^GIT_(?:DIR|WORK_TREE|INDEX_FILE|CONFIG.*|EXTERNAL_DIFF|DIFF_OPTS)$/.test(key)) delete (env as Record<string, string | undefined>)[key];
-  return new Promise((yes, no) => execFile('git', ['--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {
+  return new Promise((yes, no) => execFile('git', ['--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, signal, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {
     if (error && String(error.code) === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') no(new HttpError(413, 'Git output exceeds the inspection content limit.'));
     else if (error) no(new HttpError(422, 'Git inspection failed or exceeded its time/content limit. Check Git installation and repository state.'));
     else yes(stdout);
@@ -75,10 +75,18 @@ export class GitReview {
     if (!this.grants.has(id)) throw new HttpError(403, 'Approve read-only Git inspection separately.');
     if (this.busy.has(id)) throw new HttpError(409, 'Git inspection is already running.');
     this.busy.add(id);
+    const signal = AbortSignal.timeout(30_000);
     try {
       const root = await this.workspace.root(id);
-      const git = this.read;
+      let overrides: string[] = [];
+      const git: GitReader = (root, args) => this.read(root, [...overrides, ...args], signal);
       if (await realpath(resolve((await git(root, ['rev-parse', '--show-toplevel'])).trim())) !== root) throw new HttpError(403, 'The selected workspace must be the repository root.');
+      // Status/diff may invoke clean/process filters. Disable each configured driver
+      // for this invocation only; do not change the repository's configuration.
+      const configKeys = await git(root, ['config', '--list', '--name-only']);
+      const drivers = [...new Set(configKeys.split('\n').filter(key => /^filter\..+\.(clean|smudge|process|required)$/i.test(key)).map(key => key.replace(/\.[^.]+$/, '')))];
+      if (drivers.length > 64) throw new HttpError(422, 'Too many configured Git filters for bounded read-only inspection.');
+      overrides = drivers.flatMap(driver => ['-c', `${driver}.clean=`, '-c', `${driver}.smudge=`, '-c', `${driver}.process=`, '-c', `${driver}.required=false`]);
       const head = await git(root, ['rev-parse', '--verify', 'HEAD']).then(s => s.trim()).catch(() => 'unborn');
       const branchRef = (await git(root, ['symbolic-ref', '--short', '-q', 'HEAD']).catch(() => 'detached')).trim();
       const branch = redactText(branchRef).text;
@@ -128,7 +136,10 @@ export class GitReview {
       const endHead = await git(root, ['rev-parse', '--verify', 'HEAD']).then(s => s.trim()).catch(() => 'unborn');
       const endBranch = (await git(root, ['symbolic-ref', '--short', '-q', 'HEAD']).catch(() => 'detached')).trim();
       if (end !== raw || head !== endHead || branchRef !== endBranch || startIndex !== await indexMarker() || startMarkers !== await fileMarkers(root, paths)) throw changed();
-      return { scope: 'current-git', head, branch, fingerprint: digest(head + raw + files.map(f => f.fingerprint).join()), files, omitted: entries.length - files.length, limit: 50, pageStart, totalAllowed: allowed.length, protectedCount: entries.length - allowed.length, omissions };
+      if (configKeys !== await this.read(root, ['config', '--list', '--name-only'], signal)) throw changed();
+      await this.workspace.root(id);
+      if (!this.grants.has(id) || signal.aborted) throw new HttpError(409, 'Git inspection expired or its consent was revoked.');
+      return { scope: 'current-git', head, branch, sampledAt: new Date().toISOString(), fingerprint: digest(head + '\0' + branchRef + '\0' + raw + files.map(f => f.fingerprint).join()), files, omitted: entries.length - files.length, limit: 50, pageStart, totalAllowed: allowed.length, protectedCount: entries.length - allowed.length, omissions };
     } finally { this.busy.delete(id); }
   }
 }
