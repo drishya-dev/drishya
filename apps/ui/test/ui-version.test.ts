@@ -4,7 +4,8 @@ import { resolveUIVersion, versionURL } from '../src/lib/ui-version';
 describe('UI version navigation', () => {
   it('lets explicit links override the saved version and rejects unknown saved choices', () => {
     expect(resolveUIVersion('?experience=classic', 'fresh')).toBe('classic');
-    expect(resolveUIVersion('', 'fresh')).toBe('fresh');
+    expect(resolveUIVersion('', 'fresh')).toBe('modern');
+    expect(resolveUIVersion('?experience=fresh')).toBe('modern');
     expect(resolveUIVersion('', 'unknown')).toBe('classic');
     expect(resolveUIVersion('?experience=studio', 'fresh')).toBe('studio');
   });

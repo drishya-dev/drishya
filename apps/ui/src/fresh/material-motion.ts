@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 
 /** One real material, one transform; absent/occluded origins do not get invented. */
 export function useMaterialMotion(node: React.RefObject<HTMLButtonElement | null>, options: {
-  arrival: boolean; path?: string; tool: string; revision: unknown;
+  arrival: boolean; path?: string; tool: string; kind?: string; revision: unknown;
 }) {
   const previous = useRef<DOMRect | undefined>(undefined);
   const motion = useRef<Animation | undefined>(undefined);
@@ -22,7 +22,7 @@ export function useMaterialMotion(node: React.RefObject<HTMLButtonElement | null
       arrived.current = true;
       const candidates = [...document.querySelectorAll<HTMLElement>('[data-fr-path],[data-fr-tool]')];
       const anchor = candidates.find(candidate => options.path && candidate.dataset.frPath === options.path && visible(candidate))
-        ?? candidates.find(candidate => candidate.dataset.frTool?.split('\n').includes(options.tool) && visible(candidate));
+        ?? candidates.find(candidate => candidate.dataset.frTool?.split('\n').includes(options.tool) && (!candidate.dataset.frKind || candidate.dataset.frKind === options.kind) && visible(candidate));
       source = anchor?.getBoundingClientRect();
     } else if (last && (Math.abs(last.width - target.width) > 1 || Math.abs(last.height - target.height) > 1)) source = new DOMRect(target.x, target.y, last.width, last.height);
     if (!source || !target.width || !target.height) return;
@@ -37,7 +37,7 @@ export function useMaterialMotion(node: React.RefObject<HTMLButtonElement | null
     ], { duration: 240, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
     motion.current = animation;
     return () => animation.cancel();
-  }, [node, options.arrival, options.path, options.tool, options.revision]);
+  }, [node, options.arrival, options.path, options.tool, options.kind, options.revision]);
   useLayoutEffect(() => () => motion.current?.cancel(), []);
 }
 
