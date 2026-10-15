@@ -123,7 +123,9 @@ it('resumes Claude over structured stdin, exposes real tool inventory and applie
 });
 it('resumes Codex using RPC and returns an actual decline under conservative session permissions', async () => {
   const started = await controller.start(codexId, 'hello', true);
-  const waiting = await wait(codexId, 'approval'); expect(waiting.tools).toEqual(['docs / lookup']);
+  const waiting = await wait(codexId, 'approval');
+  // Runtime inventory is queried independently of the turn/approval stream.
+  await expect.poll(() => controller.status(codexId).tools, { timeout: 4000 }).toEqual(['docs / lookup']);
   controller.decide(codexId, started.runId, waiting.approvals[0]!.id, false);
   const completed = await wait(codexId, 'completed');
   expect(completed.output).toContain('decline hello');
