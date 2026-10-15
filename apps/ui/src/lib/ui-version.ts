@@ -1,9 +1,10 @@
-export type UIVersion = 'classic' | 'modern';
+export type UIVersion = 'canvas' | 'classic' | 'modern';
 const key = 'drishya-ui-version';
 export function resolveUIVersion(search: string, saved?: string | null): string {
   const explicit = new URLSearchParams(search).get('experience');
   if (explicit) return explicit === 'fresh' ? 'modern' : explicit;
-  return saved === 'fresh' || saved === 'modern' ? 'modern' : 'classic';
+  if (saved === 'fresh' || saved === 'modern') return 'modern';
+  return saved === 'canvas' ? 'canvas' : 'classic';
 }
 export function selectedUIVersion(): string {
   let saved: string | null = null;

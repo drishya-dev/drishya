@@ -60,7 +60,7 @@ export function Inspector({ projection }: { projection: Projection }) {
   );
 }
 
-function Detail({ op, projection }: { op: Operation; projection: Projection }) {
+export function Detail({ op, projection }: { op: Operation; projection: Projection }) {
   const d = op.detail;
   const set = useApp((s) => s.set);
   const artifacts = projection.artifacts.filter((a) => op.artifactIds.includes(a.id));

@@ -7,4 +7,6 @@ import './stage.css';
 import './studio.css';
 import './workbench.css';
 import './classic.css';
+import './atelier.css';
+import './canvas.css';
 export { App } from './App.tsx';

@@ -4,6 +4,7 @@ import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, se
 import { useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { SettingsSections } from './UIVersions.tsx';
+import { useExperience } from '../lib/experience.ts';
 
 export function ReadingDialog({ title, close, children, className = '', modeless = false, style }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -26,6 +27,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
 }
 
 export function ProductShell({ children }: { children: ReactNode }) {
+  const experience = useExperience();
   useDismissMenus();
   const motion = useApp(s => s.motion);
   useEffect(() => { document.documentElement.toggleAttribute('data-ui-motion', motion); }, [motion]);
@@ -37,19 +39,31 @@ export function ProductShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const apply = () => {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
-      const scheme = theme === 'light' ? 'light' : 'dark';
+      const scheme = theme === 'light' || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       document.documentElement.dataset.theme = scheme;
       document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'midnight' ? 'midnight' : 'jet';
     };
     apply();
+    const preference = matchMedia('(prefers-color-scheme: light)');
+    preference.addEventListener('change', apply);
+    return () => preference.removeEventListener('change', apply);
   }, [theme]);
-  return <>{children}{open && <Settings />}</>;
+  return <>{children}{open && (experience === 'canvas' ? <CanvasSettings /> : <Settings />)}</>;
+}
+
+function CanvasSettings() {
+  const theme = useApp(s => s.theme), motion = useApp(s => s.motion), low = useApp(s => s.lowResource);
+  return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog cv-settings">
+    <SettingsSections><section><h3>Appearance</h3><p>Choose how this local workspace looks.</p><div className="cv-appearance" aria-label="Colour theme">{(['dark', 'light', 'system'] as const).map(value => <button key={value} aria-pressed={theme === value || value === 'dark' && theme === 'midnight'} onClick={() => setTheme(value)}><i className={`cv-theme-preview cv-theme-${value}`} /><span>{value[0]!.toUpperCase() + value.slice(1)}</span></button>)}</div></section>
+    <section><h3>Motion and resources</h3><label className="setting-row"><span>Motion<small>Finite arrivals, state changes and camera transitions.</small></span><input type="checkbox" checked={motion && !low} disabled={low} onChange={event => setMotion(event.target.checked)} /></label><label className="setting-row"><span>Low resource mode<small>Turns motion off, reduces cached material and limits mounted nodes.</small></span><input type="checkbox" checked={low} onChange={event => setLowResource(event.target.checked)} /></label><p className="muted small">Your system’s reduced-motion setting always takes precedence.</p></section>
+    <section><h3>Keyboard shortcuts</h3><dl className="shortcut-list"><div><dt>/</dt><dd>Search actions, files and commands</dd></div><div><dt>F · E</dt><dd>Next failure · next edit</dd></div><div><dt>← · →</dt><dd>Previous · next action</dd></div><div><dt>Esc</dt><dd>Close the reader</dd></div><div><dt>+ · − · 0</dt><dd>Zoom in · out · fit</dd></div><div><dt>Space + drag</dt><dd>Pan the canvas</dd></div></dl></section><section><h3>Local by design</h3><p>Read-only observation. Captured sessions stay on this machine. No telemetry, remote fonts or external model calls.</p></section></SettingsSections>
+  </ReadingDialog>;
 }
 
 const THEMES = [
-  ['dark', 'Jet Black', 'Neutral black · mint accents'],
-  ['midnight', 'Midnight', 'Ink blue · iris accents'],
-  ['light', 'Paper', 'Soft white · forest accents'],
+  ['dark', 'Jet Black', 'Charcoal · sage accents'],
+  ['midnight', 'Midnight', 'Slate blue · silver accents'],
+  ['light', 'Paper', 'Warm paper · forest accents'],
 ] as const;
 
 function Settings() {

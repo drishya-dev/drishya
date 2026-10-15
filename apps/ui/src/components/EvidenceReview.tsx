@@ -6,13 +6,13 @@ import { ReadingDialog } from './ProductShell.tsx';
 import { FileIcon } from './FileIcon.tsx';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
-export function EvidenceReview({ projection }: { projection: Projection }) {
+export function EvidenceReview({ projection, label = 'Review work' }: { projection: Projection; label?: string }) {
   const [open, setOpen] = useState(false);
   const mode = useApp(s => s.mode);
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
   const unavailable = source?.kind === 'daemon' && id?.includes('+');
-  return <><button className="btn ghost review-open" disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>Review work</button>
+  return <><button className="btn ghost review-open" disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>
     {open && mode !== 'replay' && <ReviewContent projection={projection} close={() => setOpen(false)} />}</>;
 }
 

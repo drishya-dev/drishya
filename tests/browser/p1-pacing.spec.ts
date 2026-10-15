@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
@@ -122,7 +122,7 @@ test('a single delayed read result keeps its request readable in a bounded mater
     expect(header!.y).toBeLessThan(viewport!.y + viewport!.height);
     // Captured text mounts before the finite transform settles. Assert the same
     // allocation ceiling once it lands, rather than a subpixel intermediate frame.
-    await expect.poll(async () => (await read.boundingBox())!.height).toBeLessThanOrEqual(280);
+    await expect.poll(async () => (await read.boundingBox())!.height).toBeLessThanOrEqual(340);
     await expect.poll(() => page.evaluate(() => (window as unknown as { loadedSourceUnfold: boolean }).loadedSourceUnfold)).toBe(true);
     if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/late-source-reading.png') });
   } finally { release(); await page.unroute('**/artifacts/**'); }

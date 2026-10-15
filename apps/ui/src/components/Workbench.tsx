@@ -78,9 +78,9 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
   const primary = projection.agents.find(a => scene.agents.some(shown => shown.id === a.id) && !a.parentId);
   const filter = useApp(s => s.filter);
   return <div className="workbench-station">
-    <section className="workbench-review" aria-label="Evidence desk"><span className="desk-caption">Evidence desk</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><ReviewQuestionsEntry key={id} /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Captured changes and checks. Current Git stays separate.'}</p></section>
+    <section className="workbench-review" aria-label="Evidence desk"><span className="desk-caption">Review</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><ReviewQuestionsEntry key={id} /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Recorded changes and checks.'}</p></section>
     <button className="btn ghost workspace-navigation-open" onClick={() => window.dispatchEvent(new Event('drishya-navigate-workspace'))}>Navigate workspace <kbd>Ctrl/⌘ K</kbd></button>
-    <div className="workbench-runtime"><span className="runtime-dot" /><span>{scene.agents.length > 1 ? `${scene.agents.length} recorded agents` : agentName(primary)}<small>{scene.agents.filter(a => a.state === 'active').length ? 'Captured activity in progress' : 'Recorded work'}</small></span></div>
+    {scene.agents.length === 1 && <div className="workbench-runtime"><span className="runtime-dot" /><span>{agentName(primary)}<small>{scene.agents.some(a => a.state === 'active') ? 'Captured activity in progress' : 'Recorded work'}</small></span></div>}
     {scene.agents.length > 1 && <details className="station-agent-menu"><summary>Agents <span>{scene.agents.length}{filter?.agentId ? ' · focused' : ''}</span></summary><AgentFamilies projection={projection} scene={scene} /></details>}
     {children}
   </div>;

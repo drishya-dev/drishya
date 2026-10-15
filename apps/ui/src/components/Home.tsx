@@ -7,10 +7,14 @@ import { relTime } from './common.tsx';
 import { localPreviewId } from '../lib/local-preview.ts';
 import { SessionGroups } from './SessionGroups.tsx';
 import { timestamp } from '../lib/home-groups.ts';
+import { InterfaceGlyph } from './InterfaceGlyph.tsx';
+import { SettingsGlyph } from './SettingsGlyph.tsx';
+import { useExperience } from '../lib/experience.ts';
 
 const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
 
 export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
+  const canvas = useExperience() === 'canvas';
   const source = useApp((s) => s.source);
   const recordings = useApp((s) => s.recordings);
   const set = useApp((s) => s.set);
@@ -83,16 +87,23 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
           <BrandMark />
           Drishya
         </div>
-        <span className="muted">See your coding agents work on your own code. Connect a native session when you want to continue.</span>
-        <button className="btn ghost" onClick={() => set({ settingsOpen: true })}>Settings</button>
+        <span className="home-local"><InterfaceGlyph name="local" />Local workspace</span>
+        <button className="btn ghost home-settings" onClick={() => set({ settingsOpen: true })}><SettingsGlyph />Settings</button>
       </header>
-      {usage && <p className={usage.overBudget ? 'bad small' : 'muted small'}>Local store · {(usage.bytes / 1024 ** 3).toFixed(2)} GiB of {(usage.budgetBytes / 1024 ** 3).toFixed(0)} GiB advisory budget{usage.overBudget ? ' · budget exceeded' : ''}. Nothing is deleted automatically. Remove selected recordings with <code>drishya forget &lt;recording&gt;</code>.</p>}
-
-      <div className="home-intro"><span className="home-kicker">YOUR LOCAL AGENT WORKSPACE</span><h1>See the work.<br />Know what changed.</h1><p>Choose a Claude Code or Codex session. Follow its captured source, changes and results, or return to earlier work at your own pace.</p><div className="home-intro-actions"><button className="btn primary" onClick={() => openDemo(true)}>Watch the live demo</button><button className="btn" onClick={() => openDemo()}>Explore the synthetic demo</button><button className="btn" disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}>Refresh local sessions</button></div><div className="home-principles"><span>Local storage</span><span>Read-only observation</span><span>No telemetry</span></div></div>
+      <div className="home-intro">
+        <div className="home-intro-copy"><h1>{canvas ? 'Sessions' : 'Your agent workspace.'}</h1><p>Return to a session. Follow the source, changes and results.</p></div>
+        <div className="home-intro-actions"><button className="btn" onClick={() => openDemo(true)}><InterfaceGlyph name="play" />Watch the live demo</button><button className={`btn ${canvas ? '' : 'primary'}`} disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}><InterfaceGlyph name="refresh" />Refresh local sessions</button>{canvas && <button className="btn primary cv-home-import" onClick={() => { const section = document.getElementById('local-session-import'); section?.scrollIntoView({ behavior: 'instant', block: 'start' }); section?.querySelector<HTMLButtonElement>('.row-actions button')?.focus({ preventScroll: true }); }}>Import<span className="cv-import-icon" aria-hidden="true">+</span></button>}</div>
+      </div>
+      <div className="home-overview" aria-label="Local session inventory">
+        <span><strong>{recordings.length}</strong> recording{recordings.length === 1 ? '' : 's'}</span>
+        <span><i className="inventory-live" aria-hidden="true" /><strong>{recordings.filter(r => r.live).length}</strong> following</span>
+        <span className="home-private">Stored on this machine · no telemetry</span>
+      </div>
+      {usage && <details className={`home-storage${usage.overBudget ? ' bad' : ''}`}><summary>Local store · {(usage.bytes / 1024 ** 3).toFixed(2)} GiB{usage.overBudget ? ' · advisory budget exceeded' : ''}</summary><p>{(usage.budgetBytes / 1024 ** 3).toFixed(0)} GiB advisory budget. Nothing is deleted automatically. Remove selected recordings with <code>drishya forget &lt;recording&gt;</code>.</p></details>}
       {!preview && new URLSearchParams(location.search).get('demo') === 'local' && <p className="notice">Choose a local recording, then use More → Use this session as local preview. A missing or deleted recording is never replaced with a synthetic conversation.</p>}
       {preview && <div className="local-preview-card"><strong>Your local preview</strong><span>{preview.title ?? 'Selected recording'}</span><button className="btn" onClick={() => { location.hash = `#/r/${preview.id}`; void openRecording(preview.id); }}>Open real recording</button><small>Already-redacted local evidence. Nothing is published or copied into the synthetic sample.</small></div>}
       <div className="home-filters">
-        <input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => setQ(e.target.value)} />
+        <label className="home-search"><InterfaceGlyph name="search" /><input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         <select aria-label="Harness" value={harness} onChange={(e) => setHarness(e.target.value)}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>
         <select aria-label="Session age" value={days} onChange={(e) => setDays(Number(e.target.value))}><option value={0}>Any date</option><option value={1}>Past day</option><option value={7}>Past week</option><option value={30}>Past month</option></select>
       </div>
@@ -108,7 +119,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
               </button>
             )}
           </div>
-          {recordings.length === 0 && <p className="muted">Nothing imported yet. Open a session from this machine, or try the demo.</p>}
+          {recordings.length === 0 && <div className="home-empty"><InterfaceGlyph name="local" /><h3>Your work starts here.</h3><p>Nothing imported yet. Open a session from this machine, or try the demo.</p><button className="btn" onClick={() => openDemo()}>Explore the synthetic demo<InterfaceGlyph name="arrow" /></button></div>}
           {recordings.length > 0 && filteredRecordings.length === 0 && <p className="muted">No imported recordings match these filters.</p>}
           <SessionGroups key={`recordings:${q}:${harness}:${days}`} items={filteredRecordings} rootOf={r => r.workspaceRoot} timeOf={r => r.lastSourceTime} now={now} render={r => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />} />
           <div className="demo-card">
@@ -116,11 +127,11 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
               <strong>Synthetic demo</strong>
               <div className="muted small">Claude Code fixes free orders at checkout, a subagent searches the tests, Codex reviews the change. Every byte is invented.</div>
             </div>
-            <button className="btn" onClick={() => openDemo()}>Open demo</button>
+            <button className="btn ghost" onClick={() => openDemo()}>Open demo<InterfaceGlyph name="arrow" /></button>
           </div>
         </section>
 
-        <section>
+        <section id="local-session-import">
           <div className="sec-head">
             <h2>Sessions on this machine</h2>
             <span className="muted small" role="status">{sources ? `${filteredSources.length} matching` : err ? 'Discovery unavailable' : 'Finding local sessions…'}</span>

@@ -10,7 +10,7 @@
 import { appendFileSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer } from '../../apps/daemon/src/server.ts';
 

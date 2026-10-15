@@ -2,7 +2,7 @@ import { pointAtHistory } from './history-gestures.ts';
 import { appendFileSync, copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
@@ -508,7 +508,7 @@ test('explicit themes persist independently of the OS, restore focus and work on
 
 test('file comparison reads real daemon artifacts and opens the same action in history', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await expect(page.getByRole('heading', { name: 'See the work.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your agent workspace.' })).toBeVisible();
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const file = page.locator('.spine-file[title="src/checkout/guard.ts"]');
   await file.click();
@@ -688,17 +688,17 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Ticks are a pointer shortcut and never enter the accessibility tree.
   await expect(timeline.locator('.activity-strip')).toHaveAttribute('aria-hidden', 'true');
 
-  // Jet is the signature default. No grain or full-screen decorative layer obscures text.
+  // Jet uses a static dot field, removed by the explicit low-resource preference.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(8, 8, 8)');
-  expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toBe('none');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(13, 13, 13)');
+  expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toContain('radial-gradient');
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await dialog.getByRole('button', { name: 'Midnight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(9, 13, 22)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(17, 20, 26)');
   await dialog.getByRole('button', { name: 'Paper', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'paper');
   await dialog.getByRole('button', { name: 'Jet Black', exact: true }).click();
@@ -910,7 +910,9 @@ test('full-height world sits beneath progressive edge chrome and prompt typograp
   await expect(page.locator('.turn-text').first()).toBeVisible();
   const sizes = await page.evaluate(() => ({ prompt: getComputedStyle(document.querySelector('.turn-text')!).fontSize, response: getComputedStyle(document.querySelector('.prose')!).fontSize, blur: getComputedStyle(document.querySelector('.workspace-header')!).backdropFilter, main: document.querySelector('.main')!.getBoundingClientRect().toJSON() }));
   expect(sizes.prompt).toBe('15px'); expect(sizes.response).toBe(sizes.prompt);
-  expect(sizes.blur).toBe('blur(14px)'); expect(sizes.main.y).toBe(0); expect(sizes.main.height).toBe(900);
+  expect(sizes.blur).toBe('none'); expect(sizes.main.y).toBe(0); expect(sizes.main.height).toBe(900);
+  const headerBottom = await page.locator('.workspace-header').evaluate(el => el.getBoundingClientRect().bottom);
+  await expect.poll(() => page.locator('.turn-text').first().evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(headerBottom + 8);
   const time = page.locator('.captured-time').first();
   await time.focus();
   await expect.poll(() => time.locator('.captured-clock').evaluate(el => getComputedStyle(el).opacity)).toBe('1');

@@ -9,6 +9,7 @@ import { growingSample } from './lib/sample-source.ts';
 import { setMotion, useApp } from './state.ts';
 import { localPreviewId } from './lib/local-preview.ts';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation.tsx';
+import { useExperience } from './lib/experience.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
 
@@ -34,6 +35,7 @@ async function openBundle(url: string, growing = false) {
 }
 
 export function App() {
+  const experience = useExperience();
   const screen = useApp((s) => s.screen);
   const error = useApp((s) => s.error);
 
@@ -117,7 +119,7 @@ export function App() {
     if (screen === 'home') return <Home openDemo={(growing = false) => openBundle(DEMO_URL, growing).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
     return <Viewer />;
   };
-  return <ProductShell>{render()}<WorkspaceNavigation /></ProductShell>;
+  return <ProductShell>{render()}{experience !== 'canvas' && <WorkspaceNavigation />}</ProductShell>;
 }
 
 /** The playback clock. The composer never reads time; only this hook does. */

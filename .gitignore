@@ -16,6 +16,7 @@ fixtures/local/
 blobs/
 .drishya/
 .drishya-preview/
+/.local/
 
 # ── Secrets ───────────────────────────────────────────────────────────────
 .env

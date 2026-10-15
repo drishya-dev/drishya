@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
@@ -68,7 +68,7 @@ test('Classic evidence and agent rail, explicit palettes and map reading work ac
   await settings.click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await expect(dialog.getByRole('button', { name: 'System', exact: true })).toHaveCount(0);
-  for (const [name, palette, bg] of [['Midnight', 'midnight', 'rgb(9, 13, 22)'], ['Paper', 'paper', 'rgb(244, 245, 242)'], ['Jet Black', 'jet', 'rgb(8, 8, 8)']]) {
+  for (const [name, palette, bg] of [['Midnight', 'midnight', 'rgb(17, 20, 26)'], ['Paper', 'paper', 'rgb(244, 243, 240)'], ['Jet Black', 'jet', 'rgb(13, 13, 13)']]) {
     await dialog.getByRole('button', { name, exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette', palette);
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(bg);
