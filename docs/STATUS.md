@@ -31,13 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Modern surroundings and tool-output decoding
+### Yash with Codex — Recovered Modern composer/toolbox and header
 
-- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [77](review/77-modern-surroundings-output.md).
-- **Changed:** Modern settings category navigator with proper padding; neutral UI font, vivid syntax palette, panel utility icon, compact native composer with connection setup under its menu, intrinsic-height centered/bounded tool rail, one grouped/deduplicated sessions list. Shared structured tool output decodes recognized complete JSON envelopes with a raw toggle and bounded decoded pages; no captured/index/source-line changes.
-- **Commits:** `5c048f3` output decoding, `e494e18` Modern interface. Core Legacy visualization/hover/arrivals/map shared, Canvas/Legacy retained.
-- **Verified locally:** Both typechecks, production build, **380 units**; **34 distinct browser checks**, plus focused final settings keyboard rerun. Actual Codex/Claude visual review; two real Codex structured outputs correctly decoded. No native prompt/hosted CI, original package/artwork edits untouched.
-- **Continue:** Modern shared product entry and scoped styling, not retired Fresh shell. 76/77 supersede independent Modern instructions. Real native-account, human comprehension/ten-minute and physical/platform release acceptance remain open.
+- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [78](review/78-recovered-modern-controls.md).
+- **Changed:** Recovered the former Modern composer composition and compact Toolbox/MCP drawers, bound to the shared native/focus owners. Direct file/folder attachments, available model/effort and labelled Send/Stop. Right-side Git workspace retains actual consent/patch/handoff logic. New translucent session crown; Files / Repository names and explorer labels. Legacy's main visualization/hover/map remain shared; Canvas/Legacy preserved.
+- **Verified locally:** Both typechecks/build, **380 unit tests**; final combined browser run **34 checks passed**. Tests cover current temporary-repo Git patches in the right drawer, MCP/native origin and focus, and mocked native text/attachment/options/consent forwarding for Codex and Claude. Actual Drishya Codex inspected without submitting a native prompt or granting new real-workspace access. No hosted CI.
+- **Continue:** Active recovered `ModernTools` + `ModernToolStation`, shared `PromptComposer`/Git owners and `recovered-surfaces.css`. The Fresh app is still retired. Original package/artwork edits untouched; real native-account, human ten-minute and physical/platform acceptance remain release checks.
 
 ### @yash (with Claude)
 - **When:** 2026-09-22 → 25
