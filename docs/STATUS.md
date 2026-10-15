@@ -31,11 +31,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex - UI version integration
-- **When:** 15 October 2026. Modern PR #63 squash-merged as `354bc64`; reviewed Harsh's Canvas PR #64, integrated current main into its branch, then squash-merged it as `5a2c4bb`. Local main updated and rebuilt. Review [73](review/73-ui-version-integration.md).
-- **Delivered:** Canvas, Modern and Legacy are all enabled in Settings. Canvas retains its new-install default; saved choices and explicit recording URLs win. Old fresh links/settings migrate to Modern; Workbench is absent from the picker. Preserved both implementations, font licenses, evidence/native permission boundaries and both review-72 records. Added a cross-version imported-recording regression.
-- **Checks on combined source:** Frozen-lock install, both typechecks, **374 units/58 files**, production build, **134 browser passes/two opt-in skips** across the complete suite; an earlier 24-journey focused Canvas/Modern run also passed. Previously tracked Classic source-range hover journey passes in this integrated full run. No hosted CI, real native turn or new ten-minute/platform certification. Original package-manager/artwork edits remain local and excluded.
-- **Next:** Human comparison of the selectable versions, then their explicitly documented utility/3D/native and release acceptance gaps. Keep both designs; no automatic promotion to feature parity.
+### Yash with Codex - Modern reading craft
+- **When:** 15 October 2026, branch `codex/modern-reading-craft`; review [74](review/74-modern-reading-craft.md). Previous integration remains on main; Canvas, Modern and Legacy are retained.
+- **Delivered in separate commits:** `1f4b1b8` brighter material/syntax palette and local Outfit/JetBrains Mono; `0cd5d0c` stable-slot header-hover reading, single local scrollbar, complete projected patch/search lines, compact filenames and outcome-first tests; `6568d09` bounded private in-memory drafts per native session. All actual code stays selectable and captured; no copied animation text.
+- **Checks:** both typechecks, **374 units/58 files**, production build, **28 browser journeys** covering Modern and Canvas/version integration; actual local Codex Drishya and Claude Skeletongraph pages inspected. Hover geometry/history height, reduced motion, MCP wheel chaining, replay as-of material, responsive bounds and draft isolation pass. No hosted CI or native turn. Original package-manager/artwork changes remain local and excluded.
+- **Next:** human assessment of materials/motion, then remaining Modern 3D/resource controls, whole-history prompt navigation, offline entry, reading/navigation memory and review-50 utility. Native real-account, physical/platform/accessibility and ten-minute acceptance remain release gates; do not claim full parity from this increment.
 
 *Each person overwrites their own block. Keep it to what the other person needs in order to not redo or undo your work.*
 
