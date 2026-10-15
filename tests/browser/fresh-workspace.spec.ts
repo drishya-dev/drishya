@@ -427,3 +427,25 @@ test('Modern search clears stale matches and pending status on an empty query', 
   await expect(page.getByText('Search commands, tool output, code excerpts, and exposed prose.')).toBeVisible();
   await expect(page.getByText('Late query evidence')).toHaveCount(0);
 });
+
+
+test('Modern presentation switches persist and govern actual materials', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['codex']}`);
+  await page.locator('.md-settings-button').click();
+  for (const name of ['Material motion', 'Enlarge on header hover', 'Repository backdrop']) await page.getByRole('switch', { name: new RegExp(name) }).uncheck();
+  await page.getByRole('switch', { name: /Compact spacing/ }).check();
+  await page.locator('.md-work-button').click();
+  await expect(page.locator('.fr-action').first()).toBeVisible();
+  await expect(page.locator('.md-app')).toHaveAttribute('data-motion', 'off');
+  await expect(page.locator('.md-app')).toHaveAttribute('data-density', 'compact');
+  await expect(page.locator('.md-topology')).toHaveCount(0);
+  await page.locator('.fr-action-type').first().hover();
+  await page.waitForTimeout(300);
+  await expect(page.locator('[data-reading=open]')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('.md-app')).toHaveAttribute('data-hover-reading', 'off');
+  await page.locator('.md-settings-button').click();
+  await expect(page.getByRole('switch', { name: /Material motion/ })).not.toBeChecked();
+});

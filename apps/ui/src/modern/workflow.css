@@ -1,0 +1,21 @@
+/* Controls explain state; captured content never animates character by character. */
+.md-app .md-preference { display:flex; align-items:center; gap:24px; padding:19px 0; border-top:1px solid #ffffff0b; cursor:pointer; position:relative; }
+.md-preference>span { flex:1; min-width:0; }
+.md-preference strong { display:block; font-size:14px; font-weight:500; color:var(--fr-text); }
+.md-preference small { display:block; font-size:12px; line-height:1.6; color:var(--fr-muted); margin-top:5px; max-width:540px; }
+.md-preference input { position:absolute; right:0; width:40px; height:24px; opacity:0; cursor:pointer; }
+.md-preference i { width:36px; height:21px; flex:none; border-radius:20px; background:#ffffff18; box-shadow:inset 0 0 0 1px #ffffff12; pointer-events:none; transition:background 160ms var(--fr-ease); }
+.md-preference i:after { content:''; display:block; width:15px; height:15px; margin:3px; border-radius:50%; background:#a6b1bf; transition:transform 160ms var(--fr-ease),background 160ms var(--fr-ease); }
+.md-preference input:checked+i { background:#6de4bd30; }
+.md-preference input:checked+i:after { transform:translateX(15px); background:#83f2cc; }
+.md-preference input:focus-visible+i { outline:2px solid #b4d7cd; outline-offset:4px; }
+.md-app .md-agents .md-agent { display:block; width:100%; padding:10px; text-align:left; border-radius:8px; }
+.md-app .md-agent[aria-pressed=true] { background:#b8a3ff16; box-shadow:inset 2px 0 #b8a3ff; }
+.md-app .md-agent strong,.md-app .md-agent small { display:block; overflow-wrap:anywhere; }
+.md-app .md-agent small { margin-top:4px; color:var(--fr-muted); }
+.md-app[data-density=compact] .fr-passage { margin-bottom:24px; }
+.md-app[data-density=compact] .fr-action-sequence { gap:24px; }
+.md-app[data-density=compact] .fr-action { padding:12px; }
+.md-app[data-hover-reading=off] .fr-action-type,.md-app[data-hover-reading=off] .fr-action>strong { cursor:pointer; }
+.md-app[data-motion=off] *,.md-app[data-motion=off] *:before,.md-app[data-motion=off] *:after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
+@media(hover:hover) and (pointer:fine) { .md-app .md-agent:hover { background:#ffffff09; } }

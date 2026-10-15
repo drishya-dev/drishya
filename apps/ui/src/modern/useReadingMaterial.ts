@@ -1,8 +1,10 @@
+import { usePresentation } from './presentation';
 import { flushSync } from 'react-dom';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
 /** The real card stays in its history slot: scrolling never pins a copy to the screen. */
 export function useReadingMaterial(card: RefObject<HTMLButtonElement | null>) {
+  const { preferences } = usePresentation();
   const [reading, setReading] = useState(false);
   const open = useRef(() => {});
   useEffect(() => {
@@ -18,7 +20,7 @@ export function useReadingMaterial(card: RefObject<HTMLButtonElement | null>) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const animateFrom = (from: DOMRect) => {
       const to = element.getBoundingClientRect();
-      if (reduced.matches || element.closest('[data-modality=keyboard]')) return;
+      if (!preferences.motion || reduced.matches || element.closest('[data-modality=keyboard]')) return;
       animation = element.animate([
         { transform: `translate(${from.x - to.x}px,${from.y - to.y}px) scale(${from.width / to.width},${from.height / to.height})` },
         { transform: 'translate(0,0) scale(1,1)' },
@@ -54,7 +56,7 @@ export function useReadingMaterial(card: RefObject<HTMLButtonElement | null>) {
     };
     open.current = () => {
       clearTimeout(dwell); clearTimeout(leave);
-      if (expanded || innerWidth < 820 || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+      if (!preferences.hoverReading || expanded || innerWidth < 820 || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
       dwell = setTimeout(() => {
         if (!element.matches(':hover') || getSelection()?.toString()) return;
         const from = element.getBoundingClientRect(), bounds = stream.getBoundingClientRect();
@@ -98,6 +100,6 @@ export function useReadingMaterial(card: RefObject<HTMLButtonElement | null>) {
       window.removeEventListener('resize', reset); window.removeEventListener('blur', reset);
       reduced.removeEventListener('change', reset);
     };
-  }, [card]);
+  }, [card, preferences.motion, preferences.hoverReading]);
   return { reading, onHeaderEnter: () => open.current() };
 }
