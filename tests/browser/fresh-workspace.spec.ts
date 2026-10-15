@@ -79,6 +79,13 @@ test('Modern chrome fits wide, laptop and phone viewports; panels and settings r
     await page.setViewportSize({width,height});
     await expect(page.locator('.history')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    const header=(await page.locator('.modern-session-header').boundingBox())!;
+    const title=(await page.locator('.modern-session-header h1').boundingBox())!;
+    const actions=(await page.locator('.modern-session-header .studio-actions').boundingBox())!;
+    expect(header.height).toBeLessThanOrEqual(64);
+    expect(title.y).toBeGreaterThanOrEqual(header.y);
+    expect(title.y+title.height).toBeLessThanOrEqual(header.y+header.height);
+    expect(title.x+title.width).toBeLessThanOrEqual(actions.x);
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     const dialog=page.getByRole('dialog',{name:'Workspace settings'});
     await expect(dialog).toBeVisible();
