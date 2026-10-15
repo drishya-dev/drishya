@@ -449,3 +449,36 @@ test('Modern presentation switches persist and govern actual materials', async (
   await page.locator('.md-settings-button').click();
   await expect(page.getByRole('switch', { name: /Material motion/ })).not.toBeChecked();
 });
+
+
+test('Modern browser Back restores session views and invalid routes stay safe', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.md-session-card').first()).toBeVisible();
+  await page.locator('.md-session-card').first().click();
+  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toBeVisible();
+  const workspaceUrl = page.url();
+  await page.locator('.md-settings-button').click(); await expect(page).toHaveURL(/\/settings$/);
+  await page.goBack(); await expect(page).toHaveURL(workspaceUrl);
+  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await expect(page).toHaveURL(/\/review$/); await page.reload();
+  await expect(page.locator('.fr-git-view')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/%ZZ`);
+  await expect(page.getByRole('heading', { name: 'The work, in view.' })).toBeVisible();
+});
+
+test('Modern discovery opens above long libraries and searches every local source', async ({ page }) => {
+  await page.route('**/sources', route => route.fulfill({ json: { sources: Array.from({ length: 85 }, (_, i) => ({ adapterId: 'codex', harness: 'codex', path: `/local/source-${i}`, title: `Local task ${i}`, cwd: '/project' })), errors: [] } }));
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.md-session-card').first()).toBeVisible();
+  await page.getByRole('button', { name: /Connect session/ }).click();
+  const discovery = page.getByRole('dialog', { name: 'Connect a session' });
+  await expect(discovery).toBeVisible();
+  await expect(discovery.locator('.md-source-row')).toHaveCount(40);
+  await discovery.getByRole('textbox', { name: 'Find local session' }).fill('Local task 84');
+  await expect(discovery.locator('.md-source-row')).toHaveCount(1);
+  await expect(discovery).toContainText('Local task 84');
+  await page.keyboard.press('Escape'); await expect(discovery).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Connect session/ })).toBeFocused();
+  await page.keyboard.press('/'); await expect(page.getByRole('textbox', { name: 'Filter sessions' })).toBeFocused();
+});

@@ -6,6 +6,7 @@ import './fresh.css';
 import { FreshEvidence } from './FreshEvidence';
 import { CodeTokens } from './CodeTokens';
 import { FreshGit as GitReview } from './FreshGit';
+import { readRoute, routeHash, type WorkspaceView } from '../modern/navigation';
 import { usePresentation, PresentationSettings } from '../modern/presentation';
 import { toggleWorkFocus, workFocusLabel, type WorkFocus } from '../modern/work-focus';
 import { consumesVerticalWheel } from '../modern/local-scroll';
@@ -23,7 +24,7 @@ import { ModernActionContent } from '../modern/ModernActionContent';
 import { promptDrafts } from '../lib/prompt-drafts';
 import { useFollowWork } from '../modern/useFollowWork';
 
-type View = 'home' | 'work' | 'repository' | 'review' | 'settings';
+type View = WorkspaceView;
 type IconName = 'home' | 'work' | 'files' | 'branch' | 'settings' | 'search' | 'arrow' | 'plus' | 'close' | 'play' | 'pause' | 'back' | 'refresh' | 'check' | 'terminal' | 'code' | 'spark' | 'link' | 'agents' | 'attach' | 'stop' | 'download' | 'copy' | 'eye' | 'chevron';
 const paths: Record<IconName, string> = {
   home: 'M3 10 12 3l9 7v10H6V10m3 10v-7h6v7', work: 'M4 5h16v14H4zM4 10h16M9 10v9', files: 'M4 4h7l2 3h7v13H4z', branch: 'M6 5v14m0-7h8a4 4 0 0 0 4-4V5M3 5a3 3 0 1 0 6 0 3 3 0 0 0-6 0m12 0a3 3 0 1 0 6 0 3 3 0 0 0-6 0M3 19a3 3 0 1 0 6 0 3 3 0 0 0-6 0',
@@ -44,10 +45,10 @@ const workStates = ['running', 'connecting', 'approval'];
 export function FreshApp({ token, onExit, appearance = 'workbench' }: { token: string; onExit?: () => void; appearance?: 'workbench' | 'modern' }) {
   const { preferences } = usePresentation();
   const api = useMemo(() => createFreshApi(token), [token]);
-  const [view, setView] = useState<View>('home');
+  const [view, setView] = useState<View>(() => readRoute(location.hash).view);
   const [recordings, setRecordings] = useState<RecordingSummary[]>([]);
   const [sources, setSources] = useState<DiscoveredSource[]>([]);
-  const [selected, setSelected] = useState<string | undefined>(() => /^#\/r\/([^/?]+)/.exec(location.hash)?.[1]);
+  const [selected, setSelected] = useState<string | undefined>(() => readRoute(location.hash).recordingId);
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
   const [ready, setReady] = useState(false);
@@ -68,7 +69,7 @@ export function FreshApp({ token, onExit, appearance = 'workbench' }: { token: s
   }, []);
   useEffect(() => {
     let alive = true;
-    void (token ? api.request('session', {}).then(() => { const hash = /^#\/r\//.test(location.hash) ? location.hash : ''; history.replaceState(null, '', location.pathname + location.search + hash); }) : Promise.resolve()).then(() => reload()).then(() => { if (alive) { setReady(true); if (/^#\/r\//.test(location.hash)) setView('work'); } }).catch(e => { if (alive) setError(message(e)); });
+    void (token ? api.request('session', {}).then(() => { const hash = location.hash.startsWith('#/') ? location.hash : '';  history.replaceState(null, '', location.pathname + location.search + hash); }) : Promise.resolve()).then(() => reload()).then(() => { if (alive) { setReady(true); setView(readRoute(location.hash).view); } }).catch(e => { if (alive) setError(message(e)); });
     return () => { alive = false; };
   }, [api, reload]);
   useEffect(() => {
@@ -84,29 +85,34 @@ export function FreshApp({ token, onExit, appearance = 'workbench' }: { token: s
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
   }, []);
   useEffect(() => {
-    const navigation = () => { const target = /^#\/r\/([^/?]+)/.exec(location.hash)?.[1]; if (target) { setSelected(decodeURIComponent(target)); setView('work'); setSearchOpen(false); } else { setView('home'); } };
+    const navigation = () => { const route = readRoute(location.hash); if (route.recordingId) setSelected(route.recordingId); setView(route.view); setSearchOpen(false); };
     window.addEventListener('hashchange', navigation); window.addEventListener('popstate', navigation);
     const keyboard = () => document.querySelector('.fresh-app')?.setAttribute('data-modality', 'keyboard');
     const pointer = () => document.querySelector('.fresh-app')?.setAttribute('data-modality', 'pointer');
-    window.addEventListener('keydown', keyboard); window.addEventListener('pointerdown', pointer);
-    return () => { window.removeEventListener('hashchange', navigation); window.removeEventListener('popstate', navigation); window.removeEventListener('keydown', keyboard); window.removeEventListener('pointerdown', pointer); };
+    window.addEventListener('keydown', keyboard); window.addEventListener('pointerdown', pointer); window.addEventListener('pointermove', pointer, { passive: true });
+    return () => { window.removeEventListener('hashchange', navigation); window.removeEventListener('popstate', navigation); window.removeEventListener('keydown', keyboard); window.removeEventListener('pointerdown', pointer); window.removeEventListener('pointermove', pointer); };
   }, []);
-  const open = (id: string) => { setSelected(id); setView('work'); history.replaceState(null, '', `${location.pathname}${location.search}#/r/${encodeURIComponent(id)}`); };
+  const navigate = (next: View, id = selected) => {
+    const hash = routeHash(next, id);
+    if (location.hash !== hash) history.pushState(null, '', `${location.pathname}${location.search}${hash}`);
+    if (id) setSelected(id); setView(next); setSearchOpen(false);
+  };
+  const open = (id: string) => navigate('work', id);
   const importSource = (source: DiscoveredSource) => run(async () => { const r = await api.import(source); await reload(); open(r.recordingId); });
   return <div data-motion={preferences.motion ? 'on' : 'off'} data-hover-reading={preferences.hoverReading ? 'on' : 'off'} data-density={preferences.compact ? 'compact' : 'comfortable'} className={`fresh-app fr-app ${appearance === 'modern' ? 'md-app' : ''}`}>
     <aside className="fr-rail" aria-label="Main navigation">
-      <button className="fr-brand-button" aria-label="Drishya home" onClick={() => setView('home')}><Brand compact /></button>
+      <button className="fr-brand-button" aria-label="Drishya home" onClick={() => navigate('home')}><Brand compact /></button>
       <div className="fr-rail-main">{([
         ['home', 'home', 'Sessions'], ['work', 'work', 'Workspace'],
-      ] as [View, IconName, string][]).map(([id, icon, label]) => <button key={id} className={`fr-rail-item ${view === id ? 'is-active' : ''}`} title={label} aria-label={label} aria-current={view === id ? 'page' : undefined} disabled={id !== 'home' && !selected} onClick={() => setView(id)}><Icon name={icon} /><span>{label}</span></button>)}</div>
-      <div className="fr-rail-bottom"><button className="fr-rail-item" title="Search captured evidence · Ctrl K" aria-label="Search captured evidence" disabled={!selected} onClick={() => setSearchOpen(true)}><Icon name="search" /></button><button className={`fr-rail-item ${view === 'settings' ? 'is-active' : ''}`} title="Settings" aria-label="Settings" onClick={() => setView('settings')}><Icon name="settings" /></button>{onExit && <button className="fr-rail-item" title="Open previous workspace" aria-label="Open previous workspace" onClick={onExit}><Icon name="back" /></button>}<span className="fr-local-dot" title="Local daemon" /></div>
+      ] as [View, IconName, string][]).map(([id, icon, label]) => <button key={id} className={`fr-rail-item ${view === id ? 'is-active' : ''}`} title={label} aria-label={label} aria-current={view === id ? 'page' : undefined} disabled={id !== 'home' && !selected} onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span></button>)}</div>
+      <div className="fr-rail-bottom"><button className="fr-rail-item" title="Search captured evidence · Ctrl K" aria-label="Search captured evidence" disabled={!selected} onClick={() => setSearchOpen(true)}><Icon name="search" /></button><button className={`fr-rail-item ${view === 'settings' ? 'is-active' : ''}`} title="Settings" aria-label="Settings" onClick={() => navigate('settings')}><Icon name="settings" /></button>{onExit && <button className="fr-rail-item" title="Open previous workspace" aria-label="Open previous workspace" onClick={onExit}><Icon name="back" /></button>}<span className="fr-local-dot" title="Local daemon" /></div>
     </aside>
     <div className="fr-shell">
-      <header className="fr-topbar"><div className="fr-breadcrumb"><button className="md-home-button" aria-label="Sessions" onClick={() => setView('home')}>↖</button><Brand /><span className="fr-divider" />{recording && view !== 'home' ? <><span>{shortRoot(recording.workspaceRoot)}</span><Icon name="chevron" size={12} /><strong>{view === 'work' ? 'Work stage' : view === 'repository' ? 'Repository' : view === 'review' ? 'Review' : 'Settings'}</strong></> : <strong>{view === 'settings' ? 'Settings' : 'Your workspace'}</strong>}</div><div className="fr-topbar-actions"><span className="fr-local-badge"><i />Local</span>{selected && <button className="md-work-button" aria-label="Workspace" onClick={() => setView('work')}>Workspace</button>}<button className="md-settings-button" title="Settings" aria-label="Settings" onClick={() => setView('settings')}><Icon name="settings" size={18} /></button><button className="fr-search-trigger" disabled={!selected} onClick={() => setSearchOpen(true)}><Icon name="search" size={14} /><span>Find evidence</span><kbd>⌘ K</kbd></button></div></header>
+      <header className="fr-topbar"><div className="fr-breadcrumb"><button className="md-home-button" aria-label="Sessions" onClick={() => navigate('home')}>↖</button><Brand /><span className="fr-divider" />{recording && view !== 'home' ? <><span>{shortRoot(recording.workspaceRoot)}</span><Icon name="chevron" size={12} /><strong>{view === 'work' ? 'Work stage' : view === 'repository' ? 'Repository' : view === 'review' ? 'Review' : 'Settings'}</strong></> : <strong>{view === 'settings' ? 'Settings' : 'Your workspace'}</strong>}</div><div className="fr-topbar-actions"><span className="fr-local-badge"><i />Local</span>{selected && <button className="md-work-button" aria-label="Workspace" onClick={() => navigate('work')}>Workspace</button>}<button className="md-settings-button" title="Settings" aria-label="Settings" onClick={() => navigate('settings')}><Icon name="settings" size={18} /></button><button className="fr-search-trigger" disabled={!selected} onClick={() => setSearchOpen(true)}><Icon name="search" size={14} /><span>Find evidence</span><kbd>⌘ K</kbd></button></div></header>
       {error && <div className="fr-error" role="alert"><span>{error}</span><button aria-label="Dismiss error" onClick={() => setError(undefined)}><Icon name="close" size={16} /></button></div>}
-      {view === 'home' ? <ModernLibrary recordings={recordings} sources={sources} pending={pending} ready={ready} errors={discoveryErrors} discover={() => void run(discover)} open={open} importSource={importSource} /> : view === 'settings' ? <Settings api={api} /> : recording ? <Workspace modern={appearance === 'modern'} key={recording.id} api={api} recording={recording} recordings={recordings} view={view} onView={setView} onOpen={open} revision={revision} onReload={reload} onError={setError} searchTarget={searchTarget} /> : <div className="fr-empty"><Icon name="work" size={32} /><h2>Choose a session to begin.</h2><Button onClick={() => setView('home')}>Browse sessions</Button></div>}
+      {view === 'home' ? <ModernLibrary recordings={recordings} sources={sources} pending={pending} ready={ready} errors={discoveryErrors} discover={() => void run(discover)} open={open} importSource={importSource} /> : view === 'settings' ? <Settings api={api} /> : recording ? <Workspace modern={appearance === 'modern'} key={recording.id} api={api} recording={recording} recordings={recordings} view={view} onView={navigate} onOpen={open} revision={revision} onReload={reload} onError={setError} searchTarget={searchTarget} /> : <div className="fr-empty"><Icon name="work" size={32} /><h2>Choose a session to begin.</h2><Button onClick={() => navigate('home')}>Browse sessions</Button></div>}
     </div>
-    {searchOpen && selected && <EvidenceSearch api={api} recordingId={selected} onClose={() => setSearchOpen(false)} onSelect={observationId => { setSearchOpen(false); setView('work'); setSearchTarget(previous => ({ id: observationId, revision: (previous?.revision ?? 0) + 1 })); }} />}
+    {searchOpen && selected && <EvidenceSearch api={api} recordingId={selected} onClose={() => setSearchOpen(false)} onSelect={observationId => { setSearchOpen(false); navigate('work'); setSearchTarget(previous => ({ id: observationId, revision: (previous?.revision ?? 0) + 1 })); }} />}
   </div>;
 }
 
