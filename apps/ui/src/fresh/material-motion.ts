@@ -2,14 +2,14 @@ import { useLayoutEffect, useRef } from 'react';
 
 /** One real material, one transform; absent/occluded origins do not get invented. */
 export function useMaterialMotion(node: React.RefObject<HTMLButtonElement | null>, options: {
-  arrival: boolean; path?: string; tool: string; kind?: string; revision: unknown;
+  arrival: boolean; suspended?: boolean; path?: string; tool: string; kind?: string; revision: unknown;
 }) {
   const previous = useRef<DOMRect | undefined>(undefined);
   const motion = useRef<Animation | undefined>(undefined);
   const arrived = useRef(false);
   useLayoutEffect(() => {
     const element = node.current;
-    if (!element) return;
+    if (!element || options.suspended || element.hasAttribute('data-reading')) return;
     const target = element.getBoundingClientRect();
     const last = previous.current;
     previous.current = target;
@@ -37,7 +37,7 @@ export function useMaterialMotion(node: React.RefObject<HTMLButtonElement | null
     ], { duration: 240, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
     motion.current = animation;
     return () => animation.cancel();
-  }, [node, options.arrival, options.path, options.tool, options.kind, options.revision]);
+  }, [node, options.arrival, options.suspended, options.path, options.tool, options.kind, options.revision]);
   useLayoutEffect(() => () => motion.current?.cancel(), []);
 }
 

@@ -140,7 +140,7 @@ test('fresh backward replay removes completed output and scopes file activity to
   await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
   await expect(page.locator('.fresh-app')).toBeVisible();
   await page.goto(`${server.url}/?experience=fresh#/r/${id}`);
-  const card = page.locator('.fr-action-read').filter({ has: page.getByText(operation.title, { exact: true }) }).first();
+  const card = page.locator('.fr-action-read').filter({ has: page.getByTitle(operation.title, { exact: true }) }).first();
   await card.scrollIntoViewIfNeeded();
   await expect(card.locator('.fr-action-material pre')).toBeVisible();
   await card.click();
@@ -152,7 +152,7 @@ test('fresh backward replay removes completed output and scopes file activity to
   for (let n = 0; n < step; n++) await range.press('ArrowRight');
   await expect(range).toHaveValue(String(step));
   // A pending read's derived title has no completed range yet.
-  const pendingCard = page.locator('.fr-action-read').filter({ has: page.getByText(pending.title, { exact: true }) }).first();
+  const pendingCard = page.locator('.fr-action-read').filter({ has: page.getByTitle(pending.title, { exact: true }) }).first();
   await expect(pendingCard).toBeVisible();
   await expect(pendingCard.locator('.fr-action-material pre')).toHaveCount(0);
   expect(historyRequests.at(-1)?.step).toBe(step);
@@ -252,4 +252,102 @@ test('Modern map explores actual files with keyboard controls and maintains read
     await expect(map.getByRole('button', { name: 'Fit', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
+});
+
+test('Modern header reading enlarges one material, preserves history and returns from its current geometry', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.md-library')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['claude-code']}`);
+  const stream = page.getByRole('region', { name: 'Captured work', exact: true });
+  await expect(page.locator('.md-action-slot').first()).toBeVisible();
+  await stream.press('Control+Home');
+  const card = page.locator('.fr-action').first();
+  const header = card.locator('.fr-action-type');
+  await expect(card.locator('.fr-action-material')).toContainText('import type { Cart }');
+  await expect.poll(() => card.evaluate(e => e.getAnimations().length)).toBe(0);
+  const before = await card.boundingBox();
+  const count = await page.locator('.fr-action').count();
+  const history = await stream.evaluate(e => ({ height: e.scrollHeight, top: e.scrollTop }));
+  await header.hover();
+  await expect(card).toHaveAttribute('data-reading', 'open');
+  await expect.poll(async () => (await card.boundingBox())!.width).toBeGreaterThan(before!.width + 30);
+  await expect.poll(() => card.evaluate(e => e.getAnimations().length)).toBe(0);
+  expect(await page.locator('.fr-action').count()).toBe(count);
+  expect(await stream.evaluate(e => e.scrollHeight)).toBe(history.height);
+  const opened = await card.boundingBox();
+  const slotBefore = await card.locator('..').boundingBox();
+  await stream.evaluate(e => e.scrollTop += 35);
+  const moved = await card.boundingBox();
+  expect(Math.abs(moved!.y - opened!.y + 35)).toBeLessThan(2);
+  expect((await card.locator('..').boundingBox())!.height).toBe(slotBefore!.height);
+  await page.keyboard.press('Escape');
+  await expect(card).not.toHaveAttribute('data-reading');
+  expect(Math.abs((await card.boundingBox())!.width - before!.width)).toBeLessThan(2);
+  await header.hover();
+  await expect(card).toHaveAttribute('data-reading', 'open');
+  await page.mouse.move(5, 5);
+  await expect(card).not.toHaveAttribute('data-reading');
+  expect(Math.abs((await card.boundingBox())!.height - before!.height)).toBeLessThan(3);
+});
+
+test('Modern keeps every projected patch line and uses local fonts and distinct syntax', async ({ page }) => {
+  await page.route('**/history', async route => {
+    const response = await route.fetch(), body = await response.json();
+    for (const op of body.projection.operations) if (op.detail.kind === 'edit') {
+      op.detail.hunks = [{ oldStart: 1, oldLines: 0, newStart: 1, newLines: 50,
+        lines: Array.from({ length: 50 }, (_, i) => `+const captured_${i} = make(${i}, "literal ${i}");`) }];
+    }
+    await route.fulfill({ response, json: body });
+  });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.md-library')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['claude-code']}`);
+  const patch = page.locator('.md-patch-preview').first();
+  await expect(patch).toContainText('captured_49');
+  expect(await patch.locator('code').count()).toBe(50);
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.locator('.md-app').evaluate(e => getComputedStyle(e).fontFamily)).toContain('ModernSans');
+  const colors = await patch.evaluate(e => ['keyword', 'number', 'string'].map(k => getComputedStyle(e.querySelector(`.fr-syntax-${k}`)!).color));
+  expect(new Set(colors).size).toBe(3);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('region', { name: 'Captured work', exact: true }).press('Control+Home');
+  const first = page.locator('.fr-action').first();
+  await first.locator('.fr-action-type').hover();
+  await expect(first).toHaveAttribute('data-reading', 'open');
+  expect(await first.evaluate(e => e.getAnimations().length)).toBe(0);
+});
+
+test('Modern MCP uses the same header reader and local wheel without blocking history', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.route('**/history', async route => {
+    const response = await route.fetch(), body = await response.json();
+    const op = body.projection.operations[0];
+    op.kind = 'mcp'; op.tool = 'lookup'; op.title = 'Lookup captured records';
+    op.detail = { kind: 'mcp', server: 'synthetic-server', tool: 'lookup', input: { query: 'records' }, resultPreview: Array.from({ length: 90 }, (_, i) => `Captured row ${i}`).join('\n') };
+    await route.fulfill({ response, json: body });
+  });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.md-library')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['claude-code']}`);
+  const stream = page.getByRole('region', { name: 'Captured work', exact: true });
+  await stream.press('Control+Home');
+  const card = page.locator('.fr-action-mcp').first();
+  await card.locator('.fr-action-type').hover();
+  await expect(card).toHaveAttribute('data-reading', 'open');
+  await expect.poll(() => card.evaluate(e => e.getAnimations().length)).toBe(0);
+  const body = card.locator('.md-material-body');
+  await body.hover();
+  const scrollBefore = await stream.evaluate(e => e.scrollTop);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(() => body.evaluate(e => e.scrollTop)).toBeGreaterThan(0);
+  expect(await stream.evaluate(e => e.scrollTop)).toBe(scrollBefore);
+  await expect(card).toHaveAttribute('data-reading', 'open');
+  await body.evaluate(e => e.scrollTop = e.scrollHeight);
+  await page.mouse.wheel(0, 30);
+  await expect.poll(() => stream.evaluate(e => e.scrollTop)).toBeGreaterThan(scrollBefore);
+  await expect(card).toHaveAttribute('data-reading', 'open');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(card).not.toHaveAttribute('data-reading');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

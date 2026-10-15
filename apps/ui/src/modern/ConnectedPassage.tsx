@@ -11,7 +11,7 @@ export function ConnectedPassage({ children, revision }: { children: ReactNode; 
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const bounds = root.getBoundingClientRect();
-        const cards = [...root.querySelectorAll<HTMLElement>('.fr-action')].slice(0, 120).map(el => el.getBoundingClientRect());
+        const cards = [...root.querySelectorAll<HTMLElement>('.md-action-slot')].slice(0, 120).map(el => el.getBoundingClientRect());
         const paths = cards.slice(1).map((next, index) => {
           const previous = cards[index]!;
           const ax = previous.right - bounds.left, ay = previous.top + 24 - bounds.top;
@@ -24,7 +24,7 @@ export function ConnectedPassage({ children, revision }: { children: ReactNode; 
       });
     };
     const observer = new ResizeObserver(measure);
-    observer.observe(root); root.querySelectorAll('.fr-action').forEach(el => observer.observe(el));
+    observer.observe(root); root.querySelectorAll('.md-action-slot').forEach(el => observer.observe(el));
     measure();
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [revision]);
