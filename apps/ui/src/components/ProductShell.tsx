@@ -78,7 +78,7 @@ function Settings() {
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
-    <SettingsSections>
+    <SettingsSections categories={['Appearance', 'Reading', 'Playback', 'Privacy', 'Keyboard']}>
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
       <div className="theme-options" aria-label="Colour theme">{THEMES.map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
     </section>

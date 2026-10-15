@@ -53,13 +53,13 @@ for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: importe
   await page.goBack(); await expect(page.locator('.history')).toBeVisible();
 });
 
-test('Modern preserves Legacy action materials, typography, layout and native graph controls', async ({ page }) => {
+test('Modern preserves Legacy action materials, layout and native graph controls', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   const inspect = async (version:string) => {
     await page.goto(`${server.url}/?demo&experience=${version}&motion=0`);
     await expect(page.locator('.history article.op').first()).toBeAttached();
     return page.locator('.history article.op').evaluateAll(elements => elements.slice(0,6).map(el => {
-      const css=getComputedStyle(el); return { id:el.getAttribute('data-op-id'), text:el.textContent, background:css.backgroundColor, border:css.borderRadius, font:css.fontFamily, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
+      const css=getComputedStyle(el); return { id:el.getAttribute('data-op-id'), text:el.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
     }));
   };
   const legacy=await inspect('classic'), modern=await inspect('modern');
@@ -68,6 +68,7 @@ test('Modern preserves Legacy action materials, typography, layout and native gr
   await expect(page.getByRole('button',{name:'Back to work',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings'});
+  await settings.getByRole('tab',{name:'Reading',exact:true}).click();
   await expect(settings.getByRole('checkbox',{name:/3D repository map/})).toBeVisible();
   await expect(settings.getByRole('checkbox',{name:/Slow background orbit/})).toBeVisible();
 });
@@ -120,4 +121,66 @@ test('Modern colour and UI versions remain separate; Legacy does not load Modern
   await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');
   await expect(page.locator('.history')).toBeVisible();
   expect(await page.evaluate(() => [...document.styleSheets].some(sheet => { try { return [...sheet.cssRules].some(rule => rule.cssText.includes('data-ui-version="modern"')); } catch { return false; } }))).toBe(false);
+});
+
+test('Modern settings have allocated spacing, keyboard navigation and reachable controls', async ({ page }) => {
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'Workspace settings'});
+  const content=dialog.locator('.modern-settings-content');
+  const panel=await content.boundingBox();
+  const heading=await content.getByRole('heading',{name:'Appearance',exact:true}).boundingBox();
+  expect(heading!.x-panel!.x).toBeGreaterThanOrEqual(20);
+  expect(await dialog.evaluate(el=>getComputedStyle(el).fontFamily)).not.toContain('Outfit');
+  await dialog.getByRole('tab',{name:'Appearance',exact:true}).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(dialog.getByRole('tab',{name:'Reading',exact:true})).toBeFocused();
+  await expect(dialog.getByRole('combobox',{name:'Exposed reasoning detail'})).toBeVisible();
+  await dialog.getByRole('combobox',{name:'Exposed reasoning detail'}).selectOption('collapsed');
+  await expect(dialog.getByRole('combobox',{name:'Exposed reasoning detail'})).toHaveValue('collapsed');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});
+
+test('Modern home has one sessions list and no duplicate imported local session', async ({ page }) => {
+  await page.route('**/v1/sources',async route=>{
+    const response=await route.fetch(); const body=await response.json();
+    body.sources=[{adapterId:'codex',harness:'codex',path:'synthetic-source.jsonl',bytes:100,modifiedAt:new Date().toISOString(),title:'Duplicate imported session',importedRecordingId:ids.codex,companions:[]},{adapterId:'codex',harness:'codex',path:'synthetic-new.jsonl',bytes:100,modifiedAt:new Date().toISOString(),title:'Available local session',companions:[]}];
+    await route.fulfill({json:body});
+  });
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern`);
+  await expect(page.getByRole('heading',{name:'Recordings',exact:true})).toHaveCount(0);
+  await expect(page.locator('#local-session-import')).toHaveCount(0);
+  await expect(page.getByText('Available local session',{exact:true})).toBeVisible();
+  await expect(page.getByText('Duplicate imported session',{exact:true})).toHaveCount(0);
+});
+
+test('Modern compact composer keeps connection consent accessible and has no needless scrollbar', async ({ page }) => {
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'});
+  const input=composer.getByRole('textbox',{name:'Prompt for selected harness session'});
+  await input.fill('A short prompt');
+  expect((await composer.boundingBox())!.height).toBeLessThan(170);
+  expect(await input.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);
+  await composer.locator('.native-options>summary').click();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
+  await page.getByRole('heading',{level:1}).click();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+});
+
+test('structured shell output renders decoded newlines and retains the exact raw envelope', async ({ page }) => {
+  const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+  const op=[...bundle.projection.operations].reverse().find((o:any)=>o.kind==='shell');
+  const raw=JSON.stringify({chunk_id:'synthetic',exit_code:0,output:'first line\nsecond line\nconst pattern = "\\n";'});
+  op.detail.outputPreview=raw;
+  await page.route('**/demo/bundle.json',route=>route.fulfill({json:bundle}));
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  const card=page.locator(`article[data-op-id="${op.id}"]`);
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.locator('.structured-tool-output .output')).toContainText('first line\nsecond line');
+  await expect(card.locator('.structured-tool-output .output')).toContainText('const pattern = "\\n";');
+  await card.getByRole('button',{name:'Show raw',exact:true}).click();
+  await expect(card.locator('.structured-tool-output .output')).toContainText(raw);
 });

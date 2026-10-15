@@ -1,0 +1,54 @@
+/* Compact native composer: target, immediately usable prompt, then attachment/settings actions. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .prompt-composer.open { width:min(680px,calc(100% - 44px)); padding:12px 17px 10px; border-radius:18px; background:color-mix(in srgb,var(--s1) 91%,var(--source) 3%); }
+:root[data-ui-version=modern][data-experience=classic] .composer-target { padding-bottom:3px; }
+:root[data-ui-version=modern][data-experience=classic] .composer-target code { display:none; }
+:root[data-ui-version=modern][data-experience=classic] .composer-workspace { font-size:10px; color:var(--t3); }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer textarea { min-height:48px; font-size:14px; line-height:1.65; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer .composer-actions { margin-top:2px; align-items:center; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer .native-options { left:60px; bottom:20px; margin:0; max-width:calc(100% - 125px); }
+:root[data-ui-version=modern][data-experience=classic] .native-options>summary { font:11px/1.5 var(--sans); color:var(--t3); padding:4px 8px; border-radius:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:root[data-ui-version=modern][data-experience=classic] .native-options-menu { width:min(360px,calc(100vw - 55px)); font-size:12px; }
+:root[data-ui-version=modern][data-experience=classic] .native-options-menu>.btn { width:100%; margin-bottom:10px; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer .send-prompt { background:var(--modern-accent)!important; border-radius:50%!important; width:32px; height:32px; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer .stop-turn { background:var(--s3)!important; border-radius:50%!important; color:var(--t1)!important; }
+.modern-utility-glyph { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-menu>summary { width:36px; height:36px; display:grid; place-items:center; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-menu>summary:after { display:none; }
+/* A short dock is centered; long inventories grow only to their available allocation. */
+:root[data-ui-version=modern][data-experience=classic] .workbench-station { top:calc((100% + var(--workspace-header-h, 70px) - 48px)/2); bottom:auto; transform:translateY(-50%); height:max-content; max-height:calc(100% - var(--workspace-header-h, 70px) - 90px); overflow:auto; gap:12px; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-station>* { flex-shrink:0; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-station .workbench-review { padding-bottom:10px; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-review>div { display:flex; flex-wrap:wrap; gap:5px; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-review .btn { flex:1 1 auto; min-height:29px; padding:6px 8px; font-size:11px; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-review p { display:none; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-navigation-open { font-size:11px; padding:7px 4px; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-station .instrument { min-height:42px; }
+:root[data-ui-version=modern][data-experience=classic] .home-grid { display:block; max-width:1100px; margin:auto; }
+:root[data-ui-version=modern][data-experience=classic] .home .home-intro h1 { font-size:40px; letter-spacing:-.045em; font-weight:600; }
+:root[data-ui-version=modern][data-experience=classic] .home .home-filters { max-width:1100px; margin-inline:auto; }
+:root[data-ui-version=modern][data-experience=classic] .session-group { border:1px solid var(--line); border-radius:13px; background:color-mix(in srgb,var(--s1) 45%,transparent); overflow:hidden; margin:16px 0; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-group-heading { padding:15px 18px; }
+:root[data-ui-version=modern][data-experience=classic] .session-time-section>h3 { padding-inline:18px; font-size:10px; letter-spacing:.05em; text-transform:uppercase; }
+:root[data-ui-version=modern][data-experience=classic] .session-time-section .row { margin:0 10px; padding:15px 10px; border-radius:8px; }
+.modern-sessions-note { font-size:12px; color:var(--t3); line-height:1.7; margin:12px 0 20px; }
+/* Colors describe syntax only; captured characters, ranges and card geometry stay intact. */
+:root[data-ui-version=modern][data-theme=dark] .tk-kw { color:#d6a1ff; }
+:root[data-ui-version=modern][data-theme=dark] .tk-fn { color:#86d3ff; }
+:root[data-ui-version=modern][data-theme=dark] .tk-str { color:#efca8d; }
+:root[data-ui-version=modern][data-theme=dark] .tk-num { color:#77e6ca; }
+:root[data-ui-version=modern][data-theme=dark] .tk-property { color:#b1cfff; }
+:root[data-ui-version=modern][data-theme=dark] .tk-type { color:#ffe08a; }
+:root[data-ui-version=modern][data-theme=dark] .tk-com { color:#8ca897; }
+:root[data-ui-version=modern][data-theme=light] .tk-kw { color:#8545a8; }
+:root[data-ui-version=modern][data-theme=light] .tk-fn { color:#17699b; }
+:root[data-ui-version=modern][data-theme=light] .tk-str { color:#865313; }
+:root[data-ui-version=modern][data-theme=light] .tk-num { color:#1b7766; }
+:root[data-ui-version=modern][data-theme=light] .tk-property { color:#365995; }
+:root[data-ui-version=modern][data-theme=light] .tk-type { color:#92690b; }
+:root[data-ui-version=modern][data-theme=light] .tk-com { color:#63766b; }
+@media(max-width:820px) {
+ :root[data-ui-version=modern][data-experience=classic] .workbench-station { top:calc(var(--workspace-header-h, 70px) + 62px); bottom:70px; transform:none; height:auto; max-height:none; }
+ :root[data-ui-version=modern][data-experience=classic] .connected-workspace .prompt-composer.open { width:calc(100vw - 28px); }
+ :root[data-ui-version=modern][data-experience=classic] .native-options-menu { max-height:50dvh; }
+}
+:root[data-ui-version=modern][data-experience=classic] .home .home-search input { background:none; border:0; box-shadow:none; }
