@@ -314,3 +314,6 @@ input:not([type="checkbox"]), select { background-color: var(--s2); border-color
 @media (prefers-reduced-motion: reduce) {
   .dock .instrument, .dock .server-tool, .spine-file, .workspace-views button, .btn, .theme-option { transition: none; }
 }
+.structured-output-controls { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:5px 0 10px; font:10px/1.5 var(--sans); color:var(--t3); }
+.structured-output-controls button { flex:none; border:1px solid var(--line); border-radius:5px; background:var(--s2); color:var(--t2); padding:3px 7px; font:inherit; }
+.structured-output-controls button:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
