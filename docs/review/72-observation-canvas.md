@@ -1,5 +1,9 @@
 # 72 — Observation canvas presentation
 
+Published for review in [PR #64](https://github.com/drishya-dev/drishya/pull/64),
+with Yash (`yashdoke7`) requested as reviewer. No hosted CI dispatched; the local
+validation and remaining acceptance limits below are unchanged.
+
 15 October 2026, Harsh with Codex, local `codex/picgen-redesign` after integrating
 main through `1733c98`. Continues the existing local PicGen foundation in review
 71 and preserves the independent Workbench draft from the other review 71.
