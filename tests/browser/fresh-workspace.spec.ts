@@ -351,3 +351,30 @@ test('Modern MCP uses the same header reader and local wheel without blocking hi
   await expect(card).not.toHaveAttribute('data-reading');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('Modern keeps text drafts per session across navigation, but never across a reload', async ({ page }) => {
+  await page.route('**/v1/recordings', async route => {
+    const response = await route.fetch(), body = await response.json();
+    for (const recording of body.recordings) recording.workspaceRoot = root;
+    await route.fulfill({ response, json: body });
+  });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  const sessions = page.locator('.md-session-card');
+  await expect(sessions).toHaveCount(2);
+  const title = await sessions.first().locator('h3').innerText();
+  await sessions.first().click();
+  const prompt = page.getByRole('textbox', { name: 'Prompt to native agent' });
+  await prompt.fill('My unsent, private review question');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Workspace', exact: true }).click();
+  await expect(prompt).toHaveValue('My unsent, private review question');
+  await page.getByRole('button', { name: 'Sessions', exact: true }).click();
+  await sessions.filter({ hasNotText: title }).click();
+  await expect(prompt).toHaveValue('');
+  await prompt.fill('Different session draft');
+  await page.getByRole('button', { name: 'Sessions', exact: true }).click();
+  await sessions.filter({ hasText: title }).click();
+  await expect(prompt).toHaveValue('My unsent, private review question');
+  await page.reload();
+  await expect(prompt).toHaveValue('');
+});
