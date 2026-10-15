@@ -31,11 +31,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex - Modern reading craft
-- **When:** 15 October 2026, branch `codex/modern-reading-craft`; review [74](review/74-modern-reading-craft.md). Previous integration remains on main; Canvas, Modern and Legacy are retained.
-- **Delivered in separate commits:** `1f4b1b8` brighter material/syntax palette and local Outfit/JetBrains Mono; `0cd5d0c` stable-slot header-hover reading, single local scrollbar, complete projected patch/search lines, compact filenames and outcome-first tests; `6568d09` bounded private in-memory drafts per native session. All actual code stays selectable and captured; no copied animation text.
-- **Checks:** both typechecks, **374 units/58 files**, production build, **28 browser journeys** covering Modern and Canvas/version integration; actual local Codex Drishya and Claude Skeletongraph pages inspected. Hover geometry/history height, reduced motion, MCP wheel chaining, replay as-of material, responsive bounds and draft isolation pass. No hosted CI or native turn. Original package-manager/artwork changes remain local and excluded.
-- **Next:** human assessment of materials/motion, then remaining Modern 3D/resource controls, whole-history prompt navigation, offline entry, reading/navigation memory and review-50 utility. Native real-account, physical/platform/accessibility and ten-minute acceptance remain release gates; do not claim full parity from this increment.
+### Yash with Codex - Modern workflow craft
+- **When:** 15 October 2026, `codex/modern-reading-craft`, open [PR #65](https://github.com/drishya-dev/drishya/pull/65). Review [75](review/75-modern-workflow-craft.md) continues [74](review/74-modern-reading-craft.md).
+- **Delivered separately:** `0f36b89` correct native-kind/MCP-server/agent focus, independent connection results and stale-search handling; `39f9689` persistent motion/hover/backdrop/spacing controls; `7f76627` browser view navigation and searchable bounded discovery dialog; `a59d3a4` complete-index prompt navigation, wider evidence reader, in-file search cancellation and version-route compatibility. Existing bright typography/materials/header-hover and memory-only drafts retained; Canvas/Legacy preserved.
+- **Checks:** both typechecks, 376 full-suite units/59 files plus the added version regression passing in its three-test file; production build; final **36 Modern/Canvas browser journeys** pass. Actual Codex Drishya and Claude Skeletongraph inspected locally, including older Codex prompt navigation. No hosted CI or native turn. Package-manager/artwork edits remain excluded.
+- **Next:** bounded evidence reading memory, native attachment validation/preview, reconnect/retry UX, then true 3D Modern map and remaining review-50 utility/offline/whole-interface craft. Review 75 lists known gaps explicitly; this is not final product, full parity or public-release acceptance.
 
 *Each person overwrites their own block. Keep it to what the other person needs in order to not redo or undo your work.*
 

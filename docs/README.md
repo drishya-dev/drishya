@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Modern continuation:** [75 — workflow craft](review/75-modern-workflow-craft.md) records the 15 October functional/interaction audit and remaining work; it extends 74 and does not replace Canvas or Legacy.
+
 **15 October integrated UI precedence:** Preserve **Canvas**, **Modern** and **Legacy** as independent selectable presentations in Settings. Canvas is the new-install default; existing saved choices and explicit session links win. Saved `fresh` choices migrate to Modern; Workbench is retired from the picker. The two review-72 documents govern their own presentation only; neither removes the other. Backend evidence, permissions and local-only CI policy remain shared.
 
 **15 October observation canvas:** [72](review/72-observation-canvas.md) implements the pasted node-canvas brief as the default local Canvas presentation. Its read-only/search-only shell, specified palette, geometry and motion supersede earlier presentation choices for this route. Classic and the independent Workbench remain explicit alternatives; capture, evidence and native consent contracts remain intact.
