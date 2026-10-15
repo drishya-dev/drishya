@@ -31,13 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex - Modern workflow craft
-- **When:** 15 October 2026, `codex/modern-reading-craft`, open [PR #65](https://github.com/drishya-dev/drishya/pull/65). Review [75](review/75-modern-workflow-craft.md) continues [74](review/74-modern-reading-craft.md).
-- **Delivered separately:** `0f36b89` correct native-kind/MCP-server/agent focus, independent connection results and stale-search handling; `39f9689` persistent motion/hover/backdrop/spacing controls; `7f76627` browser view navigation and searchable bounded discovery dialog; `a59d3a4` complete-index prompt navigation, wider evidence reader, in-file search cancellation and version-route compatibility. Existing bright typography/materials/header-hover and memory-only drafts retained; Canvas/Legacy preserved.
-- **Checks:** both typechecks, 376 full-suite units/59 files plus the added version regression passing in its three-test file; production build; final **36 Modern/Canvas browser journeys** pass. Actual Codex Drishya and Claude Skeletongraph inspected locally, including older Codex prompt navigation. No hosted CI or native turn. Package-manager/artwork edits remain excluded.
-- **Next:** bounded evidence reading memory, native attachment validation/preview, reconnect/retry UX, then true 3D Modern map and remaining review-50 utility/offline/whole-interface craft. Review 75 lists known gaps explicitly; this is not final product, full parity or public-release acceptance.
+### Yash with Codex — Modern on Legacy's working foundation
 
-*Each person overwrites their own block. Keep it to what the other person needs in order to not redo or undo your work.*
+- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65; latest builder correction in [76](review/76-modern-legacy-foundation.md).
+- **Changed:** Reverted the interrupted, uncommitted Modern workspace re-layout. Modern now shares Legacy's complete working App/Viewer/history/action/hover/map/native implementation. A scoped surrounding-interface layer improves header, explorer, tools/review, composer, settings/search/readers and Home; main agent visualization stays Legacy's. Canvas and Legacy remain selectable. Fixed browser Back from logo/Home to the same loaded recording.
+- **Verified locally:** Both TypeScript checks, production build, **377 unit tests**; final combined **26 browser journeys**, plus **3 long-diff/header-hover checks** across Classic/Studio/Modern. Card parity test compares captured text, IDs, style and widths. Checked real Drishya Codex and Skeletongraph Claude sessions; rootless Claude stays explicitly read-only. No native prompt or hosted CI.
+- **Continue:** Refine Modern's surroundings using `modern/surroundings.css`; shared functional work belongs in existing Legacy components. Old Fresh/Modern shell files are unmounted and excluded from the runtime entry. Do not restart the rejected independent stage. Human preference, real native-account and physical/platform release acceptance remain open. User package/artwork edits untouched.
 
 ### @yash (with Claude)
 - **When:** 2026-09-22 → 25
@@ -151,6 +150,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **15 October — Modern foundation reset:** The builder explicitly supersedes independent/no-reference Modern: reuse Legacy's full functionality and preserve its agent visualization; modernize only surroundings with scoped styles. Shared code prevents parity drift. See [76](review/76-modern-legacy-foundation.md).
 
 - **15 October - Keep both builders' UI designs:** Canvas, Modern and Legacy remain selectable after PRs #63/#64. Canvas is the new-install default; saved/explicit selections win, fresh links migrate to Modern and Workbench stays retired. See [73](review/73-ui-version-integration.md).
 
