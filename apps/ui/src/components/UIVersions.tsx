@@ -5,8 +5,7 @@ import './ui-versions.css';
 const versions: { id: UIVersion; name: string; note: string; available: boolean }[] = [
   { id: 'canvas', name: 'Canvas', note: 'Read-only observation, connected actions and an independent evidence reader.', available: true },
   { id: 'classic', name: 'Legacy', note: 'The established continuous canvas, spatial map and full reading tools.', available: true },
-  { id: 'fresh', name: 'Workbench', note: 'The independent connected draft, preserved for comparison.', available: true },
-  { id: 'modern', name: 'Modern', note: 'A spatial black canvas with connected floating materials. In preparation.', available: false },
+  { id: 'modern', name: 'Modern', note: 'A black spatial canvas, connected floating materials and a compact toolbox.', available: true },
 ];
 
 export function SettingsSections({ children }: { children: ReactNode }) {

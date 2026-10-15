@@ -1,6 +1,10 @@
 # Drishya documentation — map and precedence
 
+**15 October integrated UI precedence:** Preserve **Canvas**, **Modern** and **Legacy** as independent selectable presentations in Settings. Canvas is the new-install default; existing saved choices and explicit session links win. Saved `fresh` choices migrate to Modern; Workbench is retired from the picker. The two review-72 documents govern their own presentation only; neither removes the other. Backend evidence, permissions and local-only CI policy remain shared.
+
 **15 October observation canvas:** [72](review/72-observation-canvas.md) implements the pasted node-canvas brief as the default local Canvas presentation. Its read-only/search-only shell, specified palette, geometry and motion supersede earlier presentation choices for this route. Classic and the independent Workbench remain explicit alternatives; capture, evidence and native consent contracts remain intact.
+
+**14 October Modern precedence:** [72](review/72-modern-spatial-workspace.md) supersedes 71 and earlier Studio/Classic composition choices for the new Modern version only. Legacy remains available. Workbench is no longer a UI choice; its saved links migrate to Modern. Backend/privacy/native truth and outstanding release acceptance remain unchanged.
 
 **14 October independent frontend:** [71](review/71-independent-new-frontend.md) records the builder's request for a completely new design from concept and backend capabilities, without consulting existing frontend designs/code. It supersedes prior visual-layout decisions for the explicit new draft, preserves Classic, and leaves evidence/privacy/native security and publishing-only CI intact.
 
