@@ -378,3 +378,52 @@ test('Modern keeps text drafts per session across navigation, but never across a
   await page.reload();
   await expect(prompt).toHaveValue('');
 });
+
+
+test('Modern map failure leaves workspace and native connection usable', async ({ page }) => {
+  await page.route('**/graph', route => route.fulfill({ status: 503, json: { error: 'Map temporarily unavailable' } }));
+  await page.route('**/controller', route => route.fulfill({ json: { available: true, state: 'idle', harness: 'codex', tools: [], inventory: 'unknown', approvals: [], output: '' } }));
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['codex']}`);
+  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toContainText(/checkout|total/);
+  await expect(page.locator('.fr-composer-top')).toContainText('Continue with Codex');
+  await expect(page.getByRole('alert')).toContainText('Repository map');
+});
+
+test('Modern tool focus sends the operation kind and combines agent focus', async ({ page }) => {
+  const filters: unknown[] = [];
+  await page.route('**/history', async route => { filters.push(route.request().postDataJSON().filter); await route.continue(); });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['codex']}`);
+  const tool = page.locator('.md-tool-list button').first();
+  await expect(tool).toBeVisible();
+  const kind = await tool.getAttribute('data-fr-kind');
+  await tool.click();
+  await expect.poll(() => filters.at(-1)).toEqual({ kind });
+  await expect(tool).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.md-agents summary').click();
+  await page.locator('.md-agent').first().click();
+  await expect.poll(() => filters.at(-1)).toMatchObject({ kind, agentId: expect.any(String) });
+  await tool.click();
+  await expect.poll(() => filters.at(-1)).toEqual({ agentId: expect.any(String) });
+});
+
+test('Modern search clears stale matches and pending status on an empty query', async ({ page }) => {
+  await page.route('**/search?*', async route => {
+    if (new URL(route.request().url()).searchParams.get('q') === 'first') await route.fulfill({ json: { hits: [{ id: 'first', snippet: 'First query evidence' }] } });
+    else { await new Promise(resolve => setTimeout(resolve, 500)); await route.fulfill({ json: { hits: [{ id: 'late', snippet: 'Late query evidence' }] } }); }
+  });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['codex']}`);
+  await page.getByRole('button', { name: /Find evidence/ }).click();
+  const query = page.getByRole('textbox', { name: 'Search captured evidence', exact: true });
+  await query.fill('first'); await expect(page.getByText('First query evidence')).toBeVisible();
+  await query.fill('second'); await expect(page.getByText('First query evidence')).toHaveCount(0);
+  await expect(page.getByText('Searching captured evidence…')).toBeVisible();
+  await query.fill('');
+  await expect(page.getByText('Search commands, tool output, code excerpts, and exposed prose.')).toBeVisible();
+  await expect(page.getByText('Late query evidence')).toHaveCount(0);
+});
