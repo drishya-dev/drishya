@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**15 October branding:** Supplied logo now covers tab/favicon, bookmark/touch and all existing app brand components. Optimized PNGs live in `apps/ui/public/brand/drishya-{32,180,192}.png`; fallback `public/favicon.ico`. Keep original `drishya.png` as source, use the 192 px derivative for UI marks. Build/HTTP/browser checks pass; no hosted CI.
+
 **Merged 15 October:** Modern refinement [PR #65](https://github.com/drishya-dev/drishya/pull/65) squash-merged as `84f76e2`; local `main` fast-forwarded. Reviews 76–80 describe the active shared Legacy visualization, recovered Modern composer/Toolbox, compact Git reader and final breadcrumb header/shared panel gradient. Individual increments remain on local `codex/modern-reading-craft`. Prior local validation applies to the exact merged tree; no hosted CI. User package-manager/artwork changes remain uncommitted.
 
 **15 October header/material refinement:** [80](review/80-modern-breadcrumb-header.md) replaces 79’s centered two-line Modern header with a horizontal Home / repository / session breadcrumb and right-side utilities. Files and Toolbox share a single neutral gradient token. Legacy visualization and 79’s compact Git reader remain intact. Local typechecks/build and 14 Modern browser journeys pass (final responsive correction rerun); no hosted CI.
