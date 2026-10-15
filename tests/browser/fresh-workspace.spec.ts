@@ -482,3 +482,37 @@ test('Modern discovery opens above long libraries and searches every local sourc
   await expect(page.getByRole('button', { name: /Connect session/ })).toBeFocused();
   await page.keyboard.press('/'); await expect(page.getByRole('textbox', { name: 'Filter sessions' })).toBeFocused();
 });
+
+
+test('Modern prompt navigation queries the complete index and keeps history live', async ({ page }) => {
+  const requests: { step: number; direction: number; types: string[] }[] = [];
+  const histories: Record<string, unknown>[] = [];
+  await page.route('**/history-marker', async route => { requests.push(route.request().postDataJSON()); await route.continue(); });
+  await page.route('**/history', async route => { histories.push(route.request().postDataJSON()); await route.continue(); });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['codex']}`);
+  await page.getByRole('button', { name: 'Previous captured prompt' }).click();
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests[0]).toMatchObject({ types: ['turn'], direction: -1 });
+  await expect.poll(() => histories.at(-1)).toMatchObject({ promptStep: expect.any(Number) });
+  expect(histories.at(-1)?.step).toBeUndefined();
+  await expect(page.locator('.md-canvas-controls button').filter({ hasText: 'Follow' })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Latest work', exact: true }).click();
+  await expect.poll(() => histories.at(-1)?.promptStep).toBeUndefined();
+});
+
+test('Modern reader can widen without creating page overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 950 });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.fresh-app')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids['codex']}`);
+  await page.locator('.fr-action').first().click();
+  const reader = page.locator('.fr-inspector');
+  const before = await reader.boundingBox();
+  await page.getByRole('button', { name: 'Widen reader' }).click();
+  await expect.poll(async () => (await reader.boundingBox())!.width).toBeGreaterThan(before!.width + 200);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole('button', { name: 'Close inspector' })).toBeVisible();
+});

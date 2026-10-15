@@ -14,6 +14,10 @@ describe('UI version navigation', () => {
     expect(resolveUIVersion('', 'unknown')).toBe('classic');
     expect(resolveUIVersion('?experience=studio', 'fresh')).toBe('studio');
   });
+  it('drops presentation-specific subviews when changing shells', () => {
+    expect(new URL(versionURL('http://localhost/?experience=modern#/r/recording/settings', 'classic')).hash).toBe('#/r/recording');
+    expect(new URL(versionURL('http://localhost/?experience=modern#/settings', 'canvas')).hash).toBe('#/');
+  });
   it('preserves the session, port and other query parameters when switching', () => {
     const url = new URL(versionURL('http://127.0.0.1:8894/?demo&experience=fresh#/r/recording', 'classic'));
     expect(url.port).toBe('8894'); expect(url.hash).toBe('#/r/recording');

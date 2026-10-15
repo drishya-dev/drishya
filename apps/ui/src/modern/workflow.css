@@ -42,3 +42,12 @@
 @keyframes md-dialog-arrive { from { opacity:0; transform:translateY(6px) scale(.98); } to { opacity:1; transform:none; } }
 @media(max-width:560px) { .md-discovery-dialog { padding:18px; max-height:calc(100dvh - 24px); } .md-discovery-search input { font-size:16px; } }
 @media(prefers-reduced-motion:reduce) { .md-discovery-dialog[open] { animation:none; } }
+
+.md-app .fr-history-control { position:sticky; top:0; z-index:7; flex-wrap:wrap; width:fit-content; max-width:100%; background:#14191feb; border-radius:10px; padding:6px 10px; box-shadow:0 6px 20px #0002; backdrop-filter:blur(10px); }
+.md-prompt-navigation { display:flex; align-items:center; gap:8px; font-size:11px; color:#b6c6d6; }
+.md-prompt-navigation button { width:28px; height:28px; border-radius:7px; background:#ffffff07; color:#dae8f1; }
+.md-prompt-navigation small { font-size:10px; max-width:180px; }
+.md-app .fr-inspector.md-reader-wide { width:min(1000px,calc(100% - 48px)); }
+.md-app .fr-inspector-heading>.fr-label { flex:1; }
+.md-app[data-motion=off] .fr-history-control { backdrop-filter:none; }
+@media(hover:hover) and (pointer:fine) { .md-prompt-navigation button:hover { background:#ffffff12; } }
