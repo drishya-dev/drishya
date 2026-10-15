@@ -5,7 +5,7 @@ import './ui-versions.css';
 const versions: { id: UIVersion; name: string; note: string; available: boolean }[] = [
   { id: 'canvas', name: 'Canvas', note: 'Read-only observation, connected actions and an independent evidence reader.', available: true },
   { id: 'classic', name: 'Legacy', note: 'The established continuous canvas, spatial map and full reading tools.', available: true },
-  { id: 'modern', name: 'Modern', note: 'A black spatial canvas, connected floating materials and a compact toolbox.', available: true },
+  { id: 'modern', name: 'Modern', note: 'Legacy’s full agent visualization, with a modern explorer, tools and prompt workspace.', available: true },
 ];
 
 export function SettingsSections({ children }: { children: ReactNode }) {

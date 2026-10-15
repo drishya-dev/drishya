@@ -1,0 +1,83 @@
+/* Modern is Legacy's working visualization with a distinct surrounding workspace.
+   Do not target History, Passage, Card, MapCanvas, arrival or hover geometry here.
+   Local chrome tokens intentionally do not recolour the captured work underneath. */
+:root[data-ui-version=modern][data-experience=classic] :is(.workspace-header,.folder-explorer,.workbench-station,.prompt-composer,.workspace-bar,.product-dialog,.search,.home) {
+  --modern-surface:color-mix(in srgb,var(--s1) 94%,var(--source) 6%);
+  --modern-raised:color-mix(in srgb,var(--s2) 95%,var(--source) 5%);
+  --modern-hairline:color-mix(in srgb,var(--t2) 16%,transparent);
+  --modern-accent:var(--focus);
+  --modern-shadow:0 10px 32px #00000015,inset 0 1px 0 #ffffff05;
+}
+:root[data-ui-version=modern][data-experience=classic][data-theme=dark] :is(.workspace-header,.folder-explorer,.workbench-station,.prompt-composer,.workspace-bar,.product-dialog,.search,.home) {
+  --modern-accent:#8cdec4;
+}
+/* An unobtrusive crown. Session title keeps the same centre and truncation behavior. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .workspace-header {
+  border:0; background:color-mix(in srgb,var(--bg) 83%,transparent); backdrop-filter:blur(14px);
+  box-shadow:0 1px 0 var(--line);
+}
+:root[data-ui-version=modern][data-experience=classic] .studio-header .brand { gap:10px; font-size:19px; letter-spacing:-.045em; }
+:root[data-ui-version=modern][data-experience=classic] .studio-session h1 { font-weight:500; letter-spacing:-.018em; }
+:root[data-ui-version=modern][data-experience=classic] .studio-actions :is(.btn,.workspace-menu>summary) {
+  min-height:34px; border:0; border-radius:9px; background:var(--modern-surface); color:var(--t2); box-shadow:inset 0 1px 0 var(--line);
+}
+:root[data-ui-version=modern][data-experience=classic] .studio-actions .settings-open { width:36px; height:36px; display:inline-grid; place-items:center; padding:7px; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-menu>div { border:1px solid var(--modern-hairline); border-radius:13px; padding:9px; box-shadow:0 16px 46px #0004; background:var(--modern-surface); }
+/* Current workspace, continuous tree, familiar extension icons; no session selector. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer { border-radius:13px; background:linear-gradient(180deg,var(--modern-surface),color-mix(in srgb,var(--bg) 97%,var(--source) 3%)); border:1px solid var(--modern-hairline); padding:12px 8px; box-shadow:var(--modern-shadow); }
+:root[data-ui-version=modern][data-experience=classic] .folder-explorer header { padding:0 5px; margin-bottom:12px; }
+:root[data-ui-version=modern][data-experience=classic] .folder-root { font-size:13px; font-weight:500; letter-spacing:-.02em; }
+:root[data-ui-version=modern][data-experience=classic] .folder-explorer input { border:0; background:color-mix(in srgb,var(--bg) 75%,var(--s2)); box-shadow:inset 0 0 0 1px var(--line); border-radius:8px; min-height:34px; font-size:12px; }
+:root[data-ui-version=modern][data-experience=classic] .folder-tree button { border-radius:6px; font-size:12px; letter-spacing:0; }
+:root[data-ui-version=modern][data-experience=classic] .folder-tree .file-icon { width:17px; height:17px; flex:none; }
+:root[data-ui-version=modern][data-experience=classic] .folder-tree button[aria-selected=true] { background:color-mix(in srgb,var(--source) 12%,transparent); }
+:root[data-ui-version=modern][data-experience=classic] .workspace-toggles { background:var(--modern-surface); border:1px solid var(--modern-hairline); padding:3px; border-radius:10px; box-shadow:var(--modern-shadow); }
+:root[data-ui-version=modern][data-experience=classic] .workspace-toggles button { border:0; border-radius:7px; font-size:12px; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-toggles button[aria-pressed=true] { background:var(--modern-raised); box-shadow:inset 0 1px 0 var(--line); }
+/* Instruments retain their true motion origins and all review/agent/runtime controls. */
+:root[data-ui-version=modern][data-experience=classic] .workbench-station { border:1px solid var(--modern-hairline); border-radius:14px; padding:12px 10px; background:color-mix(in srgb,var(--modern-surface) 96%,transparent); box-shadow:var(--modern-shadow); scrollbar-gutter:stable; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-review { padding:0 3px 12px; border-bottom:1px solid var(--line); }
+:root[data-ui-version=modern][data-experience=classic] .workbench-review .btn { font-size:12px; border:0; background:var(--modern-raised); border-radius:7px; min-height:31px; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-station .instrument { padding:8px; border:0; border-radius:9px; background:transparent; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-station .instrument[aria-pressed=true] { background:var(--modern-raised); box-shadow:inset 2px 0 var(--modern-accent); }
+:root[data-ui-version=modern][data-experience=classic] .workbench-station :is(.server,.station-agent-menu) { border-color:var(--line); }
+:root[data-ui-version=modern][data-experience=classic] .station-agent-menu>summary { padding:9px 6px; border-radius:8px; }
+:root[data-ui-version=modern][data-experience=classic] .station-agent-row { border-radius:7px; }
+/* One restrained composer surface; the shared resize/permission/attachment logic owns it. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .prompt-composer.open { border:1px solid var(--modern-hairline); border-radius:17px; background:color-mix(in srgb,var(--modern-surface) 94%,transparent); padding:13px 17px 11px; box-shadow:0 12px 40px #0003,inset 0 1px #ffffff06; backdrop-filter:blur(12px); }
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .prompt-composer:focus-within { border-color:color-mix(in srgb,var(--t2) 34%,transparent); box-shadow:0 12px 40px #0003,inset 0 1px #ffffff08; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer .composer-target { padding-bottom:4px; color:var(--t3); font-size:11px; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer .composer-target strong { font-size:12px; font-weight:550; color:var(--t1); }
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .prompt-composer textarea { background:transparent; border:0; box-shadow:none; font:14px/1.65 var(--sans); padding:9px 0; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer textarea:focus-visible { outline:none; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer :is(.send-prompt,.stop-turn) { width:34px; height:34px; border-radius:11px!important; background:var(--modern-accent)!important; color:var(--bg)!important; border:0; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer .composer-add { width:30px; height:30px; border-radius:8px; background:var(--modern-raised); color:var(--t2); }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer :is(.composer-add-menu,.native-options-menu) { border:1px solid var(--modern-hairline); border-radius:12px; background:var(--modern-surface); padding:10px; box-shadow:0 12px 40px #0004; }
+:root[data-ui-version=modern][data-experience=classic] .prompt-composer .attachment-chip { border:0; border-radius:8px; background:var(--modern-raised); }
+/* Modal readers, search and settings use the same materials, retaining their geometry. */
+:root[data-ui-version=modern][data-experience=classic] .product-dialog { border:1px solid var(--modern-hairline); border-radius:17px; box-shadow:0 24px 90px #0005; }
+:root[data-ui-version=modern][data-experience=classic] .product-dialog>header { background:var(--modern-surface); border-bottom:1px solid var(--line); }
+:root[data-ui-version=modern][data-experience=classic] .settings-dialog section { border-color:var(--line); }
+:root[data-ui-version=modern][data-experience=classic] .settings-dialog h3 { font-size:16px; font-weight:500; letter-spacing:-.02em; }
+:root[data-ui-version=modern][data-experience=classic] .theme-option { border-radius:12px; background:var(--modern-surface); border:1px solid var(--modern-hairline); }
+:root[data-ui-version=modern][data-experience=classic] .theme-option[aria-pressed=true] { border-color:var(--modern-accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--modern-accent) 8%,transparent); }
+:root[data-ui-version=modern][data-experience=classic] .search { border-radius:14px; border:1px solid var(--modern-hairline); background:var(--modern-surface); box-shadow:0 14px 44px #0004; }
+:root[data-ui-version=modern][data-experience=classic] .search input { background:transparent; }
+:root[data-ui-version=modern][data-experience=classic] .home .recording { border-radius:12px; background:var(--modern-surface); border-color:var(--modern-hairline); }
+:root[data-ui-version=modern][data-experience=classic] .home :is(input,select) { border-radius:9px; background:var(--modern-surface); border-color:var(--modern-hairline); }
+@media(hover:hover) and (pointer:fine) {
+ :root[data-ui-version=modern][data-experience=classic] :is(.studio-actions .btn,.workspace-toggles button,.folder-tree button,.workbench-station .instrument,.station-agent-menu>summary):hover { background:var(--modern-raised); }
+}
+@media(prefers-reduced-motion:reduce) {
+ :root[data-ui-version=modern][data-experience=classic] :is(.workspace-header,.prompt-composer) { backdrop-filter:none!important; }
+}
+:root[data-ui-version=modern][data-experience=classic][data-low-resource] :is(.workspace-header,.prompt-composer) { backdrop-filter:none!important; }
+
+:root[data-ui-version=modern][data-experience=classic] .workspace-agent-bar { display:none; }
+/* Long tool identifiers keep their full title without splitting words into fragments. */
+:root[data-ui-version=modern][data-experience=classic] .workbench-station .instrument { gap:8px; }
+:root[data-ui-version=modern][data-experience=classic] .studio-instrument-name { min-width:0; flex:1; }
+:root[data-ui-version=modern][data-experience=classic] .studio-instrument-name small { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+:root[data-ui-version=modern][data-experience=classic] .inst-uses { flex:none; }
+:root[data-ui-version=modern][data-experience=classic] .folder-explorer .ux-search { background:color-mix(in srgb,var(--bg) 75%,var(--s2)); border:1px solid var(--line); border-radius:8px; padding:7px 9px; }
+:root[data-ui-version=modern][data-experience=classic] .folder-explorer .ux-search input { min-height:18px; padding:0; background:none; box-shadow:none; border:0; border-radius:0; }

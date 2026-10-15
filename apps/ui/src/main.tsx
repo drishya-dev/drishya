@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { selectedUIVersion } from './lib/ui-version';
 
 const root = createRoot(document.getElementById('root')!);
-// The independent draft never loads Classic's components or cascading style layers.
+// Modern shares Legacy's verified visualization; only its surrounding chrome differs.
+document.documentElement.dataset.uiVersion = selectedUIVersion();
 if (selectedUIVersion() === 'modern') {
   const { ModernApp } = await import('./modern/entry.tsx');
   const token = new URLSearchParams(location.hash.slice(1)).get('token') ?? '';

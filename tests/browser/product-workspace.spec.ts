@@ -75,7 +75,7 @@ test('map file labels are keyboard reading targets beneath header clearance', as
   await expect(page.getByRole('dialog', { name: `Work on ${path}` })).toBeVisible();
 });
 
-for (const experience of ['classic', 'studio']) {
+for (const experience of ['classic', 'studio', 'modern']) {
   test(`${experience}: long captured changes remain scrollable and hover expands both dimensions`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));

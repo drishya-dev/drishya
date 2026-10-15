@@ -50,12 +50,12 @@ test('Canvas, Modern and Legacy switch without losing a real recording or loadin
   await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
   await expect(page.getByRole('button', { name: /^Workbench/ })).toHaveCount(0);
   await page.getByRole('button', { name: /^Modern/ }).click();
-  await expect(page.locator('.md-app')).toBeVisible();
+  await expect(page.locator('[data-ui-version=modern] .connected-workspace')).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`experience=modern.*#/r/${largeId}$`));
   await expect(page.locator('.cv-workspace')).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('.md-app')).toBeVisible();
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.locator('[data-ui-version=modern] .connected-workspace')).toBeVisible();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
   await page.getByRole('button', { name: /^Legacy/ }).click();
   await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
