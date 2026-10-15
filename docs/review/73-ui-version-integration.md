@@ -16,6 +16,8 @@ Modern was squash-merged first as `354bc64`. Main was then merged into the Canva
 
 Canvas is the new-install default from Harsh's PR. Existing saved selections and explicit links take priority. Legacy stays available, and older Studio/Legacy route aliases remain functional. Modern loads its independent entry and does not load the Classic/Canvas stylesheet cascade. Canvas remains an observation interface; native prompting remains available in the connected versions.
 
+Both PRs are merged on main: #63 as `354bc64`, #64 as `5a2c4bb`. Original author attribution is retained; integration commit `0222e19` remains available for backtracking.
+
 ## Checks
 
 Combined source: frozen-lock installation, both TypeScript projects, 374 unit tests across 58 files, production build and 24 focused Canvas/Modern browser journeys passed locally. The added integration journey opens an imported synthetic recording and switches Canvas -> Modern -> Legacy -> Canvas, preserving its recording hash and excluding the other shell. Saved-version and fresh-link migration checks also pass. The full local browser suite then passed: **134 passed, two opt-in skips** (5.2 minutes). This includes the previously tracked Classic source-range hover journey.

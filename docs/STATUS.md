@@ -32,7 +32,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 ### Yash with Codex - UI version integration
-- **When:** 15 October 2026. Modern PR #63 squash-merged as `354bc64`; reviewed Harsh's Canvas PR #64 and integrated current main into its branch before merge. Review [73](review/73-ui-version-integration.md).
+- **When:** 15 October 2026. Modern PR #63 squash-merged as `354bc64`; reviewed Harsh's Canvas PR #64, integrated current main into its branch, then squash-merged it as `5a2c4bb`. Local main updated and rebuilt. Review [73](review/73-ui-version-integration.md).
 - **Delivered:** Canvas, Modern and Legacy are all enabled in Settings. Canvas retains its new-install default; saved choices and explicit recording URLs win. Old fresh links/settings migrate to Modern; Workbench is absent from the picker. Preserved both implementations, font licenses, evidence/native permission boundaries and both review-72 records. Added a cross-version imported-recording regression.
 - **Checks on combined source:** Frozen-lock install, both typechecks, **374 units/58 files**, production build, **134 browser passes/two opt-in skips** across the complete suite; an earlier 24-journey focused Canvas/Modern run also passed. Previously tracked Classic source-range hover journey passes in this integrated full run. No hosted CI, real native turn or new ten-minute/platform certification. Original package-manager/artwork edits remain local and excluded.
 - **Next:** Human comparison of the selectable versions, then their explicitly documented utility/3D/native and release acceptance gaps. Keep both designs; no automatic promotion to feature parity.

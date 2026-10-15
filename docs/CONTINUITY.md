@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Merged 15 October:** PR #63 (Modern) is on main as `354bc64`; PR #64 (Harsh's Canvas plus reviewed integration) is on main as `5a2c4bb`. Local main is updated and rebuilt. Settings keeps **Canvas / Legacy / Modern**; old fresh links migrate to Modern. Combined gates: 374 units, both typechecks/build, full browser suite 134 passed/two opt-in skips. No hosted CI. Review [73](review/73-ui-version-integration.md) records conflict resolution and preserved boundaries. Original package-manager/artwork edits remain uncommitted.
+
 **15 October integration:** Preserve **Canvas**, **Modern** and **Legacy** as independent selectable presentations in Settings. Canvas is the new-install default; existing saved choices and explicit session links win. Saved `fresh` choices migrate to Modern; Workbench is retired from the picker. The two review-72 documents govern their own presentation only; neither removes the other. Backend evidence, permissions and local-only CI policy remain shared.
 
 **15 October publication:** Observation canvas [PR #64](https://github.com/drishya-dev/drishya/pull/64) is open into `main` from `codex/picgen-redesign`, with Yash (`yashdoke7`) review requested. Implementation `c78eba4` and the separate test fixes are published. Validation and limitations below remain unchanged; no hosted CI dispatched. This supersedes the earlier local-only publication status.
