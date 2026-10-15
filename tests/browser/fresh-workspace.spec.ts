@@ -28,228 +28,256 @@ test.afterAll(async () => {
   if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('independent frontend authenticates without loading Classic and survives reload', async ({ page }) => {
-  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
-  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
-  await expect(page.locator('.fresh-app')).toBeVisible();
-  await expect(page.getByText('Free orders reach checkout', { exact: true }).first()).toBeVisible();
-  await expect(page).not.toHaveURL(/token=/);
-  expect(await page.evaluate(() => document.querySelectorAll('.workspace-header, .product-shell').length)).toBe(0);
-  expect(await page.evaluate(() => [...document.styleSheets].some(sheet => {
-    try { return [...sheet.cssRules].some(rule => rule.cssText.includes('.workspace-header')); } catch { return false; }
-  }))).toBe(false);
-  await page.reload(); await expect(page.locator('.fresh-app')).toBeVisible();
-  await expect(page.getByText('Free orders reach checkout', { exact: true }).first()).toBeVisible();
-  expect(errors).toEqual([]);
-});
-
-for (const adapter of ['claude-code', 'codex']) test(`fresh ${adapter}: actual imported history opens through a direct link`, async ({ page }) => {
-  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
-  await expect(page.locator('.fresh-app')).toBeVisible();
-  await page.goto(`${server.url}/?experience=fresh#/r/${ids[adapter]}`);
-  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toContainText(/checkout|discount|total/);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
-
-test('fresh native submission requires consent and a new idle acknowledgement for each turn', async ({ page }) => {
-  const native = { available: true, state: 'idle', harness: 'codex', tools: [], inventory: 'unknown', approvals: [], output: '' };
-  let submissions = 0;
-  await page.route('**/controller', route => route.fulfill({ json: native }));
-  await page.route('**/controller/prompt', async route => {
-    const body = route.request().postDataJSON();
-    expect(body.exclusive).toBe(true); expect(body.prompt).toBe('Inspect the checkout condition');
-    submissions++; await route.fulfill({ json: { ...native, state: 'completed', runId: 'synthetic-turn' } });
-  });
-  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
-  await expect(page.locator('.fresh-app')).toBeVisible();
-  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
-  await page.getByRole('textbox', { name: 'Prompt to native agent' }).fill('Inspect the checkout condition');
-  const send = page.getByRole('button', { name: 'Send', exact: true });
-  await expect(send).toBeDisabled();
-  await page.getByRole('button', { name: 'Connection & permissions' }).click();
-  const grant = page.getByRole('button', { name: 'Allow workspace access', exact: true });
-  if (await grant.isVisible()) await grant.click();
-  const idle = page.getByRole('checkbox', { name: 'This session is idle in its other clients' });
-  await idle.check(); await expect(send).toBeEnabled(); await send.click();
-  await expect(idle).not.toBeChecked(); expect(submissions).toBe(1);
-  await page.getByRole('textbox', { name: 'Prompt to native agent' }).fill('Inspect the checkout condition');
-  await expect(send).toBeDisabled(); await idle.check(); await send.click();
-  await expect(idle).not.toBeChecked(); expect(submissions).toBe(2);
-  await page.getByRole('heading', { level: 1 }).click();
-  await expect(idle).toHaveCount(0);
-  const details = page.getByRole('button', { name: 'Connection & permissions' });
-  await details.click();
-  await page.keyboard.press('Escape');
-  await expect(details).toBeFocused();
-  await expect(idle).toHaveCount(0);
-});
-
-test('fresh captured material is readable and local action questions survive reopening', async ({ page }) => {
-  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
-  await expect(page.getByText('Free orders reach checkout', { exact: true }).first()).toBeVisible();
-  await page.goto(`${server.url}/?experience=fresh#/r/${ids['claude-code']}`);
-  await page.locator('.fr-action-read').first().click();
-  const inspector = page.locator('.fr-inspector');
-  await expect(inspector.locator('.fr-code-material').first()).toContainText(/export|function|const/);
-  const draft = inspector.getByRole('textbox', { name: 'Ask a question about this action' });
-  await draft.fill('Why was the total condition selected?');
-  await inspector.getByRole('button', { name: 'Save question' }).click();
-  await expect(inspector.getByText('Why was the total condition selected?', { exact: true })).toBeVisible();
-  await inspector.getByRole('button', { name: 'Mark resolved' }).click();
-  await expect(inspector.getByRole('button', { name: 'Reopen', exact: true })).toBeVisible();
-  await inspector.getByRole('button', { name: 'Close inspector' }).click();
-  await page.locator('.fr-action-read').first().click();
-  await expect(inspector.getByRole('button', { name: 'Reopen', exact: true })).toBeVisible();
-});
-
-test('fresh current Git handoff refuses a patch that changed after review', async ({ page }) => {
-  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
-  await expect(page.locator('.fresh-app')).toBeVisible();
-  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
-  const allowRoot = page.getByRole('button', { name: 'Allow this workspace', exact: true });
-  const allowGit = page.getByRole('button', { name: 'Allow read-only Git', exact: true });
-  const refresh = page.getByRole('button', { name: 'Refresh snapshot', exact: true });
-  await expect(allowRoot.or(allowGit).or(refresh)).toBeVisible();
-  // Saved consent may resolve between the visibility check and Playwright's click.
-  if (await allowRoot.isVisible()) await allowRoot.or(allowGit).or(refresh).click();
-  await expect(allowGit.or(refresh)).toBeVisible();
-  if (await allowGit.isVisible()) await allowGit.or(refresh).click();
-  await expect(page.getByRole('region', { name: 'Current Git patch' })).toContainText('total = 42');
-  await page.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
-  await page.getByRole('textbox', { name: 'Local Git review note' }).fill('Checked total');
-  await page.getByRole('button', { name: 'Preview handoff', exact: true }).click();
-  await expect(page.getByRole('textbox', { name: 'Git handoff preview' })).toHaveValue(/Checked total/);
-  writeFileSync(join(root, 'src/cart/total.ts'), 'export const total = 43;\n');
-  await page.getByRole('button', { name: 'Save checked handoff' }).click();
-  await expect(page.getByRole('alert')).toContainText('Repository changed');
-  await expect(page.getByRole('region', { name: 'Current Git patch' })).toContainText('total = 43');
-  await expect(page.getByRole('textbox', { name: 'Git handoff preview' })).toHaveCount(0);
-  await expect(page.getByRole('checkbox', { name: 'Reviewed displayed patch' })).not.toBeChecked();
-});
-
-test('fresh backward replay removes completed output and scopes file activity to the replay point', async ({ page }) => {
-  const id = ids['claude-code']!;
-  const full = app.projection(id);
-  const operation = full.operations.find(op => op.kind === 'read' && op.detail.kind === 'read' && op.detail.excerptArtifactId)!;
-  const step = operation.startSequence + 1;
-  const before = await app.history.page(id, { step, selectedOperationId: operation.id });
-  const pending = before.projection.operations.find(op => op.id === operation.id)!;
-  expect(pending.detail.kind === 'read' && pending.detail.excerptArtifactId).toBeFalsy();
-  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
-  await expect(page.locator('.fresh-app')).toBeVisible();
-  await page.goto(`${server.url}/?experience=fresh#/r/${id}`);
-  const card = page.locator('.fr-action-read').filter({ has: page.getByText(operation.title, { exact: true }) }).first();
-  await card.scrollIntoViewIfNeeded();
-  await expect(card.locator('.fr-action-material pre')).toBeVisible();
-  await card.click();
-  await page.getByText('Sequence replay', { exact: true }).click();
-  const historyRequests: Record<string, unknown>[] = [];
-  page.on('request', request => { if (request.url().endsWith('/history') && request.method() === 'POST') historyRequests.push(request.postDataJSON()); });
-  const range = page.getByRole('slider', { name: 'Replay position' });
-  await range.focus(); await range.press('Home');
-  for (let n = 0; n < step; n++) await range.press('ArrowRight');
-  await expect(range).toHaveValue(String(step));
-  // A pending read's derived title has no completed range yet.
-  const pendingCard = page.locator('.fr-action-read').filter({ has: page.getByText(pending.title, { exact: true }) }).first();
-  await expect(pendingCard).toBeVisible();
-  await expect(pendingCard.locator('.fr-action-material pre')).toHaveCount(0);
-  expect(historyRequests.at(-1)?.step).toBe(step);
-  expect(historyRequests.at(-1)?.observationId).toBeUndefined();
-  const path = operation.paths[0]!.path;
-  const file = page.locator('.fr-file-tree button').filter({ has: page.getByText(path.split('/').at(-1)!, { exact: true }) }).first();
-  const response = page.waitForResponse(r => r.url().includes('/file-operations?') && r.url().includes(`step=${step}`));
-  await page.getByRole('button', { name: 'Files', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Find repository file' }).fill(path);
-  await file.click();
-  expect((await (await response).json()).operations.every((op: { startSequence: number }) => op.startSequence < step)).toBe(true);
-});
-
-test('fresh reading has useful height and stays within desktop, phone and landscape bounds', async ({ page }) => {
-  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
-  await expect(page.getByText('Free orders reach checkout', { exact: true }).first()).toBeVisible();
-  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
-  const content = page.getByRole('region', { name: 'Captured work', exact: true });
-  for (const [width, height] of [[1440,900], [1280,720], [390,844], [844,390]]) {
-    await page.setViewportSize({ width, height }); await expect(content).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const bounds = (await content.boundingBox())!;
-    expect(bounds.height).toBeGreaterThan(height < 500 ? 70 : height * .32);
-    const prompt = (await page.getByRole('textbox', { name: 'Prompt to native agent' }).boundingBox())!;
-    expect(prompt.y + prompt.height).toBeLessThanOrEqual(height);
-    expect(prompt.width).toBeLessThanOrEqual(width);
-  }
-});
-
-test('UI versions switch between Modern and Legacy while keeping the actual session', async ({ page }) => {
-  await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
-  await expect(page.locator('.fresh-app')).toBeVisible();
-  await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
-  await page.getByRole('button', { name: /^Legacy/ }).click();
-  await expect(page).toHaveURL(new RegExp(`experience=classic.*${ids.codex}`));
+// The previous independent shell was retired by the builder. These tests protect
+// the new contract: Modern shares Legacy behavior and only changes its surroundings.
+for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: imported session, home, settings and reload`, async ({ page }) => {
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[adapter]}`);
+  await expect(page.locator('html')).toHaveAttribute('data-ui-version', 'modern');
+  await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
+  await expect(page.locator('.history')).toBeVisible();
+  await expect(page.locator('.history')).toContainText(/checkout|discount|total/);
+  await expect(page.locator('.fresh-app,.fr-action,.cv-workspace')).toHaveCount(0);
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
-  await page.getByRole('button', { name: /^Modern/ }).click();
-  await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`experience=modern.*${ids.codex}`));
-  await page.goto(`${server.url}/#/r/${ids.codex}`);
-  await expect(page.locator('.fresh-app')).toBeVisible();
+  const settings = page.getByRole('dialog', { name: 'Workspace settings' });
+  await expect(settings.getByRole('button', { name:'Midnight',exact:true })).toBeVisible();
+  await settings.getByRole('button', { name:'Midnight',exact:true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
+  await settings.getByRole('button', { name:'Close Workspace settings' }).click();
+  await expect(settings).toHaveCount(0);
+  await page.reload(); await expect(page.locator('.history')).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
+  await page.getByRole('button', { name:'Drishya',exact:true }).click();
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goBack(); await expect(page.locator('.history')).toBeVisible();
 });
 
-test('Modern keeps work in place when Files opens and reaches nested paths by search', async ({ page }) => {
-  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
-  await expect(page.locator('.md-library')).toBeVisible();
-  await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
-  const work = page.getByRole('region', { name: 'Captured work', exact: true });
-  await expect(work).toBeVisible();
-  const before = (await work.boundingBox())!;
-  await page.getByRole('button', { name: 'Files', exact: true }).click();
-  const after = (await work.boundingBox())!;
-  expect(after.x).toBe(before.x); expect(after.width).toBe(before.width);
-  await page.getByRole('textbox', { name: 'Find repository file' }).fill('src/cart/total.ts');
-  await page.getByRole('button', { name: 'TS total.ts', exact: true }).click();
-  await expect(page.locator('.fr-inspector h2')).toHaveText('total.ts');
-  await expect(page.locator('.fr-provenance-current')).toContainText('Current workspace');
+test('Modern preserves Legacy action materials, layout and native graph controls', async ({ page }) => {
+  await page.setViewportSize({width:1440,height:900});
+  const inspect = async (version:string) => {
+    await page.goto(`${server.url}/?demo&experience=${version}&motion=0`);
+    await expect(page.locator('.history article.op').first()).toBeAttached();
+    return page.locator('.history article.op').evaluateAll(elements => elements.slice(0,6).map(el => {
+      const css=getComputedStyle(el); return { id:el.getAttribute('data-op-id'), text:el.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
+    }));
+  };
+  const legacy=await inspect('classic'), modern=await inspect('modern');
+  expect(modern).toEqual(legacy);
+  await page.getByRole('button',{name:'Explore repository map'}).click();
+  await expect(page.getByRole('button',{name:'Back to work',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+  const settings=page.getByRole('dialog',{name:'Workspace settings'});
+  await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+  await expect(settings.getByRole('checkbox',{name:/3D repository map/})).toBeVisible();
+  await expect(settings.getByRole('checkbox',{name:/Slow background orbit/})).toBeVisible();
 });
 
-test('Modern long prose keeps headings, paragraphs and lists in readable vertical flow', async ({ page }) => {
-  await page.route('**/history', async route => {
-    const response = await route.fetch(); const body = await response.json();
-    for (const prose of body.projection.prose) prose.text = '# Review the change\n\nA complete paragraph about the captured source and its checks.\n\n- Read the actual input\n- Inspect the recorded result\n\nAnother paragraph remains below the list, with **emphasis** and `source.ts`.';
-    await route.fulfill({ response, json: body });
-  });
-  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
-  await expect(page.locator('.md-library')).toBeVisible();
-  await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
-  const prose = page.locator('.md-prose-content').first();
-  await expect(prose.getByRole('heading')).toHaveText('Review the change');
-  const bounds = await prose.evaluate(element => [...element.children].map(child => ({ width: child.getBoundingClientRect().width, y: child.getBoundingClientRect().y })));
-  expect(bounds.length).toBe(4);
-  expect(bounds.every(b => b.width > 150)).toBe(true);
-  expect(bounds.every((b, i) => i === 0 || b.y > bounds[i - 1]!.y)).toBe(true);
-});
-
-test('Modern map explores actual files with keyboard controls and maintains readable bounds', async ({ page }) => {
-  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
-  await expect(page.locator('.md-library')).toBeVisible();
-  await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
-  await page.getByRole('button', { name: 'Repository', exact: true }).click();
-  const map = page.locator('.md-map');
-  await expect(map.locator('.md-map-point').first()).toBeVisible();
-  await map.getByRole('button', { name: 'Zoom in', exact: true }).press('Enter');
-  await expect(map.locator('.md-map-controls')).toContainText('140%');
-  await map.getByRole('button', { name: 'Fit', exact: true }).click();
-  await expect(map.locator('.md-map-controls')).toContainText('100%');
-  await page.getByRole('textbox', { name: 'Find on repository map' }).fill('total.ts');
-  await map.getByRole('button', { name: 'src/cart/total.ts', exact: true }).click();
-  await expect(page.locator('.fr-inspector h2')).toHaveText('total.ts');
-  await page.getByRole('button', { name: 'Close inspector' }).click();
-  for (const [width, height] of [[1440, 900], [390, 844], [844, 390]]) {
-    await page.setViewportSize({ width, height });
-    await expect(map.getByRole('button', { name: 'Fit', exact: true })).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+test('Modern chrome fits wide, laptop and phone viewports; panels and settings remain reachable', async ({ page }) => {
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  for (const [width,height] of [[1920,1080],[1280,720],[900,600],[390,844]]) {
+    await page.setViewportSize({width,height});
+    await expect(page.locator('.history')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    const header=(await page.locator('.modern-session-header').boundingBox())!;
+    const title=(await page.locator('.modern-session-header h1').boundingBox())!;
+    const actions=(await page.locator('.modern-session-header .studio-actions').boundingBox())!;
+    expect(header.height).toBeLessThanOrEqual(64);
+    expect(title.y).toBeGreaterThanOrEqual(header.y);
+    expect(title.y+title.height).toBeLessThanOrEqual(header.y+header.height);
+    expect(title.x+title.width).toBeLessThanOrEqual(actions.x);
+    await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'Workspace settings'});
+    await expect(dialog).toBeVisible();
+    const box=(await dialog.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x+box.width).toBeLessThanOrEqual(width+1);
+    await dialog.getByRole('button',{name:'Close Workspace settings'}).click();
+    if(width<=820) await page.getByRole('button',{name:'Tools',exact:true}).click();
+    await expect(page.locator('.workbench-station')).toBeVisible();
+    const rail=(await page.locator('.workbench-station').boundingBox())!;
+    expect(rail.x).toBeGreaterThanOrEqual(0); expect(rail.x+rail.width).toBeLessThanOrEqual(width+1);
   }
+});
+
+test('Modern native composer keeps attachments, outside dismissal and explicit consent', async ({ page }) => {
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'});
+  await expect(composer).toBeVisible();
+  await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Inspect the checkout condition');
+  await expect(composer.getByRole('button',{name:'Attach text or image files',exact:true})).toBeVisible();
+  await expect(composer.getByRole('button',{name:'Attach folder',exact:true})).toBeVisible();
+  await composer.locator('.native-options>summary').click();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
+  await page.getByRole('heading',{level:1}).click();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+  await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
+  await composer.getByLabel('Choose prompt files').setInputFiles({name:'note.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic attachment for local testing')});
+  await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toBeVisible();
+  await composer.getByRole('button',{name:'Remove attachment note.txt'}).click();
+  await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toHaveCount(0);
+});
+
+test('Modern colour and UI versions remain separate; Legacy does not load Modern chrome', async ({ page }) => {
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+  const settings=page.getByRole('dialog',{name:'Workspace settings'});
+  await settings.getByRole('button',{name:'Paper',exact:true}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
+  await settings.getByRole('tab',{name:'UI versions',exact:true}).click();
+  await expect(settings.getByRole('button',{name:/^Modern/})).toHaveAttribute('aria-pressed','true');
+  await settings.getByRole('button',{name:/^Legacy/}).click();
+  await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');
+  await expect(page.locator('.history')).toBeVisible();
+  expect(await page.evaluate(() => [...document.styleSheets].some(sheet => { try { return [...sheet.cssRules].some(rule => rule.cssText.includes('data-ui-version="modern"')); } catch { return false; } }))).toBe(false);
+});
+
+test('Modern settings have allocated spacing, keyboard navigation and reachable controls', async ({ page }) => {
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'Workspace settings'});
+  const content=dialog.locator('.modern-settings-content');
+  const panel=await content.boundingBox();
+  const heading=await content.getByRole('heading',{name:'Appearance',exact:true}).boundingBox();
+  expect(heading!.x-panel!.x).toBeGreaterThanOrEqual(20);
+  expect(await dialog.evaluate(el=>getComputedStyle(el).fontFamily)).not.toContain('Outfit');
+  await dialog.getByRole('tab',{name:'Appearance',exact:true}).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(dialog.getByRole('tab',{name:'Reading',exact:true})).toBeFocused();
+  await expect(dialog.getByRole('combobox',{name:'Exposed reasoning detail'})).toBeVisible();
+  await dialog.getByRole('combobox',{name:'Exposed reasoning detail'}).selectOption('collapsed');
+  await expect(dialog.getByRole('combobox',{name:'Exposed reasoning detail'})).toHaveValue('collapsed');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});
+
+test('Modern home has one sessions list and no duplicate imported local session', async ({ page }) => {
+  await page.route('**/v1/sources',async route=>{
+    const response=await route.fetch(); const body=await response.json();
+    body.sources=[{adapterId:'codex',harness:'codex',path:'synthetic-source.jsonl',bytes:100,modifiedAt:new Date().toISOString(),title:'Duplicate imported session',importedRecordingId:ids.codex,companions:[]},{adapterId:'codex',harness:'codex',path:'synthetic-new.jsonl',bytes:100,modifiedAt:new Date().toISOString(),title:'Available local session',companions:[]}];
+    await route.fulfill({json:body});
+  });
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern`);
+  await expect(page.getByRole('heading',{name:'Recordings',exact:true})).toHaveCount(0);
+  await expect(page.locator('#local-session-import')).toHaveCount(0);
+  await expect(page.getByText('Available local session',{exact:true})).toBeVisible();
+  await expect(page.getByText('Duplicate imported session',{exact:true})).toHaveCount(0);
+});
+
+test('Modern compact composer keeps connection consent accessible and has no needless scrollbar', async ({ page }) => {
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'});
+  const input=composer.getByRole('textbox',{name:'Prompt for selected harness session'});
+  await input.fill('A short prompt');
+  expect((await composer.boundingBox())!.height).toBeLessThan(170);
+  expect(await input.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);
+  await composer.locator('.native-options>summary').click();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
+  await page.getByRole('heading',{level:1}).click();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+});
+
+test('structured shell output renders decoded newlines and retains the exact raw envelope', async ({ page }) => {
+  const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+  const op=[...bundle.projection.operations].reverse().find((o:any)=>o.kind==='shell');
+  const raw=JSON.stringify({chunk_id:'synthetic',exit_code:0,output:'first line\nsecond line\nconst pattern = "\\n";'});
+  op.detail.outputPreview=raw;
+  await page.route('**/demo/bundle.json',route=>route.fulfill({json:bundle}));
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  const card=page.locator(`article[data-op-id="${op.id}"]`);
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.locator('.structured-tool-output .output')).toContainText('first line\nsecond line');
+  await expect(card.locator('.structured-tool-output .output')).toContainText('const pattern = "\\n";');
+  await card.getByRole('button',{name:'Show raw',exact:true}).click();
+  await expect(card.locator('.structured-tool-output .output')).toContainText(raw);
+});
+
+test('recovered Modern toolbox preserves actual instrument origins, filters and MCP drawers', async ({ page }) => {
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  const toolbox=page.getByRole('complementary',{name:'Tools and agents'});
+  await expect(toolbox.getByText('Toolbox',{exact:true})).toBeVisible();
+  const read=toolbox.locator('.instrument.k-read');
+  await expect(read).toBeVisible();
+  await read.click(); await expect(read).toHaveAttribute('aria-pressed','true');
+  await toolbox.getByRole('button',{name:'Clear focus ×',exact:true}).click();
+  const mcpServer=toolbox.locator('.md-server').filter({has:page.locator('[data-mcp-server]')}).first();
+  await expect(mcpServer).toBeVisible();
+  {
+    await mcpServer.locator('summary').click();
+    const tool=mcpServer.locator('button[data-mcp-tool]').first();
+    await expect(tool).toBeVisible(); await tool.click();
+    await expect(tool).toHaveAttribute('aria-pressed','true');
+    await toolbox.getByRole('button',{name:'Clear focus ×',exact:true}).click();
+  }
+  await expect(page.getByRole('button',{name:'Show files',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Explore repository map',exact:true})).toHaveText('Repository');
+  await expect(page.locator('.modern-session-header')).toBeVisible();
+  await expect(page.locator('.modern-session-header .studio-session')).toContainText(/checkout|orders/);
+});
+
+test('Modern Git review opens on the right and reads actual staged/worktree patches', async ({ page }) => {
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  const git=page.getByRole('dialog',{name:'Git review',exact:true});
+  await expect(git).toBeVisible();
+  const bounds=(await git.boundingBox())!;
+  expect(bounds.x).toBeGreaterThan(700); expect(bounds.x+bounds.width).toBeGreaterThan(1400);
+  expect(bounds.width).toBeLessThanOrEqual(680);
+  expect((await git.locator(':scope > header').boundingBox())!.height).toBeLessThanOrEqual(48);
+  await expect(git.locator(':scope > header .git-branch-glyph')).toBeVisible();
+  await expect(page.getByRole('complementary',{name:'Tools and agents'}).getByRole('button',{name:'Git review',exact:true})).toHaveCount(0);
+  if(await git.getByRole('button',{name:'Approve current workspace'}).isVisible()) await git.getByRole('button',{name:'Approve current workspace'}).click();
+  await expect(git.getByRole('button',{name:'Approve read-only Git'}).or(git.getByRole('button',{name:'Refresh changes'}))).toBeVisible();
+  if(await git.getByRole('button',{name:'Approve read-only Git'}).isVisible()) await git.getByRole('button',{name:'Approve read-only Git'}).click();
+  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
+  await expect(git.locator('.git-review-layout')).toContainText('src/cart/total.ts');
+  await expect(git.locator('.git-patch-reader')).toContainText('42');
+  await page.screenshot({path:resolve('.local/modern-compact-git-test.png')});
+  await git.getByRole('button',{name:'Close Git review'}).click();
+  await expect(git).toHaveCount(0);
+  await page.getByLabel('More workspace options',{exact:true}).click();
+  const utilities=page.locator('.workspace-menu[open]');
+  await expect(utilities.getByRole('button',{name:'Review work',exact:true})).toBeVisible();
+  await expect(utilities.getByRole('button',{name:'Review questions',exact:true})).toBeVisible();
+  await utilities.getByRole('button',{name:'Review work',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Review work',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Close Review work',exact:true}).click();
+  await page.getByLabel('More workspace options',{exact:true}).click();
+  await utilities.getByRole('button',{name:'Review questions',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Review questions',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Close Review questions',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await expect(git).toBeVisible();
+  const mobileBounds=(await git.boundingBox())!;
+  expect(mobileBounds.x).toBeGreaterThanOrEqual(0);
+  expect(mobileBounds.x+mobileBounds.width).toBeLessThanOrEqual(390);
+  await git.getByRole('button',{name:'Close Git review'}).click();
+});
+
+for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} composer forwards text, attachments and native options with explicit consent`, async ({ page }) => {
+  const state={available:true,state:'idle',harness,tools:[],inventory:'unknown',approvals:[],output:'',settings:{scope:'workspace',model:'native-one',permission:'Native policy',models:[{id:'native-one',name:'Native One',efforts:['low','high']} ]}};
+  let payload:any;
+  await page.route('**/controller',route=>route.fulfill({json:state}));
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.route('**/controller/prompt',async route=>{payload=route.request().postDataJSON();await route.fulfill({json:{...state,state:'completed',runId:'synthetic-modern'}});});
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[harness]}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'});
+  await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Review the selected source');
+  await composer.getByLabel('Choose prompt files').setInputFiles({name:'context.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic context')});
+  await composer.getByRole('combobox',{name:'Native model',exact:true}).selectOption('native-one');
+  await composer.getByRole('combobox',{name:'Reasoning effort',exact:true}).selectOption('high');
+  await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
+  expect(payload).toBeUndefined();
+  await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
+  await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();
+  await expect.poll(()=>payload).toBeDefined();
+  expect(payload.prompt).toBe('Review the selected source');expect(payload.exclusive).toBe(true);
+  expect(payload.attachments).toEqual([{name:'context.txt',type:'text',data:'Synthetic context'}]);
+  expect(payload.options).toEqual({model:'native-one',effort:'high'});
 });

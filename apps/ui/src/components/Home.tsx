@@ -8,6 +8,7 @@ import { localPreviewId } from '../lib/local-preview.ts';
 import { SessionGroups } from './SessionGroups.tsx';
 import { timestamp } from '../lib/home-groups.ts';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
+import { ModernSessions } from '../modern/ModernSessions.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { useExperience } from '../lib/experience.ts';
 
@@ -15,6 +16,7 @@ const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', co
 
 export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const canvas = useExperience() === 'canvas';
+  const modern = document.documentElement.dataset.uiVersion === 'modern';
   const source = useApp((s) => s.source);
   const recordings = useApp((s) => s.recordings);
   const set = useApp((s) => s.set);
@@ -78,6 +80,11 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const filteredRecordings = recordings.filter((r) => matches(r.title, r.workspaceRoot, r.harness, r.lastSourceTime));
   const filteredSources = (sources ?? []).filter((s) => matches(s.title, s.cwd, s.harness, s.modifiedAt));
 
+  const importedIds = new Set(recordings.map(r => r.id));
+  const newSources = (sources ?? []).filter(s => !s.importedRecordingId || !importedIds.has(s.importedRecordingId));
+  const sessionCount = modern ? recordings.length + newSources.length : recordings.length;
+  const matchingCount = modern ? filteredRecordings.length + filteredSources.filter(s => !s.importedRecordingId || !importedIds.has(s.importedRecordingId)).length : filteredRecordings.length;
+
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   return (
@@ -91,11 +98,11 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
         <button className="btn ghost home-settings" onClick={() => set({ settingsOpen: true })}><SettingsGlyph />Settings</button>
       </header>
       <div className="home-intro">
-        <div className="home-intro-copy"><h1>{canvas ? 'Sessions' : 'Your agent workspace.'}</h1><p>Return to a session. Follow the source, changes and results.</p></div>
+        <div className="home-intro-copy"><h1>{canvas || modern ? 'Sessions' : 'Your agent workspace.'}</h1><p>Return to a session. Follow the source, changes and results.</p></div>
         <div className="home-intro-actions"><button className="btn" onClick={() => openDemo(true)}><InterfaceGlyph name="play" />Watch the live demo</button><button className={`btn ${canvas ? '' : 'primary'}`} disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}><InterfaceGlyph name="refresh" />Refresh local sessions</button>{canvas && <button className="btn primary cv-home-import" onClick={() => { const section = document.getElementById('local-session-import'); section?.scrollIntoView({ behavior: 'instant', block: 'start' }); section?.querySelector<HTMLButtonElement>('.row-actions button')?.focus({ preventScroll: true }); }}>Import<span className="cv-import-icon" aria-hidden="true">+</span></button>}</div>
       </div>
       <div className="home-overview" aria-label="Local session inventory">
-        <span><strong>{recordings.length}</strong> recording{recordings.length === 1 ? '' : 's'}</span>
+        <span><strong>{sessionCount}</strong> {modern ? 'session' : 'recording'}{sessionCount === 1 ? '' : 's'}</span>
         <span><i className="inventory-live" aria-hidden="true" /><strong>{recordings.filter(r => r.live).length}</strong> following</span>
         <span className="home-private">Stored on this machine · no telemetry</span>
       </div>
@@ -111,17 +118,19 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
       <div className="home-grid">
         <section>
           <div className="sec-head">
-            <h2>Recordings</h2>
-            <span className="muted small">{filteredRecordings.length} matching · {picked.length} selected</span>
+            <h2>{modern ? 'All sessions' : 'Recordings'}</h2>
+            <span className="muted small">{matchingCount} matching · {picked.length} selected</span>
             {picked.length > 1 && (
               <button className="btn primary" onClick={() => ((location.hash = `#/r/${picked.join('+')}`), openRecording(picked.join('+')))}>
                 Open {picked.length} together
               </button>
             )}
           </div>
-          {recordings.length === 0 && <div className="home-empty"><InterfaceGlyph name="local" /><h3>Your work starts here.</h3><p>Nothing imported yet. Open a session from this machine, or try the demo.</p><button className="btn" onClick={() => openDemo()}>Explore the synthetic demo<InterfaceGlyph name="arrow" /></button></div>}
-          {recordings.length > 0 && filteredRecordings.length === 0 && <p className="muted">No imported recordings match these filters.</p>}
-          <SessionGroups key={`recordings:${q}:${harness}:${days}`} items={filteredRecordings} rootOf={r => r.workspaceRoot} timeOf={r => r.lastSourceTime} now={now} render={r => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />} />
+          {recordings.length === 0 && (!modern || sources?.length === 0) && <div className="home-empty"><InterfaceGlyph name="local" /><h3>Your work starts here.</h3><p>Nothing imported yet. Open a session from this machine, or try the demo.</p><button className="btn" onClick={() => openDemo()}>Explore the synthetic demo<InterfaceGlyph name="arrow" /></button></div>}
+          {(!modern && recordings.length > 0 && filteredRecordings.length === 0 || modern && sessionCount > 0 && matchingCount === 0) && <p className="muted">{modern ? 'No sessions match these filters.' : 'No imported recordings match these filters.'}</p>}
+          {modern ? <><p className="modern-sessions-note">Open captured work or continue a local harness session. Your workspace and date keep everything together.</p>{err && <p role="alert" className="bad">{err}</p>}{sourceErrors.map(e => <p key={e.adapterId} className="bad small">{e.adapterId}: {e.message}</p>)}<ModernSessions recordings={filteredRecordings} sources={filteredSources} now={now} busy={busy} renderRecording={r => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />} onOpen={s => void open(s, true)} />{!sources && !err && <p role="status" className="muted small">Finding local sessions…</p>}</> : <>
+          <SessionGroups key={`recordings:${q}:${harness}:${days}`} items={filteredRecordings} rootOf={r => r.workspaceRoot} timeOf={r => r.lastSourceTime} now={now} render={r => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />} /></>}
+
           <div className="demo-card">
             <div>
               <strong>Synthetic demo</strong>
@@ -131,7 +140,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
           </div>
         </section>
 
-        <section id="local-session-import">
+        {!modern && <section id="local-session-import">
           <div className="sec-head">
             <h2>Sessions on this machine</h2>
             <span className="muted small" role="status">{sources ? `${filteredSources.length} matching` : err ? 'Discovery unavailable' : 'Finding local sessions…'}</span>
@@ -164,7 +173,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
                 </div>
               </div>
               )} />
-        </section>
+        </section>}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Hunk } from '@drishya/contracts';
-import { CodeView, DiffView, Output, ProvenanceBadge, useArtifact } from './common.tsx';
+import { CodeView, DiffView, ProvenanceBadge, useArtifact } from './common.tsx';
+import { ToolOutput } from './ToolOutput.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
 import { useReadingReference } from './ReadingReference.tsx';
 import { SourceFind } from './SourceFind.tsx';
@@ -51,9 +52,9 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   useEffect(() => setCopied(undefined), [id, pageStart]);
   const reveal = (line: number) => reader.current?.querySelector<HTMLElement>(`[data-source-line="${line}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
   useLayoutEffect(() => { if (activeLine !== undefined && view.text !== undefined) reveal(activeLine); }, [activeLine, pageStart, view.text]);
-  if (!id) return fallback ? <Output text={fallback} /> : <p className="muted">Not captured.</p>;
+  if (!id) return fallback ? <ToolOutput text={fallback} /> : <p className="muted">Not captured.</p>;
   if (view.error) return <div className="muted">Could not load captured content. <button className="btn" onClick={() => setRetry((n) => n + 1)}>Retry</button></div>;
-  if (view.unavailable) return <p className="muted">{view.unavailable}{fallback ? <> Available preview: <Output text={fallback} /></> : null}</p>;
+  if (view.unavailable) return <p className="muted">{view.unavailable}{fallback ? <> Available preview: <ToolOutput text={fallback} /></> : null}</p>;
   const loading = view.text === undefined;
   const text = view.text ?? '';
   const next = view.hasMore && view.nextStart !== undefined && view.nextStart > pageStart;
@@ -164,7 +165,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
         <span className="muted small" role="status">{rangeStatus || 'Loaded page only · one temporary reference'}</span>
       </div>}
       </details>}
-      {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView scrollRef={sourceViewport} text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <Output text={text} />}
+      {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView scrollRef={sourceViewport} text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <ToolOutput text={text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(pageStart > 0 || next) && (
         <nav className="reader-pages" aria-label="Captured content pages">

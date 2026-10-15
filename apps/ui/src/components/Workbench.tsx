@@ -1,3 +1,4 @@
+import { ModernToolStation } from '../modern/ModernToolStation.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -77,6 +78,7 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
   const mode = useApp(s => s.mode);
   const primary = projection.agents.find(a => scene.agents.some(shown => shown.id === a.id) && !a.parentId);
   const filter = useApp(s => s.filter);
+  if (document.documentElement.dataset.uiVersion === 'modern') return <ModernToolStation projection={projection} scene={scene} agents={<AgentFamilies projection={projection} scene={scene} />} />;
   return <div className="workbench-station">
     <section className="workbench-review" aria-label="Evidence desk"><span className="desk-caption">Review</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><ReviewQuestionsEntry key={id} /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Recorded changes and checks.'}</p></section>
     <button className="btn ghost workspace-navigation-open" onClick={() => window.dispatchEvent(new Event('drishya-navigate-workspace'))}>Navigate workspace <kbd>Ctrl/⌘ K</kbd></button>

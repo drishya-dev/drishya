@@ -12,7 +12,12 @@ export function selectedUIVersion(): string {
   return resolveUIVersion(location.search, saved);
 }
 export function versionURL(href: string, version: UIVersion): string {
-  const url = new URL(href); url.searchParams.set('experience', version); return url.href;
+  const url = new URL(href); url.searchParams.set('experience', version);
+  // Presentation-specific subviews are not routes in the other shells.
+  const recording = /^#\/r\/([^/?]+)/.exec(url.hash);
+  if (recording) url.hash = `#/r/${recording[1]}`;
+  else if (url.hash === '#/settings') url.hash = '#/';
+  return url.href;
 }
 export function switchUIVersion(version: UIVersion) {
   try { localStorage.setItem(key, version); } catch { /* URL is the authoritative fallback. */ }

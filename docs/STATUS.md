@@ -31,13 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex - UI version integration
-- **When:** 15 October 2026. Modern PR #63 squash-merged as `354bc64`; reviewed Harsh's Canvas PR #64, integrated current main into its branch, then squash-merged it as `5a2c4bb`. Local main updated and rebuilt. Review [73](review/73-ui-version-integration.md).
-- **Delivered:** Canvas, Modern and Legacy are all enabled in Settings. Canvas retains its new-install default; saved choices and explicit recording URLs win. Old fresh links/settings migrate to Modern; Workbench is absent from the picker. Preserved both implementations, font licenses, evidence/native permission boundaries and both review-72 records. Added a cross-version imported-recording regression.
-- **Checks on combined source:** Frozen-lock install, both typechecks, **374 units/58 files**, production build, **134 browser passes/two opt-in skips** across the complete suite; an earlier 24-journey focused Canvas/Modern run also passed. Previously tracked Classic source-range hover journey passes in this integrated full run. No hosted CI, real native turn or new ten-minute/platform certification. Original package-manager/artwork edits remain local and excluded.
-- **Next:** Human comparison of the selectable versions, then their explicitly documented utility/3D/native and release acceptance gaps. Keep both designs; no automatic promotion to feature parity.
+### Yash with Codex — Modern breadcrumb header and shared panel material
 
-*Each person overwrites their own block. Keep it to what the other person needs in order to not redo or undo your work.*
+- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [80](review/80-modern-breadcrumb-header.md), implementation `5ec7578`.
+- **Changed:** Files and Toolbox share a neutral graphite gradient. Modern uses a horizontal Home / repository badge / session title header, with Search and utilities on the right. Responsive project/brand collapse preserves the title and working controls; compact Git from 79 and Legacy visualization stay intact.
+- **Verified locally:** Both typechecks/build. All **14 Modern journeys pass** across the initial run plus final responsive correction rerun; added header geometry assertions caught and now prevent the inherited mobile overlap. Actual local Codex UI inspected; Files/Toolbox gradient equality verified. No new real-workspace access, native prompt or hosted CI; unit baseline not rerun for this presentation-only change.
+- **Continue:** Review 80 supersedes header/material choices in 79; review 79 still governs separate Git/Toolbox controls. User package-manager/artwork edits remain untouched. Human preference/native-account/physical/platform acceptance remains separate.
 
 ### @yash (with Claude)
 - **When:** 2026-09-22 → 25
@@ -151,6 +150,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **15 October — Modern foundation reset:** The builder explicitly supersedes independent/no-reference Modern: reuse Legacy's full functionality and preserve its agent visualization; modernize only surroundings with scoped styles. Shared code prevents parity drift. See [76](review/76-modern-legacy-foundation.md).
 
 - **15 October - Keep both builders' UI designs:** Canvas, Modern and Legacy remain selectable after PRs #63/#64. Canvas is the new-install default; saved/explicit selections win, fresh links migrate to Modern and Workbench stays retired. See [73](review/73-ui-version-integration.md).
 

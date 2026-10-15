@@ -6,7 +6,7 @@ import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { SettingsSections } from './UIVersions.tsx';
 import { useExperience } from '../lib/experience.ts';
 
-export function ReadingDialog({ title, close, children, className = '', modeless = false, style }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties }) {
+export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEvidenceScroll(ref, `dialog/${className}`);
   const titleId = useId();
@@ -21,7 +21,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     return () => { arrival?.cancel(); dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
   }, [modeless]);
   return createPortal(<dialog ref={ref} style={style} className={`product-dialog ${className}${modeless ? " map-reader" : ""}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
-    <header><h2 id={titleId}>{title}</h2><button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></header>
+    <header><h2 id={titleId}>{headerIcon}{title}</h2><button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></header>
     {children}
   </dialog>, document.body);
 }
@@ -78,7 +78,7 @@ function Settings() {
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
-    <SettingsSections>
+    <SettingsSections categories={['Appearance', 'Reading', 'Playback', 'Privacy', 'Keyboard']}>
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
       <div className="theme-options" aria-label="Colour theme">{THEMES.map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
     </section>

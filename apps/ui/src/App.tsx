@@ -72,7 +72,11 @@ export function App() {
       if (/token=/.test(location.hash)) return location.reload();
       const id = params().recording;
       const s = useApp.getState();
-      if (id && decodeURIComponent(id) !== s.recordingId && s.source?.kind === 'daemon') void s.openRecording(decodeURIComponent(id));
+      if (id && s.source?.kind === 'daemon') {
+        // Home keeps the loaded recording. Browser Back must still restore its viewer.
+        if (decodeURIComponent(id) !== s.recordingId || !s.projection) void s.openRecording(decodeURIComponent(id));
+        else if (s.screen !== 'viewer') s.set({ screen: 'viewer' });
+      }
       if (!id && s.source?.kind === 'daemon' && s.screen === 'viewer') s.set({ screen: 'home', playing: false });
     };
     window.addEventListener('hashchange', onHash);

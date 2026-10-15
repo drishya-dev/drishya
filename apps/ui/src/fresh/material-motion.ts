@@ -1,22 +1,24 @@
+import { usePresentation } from '../modern/presentation';
 import { useLayoutEffect, useRef } from 'react';
 
 /** One real material, one transform; absent/occluded origins do not get invented. */
 export function useMaterialMotion(node: React.RefObject<HTMLButtonElement | null>, options: {
-  arrival: boolean; path?: string; tool: string; kind?: string; revision: unknown;
+  arrival: boolean; suspended?: boolean; path?: string; tool: string; kind?: string; revision: unknown;
 }) {
+  const { preferences } = usePresentation();
   const previous = useRef<DOMRect | undefined>(undefined);
   const motion = useRef<Animation | undefined>(undefined);
   const arrived = useRef(false);
   useLayoutEffect(() => {
     const element = node.current;
-    if (!element) return;
+    if (!element || options.suspended || element.hasAttribute('data-reading')) return;
     const target = element.getBoundingClientRect();
     const last = previous.current;
     previous.current = target;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const keyboard = element.closest('.fresh-app')?.getAttribute('data-modality') === 'keyboard';
     const stage = element.closest('.fr-work-stream')?.getBoundingClientRect();
-    if (reduced || keyboard || document.hidden || !stage || target.bottom <= stage.top || target.top >= stage.bottom) { motion.current?.cancel(); return; }
+    if (!preferences.motion || reduced || keyboard || document.hidden || !stage || target.bottom <= stage.top || target.top >= stage.bottom) { motion.current?.cancel(); return; }
     let source: DOMRect | undefined;
     if (options.arrival && !arrived.current) {
       arrived.current = true;
@@ -37,7 +39,7 @@ export function useMaterialMotion(node: React.RefObject<HTMLButtonElement | null
     ], { duration: 240, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
     motion.current = animation;
     return () => animation.cancel();
-  }, [node, options.arrival, options.path, options.tool, options.kind, options.revision]);
+  }, [node, preferences.motion, options.arrival, options.suspended, options.path, options.tool, options.kind, options.revision]);
   useLayoutEffect(() => () => motion.current?.cancel(), []);
 }
 
