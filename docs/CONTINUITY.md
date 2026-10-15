@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Merged 15 October:** Modern refinement [PR #65](https://github.com/drishya-dev/drishya/pull/65) squash-merged as `84f76e2`; local `main` fast-forwarded. Reviews 76–80 describe the active shared Legacy visualization, recovered Modern composer/Toolbox, compact Git reader and final breadcrumb header/shared panel gradient. Individual increments remain on local `codex/modern-reading-craft`. Prior local validation applies to the exact merged tree; no hosted CI. User package-manager/artwork changes remain uncommitted.
+
 **15 October header/material refinement:** [80](review/80-modern-breadcrumb-header.md) replaces 79’s centered two-line Modern header with a horizontal Home / repository / session breadcrumb and right-side utilities. Files and Toolbox share a single neutral gradient token. Legacy visualization and 79’s compact Git reader remain intact. Local typechecks/build and 14 Modern browser journeys pass (final responsive correction rerun); no hosted CI.
 
 **15 October compact Modern correction:** [79](review/79-compact-modern-review.md) supersedes 78’s header and review placement. Toolbox contains instruments/MCP/agents only; Git review has a separate branch-icon control matching Files / Repository. Review work/questions move to workspace utilities. The session header is slim and translucent without a rounded outer frame; the content-sized right Git reader is capped at 680 px with compact chrome. Legacy visualization and native/Git evidence owners remain shared. Local checks only.

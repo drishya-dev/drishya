@@ -33,7 +33,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Yash with Codex — Modern breadcrumb header and shared panel material
 
-- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [80](review/80-modern-breadcrumb-header.md), implementation `5ec7578`.
+- **When:** 15 October 2026. PR #65 squash-merged as `84f76e2`; local `main` fast-forwarded. Original increments remain on local `codex/modern-reading-craft`; [80](review/80-modern-breadcrumb-header.md), implementation `5ec7578`.
 - **Changed:** Files and Toolbox share a neutral graphite gradient. Modern uses a horizontal Home / repository badge / session title header, with Search and utilities on the right. Responsive project/brand collapse preserves the title and working controls; compact Git from 79 and Legacy visualization stay intact.
 - **Verified locally:** Both typechecks/build. All **14 Modern journeys pass** across the initial run plus final responsive correction rerun; added header geometry assertions caught and now prevent the inherited mobile overlap. Actual local Codex UI inspected; Files/Toolbox gradient equality verified. No new real-workspace access, native prompt or hosted CI; unit baseline not rerun for this presentation-only change.
 - **Continue:** Review 80 supersedes header/material choices in 79; review 79 still governs separate Git/Toolbox controls. User package-manager/artwork edits remain untouched. Human preference/native-account/physical/platform acceptance remains separate.
