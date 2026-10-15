@@ -13,11 +13,15 @@ function readMarks(key: string): Record<string, ReviewMark> {
   try { return readReviewMarks(localStorage.getItem(key) ?? '{}'); } catch { return {}; }
 }
 
-export function GitReviewEntry() {
+function GitBranchGlyph() {
+  return <svg className="git-branch-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="6" cy="19" r="2.5" /><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6" /></svg>;
+}
+
+export function GitReviewEntry({ icon = false }: { icon?: boolean }) {
   const [open, setOpen] = useState(false);
   const id = useApp(s => s.recordingId);
   const eligible = useApp(s => s.source?.kind === 'daemon' && !s.recordingId?.includes('+'));
-  return eligible ? <><button className="btn ghost git-open" aria-label="Git review" onClick={() => setOpen(true)}>Git review</button>{open && <GitReader key={id} close={() => setOpen(false)} />}</> : null;
+  return eligible ? <><button className="btn ghost git-open" aria-label="Git review" aria-expanded={open} onClick={() => setOpen(value => !value)}>{icon && <GitBranchGlyph />}Git review</button>{open && <GitReader key={id} close={() => setOpen(false)} />}</> : null;
 }
 
 function GitReader({ close }: { close: () => void }) {
@@ -85,13 +89,14 @@ function GitReader({ close }: { close: () => void }) {
     } catch (e) { if (current()) { setPacket(undefined); setError(`Handoff check failed: ${(e as Error).message}`); } }
     finally { if (current()) setChecking(false); }
   };
-  return <ReadingDialog title="Git review" close={close} modeless={document.documentElement.dataset.uiVersion === 'modern'} className={`git-review-dialog${document.documentElement.dataset.uiVersion === 'modern' ? ' modern-git-drawer' : ''}`}>
-    {document.documentElement.dataset.uiVersion === 'modern' && <div className="modern-git-context"><span>Current repository</span><strong>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected workspace'}</strong><small>Read-only · staged and working changes</small></div>}
+  const modern = document.documentElement.dataset.uiVersion === 'modern';
+  return <ReadingDialog title="Git review" close={close} modeless={modern} headerIcon={modern ? <GitBranchGlyph /> : undefined} className={`git-review-dialog${modern ? ' modern-git-drawer' : ''}`}>
+    {modern && <div className="modern-git-context"><strong>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected workspace'}</strong><small>Read-only · current changes</small></div>}
     {!workspace?.approved ? <section><p>Inspect the selected workspace first. Git access has separate consent.</p><button className="btn" disabled={busy || checking} onClick={() => { setBusy(true); void approve().catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve current workspace</button></section> : !consent ? <section><p>Read branch, status and bounded staged / working-tree patches from this repository. No repository writes. This is current Git, separate from captured history.</p><button className="btn" disabled={busy || checking} onClick={() => { setBusy(true); void workspaceApi.approveGit(id).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve read-only Git</button></section> : <>
       <nav className="git-review-toolbar"><span>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span><button className="btn" disabled={busy || checking} onClick={() => void refresh()}>{busy ? 'Inspecting…' : 'Refresh changes'}</button><button className="btn" disabled={busy || checking || !snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint)} onClick={() => void handoff()}>Preview handoff</button></nav>
       {checking && <p role="status">Checking reviewed content…</p>}
       {snapshot && <>
-        <p className="git-scope-note">Current Git sample · Preview and save recheck content. Refresh to inspect new changes. Reviewed marks apply to this exact patch.</p>
+        {modern ? <details className="modern-git-scope"><summary>Current Git · separate from captured history</summary><p>Preview and save recheck content. Refresh to inspect new changes. Reviewed marks apply to this exact patch.</p></details> : <p className="git-scope-note">Current Git sample · Preview and save recheck content. Refresh to inspect new changes. Reviewed marks apply to this exact patch.</p>}
         {snapshot.totalAllowed !== undefined && snapshot.totalAllowed > snapshot.limit && <nav className="reader-pages git-file-pages" aria-label="Git file pages">
           <button className="btn" disabled={busy || checking || !snapshot.pageStart} onClick={() => void refresh(Math.max(0, (snapshot.pageStart ?? 0) - snapshot.limit))}>Previous files</button>
           <span>{(snapshot.pageStart ?? 0) + 1}–{Math.min((snapshot.pageStart ?? 0) + snapshot.limit, snapshot.totalAllowed)} of {snapshot.totalAllowed} eligible paths</span>

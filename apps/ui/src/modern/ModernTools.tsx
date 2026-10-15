@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import type { WorkFocus } from './work-focus';
 import type { HistoryPage, NativeState } from '../fresh/api';
 
-export function ModernTools({ page, native, onFilter, onClear, filter, agents, utilities }: { page?: Pick<HistoryPage, 'scene' | 'projection'>; native?: Pick<NativeState, 'inventory' | 'tools'>; agents?: ReactNode; utilities?: ReactNode; onFilter: (focus: WorkFocus) => void; onClear: () => void; filter?: WorkFocus }) {
+export function ModernTools({ page, native, onFilter, onClear, filter, agents }: { page?: Pick<HistoryPage, 'scene' | 'projection'>; native?: Pick<NativeState, 'inventory' | 'tools'>; agents?: ReactNode; onFilter: (focus: WorkFocus) => void; onClear: () => void; filter?: WorkFocus }) {
   return <aside className="md-tools dock modern-toolbox" aria-label="Tools and agents">
-    <div className="md-dock-heading"><span>Toolbox</span><span className="md-dock-led" /></div>{utilities}
+    <div className="md-dock-heading"><span>Toolbox</span><span className="md-dock-led" /></div>
     <div className="md-tool-list">{page?.scene.dock.native.map(tool => <button key={tool.key} data-fr-tool={tool.tools.join('\n')} className={`instrument k-${tool.kind}`} data-fr-kind={tool.kind} title={tool.tools.join(' · ')} aria-pressed={filter?.kind === tool.kind} onClick={() => onFilter({ kind: tool.kind })}>
       <i className={`md-tool-dot kind-${tool.kind}`} /><span>{tool.kind}</span><small>{tool.uses}</small>
     </button>)}</div>
