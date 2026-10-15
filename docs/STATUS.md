@@ -31,12 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Modern on Legacy's working foundation
+### Yash with Codex — Modern surroundings and tool-output decoding
 
-- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65; latest builder correction in [76](review/76-modern-legacy-foundation.md).
-- **Changed:** Reverted the interrupted, uncommitted Modern workspace re-layout. Modern now shares Legacy's complete working App/Viewer/history/action/hover/map/native implementation. A scoped surrounding-interface layer improves header, explorer, tools/review, composer, settings/search/readers and Home; main agent visualization stays Legacy's. Canvas and Legacy remain selectable. Fixed browser Back from logo/Home to the same loaded recording.
-- **Verified locally:** Both TypeScript checks, production build, **377 unit tests**; final combined **26 browser journeys**, plus **3 long-diff/header-hover checks** across Classic/Studio/Modern. Card parity test compares captured text, IDs, style and widths. Checked real Drishya Codex and Skeletongraph Claude sessions; rootless Claude stays explicitly read-only. No native prompt or hosted CI.
-- **Continue:** Refine Modern's surroundings using `modern/surroundings.css`; shared functional work belongs in existing Legacy components. Old Fresh/Modern shell files are unmounted and excluded from the runtime entry. Do not restart the rejected independent stage. Human preference, real native-account and physical/platform release acceptance remain open. User package/artwork edits untouched.
+- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [77](review/77-modern-surroundings-output.md).
+- **Changed:** Modern settings category navigator with proper padding; neutral UI font, vivid syntax palette, panel utility icon, compact native composer with connection setup under its menu, intrinsic-height centered/bounded tool rail, one grouped/deduplicated sessions list. Shared structured tool output decodes recognized complete JSON envelopes with a raw toggle and bounded decoded pages; no captured/index/source-line changes.
+- **Commits:** `5c048f3` output decoding, `e494e18` Modern interface. Core Legacy visualization/hover/arrivals/map shared, Canvas/Legacy retained.
+- **Verified locally:** Both typechecks, production build, **380 units**; **34 distinct browser checks**, plus focused final settings keyboard rerun. Actual Codex/Claude visual review; two real Codex structured outputs correctly decoded. No native prompt/hosted CI, original package/artwork edits untouched.
+- **Continue:** Modern shared product entry and scoped styling, not retired Fresh shell. 76/77 supersede independent Modern instructions. Real native-account, human comprehension/ten-minute and physical/platform release acceptance remain open.
 
 ### @yash (with Claude)
 - **When:** 2026-09-22 → 25

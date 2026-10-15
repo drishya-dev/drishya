@@ -1,5 +1,7 @@
 # Codebase — the system as built
 
+**15 October Modern surroundings:** [77](review/77-modern-surroundings-output.md) adds a real settings navigator, alternate UI font, compact Legacy-backed native composer, centered bounded tool rail, distinct utility control, vivid syntax and a unified sessions library. Recognized JSON tool envelopes get a derived decoded-text/raw toggle; stored source/artifact line addressing and indexes are unchanged. Modern shares Legacy's visualization/3D map; the old independent Fresh stage stays retired. Local typechecks/build, 380 units and 34 browser journeys pass; no native prompt or hosted CI.
+
 **15 October combined UI routing:** [73](review/73-ui-version-integration.md) integrates PRs #63/#64. Settings exposes Canvas, Modern and Legacy. `main.tsx` loads the independent Modern entry for explicit/saved Modern and old fresh selections; the other entry retains Canvas and Classic routing. Canvas is the new-install default while saved and explicit choices win. Both presentations keep existing authenticated evidence/history boundaries and their own documented acceptance gaps.
 
 **14 October Modern:** [72](review/72-modern-spatial-workspace.md) documents the new `modern/` presentation modules and entry. It reuses independent `fresh/` transport/native/evidence/Git bindings without importing Classic CSS. Version resolution migrates old fresh/Workbench selections to Modern while retaining Legacy. Spatial map grouping and motion are presentation only; no schema, daemon runtime dependency or native policy changes.
