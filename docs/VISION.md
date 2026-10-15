@@ -1,5 +1,7 @@
 # Drishya — Vision & Creative Direction
 
+**15 October compact Modern correction:** [79](review/79-compact-modern-review.md) supersedes 78’s header and review placement. Toolbox contains instruments/MCP/agents only; Git review has a separate branch-icon control matching Files / Repository. Review work/questions move to workspace utilities. The session header is slim and translucent without a rounded outer frame; the content-sized right Git reader is capped at 680 px with compact chrome. Legacy visualization and native/Git evidence owners remain shared. Local checks only.
+
 **15 October Modern controls correction:** Recover the earlier Modern composer and Toolbox compositions while retaining Legacy's main visualization and shared session state. Git review belongs in a right-side reading workspace; use Files / Repository names and a distinct Modern session header. [78](review/78-recovered-modern-controls.md) supersedes the surrounding composition in 77.
 
 **15 October Modern surroundings:** [77](review/77-modern-surroundings-output.md) adds a real settings navigator, alternate UI font, compact Legacy-backed native composer, centered bounded tool rail, distinct utility control, vivid syntax and a unified sessions library. Recognized JSON tool envelopes get a derived decoded-text/raw toggle; stored source/artifact line addressing and indexes are unchanged. Modern shares Legacy's visualization/3D map; the old independent Fresh stage stays retired. Local typechecks/build, 380 units and 34 browser journeys pass; no native prompt or hosted CI.

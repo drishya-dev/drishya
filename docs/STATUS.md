@@ -31,12 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Recovered Modern composer/toolbox and header
+### Yash with Codex — Compact Modern review controls and headers
 
-- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [78](review/78-recovered-modern-controls.md).
-- **Changed:** Recovered the former Modern composer composition and compact Toolbox/MCP drawers, bound to the shared native/focus owners. Direct file/folder attachments, available model/effort and labelled Send/Stop. Right-side Git workspace retains actual consent/patch/handoff logic. New translucent session crown; Files / Repository names and explorer labels. Legacy's main visualization/hover/map remain shared; Canvas/Legacy preserved.
-- **Verified locally:** Both typechecks/build, **380 unit tests**; final combined browser run **34 checks passed**. Tests cover current temporary-repo Git patches in the right drawer, MCP/native origin and focus, and mocked native text/attachment/options/consent forwarding for Codex and Claude. Actual Drishya Codex inspected without submitting a native prompt or granting new real-workspace access. No hosted CI.
-- **Continue:** Active recovered `ModernTools` + `ModernToolStation`, shared `PromptComposer`/Git owners and `recovered-surfaces.css`. The Fresh app is still retired. Original package/artwork edits untouched; real native-account, human ten-minute and physical/platform acceptance remain release checks.
+- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [79](review/79-compact-modern-review.md), implementation `42d51af`.
+- **Changed:** Toolbox contains tools/MCP/agents; separate compact branch-icon Git control matches Files / Repository. Review work/questions remain accessible in workspace utilities. Removed the oversized floating session frame and Sessions label. Git’s right reader is content-sized, capped at 680 px on desktop, with a 44 px icon heading, compact controls and expandable scope explanation. Legacy visualization/native/Git consent owners are preserved.
+- **Verified locally:** Both typechecks/build; **34 Modern/Legacy/Canvas browser checks passed**, plus the extended focused Git journey after adding actual Review work/questions opening checks. Tests cover desktop/narrow bounds, patch content, consent, original tool/MCP origins and relocated utility access. Actual local Codex UI/header/toolbox/Git permission state visually inspected. No real native prompt or new real-workspace consent; no hosted CI. Existing 380-unit baseline was not rerun for this presentation-only correction.
+- **Continue:** Review 79 supersedes the crown/oversized reader in 78. Active CSS remains `modern/recovered-surfaces.css`; old Fresh stage is retired. User package-manager/artwork edits remain untouched. Human visual/native-account/physical/platform acceptance remains separate.
 
 ### @yash (with Claude)
 - **When:** 2026-09-22 → 25
