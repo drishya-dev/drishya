@@ -17,6 +17,7 @@ export function FreshGit({ api, recordingId, onError }: { api: FreshApi; recordi
   const key = `drishya-fresh-git-v1:${recordingId}`;
   const [workspace, setWorkspace] = useState<WorkspaceState>();
   const [approved, setApproved] = useState(false);
+  const [ready, setReady] = useState(false);
   const [snapshot, setSnapshot] = useState<GitSnapshot>();
   const [selected, setSelected] = useState('');
   const [marks, setMarks] = useState(() => savedMarks(key));
@@ -40,7 +41,7 @@ export function FreshGit({ api, recordingId, onError }: { api: FreshApi; recordi
   useEffect(() => {
     let current = true;
     void Promise.all([api.workspace(recordingId), api.gitStatus(recordingId)]).then(async ([root, git]) => {
-      if (!current || !alive.current) return; setWorkspace(root); setApproved(git.approved);
+      if (!current || !alive.current) return; setWorkspace(root); setApproved(git.approved); setReady(true);
       if (git.approved) { setBusy(true); const sample = await api.git(recordingId); if (current && alive.current) { apply(sample); setBusy(false); } }
     }).catch(error => { if (current && alive.current) { setBusy(false); onError(error.message); } });
     return () => { current = false; };
@@ -76,6 +77,7 @@ export function FreshGit({ api, recordingId, onError }: { api: FreshApi; recordi
     if (!indexes.length) { onError('No match in this sampled patch.'); return; }
     setLineStart(Math.floor((indexes.find(index => index >= lineStart + 180) ?? indexes[0]!) / 180) * 180);
   };
+  if (!ready) return <div className="fr-git-view" role="status">Checking workspace permissions…</div>;
   if (!approved) return <div className="fr-git-view"><div className="fr-consent"><h3>{workspace?.approved ? 'Review the working tree' : 'Allow workspace reading first'}</h3><p>{workspace?.approved ? 'Read current branch, status and patches. Git remains separate from captured history.' : 'Read only this session’s captured workspace. Git inspection requires separate permission next.'}</p>{workspace?.root ? <code>{workspace.root}</code> : <p>No captured workspace is available on this machine.</p>}<button className="fr-button fr-button-primary" disabled={busy || !workspace?.root} onClick={() => void run(async () => { if (!workspace?.approved) { const root = await api.workspaceApprove(recordingId); if (alive.current) setWorkspace(root); } else { await api.gitApprove(recordingId); if (!alive.current) return; setApproved(true); const sample = await api.git(recordingId); if (alive.current) apply(sample); } })}>{busy ? 'Checking…' : workspace?.approved ? 'Allow read-only Git' : 'Allow this workspace'}</button></div></div>;
   return <div className="fr-git-view">
     <div className="fr-git-heading"><div><strong>{snapshot?.branch ?? 'Current Git'}</strong><span>{snapshot?.head.slice(0, 10)}</span></div><button className="fr-button" disabled={busy} onClick={() => void refresh()}>Refresh snapshot</button><button className="fr-button" disabled={busy || !snapshot?.files.some(item => marks[item.path]?.reviewed && marks[item.path]?.fingerprint === item.fingerprint)} onClick={() => void handoff(false)}>Preview handoff</button></div>

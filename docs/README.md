@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**14 October Modern precedence:** [72](review/72-modern-spatial-workspace.md) supersedes 71 and earlier Studio/Classic composition choices for the new Modern version only. Legacy remains available. Workbench is no longer a UI choice; its saved links migrate to Modern. Backend/privacy/native truth and outstanding release acceptance remain unchanged.
+
 **14 October independent frontend:** [71](review/71-independent-new-frontend.md) records the builder's request for a completely new design from concept and backend capabilities, without consulting existing frontend designs/code. It supersedes prior visual-layout decisions for the explicit new draft, preserves Classic, and leaves evidence/privacy/native security and publishing-only CI intact.
 
 **14 October current Git follow-up:** [70](review/70-revalidated-git-handoff.md) extends 60–63 with revalidated current-page handoff, sample timestamps, invocation-only filter suppression and a shared subprocess deadline. It supersedes the earlier manual-refresh-before-export behavior and clearing the reading context on inspection failure. Captured history, native consent and release gates are unchanged.

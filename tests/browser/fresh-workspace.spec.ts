@@ -76,6 +76,13 @@ test('fresh native submission requires consent and a new idle acknowledgement fo
   await page.getByRole('textbox', { name: 'Prompt to native agent' }).fill('Inspect the checkout condition');
   await expect(send).toBeDisabled(); await idle.check(); await send.click();
   await expect(idle).not.toBeChecked(); expect(submissions).toBe(2);
+  await page.getByRole('heading', { level: 1 }).click();
+  await expect(idle).toHaveCount(0);
+  const details = page.getByRole('button', { name: 'Connection & permissions' });
+  await details.click();
+  await page.keyboard.press('Escape');
+  await expect(details).toBeFocused();
+  await expect(idle).toHaveCount(0);
 });
 
 test('fresh captured material is readable and local action questions survive reopening', async ({ page }) => {
@@ -100,7 +107,7 @@ test('fresh current Git handoff refuses a patch that changed after review', asyn
   await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
   await expect(page.locator('.fresh-app')).toBeVisible();
   await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
-  await page.getByRole('tab', { name: 'Git review', exact: true }).click();
+  await page.getByRole('button', { name: 'Git review', exact: true }).click();
   const allowRoot = page.getByRole('button', { name: 'Allow this workspace', exact: true });
   const allowGit = page.getByRole('button', { name: 'Allow read-only Git', exact: true });
   const refresh = page.getByRole('button', { name: 'Refresh snapshot', exact: true });
@@ -152,6 +159,8 @@ test('fresh backward replay removes completed output and scopes file activity to
   const path = operation.paths[0]!.path;
   const file = page.locator('.fr-file-tree button').filter({ has: page.getByText(path.split('/').at(-1)!, { exact: true }) }).first();
   const response = page.waitForResponse(r => r.url().includes('/file-operations?') && r.url().includes(`step=${step}`));
+  await page.getByRole('button', { name: 'Files', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Find repository file' }).fill(path);
   await file.click();
   expect((await (await response).json()).operations.every((op: { startSequence: number }) => op.startSequence < step)).toBe(true);
 });
@@ -172,7 +181,7 @@ test('fresh reading has useful height and stays within desktop, phone and landsc
   }
 });
 
-test('UI versions switch between Workbench and Legacy while keeping the actual session', async ({ page }) => {
+test('UI versions switch between Modern and Legacy while keeping the actual session', async ({ page }) => {
   await page.goto(`${server.url}/?experience=fresh#token=${server.token}`);
   await expect(page.locator('.fresh-app')).toBeVisible();
   await page.goto(`${server.url}/?experience=fresh#/r/${ids.codex}`);
@@ -182,9 +191,64 @@ test('UI versions switch between Workbench and Legacy while keeping the actual s
   await expect(page).toHaveURL(new RegExp(`experience=classic.*${ids.codex}`));
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
-  await page.getByRole('button', { name: /^Workbench/ }).click();
+  await page.getByRole('button', { name: /^Modern/ }).click();
   await expect(page.getByRole('region', { name: 'Captured work', exact: true })).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`experience=fresh.*${ids.codex}`));
+  await expect(page).toHaveURL(new RegExp(`experience=modern.*${ids.codex}`));
   await page.goto(`${server.url}/#/r/${ids.codex}`);
   await expect(page.locator('.fresh-app')).toBeVisible();
+});
+
+test('Modern keeps work in place when Files opens and reaches nested paths by search', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.md-library')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
+  const work = page.getByRole('region', { name: 'Captured work', exact: true });
+  await expect(work).toBeVisible();
+  const before = (await work.boundingBox())!;
+  await page.getByRole('button', { name: 'Files', exact: true }).click();
+  const after = (await work.boundingBox())!;
+  expect(after.x).toBe(before.x); expect(after.width).toBe(before.width);
+  await page.getByRole('textbox', { name: 'Find repository file' }).fill('src/cart/total.ts');
+  await page.getByRole('button', { name: 'TS total.ts', exact: true }).click();
+  await expect(page.locator('.fr-inspector h2')).toHaveText('total.ts');
+  await expect(page.locator('.fr-provenance-current')).toContainText('Current workspace');
+});
+
+test('Modern long prose keeps headings, paragraphs and lists in readable vertical flow', async ({ page }) => {
+  await page.route('**/history', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    for (const prose of body.projection.prose) prose.text = '# Review the change\n\nA complete paragraph about the captured source and its checks.\n\n- Read the actual input\n- Inspect the recorded result\n\nAnother paragraph remains below the list, with **emphasis** and `source.ts`.';
+    await route.fulfill({ response, json: body });
+  });
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.md-library')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
+  const prose = page.locator('.md-prose-content').first();
+  await expect(prose.getByRole('heading')).toHaveText('Review the change');
+  const bounds = await prose.evaluate(element => [...element.children].map(child => ({ width: child.getBoundingClientRect().width, y: child.getBoundingClientRect().y })));
+  expect(bounds.length).toBe(4);
+  expect(bounds.every(b => b.width > 150)).toBe(true);
+  expect(bounds.every((b, i) => i === 0 || b.y > bounds[i - 1]!.y)).toBe(true);
+});
+
+test('Modern map explores actual files with keyboard controls and maintains readable bounds', async ({ page }) => {
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
+  await expect(page.locator('.md-library')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
+  await page.getByRole('button', { name: 'Repository', exact: true }).click();
+  const map = page.locator('.md-map');
+  await expect(map.locator('.md-map-point').first()).toBeVisible();
+  await map.getByRole('button', { name: 'Zoom in', exact: true }).press('Enter');
+  await expect(map.locator('.md-map-controls')).toContainText('140%');
+  await map.getByRole('button', { name: 'Fit', exact: true }).click();
+  await expect(map.locator('.md-map-controls')).toContainText('100%');
+  await page.getByRole('textbox', { name: 'Find on repository map' }).fill('total.ts');
+  await map.getByRole('button', { name: 'src/cart/total.ts', exact: true }).click();
+  await expect(page.locator('.fr-inspector h2')).toHaveText('total.ts');
+  await page.getByRole('button', { name: 'Close inspector' }).click();
+  for (const [width, height] of [[1440, 900], [390, 844], [844, 390]]) {
+    await page.setViewportSize({ width, height });
+    await expect(map.getByRole('button', { name: 'Fit', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
 });
