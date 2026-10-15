@@ -277,12 +277,12 @@ export function setMapVisible(on: boolean) {
 }
 
 /** Jet (stored as 'dark') is the signature default: matte black and champagne gold. Midnight is the cooler option. */
-export type ThemePreference = 'midnight' | 'dark' | 'light';
+export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system';
 
 function storedTheme(): ThemePreference {
   try {
     const value = localStorage.getItem('drishya.theme');
-    return value === 'midnight' || value === 'light' ? value : 'dark';
+    return value === 'midnight' || value === 'light' || value === 'system' ? value : 'dark';
   } catch {
     return 'dark';
   }

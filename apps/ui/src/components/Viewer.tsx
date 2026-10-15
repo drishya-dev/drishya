@@ -1,6 +1,7 @@
 import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
+import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
@@ -25,6 +26,7 @@ import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry } from './Workbench.tsx';
+import { CanvasWorkspace } from './CanvasWorkspace.tsx';
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
@@ -127,6 +129,8 @@ function WorkspaceViewer() {
   // A backward seek must conceal later evidence until its as-of page arrives.
   const awaitingEarlierPage = !!historyPage && scene.step > step;
 
+  if (experience === 'canvas') return <><div inert={awaitingEarlierPage} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined }}><CanvasWorkspace key={recordingId} scene={scene} projection={historical} graph={graph} /><FileHistory projection={historical} /></div>{awaitingEarlierPage && <div className="center notice" role="status">Opening the earlier captured page…</div>}</>;
+
   return (
     <>
     <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
@@ -175,7 +179,7 @@ function WorkspaceHeader({ scene, projection }: { scene: Scene; projection: Proj
     viewer.addEventListener('scroll', scroll, true);
     return () => { observer.disconnect(); viewer.removeEventListener('scroll', scroll, true); viewer.style.removeProperty('--workspace-header-h'); };
   }, []);
-  return <div ref={header} className="workspace-header">{experience === 'studio' ? <WorkbenchHeader projection={projection} scene={scene}><span className="workbench-mobile-review"><EvidenceReview projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" title="Search (/)">Search <kbd>/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => useApp.setState({ settingsOpen: true })}>Settings</button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><WorkbenchExport /><LocalPreviewEntry /><SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><ActivityTimeline scene={scene} projection={projection} /></div></details></div></details></WorkbenchHeader> : experience === 'classic' ? <StudioHeader scene={scene} projection={projection} /> : <Crown scene={scene} projection={projection} />}</div>;
+  return <div ref={header} className="workspace-header">{experience === 'studio' ? <WorkbenchHeader projection={projection} scene={scene}><span className="workbench-mobile-review"><EvidenceReview projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd>/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><WorkbenchExport /><LocalPreviewEntry /><SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><ActivityTimeline scene={scene} projection={projection} /></div></details></div></details></WorkbenchHeader> : experience === 'classic' ? <StudioHeader scene={scene} projection={projection} /> : <Crown scene={scene} projection={projection} />}</div>;
 }
 
 function WorkbenchExport() {
@@ -192,12 +196,17 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
   const source = useApp(s => s.source);
   const connection = useApp(s => s.connection);
   const searchOpen = useApp(s => s.searchOpen);
+  const filter = useApp(s => s.filter);
   const exportUrl = id ? source?.exportUrl(id) : undefined;
   return <header className="studio-header crown">
     <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>
     <div className="studio-session crown-title"><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title}>{projection.title ?? recording?.title ?? 'Recording'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
-    <div className="crown-actions studio-actions"><span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
-
+    <div className="crown-actions studio-actions"><span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
+    {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Recorded agent shortcuts">{scene.agents.map(state => {
+      const agent = projection.agents.find(a => a.id === state.id);
+      const parent = projection.agents.find(a => a.id === state.parentId);
+      return <button key={state.id} data-origin-agent={state.id} role="switch" aria-checked={filter?.agentId === state.id} aria-label={`Focus ${agentName(agent)} from agent bar`} title={`${agentName(agent)} · ${state.state}${parent ? ` · child of ${agentName(parent)}` : ''}`} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}</span><small>{state.state}</small></button>;
+    })}</div>}
   </header>;
 }
 

@@ -5,6 +5,8 @@ describe('UI version navigation', () => {
   it('lets explicit links override the saved version and rejects unknown saved choices', () => {
     expect(resolveUIVersion('?experience=classic', 'fresh')).toBe('classic');
     expect(resolveUIVersion('', 'fresh')).toBe('fresh');
+    expect(resolveUIVersion('', 'canvas')).toBe('canvas');
+    expect(resolveUIVersion('', 'classic')).toBe('classic');
     expect(resolveUIVersion('', 'unknown')).toBe('classic');
     expect(resolveUIVersion('?experience=studio', 'fresh')).toBe('studio');
   });

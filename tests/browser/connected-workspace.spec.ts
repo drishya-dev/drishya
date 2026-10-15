@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, appendFileSync, rmSync } from 'n
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 import { HarnessController } from '../../apps/daemon/src/controller.ts';

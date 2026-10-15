@@ -1,6 +1,10 @@
 # Drishya documentation — map and precedence
 
+**15 October observation canvas:** [72](review/72-observation-canvas.md) implements the pasted node-canvas brief as the default local Canvas presentation. Its read-only/search-only shell, specified palette, geometry and motion supersede earlier presentation choices for this route. Classic and the independent Workbench remain explicit alternatives; capture, evidence and native consent contracts remain intact.
+
 **14 October independent frontend:** [71](review/71-independent-new-frontend.md) records the builder's request for a completely new design from concept and backend capabilities, without consulting existing frontend designs/code. It supersedes prior visual-layout decisions for the explicit new draft, preserves Classic, and leaves evidence/privacy/native security and publishing-only CI intact.
+
+**14 October local visual redesign:** [71](review/71-picgen-workspace.md) records the builder-supplied PicGen direction: locally served Outfit, dotted canvas, shared neutral materials, session library, named multi-agent shortcuts and navigation below fixed controls. [UI design system](../apps/ui/DESIGN.md) describes the active style layer. This supersedes conflicting visual choices in 69 for this local candidate; evidence, native consent and current-Git semantics remain unchanged.
 
 **14 October current Git follow-up:** [70](review/70-revalidated-git-handoff.md) extends 60–63 with revalidated current-page handoff, sample timestamps, invocation-only filter suppression and a shared subprocess deadline. It supersedes the earlier manual-refresh-before-export behavior and clearing the reading context on inspection failure. Captured history, native consent and release gates are unchanged.
 

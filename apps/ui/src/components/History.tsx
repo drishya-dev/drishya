@@ -24,6 +24,17 @@ import { NativeTurn } from './SessionWorkspace.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
 
+/** Navigation targets the readable world below any overlapping fixed controls. */
+function readingClearance(history: HTMLElement): number {
+  const bounds = history.getBoundingClientRect();
+  let top = bounds.top;
+  for (const control of history.closest('.viewer')?.querySelectorAll<HTMLElement>('.workspace-header, .workspace-bar') ?? []) {
+    const rect = control.getBoundingClientRect();
+    if (rect.width > 0 && rect.right > bounds.left && rect.left < bounds.right && rect.top <= bounds.top + 240) top = Math.max(top, rect.bottom);
+  }
+  return Math.max(16, top - bounds.top + 16);
+}
+
 export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
   const mode = useApp((s) => s.mode);
   const compareAgents = useApp((s) => s.compareAgents);
@@ -322,7 +333,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const selected = selectedOp ? [...node.querySelectorAll<HTMLElement>('[data-op-id]')].find((n) => n.dataset.opId === selectedOp) : undefined;
     const bounds = (selected ?? node).getBoundingClientRect();
     const viewportBounds = el.getBoundingClientRect();
-    if (bounds.top < viewportBounds.top || bounds.bottom > viewportBounds.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - Math.max(16, (el.clientHeight - bounds.height) / 2));
+    const clearance = readingClearance(el);
+    const available = Math.max(0, el.clientHeight - clearance);
+    if (bounds.top < viewportBounds.top + clearance || bounds.bottom > viewportBounds.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - clearance - Math.max(0, (available - bounds.height) / 2));
     // Anchor reading to the navigated passage itself. Passages above may still carry estimated
     // heights; anchoring to whichever slot was first visible let their measurement pull the
     // reader away from the action just opened.
@@ -450,7 +463,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
           navigationBoundary.current = { step: scene.step, projection };
           chapterNavigation.current = onWindow && ps.unloaded ? { id: ps.id, step: scene.step } : undefined;
           setFocusedPassageId(ps.id);
-          readingAnchor.current = { id: ps.id, offset: 0 }; readingAtStart.current = false;
+          readingAnchor.current = { id: ps.id, offset: ref.current ? readingClearance(ref.current) : 16 }; readingAtStart.current = false;
           setScrollTop(layout.prefix[index]!);
           if (onWindow && ps.unloaded) void onWindow({ start: Math.max(0, index - 8), count: 32, pinnedPassageIds: [ps.id] }).catch(error => set({ error: error.message }));
         }} />}

@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 let dir: string, app: App, server: RunningServer;
@@ -27,4 +27,13 @@ test('agent and action focus survive each other and can be cleared independently
   await page.getByRole('button', { name: 'Clear focus', exact: true }).click();
   await expect(agent).toHaveAttribute('aria-checked', 'false');
   await expect(tool).toHaveAttribute('aria-pressed', 'false');
+  const shortcut = page.getByRole('switch', { name: 'Focus Explore from agent bar', exact: true });
+  await tool.click();
+  await shortcut.click();
+  await expect(shortcut).toHaveAttribute('aria-checked', 'true');
+  await expect(agent).toHaveAttribute('aria-checked', 'true');
+  await expect(tool).toHaveAttribute('aria-pressed', 'true');
+  await shortcut.click();
+  await expect(shortcut).toHaveAttribute('aria-checked', 'false');
+  await expect(tool).toHaveAttribute('aria-pressed', 'true');
 });

@@ -291,7 +291,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       for (const id of plan.prose) {
         if (emitted.has(`prose:${id}`)) continue;
         const target = [...history.querySelectorAll<HTMLElement>('[data-prose-id]')].find((el) => el.dataset.proseId === id);
-        const agentOrigin = [...viewer.querySelectorAll<HTMLElement>('.crown [data-agent-id], .station-agents [data-agent-id], .workbench-agents [data-agent-id]')].find((el) => el.dataset.agentId === target?.dataset.agentId && originVisible(el));
+          const agentOrigin = [...viewer.querySelectorAll<HTMLElement>('.workspace-agent-bar [data-origin-agent], .crown [data-agent-id], .station-agents [data-agent-id], .workbench-agents [data-agent-id]')].find((el) => (el.dataset.originAgent ?? el.dataset.agentId) === target?.dataset.agentId && originVisible(el));
         // Single-agent sessions omit the badge; their captured session title is the home.
         const origin = agentOrigin ?? (projection.agents.length === 1 ? viewer.querySelector<HTMLElement>('.crown-title') : undefined);
         const r = origin?.getBoundingClientRect();

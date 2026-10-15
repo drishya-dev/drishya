@@ -3,6 +3,7 @@ import { selectedUIVersion, switchUIVersion, type UIVersion } from '../lib/ui-ve
 import './ui-versions.css';
 
 const versions: { id: UIVersion; name: string; note: string; available: boolean }[] = [
+  { id: 'canvas', name: 'Canvas', note: 'Read-only observation, connected actions and an independent evidence reader.', available: true },
   { id: 'classic', name: 'Legacy', note: 'The established continuous canvas, spatial map and full reading tools.', available: true },
   { id: 'fresh', name: 'Workbench', note: 'The independent connected draft, preserved for comparison.', available: true },
   { id: 'modern', name: 'Modern', note: 'A spatial black canvas with connected floating materials. In preparation.', available: false },
@@ -10,7 +11,8 @@ const versions: { id: UIVersion; name: string; note: string; available: boolean 
 
 export function SettingsSections({ children }: { children: ReactNode }) {
   const [tab, setTab] = useState<'general' | 'versions'>('general');
-  const current = selectedUIVersion();
+  const selected = selectedUIVersion();
+  const current = selected === 'classic' && document.documentElement.dataset.experience === 'canvas' ? 'canvas' : selected;
   return <div className="dv-settings">
     <div role="tablist" aria-label="Settings sections" className="dv-tabs">
       <button role="tab" aria-selected={tab === 'general'} onClick={() => setTab('general')}>General</button>
