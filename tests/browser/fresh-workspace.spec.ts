@@ -105,9 +105,10 @@ test('fresh current Git handoff refuses a patch that changed after review', asyn
   const allowGit = page.getByRole('button', { name: 'Allow read-only Git', exact: true });
   const refresh = page.getByRole('button', { name: 'Refresh snapshot', exact: true });
   await expect(allowRoot.or(allowGit).or(refresh)).toBeVisible();
-  if (await allowRoot.isVisible()) await allowRoot.click();
+  // Saved consent may resolve between the visibility check and Playwright's click.
+  if (await allowRoot.isVisible()) await allowRoot.or(allowGit).or(refresh).click();
   await expect(allowGit.or(refresh)).toBeVisible();
-  if (await allowGit.isVisible()) await allowGit.click();
+  if (await allowGit.isVisible()) await allowGit.or(refresh).click();
   await expect(page.getByRole('region', { name: 'Current Git patch' })).toContainText('total = 42');
   await page.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
   await page.getByRole('textbox', { name: 'Local Git review note' }).fill('Checked total');
