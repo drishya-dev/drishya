@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**15 October header/material refinement:** [80](review/80-modern-breadcrumb-header.md) replaces 79’s centered two-line Modern header with a horizontal Home / repository / session breadcrumb and right-side utilities. Files and Toolbox share a single neutral gradient token. Legacy visualization and 79’s compact Git reader remain intact. Local typechecks/build and 14 Modern browser journeys pass (final responsive correction rerun); no hosted CI.
+
 **15 October compact Modern correction:** [79](review/79-compact-modern-review.md) supersedes 78’s header and review placement. Toolbox contains instruments/MCP/agents only; Git review has a separate branch-icon control matching Files / Repository. Review work/questions move to workspace utilities. The session header is slim and translucent without a rounded outer frame; the content-sized right Git reader is capped at 680 px with compact chrome. Legacy visualization and native/Git evidence owners remain shared. Local checks only.
 
 **Modern continuation:** [75 — workflow craft](review/75-modern-workflow-craft.md) records the 15 October functional/interaction audit and remaining work; it extends 74 and does not replace Canvas or Legacy.

@@ -31,12 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Compact Modern review controls and headers
+### Yash with Codex — Modern breadcrumb header and shared panel material
 
-- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [79](review/79-compact-modern-review.md), implementation `42d51af`.
-- **Changed:** Toolbox contains tools/MCP/agents; separate compact branch-icon Git control matches Files / Repository. Review work/questions remain accessible in workspace utilities. Removed the oversized floating session frame and Sessions label. Git’s right reader is content-sized, capped at 680 px on desktop, with a 44 px icon heading, compact controls and expandable scope explanation. Legacy visualization/native/Git consent owners are preserved.
-- **Verified locally:** Both typechecks/build; **34 Modern/Legacy/Canvas browser checks passed**, plus the extended focused Git journey after adding actual Review work/questions opening checks. Tests cover desktop/narrow bounds, patch content, consent, original tool/MCP origins and relocated utility access. Actual local Codex UI/header/toolbox/Git permission state visually inspected. No real native prompt or new real-workspace consent; no hosted CI. Existing 380-unit baseline was not rerun for this presentation-only correction.
-- **Continue:** Review 79 supersedes the crown/oversized reader in 78. Active CSS remains `modern/recovered-surfaces.css`; old Fresh stage is retired. User package-manager/artwork edits remain untouched. Human visual/native-account/physical/platform acceptance remains separate.
+- **When:** 15 October 2026. Branch `codex/modern-reading-craft`, PR #65, [80](review/80-modern-breadcrumb-header.md), implementation `5ec7578`.
+- **Changed:** Files and Toolbox share a neutral graphite gradient. Modern uses a horizontal Home / repository badge / session title header, with Search and utilities on the right. Responsive project/brand collapse preserves the title and working controls; compact Git from 79 and Legacy visualization stay intact.
+- **Verified locally:** Both typechecks/build. All **14 Modern journeys pass** across the initial run plus final responsive correction rerun; added header geometry assertions caught and now prevent the inherited mobile overlap. Actual local Codex UI inspected; Files/Toolbox gradient equality verified. No new real-workspace access, native prompt or hosted CI; unit baseline not rerun for this presentation-only change.
+- **Continue:** Review 80 supersedes header/material choices in 79; review 79 still governs separate Git/Toolbox controls. User package-manager/artwork edits remain untouched. Human preference/native-account/physical/platform acceptance remains separate.
 
 ### @yash (with Claude)
 - **When:** 2026-09-22 → 25
