@@ -98,10 +98,12 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   const composer=page.getByRole('region',{name:'Harness prompt'});
   await expect(composer).toBeVisible();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Inspect the checkout condition');
-  await composer.getByRole('button',{name:'Add files or folders'}).click();
-  await expect(composer.getByRole('button',{name:'Files or images',exact:true})).toBeVisible();
+  await expect(composer.getByRole('button',{name:'Attach text or image files',exact:true})).toBeVisible();
+  await expect(composer.getByRole('button',{name:'Attach folder',exact:true})).toBeVisible();
+  await composer.locator('.native-options>summary').click();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await page.getByRole('heading',{level:1}).click();
-  await expect(composer.getByRole('button',{name:'Files or images',exact:true})).toBeHidden();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
   await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
   await composer.getByLabel('Choose prompt files').setInputFiles({name:'note.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic attachment for local testing')});
   await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toBeVisible();
@@ -183,4 +185,69 @@ test('structured shell output renders decoded newlines and retains the exact raw
   await expect(card.locator('.structured-tool-output .output')).toContainText('const pattern = "\\n";');
   await card.getByRole('button',{name:'Show raw',exact:true}).click();
   await expect(card.locator('.structured-tool-output .output')).toContainText(raw);
+});
+
+test('recovered Modern toolbox preserves actual instrument origins, filters and MCP drawers', async ({ page }) => {
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  const toolbox=page.getByRole('complementary',{name:'Tools and agents'});
+  await expect(toolbox.getByText('Toolbox',{exact:true})).toBeVisible();
+  const read=toolbox.locator('.instrument.k-read');
+  await expect(read).toBeVisible();
+  await read.click(); await expect(read).toHaveAttribute('aria-pressed','true');
+  await toolbox.getByRole('button',{name:'Clear focus ×',exact:true}).click();
+  const mcpServer=toolbox.locator('.md-server').filter({has:page.locator('[data-mcp-server]')}).first();
+  await expect(mcpServer).toBeVisible();
+  {
+    await mcpServer.locator('summary').click();
+    const tool=mcpServer.locator('button[data-mcp-tool]').first();
+    await expect(tool).toBeVisible(); await tool.click();
+    await expect(tool).toHaveAttribute('aria-pressed','true');
+    await toolbox.getByRole('button',{name:'Clear focus ×',exact:true}).click();
+  }
+  await expect(page.getByRole('button',{name:'Show files',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Explore repository map',exact:true})).toHaveText('Repository');
+  await expect(page.locator('.modern-session-header')).toBeVisible();
+  await expect(page.locator('.modern-session-header .studio-session')).toContainText(/checkout|orders/);
+});
+
+test('Modern Git review opens on the right and reads actual staged/worktree patches', async ({ page }) => {
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  const git=page.getByRole('dialog',{name:'Git review',exact:true});
+  await expect(git).toBeVisible();
+  const bounds=(await git.boundingBox())!;
+  expect(bounds.x).toBeGreaterThan(100); expect(bounds.x+bounds.width).toBeGreaterThan(1400);
+  if(await git.getByRole('button',{name:'Approve current workspace'}).isVisible()) await git.getByRole('button',{name:'Approve current workspace'}).click();
+  await expect(git.getByRole('button',{name:'Approve read-only Git'}).or(git.getByRole('button',{name:'Refresh changes'}))).toBeVisible();
+  if(await git.getByRole('button',{name:'Approve read-only Git'}).isVisible()) await git.getByRole('button',{name:'Approve read-only Git'}).click();
+  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
+  await expect(git.locator('.git-review-layout')).toContainText('src/cart/total.ts');
+  await expect(git.locator('.git-patch-reader')).toContainText('42');
+  await git.getByRole('button',{name:'Close Git review'}).click();
+  await expect(git).toHaveCount(0);
+});
+
+for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} composer forwards text, attachments and native options with explicit consent`, async ({ page }) => {
+  const state={available:true,state:'idle',harness,tools:[],inventory:'unknown',approvals:[],output:'',settings:{scope:'workspace',model:'native-one',permission:'Native policy',models:[{id:'native-one',name:'Native One',efforts:['low','high']} ]}};
+  let payload:any;
+  await page.route('**/controller',route=>route.fulfill({json:state}));
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.route('**/controller/prompt',async route=>{payload=route.request().postDataJSON();await route.fulfill({json:{...state,state:'completed',runId:'synthetic-modern'}});});
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[harness]}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'});
+  await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Review the selected source');
+  await composer.getByLabel('Choose prompt files').setInputFiles({name:'context.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic context')});
+  await composer.getByRole('combobox',{name:'Native model',exact:true}).selectOption('native-one');
+  await composer.getByRole('combobox',{name:'Reasoning effort',exact:true}).selectOption('high');
+  await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
+  expect(payload).toBeUndefined();
+  await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
+  await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();
+  await expect.poll(()=>payload).toBeDefined();
+  expect(payload.prompt).toBe('Review the selected source');expect(payload.exclusive).toBe(true);
+  expect(payload.attachments).toEqual([{name:'context.txt',type:'text',data:'Synthetic context'}]);
+  expect(payload.options).toEqual({model:'native-one',effort:'high'});
 });

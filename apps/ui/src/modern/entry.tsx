@@ -5,3 +5,4 @@ import './surroundings.css';
 export function ModernApp({ token: _token }: { token: string }) { return <App />; }
 import './settings.css';
 import './workspace-chrome.css';
+import './recovered-surfaces.css';

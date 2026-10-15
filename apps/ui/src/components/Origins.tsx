@@ -250,7 +250,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           const dock = origin?.closest('.dock')?.getBoundingClientRect();
           if (!bounds || !dock || !origin || !originVisible(origin)) origin = undefined;
           label = origin ? 'MCP tool' : 'MCP server';
-          origin ??= [...viewer.querySelectorAll<HTMLElement>('.server-name')].find((el) => el.textContent?.trim() === server);
+          origin ??= [...viewer.querySelectorAll<HTMLElement>('.server-name')].find((el) => el.dataset.mcpServer === server || el.textContent?.trim() === server);
         } else {
           origin = viewer.querySelector<HTMLElement>(`.instrument.k-${op.kind}`) ?? undefined;
           label = 'Tool instrument';

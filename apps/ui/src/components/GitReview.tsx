@@ -17,7 +17,7 @@ export function GitReviewEntry() {
   const [open, setOpen] = useState(false);
   const id = useApp(s => s.recordingId);
   const eligible = useApp(s => s.source?.kind === 'daemon' && !s.recordingId?.includes('+'));
-  return eligible ? <><button className="btn ghost git-open" onClick={() => setOpen(true)}>Git review</button>{open && <GitReader key={id} close={() => setOpen(false)} />}</> : null;
+  return eligible ? <><button className="btn ghost git-open" aria-label="Git review" onClick={() => setOpen(true)}>Git review</button>{open && <GitReader key={id} close={() => setOpen(false)} />}</> : null;
 }
 
 function GitReader({ close }: { close: () => void }) {
@@ -43,6 +43,9 @@ function GitReader({ close }: { close: () => void }) {
     catch (e) { if (current()) setError((e as Error).message); }
     finally { if (current()) setBusy(false); }
   };
+  useEffect(() => {
+    if (document.documentElement.dataset.uiVersion === 'modern' && workspace?.approved && consent && !snapshot && !busy) void refresh();
+  }, [workspace?.approved, consent]);
   const file = snapshot?.files.find(f => f.path === selected);
   const mark = file ? marks[file.path] : undefined;
   const exact = !!file && mark?.fingerprint === file.fingerprint;
@@ -82,7 +85,8 @@ function GitReader({ close }: { close: () => void }) {
     } catch (e) { if (current()) { setPacket(undefined); setError(`Handoff check failed: ${(e as Error).message}`); } }
     finally { if (current()) setChecking(false); }
   };
-  return <ReadingDialog title="Git review" close={close} className="git-review-dialog">
+  return <ReadingDialog title="Git review" close={close} modeless={document.documentElement.dataset.uiVersion === 'modern'} className={`git-review-dialog${document.documentElement.dataset.uiVersion === 'modern' ? ' modern-git-drawer' : ''}`}>
+    {document.documentElement.dataset.uiVersion === 'modern' && <div className="modern-git-context"><span>Current repository</span><strong>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected workspace'}</strong><small>Read-only · staged and working changes</small></div>}
     {!workspace?.approved ? <section><p>Inspect the selected workspace first. Git access has separate consent.</p><button className="btn" disabled={busy || checking} onClick={() => { setBusy(true); void approve().catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve current workspace</button></section> : !consent ? <section><p>Read branch, status and bounded staged / working-tree patches from this repository. No repository writes. This is current Git, separate from captured history.</p><button className="btn" disabled={busy || checking} onClick={() => { setBusy(true); void workspaceApi.approveGit(id).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve read-only Git</button></section> : <>
       <nav className="git-review-toolbar"><span>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span><button className="btn" disabled={busy || checking} onClick={() => void refresh()}>{busy ? 'Inspecting…' : 'Refresh changes'}</button><button className="btn" disabled={busy || checking || !snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint)} onClick={() => void handoff()}>Preview handoff</button></nav>
       {checking && <p role="status">Checking reviewed content…</p>}
