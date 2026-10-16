@@ -12,3 +12,14 @@ it('uses an outer margin for wrapped cards without crossing their contents', () 
 it('omits routes when overlapping surfaces leave no unobstructed endpoint', () => {
   expect(flowRoute(a, b, [a, b, { left: 0, right: 260, top: 0, bottom: 130 }])).toBeUndefined();
 });
+it('retains the wrapped second-to-third connection when a fourth card fills the next row', () => {
+  const c = { ...a, top: 140, bottom: 260 };
+  const d = { ...b, top: 140, bottom: 280 };
+  expect(flowRoute(b, c, [a, b, c, d])).toBe('M 190 120 L 190 130 L 70 130 L 70 140');
+});
+it('routes around a taller neighboring card when rows have unequal heights', () => {
+  const tall = { ...a, bottom: 155 };
+  const c = { ...a, top: 180, bottom: 300 };
+  const d = { ...b, top: 180, bottom: 310 };
+  expect(flowRoute(b, c, [tall, b, c, d])).toBe('M 240 38 L 252 38 L 252 172 L 70 172 L 70 180');
+});

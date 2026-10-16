@@ -56,6 +56,7 @@ export function FlowConnections({ projection }: { projection: Projection }) {
         if (!element) {
           element = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           element.setAttribute('marker-end', 'url(#flow-arrow)');
+          element.setAttribute('data-flow-link', path.key);
           const title = document.createElementNS('http://www.w3.org/2000/svg', 'title'); title.textContent = path.label; element.append(title);
           root.append(element); elements.set(path.key, element);
         }
