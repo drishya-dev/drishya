@@ -654,6 +654,37 @@ test('an unexpected rendering failure has a usable recovery surface instead of a
   await expect(page.locator('.mh-home')).toBeVisible();
 });
 
+test('Modern seven palettes cover Home and session surfaces, and HUD controls retain the prompt draft',async({page})=>{
+  await page.setViewportSize({width:1440,height:960});
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await expect(page.locator('.mh-header').getByRole('button',{name:'Demo',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('link',{name:'Star on GitHub'})).toHaveAttribute('href','https://github.com/drishya-dev/drishya');
+  for(const [name,palette] of [['Jet Black','jet'],['Paper','paper'],['Midnight','midnight'],['Catppuccin Mocha','mocha'],['Tokyo Night','tokyo'],['Nord','nord'],['Gruvbox Dark','gruvbox']]) {
+    await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+    await page.getByRole('button',{name:name!,exact:true}).click();
+    await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
+    const expectedBase:Record<string,string>={jet:'#0a0a0a',paper:'#f9fafb',midnight:'#0b0f19',mocha:'#11111b',tokyo:'#16161e',nord:'#242933',gruvbox:'#1d2021'};
+    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
+    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#2563eb',midnight:'#38bdf8',mocha:'#b4befe',tokyo:'#7aa2f7',nord:'#88c0d0',gruvbox:'#fe8019'};
+    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
+    await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
+    await page.screenshot({path:resolve(`.local/palette-${palette}-home.png`)});
+  }
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const prompt=page.getByRole('region',{name:'Harness prompt'}),input=prompt.getByRole('textbox',{name:'Prompt for selected harness session'});
+  await input.fill('Retain this local draft while minimizing.');
+  await prompt.getByRole('button',{name:'Minimize prompt',exact:true}).click();
+  await expect(input).toBeHidden();await prompt.getByRole('button',{name:'Expand prompt',exact:true}).click();await expect(input).toHaveValue('Retain this local draft while minimizing.');
+  await page.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeHidden();
+  await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeVisible();
+  await input.fill('');
+  for(const [name,palette] of [['Jet Black','jet'],['Paper','paper'],['Midnight','midnight'],['Catppuccin Mocha','mocha'],['Tokyo Night','tokyo'],['Nord','nord'],['Gruvbox Dark','gruvbox']]) {
+    await page.getByRole('button',{name:'Workspace settings',exact:true}).click();await page.getByRole('button',{name:name!,exact:true}).click();await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.screenshot({path:resolve(`.local/palette-${palette}-session.png`)});
+  }
+});
+
 
 test('minimized Modern composer keeps Stop and failure feedback available',async({page})=>{
   let state:any={available:true,state:'running',runId:'synthetic-mini',harness:'codex',tools:[],inventory:'unknown',approvals:[],output:''};
