@@ -41,7 +41,9 @@ it('returns bounded redacted staged/worktree changes without invoking helpers or
   expect(snapshot.files.find(f => f.path === 'untracked.ts')?.patch).toContain('Untracked file');
   expect(existsSync(join(dir, 'helper-ran'))).toBe(false);
 });
-it('changes the review content identity on an edit without changing HEAD', async () => {
+// Two real Git snapshots can exceed Vitest's 5s default on Windows.
+// Keep the production subprocess/snapshot limits and every race/privacy assertion.
+it('changes the review content identity on an edit without changing HEAD', { timeout: 20_000 }, async () => {
   const before = await review.snapshot(id); writeFileSync(join(root, 'a.ts'), 'export const a = 3;\n');
   const after = await review.snapshot(id); expect(after.head).toBe(before.head);
   expect(after.files.find(f => f.path === 'a.ts')?.fingerprint).not.toBe(before.files.find(f => f.path === 'a.ts')?.fingerprint);
@@ -51,7 +53,9 @@ it('parses NUL-delimited rename paths and unusual filenames without whitespace s
   expect(parseStatus('R  new name.ts\0old name.ts\0?? odd\nfile.ts\0')).toEqual([{ path: 'new name.ts', previousPath: 'old name.ts', status: 'R ' }, { path: 'odd\nfile.ts', previousPath: undefined, status: '??' }]);
 });
 
-it('rejects a worktree edit during inspection even when status and HEAD stay identical, then allows retry', async () => {
+// Two real Git snapshots can exceed Vitest's 5s default on Windows.
+// Keep the production subprocess/snapshot limits and every race/privacy assertion.
+it('rejects a worktree edit during inspection even when status and HEAD stay identical, then allows retry', { timeout: 20_000 }, async () => {
   const status = git('status', '--porcelain=v1'), head = git('rev-parse', 'HEAD');
   let edited = false;
   const concurrent = new GitReview(access, async (root, args, signal) => {
@@ -243,7 +247,9 @@ it('rejects a file replaced with identical bytes during inspection', async () =>
   expect(replaced).toBe(true);
 });
 
-it('changes snapshot identity when switching to another branch at the same commit', async () => {
+// Two real Git snapshots can exceed Vitest's 5s default on Windows.
+// Keep the production subprocess/snapshot limits and every race/privacy assertion.
+it('changes snapshot identity when switching to another branch at the same commit', { timeout: 20_000 }, async () => {
   const stable = new GitReview(access); await stable.approve(id);
   const before = await stable.snapshot(id);
   git('symbolic-ref', 'HEAD', 'refs/heads/synthetic-review'); git('update-ref', 'HEAD', before.head);
