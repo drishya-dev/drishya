@@ -94,9 +94,8 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
   const body = useRef<HTMLDivElement>(null), alive = useRef(true), pendingLine = useRef<number>(undefined);
   useEffect(() => { alive.current=true; return () => { alive.current=false; }; },[]);
   useEffect(() => { let active=true; setFile(undefined); setError(''); void workspaceApi.file(id,path,start).then(value => { if(active) setFile(value); }).catch(e => { if(active) setError(e.message); }); return () => { active=false; }; },[id,path,start,retry]);
-  useEffect(() => { if(pendingLine.current === undefined) return; const target=body.current?.querySelector(`[data-source-line="${pendingLine.current}"]`); if(target) { target.scrollIntoView({block:'nearest',inline:'nearest'}); pendingLine.current=undefined; } },[activeLine,file]);
   useLayoutEffect(() => {
-    if(!file || !body.current) return;
+    if(!file || !body.current || pendingLine.current !== undefined) return;
     const position = memory.get(`${locationKey}/scroll/${formatted?'document':start}`) as {top:number;left:number}|undefined;
     if(position) { body.current.scrollTop=position.top; body.current.scrollLeft=position.left; }
   },[file,previewDocument,formatted,memory,locationKey,start,editing]);
@@ -106,6 +105,15 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
     void loadWorkspaceDocument(async offset=>{if(!active)throw new Error('Reading closed.');return workspaceApi.file(id,path,offset);}).then(value=>{if(active)setDocument(value);}).catch(error=>{if(active)setDocumentError(error.message);});
     return ()=>{active=false;};
   },[id,path,formatted,editing,retry]);
+  useLayoutEffect(() => {
+    if(pendingLine.current===undefined||formatted)return;
+    const root=body.current,target=root?.querySelector<HTMLElement>(`[data-source-line="${pendingLine.current}"]`);
+    if(root&&target) {
+      const bounds=target.getBoundingClientRect(),viewport=root.getBoundingClientRect();
+      root.scrollTop=Math.max(0,root.scrollTop+bounds.top-viewport.top-(root.clientHeight-bounds.height)/2);
+      pendingLine.current=undefined;
+    }
+  },[activeLine,file,formatted]);
   const draft = drafts.get(id,path);
   useEffect(() => { if(editing && !draft) setEditing(false); },[draft,editing]);
   const matches = query && file ? file.text.split('\n').flatMap((text,index) => text.toLowerCase().includes(query.toLowerCase()) ? [file.start+index+1] : []) : [];
