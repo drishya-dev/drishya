@@ -14,6 +14,8 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await page.setViewportSize({width:1440,height:960});
   await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
+  await expect(page.locator('.mh-session').first()).toBeVisible();
+  await page.screenshot({path:resolve(`.local/review-actual-${index+1}-home.png`)});
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(id)}`);
   await expect(page.locator('.history')).toBeVisible();
   await expect.poll(()=>page.locator('.history .op,.history .prose,.history .turn').evaluateAll(nodes=>nodes.some(el=>{const r=el.getBoundingClientRect();return r.height>0&&r.bottom>100&&r.top<innerHeight-180;})),{timeout:20000}).toBe(true);

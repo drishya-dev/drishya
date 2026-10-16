@@ -11,6 +11,7 @@ const ids: Record<string, string> = {};
 test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-fresh-')); root = join(dir, 'shop');
   cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
+  writeFileSync(join(root,'src/cart/reading.ts'),Array.from({length:450},(_,i)=>`export const reviewLine${i+1} = ${i+1};`).join('\n'));
   const git = (...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true });
   git('init'); git('config', 'user.name', 'Synthetic'); git('config', 'user.email', 'synthetic@example.invalid');
   git('add', '.'); git('commit', '-m', 'synthetic workspace');
@@ -31,6 +32,8 @@ test.beforeAll(async () => {
   ids.review=(await app.ingest.importSource('codex',reviewJournal)).recordingId;
   server = await startServer({ app, port: 0, token: 'synthetic-independent-design' });
 });
+test.beforeEach(async({request})=>{await request.delete(`${server.url}/v1/working-locations`,{headers:{authorization:`Bearer ${server.token}`,'content-type':'application/json'}});});
+
 test.afterAll(async () => {
   if (server) await server.close(); if (app) await app.close();
   if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); }
@@ -554,4 +557,67 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x+box.width).toBeLessThanOrEqual(390);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({path:resolve('.local/developer-workspace-phone.png')});
+});
+
+test('Modern navigation keeps two actions at each edge, readable and outside the history viewport',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  for(const width of [1600,1280,1024,768,600,390]) {
+    await page.setViewportSize({width,height:900});
+    const buttons=['Show files','Explore repository map','Open developer workspace','Git review'];
+    const boxes=[];
+    for(const name of buttons) {const node=page.getByRole('button',{name,exact:true});await expect(node).toBeVisible();const box=(await node.boundingBox())!;expect(box.height).toBeGreaterThanOrEqual(38);expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);boxes.push(box);}
+    expect(boxes[0]!.x).toBeLessThan(30);expect(boxes[3]!.x+boxes[3]!.width).toBeGreaterThan(width-30);
+    if(width===1280)await page.screenshot({path:resolve('.local/modern-navigation-edges.png')});
+    for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i]!,b=boxes[j]!;expect(Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y))).toBeLessThan(1);}
+    const history=(await page.locator('.history').boundingBox())!;
+    expect(history.y).toBeLessThan(boxes[0]!.y);
+    if(width>=768)expect(await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.closest('.workspace-leading,.workspace-secondary,.workspace-bar')!==null,{x:width/2,y:boxes[0]!.y+10})).toBe(false);
+  }
+});
+
+test('Modern restores source tabs, reading page and Home resume after a hard reload without saving source or grants',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
+  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
+  const approve=desk.getByRole('button',{name:'Approve workspace reading'});
+  await expect(approve.or(desk.getByRole('tablist'))).toBeVisible();if(await approve.isVisible())await approve.click();
+  await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/reading.ts');
+  await page.locator('[data-spine-path="src/cart/reading.ts"]').click();
+  const reader=desk.getByRole('region',{name:'Workspace file src/cart/reading.ts',exact:true});
+  await reader.getByRole('textbox',{name:'Go to line in src/cart/reading.ts',exact:true}).fill('300');
+  await reader.getByRole('button',{name:'Go',exact:true}).click();
+  await expect(reader.locator('footer')).toContainText('Lines 201–400');
+  await reader.getByRole('button',{name:'Wrap',exact:true}).click();
+  await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain('desk/document/0/src/cart/reading.ts');
+  const saved=JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json());
+  expect(saved).not.toContain('export const reviewLine');expect(saved).not.toContain('approved');expect(saved).not.toContain('prompt');
+  await page.reload();await expect(desk).toBeVisible();await expect(reader.locator('footer')).toContainText('Lines 201–400');
+  await expect(reader.getByRole('button',{name:'Wrap',exact:true})).toHaveAttribute('aria-pressed','true');
+  await reader.locator('.desk-code').focus();await page.keyboard.press('Alt+w');await expect(reader).toHaveCount(0);
+  await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
+  await page.getByRole('button',{name:'Drishya',exact:true}).click();await expect(page.locator('.mh-home')).toBeVisible();
+  await expect(page.getByRole('button',{name:/Resume your last workspace/})).toBeVisible();
+});
+
+test('Modern Home keeps captured sessions on discovery failure and reaches deep matching sessions',async({page})=>{
+  await page.route('**/v1/sources',route=>route.fulfill({status:500,json:{error:'Synthetic discovery failure'}}));
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
+  await expect(page.locator('.mh-session')).not.toHaveCount(0);await expect(page.getByRole('alert')).toContainText('Local discovery');
+  await page.unroute('**/v1/sources');
+  const base=app.recording(ids.codex!);
+  await page.route('**/v1/recordings',route=>route.fulfill({json:{recordings:Array.from({length:132},(_,i)=>({...base,id:`synthetic-home-${i}`,workspaceRoot:root,title:`Synthetic session ${String(i).padStart(3,'0')}`,lastSourceTime:new Date(Date.now()-i*1000).toISOString()}))}}));
+  await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[],errors:[]}}));
+  await page.getByRole('button',{name:'Refresh sessions',exact:true}).click();
+  await page.getByRole('textbox',{name:'Find sessions',exact:true}).fill('Synthetic session 131');
+  await expect(page.getByText('Synthetic session 131',{exact:true})).toBeVisible();
+  await page.getByRole('textbox',{name:'Find sessions',exact:true}).fill('');
+  const list=page.locator('.mh-session-list');
+  for(let i=0;i<4;i++){await list.evaluate(node=>{node.scrollTop=node.scrollHeight;node.dispatchEvent(new Event('scroll'));});await page.waitForTimeout(80);}
+  await expect(page.getByText('Synthetic session 131',{exact:true})).toBeVisible();
+  await page.screenshot({path:resolve('.local/modern-home-desktop.png')});
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.screenshot({path:resolve('.local/modern-home-phone.png')});
 });
