@@ -48,7 +48,7 @@ export class HistoryService {
 
   page(id: string, query: HistoryQuery = {}) { return this.request<HistoryPage>('page', { id, query }); }
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
-  since(id: string, after: number) { return this.request<SinceSnapshot>('since', { id, after }); }
+  since(id: string, after: number, page = 0) { return this.request<SinceSnapshot>('since', { id, after, page }); }
   verification(id: string, operationId: string) { return this.request<VerificationTrail | null>('verification', { id, operationId }); }
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }
   artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) { return this.request<BlobSearchResult | undefined>('artifact-find', { id, artifactId, query, start, continuation }); }

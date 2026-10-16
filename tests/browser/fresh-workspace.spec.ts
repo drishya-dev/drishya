@@ -21,6 +21,14 @@ test.beforeAll(async () => {
     writeFileSync(source, readFileSync(resolve(`fixtures/synthetic/${fixture}`), 'utf8').replaceAll('/home/dev/shop', root.replaceAll('\\', '/')));
     ids[adapter!] = (await app.ingest.importSource(adapter!, source)).recordingId;
   }
+  const reviewJournal=join(dir,'review-pages.jsonl'), timestamp='2026-10-16T00:00:00Z';
+  const reviewRows=[JSON.stringify({timestamp,type:'session_meta',payload:{id:'review-pages',cwd:root.replaceAll('\\','/')}})];
+  for(let index=0;index<70;index++) {
+    reviewRows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`review-${index}`,arguments:JSON.stringify({cmd:`npm test -- review-case-${index}`})}}));
+    reviewRows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call_output',call_id:`review-${index}`,output:'1 passed'}}));
+  }
+  writeFileSync(reviewJournal,reviewRows.join('\n')+'\n');
+  ids.review=(await app.ingest.importSource('codex',reviewJournal)).recordingId;
   server = await startServer({ app, port: 0, token: 'synthetic-independent-design' });
 });
 test.afterAll(async () => {
@@ -427,4 +435,33 @@ test('Modern offline bundle keeps keyboard review destinations and bounded phone
   await expect(page.locator('.map-tools')).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await expect(page.getByRole('region',{name:'Harness prompt'})).toHaveCount(0);
+});
+
+
+test('Modern review pages reach every captured check beyond the first twenty without changing global counts', async ({page}) => {
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.review}`);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.keyboard.press('Control+k');
+  const commands=page.getByRole('dialog',{name:'Navigate workspace'});
+  await commands.getByRole('combobox').fill('Review recorded changes');
+  await commands.getByRole('option',{name:/Review recorded changes and checks/}).click();
+  const review=page.getByRole('dialog',{name:'Review work',exact:true});
+  const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
+  await expect(checks.locator('.review-item')).toHaveCount(20);
+  await expect(review.locator('.review-counts')).toContainText('70 test runs');
+  await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toContainText('Page 1 of 4');
+  await review.getByRole('button',{name:'Next review page',exact:true}).click();
+  await expect(checks).toContainText('review-case-20');
+  await expect(checks).not.toContainText('review-case-0 ');
+  await review.getByRole('button',{name:'Next review page',exact:true}).click();
+  await expect(checks).toContainText('review-case-40');
+  await review.getByRole('button',{name:'Next review page',exact:true}).click();
+  await expect(checks.locator('.review-item')).toHaveCount(10);
+  await expect(checks).toContainText('review-case-69');
+  await expect(review.locator('.review-counts')).toContainText('70 test runs');
+  await expect(review.getByRole('button',{name:'Next review page',exact:true})).toBeDisabled();
+  await checks.getByRole('button',{name:/review-case-69/}).click();
+  await expect(review).toHaveCount(0);
+  await expect(page.getByRole('complementary',{name:'Operation detail'})).toContainText('review-case-69');
 });

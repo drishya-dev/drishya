@@ -4,6 +4,7 @@ import { sinceSnapshot, type SinceSnapshot } from '../../../../packages/scene/sr
 import { useApp } from '../state.ts';
 import { ReadingDialog } from './ProductShell.tsx';
 import { FileIcon } from './FileIcon.tsx';
+import { useEvidenceState } from './EvidenceNavigation.tsx';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
 export function EvidenceReview({ projection, label = 'Review work' }: { projection: Projection; label?: string }) {
@@ -20,29 +21,38 @@ function ReviewContent({ projection, close }: { projection: Projection; close: (
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId)!;
   const revision = useApp(s => s.renderedRevisions[id]);
-  const [facts, setFacts] = useState<SinceSnapshot>();
+  const [page, setPage] = useEvidenceState('review/page', 0);
+  const [response, setResponse] = useState<{ page: number; data: SinceSnapshot }>();
+  const facts = response?.page === page ? response.data : undefined;
+  const pageCount = Math.max(1, Math.ceil((response?.data.editedFileCount ?? 0) / 50), ...Object.entries(response?.data.counts ?? {}).filter(([key]) => key !== 'edits').map(([, count]) => Math.ceil(count / 20)));
   const [error, setError] = useState<string>();
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
     setError(undefined);
-    const request = source?.kind === 'daemon' ? source.since?.(id, -1) : Promise.resolve(sinceSnapshot(projection, -1));
+    const request = source?.kind === 'daemon' ? source.since?.(id, -1, page) : Promise.resolve(sinceSnapshot(projection, -1, page));
     if (!request) { setError('Review is unavailable for this recording.'); return; }
-    void request.then(data => { if (active) setFacts(data); }).catch(e => { if (active) setError(e.message); });
+    void request.then(data => {
+      if (!active) return;
+      const pages = Math.max(1, Math.ceil(data.editedFileCount / 50), ...Object.entries(data.counts).filter(([key]) => key !== 'edits').map(([, count]) => Math.ceil(count / 20)));
+      if (page >= pages) { setPage(pages - 1); return; }
+      setResponse({ page, data });
+    }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [source, id, revision, projection.lastSequence, retry]);
+  }, [source, id, revision, projection.lastSequence, retry, page]);
   const groups = [['failures', 'Failures'], ['tests', 'Recorded checks'], ['unfinished', 'In progress'], ['gaps', 'Capture gaps']] as const;
   return <ReadingDialog title="Review work" close={close} className="evidence-review">
     <div className="review-intro"><p>Start with the change. Follow the evidence.</p><span>Whole recording · recorded order, not test coverage</span></div>
+    {pageCount > 1 && <nav className="reader-pages" aria-label="Recorded review pages"><button className="btn" disabled={!page} onClick={() => setPage(n => Math.max(0, n - 1))}>Previous review page</button><span>Page {page + 1} of {pageCount} · up to 20 outcomes per group / 50 files</span><button className="btn" disabled={page + 1 >= pageCount} onClick={() => setPage(n => n + 1)}>Next review page</button></nav>}
     {error ? <p role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry</button></p> : !facts ? <p role="status">Opening recorded evidence…</p> : <>
       <div className="review-counts"><span><strong>{facts.editedFileCount.toLocaleString()}</strong> {facts.editedFileCount === 1 ? 'file' : 'files'} with change inputs</span><span><strong>{facts.counts.failures.toLocaleString()}</strong> failed {facts.counts.failures === 1 ? 'operation' : 'operations'}</span><span><strong>{facts.counts.tests.toLocaleString()}</strong> test {facts.counts.tests === 1 ? 'run' : 'runs'}</span></div>
       <div className="review-layout"><section className="review-files" aria-label="Files with captured changes"><h3>Changed files</h3>
-        {facts.editedFiles.length ? facts.editedFiles.map(path => <button key={path} onClick={() => { useApp.setState({ filePanel: path, filePanelFocus: 'change', currentFile: undefined, explore: false }); close(); }}><FileIcon path={path} /><span>{path}</span><span aria-hidden="true">↗</span></button>) : <p className="muted">No change inputs recorded.</p>}
-        {facts.editedFileCount > facts.editedFiles.length && <p className="muted">Showing {facts.editedFiles.length} of {facts.editedFileCount} files. Search captured work for another path.</p>}
+        {facts.editedFiles.length ? facts.editedFiles.map(path => <button key={path} onClick={() => { useApp.setState({ filePanel: path, filePanelFocus: 'change', currentFile: undefined, explore: false }); close(); }}><FileIcon path={path} /><span>{path}</span><span aria-hidden="true">↗</span></button>) : <p className="muted">{facts.editedFileCount ? 'No more changed files on this page.' : 'No change inputs recorded.'}</p>}
+        {facts.editedFileCount > facts.editedFiles.length && <p className="muted">Showing {facts.editedFiles.length} of {facts.editedFileCount} files on page {page + 1}. Use review pages for the rest.</p>}
         <p className="review-note">Captured patches can be proposed or reconstructed. Open a file to inspect its actual evidence and later checks.</p>
       </section><div className="review-outcomes">{groups.map(([key, title]) => <section key={key} aria-label={title}><h3>{title} <span>{facts.counts[key]}</span></h3>
-        {facts[key].length ? facts[key].map(item => <div className="review-item" key={`${key}/${item.operationId ?? item.sequence}`}>{item.operationId ? <button onClick={() => { useApp.getState().select(item.operationId!); close(); }}>{item.title}<span aria-hidden="true">↗</span></button> : <span>{item.title}</span>}{item.detail && <small>{item.detail}</small>}{item.status === 'unknown' && <small>Outcome not exposed</small>}</div>) : <p className="muted">None recorded.</p>}
-        {facts.counts[key] > facts[key].length && <p className="muted">Showing {facts[key].length} of {facts.counts[key]}; remaining evidence stays in history.</p>}
+        {facts[key].length ? facts[key].map(item => <div className="review-item" key={`${key}/${item.operationId ?? item.sequence}`}>{item.operationId ? <button onClick={() => { useApp.getState().select(item.operationId!); close(); }}>{item.title}<span aria-hidden="true">↗</span></button> : <span>{item.title}</span>}{item.detail && <small>{item.detail}</small>}{item.status === 'unknown' && <small>Outcome not exposed</small>}</div>) : <p className="muted">{facts.counts[key] ? 'No more on this page.' : 'None recorded.'}</p>}
+        {facts.counts[key] > facts[key].length && <p className="muted">Showing {facts[key].length} of {facts.counts[key]} on page {page + 1}. Use review pages for the rest.</p>}
       </section>)}</div></div>
     </>}
   </ReadingDialog>;

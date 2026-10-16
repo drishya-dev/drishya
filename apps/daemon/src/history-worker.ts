@@ -203,7 +203,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
-    else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after);
+    else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after, a.page);
     else if (message.method === 'verification') value = verificationFor(current(a.id).projection, a.operationId) ?? null;
     else if (message.method === 'prepare') {
       const p = current(a.id).projection;
