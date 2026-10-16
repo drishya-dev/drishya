@@ -81,7 +81,9 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
 
 /** Native live receipt is separate from persisted evidence and disappears on capture. */
 export function NativeTurn({ projection }: { projection: Projection }) {
-  const { controller, submitting } = useSessionWorkspace();
+  const { controller, submitting, error } = useSessionWorkspace();
+  const connection = useApp(s => s.connection);
+  const connected = connection === 'connected' && !error;
   const mode = useApp(s => s.mode);
   const detail = useApp(s => s.reasoningDetail);
   if (mode !== 'history') return null;
@@ -97,8 +99,8 @@ export function NativeTurn({ projection }: { projection: Projection }) {
   const phase = submitting ? 'Sending prompt…' : controller?.state === 'connecting' ? 'Connecting to native session…' : controller?.state === 'approval' ? 'Waiting for your approval' : controller?.phase === 'thinking' ? 'Thinking…' : controller?.phase === 'responding' ? 'Receiving response…' : controller?.phase === 'tool' ? 'Working with tools…' : 'Waiting for the agent…';
   return <section className="native-live-work" aria-label="Native turn progress">
     {prompt && !promptCaptured && <div className="turn"><div className="turn-text"><small className="muted">Submitted here</small><p>{prompt}</p>{!!controller?.attachments?.length && <small>{controller.attachments.map(a => a.name).join(' · ')}</small>}</div></div>}
-    {(submitting || running) && <p className="native-phase" role="status">{phase}</p>}
-    {visible && <div className="prose" data-native-preview={preview.id}><small className="muted">Live from harness · {preview.role === 'reasoning' ? preview.exposure === 'summary' ? 'reasoning summary' : 'exposed thinking' : 'response'}</small>{preview.role === 'reasoning' && detail === 'collapsed' ? <details><summary>Read exposed reasoning</summary><pre>{preview.text}</pre></details> : <pre>{preview.text}</pre>}</div>}
+    {(submitting || running) && <p className="native-phase" role="status">{connected ? phase : 'Connection unavailable · native turn state may have changed'}</p>}
+    {visible && <div className="prose" data-native-preview={preview.id}><small className="muted">{connected ? 'Live from harness' : 'Last received from harness'} · {preview.role === 'reasoning' ? preview.exposure === 'summary' ? 'reasoning summary' : 'exposed thinking' : 'response'}</small>{preview.role === 'reasoning' && detail === 'collapsed' ? <details><summary>Read exposed reasoning</summary><pre>{preview.text}</pre></details> : <pre>{preview.text}</pre>}</div>}
   </section>;
 }
 

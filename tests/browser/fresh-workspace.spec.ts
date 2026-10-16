@@ -465,3 +465,18 @@ test('Modern review pages reach every captured check beyond the first twenty wit
   await expect(review).toHaveCount(0);
   await expect(page.getByRole('complementary',{name:'Operation detail'})).toContainText('review-case-69');
 });
+
+
+test('Modern qualifies cached native receipts instead of claiming a current agent phase while disconnected', async ({page}) => {
+  await page.route('**/controller',route=>route.fulfill({json:{available:true,state:'running',runId:'synthetic-receipt',harness:'codex',tools:[],inventory:'unknown',approvals:[],output:'',phase:'thinking',afterSequence:100000,preview:{id:'synthetic-preview',role:'response',text:'Synthetic native receipt already received',exposure:'full'}}}));
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const receipt=page.getByRole('region',{name:'Native turn progress'});
+  await expect(receipt).toContainText('Live from harness');
+  await page.context().setOffline(true);
+  await expect(receipt).toContainText('Last received from harness');
+  await expect(receipt).toContainText('native turn state may have changed');
+  await expect(receipt).not.toContainText('Thinking…');
+  await expect(receipt).toContainText('Synthetic native receipt already received');
+});
