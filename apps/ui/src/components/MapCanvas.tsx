@@ -11,6 +11,7 @@ import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
 import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
 import { fitProjectedMap, mapReadingArea, rebaseMapCamera, type MapFrame } from '../lib/map-fit.ts';
+import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 
 interface Cam {
   x: number;
@@ -69,8 +70,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const lowResource = useApp(s => s.lowResource);
   const depth = useApp(s => s.mapDepth);
   const orbit = useApp(s => s.mapOrbit);
-  const [yaw, setYaw] = useState(.25);
-  const [pitch, setPitch] = useState(.18);
+  const [yaw, setYaw] = useWorkspaceState('map/yaw', .25);
+  const [pitch, setPitch] = useWorkspaceState('map/pitch', .18);
   const manualUntil = useRef(0);
   const spatialActive = depth && !lowResource && gpuReady;
   const holdOrientation = () => { manualUntil.current = performance.now() + 12_000; };
@@ -88,7 +89,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const hoveredPath = useApp((s) => s.hoveredPath);
   const set = useApp((s) => s.set);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const [cam, setCam] = useState<Cam>({ x: 0, y: 0, k: 1 });
+  const [cam, setCam] = useWorkspaceState<Cam>('map/camera', { x: 0, y: 0, k: 1 });
   const camera = useRef(cam);
   const cameraFrame = useRef(0);
   const cameraTarget = useRef(cam);
@@ -395,6 +396,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       data-map-depth={spatialActive ? 'spatial-3d' : 'flat'}
       data-map-yaw={yaw.toFixed(5)}
       data-map-pitch={pitch.toFixed(5)}
+      data-map-zoom={cam.k.toFixed(5)}
       data-map-scope={explore && connectionsOpen && neighborhood ? 'direct-neighborhood' : observedOnly ? 'observed' : 'all'}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {

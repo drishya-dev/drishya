@@ -281,3 +281,75 @@ for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} 
   expect(payload.attachments).toEqual([{name:'context.txt',type:'text',data:'Synthetic context'}]);
   expect(payload.options).toEqual({model:'native-one',effort:'high'});
 });
+
+test('Modern keeps file evidence, search controls and reading position across session detours', async ({ page }) => {
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['claude-code']}`);
+  const history=page.locator('.history');
+  await history.dispatchEvent('keydown',{key:'Home'});
+  await history.evaluate(el => { el.scrollTop = 160; });
+  await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBe(160);
+  const anchor=await history.evaluate(el=>{const node=[...el.querySelectorAll<HTMLElement>('.passage-slot')].find(node=>node.getBoundingClientRect().bottom>el.getBoundingClientRect().top+1)!;return {id:node.dataset.passageId,offset:node.getBoundingClientRect().top-el.getBoundingClientRect().top};});
+  const row = page.locator('[data-spine-path="src/cart/total.ts"]').first();
+  await row.click();
+  // Approved workspace state can differ between isolated journeys; follow its explicit captured destination.
+  const disk = page.getByRole('dialog', {name:'src/cart/total.ts',exact:true});
+  if(await disk.isVisible()) await disk.getByRole('button',{name:'Recorded work on this file'}).click();
+  const reader=page.getByRole('dialog',{name:'Work on src/cart/total.ts',exact:true});
+  await expect(reader).toBeVisible();
+  await reader.getByLabel('Filter actions on this file').fill('Read');
+  await page.evaluate(id => { location.hash=`#/r/${id}`; }, ids.codex);
+  await expect(reader).toHaveCount(0);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.evaluate(id => { location.hash=`#/r/${id}`; }, ids['claude-code']);
+  await expect(reader).toBeVisible();
+  await expect(reader.getByLabel('Filter actions on this file')).toHaveValue('Read');
+  await reader.getByRole('button',{name:'Close Work on src/cart/total.ts'}).click();
+  await expect.poll(()=>history.evaluate((el,anchor)=>{const node=[...el.querySelectorAll<HTMLElement>('.passage-slot')].find(node=>node.dataset.passageId===anchor.id);return node?Math.abs(node.getBoundingClientRect().top-el.getBoundingClientRect().top-anchor.offset):Infinity;},anchor)).toBeLessThan(3);
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+  await page.getByRole('button',{name:'Close Workspace settings'}).click();
+  await expect(page.locator('.history')).toBeVisible();
+});
+
+
+test('Modern retains Git scope and find controls after closing and reopening a reader', async ({page}) => {
+  const snapshot={root,branch:'synthetic',head:'abc123',fingerprint:'page1',sampledAt:'2026-10-16T00:00:00Z',omitted:0,limit:50,pageStart:0,totalAllowed:1,protectedCount:0,files:[{path:'sample.ts',status:' M',fingerprint:'exact-patch',patch:'Working tree changes\ndiff --git a/sample.ts b/sample.ts\n--- a/sample.ts\n+++ b/sample.ts\n@@ -1 +1 @@\n-old\n+new',staged:false}]};
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.route('**/git',route=>route.fulfill({json:{approved:true,scope:'current-git'}}));
+  await page.route('**/git/snapshot**',route=>route.fulfill({json:snapshot}));
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  const reader=page.getByRole('dialog',{name:'Git review',exact:true});
+  await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toBeVisible();
+  await reader.getByRole('searchbox',{name:'Find in patch'}).fill('new');
+  await reader.getByRole('button',{name:'Side by side',exact:true}).click();
+  await reader.getByRole('button',{name:'Close Git review'}).click();
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toHaveValue('new');
+  await expect(reader.getByRole('button',{name:'Side by side',exact:true})).toHaveAttribute('aria-pressed','true');
+});
+
+test('Modern map camera and folder keyboard state survive a session detour', async ({page}) => {
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['claude-code']}`);
+  const folder=page.getByRole('treeitem',{name:'src',exact:true});
+  await expect(folder).toHaveAttribute('aria-expanded','true');
+  await folder.focus(); await page.keyboard.press('ArrowLeft');
+  await expect(folder).toHaveAttribute('aria-expanded','false');
+  await page.getByRole('button',{name:'Explore repository map'}).click();
+  await page.getByRole('button',{name:'Zoom into repository',exact:true}).click();
+  const zoom=await page.locator('.map').getAttribute('data-map-zoom');
+  await page.evaluate(id=>{location.hash=`#/r/${id}`;},ids.codex);
+  await expect(page.locator('.map-tools')).toHaveCount(0);
+  await page.evaluate(id=>{location.hash=`#/r/${id}`;},ids['claude-code']);
+  await expect(page.locator('.map-tools')).toBeVisible();
+  await expect(page.locator('.map')).toHaveAttribute('data-map-zoom',zoom!);
+  await page.getByRole('button',{name:'Back to work',exact:true}).click();
+  await expect(folder).toHaveAttribute('aria-expanded','false');
+  await folder.focus(); await page.keyboard.press('ArrowRight');
+  await expect(folder).toHaveAttribute('aria-expanded','true');
+});

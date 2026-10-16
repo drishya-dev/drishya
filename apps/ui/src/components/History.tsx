@@ -23,6 +23,7 @@ import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { NativeTurn } from './SessionWorkspace.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
+import { useWorkspaceMemory } from '../lib/workspace-memory-react.ts';
 
 /** Navigation targets the readable world below any overlapping fixed controls. */
 function readingClearance(history: HTMLElement): number {
@@ -49,11 +50,12 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const promptStep = useApp((s) => s.promptStep);
   const set = useApp((s) => s.set);
   const ref = useRef<HTMLDivElement>(null);
+  const memory = useWorkspaceMemory();
   useHoverReading(ref);
-  const [viewport, setViewport] = useState({ top: 0, height: 900 });
+  const [viewport, setViewport] = useState({ top: memory.get('history/top') as number ?? 0, height: 900 });
   const [measurementVersion, setMeasurementVersion] = useState(0);
   const [focusedPassageId, setFocusedPassageId] = useState<string | undefined>();
-  const measurements = useRef(new Map<string, number>());
+  const measurements = useRef(new Map<string, number>(memory.get('history/heights') as [string, number][] | undefined));
   const programmatic = useRef(false);
   const lastScrollTop = useRef(0);
   const userScrollUntil = useRef(0);
@@ -61,8 +63,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const scrollFrame = useRef<number | undefined>(undefined);
   const navigationFrame = useRef<number | undefined>(undefined);
   const navigating = useRef(false);
-  const readingAnchor = useRef<{ id: string; offset: number } | undefined>(undefined);
-  const readingAtStart = useRef(false);
+  const readingAnchor = useRef(memory.get('history/anchor') as { id: string; offset: number } | undefined);
+  const readingAtStart = useRef(memory.get('history/top') === 0);
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
   const navigationBoundary = useRef<{ step: number; projection: Projection } | undefined>(undefined);
@@ -184,6 +186,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // The start boundary exists even while virtualization has no mounted passage there.
     readingAtStart.current = el.scrollTop < 1 || navigating.current && readingAtStart.current;
     readingAnchor.current = node?.dataset.passageId ? { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top } : undefined;
+    memory.set('history/top', el.scrollTop);
+    memory.set('history/anchor', readingAnchor.current);
+    memory.set('history/heights', [...measurements.current].slice(-96));
     if (useApp.getState().readingPassageId !== readingAnchor.current?.id) set({ readingPassageId: readingAnchor.current?.id });
   };
 
@@ -201,6 +206,13 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
     scrollFrame.current = requestAnimationFrame(() => { programmatic.current = false; scrollFrame.current = undefined; });
   };
+
+  useLayoutEffect(() => {
+    readingAnchor.current = memory.get('history/anchor') as { id: string; offset: number } | undefined;
+    readingAtStart.current = memory.get('history/top') === 0;
+    measurements.current = new Map(memory.get('history/heights') as [string, number][] | undefined);
+    if (!useApp.getState().follow) setScrollTop(memory.get('history/top') as number ?? 0);
+  }, [memory]);
 
   const followLatest = () => {
     const boundary = navigationBoundary.current;

@@ -1,6 +1,7 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useState, type Dispatch, type SetStateAction, type ReactNode, type RefObject } from 'react';
 import { useApp } from '../state.ts';
 import { EvidenceTrail, type EvidenceLocation, type EvidenceVisit } from '../lib/evidence-navigation.ts';
+import { useWorkspaceMemory } from '../lib/workspace-memory-react.ts';
 
 const NavigationContext = createContext<{ trail: EvidenceTrail; visit: EvidenceVisit } | undefined>(undefined);
 
@@ -17,10 +18,18 @@ export function EvidenceNavigationProvider({ children }: { children: ReactNode }
   const explore = useApp(s => s.explore);
   const inspectorTab = useApp(s => s.inspectorTab);
   const inspectorWidth = useApp(s => s.inspectorWidth);
+  const loaded = useApp(s => !!s.projection);
   // Replay movement invalidates retained evidence before rendering. Live capture
   // does not erase the user's independent reading trail.
-  const trail = useMemo(() => new EvidenceTrail(), [source, id, mode, cutoff]);
+  const memory = useWorkspaceMemory();
+  const trail = useMemo(() => {
+    const saved = mode === 'history' ? memory.get('evidence/trail') as EvidenceTrail | undefined : undefined;
+    const value = saved ?? new EvidenceTrail();
+    if (mode === 'history') memory.set('evidence/trail', value);
+    return value;
+  }, [memory, source, id, mode, cutoff]);
   const location: EvidenceLocation = { filePanel, filePanelFocus, filePanelEvidence, currentFile, selectedOp, explore, inspectorTab, inspectorWidth };
+  if (!loaded) return <>{children}</>;
   const visit = trail.visit(location);
   return <NavigationContext.Provider value={{ trail, visit }}>{children}</NavigationContext.Provider>;
 }
@@ -78,12 +87,14 @@ export function useEvidenceScroll(ref: RefObject<HTMLElement | null>, key: strin
       if (visit.memory.size > 64) visit.memory.delete(visit.memory.keys().next().value!);
     };
     const interact = () => { pending = false; };
+    const keyboard = (event: KeyboardEvent) => { if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) interact(); };
     const observer = new MutationObserver(restore);
     observer.observe(root, { childList: true, subtree: true });
     const resize = new ResizeObserver(restore); resize.observe(root);
     root.addEventListener('scroll', save, { passive: true });
     root.addEventListener('wheel', interact, { passive: true });
     root.addEventListener('pointerdown', interact);
-    return () => { observer.disconnect(); resize.disconnect(); root.removeEventListener('scroll', save); root.removeEventListener('wheel', interact); root.removeEventListener('pointerdown', interact); };
+    root.addEventListener('keydown', keyboard);
+    return () => { observer.disconnect(); resize.disconnect(); root.removeEventListener('scroll', save); root.removeEventListener('wheel', interact); root.removeEventListener('pointerdown', interact); root.removeEventListener('keydown', keyboard); };
   }, [ref, visit, key, ready]);
 }

@@ -3,6 +3,7 @@ import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './Evide
 import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type CurrentFile, type PromptAttachment, type TurnOptions } from '../api.ts';
 import { promptFiles } from '../lib/prompt-files.ts';
 import { promptDrafts } from '../lib/prompt-drafts.ts';
+import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -109,27 +110,28 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const files = useApp(s => s.projection?.files);
   const hidden = useApp(s => s.foldersHidden);
   const { workspace, approve } = useSessionWorkspace();
-  const [query, setQuery] = useState('');
-  const [opened, setOpened] = useState(() => {
+  const [query, setQuery] = useWorkspaceState('folders/query', '');
+  const [opened, setOpened] = useWorkspaceState('folders/open', () => {
     const initial = new Set<string>(['']);
     // Open the bounded recorded working set; other folders start collapsed.
     for (const file of projection.files.slice(0, 32)) {
       const parts = file.path.split('/');
-      for (let n = 1; n < parts.length; n++) initial.add(parts.slice(0, n).join('/'));
+      for (let n = 1; n < parts.length && initial.size < 256; n++) initial.add(parts.slice(0, n).join('/'));
     }
     return initial;
   });
   const treeElement = useRef<HTMLDivElement>(null);
-  const [treeScroll, setTreeScroll] = useState(0);
+  const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
   const [treeHeight, setTreeHeight] = useState(600);
   const folderAnchor = useRef<{ path: string; offset: number } | undefined>(undefined);
   const [error, setError] = useState<string>();
+  const [graphRetry, setGraphRetry] = useState(0);
   useEffect(() => {
     if (graph || !source || !id) return;
-    let active = true;
+    let active = true; setError(undefined);
     void source.graph(id).then(g => { if (active && useApp.getState().recordingId === id) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [source, id, graph]);
+  }, [source, id, graph, graphRetry]);
   const paths = useMemo(() => [...new Set((graph?.nodes.map(n => n.path) ?? files?.map(f => f.path) ?? []).filter(p => !(graph?.temporal === 'current' && p.startsWith('.local/')) && !p.startsWith('/') && !/^[A-Za-z]:/.test(p)))].sort(), [graph, files]);
   const tree = useMemo(() => {
     if (query.trim()) return paths.filter(p => p.toLowerCase().includes(query.toLowerCase())).map(path => ({ path, folder: false, depth: 0, name: path }));
@@ -186,14 +188,18 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => useApp.setState({ foldersHidden: true })}>‹</button></header>
     <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Find repository files' : 'Find session files'} placeholder="Find files…" value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" onClick={() => void approve().catch(e => setError(e.message))}>Enable workspace reading<small>Read current files in this folder</small></button>}
-    {error && <p className="bad small" role="alert">{error}</p>}
+    {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
-      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+      if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
       const target = (e.target as HTMLElement).closest<HTMLElement>('[data-tree-index]');
       if (!target || !tree.length) return;
       e.preventDefault();
       const index = Number(target.dataset.treeIndex);
-      const next = e.key === 'Home' ? 0 : e.key === 'End' ? tree.length - 1 : Math.max(0, Math.min(tree.length - 1, index + (e.key === 'ArrowDown' ? 1 : -1)));
+      const row = tree[index];
+      if (!row) return;
+      if (e.key === 'ArrowRight' && row.folder && !opened.has(row.path) || e.key === 'ArrowLeft' && row.folder && opened.has(row.path)) { target.click(); return; }
+      const parent = row.path.slice(0, row.path.lastIndexOf('/'));
+      const next = e.key === 'ArrowRight' ? row.folder && tree[index + 1]?.depth === row.depth + 1 ? index + 1 : index : e.key === 'ArrowLeft' ? Math.max(0, tree.findIndex(item => item.folder && item.path === parent)) : e.key === 'Home' ? 0 : e.key === 'End' ? tree.length - 1 : Math.max(0, Math.min(tree.length - 1, index + (e.key === 'ArrowDown' ? 1 : -1)));
       const el = treeElement.current!;
       if (next * rowHeight < el.scrollTop) el.scrollTop = next * rowHeight;
       else if ((next + 1) * rowHeight > el.scrollTop + el.clientHeight) el.scrollTop = (next + 1) * rowHeight - el.clientHeight;
@@ -202,7 +208,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
       {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
-        if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); return next; }); }
+        if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }
         else useApp.setState(workspace?.approved ? { currentFile: row.path } : { filePanel: row.path });
       }}><span className="folder-disclosure" aria-hidden="true">{row.folder ? opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span>{row.name}</span></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : 'No relative paths captured yet'}</p>}

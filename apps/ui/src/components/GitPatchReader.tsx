@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { GitFile } from '../../../daemon/src/git-types.ts';
 import { gitPatchSections } from '../lib/git-patch.ts';
 import { DiffReader } from './ArtifactReader.tsx';
 import { CodeView } from './common.tsx';
+import { useEvidenceState } from './EvidenceNavigation.tsx';
 
 export function GitPatchReader({ file }: { file: GitFile }) {
   const sections = useMemo(() => gitPatchSections(file.patch), [file.patch]);
-  const [scope, setScope] = useState(() => sections.some(section => section.name === 'Working tree') ? 'Working tree' : 'Staged');
+  const key = `git/${file.path}/${file.fingerprint}`;
+  const [scope, setScope] = useEvidenceState(`${key}/scope`, () => sections.some(section => section.name === 'Working tree') ? 'Working tree' : 'Staged');
   const section = sections.find(section => section.name === scope) ?? sections[0];
-  const [raw, setRaw] = useState(false), [page, setPage] = useState(0);
+  const [raw, setRaw] = useEvidenceState(`${key}/raw`, false), [page, setPage] = useEvidenceState(`${key}/page`, 0);
   const lines = useMemo(() => file.patch.split('\n'), [file.patch]);
   const structured = !raw && !!section?.hunks.length;
   return <div className="git-patch-reader">
