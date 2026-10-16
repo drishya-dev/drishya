@@ -295,14 +295,16 @@ function LiveWatch() {
   const source = useApp(s => s.source);
   const follow = useApp(s => s.follow);
   const mode = useApp(s => s.mode);
-  return <button className={`btn ghost live workspace-follow${follow ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={follow} onClick={async () => {
-    const on = !useApp.getState().follow;
+  const enabled = follow && (mode === 'replay' || source?.kind !== 'daemon' || !!recording?.live);
+  return <button className={`btn ghost live workspace-follow${enabled ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={enabled} onClick={async () => {
+    const on = !enabled;
     useApp.setState({ follow: on });
-    if (on && source?.kind === 'daemon' && id && !id.includes('+') && !recording?.live) {
-      try { await source.setLive(id, true); }
-      catch (error) { useApp.setState({ error: (error as Error).message }); }
+    if (on && mode === 'history' && source?.kind === 'daemon' && id && !id.includes('+') && !recording?.live) {
+      const current = () => { const s = useApp.getState(); return s.source === source && s.recordingId === id && s.mode === mode; };
+      try { await source.setLive(id, true); if (current()) await useApp.getState().reloadProjection(); }
+      catch (error) { if (current()) useApp.setState({ follow: false, error: (error as Error).message }); }
     }
-  }} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${follow ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow live'}</button>;
+  }} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${enabled ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow live'}</button>;
 }
 
 function UsagePeek() {

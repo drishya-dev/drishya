@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { latestOnly, needsReload } from '../src/lib/sync.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { latestOnly, liveRefresh, needsReload } from '../src/lib/sync.ts';
 
 // B1b (audit A07): after a reconnect, the viewer compares the revisions it rendered with the
 // server's, and reloads only what changed.
@@ -32,5 +32,30 @@ describe('latestOnly', () => {
     const a = guard('projection');
     guard('graph');
     expect(a()).toBe(true);
+  });
+});
+
+describe('liveRefresh', () => {
+  it('refreshes during a continuous stream instead of waiting for silence', async () => {
+    vi.useFakeTimers();
+    const refresh=vi.fn(async()=>{}), queue=liveRefresh(refresh,()=>{});
+    try {
+      for(let i=0;i<20;i++){queue.schedule();await vi.advanceTimersByTimeAsync(50);}
+      expect(refresh.mock.calls.length).toBeGreaterThanOrEqual(6);
+    } finally {queue.close();vi.useRealTimers();}
+  });
+  it('serializes slow refreshes, retains notices arriving during work and cancels queued work', async () => {
+    vi.useFakeTimers();
+    let resolve!:()=>void;
+    const refresh=vi.fn(()=>new Promise<void>(r=>{resolve=r;})), failed=vi.fn(),queue=liveRefresh(refresh,failed);
+    try {
+      queue.schedule();await vi.advanceTimersByTimeAsync(150);
+      queue.schedule();queue.schedule();await vi.advanceTimersByTimeAsync(500);
+      expect(refresh).toHaveBeenCalledTimes(1);
+      resolve();await vi.advanceTimersByTimeAsync(150);
+      expect(refresh).toHaveBeenCalledTimes(2);
+      queue.schedule();queue.close();resolve();await vi.advanceTimersByTimeAsync(500);
+      expect(refresh).toHaveBeenCalledTimes(2);expect(failed).not.toHaveBeenCalled();
+    } finally {queue.close();vi.useRealTimers();}
   });
 });

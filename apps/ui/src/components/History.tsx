@@ -259,7 +259,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // Native scrolling can precede its scroll event. Never restore an older anchor
     // over that still-unreported user delta while a measurement commits.
     if(committedLayout&&!programmatic.current&&Math.abs(el.scrollTop-lastScrollTop.current)>.5) {
-      rememberReading();lastScrollTop.current=el.scrollTop;return;
+      rememberReading();return;
     }
     // At the document start, late allocation changes must preserve the boundary,
     // rather than pull the reader down to an old first-passage pixel offset.
@@ -286,7 +286,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   useLayoutEffect(() => {
     // Correct measured spacer changes before paint, using the latest user-scroll anchor.
     restoreReading(true);
-  }, [scene.passages, follow, compareAgents, explore, theme, measurementVersion, layout]);
+  }, [scene.passages, follow, compareAgents, explore, theme, measurementVersion]);
 
   // A passage can grow after its artifact arrives or its width changes. Record the actual slot
   // height, then reflow spacers; preserve the captured passage/pixel anchor while detached.
