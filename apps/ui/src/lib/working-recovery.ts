@@ -48,8 +48,8 @@ export function useWorkingRecovery() {
       const sessions=snapshot.sessions.filter(s=>(savedSessions.get(s.id)??workspaceMemory(source).saved(s.id))!==JSON.stringify(s.entries));
       const payload={...snapshot,sessions},encoded=JSON.stringify(payload);
       inFlight=true;
-      try { const result=await workspaceApi.saveWorkingLocations(payload,new TextEncoder().encode(encoded).length<60000);const source=useApp.getState().source;if(source)workspaceMemory(source).versions(result.revisions,sessions.map(s=>s.id));for(const session of sessions)savedSessions.set(session.id,JSON.stringify(session.entries));for(const id of savedSessions.keys())if(!(id in result.revisions))savedSessions.delete(id);last=signature;useApp.setState({recoveryState:'saved',recoveryError:undefined,resumeRecordingId:snapshot.last}); }
-      catch(e) { useApp.setState({recoveryState:'unavailable',recoveryError:(e as Error).message}); }
+      try { const result=await workspaceApi.saveWorkingLocations(payload,new TextEncoder().encode(encoded).length<60000);if(useApp.getState().source!==source)return;workspaceMemory(source).versions(result.revisions,sessions.map(s=>s.id));for(const session of sessions)savedSessions.set(session.id,JSON.stringify(session.entries));for(const id of savedSessions.keys())if(!(id in result.revisions))savedSessions.delete(id);last=signature;useApp.setState({recoveryState:'saved',recoveryError:undefined,resumeRecordingId:snapshot.last}); }
+      catch(e) { if(useApp.getState().source===source)useApp.setState({recoveryState:'unavailable',recoveryError:(e as Error).message}); }
       finally {inFlight=false;if(again){again=false;schedule();}}
     };
     const schedule=()=>{updateWarning();if(timer===undefined)timer=window.setTimeout(()=>void save(),750);};
