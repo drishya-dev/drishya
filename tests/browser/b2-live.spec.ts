@@ -123,6 +123,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   }
 
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   await page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' }).locator('[data-file-op]').first().click();
   await expect(page.getByRole('complementary', { name: 'Operation detail' }).getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText("if (!cart.total)");
@@ -289,6 +290,7 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await expect(pinned.getByRole('button', { name: /Pinned source/ })).toBeFocused();
   await expect(pinned.locator('.reference-content')).toHaveCount(0);
 
+  await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   const panel = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await expect(panel).toBeVisible();

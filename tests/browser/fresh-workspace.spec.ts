@@ -96,8 +96,12 @@ test('Modern preserves Legacy action materials, layout and native graph controls
   await page.setViewportSize({width:1440,height:900});
   const inspect = async (version:string) => {
     await page.goto(`${server.url}/?demo&experience=${version}&motion=0`);
-    await expect(page.locator('.history article.op').first()).toBeAttached();
-    return page.locator('.history article.op').evaluateAll(elements => elements.slice(0,6).map(el => {
+    const history=page.locator('.history');await expect(history).toBeVisible();
+    await history.dispatchEvent('wheel',{deltaY:-1});
+    await history.evaluate(el=>{el.scrollTop=0;el.dispatchEvent(new Event('scroll'));});
+    await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBe(0);
+    await expect(page.locator('.history article.op').first()).toBeVisible();
+    return page.evaluate(() => [...document.querySelectorAll('.history article.op')].slice(0,6).map(el => {
       const css=getComputedStyle(el); return { id:el.getAttribute('data-op-id'), text:el.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
     }));
   };
@@ -181,7 +185,7 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toHaveCount(0);
 });
 
-test('Modern colour and UI versions remain separate; Legacy does not load Modern chrome', async ({ page }) => {
+test('Modern colour and UI versions remain separate; scoped Modern chrome does not affect Legacy', async ({ page }) => {
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings'});
@@ -192,7 +196,7 @@ test('Modern colour and UI versions remain separate; Legacy does not load Modern
   await settings.getByRole('button',{name:/^Legacy/}).click();
   await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');
   await expect(page.locator('.history')).toBeVisible();
-  expect(await page.evaluate(() => [...document.styleSheets].some(sheet => { try { return [...sheet.cssRules].some(rule => rule.cssText.includes('data-ui-version="modern"')); } catch { return false; } }))).toBe(false);
+  await expect(page.locator('.modern-session-header,.modern-native-composer,.modern-toolbox')).toHaveCount(0);
 });
 
 test('Modern settings have allocated spacing, keyboard navigation and reachable controls', async ({ page }) => {
@@ -294,8 +298,10 @@ test('tool cards retain visible results for short and long input/output combinat
     await card.scrollIntoViewIfNeeded();
     const result=card.locator('.result-content');
     await expect(result).toContainText('OUTCOME_VISIBLE');
-    const bounds=await card.boundingBox(), outcome=await result.boundingBox();
-    expect(outcome!.y+Math.min(30,outcome!.height),`${kind}/${longInput}/${longOutput}`).toBeLessThan(bounds!.y+bounds!.height);
+    // Read related geometry in one frame: Follow can move the viewport between
+    // independent protocol calls without changing the card's internal allocation.
+    const bounds=await card.evaluate(el=>{const card=el.getBoundingClientRect(),result=el.querySelector('.result-content')!.getBoundingClientRect();return {bottom:card.bottom,outcome:result.top+Math.min(30,result.height)};});
+    expect(bounds.outcome,`${kind}/${longInput}/${longOutput}`).toBeLessThan(bounds.bottom);
     const request=card.locator(kind==='shell'?'.command-request':'.tool-input');
     if(longInput) expect(await request.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
     if(longOutput) expect(await result.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
@@ -400,6 +406,7 @@ test('Modern keeps file evidence, search controls and reading position across se
   await history.evaluate(el => { el.scrollTop = 160; });
   await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBe(160);
   const anchor=await history.evaluate(el=>{const node=[...el.querySelectorAll<HTMLElement>('.passage-slot')].find(node=>node.getBoundingClientRect().bottom>el.getBoundingClientRect().top+1)!;return {id:node.dataset.passageId,offset:node.getBoundingClientRect().top-el.getBoundingClientRect().top};});
+  await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/total.ts');
   const row = page.locator('[data-spine-path="src/cart/total.ts"]').first();
   await row.click();
   // Approved workspace state can differ between isolated journeys; follow its explicit captured destination.
@@ -445,6 +452,8 @@ test('Modern map camera and folder keyboard state survive a session detour', asy
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['claude-code']}`);
   const folder=page.getByRole('treeitem',{name:'src',exact:true});
+  await expect(folder).toHaveAttribute('aria-expanded','false');
+  await folder.focus(); await page.keyboard.press('ArrowRight');
   await expect(folder).toHaveAttribute('aria-expanded','true');
   await folder.focus(); await page.keyboard.press('ArrowLeft');
   await expect(folder).toHaveAttribute('aria-expanded','false');

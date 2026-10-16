@@ -185,6 +185,7 @@ test('reading Back restores a captured page, search, selected line, wrap and scr
   await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(url());
+  await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await reader.getByRole('button', { name: 'Next lines', exact: true }).click();
@@ -223,6 +224,7 @@ test('reading Back restores a captured page, search, selected line, wrap and scr
 
 test('change to check to Back restores the same patch and comparison layout', async ({ page }) => {
   await page.goto(url());
+  await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   const choice = reader.getByRole('combobox', { name: 'First evidence' });
