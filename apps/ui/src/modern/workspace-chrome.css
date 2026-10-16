@@ -52,3 +52,5 @@
  :root[data-ui-version=modern][data-experience=classic] .native-options-menu { max-height:50dvh; }
 }
 :root[data-ui-version=modern][data-experience=classic] .home .home-search input { background:none; border:0; box-shadow:none; }
+
+@media(max-width:600px) { :root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-review-control .git-open { font-size:0; gap:0; width:32px; padding:7px; } }

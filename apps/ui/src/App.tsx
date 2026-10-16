@@ -173,6 +173,7 @@ function useKeyboard() {
       if (k === 'Escape') {
         if (s.settingsOpen) s.set({ settingsOpen: false });
         else if (s.searchOpen) s.set({ searchOpen: false });
+        else if (s.developerWorkspace) s.set({ developerWorkspace: false });
         else if (s.filePanel) s.set({ filePanel: undefined });
         else if (s.expandedOp) s.set({ expandedOp: undefined });
         else if (s.selectedOp) s.select(undefined);
@@ -181,6 +182,7 @@ function useKeyboard() {
         else if (s.filter) s.setFilter(undefined);
         return;
       }
+      if (s.developerWorkspace) return;
       if (t.closest('input, textarea, select, button, a, summary, [role="slider"], [role="dialog"], .op-expanded') || t.isContentEditable) return;
       if (!document.querySelector('.t-controls') && [' ', 'ArrowRight', 'ArrowLeft', 'Home', 'End', 'e', 'E', 'f', 'F'].includes(k)) return;
       if (k === ' ') {
