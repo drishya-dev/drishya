@@ -12,13 +12,14 @@ export function presentationOf(op: Operation): { shape: MaterialShape; material:
       return { shape: lines.some((line) => line.length > 110) || lines.length > 24 ? 'wide' : 'source', material: 'change' };
     }
     case 'shell': return { shape: d.command.length > 110 || d.command.includes('\n') ? 'wide' : (d.outputPreview?.length ?? 0) > 160 ? 'medium' : 'compact', material: 'terminal', width: readingWidth(d.command, d.outputPreview) };
-    case 'test': return { shape: d.summary?.failures.length ? 'medium' : 'compact', material: 'verification' };
+    case 'test': return { shape: d.command.length>110||d.command.includes('\n')?'wide':'medium', material: 'verification',width:Math.max(350,readingWidth(d.command,d.outputPreview)) };
     case 'search': return { shape: d.hits.length > 3 ? 'medium' : 'compact', material: 'matches', width: readingWidth(d.query, ...d.hits.slice(0, 5).map(hit => `${hit.path}:${hit.line ?? ''} ${hit.text ?? ''}`)) };
     case 'mcp': {
       const inputNeedsSpace = typeof d.input === 'string' ? d.input.length > 180 : !!d.input && typeof d.input === 'object' && Object.values(d.input).some((value) => typeof value === 'string' && value.length > 180);
-      return { shape: inputNeedsSpace || (d.resultPreview?.length ?? 0) > 300 ? 'reading' : 'medium', material: 'external' };
+      return { shape: inputNeedsSpace || (d.resultPreview?.length ?? 0) > 300 ? 'reading' : 'medium', material: 'external',width:Math.max(320,readingWidth(typeof d.input==='string'?d.input:JSON.stringify(d.input),d.resultPreview)) };
     }
     case 'web': return { shape: (d.resultPreview?.length ?? 0) > 300 || (d.url ?? d.query ?? '').length > 180 ? 'reading' : 'medium', material: 'external' };
+    case 'other': return {shape:'medium',material:'action',width:Math.max(320,readingWidth(typeof d.input==='string'?d.input:JSON.stringify(d.input),d.resultPreview))};
     default: return { shape: 'compact', material: 'action' };
   }
 }

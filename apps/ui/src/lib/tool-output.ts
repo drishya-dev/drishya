@@ -16,7 +16,7 @@ export function toolOutputText(text: string): { text: string; decoded: boolean }
       if (typeof value.session_id === 'number') lines.push(`Running session: ${value.session_id}`);
       return lines.join('\n');
     }
-    if (Array.isArray(value.content) && typeof value.isError === 'boolean' && value.content.every(item => record(item) && item.type === 'text' && typeof item.text === 'string')) {
+    if (Array.isArray(value.content) && (value.isError === undefined || typeof value.isError === 'boolean') && value.content.every(item => record(item) && item.type === 'text' && typeof item.text === 'string')) {
       const body = value.content.map(item => item.text).join('\n');
       return value.isError ? `Tool error\n${body}` : body;
     }

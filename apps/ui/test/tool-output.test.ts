@@ -11,6 +11,7 @@ describe('structured tool output display', () => {
     const raw = ['warning',JSON.stringify({output:'one\ntwo',session_id:32}),JSON.stringify({content:[{type:'text',text:'three\nfour'}],isError:true})].join('\n');
     expect(toolOutputText(raw).text).toBe('warning\none\ntwo\nRunning session: 32\nTool error\nthree\nfour');
   });
+  it('decodes standard MCP text when the optional error flag is absent',()=>{expect(toolOutputText(JSON.stringify({content:[{type:'text',text:'one\ntwo'}]}))).toEqual({text:'one\ntwo',decoded:true});});
   it('does not reinterpret code, JSON data, cut-off envelopes or Windows paths', () => {
     for(const text of ['const separator = "\\n";', 'C:\\new\\repo\\thing', '{"output":"one\\ntwo"}', '{"chunk_id":"x","output":"one\\n', JSON.stringify({content:[{type:'image',data:'unchanged'}],isError:false})]) expect(toolOutputText(text)).toEqual({text,decoded:false});
   });

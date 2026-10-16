@@ -1,3 +1,5 @@
+import { ToolInput } from './ToolInput.tsx';
+import { ToolOutput } from './ToolOutput.tsx';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
@@ -88,7 +90,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         const r = materialRect(card);
         const stored = new DOMRect(r.left, r.top + history.scrollTop, r.width, r.height);
         const before = materialPositions.current.get(id);
-        if (before && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
+        if (before && useApp.getState().follow && performance.now()>userScrollUntil.current && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
           moveMaterial(card, new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), 300, 'surface-Reflow');
         }
         next.set(id, stored);
@@ -248,12 +250,17 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     followFrame.current = requestAnimationFrame(tick);
   };
 
-  const restoreReading = () => {
+  const restoreReading = (committedLayout=false) => {
     const el = ref.current;
     const anchor = readingAnchor.current;
     const boundary = navigationBoundary.current;
     const atDestination = boundary?.step === scene.step && boundary.projection === projection;
-    if (!el || follow && !atDestination || navigating.current) return;
+    if (!el || follow && !atDestination || navigating.current&&!committedLayout) return;
+    // Native scrolling can precede its scroll event. Never restore an older anchor
+    // over that still-unreported user delta while a measurement commits.
+    if(committedLayout&&!programmatic.current&&Math.abs(el.scrollTop-lastScrollTop.current)>.5) {
+      rememberReading();lastScrollTop.current=el.scrollTop;return;
+    }
     // At the document start, late allocation changes must preserve the boundary,
     // rather than pull the reader down to an old first-passage pixel offset.
     if (readingAtStart.current) { if (el.scrollTop > .5) setScrollTop(0); return; }
@@ -277,8 +284,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   // A late record can insert steps ahead of the reader. Restore the same captured passage
   // and pixel offset after React updates it, instead of trusting an old array index.
   useLayoutEffect(() => {
-    restoreReading();
-  }, [scene.passages, follow, compareAgents, explore, theme]);
+    // Correct measured spacer changes before paint, using the latest user-scroll anchor.
+    restoreReading(true);
+  }, [scene.passages, follow, compareAgents, explore, theme, measurementVersion, layout]);
 
   // A passage can grow after its artifact arrives or its width changes. Record the actual slot
   // height, then reflow spacers; preserve the captured passage/pixel anchor while detached.
@@ -657,7 +665,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'mcp':
       return <div className="op-expanded mcp-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.server} / {d.tool} · captured input</div>
-        <pre className="json">{JSON.stringify(d.input, null, 2) ?? String(d.input)}</pre>
+        <ToolInput value={d.input}/>
         <div className="material-context">Captured result preview</div>
         <StructuredResult text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')} />
       </div>;
@@ -665,14 +673,14 @@ function ExpandedOperation({ op }: { op: Operation }) {
       return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
         <div className="material-context">Captured result preview</div>
-        <pre className="output">{d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}</pre>
+        <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
       </div>;
     case 'other':
       return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">Captured input</div>
-        <pre className="json">{JSON.stringify(d.input, null, 2) ?? String(d.input)}</pre>
+        <ToolInput value={d.input}/>
         <div className="material-context">Captured result preview</div>
-        <pre className="output">{d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}</pre>
+        <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
       </div>;
     default:
       return null;
@@ -742,6 +750,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
               {s.failures[0].message && <div className="failure-msg">{s.failures[0].message}</div>}
             </div>
           )}
+          {d.outputPreview&&<TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={op.status==='error'}/>}
           </ResultArea>
         </div>
       );
@@ -763,7 +772,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="mcp">
           <div className="mcp-tool">{d.tool}</div>
           <div className="material-context">Captured arguments · bounded preview</div>
-          <RequestFields input={d.input} />
+          <ToolInput value={d.input}/>
           <ResultArea state={op.status} resolving={resolving}>
             {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview} /></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
           </ResultArea>
@@ -774,7 +783,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="web">
           <div className="query">{d.url ?? d.query}</div>
           <ResultArea state={op.status} resolving={resolving}>
-            {d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
+            {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
           </ResultArea>
         </div>
       );
@@ -795,16 +804,10 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       );
     default:
       return <>
-        <div className="mcp-input">{summarizeInput(d.input)}</div>
-        <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div> : undefined}</ResultArea>
+        <ToolInput value={d.input}/>
+        <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : undefined}</ResultArea>
       </>;
   }
-}
-
-function RequestFields({ input }: { input: unknown }) {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) return <div className="mcp-input">{summarizeInput(input)}</div>;
-  const keys = Object.keys(input);
-  return <><dl className="request-fields">{keys.slice(0, 6).map((key) => <div key={key}><dt>{key}</dt><dd>{summarizeInput((input as Record<string, unknown>)[key])}</dd></div>)}</dl>{keys.length > 6 && <p className="muted">{keys.length - 6} more arguments · expand for full captured input</p>}</>;
 }
 
 /** All captured changes are reachable; large patches page explicitly rather than disappearing. */
