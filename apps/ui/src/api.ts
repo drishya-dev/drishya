@@ -224,10 +224,12 @@ export const daemon: DataSource = {
     let checking = false;
     // EventSource reconnects by itself; each new connection opens with a `sync` of revisions.
     es.addEventListener('sync', (e) => {
+      if (closed) return;
       hooks?.onStatus?.('connected');
       hooks?.onSync?.((JSON.parse((e as MessageEvent).data) as { revisions: Record<string, number> }).revisions);
     });
     es.addEventListener('error', () => {
+      if (closed) return;
       hooks?.onStatus?.('reconnecting');
       if (checking || closed) return;
       checking = true;

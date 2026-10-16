@@ -389,3 +389,25 @@ test('Modern queues overlapping file preparation, previews text and retains reje
   await expect(composer.locator('.attachment-chip')).toHaveCount(2);
 });
 
+test('Modern server restart authentication preserves cached reading and disables sending', async ({page}) => {
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.locator('.history').evaluate(el => el.setAttribute('data-cached-reading-test','retained'));
+  const actions=await page.locator('.history article.op').evaluateAll(nodes => nodes.map(node=>node.getAttribute('data-op-id')));
+  await page.context().clearCookies();
+  await page.context().setOffline(true);
+  const notice=page.getByRole('status',{name:'Local server connection'});
+  await expect(notice).toContainText('Disconnected');
+  await expect(page.locator('.history')).toHaveAttribute('data-cached-reading-test','retained');
+  expect(await page.locator('.history article.op').evaluateAll(nodes => nodes.map(node=>node.getAttribute('data-op-id')))).toEqual(actions);
+  await page.context().setOffline(false);
+  await notice.getByRole('button',{name:'Retry connection'}).click();
+  await expect(notice).toContainText('Server sign-in required');
+  await expect(page.locator('.history')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await expect(page.locator('.home')).toBeVisible();
+});

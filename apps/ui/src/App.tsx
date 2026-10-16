@@ -123,7 +123,17 @@ export function App() {
     if (screen === 'home') return <Home openDemo={(growing = false) => openBundle(DEMO_URL, growing).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
     return <Viewer />;
   };
-  return <ProductShell>{render()}{experience !== 'canvas' && <WorkspaceNavigation />}</ProductShell>;
+  return <ProductShell>{render()}<ConnectionNotice />{experience !== 'canvas' && <WorkspaceNavigation />}</ProductShell>;
+}
+
+function ConnectionNotice() {
+  const connection = useApp(s => s.connection), source = useApp(s => s.source), screen = useApp(s => s.screen);
+  if (source?.kind !== 'daemon' || !['home', 'viewer'].includes(screen) || connection === 'connected') return null;
+  return <aside className="connection-recovery" role="status" aria-label="Local server connection">
+    <strong>{connection === 'signed-out' ? 'Server sign-in required' : 'Disconnected · reading cached evidence'}</strong>
+    <span>{connection === 'signed-out' ? 'Open the new launch link printed by the server in this browser. Your current reading is kept here.' : 'New work may be missing. This does not mean the agent stopped or that its journal is being watched.'}</span>
+    <button className="btn small" onClick={() => useApp.setState(s => ({ connection: 'reconnecting', reconnectAttempt: s.reconnectAttempt + 1 }))}>Retry connection</button>
+  </aside>;
 }
 
 /** The playback clock. The composer never reads time; only this hook does. */
@@ -196,38 +206,55 @@ function useKeyboard() {
 /** Live: the daemon announces committed observations; the viewer refetches the projection. */
 function useLiveUpdates() {
   const source = useApp((s) => s.source);
+  const attempt = useApp(s => s.reconnectAttempt);
   useEffect(() => {
     if (!source) return;
+    let active = true;
+    const current = () => active && useApp.getState().source === source;
+    const offline = () => { if (current() && source.kind === 'daemon') useApp.setState({ connection: 'reconnecting' }); };
+    const online = () => { if (current() && source.kind === 'daemon') useApp.setState(s => ({ reconnectAttempt: s.reconnectAttempt + 1 })); };
+    window.addEventListener('offline', offline); window.addEventListener('online', online);
+    if (!navigator.onLine) offline();
     let pending: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = source.subscribe((e) => {
       const s = useApp.getState();
+      if (!current()) return;
       if (s.recordingId !== e.recordingId && !s.recordingId?.split('+').includes(e.recordingId)) return;
       if (e.health && !e.added) {
         // A capture-state change carries no new data: refresh the summary, not the projection.
         void s.source?.recordings().then((recordings) => {
           const current = useApp.getState();
-          if (current.source !== s.source) return;
+          if (!active || current.source !== s.source) return;
           const openId = current.recordingId?.split('+')[0];
           useApp.setState({ recordings, recording: recordings.find((r) => r.id === current.recordingId) ?? recordings.find((r) => r.id === openId) ?? current.recording });
         }).catch(() => undefined);
         return;
       }
       clearTimeout(pending);
-      pending = setTimeout(() => void useApp.getState().reloadProjection().catch((error) => useApp.setState({ error: error.message, playing: false })), 150);
+      pending = setTimeout(() => {
+        if (!current()) return;
+        void useApp.getState().reloadProjection().catch((error) => { if (current()) useApp.setState({ error: error.message, playing: false }); });
+      }, 150);
     }, {
-      onStatus: (connection) => connection === 'signed-out'
-        ? useApp.setState({ screen: 'signed-out', source: undefined, playing: false })
-        : useApp.setState({ connection }),
+      onStatus: (connection) => { if (current()) useApp.setState({ connection: connection === 'connected' && !navigator.onLine ? 'reconnecting' : connection, ...(connection === 'signed-out' ? { playing: false } : {}) }); },
       // After a reconnect, notices sent while the stream was down are lost: compare revisions and
       // reload the open view if it fell behind, even if nothing new arrives later (audit A07).
       onSync: (revisions) => {
+        if (!current()) return;
         const s = useApp.getState();
-        if (s.recordingId && s.projection && needsReload(s.recordingId, s.renderedRevisions, revisions)) void s.reloadProjection().catch((error) => useApp.setState({ error: error.message, playing: false }));
+        void source.recordings().then(recordings => {
+          if (!current()) return;
+          const now = useApp.getState();
+          useApp.setState({ recordings, recording: recordings.find(r => r.id === now.recordingId) ?? now.recording });
+        }).catch(error => { if (current()) useApp.setState({ error: error.message }); });
+        if (s.recordingId && s.projection && needsReload(s.recordingId, s.renderedRevisions, revisions)) void s.reloadProjection().catch((error) => { if (current()) useApp.setState({ error: error.message, playing: false }); });
       },
     });
     return () => {
+      active = false;
+      window.removeEventListener('offline', offline); window.removeEventListener('online', online);
       clearTimeout(pending);
       unsubscribe();
     };
-  }, [source]);
+  }, [source, attempt]);
 }

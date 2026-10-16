@@ -34,7 +34,8 @@ interface State {
   /** Revisions the shown projection is at; compared with the daemon's after a reconnect (B1b). */
   renderedRevisions: Record<string, number>;
   /** The daemon's change stream: 'reconnecting' while it is down. */
-  connection: 'connected' | 'reconnecting';
+  connection: 'connected' | 'reconnecting' | 'signed-out';
+  reconnectAttempt: number;
 
   /** Normal reading shows every committed step; replay alone applies a visibility cursor. */
   mode: 'history' | 'replay';
@@ -120,6 +121,7 @@ export const useApp = create<State>((set, get) => ({
   recordings: [],
   renderedRevisions: {},
   connection: 'connected',
+  reconnectAttempt: 0,
   mode: 'history',
   replayDiagnostics: false,
   step: 0,
