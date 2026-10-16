@@ -317,7 +317,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         if (useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) {
           followLatest();
         }
-        else requestAnimationFrame(() => restoreReading());
+        // The measurement revision restores detached reading in useLayoutEffect,
+        // before paint. A second, untracked RAF can run after the next wheel's
+        // native scroll but before its scroll event, restoring an obsolete anchor.
       }
     });
     // The inner section repeats the same identity but has a different height. Measuring both
