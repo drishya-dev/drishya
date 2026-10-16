@@ -66,7 +66,10 @@ export class WorkspaceAccess {
       const bytes = buffer.subarray(0, bytesRead);
       if (bytes.length > 2 * 1024 * 1024 || bytes.includes(0)) throw new HttpError(413, 'not a supported text file');
       // Redact the full bounded document before slicing: secrets may span page boundaries.
-      const safe = redactText(bytes.toString('utf8'));
+      let text: string;
+      try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
+      catch { throw new HttpError(413, 'current reader supports valid UTF-8 text files'); }
+      const safe = redactText(text);
       const lines = safe.text.split('\n');
       return { path, scope: 'current-workspace' as const, text: lines.slice(start, start + count).join('\n'), start, totalLines: lines.length, returnedLines: Math.min(count, Math.max(0, lines.length - start)), hasMore: start + count < lines.length, redacted: safe.hits.length > 0, modifiedAt: stat.mtime.toISOString() };
     } finally { await handle.close(); }
