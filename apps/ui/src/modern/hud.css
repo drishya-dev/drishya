@@ -41,3 +41,8 @@
 :root[data-ui-version=modern] .modern-session-header .studio-actions :is(svg,.modern-utility-glyph) {display:block;width:18px;height:18px;flex:none;margin:0;}
 :root[data-ui-version=modern] .modern-session-header .search-open :is(span,kbd) {display:none;}
 :root[data-ui-version=modern] .modern-native-composer:not(.composer-minimized) .modern-composer-top {padding-right:42px;}
+:root[data-ui-version=modern] .connected-workspace .workspace-header::after {content:none;}
+:root[data-ui-version=modern] .modern-session-header .studio-session-label {display:none;}
+:root[data-ui-version=modern] .modern-session-header .studio-session {padding:10px 18px;}
+:root[data-ui-version=modern] .modern-session-header .studio-session h1 {font-size:15px;font-weight:550;line-height:1.5;margin:0;}
+@media(max-width:700px) {:root[data-ui-version=modern] .modern-session-header .studio-session h1 {font-size:13px;}}
