@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Yash with Codex | Header rollback, PR 66/67 review, multi-file workspace and product review | Modern CSS/Viewer, workspace readers, review and handoff docs |
 
 
 ---
@@ -39,6 +40,15 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Validation:** Final Windows Node 24.11.1 / cached pinned pnpm 10.34.5: both typechecks and **387 units / 63 files pass**; final complete browser sweep **145 passed / two explicit opt-in skips** (147 total, 8.2 minutes); isolated offline package installation/import/API/persisted restart and unchanged deterministic demo pass. Ten-minute synthetic reading: **601,301 ms / 84 rounds / peak 862 DOM nodes**, with pinned evidence/anchors retained; last native offline disclosure and Usage geometry pass three repetitions each and the final full browser sweep. Earlier layout failures were repaired and the two finite Follow/menu test races were corrected without weakening evidence or exact geometry assertions. Details/limits in 81.
 - **Runtime:** Actual server on `http://127.0.0.1:7878/`, normal user store. Restarted only with all six native controllers idle, then restored the three previously enabled passive watches. New launch link is required in separately signed-out browsers. Existing real recording/Settings and deployed bounded review API inspected; no new real-session import, native prompt/approval or hosted CI.
 - **Next/limits:** Other-builder code review before merge. Builder-owned real Claude/Codex lifecycle, human comprehension/preference and assistive-tech checks, physical low-resource and macOS/Linux release acceptance remain open. Review 75's retired independent-shell parity list is superseded by the shared foundation; do not reopen delivered 3D, Home, reading or Git functionality as missing features. Private stores/screenshots/logs stay ignored.
+
+### Harsh with Codex — Repository map and live workflow proposal
+
+- **PR:** [#66](https://github.com/drishya-dev/drishya/pull/66) open into main; Yash (`yashdoke7`) review requested. Labels: documentation, area: map, area: canvas, decision. No implementation or merge performed.
+
+- **When:** 16 October 2026, isolated branch `codex/repository-workflow-proposal`, based on main `15974a4`. The builder requested a written proposal and a PR for Yash before implementation.
+- **Proposed:** [Repository map and live workflow](review/repository-map-live-workflow-proposal.md): retain the current 3D overview; compare a bounded optional 2D folder/import focus view with the existing renderer; preserve chronological passages, terminal evidence and shared evidence/navigation owners. React Flow/ELK remain candidates, not adopted dependencies.
+- **Review gate:** Yash should accept/revise/reject the six explicit questions. No visualization/default/native/schema change is approved by this document; agree the first bounded implementation task after review. Current Modern-on-Legacy and Canvas boundaries remain authoritative.
+- **Validation:** Documentation links, Markdown fences, whitespace and exact file scope checked locally. No runtime/UI code changed; no browser/performance/human acceptance claim and no hosted CI. The active workspace-reliability checkout and its uncommitted changes are outside this PR.
 
 ### Yash with Codex — Modern breadcrumb header and shared panel material
 
