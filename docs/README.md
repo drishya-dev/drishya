@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Latest — 16 October:** [82 — Developer workspace](review/82-developer-workspace.md) governs current multi-file reading/local drafts/native-request preparation; [83 — Independent developer review](review/83-independent-developer-review.md) records adoption findings and next work. Header rollback restores79 over80. PR66 map proposal is documentation, not an adopted renderer/default. Native/evidence boundaries remain authoritative.
+
 **16 October reliability continuation:** [81](review/81-workspace-reliability.md) governs bounded reading continuity, attachment preparation/byte validation, cached connection recovery and explicit review paging across the shared UI. It audits review 75 against the later Legacy-backed Modern implementation; the old missing-3D/parity list is not a new feature queue. Reviews 76–80 still own the visual foundation and surrounding composition. Real native-account acceptance is explicitly assigned to the builder; human/physical/platform checks remain release acceptance.
 
 **16 October proposal awaiting review:** [Repository map and live workflow](review/repository-map-live-workflow-proposal.md) proposes retaining the 3D overview, evaluating a bounded 2D repository focus view and reusing existing chronological passages. It is documentation for Yash's review, not a superseding design decision or approval to adopt React Flow, replace the visualization or change defaults. Agree the next bounded task after review.

@@ -25,16 +25,24 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Header rollback, PR 66/67 review, multi-file workspace and product review | Modern CSS/Viewer, workspace readers, review and handoff docs |
 
 
 ---
 
 ## Last session
 
+### Yash with Codex — Integrated workspace and independent adoption review
+
+- **When:** 16 October 2026, `codex/multi-file-workspace`, based on integrated main `b3184bd`.
+- **Merged:** PR66 proposal `c809a1b`, PR67 reliability `b3184bd`; preserved Harsh's authored work and both handoffs. Restored the previous centered Modern header (`9b26b64`), retained logo/panel material. Found/fixed queued rejected-attachment retry before merging67 (`7cea284`). React Flow/ELK remains proposed, not adopted.
+- **Delivered:** [82](review/82-developer-workspace.md), strict current UTF-8 (`851cf03`) and multi-file Workspace (`35740b1`): eight tabs, resizable panes, narrow single-pane switch, retained per-file reading, existing import connections, small complete-source local drafts, explicit download/lifetime, captured-reading recovery, native edit/command prompt preparation. Removed redundant quick-reader copy-range controls. No direct source writes or terminal endpoint.
+- **Validation:** Both typechecks/build; full check **395 units/65 files**, subsequent concurrent-draft regression adds one passing test (**396 represented**); final **45 local browser journeys**, including actual existing Codex/Claude redacted recordings, pass. No journal imports, native turns or hosted CI. Browser checks establish unchanged disk/zero submission during preparation, draft export, source reading continuity and responsive/version isolation. Code review repairs documented in82. Private screenshots/store excluded.
+- **Critical review:** Three independent reviewers, consolidated in [83](review/83-independent-developer-review.md). Strong evidence/review utility; readiness roughly5.5–6/10, not a sole IDE replacement. Next: coherent evidence/current-source/correction/check loop, whole-file find, review discoverability and meaningful map neighborhoods. Native-account, human sustained reading, physical/platform/accessibility acceptance stays open. CUA unavailable; source, automated journeys and rendered frames are the evidence.
+- **Publication:** Major Workspace increment is on its own branch for the other builder's review. User package-manager and artwork files are untouched/uncommitted.
+
 ### Harsh with Codex — Everyday workspace reliability
 
-- **Review:** [PR #67](https://github.com/drishya-dev/drishya/pull/67) is open into `main`, with Yash (`yashdoke7`) review requested. Implementation and acceptance commits are published; not merged, no hosted CI dispatched.
+- **Review:** [PR #67](https://github.com/drishya-dev/drishya/pull/67) merged as `b3184bd` after Yash review and queued-retry correction. No hosted CI dispatched.
 - **When:** 16 October 2026, `codex/workspace-reliability`, based on main `15974a4`. The builder requested the remaining work after PR #65 and explicitly keeps real native-account checks for themselves.
 - **Delivered:** [81](review/81-workspace-reliability.md): bounded source/session reading memory, history/evidence/map/folder continuity, exact-patch Git control restoration, queued concurrent file preparation, attachment previews/retry, UTF-8 prompt limits and rejection-safe drafts, qualified cached reading/native receipts on disconnect/authentication loss, contextual retries, corrected keyboard review navigation and file glyphs/folder keys. Review work now pages every captured outcome/file through the existing history worker, capped at 20/group and 50 paths with complete global counts. Existing 3D/reading/review features were audited and retained; no event/store schema or native permission change.
 - **Validation:** Final Windows Node 24.11.1 / cached pinned pnpm 10.34.5: both typechecks and **387 units / 63 files pass**; final complete browser sweep **145 passed / two explicit opt-in skips** (147 total, 8.2 minutes); isolated offline package installation/import/API/persisted restart and unchanged deterministic demo pass. Ten-minute synthetic reading: **601,301 ms / 84 rounds / peak 862 DOM nodes**, with pinned evidence/anchors retained; last native offline disclosure and Usage geometry pass three repetitions each and the final full browser sweep. Earlier layout failures were repaired and the two finite Follow/menu test races were corrected without weakening evidence or exact geometry assertions. Details/limits in 81.
@@ -43,7 +51,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Harsh with Codex — Repository map and live workflow proposal
 
-- **PR:** [#66](https://github.com/drishya-dev/drishya/pull/66) open into main; Yash (`yashdoke7`) review requested. Labels: documentation, area: map, area: canvas, decision. No implementation or merge performed.
+- **PR:** [#66](https://github.com/drishya-dev/drishya/pull/66) merged as `c809a1b` after Yash review. Labels: documentation, area: map, area: canvas, decision. No implementation or merge performed.
 
 - **When:** 16 October 2026, isolated branch `codex/repository-workflow-proposal`, based on main `15974a4`. The builder requested a written proposal and a PR for Yash before implementation.
 - **Proposed:** [Repository map and live workflow](review/repository-map-live-workflow-proposal.md): retain the current 3D overview; compare a bounded optional 2D folder/import focus view with the existing renderer; preserve chronological passages, terminal evidence and shared evidence/navigation owners. React Flow/ELK remain candidates, not adopted dependencies.
