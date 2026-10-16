@@ -336,7 +336,7 @@ test('MCP input and captured result can be read in the history passage', async (
   await operation.getByRole('button', { name: /Expand/ }).click();
   await expect(operation).toContainText('context7CompatibleLibraryID');
   await expect(operation).toContainText('Captured result preview');
-  await expect(operation.locator('.op-expanded .output')).not.toBeEmpty();
+  await expect(operation.locator('.op-expanded .result-prose')).toContainText('TypeScript handbook');
 });
 
 test('a burst follows automatically and deliberate reading can hold and resume the camera', async ({ page }) => {

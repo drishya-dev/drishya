@@ -157,6 +157,8 @@ test('native model settings and attachment menus dismiss outside without detachi
   await expect(composer.locator('.composer-target')).not.toContainText('Checking…');
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
   if (await enable.count()) await enable.click();
+  const follow = page.getByRole('switch', { name: 'Automatically follow new work' });
+  const originalFollow = await follow.getAttribute('aria-checked');
   const policy = composer.locator('.permission-policy');
   await policy.locator('summary').click();
   await policy.getByRole('button', { name: 'Read native settings' }).click();
@@ -164,7 +166,7 @@ test('native model settings and attachment menus dismiss outside without detachi
   await policy.getByLabel('Effort').selectOption('high');
   await page.locator('.crown-title').click({ force: true });
   await expect(policy).not.toHaveAttribute('open', '');
-  await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'true');
+  await expect(follow).toHaveAttribute('aria-checked', originalFollow!);
   await composer.getByRole('button', { name: 'Add files or folders' }).click();
   await expect(composer.locator('.composer-add-menu')).toBeVisible();
   await composer.locator('.composer-add-menu').getByRole('button', { name: 'Files or images' }).focus();
@@ -244,6 +246,7 @@ test('composer attaches code and pasted screenshots, removes chips and sends the
   let sent: any;
   await page.route('**/controller/prompt', async route => { sent = route.request().postDataJSON(); await route.continue(); });
   await composer.getByRole('textbox').fill('Review the attached source and screenshot');
+  await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeEnabled();
   await composer.getByRole('button', { name: 'Send prompt', exact: true }).click();
   await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
   await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();

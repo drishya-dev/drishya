@@ -14,11 +14,11 @@ export function WorkspaceBar() {
   useLayoutEffect(() => {
     const element = bar.current;
     const viewer = element?.closest<HTMLElement>('.viewer');
-    if (!element || !viewer || experience !== 'classic') return;
+    if (!element || !viewer) return;
     // Demo controls and focus controls can wrap; the explorer must start below them.
     const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12}px`); };
     const observer = new ResizeObserver(measure);
-    observer.observe(element); for(const group of element.querySelectorAll('.workspace-leading,.workspace-secondary'))observer.observe(group);observer.observe(viewer);measure();
+    observer.observe(element); for(const group of element.querySelectorAll('.workspace-leading,.workspace-secondary'))observer.observe(group);observer.observe(viewer);const header=viewer.querySelector('.workspace-header');if(header)observer.observe(header);measure();
     return () => { observer.disconnect(); viewer.style.removeProperty('--workspace-tools-bottom'); };
   }, [experience]);
   const developerWorkspace = useApp(s => s.developerWorkspace);

@@ -101,7 +101,7 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
       expect(await control.evaluate(el => {
         const r = el.getBoundingClientRect();
         return el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
-      })).toBe(true);
+      }), `Hit target at ${width}px: ${await control.innerText()} / ${await control.evaluate(el=>{const r=el.getBoundingClientRect(),top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return `${r.x},${r.y} -> ${top?.tagName}.${top?.className}`;})}`).toBe(true);
     }
     const before = (await nav.boundingBox())!;
     const history = page.locator('.history');
