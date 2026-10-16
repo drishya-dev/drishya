@@ -12,6 +12,7 @@ test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-fresh-')); root = join(dir, 'shop');
   cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
   writeFileSync(join(root,'src/cart/reading.ts'),Array.from({length:450},(_,i)=>`export const reviewLine${i+1} = ${i+1};`).join('\n'));
+  writeFileSync(join(root,'README.md'),'# Workspace guide\n\nA **readable** document.\n\n| Feature | State |\n| --- | --- |\n| Reading | Ready |\n\n> Current source, safely rendered.\n\n```ts\nexport const ready = true;\n```\n');
   const git = (...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true });
   git('init'); git('config', 'user.name', 'Synthetic'); git('config', 'user.email', 'synthetic@example.invalid');
   git('add', '.'); git('commit', '-m', 'synthetic workspace');
@@ -620,4 +621,26 @@ test('Modern Home keeps captured sessions on discovery failure and reaches deep 
   await page.setViewportSize({width:390,height:844});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({path:resolve('.local/modern-home-phone.png')});
+});
+
+test('Workspace Markdown opens as a readable document with an explicit exact-source view',async({page})=>{
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedCode:string}).copiedCode=text;}}}));
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
+  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
+  const grant=desk.getByRole('button',{name:'Approve workspace reading'});if(await grant.isVisible())await grant.click();
+  await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('README.md');
+  await page.locator('[data-spine-path="README.md"]').click();
+  const document=desk.getByRole('region',{name:'Workspace file README.md',exact:true});
+  await expect(document.getByRole('heading',{name:'Workspace guide'})).toBeVisible();
+  await expect(document.getByRole('cell',{name:'Ready',exact:true})).toBeVisible();
+  await expect(document.locator('.desk-markdown strong')).toHaveText('readable');
+  const code=document.locator('.fenced-material');await code.getByRole('button',{name:'Copy',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCode:string}).copiedCode)).toBe('export const ready = true;');
+  await code.getByRole('button',{name:'Wrap',exact:true}).click();await expect(code.locator('pre')).toHaveClass(/code-wrap/);
+  await document.getByRole('button',{name:'Source',exact:true}).click();
+  await expect(document.locator('.desk-code')).toContainText('# Workspace guide');
+  await document.getByRole('button',{name:'Document',exact:true}).click();
+  await expect(document.getByRole('heading',{name:'Workspace guide'})).toBeVisible();
 });

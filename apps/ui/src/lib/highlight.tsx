@@ -38,7 +38,7 @@ export function tokenize(line: string, lang?: string): Tok[] {
     } else if (m[2]) out.push({ t: 'str', s: m[2] });
     else if (m[3]) out.push({ t: 'num', s: m[3] });
     else if (m[4]) out.push({ t: KEYWORDS.has(m[4]) ? 'kw' : 'fn', s: m[4] });
-    else if (m[5]) out.push({ t: KEYWORDS.has(m[5]) ? 'kw' : /^[A-Z]/.test(m[5]) ? 'type' : line[i - 1] === '.' || /^\s*:/.test(line.slice(i + m[5].length)) ? 'property' : 'plain', s: m[5] });
+    else if (m[5]) out.push({ t: KEYWORDS.has(m[5]) ? 'kw' : lang === 'shell' && /^(node|npm|npx|pnpm|corepack|git|python|pytest|vitest|tsc|Get|Select|Set|Write|Remove|Copy|Move)$/.test(m[5]) ? 'fn' : lang === 'shell' && /[-$]/.test(line[i-1] ?? '') ? 'property' : /^[A-Z]/.test(m[5]) ? 'type' : line[i - 1] === '.' || /^\s*:/.test(line.slice(i + m[5].length)) ? 'property' : 'plain', s: m[5] });
     last = i + m[0].length;
   }
   if (last < line.length) out.push({ t: 'plain', s: line.slice(last) });

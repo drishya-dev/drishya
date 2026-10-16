@@ -1,3 +1,4 @@
+import { CommandText } from './CommandText.tsx';
 import { ToolInput } from './ToolInput.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -648,7 +649,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       </div>;
     case 'test':
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
-        <div className="cmd">$ {d.command}</div>
+        <CommandText text={d.command}/>
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
         {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
@@ -656,7 +657,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       </div>;
     case 'shell':
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
-        <div className="cmd">$ {d.command}</div>
+        <CommandText text={d.command}/>
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes output={d.outputPreview} />
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
@@ -738,7 +739,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       const s = d.summary;
       return (
         <div className="test">
-          <div className="cmd">$ {d.command}</div>
+          <CommandText text={d.command}/>
           <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} fallback={s ? (
             <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
@@ -758,8 +759,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'shell':
       return (
         <div className="shell">
-          <div className="cmd">$ {d.command.slice(0, 1200)}</div>
-          {d.command.length > 1200 && <div className="material-context">First 1,200 captured characters · expand for full input</div>}
+          <CommandText text={d.command}/>
           <ResultArea state={op.status} resolving={resolving}>
             <CapturedOutcomes output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
             {d.outputPreview ? <TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={op.status === 'error'} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}

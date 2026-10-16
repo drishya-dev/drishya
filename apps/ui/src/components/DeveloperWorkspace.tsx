@@ -9,6 +9,8 @@ import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { FileIcon } from './FileIcon.tsx';
 import { CodeView } from './common.tsx';
 import { ImportContext } from './ImportContext.tsx';
+import { Markdown } from '../lib/markdown.tsx';
+import { loadWorkspaceDocument } from '../lib/load-workspace-document.ts';
 import { SourceFind } from './SourceFind.tsx';
 
 /** Current-disk reading and local drafts; capture and native execution keep their own owners. */
@@ -77,8 +79,10 @@ export function DeveloperWorkspace() {
 
 function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,changed }: {id:string;slot:number;path:string;source:object;drafts:WorkspaceDrafts;revision:number;changed:()=>void}) {
   const memory = useWorkspaceMemory(), locationKey = `desk/document/${slot}/${path}`;
-  const [reading,setReading] = useWorkspaceState<{start:number;query:string;line:string;wrap:boolean;activeLine?:number}>(locationKey, {start:0,query:'',line:'',wrap:false});
+  const [reading,setReading] = useWorkspaceState<{start:number;query:string;line:string;wrap:boolean;activeLine?:number;formatted?:boolean}>(locationKey, {start:0,query:'',line:'',wrap:false});
   const {start,query,line,wrap,activeLine} = reading;
+  const markdown=/\.(md|markdown)$/i.test(path), formatted=markdown && (reading.formatted ?? true);
+  const [previewDocument,setDocument]=useState<Awaited<ReturnType<typeof loadWorkspaceDocument>>>(),[documentError,setDocumentError]=useState('');
   const setStart = (value:number) => setReading(old=>({...old,start:value}));
   const setQuery = (value:string) => setReading(old=>({...old,query:value}));
   const setLine = (value:string) => setReading(old=>({...old,line:value}));
@@ -93,9 +97,15 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
   useEffect(() => { if(pendingLine.current === undefined) return; const target=body.current?.querySelector(`[data-source-line="${pendingLine.current}"]`); if(target) { target.scrollIntoView({block:'nearest',inline:'nearest'}); pendingLine.current=undefined; } },[activeLine,file]);
   useLayoutEffect(() => {
     if(!file || !body.current) return;
-    const position = memory.get(`${locationKey}/scroll/${start}`) as {top:number;left:number}|undefined;
+    const position = memory.get(`${locationKey}/scroll/${formatted?'document':start}`) as {top:number;left:number}|undefined;
     if(position) { body.current.scrollTop=position.top; body.current.scrollLeft=position.left; }
-  },[file,memory,locationKey,start,editing]);
+  },[file,previewDocument,formatted,memory,locationKey,start,editing]);
+  useEffect(()=>{
+    if(!formatted||editing)return;
+    let active=true;setDocument(undefined);setDocumentError('');
+    void loadWorkspaceDocument(async offset=>{if(!active)throw new Error('Reading closed.');return workspaceApi.file(id,path,offset);}).then(value=>{if(active)setDocument(value);}).catch(error=>{if(active)setDocumentError(error.message);});
+    return ()=>{active=false;};
+  },[id,path,formatted,editing,retry]);
   const draft = drafts.get(id,path);
   useEffect(() => { if(editing && !draft) setEditing(false); },[draft,editing]);
   const matches = query && file ? file.text.split('\n').flatMap((text,index) => text.toLowerCase().includes(query.toLowerCase()) ? [file.start+index+1] : []) : [];
@@ -125,9 +135,11 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
     <header><strong title={path}>{path}</strong><div><button className="btn ghost" onClick={() => { useApp.setState({developerWorkspace:false,filePanel:path,currentFile:undefined}); }}>Recorded work</button><button className="btn ghost" onClick={() => useApp.setState({developerWorkspace:false,explore:true,mapVisible:true,mapFocusPath:path})}>Reveal in map</button><button className="btn ghost" disabled={loadingDraft || !file} onClick={() => { if(editing) setEditing(false); else void edit(); }}>{loadingDraft?'Loading draft…':editing?'Read source':'Draft edit'}</button></div></header>
     {!editing && <ImportContext path={path} current openCurrent={target => window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:target}))}/>}
     {editing && draft ? <><div className="desk-draft-bar"><span>Local draft · disk unchanged · lost on reload</span><button className="btn ghost" onClick={() => { const url=URL.createObjectURL(new Blob([draft.text],{type:'text/plain;charset=utf-8'})); const link=document.createElement('a'); link.href=url; link.download=`${path.split('/').at(-1)}.draft.txt`; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); }}>Download draft</button><button className="btn ghost" onClick={() => { drafts.discard(id,path); changed(); setEditing(false); }}>Discard draft</button><button className="btn" disabled={draft.text===draft.base} onClick={() => void prepare(draft)}>Review in native prompt</button></div><textarea className="desk-editor" aria-label={`Local draft for ${path}`} spellCheck={false} value={draft.text} onChange={e => { try { drafts.set(id,path,{...draft,text:e.target.value}); setError(''); changed(); } catch(err) { setError((err as Error).message); } }}/></> : <>
+      {markdown && <div className="desk-document-views" role="group" aria-label="Markdown presentation"><button className="btn ghost" aria-pressed={formatted} onClick={()=>setReading(old=>({...old,formatted:true}))}>Document</button><button className="btn ghost" aria-pressed={!formatted} onClick={()=>setReading(old=>({...old,formatted:false}))}>Source</button></div>}
+      {formatted ? <><div className="desk-markdown" ref={body} onScroll={e=>memory.set(`${locationKey}/scroll/document`,{top:e.currentTarget.scrollTop,left:e.currentTarget.scrollLeft})} tabIndex={0} aria-label={`Rendered document ${path}`}>{previewDocument ? <Markdown text={previewDocument.text} document /> : documentError ? <p role="alert">{documentError}<button className="btn ghost" onClick={()=>setReading(old=>({...old,formatted:false}))}>Read source</button></p> : <p role="status">Rendering document…</p>}</div><footer><span>Current disk{previewDocument?` · ${previewDocument.totalLines} lines${previewDocument.redacted?' · redacted':''}`:''}</span><button className="btn ghost" onClick={()=>setRetry(n=>n+1)}>Refresh</button></footer></> : <>
       <div className="desk-source-tools"><SourceFind query={query} change={value => {setQuery(value);setActiveLine(undefined);}} matches={matches} activeLine={activeLine} move={direction => { if(matches.length) { const index=matches.indexOf(activeLine ?? -1); setActiveLine(matches[index<0 ? direction>0 ? 0 : matches.length-1 : (index+direction+matches.length)%matches.length]); } }} label={`Find in ${path} loaded page`} idleLabel="" /><form onSubmit={e => { e.preventDefault(); const n=Number(line); if(!file || !/^\d+$/.test(line) || !Number.isSafeInteger(n) || n<1 || n>file.totalLines) {setError('Enter an existing line number.');return;} setError('');setActiveLine(n);setStart(Math.floor((n-1)/200)*200); }}><input aria-label={`Go to line in ${path}`} inputMode="numeric" placeholder="Line" value={line} onChange={e => setLine(e.target.value)} /><button className="btn ghost" disabled={!file}>Go</button></form><button className="btn ghost" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap</button><button className="btn ghost" disabled={!file} onClick={() => { void navigator.clipboard.writeText(file!.text).then(()=>setCopied('Copied page')).catch(()=>setError('Select the source text to copy.')); }}>Copy page</button></div>
       {file ? <div ref={body} onScroll={e => { const node=e.currentTarget; memory.set(`${locationKey}/scroll/${start}`,{top:node.scrollTop,left:node.scrollLeft}); }} className={`desk-code source-reading${wrap?' wrap-source':''}`} tabIndex={0} aria-label={`Source ${path}`}><CodeView text={file.text} path={path} startLine={start+1} highlightLines={new Set(matches)} activeLine={activeLine}/></div> : !error && <p role="status" className="desk-loading">Reading current source…</p>}
-      <footer><span>{file ? `Lines ${start+1}–${start+file.returnedLines} of ${file.totalLines}${file.redacted?' · redacted':''}`:'Current disk'}</span><button className="btn ghost" disabled={!start} onClick={() => setStart(Math.max(0,start-200))}>Previous</button><button className="btn ghost" disabled={!file?.hasMore} onClick={() => setStart(start+200)}>Next</button><button className="btn ghost" onClick={() => setRetry(n=>n+1)}>Refresh</button>{draft && <small>Draft retained</small>}<span role="status">{copied}</span></footer>
+      <footer><span>{file ? `Lines ${start+1}–${start+file.returnedLines} of ${file.totalLines}${file.redacted?' · redacted':''}`:'Current disk'}</span><button className="btn ghost" disabled={!start} onClick={() => setStart(Math.max(0,start-200))}>Previous</button><button className="btn ghost" disabled={!file?.hasMore} onClick={() => setStart(start+200)}>Next</button><button className="btn ghost" onClick={() => setRetry(n=>n+1)}>Refresh</button>{draft && <small>Draft retained</small>}<span role="status">{copied}</span></footer></>}
     </>}
     {error && <p className="desk-error" role="alert">{error}<button className="btn ghost" onClick={()=>setRetry(n=>n+1)}>Retry source</button></p>}
   </section>;
