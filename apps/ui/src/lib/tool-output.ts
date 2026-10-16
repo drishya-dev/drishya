@@ -5,7 +5,12 @@ const record = (value: unknown): value is RecordValue => !!value && typeof value
 export function toolOutputText(text: string): { text: string; decoded: boolean } {
   if (text.length > 2 * 1024 * 1024) return { text, decoded:false };
   const unwrap = (value: unknown, depth: number): string | undefined => {
-    if (!record(value) || depth > 4) return;
+    if (depth > 4) return;
+    if (Array.isArray(value) && value.length > 0 && value.length <= 100) {
+      const parts = value.map(item => unwrap(item, depth + 1));
+      return parts.every(part => part !== undefined) ? parts.join('\n\n') : undefined;
+    }
+    if (!record(value)) return;
     if (value.status === 'fulfilled' && 'value' in value) {
       const output = unwrap(value.value, depth + 1);
       return output === undefined ? undefined : `${Number.isInteger(value.i) ? `Request ${value.i}\n` : ''}${output}`;
@@ -16,8 +21,10 @@ export function toolOutputText(text: string): { text: string; decoded: boolean }
       if (typeof value.session_id === 'number') lines.push(`Running session: ${value.session_id}`);
       return lines.join('\n');
     }
-    if (Array.isArray(value.content) && typeof value.isError === 'boolean' && value.content.every(item => record(item) && item.type === 'text' && typeof item.text === 'string')) {
-      const body = value.content.map(item => item.text).join('\n');
+    if (Array.isArray(value.content) && (value.isError === undefined || typeof value.isError === 'boolean') && value.content.every(item => record(item) && item.type === 'text' && typeof item.text === 'string')) {
+      const body = value.content.map(item => {
+        try { return unwrap(JSON.parse(item.text), depth + 1) ?? item.text; } catch { return item.text; }
+      }).join('\n');
       return value.isError ? `Tool error\n${body}` : body;
     }
   };

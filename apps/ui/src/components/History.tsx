@@ -1,3 +1,6 @@
+import { CommandText } from './CommandText.tsx';
+import { ToolInput } from './ToolInput.tsx';
+import { ToolOutput } from './ToolOutput.tsx';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
@@ -67,6 +70,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const readingAtStart = useRef(memory.get('history/top') === 0);
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
+  const navigationIntent = useRef<string | undefined>(undefined);
+  const cancelledNavigation = useRef<string | undefined>(undefined);
   const navigationBoundary = useRef<{ step: number; projection: Projection } | undefined>(undefined);
   const chapterNavigation = useRef<{ id: string; step: number } | undefined>(undefined);
   const seenThrough = useRef(scene.total);
@@ -88,7 +93,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         const r = materialRect(card);
         const stored = new DOMRect(r.left, r.top + history.scrollTop, r.width, r.height);
         const before = materialPositions.current.get(id);
-        if (before && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
+        if (before && useApp.getState().follow && performance.now()>userScrollUntil.current && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
           moveMaterial(card, new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), 300, 'surface-Reflow');
         }
         next.set(id, stored);
@@ -106,7 +111,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   useLayoutEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     const cancel = () => { for (const card of ref.current?.querySelectorAll('article[data-op-id]') ?? []) for (const a of card.getAnimations()) if (a.id === 'surface-Reflow') a.cancel(); };
-    if (!motion || lowResource) cancel();
+    if (!motion || lowResource || !follow) cancel();
     const changed = () => { if (preference.matches) cancel(); };
     preference.addEventListener('change', changed);
     const history = ref.current;
@@ -115,7 +120,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     history?.addEventListener('click', cancel, true);
     history?.addEventListener('keydown', cancel);
     return () => { preference.removeEventListener('change', changed); history?.removeEventListener('click', cancel, true); history?.removeEventListener('keydown', cancel); };
-  }, [motion, lowResource]);
+  }, [motion, lowResource, follow]);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
@@ -137,6 +142,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : promptStep !== undefined ? ps.id === projection.passages.find(p => p.firstStep >= promptStep - 1)?.id : false,
   );
   const targetId = scene.passages[targetIndex]?.id;
+  const intent = selectedOp ? `op:${selectedOp}` : focusObservationId ? `observation:${focusObservationId}` : promptStep !== undefined ? `prompt:${promptStep}` : undefined;
   const expandedId = scene.passages.find((ps) => ps.ops.some((op) => op.id === expandedOp))?.id;
   const ids = scene.passages.map((ps) => ps.id);
   const hoverPassageId = scene.passages.find(ps => ps.ops.some(op => op.id === hoveredOp))?.id;
@@ -248,12 +254,17 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     followFrame.current = requestAnimationFrame(tick);
   };
 
-  const restoreReading = () => {
+  const restoreReading = (committedLayout=false) => {
     const el = ref.current;
     const anchor = readingAnchor.current;
     const boundary = navigationBoundary.current;
     const atDestination = boundary?.step === scene.step && boundary.projection === projection;
-    if (!el || follow && !atDestination || navigating.current) return;
+    if (!el || follow && !atDestination || navigating.current&&!committedLayout) return;
+    // Native scrolling can precede its scroll event. Never restore an older anchor
+    // over that still-unreported user delta while a measurement commits.
+    if(committedLayout&&!programmatic.current&&Math.abs(el.scrollTop-lastScrollTop.current)>.5) {
+      rememberReading();return;
+    }
     // At the document start, late allocation changes must preserve the boundary,
     // rather than pull the reader down to an old first-passage pixel offset.
     if (readingAtStart.current) { if (el.scrollTop > .5) setScrollTop(0); return; }
@@ -277,8 +288,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   // A late record can insert steps ahead of the reader. Restore the same captured passage
   // and pixel offset after React updates it, instead of trusting an old array index.
   useLayoutEffect(() => {
-    restoreReading();
-  }, [scene.passages, follow, compareAgents, explore, theme]);
+    // Correct measured spacer changes before paint, using the latest user-scroll anchor.
+    restoreReading(true);
+  }, [scene.passages, follow, compareAgents, explore, theme, measurementVersion]);
 
   // A passage can grow after its artifact arrives or its width changes. Record the actual slot
   // height, then reflow spacers; preserve the captured passage/pixel anchor while detached.
@@ -305,7 +317,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         if (useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) {
           followLatest();
         }
-        else requestAnimationFrame(() => restoreReading());
+        // The measurement revision restores detached reading in useLayoutEffect,
+        // before paint. A second, untracked RAF can run after the next wheel's
+        // native scroll but before its scroll event, restoring an obsolete anchor.
       }
     });
     // The inner section repeats the same identity but has a different height. Measuring both
@@ -328,7 +342,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || !targetId) { lastNavigation.current = undefined; pendingNavigation.current = undefined; return; }
+    if (navigationIntent.current !== intent) {
+      navigationIntent.current = intent; cancelledNavigation.current = undefined;
+      lastNavigation.current = undefined; pendingNavigation.current = undefined;
+    }
+    if (!el || !targetId || intent && cancelledNavigation.current === intent) return;
     if (targetId !== lastNavigation.current) {
       lastNavigation.current = targetId;
       pendingNavigation.current = targetId;
@@ -354,7 +372,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     readingAnchor.current = { id: targetId, offset: node.getBoundingClientRect().top - el.getBoundingClientRect().top };
     if (useApp.getState().readingPassageId !== targetId) set({ readingPassageId: targetId });
     pendingNavigation.current = undefined;
-  }, [targetId, targetIndex, layout, selectedOp]);
+  }, [intent, targetId, targetIndex, layout, selectedOp]);
 
   // Follow remains active across bursts and late artifacts. Only deliberate reading
   // detaches it; live capture and the replay clock advance independently.
@@ -422,6 +440,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     <>
     <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
       if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; }
+      cancelledNavigation.current = intent; pendingNavigation.current = undefined;
       userScrollUntil.current = performance.now() + 750;
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? (ref.current?.clientHeight ?? 1) : 1;
       const reachesStart = e.deltaY < 0 && (ref.current?.scrollTop ?? 0) + e.deltaY * unit <= 0;
@@ -436,7 +455,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
           rememberReading(); navigating.current = false; restoreReading(); navigationFrame.current = undefined;
         });
       });
-    }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) { userScrollUntil.current = performance.now() + 750; readingAtStart.current = false; } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) readingAtStart.current = false; if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
+    }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) { userScrollUntil.current = performance.now() + 750; readingAtStart.current = false; } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { readingAtStart.current = false; cancelledNavigation.current = intent; pendingNavigation.current = undefined; } if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
       // Pin the interacted material after activation without disabling Follow.
       if ((e.target as HTMLElement).closest('button, input, select, a')) {
         const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId;
@@ -581,6 +600,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       data-op-id={op.id}
       data-material={presentation.material}
       data-origin={so.origin.type}
+      data-tool-exchange={['shell','test','mcp','web','other'].includes(op.detail.kind) || undefined}
       className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
       style={{ zIndex: selected ? 50 : 10 + index, ...(readingAllocation ? { '--reading-width': `${readingAllocation}px` } : {}) } as React.CSSProperties}
       tabIndex={0}
@@ -640,7 +660,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       </div>;
     case 'test':
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
-        <div className="cmd">$ {d.command}</div>
+        <CommandText text={d.command}/>
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
         {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
@@ -648,7 +668,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       </div>;
     case 'shell':
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
-        <div className="cmd">$ {d.command}</div>
+        <CommandText text={d.command}/>
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes output={d.outputPreview} />
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
@@ -657,7 +677,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'mcp':
       return <div className="op-expanded mcp-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.server} / {d.tool} · captured input</div>
-        <pre className="json">{JSON.stringify(d.input, null, 2) ?? String(d.input)}</pre>
+        <ToolInput value={d.input}/>
         <div className="material-context">Captured result preview</div>
         <StructuredResult text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')} />
       </div>;
@@ -665,14 +685,14 @@ function ExpandedOperation({ op }: { op: Operation }) {
       return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
         <div className="material-context">Captured result preview</div>
-        <pre className="output">{d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}</pre>
+        <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
       </div>;
     case 'other':
       return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">Captured input</div>
-        <pre className="json">{JSON.stringify(d.input, null, 2) ?? String(d.input)}</pre>
+        <ToolInput value={d.input}/>
         <div className="material-context">Captured result preview</div>
-        <pre className="output">{d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}</pre>
+        <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
       </div>;
     default:
       return null;
@@ -730,7 +750,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       const s = d.summary;
       return (
         <div className="test">
-          <div className="cmd">$ {d.command}</div>
+          <CommandText text={d.command}/>
           <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} fallback={s ? (
             <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
@@ -742,6 +762,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
               {s.failures[0].message && <div className="failure-msg">{s.failures[0].message}</div>}
             </div>
           )}
+          {d.outputPreview&&<TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={op.status==='error'}/>}
           </ResultArea>
         </div>
       );
@@ -749,8 +770,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'shell':
       return (
         <div className="shell">
-          <div className="cmd">$ {d.command.slice(0, 1200)}</div>
-          {d.command.length > 1200 && <div className="material-context">First 1,200 captured characters · expand for full input</div>}
+          <CommandText text={d.command}/>
           <ResultArea state={op.status} resolving={resolving}>
             <CapturedOutcomes output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
             {d.outputPreview ? <TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={op.status === 'error'} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
@@ -763,7 +783,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="mcp">
           <div className="mcp-tool">{d.tool}</div>
           <div className="material-context">Captured arguments · bounded preview</div>
-          <RequestFields input={d.input} />
+          <ToolInput value={d.input}/>
           <ResultArea state={op.status} resolving={resolving}>
             {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview} /></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
           </ResultArea>
@@ -774,7 +794,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="web">
           <div className="query">{d.url ?? d.query}</div>
           <ResultArea state={op.status} resolving={resolving}>
-            {d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
+            {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
           </ResultArea>
         </div>
       );
@@ -795,16 +815,10 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       );
     default:
       return <>
-        <div className="mcp-input">{summarizeInput(d.input)}</div>
-        <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result">{d.resultPreview.slice(0, 200)}</div> : undefined}</ResultArea>
+        <ToolInput value={d.input}/>
+        <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : undefined}</ResultArea>
       </>;
   }
-}
-
-function RequestFields({ input }: { input: unknown }) {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) return <div className="mcp-input">{summarizeInput(input)}</div>;
-  const keys = Object.keys(input);
-  return <><dl className="request-fields">{keys.slice(0, 6).map((key) => <div key={key}><dt>{key}</dt><dd>{summarizeInput((input as Record<string, unknown>)[key])}</dd></div>)}</dl>{keys.length > 6 && <p className="muted">{keys.length - 6} more arguments · expand for full captured input</p>}</>;
 }
 
 /** All captured changes are reachable; large patches page explicitly rather than disappearing. */

@@ -357,6 +357,13 @@
 @media (hover: none) { .connected-workspace .history .op-body { scrollbar-color: var(--t3) transparent; } }
 @media (forced-colors: active) { .connected-workspace .history .op-body { scrollbar-color: auto; } }
 
+/* Input never consumes the entire preview: both parts retain independent reading space. */
+:root[data-experience] .connected-workspace .history .op[data-tool-exchange]:not(.expanded) .op-body { overflow: auto; mask-image: none; -webkit-mask-image: none; }
+:root[data-experience] .history .op[data-tool-exchange]:not(.expanded) :is(.command-request,.tool-input,.web>.query) { max-height: 88px; overflow: auto; min-width: 0; scrollbar-width: thin; }
+:root[data-experience] .history .op[data-tool-exchange]:not(.expanded) .result-content { max-height: 142px; overflow: auto; scrollbar-width: thin; }
+:root[data-experience] .history .op[data-tool-exchange][data-hover-reading] :is(.command-request,.tool-input,.web>.query) { max-height: min(24dvh,180px); }
+:root[data-experience] .history .op[data-tool-exchange][data-hover-reading] .result-content { max-height: max(142px,calc(var(--hover-height) - 280px)); }
+
 /* Do not clip the world above the composer: use document padding, not a shortened viewport. */
 .connected-workspace .history { bottom: 0; }
 .connected-workspace .history-inner { padding-bottom: calc(var(--composer-gap, 0px) + 36px); }
@@ -614,7 +621,9 @@
 .search-scope-note { padding: 0 14px; font-size: 11px; color: var(--t3); }
 .preview-pages { display: flex; justify-content: space-between; align-items: center; gap: 8px; position: sticky; bottom: 0; background: var(--s1); border-top: 1px solid var(--line); padding: 8px 0; font-size: 10px; }
 .preview-pages button { padding: 5px; }
-.connected-workspace.exploring > .workspace-bar > :not(.workspace-toggles) { display: none; }
+.connected-workspace.exploring > .workspace-bar > .workspace-leading { display:contents; }
+.connected-workspace.exploring > .workspace-bar .workspace-leading > :not(.workspace-toggles),
+.connected-workspace.exploring > .workspace-bar > .workspace-secondary { display:none; }
 .connected-workspace .map-connections { top: calc(var(--workspace-header-h, 140px) + 68px); max-height: calc(100% - var(--workspace-header-h, 140px) - 152px); }
 .connected-workspace .map-file-label { pointer-events: auto; cursor: pointer; border: 0; padding: 4px 6px; min-height: 24px; text-align: left; }
 .connected-workspace .agent-overview { top: calc(var(--workspace-header-h, 140px) + 132px); }

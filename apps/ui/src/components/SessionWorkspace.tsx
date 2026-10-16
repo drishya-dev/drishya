@@ -11,6 +11,7 @@ import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { FileIcon } from './FileIcon.tsx';
 import { SourceFind } from './SourceFind.tsx';
+import { WholeSource } from './WholeSource.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 
@@ -113,15 +114,8 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const hidden = useApp(s => s.foldersHidden);
   const { workspace, approve } = useSessionWorkspace();
   const [query, setQuery] = useWorkspaceState('folders/query', '');
-  const [opened, setOpened] = useWorkspaceState('folders/open', () => {
-    const initial = new Set<string>(['']);
-    // Open the bounded recorded working set; other folders start collapsed.
-    for (const file of projection.files.slice(0, 32)) {
-      const parts = file.path.split('/');
-      for (let n = 1; n < parts.length && initial.size < 256; n++) initial.add(parts.slice(0, n).join('/'));
-    }
-    return initial;
-  });
+  const [approving,setApproving] = useState(false);
+  const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
   const treeElement = useRef<HTMLDivElement>(null);
   const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
   const [treeHeight, setTreeHeight] = useState(600);
@@ -186,10 +180,10 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   }, [tree]);
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
   if (hidden) return null;
-  return <aside className="folder-explorer spine" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Repository files' : 'Session folders'}>
+  return <aside className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Repository files' : 'Session folders'}>
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => useApp.setState({ foldersHidden: true })}>‹</button></header>
     <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Find repository files' : 'Find session files'} placeholder="Find files…" maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
-    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" onClick={() => void approve().catch(e => setError(e.message))}>Enable workspace reading<small>Read current files in this folder</small></button>}
+    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
       if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
@@ -209,8 +203,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       requestAnimationFrame(() => el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true }));
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
-      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
+      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
         if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }
+        else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: row.path }));
         else useApp.setState(workspace?.approved ? { currentFile: row.path } : { filePanel: row.path });
       }}><span className="folder-disclosure" aria-hidden="true">{row.folder ? opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span>{row.name}</span></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : 'No relative paths captured yet'}</p>}
@@ -238,21 +233,18 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
   const [lineError, setLineError] = useState<string>();
   const [wrap, setWrap] = useEvidenceState('disk/wrap', false);
   const [width, setWidth] = useEvidenceState('disk/width', 1040);
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
   const [copied, setCopied] = useState('');
   const code = useRef<HTMLDivElement>(null);
   useEvidenceScroll(code, `disk/${start}`, !!file);
   useEffect(() => { if (file && !readingVersion) setReadingVersion(file.modifiedAt); }, [file, readingVersion]);
   useEffect(() => {
     let active = true; setFile(undefined); setError(undefined);
-    void workspaceApi.file(id, path, start).then(f => { if (active) setFile(f); }).catch(e => { if (active) setError(e.message); });
+    void workspaceApi.document(id, path).then(f => { if (active) setFile(f); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [id, path, start, retry]);
-  useEffect(() => { setFrom(''); setTo(''); setCopied(''); }, [start, retry]);
-  useLayoutEffect(() => { if (activeLine !== undefined) code.current?.querySelector(`[data-source-line="${activeLine}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' }); }, [activeLine, file]);
-  const lines = file?.text.replace(/\n$/, '').split('\n') ?? [];
-  const matches = query ? lines.flatMap((line, index) => line.toLowerCase().includes(query.toLowerCase()) ? [start + index + 1] : []) : [];
+  }, [id, path, retry]);
+  useEffect(() => { setCopied(''); }, [start, retry]);
+  const lines = file?.text.split('\n') ?? [];
+  const matches = query ? lines.flatMap((line, index) => line.toLowerCase().includes(query.toLowerCase()) ? [index + 1] : []) : [];
   const moveMatch = (direction: 1 | -1) => {
     if (!matches.length) return;
     const current = matches.indexOf(activeLine ?? -1);
@@ -262,27 +254,23 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
     const line = Number(lineInput);
     if (!file || !/^\d+$/.test(lineInput) || !Number.isSafeInteger(line) || line < 1 || line > file.totalLines) { setLineError(`Choose a line from 1 to ${file?.totalLines ?? 0}`); return; }
     setLineError(undefined); setActiveLine(line);
-    if (line <= start || line > start + file.returnedLines) setStart(Math.floor((line - 1) / 200) * 200);
   };
-  const copy = async (range = false) => {
+  const copy = async () => {
     if (!file) return;
-    const first = from ? Number(from) : start + 1;
-    const last = to ? Number(to) : start + file.returnedLines;
-    if (range && ((from && !/^\d+$/.test(from)) || (to && !/^\d+$/.test(to)) || !Number.isSafeInteger(first) || !Number.isSafeInteger(last) || first < start + 1 || last > start + file.returnedLines || last < first)) { setCopied('Choose a range within the loaded page.'); return; }
-    try { await navigator.clipboard.writeText(range ? lines.slice(first - start - 1, last - start).join('\n') : file.text); setCopied(range ? `Copied lines ${first}–${last}` : 'Copied visible page'); }
+    try { await navigator.clipboard.writeText(file.text); setCopied('Copied file'); }
     catch { setCopied('Copy unavailable · select the text to copy.'); }
   };
   return <ReadingDialog title={path} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader" modeless={explore} style={explore ? undefined : { width: `min(${width}px, calc(100vw - 28px))` }}>
     <EvidenceNavigation />
     {file && readingVersion && file.modifiedAt !== readingVersion && <p className="small" role="status">File changed since this reading location · showing current disk content.</p>}
     {!explore && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} label="Resize current source reading space" fromRight />}
-    <div className="current-file-meta"><span className="tag" title="Current disk · not a historical snapshot">On disk</span><button className="btn ghost" onClick={() => setRetry(r => r + 1)}>Refresh</button><button className="btn ghost" onClick={() => useApp.setState({ currentFile: undefined, filePanel: path })}>Recorded work on this file</button></div>
-    <div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source page" />
+    <div className="current-file-meta"><span className="tag" title="Current disk · not a historical snapshot">On disk</span><button className="btn ghost" onClick={() => { useApp.setState({ developerWorkspace: true, explore: false, currentFile: undefined, filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }}>Open in Workspace</button><button className="btn ghost" onClick={() => setRetry(r => r + 1)}>Refresh</button><button className="btn ghost" onClick={() => useApp.setState({ currentFile: undefined, filePanel: path })}>Recorded work on this file</button></div>
+    <div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source file" scopeLabel="this file" idleLabel="" />
       <form className="source-go" onSubmit={e => { e.preventDefault(); go(); }}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e => { setLineInput(e.target.value); setLineError(undefined); }} /><button className="btn ghost small" disabled={!file}>Go to line</button><button type="button" className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button><span role="status">{lineError}</span></form>
-      <details className="source-utilities"><summary>Copy source range</summary><div className="source-range"><input aria-label="Current source range start" placeholder="From" inputMode="numeric" maxLength={16} value={from} onChange={e => setFrom(e.target.value)} /><input aria-label="Current source range end" placeholder="To" inputMode="numeric" maxLength={16} value={to} onChange={e => setTo(e.target.value)} /><button className="btn ghost small" disabled={!file} onClick={() => void copy(true)}>Copy range</button><span role="status">{copied || 'Loaded page only'}</span></div></details>
+
     </div>
     <ImportContext path={path} current />
-    {error ? <p className="bad" role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry current source</button></p> : !file ? <p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><CodeView text={file.text} path={path} startLine={file.start + 1} highlightLines={new Set(matches)} activeLine={activeLine} /></div><footer><span title={`Current file version: ${file.modifiedAt}`}>Lines {file.start + 1}–{file.start + file.returnedLines} of {file.totalLines}{file.redacted ? ' · secrets redacted' : ''}</span><button disabled={!start} onClick={() => { setActiveLine(undefined); setStart(s => Math.max(0, s - 200)); }}>Previous lines</button><button disabled={!file.hasMore} onClick={() => { setActiveLine(undefined); setStart(s => s + 200); }}>Next lines</button><button onClick={() => void copy()}>Copy visible page</button></footer></>}
+    {error ? <p className="bad" role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry current source</button></p> : !file ? <p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine}/></div><footer><span title={`Current file version: ${file.modifiedAt}`}>Current disk · {file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 
@@ -292,10 +280,12 @@ export function PromptComposer() {
   const recording = useApp(s => s.recording);
   const connection = useApp(s => s.connection);
   const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect } = useSessionWorkspace();
+  const [collapsed,setCollapsed]=useWorkspaceState('composer/collapsed',false);
   const [options, setOptions] = useState<TurnOptions>({});
   useEffect(() => { setOptions({}); }, [id]);
   const [prompt, updatePrompt] = useState(() => source && id ? promptDrafts(source).get(id) : '');
   const setPrompt = (text: string) => { if (source && id) promptDrafts(source).set(id, text); updatePrompt(text); };
+  useEffect(() => { const changed = () => { if (source && id) { setCollapsed(false); updatePrompt(promptDrafts(source).get(id)); requestAnimationFrame(() => input.current?.focus({ preventScroll: true })); } }; window.addEventListener('drishya-composer-draft', changed); return () => window.removeEventListener('drishya-composer-draft', changed); }, [source, id]);
   const [exclusive, setExclusive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -304,6 +294,7 @@ export function PromptComposer() {
   const [confirmSend, setConfirmSend] = useState(false);
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
   const attachmentRef = useRef(attachments); attachmentRef.current = attachments;
+  useEffect(()=>{if(!attachments.length)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[attachments.length]);
   const [preview, setPreview] = useState<PromptAttachment>();
   const rejectedFiles = useRef<File[]>([]);
   const [canRetryFiles, setCanRetryFiles] = useState(false);
@@ -358,6 +349,16 @@ export function PromptComposer() {
     fileQueue.current = task;
     await task;
   };
+  useEffect(()=>{
+    const receive=(event:Event)=>{
+      const detail=(event as CustomEvent).detail;
+      if(detail?.source!==source||detail?.id!==id||!Array.isArray(detail.files)||!detail.files.every((file:unknown)=>file instanceof File))return;
+      if(busy||controller&&['connecting','running','approval'].includes(controller.state)){setError('Wait for the current turn, then prepare the file request again. Its attachment was not added.');return;}
+      void attach(detail.files);
+    };
+    window.addEventListener('drishya-composer-files',receive);
+    return()=>window.removeEventListener('drishya-composer-files',receive);
+  },[source,id,busy,controller?.state]);
   useLayoutEffect(() => {
     const node = input.current;
     if (!node) return;
@@ -411,7 +412,9 @@ export function PromptComposer() {
         <small>Each Allow once applies only to its native request. Full access and global settings remain in the native CLI.</small>
       </div></details></>;
   if (workspace && !workspace.root) return <section ref={element} className="prompt-composer open composer-readonly" aria-label="Harness prompt"><div><strong>{recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} recording</strong><span>Read-only here · no workspace path was captured.</span></div><button className="btn ghost" onClick={() => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); }}>Choose session</button></section>;
-  return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}`} aria-label="Harness prompt">
+  return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}${modern && collapsed?' composer-minimized':''}`} aria-label="Harness prompt">
+    {modern && <button type="button" className="composer-minimize" title={statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{setCollapsed(!collapsed);if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}>{collapsed?controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':'Ask your agent…':'⌄'}</button>}
+    {modern && collapsed && running && <button type="button" className="composer-mini-stop" aria-label="Stop turn" title="Stop this turn" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button>}
     {modern ? <div className="modern-composer-top"><span className="modern-composer-identity" title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg>Continue with {recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness}</span><span role="status" className="modern-composer-state" title={statusLabel}>{workspace?.approved ? statusLabel : 'Needs access'}</span>{nativeOptions}</div> : <>
     <div className="composer-target"><span title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><strong>{recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness ?? 'Native harness'}</strong><span className="composer-workspace">{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'}</span><code>{id.slice(-8)}</code></span><small role="status">{statusLabel}</small></div></>}
 
@@ -428,7 +431,7 @@ export function PromptComposer() {
       </form>
       {!modern && nativeOptions}
       {canRetryFiles && <button className="btn ghost small" disabled={loadingFiles || busy || !!running} onClick={() => void attach(rejectedFiles.current)}>Retry rejected files</button>}
-      {preview && <ReadingDialog title={`Attachment: ${preview.name}`} close={() => setPreview(undefined)} className="attachment-preview-dialog"><p className="muted">Prepared locally · not sent. Text is redacted by the server before submission; inspect images for secrets.</p>{preview.type === 'image' ? <img alt={preview.name} src={`data:${preview.mime};base64,${preview.data}`} style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain' }} /> : <><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{preview.data.slice(0, 16_384)}</pre>{preview.data.length > 16_384 && <p>Preview limited to 16,384 characters; the complete attachment is prepared.</p>}</>}</ReadingDialog>}
+      {preview && <ReadingDialog title={`Attachment: ${preview.name}`} close={() => setPreview(undefined)} className="attachment-preview-dialog"><p className="muted">Prepared locally · not sent. Text is redacted by the server before submission; inspect images for secrets.</p>{preview.type === 'image' ? <img alt={preview.name} src={`data:${preview.mime};base64,${preview.data}`} style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain' }} /> : <><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight:'60dvh',overflow:'auto' }}>{preview.data}</pre></>}</ReadingDialog>}
 
       <div className="native-turn-details">
       {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}{connectionError && <button className="btn ghost small" disabled={busy} onClick={() => void act(refresh)}>Retry native connection</button>}</p>}

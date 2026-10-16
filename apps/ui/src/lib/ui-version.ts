@@ -4,11 +4,11 @@ export function resolveUIVersion(search: string, saved?: string | null): string 
   const explicit = new URLSearchParams(search).get('experience');
   if (explicit) return explicit === 'fresh' ? 'modern' : explicit;
   if (saved === 'fresh' || saved === 'modern') return 'modern';
-  return saved === 'canvas' ? 'canvas' : 'classic';
+  return saved === 'canvas' || saved === 'classic' ? saved : 'modern';
 }
 export function selectedUIVersion(): string {
   let saved: string | null = null;
-  try { saved = localStorage.getItem(key); } catch { /* URL selection works without storage. */ }
+  try { saved = localStorage.getItem(key) ?? localStorage.getItem('drishya-experience-v4'); } catch { /* URL selection works without storage. */ }
   return resolveUIVersion(location.search, saved);
 }
 export function versionURL(href: string, version: UIVersion): string {

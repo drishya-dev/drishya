@@ -69,7 +69,7 @@ test('Studio native workspace connects its composer, attachments, approval and e
   await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
   await page.getByRole('button', { name: 'Show session folders' }).click();
   const folders = page.getByRole('complementary', { name: 'Session folders' });
-  await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
+  await folders.getByRole('treeitem', { name: 'src', exact: true }).click();await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'src/actual.ts', exact: true })).toContainText('fromSelectedWorkspace');
 });
 
@@ -78,28 +78,31 @@ test('current source reading finds, navigates and wraps bounded disk pages witho
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
   const folders = page.getByRole('complementary', { name: 'Session folders' });
   const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
-  if (await enable.count()) await enable.click();
-  await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
+  await expect(folders).not.toHaveAttribute('data-reading-access','checking');
+  if (await enable.count()) {await enable.click();await expect(folders.locator('.workspace-grant')).toHaveCount(0);}
+  await folders.getByRole('treeitem', { name: 'src', exact: true }).click();await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
   const reader = page.getByRole('dialog', { name: 'src/actual.ts', exact: true });
+  await page.screenshot({path:resolve('.local/current-reader-check.png')});
+  await expect(reader).toBeVisible();
   const resize = reader.getByRole('separator', { name: 'Resize current source reading space' });
   await resize.press('ArrowLeft');
   await expect(resize).toHaveAttribute('aria-valuenow', '1072');
   await reader.getByRole('textbox', { name: 'Go to current source line' }).fill('9999');
   await reader.getByRole('button', { name: 'Go to line', exact: true }).click();
   await expect(reader.locator('.source-go')).toContainText('251');
-  await reader.getByRole('searchbox', { name: 'Find in current source page' }).fill('fromSelectedWorkspace');
+  await reader.getByRole('searchbox', { name: 'Find in current source file' }).fill('fromSelectedWorkspace');
   await expect(reader.locator('.source-find')).toContainText('1 matching line');
   await reader.getByRole('button', { name: 'Next match', exact: true }).click();
   await expect(reader.locator('[data-source-line="1"]')).toHaveAttribute('aria-current', 'location');
   await reader.getByRole('textbox', { name: 'Go to current source line' }).fill('205');
   await reader.getByRole('button', { name: 'Go to line', exact: true }).click();
-  await expect(reader).toContainText('Lines 201–251 of 251');
+  await expect(reader).toContainText('251 lines');
   await expect(reader.locator('[data-source-line="205"]')).toHaveAttribute('aria-current', 'location');
   await reader.getByRole('button', { name: 'Wrap lines', exact: true }).click();
   await expect(reader.locator('.current-file-code')).toHaveClass(/wrap-source/);
   await page.screenshot({ path: resolve('.local/source-reader-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(reader.getByRole('button', { name: 'Next lines' })).toBeVisible();
+  await expect(reader.getByRole('button', { name: 'Copy file' })).toBeVisible();
   const bounds = await reader.boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
@@ -123,7 +126,7 @@ test('source reading links qualified current imports to a bounded map neighborho
   if (await approve.count()) await approve.click();
   await expect(page.locator('.map-legend')).toContainText('2 files · 1 imports');
   await page.getByRole('button', { name: 'Back to work' }).click();
-  await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
+  await folders.getByRole('treeitem', { name: 'src', exact: true }).click();await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
   const reader = page.getByRole('dialog', { name: 'src/actual.ts', exact: true });
   await reader.locator('.import-context summary').click();
   await expect(reader.locator('.import-context')).toContainText('Current index');
@@ -157,6 +160,8 @@ test('native model settings and attachment menus dismiss outside without detachi
   await expect(composer.locator('.composer-target')).not.toContainText('Checking…');
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
   if (await enable.count()) await enable.click();
+  const follow = page.getByRole('switch', { name: 'Automatically follow new work' });
+  const originalFollow = await follow.getAttribute('aria-checked');
   const policy = composer.locator('.permission-policy');
   await policy.locator('summary').click();
   await policy.getByRole('button', { name: 'Read native settings' }).click();
@@ -164,7 +169,7 @@ test('native model settings and attachment menus dismiss outside without detachi
   await policy.getByLabel('Effort').selectOption('high');
   await page.locator('.crown-title').click({ force: true });
   await expect(policy).not.toHaveAttribute('open', '');
-  await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'true');
+  await expect(follow).toHaveAttribute('aria-checked', originalFollow!);
   await composer.getByRole('button', { name: 'Add files or folders' }).click();
   await expect(composer.locator('.composer-add-menu')).toBeVisible();
   await composer.locator('.composer-add-menu').getByRole('button', { name: 'Files or images' }).focus();
@@ -197,13 +202,13 @@ test('selected workspace folders read current files separately from the exact hi
   const enableReading = folder.getByRole('button',{name:/Enable workspace reading/});
   if (await enableReading.count()) await enableReading.click();
   await expect(folder.getByRole('button',{name:/Enable workspace reading/})).toHaveCount(0);
-  await folder.getByRole('treeitem',{name:'actual.ts',exact:true}).click();
+  await folder.getByRole('treeitem',{name:'src',exact:true}).click();await folder.getByRole('treeitem',{name:'actual.ts',exact:true}).click();
   const reader=page.getByRole('dialog',{name:'src/actual.ts',exact:true});
   await expect(reader.getByTitle('Current disk · not a historical snapshot')).toHaveText('On disk');
   await expect(reader).toContainText('fromSelectedWorkspace');
   await expect(reader).not.toContainText('recorded historical bytes');
-  await reader.getByRole('button',{name:'Next lines'}).click();
-  await expect(reader).toContainText('Lines 201–251 of 251');
+  await reader.getByRole('textbox',{name:'Go to current source line'}).fill('205');await reader.getByRole('button',{name:'Go to line',exact:true}).click();
+  await expect(reader).toContainText('251 lines');
   await reader.getByRole('button',{name:'Recorded work on this file'}).click();
   const historical=page.getByRole('dialog',{name:'Work on src/actual.ts'});
   await expect(historical).toContainText('recorded historical bytes');
@@ -244,6 +249,7 @@ test('composer attaches code and pasted screenshots, removes chips and sends the
   let sent: any;
   await page.route('**/controller/prompt', async route => { sent = route.request().postDataJSON(); await route.continue(); });
   await composer.getByRole('textbox').fill('Review the attached source and screenshot');
+  await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeEnabled();
   await composer.getByRole('button', { name: 'Send prompt', exact: true }).click();
   await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
   await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();

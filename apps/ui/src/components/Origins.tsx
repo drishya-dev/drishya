@@ -261,8 +261,11 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           origin = viewer.querySelector<HTMLElement>(`.instrument.k-${op.kind === 'write' ? 'edit' : op.kind}`) ?? undefined;
           label = 'Tool instrument';
         }
-        if (!origin) continue;
-        if (!originVisible(origin)) continue;
+        if (!origin || !originVisible(origin)) {
+          const compact = viewer.querySelector<HTMLElement>('.toolbox-minimized .toolbox-collapse');
+          if (compact && originVisible(compact)) { origin = compact; label = 'Tool instrument'; }
+        }
+        if (!origin || !originVisible(origin)) continue;
         const materialOnly = ready.includes(op.id);
         const move = materialOnly ? 'Lift' : arrivals && animate && plan.arrivals.includes(op.id) && !emitted.has(`start:${op.id}`) ? op.origin.type === 'map' && label !== 'Tool instrument' ? 'Lift' : 'Emit' : undefined;
         if (move) emitted.add(`start:${op.id}`);

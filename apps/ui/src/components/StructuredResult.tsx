@@ -1,5 +1,8 @@
+import { toolOutputText } from '../lib/tool-output.ts';
+import { ToolOutput } from './ToolOutput.tsx';
 /** Render only the captured preview. React escapes every value; no remote HTML or execution. */
 export function StructuredResult({ text }: { text: string }) {
+  if(toolOutputText(text).decoded) return <ToolOutput text={text}/>;
   let value: unknown;
   try { value = JSON.parse(text); } catch { return <pre className="output result-prose">{text}</pre>; }
   const scalar = (v: unknown) => v === null || ['string', 'number', 'boolean'].includes(typeof v);

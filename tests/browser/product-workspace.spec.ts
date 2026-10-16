@@ -510,6 +510,7 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   await page.goto(server.launchUrl);
   await expect(page.getByRole('heading', { name: 'Your agent workspace.' })).toBeVisible();
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   const file = page.locator('.spine-file[title="src/checkout/guard.ts"]');
   await file.click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
@@ -556,6 +557,7 @@ test('agent ownership shares one history, and replay file choices obey the histo
   await expect(overview).toHaveCount(0);
   // Deep link intentionally holds replay at an early step before the guard read completes.
   await page.goto(new URL('/?demo&at=3', server.launchUrl).href);
+  await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await expect(dialog).toContainText('Visible at this replay step');
@@ -569,6 +571,7 @@ test('agent ownership shares one history, and replay file choices obey the histo
 test('distant file moments compare across bounded trail pages', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/distant.ts');
   await page.locator('.spine-file[title="src/distant.ts"]').click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/distant.ts' });
   await expect(dialog.locator('.file-trail-item')).toHaveCount(24);
@@ -604,6 +607,7 @@ test('a sanitized export opens as read-only evidence and can return to the local
   await page.goto(replay.href);
   await expect(page.locator('.workspace-context')).toContainText('Offline evidence');
   await expect(page.getByRole('button', { name: 'Watch live', exact: true })).toHaveCount(0);
+  await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await expect(dialog).toContainText('if (!cart.total)');

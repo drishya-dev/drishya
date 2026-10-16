@@ -82,7 +82,10 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       // overflow and an unnecessary scrollbar even when all content fits.
       const body = card.querySelector<HTMLElement>('.op-body');
       const bodyOverflow = body ? Math.max(0, body.scrollHeight - body.clientHeight) : 0;
-      const needed = Math.ceil(card.scrollHeight + bodyOverflow + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 2);
+      // Tool previews allocate input and outcome independently. Include their
+      // hidden depth when opening a reader, not just the outer body's overflow.
+      const exchangeOverflow = [...card.querySelectorAll<HTMLElement>('.command-request,.tool-input,.result-content')].reduce((sum,node)=>sum+Math.max(0,node.scrollHeight-node.clientHeight),0);
+      const needed = Math.ceil(card.scrollHeight + bodyOverflow + exchangeOverflow + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 2);
       const height = Math.min(bottom - top, innerHeight * .72, Math.max(from.height * 1.12, needed));
       card.style.setProperty('--hover-height', `${height}px`);
       card.style.setProperty('--hover-top', `${Math.max(top, Math.min(bottom - height, from.top + (from.height - height) / 2))}px`);

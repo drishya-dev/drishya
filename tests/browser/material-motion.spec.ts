@@ -82,7 +82,7 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
   const latest = page.getByRole('button', { name: /Back to latest/ });
   if (await latest.isVisible()) await latest.click();
   await expect(latest).toHaveCount(0);
-  const body = card.locator('.op-body');
+  const body = card.locator('.result-content');
   await expect.poll(() => body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
   const r = (await body.boundingBox())!;
   const viewport = (await page.locator('.history').boundingBox())!;
@@ -146,7 +146,7 @@ test('hover result boundaries scroll history without dismissing the same reading
   await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
   const focusedBounds = (await card.boundingBox())!;
   const focusScroll = await history.evaluate(el => el.scrollTop);
-  const body = card.locator('.op-body');
+  const body = card.locator('.result-content');
   await expect.poll(() => body.evaluate(el => el.scrollHeight > el.clientHeight + 1)).toBe(true);
   await body.hover();
   await page.mouse.wheel(0, 80);

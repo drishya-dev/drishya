@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Spatial map and native attachments [#51](https://github.com/drishya-dev/drishya/pull/51) merged (`29a7c75`, review 37), following native progress #50 (`6bf89ef`) and scroll-preserved motion/prompt rail #49 merged (`e34ee14`, review 35), following compact connected workspace and upward-only Follow #48 merged on main (`2de25da`, review 34), after connector fix `8296135` and smooth follow #47 (`e1ca4d3`), following replay/prompt #46 (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | Main includes Harsh PR66 map proposal (`c809a1b`) and PR67 reliability (`b3184bd`). [PR68](https://github.com/drishya-dev/drishya/pull/68), `codex/multi-file-workspace`, adds integrated Workspace/Modern daily-use improvements and remains for the other builder's review. B0–B4 and P1/P2 base capabilities exist; this is not broad release/native/human acceptance. |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -25,16 +25,31 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Header rollback, PR 66/67 review, multi-file workspace and product review | Modern CSS/Viewer, workspace readers, review and handoff docs |
 
 
 ---
 
 ## Last session
 
+### Yash with Codex — Whole-file reading and stable Modern workflow
+
+- **When:** 16 October 2026, `codex/multi-file-workspace` / [PR68](https://github.com/drishya-dev/drishya/pull/68). Builder explicitly requests push/squash-merge after local gates. Later PRs use one coherent commit each; the existing branch retains its earlier purpose increments for backtracking.
+- **Delivered:** [87](review/87-modern-reading-and-component-audit.md): stable larger header and centered glyphs, in-capsule minimize/fresh collapsed folders, whole-file2MiB virtual source Find/Go/Copy, higher compact Workspace/Back,256KiB native-attached Edit/New file drafts, wrapped connectors, decoded execution/MCP arguments/results with raw access, independent input/result allocations, nested-content hover sizing, removed duplicate delayed scroll correction, prompt-rail clearance, passive stopped-journal catch-up and Home update hints/refined native filters. No direct project writes or automatic prompt submission.
+- **Validation:** Both typechecks/build,426units/71files pass.105 distinct selected browser journeys have passing final results across the103-pass sweep and corrected focused reruns; not one all-green full run. Four private actual recordings also pass. No hosted CI/native turn. Review87 records test races, fixes and exact limits;38 records renewed antivirus evidence without a false-positive/fixed claim.
+- **Next:** Native segmented-history continuity, joined evidence/source/correction/check workflow, broader component/palette audit and native/human/platform acceptance. An old journal stopped growing while its newer imported segment was behind; opening the newer one catches up now, automatic stitching is not implemented. Preserve user package/artwork edits and private stores.
+
+### Yash with Codex — Modern daily workflow, recovery, reading and HUD
+
+- **When:** 16 October 2026, `codex/multi-file-workspace` / [PR68](https://github.com/drishya-dev/drishya/pull/68), based on integrated main `b3184bd`. Every coherent purpose is a separate commit; do not collapse this working history into a single authored increment.
+- **Merged earlier:** PR66 proposal `c809a1b`, PR67 reliability `b3184bd`, preserving Harsh's authorship; React Flow/ELK remains proposal. Prior centered-header rollback retained as history; latest floating HUD explicitly supersedes its surrounding chrome only.
+- **Delivered:** Eight-tab/two-pane Workspace/current source/local volatile drafts/native preparation ([82](review/82-developer-workspace.md)); consistent tool envelope formatting/readable card minimums; independent edge controls; Modern default; bounded daemon-backed navigation recovery/CAS/privacy/forget; complete merged Home session library and Drishya introduction; sustained live refresh/Follow restart; React185/manual-scroll positioning repairs and error recovery; Markdown Document/Source and fenced exact Copy/Wrap; header HUD/minimized composer with Stop/status/Toolbox; seven effective Modern palettes. Shared actual visualization and native/privacy boundaries remain.
+- **Validation:** Both typechecks, production build and **415 units/68 files pass**. Three real-Git integration cases now have an explicit20s test budget after measuring two-snapshot journeys above5s on Windows; assertions/product limits unchanged. Browser validation: the full156-case run had153 passes,2 explicit opt-in skips and one obsolete palette-parity expectation; its corrected focused rerun passes. Three additional actual redacted recordings (Skeletongraph Codex, Skeletongraph Claude, Drishya) pass history/manual-scroll/text-wrap/multi-file reading checks. Thus157 distinct browser journeys have passing final results across the full run and focused rerun; no single all-green full-suite claim. Five focused HUD/palette/Git journeys also passed earlier. No hosted CI or real native turn. Private stores/screenshots and user package-manager/artwork excluded.
+- **Critical review and remaining work:** [84](review/84-modern-daily-workflow.md) is the ordered complete request queue; [85](review/85-modern-component-review.md) records independent developer/component gaps; [86](review/86-hud-palettes-and-reading.md) records current HUD/palette/reading contract. Next: faithful keyboard/path-line Markdown navigation/list structure, whole-file find/current version continuity, joined evidence/source/correction/check workflow, reader density and useful typed map neighborhoods. Native-account, sustained human reading, physical/platform/accessibility gates remain open. CUA unavailable; automated journeys/source/rendered frames are the evidence.
+- **Publication:** PR68 awaits other-builder review; no automatic merge or CI dispatch. The running local daemon was not silently restarted. Refresh serves the built frontend; new metadata endpoints require a normal restart of the existing local server.
+
 ### Harsh with Codex — Everyday workspace reliability
 
-- **Review:** [PR #67](https://github.com/drishya-dev/drishya/pull/67) is open into `main`, with Yash (`yashdoke7`) review requested. Implementation and acceptance commits are published; not merged, no hosted CI dispatched.
+- **Review:** [PR #67](https://github.com/drishya-dev/drishya/pull/67) merged as `b3184bd` after Yash review and queued-retry correction. No hosted CI dispatched.
 - **When:** 16 October 2026, `codex/workspace-reliability`, based on main `15974a4`. The builder requested the remaining work after PR #65 and explicitly keeps real native-account checks for themselves.
 - **Delivered:** [81](review/81-workspace-reliability.md): bounded source/session reading memory, history/evidence/map/folder continuity, exact-patch Git control restoration, queued concurrent file preparation, attachment previews/retry, UTF-8 prompt limits and rejection-safe drafts, qualified cached reading/native receipts on disconnect/authentication loss, contextual retries, corrected keyboard review navigation and file glyphs/folder keys. Review work now pages every captured outcome/file through the existing history worker, capped at 20/group and 50 paths with complete global counts. Existing 3D/reading/review features were audited and retained; no event/store schema or native permission change.
 - **Validation:** Final Windows Node 24.11.1 / cached pinned pnpm 10.34.5: both typechecks and **387 units / 63 files pass**; final complete browser sweep **145 passed / two explicit opt-in skips** (147 total, 8.2 minutes); isolated offline package installation/import/API/persisted restart and unchanged deterministic demo pass. Ten-minute synthetic reading: **601,301 ms / 84 rounds / peak 862 DOM nodes**, with pinned evidence/anchors retained; last native offline disclosure and Usage geometry pass three repetitions each and the final full browser sweep. Earlier layout failures were repaired and the two finite Follow/menu test races were corrected without weakening evidence or exact geometry assertions. Details/limits in 81.
@@ -43,7 +58,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Harsh with Codex — Repository map and live workflow proposal
 
-- **PR:** [#66](https://github.com/drishya-dev/drishya/pull/66) open into main; Yash (`yashdoke7`) review requested. Labels: documentation, area: map, area: canvas, decision. No implementation or merge performed.
+- **PR:** [#66](https://github.com/drishya-dev/drishya/pull/66) merged as `c809a1b` after Yash review. Labels: documentation, area: map, area: canvas, decision. No implementation or merge performed.
 
 - **When:** 16 October 2026, isolated branch `codex/repository-workflow-proposal`, based on main `15974a4`. The builder requested a written proposal and a PR for Yash before implementation.
 - **Proposed:** [Repository map and live workflow](review/repository-map-live-workflow-proposal.md): retain the current 3D overview; compare a bounded optional 2D folder/import focus view with the existing renderer; preserve chronological passages, terminal evidence and shared evidence/navigation owners. React Flow/ELK remain candidates, not adopted dependencies.
@@ -129,6 +144,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Next/limits:** Human visual preference/comprehension and real native-account/physical/platform/accessibility acceptance remain separate. Local preview on 5175 (`?demo=live`); screenshots and synthetic QA stores stay local and outside candidate files. No real recordings imported or native prompts submitted by this pass. Existing PR #61 remains separate.
 
 ## Next up
+
+**Current ordered work:** [84](review/84-modern-daily-workflow.md) supersedes the historical checklist below for active product/UI tasks. Keep every builder request and review disposition there; use85 for critical findings and86 for current HUD/palette contract. Native/platform/human acceptance remains release work.
 
 **Current backend-first sequence:**
 
@@ -356,3 +373,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 
 **11 October design decision:** Prior Studio becomes default Classic; a distinct Studio organizes captured working files, continuous materials and an evidence/tool desk. Legacy preserves the older design. Backend evidence/controller engines stay shared; a local real-preview reference never publishes private journals or substitutes synthetic evidence. See [47](review/47-studio-workbench.md).
+
+| 2026-10-16 | Persist bounded navigation metadata, never content or grants | Builder requested recovery after accidental/intentional close. Own-store CAS checkpoints re-fetch source and recheck consent; drafts remain volatile/exportable. | review84; working-locations |
+| 2026-10-16 | Modern default with independent overlays and seven semantic palettes | Latest builder HUD/palette direction supersedes earlier three-palette limit. Keep Legacy visualization/backups; correct CSS precedence and collapsed lifecycle feedback. | review85–86 |
+| 2026-10-16 | Keep purpose-specific branch commits and local validation | Builder explicitly requires independent backtracking and no hosted Actions until final publication candidate. Final PR merge method remains governed by repository policy. | PR68; review86 |

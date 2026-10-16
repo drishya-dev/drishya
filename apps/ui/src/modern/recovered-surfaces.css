@@ -103,8 +103,8 @@
  .modern-git-context { padding:10px 14px 0; }.modern-git-context small { font-size:9px; }
  .modern-review-control { right:14px!important; }
 }
-@media(prefers-reduced-motion:reduce) { :root[data-ui-version=modern] .modern-session-header { backdrop-filter:none!important; } }
-:root[data-ui-version=modern][data-low-resource] .modern-session-header { backdrop-filter:none!important; }
+@media(prefers-reduced-motion:reduce) { :root[data-ui-version=modern] .workspace-header, :root[data-ui-version=modern] .modern-session-header { backdrop-filter:none!important; } }
+:root[data-ui-version=modern][data-low-resource] .workspace-header, :root[data-ui-version=modern][data-low-resource] .modern-session-header { backdrop-filter:none!important; }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer textarea { padding:12px 15px 8px; font:13px/1.7 var(--sans); }
 .modern-composer-input-tools select { border:1px solid var(--line); border-radius:6px; background:var(--s1); color:var(--t2); font:10px/1.5 var(--sans); padding:4px 6px; min-width:0; max-width:135px; }
 .modern-composer-input-tools .modern-effort-select { max-width:100px; }

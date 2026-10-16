@@ -40,6 +40,18 @@ function claudeLine(rec: Record<string, unknown>) {
 }
 
 describe('import', () => {
+  it('catches up stopped journals without sealing an unfinished append or starting a watch',async()=>{
+    const path=join(dir,'catchup.jsonl');
+    writeFileSync(path,JSON.stringify({type:'session_meta',payload:{id:'catchup',cwd:'/w'}})+'\n');
+    const {recordingId}=await ingest.importSource('codex',path);
+    const text=JSON.stringify({type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'complete after newline'}]}});
+    appendFileSync(path,text);
+    expect((await ingest.sync(recordingId,{turnBytes:16*1024*1024,acceptUnterminated:false})).added).toBe(0);
+    appendFileSync(path,'\n');
+    expect((await ingest.sync(recordingId,{turnBytes:16*1024*1024,acceptUnterminated:false})).added).toBeGreaterThan(0);
+    expect(ingest.isLive(recordingId)).toBe(false);
+    expect(ingest.projection(recordingId).prose.some(p=>p.text==='complete after newline')).toBe(true);
+  });
   it('projects wrapped Codex creations and edits, including previously stored shell-shaped calls', async () => {
     const patch = '*** Begin Patch\n*** Add File: new.ts\n+export const n = 1;\n*** Update File: old.ts\n@@\n-old\n+new\n*** End Patch';
     const source = `text(await tools.apply_patch(${JSON.stringify(patch)}));`;

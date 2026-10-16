@@ -9,6 +9,7 @@ import { Ingestor } from '@drishya/ingest';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { Store } from '@drishya/store';
 import { HistoryService } from './history.ts';
+import { workingLocations } from '../../../packages/contracts/src/working-locations.ts';
 
 export const VERSION = '0.1.0-draft';
 
@@ -46,7 +47,20 @@ export class App {
     try {
       await this.ingest.stopLive(id);
       await this.history.forget(id);
-      return await this.ingest.forget(id);
+      const removed = await this.ingest.forget(id);
+      // CLI and HTTP deletion share this path: forgotten recordings must leave no
+      // retained reading-location references, including combined session views.
+      const key = 'ui-working-locations-v1';
+      const row = this.store.db.prepare('SELECT value FROM meta WHERE key=?').get(key) as { value: string } | undefined;
+      if (row) {
+        try {
+          const saved = workingLocations(JSON.parse(row.value));
+          saved.sessions = saved.sessions.filter(s => !s.id.split('+').includes(id));
+          if (saved.last?.split('+').includes(id)) delete saved.last;
+          this.store.db.prepare('UPDATE meta SET value=? WHERE key=?').run(JSON.stringify(saved), key);
+        } catch { this.store.db.prepare('DELETE FROM meta WHERE key=?').run(key); }
+      }
+      return removed;
     } finally { this.deleting.delete(id); }
   }
 

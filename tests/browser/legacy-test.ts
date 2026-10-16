@@ -5,6 +5,18 @@ import { test as base, expect } from '@playwright/test';
 export const test = base.extend({
   page: async ({ page }, use) => {
     await page.addInitScript(() => localStorage.setItem('drishya-experience-v4', 'classic'));
+    // Each browser journey begins with its own reading locations. The daemon is
+    // deliberately shared by tests, whereas real users intentionally share recovery.
+    // Keep reloads within a journey intact; fresh-workspace covers recovery explicitly.
+    let first = true;
+    await page.route('**/v1/working-locations', async route => {
+      if (first && route.request().method() === 'GET') {
+        first = false;
+        await page.request.delete(route.request().url(), { headers: { 'content-type': 'application/json' } });
+      }
+      await route.continue();
+    });
+    page.on('pageerror', error => console.error('Browser runtime:',error.message));
     await use(page);
   },
 });

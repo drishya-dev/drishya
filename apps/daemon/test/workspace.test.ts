@@ -12,6 +12,7 @@ beforeAll(async () => {
   writeFileSync(join(root, 'a.ts'), Array.from({ length: 405 }, (_, n) => n === 201 ? 'const apiKey = "sk-proj-abcdefghijklmnopqrstuvw0123456789";' : `export const item${n} = ${n};`).join('\n'));
   writeFileSync(join(root, '.env'), 'private data');
   writeFileSync(join(root, 'binary.ts'), Buffer.from([0, 1, 2]));
+  writeFileSync(join(root, 'invalid-utf8.ts'), Buffer.from([0x61,0xc3,0x28]));
   writeFileSync(join(root, 'large.ts'), 'a'.repeat(2 * 1024 * 1024 + 1));
   const journal = join(dir, 'session.jsonl');
   writeFileSync(journal, JSON.stringify({ type: 'user', uuid: 'u1', sessionId: '44444444-4444-4444-8444-444444444444', cwd: root, message: { role: 'user', content: 'Synthetic workspace' } }) + '\n');
@@ -31,6 +32,12 @@ it('approves only the selected captured workspace and returns bounded redacted c
   expect(page.scope).toBe('current-workspace'); expect(page.returnedLines).toBe(200); expect(page.hasMore).toBe(true);
   expect(page.text).toContain('[REDACTED:'); expect(page.text).not.toContain('abcdefghijklmnopqrstuvw'); expect(page.redacted).toBe(true);
 });
+it('returns the entire redacted file for document reading with the same consent boundary',async()=>{
+  const file=await access.read(id,'a.ts',0,Number.MAX_SAFE_INTEGER);
+  expect(file.start).toBe(0);expect(file.hasMore).toBe(false);expect(file.returnedLines).toBe(file.totalLines);
+  expect(file.text.split('\n')).toHaveLength(file.totalLines);
+  await expect(new WorkspaceAccess(app).read(id,'a.ts',0,Number.MAX_SAFE_INTEGER)).rejects.toMatchObject({status:403});
+});
 it.each(['../outside.ts', '/etc/passwd', 'C:/private.ts', '.env', 'folder/../../a.ts', 'folder\\a.ts', '.local/private.ts'])('rejects protected or escaping path %s', async path => {
   await expect(access.read(id, path)).rejects.toMatchObject({ status: 403 });
 });
@@ -49,3 +56,5 @@ it('requires a single workspace and drops reading permissions across server inst
   await expect(access.approve(`${id}+${id}`)).rejects.toMatchObject({ status: 400 });
   expect(new WorkspaceAccess(app).status(id).approved).toBe(false);
 });
+
+it('refuses malformed UTF-8 rather than presenting replacement characters as editable source', async () => { await expect(access.read(id,'invalid-utf8.ts')).rejects.toMatchObject({status:413}); });

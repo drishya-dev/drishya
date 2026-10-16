@@ -52,3 +52,43 @@
  :root[data-ui-version=modern][data-experience=classic] .native-options-menu { max-height:50dvh; }
 }
 :root[data-ui-version=modern][data-experience=classic] .home .home-search input { background:none; border:0; box-shadow:none; }
+
+/* One measured navigation allocation; content never sits under independently positioned controls. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace>.workspace-bar { left:18px; right:18px; width:auto; display:flex; flex-wrap:wrap; align-items:center; gap:8px; top:calc(var(--workspace-header-h,56px) + 12px); }
+:root[data-ui-version=modern][data-experience=classic] .workspace-toggles { display:flex; flex-wrap:wrap; gap:3px; max-width:100%; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-toggles button { min-height:40px; padding:9px 13px; font-size:13px; gap:8px; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control { position:static; margin-left:auto; padding:3px; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control .git-open { min-height:40px; font-size:13px; padding:9px 13px; }
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history { top:var(--workspace-tools-bottom,126px); }
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner { padding-top:20px; }
+@media(max-width:600px) {
+ :root[data-ui-version=modern][data-experience=classic] .connected-workspace>.workspace-bar { left:12px; right:12px; gap:5px; }
+ :root[data-ui-version=modern][data-experience=classic] .workspace-toggles button { padding:8px 9px; font-size:12px; min-height:38px; }
+ :root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control .git-open { min-height:38px; font-size:12px; padding:8px 9px; }
+}
+
+:root[data-ui-version=modern][data-experience=classic] .workspace-bar { justify-content:space-between; pointer-events:none; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-bar>* { pointer-events:auto; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-secondary { margin-left:auto; display:flex; gap:6px; align-items:center; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-secondary>button { display:flex; align-items:center; gap:8px; min-height:46px; padding:9px 13px; border:1px solid var(--line-2); border-radius:10px; font:13px/1.5 var(--sans); background:var(--s1); color:var(--t2); }
+:root[data-ui-version=modern][data-experience=classic] .workspace-secondary>button svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.5; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-secondary>button[aria-pressed=true] { background:var(--s3);color:var(--t1); }
+@media(max-width:600px) { :root[data-ui-version=modern][data-experience=classic] .workspace-secondary>button { min-height:44px; padding:8px 9px; font-size:12px; gap:6px; } }
+
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace>.workspace-bar { flex-direction:row; transform:none; }
+
+/* Side controls are independent overlays. The agent world occupies the center at their height. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace>.workspace-bar { display:contents; }
+:root[data-ui-version=modern][data-experience=classic] .workspace-leading { position:absolute; top:calc(var(--workspace-header-h,56px) + 12px);left:18px;z-index:6;display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:auto;max-width:calc(50% - 24px); }
+:root[data-ui-version=modern][data-experience=classic] .workspace-secondary { position:absolute;top:calc(var(--workspace-header-h,56px) + 12px);right:18px;z-index:6;pointer-events:auto;max-width:calc(50% - 24px); }
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history { top:0; }
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner { padding-top:calc(var(--workspace-header-h,56px) + 20px); }
+@media(max-width:600px) {
+ :root[data-ui-version=modern][data-experience=classic] .workspace-leading { left:12px;max-width:calc(50% - 15px); }
+ :root[data-ui-version=modern][data-experience=classic] .workspace-secondary { right:12px;max-width:calc(50% - 15px);gap:3px; }
+ :root[data-ui-version=modern][data-experience=classic] .workspace-toggles button { padding-inline:6px;gap:4px; }
+ :root[data-ui-version=modern][data-experience=classic] .workspace-secondary>button,:root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control .git-open { padding-inline:6px;gap:4px;font-size:11px; }
+ :root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner { padding-top:calc(var(--workspace-tools-bottom,125px) + 12px); }
+}
+
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace.exploring>.workspace-bar>:is(.workspace-leading,.workspace-secondary) { display:flex; }

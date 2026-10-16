@@ -28,6 +28,7 @@ import { ReviewQuestionsEntry } from './ReviewQuestions.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry } from './Workbench.tsx';
 import { CanvasWorkspace } from './CanvasWorkspace.tsx';
+import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
@@ -36,6 +37,7 @@ export function Viewer() {
 
 function WorkspaceViewer() {
   const experience = useExperience();
+  const developerWorkspace = useApp(s => s.developerWorkspace);
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
   const historyPage = useApp((s) => s.historyPage);
@@ -44,6 +46,7 @@ function WorkspaceViewer() {
   const mapVisible = useApp((s) => s.mapVisible);
   const recordingId = useApp((s) => s.recordingId);
   const source = useApp((s) => s.source);
+  const historyMode = useApp(s=>s.mode==='history');
   const step = useApp((s) => s.step);
   const filter = useApp((s) => s.filter);
   const selectedOp = useApp((s) => s.selectedOp);
@@ -59,6 +62,24 @@ function WorkspaceViewer() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [mapError, setMapError] = useState<string>();
   const [mapRetry, setMapRetry] = useState(0);
+  const [catchupError,setCatchupError]=useState<string>();
+  const [catchupRetry,setCatchupRetry]=useState(0);
+
+  useEffect(()=>{
+    if(!historyMode||source?.kind!=='daemon'||!source.refreshRecording||!recordingId||recordingId.includes('+')) return;
+    let disposed=false, timer:ReturnType<typeof setTimeout>|undefined;
+    setCatchupError(undefined);
+    const catchUp=async()=>{
+      try {
+        const result=await source.refreshRecording!(recordingId);
+        if(disposed||useApp.getState().source!==source||useApp.getState().recordingId!==recordingId) return;
+        if(result.added) await useApp.getState().reloadProjection();
+        if(!disposed&&result.more) timer=setTimeout(()=>void catchUp(),150);
+      } catch(error) {if(!disposed)setCatchupError((error as Error).message);}
+    };
+    void catchUp();
+    return ()=>{disposed=true;clearTimeout(timer);};
+  },[source,recordingId,historyMode,catchupRetry]);
 
   const scene = useMemo(() => historyPage?.scene ?? (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [historyPage, projection, step, filter, selectedOp]);
   const historical = useMemo(() => historyPage?.projection ?? (projection ? asOfProjection(projection, step) : undefined), [historyPage, projection, step]);
@@ -134,11 +155,12 @@ function WorkspaceViewer() {
 
   return (
     <>
-    <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${developerWorkspace ? ' developer-workspace-open' : ''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <WorkspaceHeader scene={scene} projection={projection} />{experience === 'studio' ? <WorkbenchSources projection={historical} /> : <WorkspaceBar />}
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
+      {catchupError&&<div className="notice bad" role="alert">Local journal refresh failed: {catchupError} <button className="btn" onClick={()=>setCatchupRetry(n=>n+1)}>Retry journal refresh</button></div>}
       <div className="main" ref={main}>
-        {mapVisible && <MapCanvas graph={graph} heat={scene.heat} passagePaths={passagePaths} readingRect={reading} />}
+        {mapVisible && !developerWorkspace && <MapCanvas graph={graph} heat={scene.heat} passagePaths={passagePaths} readingRect={reading} />}
         {mapVisible && mapError && <div className="map-recovery" role="alert">Repository map unavailable: {mapError}<button className="btn" onClick={() => setMapRetry(n => n + 1)}>Retry repository map</button></div>}
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
         {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
@@ -150,6 +172,7 @@ function WorkspaceViewer() {
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
       <PromptComposer key={recordingId} />
+      <DeveloperWorkspace />
       <Inspector projection={historical} />
       <Briefing projection={projection} />
       <Search projection={projection} />
@@ -202,7 +225,7 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   return <header className={`studio-header crown${modern ? ' modern-session-header' : ''}`}>
     <button className="brand" aria-label={modern ? 'Drishya' : undefined} title={modern ? 'All sessions' : 'All recordings'} onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>
-    <div className="studio-session crown-title"><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title}>{projection.title ?? recording?.title ?? 'Recording'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
+    <div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title}>{projection.title ?? recording?.title ?? 'Recording'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
     <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div>{modern && <div className="modern-evidence-actions"><EvidenceReview key={id} projection={projection} /><ReviewQuestionsEntry key={`questions/${id}`} /></div>}<UsagePeek /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
     {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Recorded agent shortcuts">{scene.agents.map(state => {
       const agent = projection.agents.find(a => a.id === state.id);
@@ -292,14 +315,16 @@ function LiveWatch() {
   const source = useApp(s => s.source);
   const follow = useApp(s => s.follow);
   const mode = useApp(s => s.mode);
-  return <button className={`btn ghost live workspace-follow${follow ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={follow} onClick={async () => {
-    const on = !useApp.getState().follow;
+  const enabled = follow && (mode === 'replay' || source?.kind !== 'daemon' || !!recording?.live);
+  return <button className={`btn ghost live workspace-follow${enabled ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={enabled} onClick={async () => {
+    const on = !enabled;
     useApp.setState({ follow: on });
-    if (on && source?.kind === 'daemon' && id && !id.includes('+') && !recording?.live) {
-      try { await source.setLive(id, true); }
-      catch (error) { useApp.setState({ error: (error as Error).message }); }
+    if (on && mode === 'history' && source?.kind === 'daemon' && id && !id.includes('+') && !recording?.live) {
+      const current = () => { const s = useApp.getState(); return s.source === source && s.recordingId === id && s.mode === mode; };
+      try { await source.setLive(id, true); if (current()) await useApp.getState().reloadProjection(); }
+      catch (error) { if (current()) useApp.setState({ follow: false, error: (error as Error).message }); }
     }
-  }} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${follow ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow live'}</button>;
+  }} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${enabled ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow live'}</button>;
 }
 
 function UsagePeek() {

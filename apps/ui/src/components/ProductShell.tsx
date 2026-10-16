@@ -41,7 +41,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
       const scheme = theme === 'light' || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       document.documentElement.dataset.theme = scheme;
-      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'midnight' ? 'midnight' : 'jet';
+      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'dark' || theme === 'system' ? 'jet' : theme;
     };
     apply();
     const preference = matchMedia('(prefers-color-scheme: light)');
@@ -61,9 +61,13 @@ function CanvasSettings() {
 }
 
 const THEMES = [
-  ['dark', 'Jet Black', 'Charcoal · sage accents'],
-  ['midnight', 'Midnight', 'Slate blue · silver accents'],
-  ['light', 'Paper', 'Warm paper · forest accents'],
+  ['dark', 'Jet Black', 'Linear Dark · graphite and indigo'],
+  ['midnight', 'Midnight', 'Deep navy · sky blue'],
+  ['light', 'Paper', 'Pristine Light · off-white and blue'],
+  ['mocha', 'Catppuccin Mocha', 'Soft charcoal · lavender'],
+  ['tokyo', 'Tokyo Night', 'Blue-black · electric blue'],
+  ['nord', 'Nord', 'Arctic slate · frost'],
+  ['gruvbox', 'Gruvbox Dark', 'Warm graphite · orange'],
 ] as const;
 
 function Settings() {
@@ -80,7 +84,7 @@ function Settings() {
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
     <SettingsSections categories={['Appearance', 'Reading', 'Playback', 'Privacy', 'Keyboard']}>
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
-      <div className="theme-options" aria-label="Colour theme">{THEMES.map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
+      <div className="theme-options" aria-label="Colour theme">{(document.documentElement.dataset.uiVersion==='modern'?THEMES:THEMES.slice(0,3)).map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
     </section>
     <section><h3>Reading and resources</h3>
       <label className="setting-row"><span>Low resource mode<small>Smaller material cache and history overscan. Turns map and motion off.</small></span><input type="checkbox" checked={low} onChange={(e) => setLowResource(e.target.checked)} /></label>

@@ -11,6 +11,7 @@ import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { ModernSessions } from '../modern/ModernSessions.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { useExperience } from '../lib/experience.ts';
+import { SessionHome } from '../modern/SessionHome.tsx';
 
 const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
 
@@ -43,11 +44,14 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
 
   const refresh = async () => {
     if (!source) return;
-    const [recordings, found, storage] = await Promise.all([source.recordings(), source.sources(), source.storage?.()]);
+    const [recordings, found, storage] = await Promise.allSettled([source.recordings(), source.sources(), source.storage?.()]);
     if (useApp.getState().source !== source) return;
     setNow(new Date());
-    setErr(undefined);
-    set({ recordings }); setUsage(storage); setSources(found.sources); setSourceErrors(found.errors);
+    const errors:string[]=[];
+    if(recordings.status==='fulfilled')set({recordings:recordings.value});else errors.push(`Captured sessions: ${recordings.reason.message}`);
+    if(found.status==='fulfilled'){setSources(found.value.sources);setSourceErrors(found.value.errors);}else errors.push(`Local discovery: ${found.reason.message}`);
+    if(storage.status==='fulfilled')setUsage(storage.value);else errors.push(`Storage information: ${storage.reason.message}`);
+    setErr(errors.join(' · ')||undefined);
   };
   useEffect(() => {
     refresh().catch((e) => setErr(e.message));
@@ -86,6 +90,8 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const matchingCount = modern ? filteredRecordings.length + filteredSources.filter(s => !s.importedRecordingId || !importedIds.has(s.importedRecordingId)).length : filteredRecordings.length;
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  if(modern)return <SessionHome recordings={recordings} sources={sources} now={now} busy={busy} error={[err,...sourceErrors.map(e=>`${HARNESS_LABEL[e.adapterId]??e.adapterId}: ${e.message}`)].filter(Boolean).join(' · ')} refresh={()=>void refresh().catch(e=>setErr(e.message))} openDemo={()=>openDemo(true)} onOpen={(session,live)=>void open(session,live)}/>;
 
   return (
     <div className="home">

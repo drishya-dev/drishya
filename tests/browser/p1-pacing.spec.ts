@@ -336,7 +336,7 @@ test('MCP input and captured result can be read in the history passage', async (
   await operation.getByRole('button', { name: /Expand/ }).click();
   await expect(operation).toContainText('context7CompatibleLibraryID');
   await expect(operation).toContainText('Captured result preview');
-  await expect(operation.locator('.op-expanded .output')).not.toBeEmpty();
+  await expect(operation.locator('.op-expanded .result-prose')).toContainText('TypeScript handbook');
 });
 
 test('a burst follows automatically and deliberate reading can hold and resume the camera', async ({ page }) => {
@@ -382,6 +382,7 @@ test('content gets reading width and origin tethers use the visible instrument',
   expect(sourceWidth).toBeLessThanOrEqual(420);
   expect(sourceWidth).toBeGreaterThan((await verification.boundingBox())!.width);
   await page.mouse.move(0, 0);
+  await page.locator('.instrument.k-test').scrollIntoViewIfNeeded();
   await verification.locator('.op-head').hover();
   const tether = page.locator('.origin-thread[data-origin-type="Tool instrument"]');
   await expect(tether).toHaveCount(1);

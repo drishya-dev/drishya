@@ -28,6 +28,7 @@ import { storageUsage } from './storage.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { HarnessController } from './controller.ts';
+import { readWorkingLocations, saveWorkingLocations } from './working-locations.ts';
 
 export interface ServerOptions {
   port?: number;
@@ -206,6 +207,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     const parts = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent); // drop "v1"
     const [a, id, sub, subId] = parts;
     if (a === 'storage' && m === 'GET') return json(res, await storageUsage(app.store.dataDir));
+    if (a === 'working-locations' && m === 'GET') return json(res, readWorkingLocations(app));
+    if (a === 'working-locations' && m === 'PUT') return json(res, saveWorkingLocations(app, await readJson(req,256*1024)));
+    if (a === 'working-locations' && m === 'DELETE') {app.store.db.prepare("DELETE FROM meta WHERE key='ui-working-locations-v1'").run();return json(res,{cleared:true});}
 
     if (a === 'config' && m === 'GET') {
       return json(res, {
@@ -246,12 +250,19 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
 
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
+      if (sub === 'refresh' && m === 'POST') {
+        if(id.includes('+')) throw new HttpError(400,'Refresh one local session at a time.');
+        const recording=app.recording(id);
+        if(!recording.sourcePath) return json(res,{added:0,more:false});
+        return json(res,await app.ingest.sync(id,{turnBytes:16*1024*1024,acceptUnterminated:false}));
+      }
       if (sub === 'workspace' && !subId && m === 'GET') return json(res, workspace.status(id));
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
       if (sub === 'workspace' && subId === 'approve' && m === 'POST') return json(res, await workspace.approve(id));
       if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));
+      if (sub === 'workspace' && subId === 'document' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', 0, Number.MAX_SAFE_INTEGER));
       if (sub === 'controller' && !subId && m === 'GET') return json(res, controller.status(id));
       if (sub === 'controller' && subId === 'settings' && m === 'POST') return json(res, await controller.inspect(id));
       if (sub === 'controller' && subId === 'prompt' && m === 'POST') {

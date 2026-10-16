@@ -8,6 +8,7 @@ import { StructuredResult } from '../src/components/StructuredResult.tsx';
 
 const bundle = JSON.parse(readFileSync(new URL('../public/demo/bundle.json', import.meta.url), 'utf8')) as ReplayBundle;
 describe('captured material presentation', () => {
+  it('gives chained PowerShell test outcomes reading width before output exists',()=>{const op=bundle.projection.operations.find(op=>op.detail.kind==='test')!;const result=presentationOf({...op,detail:{kind:'test',command:'node cli.ts demo-bundle; npx --yes pnpm@10.34.5 ui:build; npx vitest run; npx tsc --noEmit',outputPreview:'Test Files  1 failed | 9 passed (10)\nTests  4 failed | 92 passed (96)'}});expect(result.width).toBeGreaterThanOrEqual(350);expect(result.shape).not.toBe('compact');});
   it('reserves reading space for source and for long command inputs before output exists', () => {
     const read = bundle.projection.operations.find((op) => op.detail.kind === 'read')!;
     const shell = bundle.projection.operations.find((op) => op.detail.kind === 'shell')!;

@@ -27,6 +27,14 @@ export class EvidenceTrail {
   get current() { return this.visits[this.cursor]; }
   get canBack() { return this.cursor > 0; }
   get canForward() { return this.cursor < this.visits.length - 1; }
+  snapshot() { return {cursor:this.cursor,visits:this.visits.map(visit=>({id:visit.id,location:visit.location,memory:[...visit.memory]}))}; }
+  static restore(saved:{cursor:number;visits:{id:number;location:EvidenceLocation;memory:[string,unknown][]}[]}) {
+    const trail=new EvidenceTrail();
+    trail.visits=saved.visits.slice(-8).map(visit=>({...visit,memory:new Map(visit.memory)}));
+    trail.cursor=Math.max(-1,Math.min(saved.cursor,trail.visits.length-1));
+    trail.nextId=Math.max(0,...trail.visits.map(visit=>visit.id+1));
+    return trail;
+  }
   visit(location: EvidenceLocation) {
     if (this.current && identity(this.current.location) === identity(location)) {
       this.current.location = { ...location };

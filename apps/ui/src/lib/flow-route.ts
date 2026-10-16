@@ -11,6 +11,17 @@ export function flowRoute(a: RouteRect, b: RouteRect, obstacles: RouteRect[]): s
     [{ x: a.left, y: ay }, { x: left, y: ay }, { x: left, y: by }, { x: b.left, y: by }],
     [{ x: a.right, y: ay }, { x: right, y: ay }, { x: right, y: by }, { x: b.right, y: by }],
   ];
+  // A wrapped passage must leave the previous row vertically before crossing
+  // back to its first column. Side-to-side routes cross the intervening cards.
+  if (a.bottom < b.top) {
+    const gap = (a.bottom + b.top) / 2;
+    const ax = (a.left + a.right) / 2;
+    const bx = (b.left + b.right) / 2;
+    candidates.push(
+      [{ x: ax, y: a.bottom }, { x: ax, y: gap }, { x: bx, y: gap }, { x: bx, y: b.top }],
+      [{ x: a.right, y: ay }, { x: right, y: ay }, { x: right, y: b.top - 8 }, { x: bx, y: b.top - 8 }, { x: bx, y: b.top }],
+    );
+  }
   const crosses = (p: Point, q: Point, r: RouteRect) => p.y === q.y
     ? p.y > r.top - 2 && p.y < r.bottom + 2 && Math.max(p.x, q.x) > r.left + .1 && Math.min(p.x, q.x) < r.right - .1
     : p.x > r.left - 2 && p.x < r.right + 2 && Math.max(p.y, q.y) > r.top + .1 && Math.min(p.y, q.y) < r.bottom - .1;

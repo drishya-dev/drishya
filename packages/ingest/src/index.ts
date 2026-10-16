@@ -60,6 +60,8 @@ export interface ImportResult {
 export interface SyncOptions {
   /** Read at most this many bytes per source in this turn (and accept records up to this size). */
   turnBytes?: number;
+  /** Passive catch-up must not seal a journal record that is still being written. */
+  acceptUnterminated?: boolean;
 }
 
 export interface IngestorOptions {
@@ -211,7 +213,7 @@ export class Ingestor extends EventEmitter {
       let mainMissing = false;
       const sources: RecordingHealth['sources'] = [];
       for (const src of this.store.getSources(recordingId)) {
-        const r = await this.readSource(adapter, src, rec.live, turnBytes);
+        const r = await this.readSource(adapter, src, rec.live, turnBytes, opts.acceptUnterminated);
         added += r.added;
         gaps += r.gaps;
         more ||= r.more;
@@ -250,7 +252,7 @@ export class Ingestor extends EventEmitter {
     }
   }
 
-  private async readSource(adapter: Adapter, src: SourceRow, live: boolean, turnBytes: number | undefined): Promise<{ added: number; gaps: number; more: boolean; missing: boolean; size?: number }> {
+  private async readSource(adapter: Adapter, src: SourceRow, live: boolean, turnBytes: number | undefined, acceptUnterminated = !live): Promise<{ added: number; gaps: number; more: boolean; missing: boolean; size?: number }> {
     let parser = this.parsers.get(src.id);
     if (!parser) {
       parser = adapter.createParser({ recordingId: src.recordingId, sourceId: src.id, sourcePath: src.path, agentId: src.agentId });
@@ -259,7 +261,7 @@ export class Ingestor extends EventEmitter {
       this.parsers.set(src.id, parser);
     }
     // A record must fit in one read, or a bounded turn could never get past it.
-    const readOpts = turnBytes === undefined ? { acceptUnterminated: !live } : { acceptUnterminated: !live, maxReadBytes: turnBytes, maxRecordBytes: Math.min(MAX_RECORD_BYTES, turnBytes) };
+    const readOpts = turnBytes === undefined ? { acceptUnterminated } : { acceptUnterminated, maxReadBytes: turnBytes, maxRecordBytes: Math.min(MAX_RECORD_BYTES, turnBytes) };
     let cursor = src.cursor;
     let added = 0;
     let gaps = 0;

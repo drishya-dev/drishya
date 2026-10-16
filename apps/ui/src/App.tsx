@@ -4,12 +4,14 @@ import { bundleSource, daemon, loadBundle, signIn } from './api.ts';
 import { ProductShell } from './components/ProductShell.tsx';
 import { Home } from './components/Home.tsx';
 import { Viewer } from './components/Viewer.tsx';
-import { needsReload } from './lib/sync.ts';
+import { liveRefresh, needsReload } from './lib/sync.ts';
 import { growingSample } from './lib/sample-source.ts';
 import { setMotion, useApp } from './state.ts';
 import { localPreviewId } from './lib/local-preview.ts';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation.tsx';
 import { useExperience } from './lib/experience.ts';
+import { restoreWorkingLocations, useWorkingRecovery } from './lib/working-recovery.ts';
+import { workspaceMemory } from './lib/workspace-memory.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
 
@@ -49,7 +51,9 @@ export function App() {
         const auth = await signIn();
         if (auth === 'ok') {
           const recordings = await daemon.recordings();
-          useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings });
+          const saved=await restoreWorkingLocations().catch(()=>undefined);
+          if(saved)workspaceMemory(daemon).restore(saved);
+          useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings, resumeRecordingId:saved?.last&&recordings.some(r=>r.id===saved.last)?saved.last:undefined,recoveryState:saved?'saved':'unavailable' });
           const preview = new URLSearchParams(location.search).get('demo') === 'local' ? localPreviewId() : undefined;
           const id = p.recording ? decodeURIComponent(p.recording) : recordings.some(r => r.id === preview) ? preview : undefined;
           if (id) await useApp.getState().openRecording(id, p.at === undefined ? undefined : { at: p.at });
@@ -84,6 +88,7 @@ export function App() {
   }, []);
 
   usePlayback();
+  useWorkingRecovery();
   useKeyboard();
   useLiveUpdates();
 
@@ -173,6 +178,7 @@ function useKeyboard() {
       if (k === 'Escape') {
         if (s.settingsOpen) s.set({ settingsOpen: false });
         else if (s.searchOpen) s.set({ searchOpen: false });
+        else if (s.developerWorkspace) s.set({ developerWorkspace: false });
         else if (s.filePanel) s.set({ filePanel: undefined });
         else if (s.expandedOp) s.set({ expandedOp: undefined });
         else if (s.selectedOp) s.select(undefined);
@@ -181,6 +187,7 @@ function useKeyboard() {
         else if (s.filter) s.setFilter(undefined);
         return;
       }
+      if (s.developerWorkspace) return;
       if (t.closest('input, textarea, select, button, a, summary, [role="slider"], [role="dialog"], .op-expanded') || t.isContentEditable) return;
       if (!document.querySelector('.t-controls') && [' ', 'ArrowRight', 'ArrowLeft', 'Home', 'End', 'e', 'E', 'f', 'F'].includes(k)) return;
       if (k === ' ') {
@@ -215,7 +222,11 @@ function useLiveUpdates() {
     const online = () => { if (current() && source.kind === 'daemon') useApp.setState(s => ({ reconnectAttempt: s.reconnectAttempt + 1 })); };
     window.addEventListener('offline', offline); window.addEventListener('online', online);
     if (!navigator.onLine) offline();
-    let pending: ReturnType<typeof setTimeout> | undefined;
+    let refreshingId: string | undefined;
+    const refresh = liveRefresh(async () => {
+      refreshingId = useApp.getState().recordingId;
+      if (current()) await useApp.getState().reloadProjection();
+    }, error => { if (current() && useApp.getState().recordingId === refreshingId) useApp.setState({ error: (error as Error).message, playing: false }); });
     const unsubscribe = source.subscribe((e) => {
       const s = useApp.getState();
       if (!current()) return;
@@ -230,11 +241,7 @@ function useLiveUpdates() {
         }).catch(() => undefined);
         return;
       }
-      clearTimeout(pending);
-      pending = setTimeout(() => {
-        if (!current()) return;
-        void useApp.getState().reloadProjection().catch((error) => { if (current()) useApp.setState({ error: error.message, playing: false }); });
-      }, 150);
+      refresh.schedule();
     }, {
       onStatus: (connection) => { if (current()) useApp.setState({ connection: connection === 'connected' && !navigator.onLine ? 'reconnecting' : connection, ...(connection === 'signed-out' ? { playing: false } : {}) }); },
       // After a reconnect, notices sent while the stream was down are lost: compare revisions and
@@ -247,13 +254,13 @@ function useLiveUpdates() {
           const now = useApp.getState();
           useApp.setState({ recordings, recording: recordings.find(r => r.id === now.recordingId) ?? now.recording });
         }).catch(error => { if (current()) useApp.setState({ error: error.message }); });
-        if (s.recordingId && s.projection && needsReload(s.recordingId, s.renderedRevisions, revisions)) void s.reloadProjection().catch((error) => { if (current()) useApp.setState({ error: error.message, playing: false }); });
+        if (s.recordingId && s.projection && needsReload(s.recordingId, s.renderedRevisions, revisions)) refresh.schedule();
       },
     });
     return () => {
       active = false;
       window.removeEventListener('offline', offline); window.removeEventListener('online', online);
-      clearTimeout(pending);
+      refresh.close();
       unsubscribe();
     };
   }, [source, attempt]);

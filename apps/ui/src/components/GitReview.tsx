@@ -19,7 +19,7 @@ function GitBranchGlyph() {
 }
 
 export function GitReviewEntry({ icon = false }: { icon?: boolean }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useWorkspaceState('git/open',false);
   const id = useApp(s => s.recordingId);
   const eligible = useApp(s => s.source?.kind === 'daemon' && !s.recordingId?.includes('+'));
   return eligible ? <><button className="btn ghost git-open" aria-label="Git review" aria-expanded={open} onClick={() => setOpen(value => !value)}>{icon && <GitBranchGlyph />}Git review</button>{open && <GitReader key={id} close={() => setOpen(false)} />}</> : null;
