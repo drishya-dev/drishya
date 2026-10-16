@@ -35,3 +35,5 @@
 @media(max-width:820px) { .desk-panes.split { display:flex; overflow:hidden; }.desk-panes.split .desk-pane { flex:1; min-height:0; }.desk-panes.split .desk-pane:not(.active) { display:none; }.developer-workspace .desk-pane-switch { display:inline-flex; } }
 
 .workspace-secondary { display:flex;align-items:center;gap:6px; }.workspace-secondary>button { display:inline-flex;align-items:center;gap:6px;padding:7px 10px;font:12px/1.5 var(--sans);border:1px solid var(--line);border-radius:8px;background:var(--s1);color:var(--t2); }.workspace-secondary>button svg { width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5; }
+
+.connected-workspace.exploring>.workspace-bar>.workspace-leading { display:flex;flex-direction:column;gap:6px; }
