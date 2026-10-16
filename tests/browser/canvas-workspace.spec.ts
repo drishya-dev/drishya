@@ -23,10 +23,11 @@ test.beforeAll(async () => {
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); } });
 const url = (extra = '') => new URL(`/?demo&experience=canvas&motion=0${extra}`, server.launchUrl).href;
 
-test('Canvas is the default and explicit retained-version choices survive a launch without a version query', async ({ page }) => {
+test('Modern is the default and explicit retained-version choices survive a launch without a version query', async ({ page }) => {
   const ordinary = new URL('/?demo&motion=0', server.launchUrl).href;
   await page.goto(ordinary);
-  await expect(page.locator('html')).toHaveAttribute('data-experience', 'canvas');
+  await expect(page.locator('html')).toHaveAttribute('data-ui-version', 'modern');
+  await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('tab', { name: 'UI versions', exact: true }).click();
   await page.getByRole('button', { name: /^Legacy/ }).click();
