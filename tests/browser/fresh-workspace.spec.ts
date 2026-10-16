@@ -653,3 +653,23 @@ test('an unexpected rendering failure has a usable recovery surface instead of a
   await page.getByRole('button',{name:'All sessions',exact:true}).click();
   await expect(page.locator('.mh-home')).toBeVisible();
 });
+
+
+test('minimized Modern composer keeps Stop and failure feedback available',async({page})=>{
+  let state:any={available:true,state:'running',runId:'synthetic-mini',harness:'codex',tools:[],inventory:'unknown',approvals:[],output:''};
+  let stopped=false;
+  await page.route('**/controller',route=>route.fulfill({json:state}));
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.route('**/controller/stop',route=>{stopped=true;state={...state,state:'failed',error:'Synthetic failed turn'};return route.fulfill({json:state});});
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'});
+  await expect(composer.getByRole('button',{name:'Stop turn',exact:true})).toBeVisible();
+  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
+  await expect(composer.getByRole('button',{name:'Expand prompt',exact:true})).toHaveText('Agent working…');
+  await composer.getByRole('button',{name:'Stop turn',exact:true}).click();
+  await expect.poll(()=>stopped).toBe(true);
+  await expect(composer.getByRole('button',{name:'Expand prompt',exact:true})).toHaveText('Needs attention');
+  await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();
+  await expect(composer.getByRole('alert')).toContainText('Synthetic failed turn');
+});

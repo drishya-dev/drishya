@@ -2,7 +2,7 @@
 export interface WorkingLocations { version: 1; last?: string; sessions: { id: string; revision?:number; entries: [string,unknown][] }[] }
 const record=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
 const fields=new Set('developerWorkspace selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence explore compareAgents mapFocusPath filter follow held inspectorTab inspectorWidth readingPassageId start agentId kind server tool x y k zoom top left id offset query line wrap formatted activeLine scope pages index width layout match trailWidth trailHidden right leftKey rightKey version primary secondary split pane ratio cursor visits location memory open name root harness days workspace'.split(' '));
-const slot=/^(location|history\/(top|anchor|heights)|desk\/(files|primary|secondary|split|pane|ratio)|desk\/document\/.+|folders\/(query|open|top)|map\/(yaw|pitch|camera|query|observed|connections|file|page|neighborhood)|git\/(selected|page|open)|canvas\/(view|panel|panelFocus|camera)|home\/.+|evidence\/trail)$/;
+const slot=/^(composer\/collapsed|toolbox\/collapsed|location|history\/(top|anchor|heights)|desk\/(files|primary|secondary|split|pane|ratio)|desk\/document\/.+|folders\/(query|open|top)|map\/(yaw|pitch|camera|query|observed|connections|file|page|neighborhood)|git\/(selected|page|open)|canvas\/(view|panel|panelFocus|camera)|home\/.+|evidence\/trail)$/;
 const readerSlot=/^(disk\/(start|version|query|line|lineInput|wrap|width)|file\/(trailWidth|trailHidden|query|start|left|right)|(?:.*\/artifact|diff)\/.+\/(pages|index|query|wrap|line|lineInput|offset|layout|match)|scroll\/.+)$/;
 const locationStrings='selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence mapFocusPath readingPassageId'.split(' ');
 function location(input:unknown):Record<string,unknown> {
@@ -45,6 +45,7 @@ export function workingLocations(input:unknown):WorkingLocations {
   const sessions=input.sessions.slice(-9).flatMap(session=>{
     if(!record(session)||typeof session.id!=='string'||session.id.length>256||!/^[@\w+.-]+$/.test(session.id))return [];
     const clean=entries(session.entries,slot).filter(([key,item])=>{
+      if(key==='composer/collapsed'||key==='toolbox/collapsed')return typeof item==='boolean';
       if(key==='location')return record(item);
       if(key==='evidence/trail')return record(item)&&Array.isArray(item.visits);
       if(key==='desk/files'||key==='folders/open')return Array.isArray(item)&&item.every(x=>typeof x==='string')&&(key!=='desk/files'||item.length<=8);
