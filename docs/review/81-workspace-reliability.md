@@ -2,6 +2,9 @@
 
 16 October 2026 · Harsh with Codex · `codex/workspace-reliability`.
 
+Published in [PR #67](https://github.com/drishya-dev/drishya/pull/67), with Yash
+(`yashdoke7`) review requested. Not merged; local validation only.
+
 ## Scope and current architecture
 
 The builder asked to execute all remaining tasks discussed after PR #65. Review
