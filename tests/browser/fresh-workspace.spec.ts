@@ -75,7 +75,9 @@ test('Modern preserves Legacy action materials, layout and native graph controls
     }));
   };
   const legacy=await inspect('classic'), modern=await inspect('modern');
-  expect(modern).toEqual(legacy);
+  // Palettes intentionally differ; shared captured content, allocation and type remain equal.
+  expect(modern.map(({background:_,...material})=>material)).toEqual(legacy.map(({background:_,...material})=>material));
+  expect(modern.every(material=>material.background==='rgb(18, 18, 18)')).toBe(true);
   await page.getByRole('button',{name:'Explore repository map'}).click();
   await expect(page.getByRole('button',{name:'Back to work',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
