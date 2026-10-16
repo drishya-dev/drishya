@@ -31,6 +31,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — Everyday workspace reliability
+
+- **When:** 16 October 2026, `codex/workspace-reliability`, based on main `15974a4`. The builder requested the remaining work after PR #65 and explicitly keeps real native-account checks for themselves.
+- **Delivered:** [81](review/81-workspace-reliability.md): bounded source/session reading memory, history/evidence/map/folder continuity, exact-patch Git control restoration, queued concurrent file preparation, attachment previews/retry, UTF-8 prompt limits and rejection-safe drafts, qualified cached reading/native receipts on disconnect/authentication loss, contextual retries, corrected keyboard review navigation and file glyphs/folder keys. Review work now pages every captured outcome/file through the existing history worker, capped at 20/group and 50 paths with complete global counts. Existing 3D/reading/review features were audited and retained; no event/store schema or native permission change.
+- **Validation:** Final Windows Node 24.11.1 / cached pinned pnpm 10.34.5: both typechecks and **387 units / 63 files pass**; final complete browser sweep **145 passed / two explicit opt-in skips** (147 total, 8.2 minutes); isolated offline package installation/import/API/persisted restart and unchanged deterministic demo pass. Ten-minute synthetic reading: **601,301 ms / 84 rounds / peak 862 DOM nodes**, with pinned evidence/anchors retained; last native offline disclosure and Usage geometry pass three repetitions each and the final full browser sweep. Earlier layout failures were repaired and the two finite Follow/menu test races were corrected without weakening evidence or exact geometry assertions. Details/limits in 81.
+- **Runtime:** Actual server on `http://127.0.0.1:7878/`, normal user store. Restarted only with all six native controllers idle, then restored the three previously enabled passive watches. New launch link is required in separately signed-out browsers. Existing real recording/Settings and deployed bounded review API inspected; no new real-session import, native prompt/approval or hosted CI.
+- **Next/limits:** Other-builder code review before merge. Builder-owned real Claude/Codex lifecycle, human comprehension/preference and assistive-tech checks, physical low-resource and macOS/Linux release acceptance remain open. Review 75's retired independent-shell parity list is superseded by the shared foundation; do not reopen delivered 3D, Home, reading or Git functionality as missing features. Private stores/screenshots/logs stay ignored.
+
 ### Yash with Codex — Modern breadcrumb header and shared panel material
 
 - **When:** 15 October 2026. PR #65 squash-merged as `84f76e2`; local `main` fast-forwarded. Original increments remain on local `codex/modern-reading-craft`; [80](review/80-modern-breadcrumb-header.md), implementation `5ec7578`.
@@ -151,6 +159,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **16 October — Bounded everyday reading and review:** Keep source-scoped reading locations only in memory, capped at eight sessions/64 slots with existing eight-visit evidence trails. Review continuation uses bounded pages of existing worker-owned derived snapshots, retaining global counts and tied-sequence outcomes. No whole-history browser cache or new capture schema. Real native-account acceptance is assigned to the builder by explicit request. See [81](review/81-workspace-reliability.md).
 
 - **15 October — Modern foundation reset:** The builder explicitly supersedes independent/no-reference Modern: reuse Legacy's full functionality and preserve its agent visualization; modernize only surroundings with scoped styles. Shared code prevents parity drift. See [76](review/76-modern-legacy-foundation.md).
 
