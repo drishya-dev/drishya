@@ -1,5 +1,15 @@
 # Windows antivirus attribution audit
 
+## 16 October recurrence
+
+Read-only inspection finds four new detections at **18:22:08,19:22:12,20:22:15,21:22:18 IST**. They name `Real Protect-PSFL!DC98AC2364A0`, Windows PowerShell5.1 and a136,350-byte in-memory target, with no backing file/hash. This is a changed payload/signature from the88,248-byte October8 record, not proof that the earlier payload was fixed.
+
+Windows PowerShell event400 records the same stdin/`Invoke-Expression` host wrapper at18:22:06 and21:22:16, approximately two seconds before the matching alerts. The old managed Codex app-server `0.160.0` is running again, started18:17, alongside newer Codex executables. The earlier audit directly attributed that wrapper to the managed app-server; **fresh parent-process attribution was not available from retained Security4688 events**, so this recurrence is a strong match, not a new definitive process-parent trace. Payload contents and false-positive status remain unverified.
+
+The production Drishya daemon/packages/scripts contain no launch of PowerShell, `Invoke-Expression`, `ExecutionPolicy Bypass` or encoded command. The adapter's PowerShell mentions only recognize captured command text. Running Corepack/pnpm in the background does not establish that it caused these detections. No evidence here identifies Drishya's packaged launcher as the origin, and changing its UI/ingestion cannot repair an external runtime's periodic script.
+
+Keep protection enabled. The next actionable diagnosis is a fresh process-parent trace at a recurrence or review by the runtime/security vendor using sanitized metadata, then rerun the packaged/native acceptance matrix. Do not execute the blocked payload, disable protection, add broad exclusions, upload private data or automatically terminate either coding session. No external report or host configuration change was made. The older supported escalation links below remain references, not evidence that an update fixes this recurrence.
+
 8 October 2026. Builder supplied a local McAfee detection log and requested identifying whether development or the shipped product causes recurring script alerts. Host checks are read-only. No antivirus exclusions, policy changes, quarantine restoration or uploads were performed. Raw host logs and script contents are not committed.
 
 ## Established evidence
