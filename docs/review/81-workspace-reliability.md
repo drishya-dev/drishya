@@ -115,3 +115,8 @@ Use disposable sessions and explicitly approve each native action in the app:
   authentication, discovery/import/watch, restart, offline reading and retention.
 - Screen reader, touch and full keyboard reading; human ten-minute clarity and
   preference review on dense real work. Automated soak is distinct from this.
+
+## Independent merge review, 16 October
+
+Yash with Codex reviewed PR #67 and ran both typechecks, 387 units and 30 Modern/Classic browser journeys locally. One minor retry defect was corrected in a separate reviewer-authored commit: a successful queued attachment selection must not clear an earlier rejected batch. The overlapping invalid-then-valid regression now passes. No new native permission or hosted CI. PR #66 is merged as a proposal only; renderer/library adoption remains a separate decision.
+

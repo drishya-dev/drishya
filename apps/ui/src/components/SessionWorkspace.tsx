@@ -345,7 +345,9 @@ export function PromptComposer() {
         const items = await promptFiles(files, attachmentRef.current);
         if (!active.current) return;
         attachmentRef.current = items; setAttachments(items);
-        rejectedFiles.current = []; setCanRetryFiles(false);
+        // A later successful selection must not erase an earlier rejected batch.
+        rejectedFiles.current = rejectedFiles.current.filter(file => !files.includes(file));
+        setCanRetryFiles(rejectedFiles.current.length > 0);
       } catch (e) {
         if (active.current) { rejectedFiles.current = files; setCanRetryFiles(true); setError((e as Error).message); }
       } finally {

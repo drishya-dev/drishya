@@ -393,8 +393,10 @@ test('Modern queues overlapping file preparation, previews text and retains reje
   await expect(input).toHaveValue('Retain this draft if the server rejects it');
   await expect(composer.locator('.attachment-chip')).toHaveCount(2);
   await files.setInputFiles({name:'invalid.bin',mimeType:'application/octet-stream',buffer:Buffer.from([0,1,2])});
+  await files.setInputFiles({name:'valid-after-rejection.txt',mimeType:'text/plain',buffer:Buffer.from('Keep the earlier rejected batch retryable')});
   await expect(composer.getByRole('button',{name:'Retry rejected files'})).toBeVisible();
-  await expect(composer.locator('.attachment-chip')).toHaveCount(2);
+  await expect(composer.locator('.attachment-chip')).toHaveCount(3);
+  await expect(composer.getByRole('button',{name:'Retry rejected files'})).toBeVisible();
 });
 
 test('Modern server restart authentication preserves cached reading and disables sending', async ({page}) => {
