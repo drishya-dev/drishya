@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { pointAtHistory } from './history-gestures.ts';
 import { expect,test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer,type RunningServer } from '../../apps/daemon/src/server.ts';
@@ -17,9 +18,34 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await expect(page.locator('.mh-session').first()).toBeVisible();
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-home.png`)});
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(id)}`);
+  await expect(page.locator('.viewer')).toBeVisible();
+  const recoveredDesk=page.getByRole('region',{name:'Developer workspace',exact:true});
+  if(await recoveredDesk.isVisible())await recoveredDesk.getByRole('button',{name:'Back to agent',exact:true}).click();
+  const currentReader=page.locator('.current-file-reader');if(await currentReader.isVisible())await currentReader.locator('header button').first().click();
+  const mapBack=page.getByRole('button',{name:'Back to work',exact:true});if(await mapBack.isVisible())await mapBack.click();
   await expect(page.locator('.history')).toBeVisible();
   await expect.poll(()=>page.locator('.history .op,.history .prose,.history .turn').evaluateAll(nodes=>nodes.some(el=>{const r=el.getBoundingClientRect();return r.height>0&&r.bottom>100&&r.top<innerHeight-180;})),{timeout:20000}).toBe(true);
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-history.png`)});
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  const history=page.locator('.history');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  for(let n=0;n<12;n++) {
+    await pointAtHistory(page,history);await page.mouse.wheel(0,-220);
+    await history.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+    await expect(history).toBeVisible();expect(errors).toEqual([]);
+    const stability=await history.evaluate(async el=>{
+      const viewport=el.getBoundingClientRect();
+      const node=[...el.querySelectorAll<HTMLElement>('[data-op-id],[data-prose-id]')].find(node=>{const r=node.getBoundingClientRect();return r.bottom>viewport.top+80&&r.top<viewport.bottom-140;});
+      if(!node)return 0;
+      const top=node.getBoundingClientRect().top;await new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+      return node.isConnected?Math.abs(node.getBoundingClientRect().top-top):0;
+    });
+    expect(stability,'Captured material should not snap into a whole-card position after manual scrolling').toBeLessThan(3);
+  }
+  const latest=page.getByRole('button',{name:/Back to latest/});if(await latest.isVisible())await latest.click();
+  await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
+  const textBlocks=page.locator('.prose .md-code-text');
+  for(const block of await textBlocks.all())expect(await block.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
   await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
   const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
   await expect(desk).toBeVisible();
@@ -37,6 +63,7 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();
   if(await grant.isVisible())await grant.click();
   await expect(desk.getByRole('tablist')).toBeVisible();
+  const split=desk.getByRole('button',{name:'Split view',exact:true});if(await split.getAttribute('aria-pressed')==='true')await split.click();
   const graph=await app.graph(id);
   const paths=graph.nodes.map(node=>node.path).filter(path=>!path.startsWith('.local/')&&/\.(ts|tsx|md|css)$/.test(path));
   const preferred=['apps/ui/src/components/Viewer.tsx','apps/ui/src/modern/recovered-surfaces.css'];
@@ -44,7 +71,12 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   expect(selected.length).toBe(2);
   for(const path of selected){await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill(path);await page.locator('[data-spine-path]').filter({has:page.getByText(path,{exact:true})}).click();}
   await desk.getByRole('button',{name:'Split view',exact:true}).click();
-  await expect(desk.locator('.desk-code')).toHaveCount(2);
+  await desk.locator('.desk-pane').nth(0).click({position:{x:8,y:8}});
+  await desk.getByRole('tab',{name:selected[0]!.split('/').at(-1),exact:true}).click();
+  await desk.locator('.desk-pane').nth(1).click({position:{x:8,y:8}});
+  await desk.getByRole('tab',{name:selected[1]!.split('/').at(-1),exact:true}).click();
+  await expect(desk.locator('.desk-code,.desk-markdown')).toHaveCount(2);
+  await expect(desk.locator('.desk-markdown>p[role=status]')).toHaveCount(0);
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-workspace.png`)});
   const reader=desk.getByRole('region',{name:`Workspace file ${selected[0]}`,exact:true});
   const meta=await reader.locator('footer').innerText();

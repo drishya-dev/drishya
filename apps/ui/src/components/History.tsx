@@ -70,6 +70,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const readingAtStart = useRef(memory.get('history/top') === 0);
   const pendingNavigation = useRef<string | undefined>(undefined);
   const lastNavigation = useRef<string | undefined>(undefined);
+  const navigationIntent = useRef<string | undefined>(undefined);
+  const cancelledNavigation = useRef<string | undefined>(undefined);
   const navigationBoundary = useRef<{ step: number; projection: Projection } | undefined>(undefined);
   const chapterNavigation = useRef<{ id: string; step: number } | undefined>(undefined);
   const seenThrough = useRef(scene.total);
@@ -109,7 +111,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   useLayoutEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
     const cancel = () => { for (const card of ref.current?.querySelectorAll('article[data-op-id]') ?? []) for (const a of card.getAnimations()) if (a.id === 'surface-Reflow') a.cancel(); };
-    if (!motion || lowResource) cancel();
+    if (!motion || lowResource || !follow) cancel();
     const changed = () => { if (preference.matches) cancel(); };
     preference.addEventListener('change', changed);
     const history = ref.current;
@@ -118,7 +120,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     history?.addEventListener('click', cancel, true);
     history?.addEventListener('keydown', cancel);
     return () => { preference.removeEventListener('change', changed); history?.removeEventListener('click', cancel, true); history?.removeEventListener('keydown', cancel); };
-  }, [motion, lowResource]);
+  }, [motion, lowResource, follow]);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
@@ -140,6 +142,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : promptStep !== undefined ? ps.id === projection.passages.find(p => p.firstStep >= promptStep - 1)?.id : false,
   );
   const targetId = scene.passages[targetIndex]?.id;
+  const intent = selectedOp ? `op:${selectedOp}` : focusObservationId ? `observation:${focusObservationId}` : promptStep !== undefined ? `prompt:${promptStep}` : undefined;
   const expandedId = scene.passages.find((ps) => ps.ops.some((op) => op.id === expandedOp))?.id;
   const ids = scene.passages.map((ps) => ps.id);
   const hoverPassageId = scene.passages.find(ps => ps.ops.some(op => op.id === hoveredOp))?.id;
@@ -337,7 +340,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || !targetId) { lastNavigation.current = undefined; pendingNavigation.current = undefined; return; }
+    if (navigationIntent.current !== intent) {
+      navigationIntent.current = intent; cancelledNavigation.current = undefined;
+      lastNavigation.current = undefined; pendingNavigation.current = undefined;
+    }
+    if (!el || !targetId || intent && cancelledNavigation.current === intent) return;
     if (targetId !== lastNavigation.current) {
       lastNavigation.current = targetId;
       pendingNavigation.current = targetId;
@@ -363,7 +370,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     readingAnchor.current = { id: targetId, offset: node.getBoundingClientRect().top - el.getBoundingClientRect().top };
     if (useApp.getState().readingPassageId !== targetId) set({ readingPassageId: targetId });
     pendingNavigation.current = undefined;
-  }, [targetId, targetIndex, layout, selectedOp]);
+  }, [intent, targetId, targetIndex, layout, selectedOp]);
 
   // Follow remains active across bursts and late artifacts. Only deliberate reading
   // detaches it; live capture and the replay clock advance independently.
@@ -431,6 +438,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     <>
     <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
       if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; }
+      cancelledNavigation.current = intent; pendingNavigation.current = undefined;
       userScrollUntil.current = performance.now() + 750;
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? (ref.current?.clientHeight ?? 1) : 1;
       const reachesStart = e.deltaY < 0 && (ref.current?.scrollTop ?? 0) + e.deltaY * unit <= 0;
@@ -445,7 +453,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
           rememberReading(); navigating.current = false; restoreReading(); navigationFrame.current = undefined;
         });
       });
-    }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) { userScrollUntil.current = performance.now() + 750; readingAtStart.current = false; } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) readingAtStart.current = false; if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
+    }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) { userScrollUntil.current = performance.now() + 750; readingAtStart.current = false; } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { readingAtStart.current = false; cancelledNavigation.current = intent; pendingNavigation.current = undefined; } if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
       // Pin the interacted material after activation without disabling Follow.
       if ((e.target as HTMLElement).closest('button, input, select, a')) {
         const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId;
