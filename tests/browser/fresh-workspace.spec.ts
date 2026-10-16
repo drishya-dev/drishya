@@ -53,6 +53,20 @@ test('opening stored history catches up its native journal without enabling a li
   expect(app.ingest.isLive(recordingId)).toBe(false);
 });
 
+test('Home surfaces changed imported journals and keeps filter menus keyboard accessible',async({page})=>{
+  const recording=app.store.getRecording(ids.codex!)!;
+  await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[{adapterId:'codex',harness:'codex',path:'synthetic-current.jsonl',cwd:root,title:recording.title,modifiedAt:new Date().toISOString(),bytes:999999999,importedRecordingId:recording.id}],errors:[]}}));
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
+  await expect(page.getByText('Journal updated',{exact:true})).toBeVisible();
+  const filter=page.getByRole('combobox',{name:'Harness',exact:true});
+  await filter.selectOption('codex');await expect(filter).toHaveValue('codex');
+  await filter.focus();await page.keyboard.press('Space');await page.keyboard.press('Escape');
+  await expect(filter).toBeFocused();await expect(filter).toHaveValue('codex');
+  await filter.click();await page.getByRole('heading',{name:'Your agents. In view.'}).click();
+  await expect(filter).toHaveValue('codex');
+  await page.screenshot({path:resolve('.local/home-refined-filters.png')});
+});
+
 // The previous independent shell was retired by the builder. These tests protect
 // the new contract: Modern shares Legacy behavior and only changes its surroundings.
 for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: imported session, home, settings and reload`, async ({ page }) => {

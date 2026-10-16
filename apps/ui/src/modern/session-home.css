@@ -14,3 +14,15 @@
 .mh-session { height:100px; box-sizing:border-box; }.mh-time-group h3 { height:34px; box-sizing:border-box; }.mh-session-open>span { max-height:32px; overflow:hidden; }
 
 .mh-search input:focus-visible { outline:0!important;box-shadow:none!important; }.mh-search:focus-within { box-shadow:0 1px 0 var(--modern-accent); }.mh-header .brand-mark { width:28px;height:28px;flex:none; }
+
+/* Retain the browser's select semantics, focus handling and outside dismissal. */
+@supports (appearance:base-select) {
+  .mh-filters select,.mh-filters select::picker(select) { appearance:base-select; }
+  .mh-filters select { display:flex;align-items:center;gap:12px;min-height:36px;padding:7px 11px;border:1px solid var(--line);border-radius:8px;background:var(--s1);color:var(--t2);font:12px/1.5 var(--sans); }
+  .mh-filters select::picker-icon { color:var(--t3);font-size:10px; }
+  .mh-filters select::picker(select) { margin-top:6px;padding:5px;min-width:170px;background:var(--s1);color:var(--t1);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 12px 32px #0003; }
+  .mh-filters option { padding:9px 12px;min-height:36px;border-radius:6px;gap:10px;font:12px/1.5 var(--sans); }
+  .mh-filters option:checked { color:var(--modern-accent);background:color-mix(in srgb,var(--modern-accent) 9%,var(--s1)); }
+  .mh-filters option:is(:hover,:focus-visible) { background:var(--s2);outline:0; }
+  .mh-filters option::checkmark { color:var(--modern-accent);font-size:12px; }
+}
