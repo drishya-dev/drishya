@@ -208,6 +208,25 @@ test('structured shell output renders decoded newlines and retains the exact raw
   await expect(card.locator('.structured-tool-output .output')).toContainText(raw);
 });
 
+test('long captured at-sign scripts retain real syntax colors and exact command copy',async({page})=>{
+  const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+  const op=bundle.projection.operations.find((item:any)=>item.kind==='shell');
+  const script="@'\nfrom pathlib import Path\n"+'project description '.repeat(180)+"\n'@ | python -";
+  const command=`text(await tools.exec_command({cmd:${JSON.stringify(script)},max_output_tokens:500}));`;
+  op.detail.command=command;
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedCommand:string}).copiedCommand=text;}}}));
+  await page.route('**/demo/bundle.json',route=>route.fulfill({json:bundle}));
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  const card=page.locator(`article[data-op-id="${op.id}"]`);
+  await card.scrollIntoViewIfNeeded();
+  const material=card.locator('.command-material');
+  await expect(material.locator('.tk-str')).toContainText("@'");
+  await expect(material.locator('.tk-num')).toHaveText('500');
+  expect(await material.locator('.tk-str').evaluate(el=>getComputedStyle(el).color!==getComputedStyle(el.parentElement!).color)).toBe(true);
+  await material.getByRole('button',{name:'Copy command',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
+});
+
 test('recovered Modern toolbox preserves actual instrument origins, filters and MCP drawers', async ({ page }) => {
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
   const toolbox=page.getByRole('complementary',{name:'Tools and agents'});

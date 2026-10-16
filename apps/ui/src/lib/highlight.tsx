@@ -9,7 +9,11 @@ const KEYWORDS = new Set(
 
 type Tok = { t: 'kw' | 'str' | 'com' | 'num' | 'fn' | 'type' | 'property' | 'plain'; s: string };
 
-const RE = /(\/\/.*$|#(?![!{[]).*$|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|(\b\d[\d_.]*(?:e[+-]?\d+)?\b)|([A-Za-z_$][\w$]*)(?=\s*\()|([A-Za-z_$][\w$]*)/gm;
+const IDENTIFIER = /[A-Za-z_$][\w$]*/y;
+const NUMBER = /\d[\d_.]*(?:e[+-]?\d+)?/iy;
+const AT_NAME = /@[A-Za-z_][\w./-]*/y;
+const COLOR_CHARACTERS = 64 * 1024;
+const COLOR_TOKENS = 512;
 
 export function tokenize(line: string, lang?: string): Tok[] {
   // Document prose is not programming syntax: English “for/from/return” must stay prose.
@@ -27,26 +31,50 @@ export function tokenize(line: string, lang?: string): Tok[] {
   }
   if (lang === 'txt' || lang === 'text' || lang === 'log') return [{ t: 'plain', s: line }];
   const out: Tok[] = [];
-  let last = 0;
+  let cursor = 0, plain = 0;
+  const end = Math.min(line.length, COLOR_CHARACTERS);
   const hashComments = lang === 'python' || lang === 'shell' || lang === 'yaml' || lang === 'toml' || lang === 'ruby';
-  for (const m of line.matchAll(RE)) {
-    const i = m.index ?? 0;
-    if (i > last) out.push({ t: 'plain', s: line.slice(last, i) });
-    if (m[1]) {
-      if (m[1].startsWith('#') && !hashComments) out.push({ t: 'plain', s: m[1] });
-      else out.push({ t: 'com', s: m[1] });
-    } else if (m[2]) out.push({ t: 'str', s: m[2] });
-    else if (m[3]) out.push({ t: 'num', s: m[3] });
-    else if (m[4]) out.push({ t: KEYWORDS.has(m[4]) ? 'kw' : 'fn', s: m[4] });
-    else if (m[5]) out.push({ t: KEYWORDS.has(m[5]) ? 'kw' : lang === 'shell' && /^(node|npm|npx|pnpm|corepack|git|python|pytest|vitest|tsc|Get|Select|Set|Write|Remove|Copy|Move)$/.test(m[5]) ? 'fn' : lang === 'shell' && /[-$]/.test(line[i-1] ?? '') ? 'property' : /^[A-Z]/.test(m[5]) ? 'type' : line[i - 1] === '.' || /^\s*:/.test(line.slice(i + m[5].length)) ? 'property' : 'plain', s: m[5] });
-    last = i + m[0].length;
+  // Scan forward once, including unterminated quotes. Retrying a global string
+  // regex at every quote makes long pasted scripts expensive. Bound DOM spans,
+  // not readable content: any remaining characters are still rendered as plain text.
+  while (cursor < end && out.length < COLOR_TOKENS - 2) {
+    const start = cursor, char = line[cursor]!;
+    let kind: Tok['t'] = 'plain';
+    if (line.startsWith('//', cursor) || char === '#' && hashComments && !/[!{[]/.test(line[cursor + 1] ?? '')) {
+      cursor = end; kind = 'com';
+    } else if (line.startsWith('/*', cursor)) {
+      const close = line.indexOf('*/', cursor + 2);
+      cursor = close < 0 ? end : Math.min(end, close + 2); kind = 'com';
+    } else if (char === '"' || char === "'" || char === '`') {
+      cursor++;
+      while (cursor < end) {
+        if (line[cursor] === '\\') { cursor = Math.min(end, cursor + 2); continue; }
+        if (line[cursor++] === char) break;
+      }
+      kind = 'str';
+    } else {
+      AT_NAME.lastIndex = IDENTIFIER.lastIndex = NUMBER.lastIndex = cursor;
+      const at = char === '@' ? AT_NAME.exec(line) : null;
+      const number = /\d/.test(char) ? NUMBER.exec(line) : null;
+      const name = !at && !number ? IDENTIFIER.exec(line) : null;
+      const word = (at ?? number ?? name)?.[0];
+      if (word) {
+        cursor += word.length;
+        let next = cursor; while (next < end && /\s/.test(line[next]!)) next++;
+        kind = at ? 'property' : number ? 'num' : KEYWORDS.has(word) ? 'kw' : line[next] === '(' ? 'fn' : lang === 'shell' && /^(node|npm|npx|pnpm|corepack|git|python|pytest|vitest|tsc|Get|Select|Set|Write|Remove|Copy|Move)$/.test(word) ? 'fn' : lang === 'shell' && /[-$]/.test(line[start - 1] ?? '') ? 'property' : /^[A-Z]/.test(word) ? 'type' : line[start - 1] === '.' || line[next] === ':' ? 'property' : 'plain';
+      } else cursor++;
+    }
+    if (kind !== 'plain') {
+      if (start > plain) out.push({ t: 'plain', s: line.slice(plain, start) });
+      out.push({ t: kind, s: line.slice(start, cursor) });
+      plain = cursor;
+    }
   }
-  if (last < line.length) out.push({ t: 'plain', s: line.slice(last) });
+  if (plain < line.length) out.push({ t: 'plain', s: line.slice(plain) });
   return out;
 }
 
 export function Highlighted({ line, lang }: { line: string; lang?: string }): ReactNode {
-  if (line.length > 2000) return line;
   return tokenize(line, lang).map((t, i) => (t.t === 'plain' ? t.s : <span key={i} className={`tk-${t.t}`}>{t.s}</span>));
 }
 
