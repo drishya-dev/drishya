@@ -353,3 +353,39 @@ test('Modern map camera and folder keyboard state survive a session detour', asy
   await folder.focus(); await page.keyboard.press('ArrowRight');
   await expect(folder).toHaveAttribute('aria-expanded','true');
 });
+
+test('Modern queues overlapping file preparation, previews text and retains rejected prompt drafts', async ({page}) => {
+  const state={available:true,state:'idle',harness:'codex',tools:[],inventory:'unknown',approvals:[],output:''};
+  await page.route('**/controller',route=>route.fulfill({json:state}));
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.route('**/controller/prompt',route=>route.fulfill({status:409,json:{error:'Synthetic rejected turn; retry after checking the target'}}));
+  // A delayed browser File read exposes the concurrent-selection path deterministically.
+  await page.addInitScript(() => { const read=File.prototype.arrayBuffer; File.prototype.arrayBuffer=async function(){await new Promise(resolve=>setTimeout(resolve,250));return read.call(this);}; });
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'}), files=composer.getByLabel('Choose prompt files');
+  await files.setInputFiles({name:'one.txt',mimeType:'text/plain',buffer:Buffer.from('First prepared text')});
+  await files.setInputFiles({name:'two.txt',mimeType:'text/plain',buffer:Buffer.from('Second prepared text')});
+  await expect(composer.locator('.attachment-chip')).toHaveCount(2);
+  await composer.getByRole('button',{name:'Preview attachment two.txt',exact:true}).click();
+  const preview=page.getByRole('dialog',{name:'Attachment: two.txt',exact:true});
+  await expect(preview).toContainText('Second prepared text');
+  await preview.getByRole('button',{name:'Close Attachment: two.txt'}).click();
+  const input=composer.getByRole('textbox',{name:'Prompt for selected harness session'});
+  await input.fill('🙂'.repeat(16_385));
+  await expect(input).toHaveAttribute('aria-invalid','true');
+  await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
+  await input.fill('Retain this draft if the server rejects it');
+  await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeEnabled();
+  await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
+  await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
+  await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();
+  await expect(composer.getByRole('alert')).toContainText('Synthetic rejected turn');
+  await expect(input).toHaveValue('Retain this draft if the server rejects it');
+  await expect(composer.locator('.attachment-chip')).toHaveCount(2);
+  await files.setInputFiles({name:'invalid.bin',mimeType:'application/octet-stream',buffer:Buffer.from([0,1,2])});
+  await expect(composer.getByRole('button',{name:'Retry rejected files'})).toBeVisible();
+  await expect(composer.locator('.attachment-chip')).toHaveCount(2);
+});
+

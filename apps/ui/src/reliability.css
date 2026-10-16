@@ -1,0 +1,4 @@
+.attachment-chip .attachment-preview { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-preview-dialog { max-width: min(800px, calc(100vw - 24px)); }
+.attachment-preview-dialog pre { max-height: 55dvh; overflow: auto; }
+.prompt-composer > #prompt-size-status { display: block; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
