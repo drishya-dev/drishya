@@ -7,6 +7,7 @@ import type { Projection } from '@drishya/contracts';
 import { Ingestor } from '@drishya/ingest';
 import { Store } from '@drishya/store';
 import { sinceBoundary } from '../src/index.ts';
+import { sinceSnapshot } from '../src/since.ts';
 
 // P2-A "Since your last visit": deterministic facts after a reading boundary, each linked to its
 // operation. Facts only: what changed, what failed, what ran, what is unfinished, what is missing.
@@ -29,6 +30,15 @@ afterAll(() => {
 const tests = () => p.operations.filter((o) => o.kind === 'test');
 
 describe('sinceBoundary', () => {
+  it('pages bounded review groups by position without losing outcomes with the same sequence', () => {
+    const operation = tests()[0]!;
+    const projection = { ...p, operations: Array.from({ length: 45 }, (_, index) => ({ ...operation, id: `same-outcome-${index}` })) };
+    const first = sinceSnapshot(projection, -1), next = sinceSnapshot(projection, -1, 1), last = sinceSnapshot(projection, -1, 2);
+    expect(first.tests).toHaveLength(20); expect(next.tests).toHaveLength(20); expect(last.tests).toHaveLength(5);
+    expect(next.counts.tests).toBe(45);
+    expect(new Set([...first.tests, ...next.tests, ...last.tests].map(item => item.operationId)).size).toBe(45);
+    expect(sinceSnapshot(projection, -1, -1).tests).toEqual(first.tests);
+  });
   it('with no boundary, reports the whole recording', () => {
     const d = sinceBoundary(p, -1);
     expect(d.newSteps).toBe(p.timeline.length);

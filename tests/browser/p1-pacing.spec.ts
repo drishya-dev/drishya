@@ -488,8 +488,14 @@ test('every observed action kind can arrive as a real surface without removing i
     { name: 'mcp__arrival__inspect', input: { fixture: 'synthetic' }, kind: 'mcp' },
   ];
   for (const [index, call] of calls.entries()) {
-    const latest = page.getByRole('button', { name: /Back to latest/ });
-    if (await latest.isVisible()) await latest.click();
+    // A late layout can finish following between visibility and activation.
+    // Accept that completed state, otherwise activate the real return control.
+    const follow = page.getByRole('switch', { name: 'Automatically follow new work' });
+    await expect(async () => {
+      if (await follow.getAttribute('aria-checked') === 'true') return;
+      await page.getByRole('button', { name: /Back to latest/ }).click({ timeout: 1200 });
+      await expect(follow).toHaveAttribute('aria-checked', 'true');
+    }).toPass({ timeout: 6000 });
     const id = `all-kind-arrival-${index}`;
     append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: call.name, input: call.input }] } });
     await app.ingest.sync(recordingId);

@@ -11,6 +11,7 @@ import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
 import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
 import { fitProjectedMap, mapReadingArea, rebaseMapCamera, type MapFrame } from '../lib/map-fit.ts';
+import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 
 interface Cam {
   x: number;
@@ -69,8 +70,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const lowResource = useApp(s => s.lowResource);
   const depth = useApp(s => s.mapDepth);
   const orbit = useApp(s => s.mapOrbit);
-  const [yaw, setYaw] = useState(.25);
-  const [pitch, setPitch] = useState(.18);
+  const [yaw, setYaw] = useWorkspaceState('map/yaw', .25);
+  const [pitch, setPitch] = useWorkspaceState('map/pitch', .18);
   const manualUntil = useRef(0);
   const spatialActive = depth && !lowResource && gpuReady;
   const holdOrientation = () => { manualUntil.current = performance.now() + 12_000; };
@@ -88,7 +89,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const hoveredPath = useApp((s) => s.hoveredPath);
   const set = useApp((s) => s.set);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const [cam, setCam] = useState<Cam>({ x: 0, y: 0, k: 1 });
+  const [cam, setCam] = useWorkspaceState<Cam>('map/camera', { x: 0, y: 0, k: 1 });
   const camera = useRef(cam);
   const cameraFrame = useRef(0);
   const cameraTarget = useRef(cam);
@@ -120,12 +121,12 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     animateCam({ k, x: size.w / 2 - (size.w / 2 - c.x) * k / c.k, y: size.h / 2 - (size.h / 2 - c.y) * k / c.k });
   };
   const [tip, setTip] = useState<{ node: MapGroup; x: number; y: number }>();
-  const [query, setQuery] = useState('');
-  const [observedOnly, setObservedOnly] = useState(false);
-  const [connectionsOpen, setConnectionsOpen] = useState(false);
-  const [connectionFile, setConnectionFile] = useState<string>();
-  const [connectionPage, setConnectionPage] = useState(0);
-  const [neighborhood, setNeighborhood] = useState(false);
+  const [query, setQuery] = useWorkspaceState('map/query', '');
+  const [observedOnly, setObservedOnly] = useWorkspaceState('map/observed', false);
+  const [connectionsOpen, setConnectionsOpen] = useWorkspaceState('map/connections', false);
+  const [connectionFile, setConnectionFile] = useWorkspaceState<string | undefined>('map/file', undefined);
+  const [connectionPage, setConnectionPage] = useWorkspaceState('map/page', 0);
+  const [neighborhood, setNeighborhood] = useWorkspaceState('map/neighborhood', false);
   const requestedFocus = useApp(s => s.mapFocusPath);
   const observedKey = heat.map(cell => cell.path).join('\0');
   const observedPaths = useMemo(() => new Set(observedKey ? observedKey.split('\0') : []), [observedKey]);
@@ -395,6 +396,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       data-map-depth={spatialActive ? 'spatial-3d' : 'flat'}
       data-map-yaw={yaw.toFixed(5)}
       data-map-pitch={pitch.toFixed(5)}
+      data-map-zoom={cam.k.toFixed(5)}
       data-map-scope={explore && connectionsOpen && neighborhood ? 'direct-neighborhood' : observedOnly ? 'observed' : 'all'}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
@@ -458,7 +460,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       <canvas ref={spatialCanvas} data-spatial-renderer="webgl" style={{ width: size.w, height: size.h, display: spatialActive ? 'block' : 'none' }} />
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
-        <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find a file on the map" placeholder="Find a file…" value={query} onChange={(e) => setQuery(e.target.value)} />{query && <button aria-label="Clear map search" onClick={() => setQuery('')}>×</button>}</label>
+        <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find a file on the map" placeholder="Find a file…" maxLength={200} value={query} onChange={(e) => setQuery(e.target.value)} />{query && <button aria-label="Clear map search" onClick={() => setQuery('')}>×</button>}</label>
         <div className="map-scope" role="group" aria-label="Files shown on the map"><button aria-pressed={!observedOnly && !neighborhood} onClick={() => { setObservedOnly(false); setNeighborhood(false); }}>All files</button><button aria-pressed={observedOnly && !neighborhood} onClick={() => { setObservedOnly(true); setNeighborhood(false); }}>Observed <small>{observedCount}</small></button></div>
         <button className="map-connections-toggle" role="switch" aria-checked={connectionsOpen} onClick={() => {
           setConnectionsOpen(!connectionsOpen);

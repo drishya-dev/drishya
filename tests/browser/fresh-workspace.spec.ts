@@ -21,6 +21,14 @@ test.beforeAll(async () => {
     writeFileSync(source, readFileSync(resolve(`fixtures/synthetic/${fixture}`), 'utf8').replaceAll('/home/dev/shop', root.replaceAll('\\', '/')));
     ids[adapter!] = (await app.ingest.importSource(adapter!, source)).recordingId;
   }
+  const reviewJournal=join(dir,'review-pages.jsonl'), timestamp='2026-10-16T00:00:00Z';
+  const reviewRows=[JSON.stringify({timestamp,type:'session_meta',payload:{id:'review-pages',cwd:root.replaceAll('\\','/')}})];
+  for(let index=0;index<70;index++) {
+    reviewRows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`review-${index}`,arguments:JSON.stringify({cmd:`npm test -- review-case-${index}`})}}));
+    reviewRows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call_output',call_id:`review-${index}`,output:'1 passed'}}));
+  }
+  writeFileSync(reviewJournal,reviewRows.join('\n')+'\n');
+  ids.review=(await app.ingest.importSource('codex',reviewJournal)).recordingId;
   server = await startServer({ app, port: 0, token: 'synthetic-independent-design' });
 });
 test.afterAll(async () => {
@@ -280,4 +288,197 @@ for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} 
   expect(payload.prompt).toBe('Review the selected source');expect(payload.exclusive).toBe(true);
   expect(payload.attachments).toEqual([{name:'context.txt',type:'text',data:'Synthetic context'}]);
   expect(payload.options).toEqual({model:'native-one',effort:'high'});
+});
+
+test('Modern keeps file evidence, search controls and reading position across session detours', async ({ page }) => {
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['claude-code']}`);
+  const history=page.locator('.history');
+  await history.dispatchEvent('keydown',{key:'Home'});
+  await history.evaluate(el => { el.scrollTop = 160; });
+  await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBe(160);
+  const anchor=await history.evaluate(el=>{const node=[...el.querySelectorAll<HTMLElement>('.passage-slot')].find(node=>node.getBoundingClientRect().bottom>el.getBoundingClientRect().top+1)!;return {id:node.dataset.passageId,offset:node.getBoundingClientRect().top-el.getBoundingClientRect().top};});
+  const row = page.locator('[data-spine-path="src/cart/total.ts"]').first();
+  await row.click();
+  // Approved workspace state can differ between isolated journeys; follow its explicit captured destination.
+  const disk = page.getByRole('dialog', {name:'src/cart/total.ts',exact:true});
+  if(await disk.isVisible()) await disk.getByRole('button',{name:'Recorded work on this file'}).click();
+  const reader=page.getByRole('dialog',{name:'Work on src/cart/total.ts',exact:true});
+  await expect(reader).toBeVisible();
+  await reader.getByLabel('Filter actions on this file').fill('Read');
+  await page.evaluate(id => { location.hash=`#/r/${id}`; }, ids.codex);
+  await expect(reader).toHaveCount(0);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.evaluate(id => { location.hash=`#/r/${id}`; }, ids['claude-code']);
+  await expect(reader).toBeVisible();
+  await expect(reader.getByLabel('Filter actions on this file')).toHaveValue('Read');
+  await reader.getByRole('button',{name:'Close Work on src/cart/total.ts'}).click();
+  await expect.poll(()=>history.evaluate((el,anchor)=>{const node=[...el.querySelectorAll<HTMLElement>('.passage-slot')].find(node=>node.dataset.passageId===anchor.id);return node?Math.abs(node.getBoundingClientRect().top-el.getBoundingClientRect().top-anchor.offset):Infinity;},anchor)).toBeLessThan(3);
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+  await page.getByRole('button',{name:'Close Workspace settings'}).click();
+  await expect(page.locator('.history')).toBeVisible();
+});
+
+
+test('Modern retains Git scope and find controls after closing and reopening a reader', async ({page}) => {
+  const snapshot={root,branch:'synthetic',head:'abc123',fingerprint:'page1',sampledAt:'2026-10-16T00:00:00Z',omitted:0,limit:50,pageStart:0,totalAllowed:1,protectedCount:0,files:[{path:'sample.ts',status:' M',fingerprint:'exact-patch',patch:'Working tree changes\ndiff --git a/sample.ts b/sample.ts\n--- a/sample.ts\n+++ b/sample.ts\n@@ -1 +1 @@\n-old\n+new',staged:false}]};
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.route('**/git',route=>route.fulfill({json:{approved:true,scope:'current-git'}}));
+  await page.route('**/git/snapshot**',route=>route.fulfill({json:snapshot}));
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  const reader=page.getByRole('dialog',{name:'Git review',exact:true});
+  await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toBeVisible();
+  await reader.getByRole('searchbox',{name:'Find in patch'}).fill('new');
+  await reader.getByRole('button',{name:'Side by side',exact:true}).click();
+  await reader.getByRole('button',{name:'Close Git review'}).click();
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toHaveValue('new');
+  await expect(reader.getByRole('button',{name:'Side by side',exact:true})).toHaveAttribute('aria-pressed','true');
+});
+
+test('Modern map camera and folder keyboard state survive a session detour', async ({page}) => {
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['claude-code']}`);
+  const folder=page.getByRole('treeitem',{name:'src',exact:true});
+  await expect(folder).toHaveAttribute('aria-expanded','true');
+  await folder.focus(); await page.keyboard.press('ArrowLeft');
+  await expect(folder).toHaveAttribute('aria-expanded','false');
+  await page.getByRole('button',{name:'Explore repository map'}).click();
+  await page.getByRole('button',{name:'Zoom into repository',exact:true}).click();
+  const zoom=await page.locator('.map').getAttribute('data-map-zoom');
+  await page.evaluate(id=>{location.hash=`#/r/${id}`;},ids.codex);
+  await expect(page.locator('.map-tools')).toHaveCount(0);
+  await page.evaluate(id=>{location.hash=`#/r/${id}`;},ids['claude-code']);
+  await expect(page.locator('.map-tools')).toBeVisible();
+  await expect(page.locator('.map')).toHaveAttribute('data-map-zoom',zoom!);
+  await page.getByRole('button',{name:'Back to work',exact:true}).click();
+  await expect(folder).toHaveAttribute('aria-expanded','false');
+  await folder.focus(); await page.keyboard.press('ArrowRight');
+  await expect(folder).toHaveAttribute('aria-expanded','true');
+});
+
+test('Modern queues overlapping file preparation, previews text and retains rejected prompt drafts', async ({page}) => {
+  const state={available:true,state:'idle',harness:'codex',tools:[],inventory:'unknown',approvals:[],output:''};
+  await page.route('**/controller',route=>route.fulfill({json:state}));
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.route('**/controller/prompt',route=>route.fulfill({status:409,json:{error:'Synthetic rejected turn; retry after checking the target'}}));
+  // A delayed browser File read exposes the concurrent-selection path deterministically.
+  await page.addInitScript(() => { const read=File.prototype.arrayBuffer; File.prototype.arrayBuffer=async function(){await new Promise(resolve=>setTimeout(resolve,250));return read.call(this);}; });
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'}), files=composer.getByLabel('Choose prompt files');
+  await files.setInputFiles({name:'one.txt',mimeType:'text/plain',buffer:Buffer.from('First prepared text')});
+  await files.setInputFiles({name:'two.txt',mimeType:'text/plain',buffer:Buffer.from('Second prepared text')});
+  await expect(composer.locator('.attachment-chip')).toHaveCount(2);
+  await composer.getByRole('button',{name:'Preview attachment two.txt',exact:true}).click();
+  const preview=page.getByRole('dialog',{name:'Attachment: two.txt',exact:true});
+  await expect(preview).toContainText('Second prepared text');
+  await preview.getByRole('button',{name:'Close Attachment: two.txt'}).click();
+  const input=composer.getByRole('textbox',{name:'Prompt for selected harness session'});
+  await input.fill('🙂'.repeat(16_385));
+  await expect(input).toHaveAttribute('aria-invalid','true');
+  await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
+  await input.fill('Retain this draft if the server rejects it');
+  await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeEnabled();
+  await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
+  await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
+  await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();
+  await expect(composer.getByRole('alert')).toContainText('Synthetic rejected turn');
+  await expect(input).toHaveValue('Retain this draft if the server rejects it');
+  await expect(composer.locator('.attachment-chip')).toHaveCount(2);
+  await files.setInputFiles({name:'invalid.bin',mimeType:'application/octet-stream',buffer:Buffer.from([0,1,2])});
+  await files.setInputFiles({name:'valid-after-rejection.txt',mimeType:'text/plain',buffer:Buffer.from('Keep the earlier rejected batch retryable')});
+  await expect(composer.getByRole('button',{name:'Retry rejected files'})).toBeVisible();
+  await expect(composer.locator('.attachment-chip')).toHaveCount(3);
+  await expect(composer.getByRole('button',{name:'Retry rejected files'})).toBeVisible();
+});
+
+test('Modern server restart authentication preserves cached reading and disables sending', async ({page}) => {
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.locator('.history').evaluate(el => el.setAttribute('data-cached-reading-test','retained'));
+  const actions=await page.locator('.history article.op').evaluateAll(nodes => nodes.map(node=>node.getAttribute('data-op-id')));
+  await page.context().clearCookies();
+  await page.context().setOffline(true);
+  const notice=page.getByRole('status',{name:'Local server connection'});
+  await expect(notice).toContainText('Disconnected');
+  await expect(page.locator('.history')).toHaveAttribute('data-cached-reading-test','retained');
+  expect(await page.locator('.history article.op').evaluateAll(nodes => nodes.map(node=>node.getAttribute('data-op-id')))).toEqual(actions);
+  await page.context().setOffline(false);
+  await notice.getByRole('button',{name:'Retry connection'}).click();
+  await expect(notice).toContainText('Server sign-in required');
+  await expect(page.locator('.history')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+});
+
+test('Modern offline bundle keeps keyboard review destinations and bounded phone reading', async ({page}) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.keyboard.press('Control+k');
+  const command=page.getByRole('dialog',{name:'Navigate workspace'});
+  await command.getByRole('combobox').fill('Review questions');
+  await command.getByRole('option',{name:/Review questions/}).click();
+  await expect(page.getByRole('dialog',{name:'Review questions',exact:true})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.context().setOffline(true);
+  await page.getByRole('button',{name:'Explore repository map'}).click();
+  await expect(page.locator('.map-tools')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(page.getByRole('region',{name:'Harness prompt'})).toHaveCount(0);
+});
+
+
+test('Modern review pages reach every captured check beyond the first twenty without changing global counts', async ({page}) => {
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.review}`);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.keyboard.press('Control+k');
+  const commands=page.getByRole('dialog',{name:'Navigate workspace'});
+  await commands.getByRole('combobox').fill('Review recorded changes');
+  await commands.getByRole('option',{name:/Review recorded changes and checks/}).click();
+  const review=page.getByRole('dialog',{name:'Review work',exact:true});
+  const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
+  await expect(checks.locator('.review-item')).toHaveCount(20);
+  await expect(review.locator('.review-counts')).toContainText('70 test runs');
+  await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toContainText('Page 1 of 4');
+  await review.getByRole('button',{name:'Next review page',exact:true}).click();
+  await expect(checks).toContainText('review-case-20');
+  await expect(checks).not.toContainText('review-case-0 ');
+  await review.getByRole('button',{name:'Next review page',exact:true}).click();
+  await expect(checks).toContainText('review-case-40');
+  await review.getByRole('button',{name:'Next review page',exact:true}).click();
+  await expect(checks.locator('.review-item')).toHaveCount(10);
+  await expect(checks).toContainText('review-case-69');
+  await expect(review.locator('.review-counts')).toContainText('70 test runs');
+  await expect(review.getByRole('button',{name:'Next review page',exact:true})).toBeDisabled();
+  await checks.getByRole('button',{name:/review-case-69/}).click();
+  await expect(review).toHaveCount(0);
+  await expect(page.getByRole('complementary',{name:'Operation detail'})).toContainText('review-case-69');
+});
+
+
+test('Modern qualifies cached native receipts instead of claiming a current agent phase while disconnected', async ({page}) => {
+  await page.route('**/controller',route=>route.fulfill({json:{available:true,state:'running',runId:'synthetic-receipt',harness:'codex',tools:[],inventory:'unknown',approvals:[],output:'',phase:'thinking',afterSequence:100000,preview:{id:'synthetic-preview',role:'response',text:'Synthetic native receipt already received',exposure:'full'}}}));
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const receipt=page.getByRole('region',{name:'Native turn progress'});
+  await expect(receipt).toContainText('Live from harness');
+  await page.context().setOffline(true);
+  await expect(receipt).toContainText('Last received from harness');
+  await expect(receipt).toContainText('native turn state may have changed');
+  await expect(receipt).not.toContainText('Thinking…');
+  await expect(receipt).toContainText('Synthetic native receipt already received');
 });

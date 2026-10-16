@@ -85,7 +85,7 @@ export interface DataSource {
   forget(id: string): Promise<void>;
   /** The reader's "seen through here" mark for one recording; null when never marked. */
   boundary(id: string): Promise<ReadingBoundary | null>;
-  since?(id: string, after: number): Promise<SinceSnapshot>;
+  since?(id: string, after: number, page?: number): Promise<SinceSnapshot>;
   /** P2-C: test runs recorded after one change, over the whole session; null if not a change. */
   verification?(id: string, operationId: string): Promise<VerificationTrail | null>;
   /** Moves the mark. Only explicit reader actions call this. */
@@ -208,7 +208,7 @@ export const daemon: DataSource = {
     await req(`/v1/recordings/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
   boundary: async (id) => (await req<{ boundary: ReadingBoundary | null }>(`/v1/recordings/${encodeURIComponent(id)}/boundary`)).boundary,
-  since: (id, after) => req(`/v1/recordings/${encodeURIComponent(id)}/since?after=${after}`),
+  since: (id, after, page = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/since?after=${after}&page=${page}`),
   verification: async (id, operationId) => {
     try {
       return await req<VerificationTrail>(`/v1/recordings/${encodeURIComponent(id)}/verification/${encodeURIComponent(operationId)}`);
@@ -224,10 +224,12 @@ export const daemon: DataSource = {
     let checking = false;
     // EventSource reconnects by itself; each new connection opens with a `sync` of revisions.
     es.addEventListener('sync', (e) => {
+      if (closed) return;
       hooks?.onStatus?.('connected');
       hooks?.onSync?.((JSON.parse((e as MessageEvent).data) as { revisions: Record<string, number> }).revisions);
     });
     es.addEventListener('error', () => {
+      if (closed) return;
       hooks?.onStatus?.('reconnecting');
       if (checking || closed) return;
       checking = true;

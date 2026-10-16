@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**16 October reliability continuation:** [81](review/81-workspace-reliability.md) governs bounded reading continuity, attachment preparation/byte validation, cached connection recovery and explicit review paging across the shared UI. It audits review 75 against the later Legacy-backed Modern implementation; the old missing-3D/parity list is not a new feature queue. Reviews 76–80 still own the visual foundation and surrounding composition. Real native-account acceptance is explicitly assigned to the builder; human/physical/platform checks remain release acceptance.
+
 **16 October proposal awaiting review:** [Repository map and live workflow](review/repository-map-live-workflow-proposal.md) proposes retaining the 3D overview, evaluating a bounded 2D repository focus view and reusing existing chronological passages. It is documentation for Yash's review, not a superseding design decision or approval to adopt React Flow, replace the visualization or change defaults. Agree the next bounded task after review.
 
 **15 October header/material refinement:** [80](review/80-modern-breadcrumb-header.md) replaces 79’s centered two-line Modern header with a horizontal Home / repository / session breadcrumb and right-side utilities. Files and Toolbox share a single neutral gradient token. Legacy visualization and 79’s compact Git reader remain intact. Local typechecks/build and 14 Modern browser journeys pass (final responsive correction rerun); no hosted CI.

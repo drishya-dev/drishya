@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type CurrentFile, type PromptAttachment, type TurnOptions } from '../api.ts';
-import { promptFiles } from '../lib/prompt-files.ts';
+import { promptFiles, PROMPT_BYTES, utf8Bytes, attachmentBytes } from '../lib/prompt-files.ts';
 import { promptDrafts } from '../lib/prompt-drafts.ts';
+import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -36,7 +37,7 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     if (!eligible) return;
     const request = ++revision.current;
     const [w, c] = await Promise.all([workspaceApi.status(id!), workspaceApi.controller(id!)]);
-    if (useApp.getState().recordingId !== id || request !== revision.current) return;
+    if (useApp.getState().source !== source || useApp.getState().recordingId !== id || request !== revision.current) return;
     setWorkspace(w); setController(c); setError(undefined);
   };
   useEffect(() => {
@@ -60,27 +61,29 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     if (!eligible) return;
     const w = await workspaceApi.approve(id!);
     const graph = await source!.graph(id!);
-    if (useApp.getState().recordingId !== id) return;
+    if (useApp.getState().source !== source || useApp.getState().recordingId !== id) return;
     setWorkspace(w); useApp.setState({ graph });
   };
   const inspect = async () => {
     if (!eligible) return;
     const state = await workspaceApi.settings(id!);
-    if (useApp.getState().recordingId === id) { ++revision.current; setController(state); }
+    if (useApp.getState().source === source && useApp.getState().recordingId === id) { ++revision.current; setController(state); }
   };
   const submit = async (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => {
     if (!eligible) return;
     setSubmitting(true);
     ++revision.current;
-    try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments, options); if (useApp.getState().recordingId === id) { ++revision.current; setController(state); } }
-    finally { if (useApp.getState().recordingId === id) setSubmitting(false); }
+    try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments, options); if (useApp.getState().source === source && useApp.getState().recordingId === id) { ++revision.current; setController(state); } }
+    finally { if (useApp.getState().source === source && useApp.getState().recordingId === id) setSubmitting(false); }
   };
   return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect }}>{children}</SessionContext.Provider>;
 }
 
 /** Native live receipt is separate from persisted evidence and disappears on capture. */
 export function NativeTurn({ projection }: { projection: Projection }) {
-  const { controller, submitting } = useSessionWorkspace();
+  const { controller, submitting, error } = useSessionWorkspace();
+  const connection = useApp(s => s.connection);
+  const connected = connection === 'connected' && !error;
   const mode = useApp(s => s.mode);
   const detail = useApp(s => s.reasoningDetail);
   if (mode !== 'history') return null;
@@ -96,8 +99,8 @@ export function NativeTurn({ projection }: { projection: Projection }) {
   const phase = submitting ? 'Sending prompt…' : controller?.state === 'connecting' ? 'Connecting to native session…' : controller?.state === 'approval' ? 'Waiting for your approval' : controller?.phase === 'thinking' ? 'Thinking…' : controller?.phase === 'responding' ? 'Receiving response…' : controller?.phase === 'tool' ? 'Working with tools…' : 'Waiting for the agent…';
   return <section className="native-live-work" aria-label="Native turn progress">
     {prompt && !promptCaptured && <div className="turn"><div className="turn-text"><small className="muted">Submitted here</small><p>{prompt}</p>{!!controller?.attachments?.length && <small>{controller.attachments.map(a => a.name).join(' · ')}</small>}</div></div>}
-    {(submitting || running) && <p className="native-phase" role="status">{phase}</p>}
-    {visible && <div className="prose" data-native-preview={preview.id}><small className="muted">Live from harness · {preview.role === 'reasoning' ? preview.exposure === 'summary' ? 'reasoning summary' : 'exposed thinking' : 'response'}</small>{preview.role === 'reasoning' && detail === 'collapsed' ? <details><summary>Read exposed reasoning</summary><pre>{preview.text}</pre></details> : <pre>{preview.text}</pre>}</div>}
+    {(submitting || running) && <p className="native-phase" role="status">{connected ? phase : 'Connection unavailable · native turn state may have changed'}</p>}
+    {visible && <div className="prose" data-native-preview={preview.id}><small className="muted">{connected ? 'Live from harness' : 'Last received from harness'} · {preview.role === 'reasoning' ? preview.exposure === 'summary' ? 'reasoning summary' : 'exposed thinking' : 'response'}</small>{preview.role === 'reasoning' && detail === 'collapsed' ? <details><summary>Read exposed reasoning</summary><pre>{preview.text}</pre></details> : <pre>{preview.text}</pre>}</div>}
   </section>;
 }
 
@@ -109,27 +112,28 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const files = useApp(s => s.projection?.files);
   const hidden = useApp(s => s.foldersHidden);
   const { workspace, approve } = useSessionWorkspace();
-  const [query, setQuery] = useState('');
-  const [opened, setOpened] = useState(() => {
+  const [query, setQuery] = useWorkspaceState('folders/query', '');
+  const [opened, setOpened] = useWorkspaceState('folders/open', () => {
     const initial = new Set<string>(['']);
     // Open the bounded recorded working set; other folders start collapsed.
     for (const file of projection.files.slice(0, 32)) {
       const parts = file.path.split('/');
-      for (let n = 1; n < parts.length; n++) initial.add(parts.slice(0, n).join('/'));
+      for (let n = 1; n < parts.length && initial.size < 256; n++) initial.add(parts.slice(0, n).join('/'));
     }
     return initial;
   });
   const treeElement = useRef<HTMLDivElement>(null);
-  const [treeScroll, setTreeScroll] = useState(0);
+  const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
   const [treeHeight, setTreeHeight] = useState(600);
   const folderAnchor = useRef<{ path: string; offset: number } | undefined>(undefined);
   const [error, setError] = useState<string>();
+  const [graphRetry, setGraphRetry] = useState(0);
   useEffect(() => {
     if (graph || !source || !id) return;
-    let active = true;
+    let active = true; setError(undefined);
     void source.graph(id).then(g => { if (active && useApp.getState().recordingId === id) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [source, id, graph]);
+  }, [source, id, graph, graphRetry]);
   const paths = useMemo(() => [...new Set((graph?.nodes.map(n => n.path) ?? files?.map(f => f.path) ?? []).filter(p => !(graph?.temporal === 'current' && p.startsWith('.local/')) && !p.startsWith('/') && !/^[A-Za-z]:/.test(p)))].sort(), [graph, files]);
   const tree = useMemo(() => {
     if (query.trim()) return paths.filter(p => p.toLowerCase().includes(query.toLowerCase())).map(path => ({ path, folder: false, depth: 0, name: path }));
@@ -184,16 +188,20 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   if (hidden) return null;
   return <aside className="folder-explorer spine" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Repository files' : 'Session folders'}>
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => useApp.setState({ foldersHidden: true })}>‹</button></header>
-    <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Find repository files' : 'Find session files'} placeholder="Find files…" value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
+    <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Find repository files' : 'Find session files'} placeholder="Find files…" maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" onClick={() => void approve().catch(e => setError(e.message))}>Enable workspace reading<small>Read current files in this folder</small></button>}
-    {error && <p className="bad small" role="alert">{error}</p>}
+    {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
-      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+      if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
       const target = (e.target as HTMLElement).closest<HTMLElement>('[data-tree-index]');
       if (!target || !tree.length) return;
       e.preventDefault();
       const index = Number(target.dataset.treeIndex);
-      const next = e.key === 'Home' ? 0 : e.key === 'End' ? tree.length - 1 : Math.max(0, Math.min(tree.length - 1, index + (e.key === 'ArrowDown' ? 1 : -1)));
+      const row = tree[index];
+      if (!row) return;
+      if (e.key === 'ArrowRight' && row.folder && !opened.has(row.path) || e.key === 'ArrowLeft' && row.folder && opened.has(row.path)) { target.click(); return; }
+      const parent = row.path.slice(0, row.path.lastIndexOf('/'));
+      const next = e.key === 'ArrowRight' ? row.folder && tree[index + 1]?.depth === row.depth + 1 ? index + 1 : index : e.key === 'ArrowLeft' ? Math.max(0, tree.findIndex(item => item.folder && item.path === parent)) : e.key === 'Home' ? 0 : e.key === 'End' ? tree.length - 1 : Math.max(0, Math.min(tree.length - 1, index + (e.key === 'ArrowDown' ? 1 : -1)));
       const el = treeElement.current!;
       if (next * rowHeight < el.scrollTop) el.scrollTop = next * rowHeight;
       else if ((next + 1) * rowHeight > el.scrollTop + el.clientHeight) el.scrollTop = (next + 1) * rowHeight - el.clientHeight;
@@ -202,7 +210,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
       {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
-        if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); return next; }); }
+        if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }
         else useApp.setState(workspace?.approved ? { currentFile: row.path } : { filePanel: row.path });
       }}><span className="folder-disclosure" aria-hidden="true">{row.folder ? opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span>{row.name}</span></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : 'No relative paths captured yet'}</p>}
@@ -274,7 +282,7 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
       <details className="source-utilities"><summary>Copy source range</summary><div className="source-range"><input aria-label="Current source range start" placeholder="From" inputMode="numeric" maxLength={16} value={from} onChange={e => setFrom(e.target.value)} /><input aria-label="Current source range end" placeholder="To" inputMode="numeric" maxLength={16} value={to} onChange={e => setTo(e.target.value)} /><button className="btn ghost small" disabled={!file} onClick={() => void copy(true)}>Copy range</button><span role="status">{copied || 'Loaded page only'}</span></div></details>
     </div>
     <ImportContext path={path} current />
-    {error ? <p className="bad" role="alert">{error}</p> : !file ? <p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><CodeView text={file.text} path={path} startLine={file.start + 1} highlightLines={new Set(matches)} activeLine={activeLine} /></div><footer><span title={`Current file version: ${file.modifiedAt}`}>Lines {file.start + 1}–{file.start + file.returnedLines} of {file.totalLines}{file.redacted ? ' · secrets redacted' : ''}</span><button disabled={!start} onClick={() => { setActiveLine(undefined); setStart(s => Math.max(0, s - 200)); }}>Previous lines</button><button disabled={!file.hasMore} onClick={() => { setActiveLine(undefined); setStart(s => s + 200); }}>Next lines</button><button onClick={() => void copy()}>Copy visible page</button></footer></>}
+    {error ? <p className="bad" role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry current source</button></p> : !file ? <p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><CodeView text={file.text} path={path} startLine={file.start + 1} highlightLines={new Set(matches)} activeLine={activeLine} /></div><footer><span title={`Current file version: ${file.modifiedAt}`}>Lines {file.start + 1}–{file.start + file.returnedLines} of {file.totalLines}{file.redacted ? ' · secrets redacted' : ''}</span><button disabled={!start} onClick={() => { setActiveLine(undefined); setStart(s => Math.max(0, s - 200)); }}>Previous lines</button><button disabled={!file.hasMore} onClick={() => { setActiveLine(undefined); setStart(s => s + 200); }}>Next lines</button><button onClick={() => void copy()}>Copy visible page</button></footer></>}
   </ReadingDialog>;
 }
 
@@ -282,6 +290,7 @@ export function PromptComposer() {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId);
   const recording = useApp(s => s.recording);
+  const connection = useApp(s => s.connection);
   const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect } = useSessionWorkspace();
   const [options, setOptions] = useState<TurnOptions>({});
   useEffect(() => { setOptions({}); }, [id]);
@@ -294,6 +303,10 @@ export function PromptComposer() {
   const input = useRef<HTMLTextAreaElement>(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
+  const attachmentRef = useRef(attachments); attachmentRef.current = attachments;
+  const [preview, setPreview] = useState<PromptAttachment>();
+  const rejectedFiles = useRef<File[]>([]);
+  const [canRetryFiles, setCanRetryFiles] = useState(false);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addPointer, setAddPointer] = useState(false);
@@ -317,12 +330,33 @@ export function PromptComposer() {
     document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', dismiss, true); document.removeEventListener('focusin', dismiss); document.removeEventListener('keydown', escape); };
   }, [addOpen]);
-  const fileLoading = useRef(false);
+  const queuedFiles = useRef(0);
+  const fileQueue = useRef(Promise.resolve());
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; rejectedFiles.current = []; }; }, []);
   const attach = async (files: File[]) => {
-    if (!files.length || fileLoading.current || busy || controller && ['connecting', 'running', 'approval'].includes(controller.state)) return;
-    fileLoading.current = true; setLoadingFiles(true); setError(undefined); setAddOpen(false); setConfirmSend(false); setExclusive(false);
-    try { setAttachments(await promptFiles(files, attachments)); } catch (e) { setError((e as Error).message); }
-    finally { fileLoading.current = false; setLoadingFiles(false); }
+    if (!files.length || busy || controller && ['connecting', 'running', 'approval'].includes(controller.state)) return;
+    if (files.length + queuedFiles.current + attachmentRef.current.length > 32) { setError('Select at most 32 files, including files being prepared.'); return; }
+    queuedFiles.current += files.length;
+    setLoadingFiles(true); setError(undefined); setAddOpen(false); setConfirmSend(false); setExclusive(false);
+    const task = fileQueue.current.then(async () => {
+      if (!active.current) return;
+      try {
+        const items = await promptFiles(files, attachmentRef.current);
+        if (!active.current) return;
+        attachmentRef.current = items; setAttachments(items);
+        // A later successful selection must not erase an earlier rejected batch.
+        rejectedFiles.current = rejectedFiles.current.filter(file => !files.includes(file));
+        setCanRetryFiles(rejectedFiles.current.length > 0);
+      } catch (e) {
+        if (active.current) { rejectedFiles.current = files; setCanRetryFiles(true); setError((e as Error).message); }
+      } finally {
+        queuedFiles.current -= files.length;
+        if (active.current) setLoadingFiles(queuedFiles.current > 0);
+      }
+    });
+    fileQueue.current = task;
+    await task;
   };
   useLayoutEffect(() => {
     const node = input.current;
@@ -355,7 +389,11 @@ export function PromptComposer() {
   }, [source, id]);
   if (source?.kind !== 'daemon' || !id || id.includes('+')) return null;
   const running = controller && ['connecting', 'running', 'approval'].includes(controller.state);
-  const statusLabel = submitting ? 'Sending…' : busy ? 'Working…' : !controller ? 'Checking…' : !controller.available ? 'CLI unavailable' : !workspace?.approved ? 'Workspace access required' : controller.state === 'failed' ? 'Turn failed' : controller.state === 'stopped' ? 'Stopped' : controller.state === 'approval' ? 'Approval needed' : controller.state === 'connecting' ? 'Connecting…' : controller.state === 'running' ? controller.phase === 'thinking' ? 'Thinking…' : 'Running here' : 'Ready';
+  const promptBytes = utf8Bytes(prompt);
+  const overLimit = promptBytes > PROMPT_BYTES;
+  const unavailable = !!connectionError || connection !== 'connected';
+  const cannotSend = busy || loadingFiles || queuedFiles.current > 0 || !prompt.trim() || overLimit || unavailable || !workspace?.approved || !controller?.available;
+  const statusLabel = unavailable ? 'Connection unavailable' : submitting ? 'Sending…' : busy ? 'Working…' : !controller ? 'Checking…' : !controller.available ? 'CLI unavailable' : !workspace?.approved ? 'Workspace access required' : controller.state === 'failed' ? 'Turn failed' : controller.state === 'stopped' ? 'Stopped' : controller.state === 'approval' ? 'Approval needed' : controller.state === 'connecting' ? 'Connecting…' : controller.state === 'running' ? controller.phase === 'thinking' ? 'Thinking…' : 'Running here' : 'Ready';
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true); setError(undefined);
     try { await fn(); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -364,7 +402,7 @@ export function PromptComposer() {
   const connectionSetup = <>      {!workspace?.approved && <button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(approve)}>Enable this workspace</button>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
 </>;
-  const nativeOptions = <>      <details className="permission-policy native-options"><summary>{modern ? 'Connection & permissions' : <>{options.model ?? controller?.settings?.model ?? 'Native settings'} · {controller?.settings?.permission ?? 'Native policy'}</>}</summary><div className="native-options-menu">{modern && connectionSetup}
+  const nativeOptions = <>      <details className="permission-policy native-options"><summary>{modern ? 'Connection & permissions' : <>{options.model ?? controller?.settings?.model ?? 'Native settings'} · {controller?.settings?.permission ?? 'Native policy'}</>}</summary><div className="native-options-menu">{modern && connectionSetup}<small title={workspace?.root}>Target: {workspace?.root ?? 'Workspace unavailable'} · recording {id.slice(-8)}</small><small>Native settings describe the last reported policy; the harness validates permissions when connecting.</small>
         <button disabled={!!running || busy || !workspace?.approved} onClick={() => inspect && void act(inspect)}>Read native settings</button>
         {!!controller?.settings && <><small>{controller.settings.scope === 'connected-session' ? 'Connected session' : 'Workspace defaults'} · {controller.settings.permission ?? 'Policy reported after connecting'}{controller.settings.sandbox && ` · ${controller.settings.sandbox}`}</small>
           <label>Model<select disabled={!!running || busy} value={options.model ?? ''} onChange={e => { setOptions(e.target.value ? { model: e.target.value } : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>
@@ -374,23 +412,26 @@ export function PromptComposer() {
       </div></details></>;
   if (workspace && !workspace.root) return <section ref={element} className="prompt-composer open composer-readonly" aria-label="Harness prompt"><div><strong>{recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} recording</strong><span>Read-only here · no workspace path was captured.</span></div><button className="btn ghost" onClick={() => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); }}>Choose session</button></section>;
   return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}`} aria-label="Harness prompt">
-    {modern ? <div className="modern-composer-top"><span className="modern-composer-identity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg>Continue with {recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness}</span><span role="status" className="modern-composer-state" title={statusLabel}>{workspace?.approved ? statusLabel : 'Needs access'}</span>{nativeOptions}</div> : <>
+    {modern ? <div className="modern-composer-top"><span className="modern-composer-identity" title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg>Continue with {recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness}</span><span role="status" className="modern-composer-state" title={statusLabel}>{workspace?.approved ? statusLabel : 'Needs access'}</span>{nativeOptions}</div> : <>
     <div className="composer-target"><span title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><strong>{recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness ?? 'Native harness'}</strong><span className="composer-workspace">{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'}</span><code>{id.slice(-8)}</code></span><small role="status">{statusLabel}</small></div></>}
 
       {!modern && connectionSetup}
       <input hidden ref={fileInput} type="file" multiple aria-label="Choose prompt files" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <input hidden ref={folderInput} type="file" multiple {...{ webkitdirectory: '' }} aria-label="Choose prompt folder" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
-      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); setAttachments([]); setExclusive(false); setConfirmSend(false); }); }}>
-        {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<span>{a.name}</span><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { setAttachments(items => items.filter((_, i) => i !== index)); setExclusive(false); setConfirmSend(false); }}>×</button></span>)}</div>}
-        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} onPaste={e => { const files = [...e.clipboardData.items].filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => !!file); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
-        <div className="composer-actions">{modern ? <div className="modern-composer-input-tools"><button type="button" className="modern-attachment" title="Attach text or image" aria-label="Attach text or image files" disabled={!!running || busy || loadingFiles} onClick={() => fileInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 7-7a4 4 0 0 1 6 6L11 21a6 6 0 0 1-8-8L14 2m-6 10 7-7" /></svg></button><button type="button" className="modern-attachment" title="Attach folder contents" aria-label="Attach folder" disabled={!!running || busy || loadingFiles} onClick={() => folderInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg></button>{controller?.settings?.models.length ? <><select className="modern-model-select" aria-label="Native model" value={options.model ?? ''} disabled={!!running || busy} onChange={e => { setOptions(e.target.value ? {model:e.target.value} : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select>{!!controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.length && <select className="modern-effort-select" aria-label="Reasoning effort" value={options.effort ?? ''} disabled={!!running || busy} onChange={e => { setOptions({...options,effort:e.target.value || undefined}); setExclusive(false); setConfirmSend(false); }}><option value="">Default effort</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))!.efforts.map(effort => <option key={effort}>{effort}</option>)}</select>}</> : <span className="modern-native-model">{options.model ?? controller?.settings?.model ?? 'Native defaults'}</span>}</div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title="Send prompt" disabled={busy || loadingFiles || !prompt.trim() || !workspace?.approved || !controller?.available}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg>{modern && <span>Send</span>}</button>}</div>
+      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || cannotSend) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); attachmentRef.current = []; setAttachments([]); setPreview(undefined); rejectedFiles.current = []; setCanRetryFiles(false); setExclusive(false); setConfirmSend(false); }); }}>
+        {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<button type="button" className="attachment-preview" onClick={() => setPreview(a)} aria-label={`Preview attachment ${a.name}`}>{a.name}</button><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { attachmentRef.current = attachmentRef.current.filter((_, i) => i !== index); setAttachments(attachmentRef.current); if (preview === a) setPreview(undefined); setExclusive(false); setConfirmSend(false); }}>×</button></span>)}</div>}
+        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = [...e.clipboardData.items].filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => !!file); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
+      <small id="prompt-size-status" className={overLimit ? 'bad' : promptBytes >= 48 * 1024 || attachments.length ? 'muted' : 'sr-only'} role={overLimit ? 'alert' : undefined}>{overLimit ? `Prompt exceeds 64 KiB by ${(promptBytes - PROMPT_BYTES).toLocaleString()} UTF-8 bytes. Your draft is kept.` : `${(PROMPT_BYTES - promptBytes).toLocaleString()} prompt bytes available`}{attachments.length ? ` · ${attachments.length}/32 files · ${attachments.reduce((sum, item) => sum + attachmentBytes(item), 0).toLocaleString()} attachment bytes` : ''}</small>
+        <div className="composer-actions">{modern ? <div className="modern-composer-input-tools"><button type="button" className="modern-attachment" title="Attach text or image" aria-label="Attach text or image files" disabled={!!running || busy || loadingFiles} onClick={() => fileInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 7-7a4 4 0 0 1 6 6L11 21a6 6 0 0 1-8-8L14 2m-6 10 7-7" /></svg></button><button type="button" className="modern-attachment" title="Attach folder contents" aria-label="Attach folder" disabled={!!running || busy || loadingFiles} onClick={() => folderInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg></button>{controller?.settings?.models.length ? <><select className="modern-model-select" aria-label="Native model" value={options.model ?? ''} disabled={!!running || busy} onChange={e => { setOptions(e.target.value ? {model:e.target.value} : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select>{!!controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.length && <select className="modern-effort-select" aria-label="Reasoning effort" value={options.effort ?? ''} disabled={!!running || busy} onChange={e => { setOptions({...options,effort:e.target.value || undefined}); setExclusive(false); setConfirmSend(false); }}><option value="">Default effort</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))!.efforts.map(effort => <option key={effort}>{effort}</option>)}</select>}</> : <span className="modern-native-model">{options.model ?? controller?.settings?.model ?? 'Native defaults'}</span>}</div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title="Send prompt" disabled={cannotSend}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg>{modern && <span>Send</span>}</button>}</div>
         {!modern && <div className="composer-add-menu" hidden={!addOpen} data-pointer-menu={addPointer ? '' : undefined}><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}
-        {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || busy}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
+        {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || cannotSend}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
       </form>
       {!modern && nativeOptions}
+      {canRetryFiles && <button className="btn ghost small" disabled={loadingFiles || busy || !!running} onClick={() => void attach(rejectedFiles.current)}>Retry rejected files</button>}
+      {preview && <ReadingDialog title={`Attachment: ${preview.name}`} close={() => setPreview(undefined)} className="attachment-preview-dialog"><p className="muted">Prepared locally · not sent. Text is redacted by the server before submission; inspect images for secrets.</p>{preview.type === 'image' ? <img alt={preview.name} src={`data:${preview.mime};base64,${preview.data}`} style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain' }} /> : <><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{preview.data.slice(0, 16_384)}</pre>{preview.data.length > 16_384 && <p>Preview limited to 16,384 characters; the complete attachment is prepared.</p>}</>}</ReadingDialog>}
 
       <div className="native-turn-details">
-      {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}</p>}
+      {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}{connectionError && <button className="btn ghost small" disabled={busy} onClick={() => void act(refresh)}>Retry native connection</button>}</p>}
       {controller?.promptRedacted && <p className="muted small">Detected secrets were removed before sending this prompt.</p>}
       {controller?.approvals.map(p => <div className="tool-approval" key={p.id}><strong>{p.name} · approval requested</strong><pre>{p.detail}</pre><button disabled={busy} onClick={() => void act(() => workspaceApi.decide(id, controller.runId!, p.id, false))}>Decline</button><button disabled={busy} onClick={() => void act(() => workspaceApi.decide(id, controller.runId!, p.id, true))}>Allow once</button></div>)}
       </div>

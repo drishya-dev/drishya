@@ -3,6 +3,7 @@ import { redactText } from '../../../../packages/privacy/src/index.ts';
 import { workspaceApi } from '../api.ts';
 import type { GitSnapshot } from '../../../daemon/src/git-types.ts';
 import { useApp } from '../state.ts';
+import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { ReadingDialog } from './ProductShell.tsx';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { GitPatchReader } from './GitPatchReader.tsx';
@@ -36,14 +37,15 @@ function GitReader({ close }: { close: () => void }) {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [selected, setSelected] = useState('');
+  const [selected, setSelected] = useWorkspaceState('git/selected', '');
+  const [pageStart, setPageStart] = useWorkspaceState('git/page', 0);
   const key = `drishya-git-review-v1:${id}`;
   const [marks, setMarks] = useState(() => readMarks(key));
   const [packet, setPacket] = useState<string>();
   useEffect(() => { let active = true; void workspaceApi.gitStatus(id).then(s => { if (active) setConsent(s.approved); }).catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [id]);
-  const refresh = async (start = snapshot?.pageStart ?? 0) => {
+  const refresh = async (start = snapshot?.pageStart ?? pageStart) => {
     setBusy(true); setError(undefined); setPacket(undefined);
-    try { const next = await workspaceApi.gitSnapshot(id, start); if (current()) { setSnapshot(next); setSelected(path => next.files.some(f => f.path === path) ? path : next.files[0]?.path ?? ''); } }
+    try { const next = await workspaceApi.gitSnapshot(id, start); if (current()) { setSnapshot(next); setPageStart(next.pageStart ?? 0); setSelected(path => next.files.some(f => f.path === path) ? path : next.files[0]?.path ?? ''); } }
     catch (e) { if (current()) setError((e as Error).message); }
     finally { if (current()) setBusy(false); }
   };

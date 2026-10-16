@@ -13,6 +13,7 @@ import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { SinceMarkSection } from './SinceMark.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
+import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 
 type View = 'follow' | 'agents' | 'repository';
 type Camera = { x: number; y: number; zoom: number };
@@ -50,8 +51,8 @@ export function CanvasWorkspace({ scene, projection, graph }: { scene: Scene; pr
   const selected = useApp(s => s.selectedOp), filter = useApp(s => s.filter), follow = useApp(s => s.follow);
   const low = useApp(s => s.lowResource), motion = useApp(s => s.motion), mode = useApp(s => s.mode), playing = useApp(s => s.playing);
   const historyPage = useApp(s => s.historyPage), loadWindow = useApp(s => s.loadHistoryWindow), focusObservation = useApp(s => s.focusObservationId);
-  const [view, setView] = useState<View>('follow'), [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 900), [panelFocus, setPanelFocus] = useState('overview');
-  const [size, setSize] = useState({ width: 950, height: 700 }), [camera, setCameraState] = useState<Camera>({ x: 32, y: 24, zoom: 1 });
+  const [view, setView] = useWorkspaceState<View>('canvas/view', 'follow'), [panelOpen, setPanelOpen] = useWorkspaceState('canvas/panel', () => window.innerWidth > 900), [panelFocus, setPanelFocus] = useWorkspaceState('canvas/panelFocus', 'overview');
+  const [size, setSize] = useState({ width: 950, height: 700 }), [camera, setCameraState] = useWorkspaceState<Camera>('canvas/camera', { x: 32, y: 24, zoom: 1 });
   const [query, setQuery] = useState(''), [queryOpen, setQueryOpen] = useState(false), [briefing, setBriefing] = useState(false);
   const [notice, setNotice] = useState(''), [legend, setLegend] = useState(false);
   const viewport = useRef<HTMLDivElement>(null), world = useRef<HTMLDivElement>(null), searchInput = useRef<HTMLInputElement>(null);

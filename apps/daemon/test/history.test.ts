@@ -57,6 +57,13 @@ describe('worker-owned history pages', () => {
     expect(digest.newSteps).toBe(page.scene.total);
     expect(digest.counts.tests).toBe(70);
     expect(digest.tests).toHaveLength(20);
+    const next = await app.history.since(recordingId, -1, 1);
+    const last = await app.history.since(recordingId, -1, 3);
+    expect(next.counts.tests).toBe(70);
+    expect(next.tests).toHaveLength(20);
+    expect(last.tests).toHaveLength(10);
+    expect(new Set([...digest.tests, ...next.tests].map(item => item.operationId)).size).toBe(40);
+    expect((await app.history.since(recordingId, -1, 4)).tests).toHaveLength(0);
     expect(page.projection.operations.length).toBeLessThan(70);
     expect((await app.history.since(recordingId, digest.through)).newSteps).toBe(0);
   });

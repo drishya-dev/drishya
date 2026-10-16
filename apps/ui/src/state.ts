@@ -7,6 +7,7 @@ import { nextMarker, type ComposeInput, type Marker } from '@drishya/scene';
 import type { Config, DataSource, ReaderRecording } from './api.ts';
 import { latestOnly } from './lib/sync.ts';
 import { materialCache } from './lib/artifact-cache.ts';
+import { workspaceMemory } from './lib/workspace-memory.ts';
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
 
 /** One guard for every projection load, so the newest open or reload is the only one that lands. */
@@ -33,7 +34,8 @@ interface State {
   /** Revisions the shown projection is at; compared with the daemon's after a reconnect (B1b). */
   renderedRevisions: Record<string, number>;
   /** The daemon's change stream: 'reconnecting' while it is down. */
-  connection: 'connected' | 'reconnecting';
+  connection: 'connected' | 'reconnecting' | 'signed-out';
+  reconnectAttempt: number;
 
   /** Normal reading shows every committed step; replay alone applies a visibility cursor. */
   mode: 'history' | 'replay';
@@ -119,6 +121,7 @@ export const useApp = create<State>((set, get) => ({
   recordings: [],
   renderedRevisions: {},
   connection: 'connected',
+  reconnectAttempt: 0,
   mode: 'history',
   replayDiagnostics: false,
   step: 0,
@@ -147,6 +150,20 @@ export const useApp = create<State>((set, get) => ({
   async openRecording(id, opts = {}) {
     const src = get().source;
     if (!src) return;
+    const before = get();
+    if (before.recordingId && before.projection && before.mode === 'history') {
+      workspaceMemory(src).session(before.recordingId).set('location', {
+        selectedOp: before.selectedOp, expandedOp: before.expandedOp, currentFile: before.currentFile,
+        filePanel: before.filePanel, filePanelFocus: before.filePanelFocus, filePanelEvidence: before.filePanelEvidence,
+        explore: before.explore, compareAgents: before.compareAgents, mapFocusPath: before.mapFocusPath,
+        filter: before.filter, follow: before.follow, held: before.held,
+        inspectorTab: before.inspectorTab, inspectorWidth: before.inspectorWidth,
+        readingPassageId: before.readingPassageId, start: before.historyPage?.start,
+      });
+    }
+    const memory = workspaceMemory(src);
+    if (opts.at !== undefined || opts.play) memory.clear(id);
+    const saved = memory.session(id).get('location') as (Partial<State> & { start?: number }) | undefined;
     set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
@@ -154,14 +171,15 @@ export const useApp = create<State>((set, get) => ({
       const recordings = await src.recordings();
       const count = recordings.filter((r) => id.split('+').includes(r.id)).reduce((n, r) => n + r.observationCount, 0);
       const bytes = recordings.filter((r) => id.split('+').includes(r.id)).reduce((n, r) => n + (r.sourceBytes ?? 0), 0);
-      const page = (count > 10_000 || bytes > 32 * 1024 * 1024) && src.history ? await src.history(id, { step: typeof opts.at === 'number' ? opts.at : opts.play ? 0 : undefined }) : undefined;
+      const page = (count > 10_000 || bytes > 32 * 1024 * 1024) && src.history ? await src.history(id, { step: typeof opts.at === 'number' ? opts.at : opts.play ? 0 : undefined, start: saved?.follow === false ? saved.start : undefined, selectedOperationId: saved?.selectedOp, filter: saved?.filter }) : undefined;
       const projection = page?.projection ?? await src.projection(id);
       if (!current() || get().recordingId !== id) return; // the user moved on; this response is stale
       const recording = recordings.find((r) => r.id === id) ?? recordings.find((r) => r.id === id.split('+')[0]) ?? recordings[0];
       const mode = opts.at === undefined && !opts.play ? 'history' : 'replay';
       const total = page?.scene.total ?? projection.timeline.length;
       const step = mode === 'history' || opts.at === 'end' ? total : Math.max(0, Math.min(opts.at ?? 0, total));
-      set({ error: undefined, projection, historyPage: page, recording, recordings, renderedRevisions: page?.revisions ?? revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < total });
+      const { start: _start, ...location } = saved ?? {};
+      set({ ...location, error: undefined, projection, historyPage: page, recording, recordings, renderedRevisions: page?.revisions ?? revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < total });
     } catch (error) {
       if (current() && get().recordingId === id) set({ error: (error as Error).message, playing: false });
     }
@@ -201,6 +219,7 @@ export const useApp = create<State>((set, get) => ({
   seek(step, opts) {
     const p = get().projection;
     if (!p) return;
+    if (get().mode === 'history' && get().source && get().recordingId) workspaceMemory(get().source!).clear(get().recordingId!);
     const s = Math.max(0, Math.min(get().historyPage?.scene.total ?? p.timeline.length, Math.round(step)));
     set({ mode: 'replay', step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
     if (get().historyPage) void get().loadHistoryWindow({ step: s, ...(!get().follow && get().readingPassageId ? { pinnedPassageIds: [get().readingPassageId!] } : {}) }).catch((error) => set({ error: error.message }));

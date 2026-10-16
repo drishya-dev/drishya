@@ -348,7 +348,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       if (sub === 'since' && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');
-        return json(res, await app.history.since(id, intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER)));
+        return json(res, await app.history.since(id, intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER), intParam(url, 'page', 0, 0, 1_000_000)));
       }
       if (sub === 'boundary' && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');

@@ -1,9 +1,13 @@
 import type { PromptAttachment } from '../api.ts';
 
+export const PROMPT_BYTES = 64 * 1024;
+export const utf8Bytes = (text: string) => new TextEncoder().encode(text).length;
+export const attachmentBytes = (item: PromptAttachment) => item.type === 'text' ? utf8Bytes(item.data) : item.data.length * 3 / 4 - (item.data.endsWith('==') ? 2 : item.data.endsWith('=') ? 1 : 0);
+
 export async function promptFiles(files: File[], existing: PromptAttachment[]): Promise<PromptAttachment[]> {
   if (files.length + existing.length > 32) throw new Error('Select at most 32 files; choose a smaller folder or individual files.');
-  let total = existing.reduce((sum, a) => sum + (a.type === 'image' ? a.data.length * .75 : new TextEncoder().encode(a.data).length), 0);
-  let text = existing.filter(a => a.type === 'text').reduce((sum, a) => sum + new TextEncoder().encode(a.data).length, 0);
+  let total = existing.reduce((sum, a) => sum + attachmentBytes(a), 0);
+  let text = existing.filter(a => a.type === 'text').reduce((sum, a) => sum + utf8Bytes(a.data), 0);
   const result: PromptAttachment[] = [];
   for (const file of files) {
     const name = file.webkitRelativePath || file.name;
