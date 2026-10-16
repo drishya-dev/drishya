@@ -68,7 +68,7 @@ export function Markdown({ text, onPath, document = false }: { text: string; onP
 
 function inline(s: string, onPath?: (p: string) => void): ReactNode[] {
   const out: ReactNode[] = [];
-  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(([^)]+)\))|(\*[^*\n]+\*|_[^_\n]+_)/g;
+  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(([^)]+)\))|(\*[^*\n]+\*|(?<![\w_])_[^_\n]+_(?![\w_]))/g;
   let last = 0;
   let k = 0;
   for (const m of s.matchAll(re)) {

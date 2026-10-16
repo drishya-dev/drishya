@@ -15,3 +15,7 @@ it('reads one complete redacted document across source pages and rejects changed
  await expect(loadWorkspaceDocument(async start=>start===0?page(first,0,201,true):{...page('end',200,201),modifiedAt:'two'})).rejects.toThrow('changed');
  await expect(loadWorkspaceDocument(async()=>page('x',0,5001,true))).rejects.toThrow('5,000');
 });
+
+it('does not consume underscores inside captured tool identifiers',()=>{
+ expect(renderToStaticMarkup(createElement(Markdown,{text:'Captured outcome for mcp__arrival__inspect.'}))).toContain('mcp__arrival__inspect');
+});
