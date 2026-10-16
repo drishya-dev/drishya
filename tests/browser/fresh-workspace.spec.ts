@@ -41,6 +41,18 @@ test.afterAll(async () => {
   if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('opening stored history catches up its native journal without enabling a live watch',async({page})=>{
+  const path=join(dir,'catch-up.jsonl'), timestamp='2026-10-16T12:00:00Z';
+  const meta=JSON.stringify({timestamp,type:'session_meta',payload:{id:'catch-up',cwd:root}})+'\n';
+  writeFileSync(path,meta);
+  const {recordingId}=await app.ingest.importSource('codex',path);
+  writeFileSync(path,meta+JSON.stringify({timestamp,type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'JOURNAL_CATCHUP_CONFIRMED'}]}})+'\n');
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
+  await expect(page.locator('.history')).toContainText('JOURNAL_CATCHUP_CONFIRMED');
+  expect(app.ingest.isLive(recordingId)).toBe(false);
+});
+
 // The previous independent shell was retired by the builder. These tests protect
 // the new contract: Modern shares Legacy behavior and only changes its surroundings.
 for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: imported session, home, settings and reload`, async ({ page }) => {

@@ -46,6 +46,7 @@ function WorkspaceViewer() {
   const mapVisible = useApp((s) => s.mapVisible);
   const recordingId = useApp((s) => s.recordingId);
   const source = useApp((s) => s.source);
+  const historyMode = useApp(s=>s.mode==='history');
   const step = useApp((s) => s.step);
   const filter = useApp((s) => s.filter);
   const selectedOp = useApp((s) => s.selectedOp);
@@ -61,6 +62,24 @@ function WorkspaceViewer() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [mapError, setMapError] = useState<string>();
   const [mapRetry, setMapRetry] = useState(0);
+  const [catchupError,setCatchupError]=useState<string>();
+  const [catchupRetry,setCatchupRetry]=useState(0);
+
+  useEffect(()=>{
+    if(!historyMode||source?.kind!=='daemon'||!source.refreshRecording||!recordingId||recordingId.includes('+')) return;
+    let disposed=false, timer:ReturnType<typeof setTimeout>|undefined;
+    setCatchupError(undefined);
+    const catchUp=async()=>{
+      try {
+        const result=await source.refreshRecording!(recordingId);
+        if(disposed||useApp.getState().source!==source||useApp.getState().recordingId!==recordingId) return;
+        if(result.added) await useApp.getState().reloadProjection();
+        if(!disposed&&result.more) timer=setTimeout(()=>void catchUp(),150);
+      } catch(error) {if(!disposed)setCatchupError((error as Error).message);}
+    };
+    void catchUp();
+    return ()=>{disposed=true;clearTimeout(timer);};
+  },[source,recordingId,historyMode,catchupRetry]);
 
   const scene = useMemo(() => historyPage?.scene ?? (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [historyPage, projection, step, filter, selectedOp]);
   const historical = useMemo(() => historyPage?.projection ?? (projection ? asOfProjection(projection, step) : undefined), [historyPage, projection, step]);
@@ -139,6 +158,7 @@ function WorkspaceViewer() {
     <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${developerWorkspace ? ' developer-workspace-open' : ''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <WorkspaceHeader scene={scene} projection={projection} />{experience === 'studio' ? <WorkbenchSources projection={historical} /> : <WorkspaceBar />}
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
+      {catchupError&&<div className="notice bad" role="alert">Local journal refresh failed: {catchupError} <button className="btn" onClick={()=>setCatchupRetry(n=>n+1)}>Retry journal refresh</button></div>}
       <div className="main" ref={main}>
         {mapVisible && !developerWorkspace && <MapCanvas graph={graph} heat={scene.heat} passagePaths={passagePaths} readingRect={reading} />}
         {mapVisible && mapError && <div className="map-recovery" role="alert">Repository map unavailable: {mapError}<button className="btn" onClick={() => setMapRetry(n => n + 1)}>Retry repository map</button></div>}

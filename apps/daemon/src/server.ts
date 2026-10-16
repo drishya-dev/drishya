@@ -250,6 +250,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
 
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
+      if (sub === 'refresh' && m === 'POST') {
+        if(id.includes('+')) throw new HttpError(400,'Refresh one local session at a time.');
+        const recording=app.recording(id);
+        if(!recording.sourcePath) return json(res,{added:0,more:false});
+        return json(res,await app.ingest.sync(id,{turnBytes:16*1024*1024,acceptUnterminated:false}));
+      }
       if (sub === 'workspace' && !subId && m === 'GET') return json(res, workspace.status(id));
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
