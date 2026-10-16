@@ -50,3 +50,16 @@ Both typechecks, production build and415units/68files pass. Three real-Git multi
 ## Commit policy
 
 Each purpose is a separate coherent commit: sustained live/black-screen fix, manual scroll positioning, complete Markdown/code reading, render recovery, retained-layout geometry, Home introduction, HUD controls, palette choices, and durable docs. Preserve user package-manager/artwork files. Never squash these increments locally into one giant authored change; normal final PR squash policy is separate from this reviewable branch history.
+
+
+## Follow-up: long commands containing `@`
+
+The builder supplied a wrapped PowerShell `@'` Python-script command as a reproduction. `Highlighted` previously returned the entire line uncolored above2000characters; long JSON-encoded scripts often hit that threshold. The shared highlighter now uses a forward lexical scan with bounded colored spans (512tokens/64KiB per programming line), preserving the complete remaining text as plain text rather than disabling the entire line. Scoped package/decorator names receive semantic property color. Unterminated quotes are consumed once instead of repeatedly searching a global string regex. This remains a lexical display aid, not an embedded-language/multiline parser. Document prose/plain logs remain uncolored by design.
+
+| Before | After | Why |
+|---|---|---|
+| Entire long command lost color | Long strings/functions/numbers retain bounded semantic highlighting | Remove the abrupt2000-character visual cliff without unbounded DOM spans. |
+| `@scope/package`/decorator prefix lacked a token | Property token preserving exact characters and following syntax | At-sign syntax should not interfere with subsequent expressions. |
+| Only short material exercised highlighting | Regression covers long wrapped `@'` scripts, malformed/huge strings, token bounds and browser-computed color/exact Copy | Verify presentation and source fidelity together. |
+
+Validation is recorded in the latest STATUS follow-up. No captured text, command execution, native policy or output indexing changes.

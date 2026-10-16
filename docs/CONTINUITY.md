@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**Latest syntax fix — 16 October:** Shared highlighter no longer drops all colors above2000characters. Long wrapped `@'` script commands retain bounded lexical color, scoped package/decorator names are recognized, and exact captured text/Copy are unchanged.418units/69files, both typechecks/build and4focused browser journeys pass; no hosted CI/native turn. Existing ordered queue84 remains next.
+
 **Current handoff — 16 October, PR68 / `codex/multi-file-workspace`:** Modern shares Legacy's actual visualization and is the default. Keep independent left Files/Repository and right Workspace/Git controls with no center toolbar allocation. Delivered navigation-only daemon recovery, multi-file/split source reading/local drafts, live-refresh starvation/scroll-anchor repairs, complete bounded Markdown reading/fenced Copy/Wrap, Home session library, floating HUD/collapse controls and seven presets. Follow84 for the complete ordered queue,85 for critical findings and86 for current UI contract/validation. Preserve user package-manager files and untracked artwork. Each purpose has its own commit. No hosted CI.
 
 **Validation:** Both typechecks/build and415units/68files pass.157 distinct browser journeys pass across the full run and focused rerun (including3private actual recordings);2 opt-in suites skipped. Full run initially caught an obsolete palette-equality expectation, corrected and rerun explicitly; not a single all-green full-run claim. No hosted CI.

@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Long command syntax follow-up
+
+- **When:** 16 October 2026, same PR68 branch; independent bug-fix commit.
+- **Fixed:** Wrapped commands above2000characters previously became entirely uncolored, often visible around PowerShell `@'` script blocks. Shared highlighter now scans forward with bounded spans/characters, colors scoped package/decorator names and preserves every captured character. It remains a lexical aid, not a multiline embedded-language parser. No command/capture/native-policy changes.
+- **Validation:** Both typechecks, production build, **418 units/69 files** and **4 focused local browser journeys pass** (long at-sign string colors/computed CSS/exact Copy, structured output, long labels/mobile bounds, every observed action kind). Earlier broad browser acceptance remains recorded below; no hosted CI or native turn. Private/user package-manager/artwork files excluded.
+- **Next:** Ordered queue84 and critical review85 remain active; this fix does not supersede whole-file find/current-version/investigation/native acceptance tasks. See86 follow-up.
+
 ### Yash with Codex — Modern daily workflow, recovery, reading and HUD
 
 - **When:** 16 October 2026, `codex/multi-file-workspace` / [PR68](https://github.com/drishya-dev/drishya/pull/68), based on integrated main `b3184bd`. Every coherent purpose is a separate commit; do not collapse this working history into a single authored increment.
