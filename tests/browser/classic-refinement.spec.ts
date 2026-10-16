@@ -105,6 +105,9 @@ test('usage expands inside the utility menu without clipping at narrow widths', 
     await page.locator('.workspace-menu .usage-peek > summary').click();
     const panel = page.locator('.workspace-menu .usage-peek > div');
     await expect(panel).toBeVisible();
+    // scrollWidth is intrinsic; boundingBox includes the pointer-entry scale of
+    // the parent menu. Compare the settled allocation, retaining the exact bound.
+    await expect.poll(() => page.locator('.workspace-menu > div').evaluate(el => el.getAnimations({ subtree: true }).length)).toBe(0);
     const box = (await panel.boundingBox())!;
     const menu = (await page.locator('.workspace-menu > div').boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(menu.x);
