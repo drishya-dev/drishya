@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | **Spatial map and native attachments [#51](https://github.com/drishya-dev/drishya/pull/51) merged (`29a7c75`, review 37), following native progress #50 (`6bf89ef`) and scroll-preserved motion/prompt rail #49 merged (`e34ee14`, review 35), following compact connected workspace and upward-only Follow #48 merged on main (`2de25da`, review 34), after connector fix `8296135` and smooth follow #47 (`e1ca4d3`), following replay/prompt #46 (`79e5d82`), following request audit #45 (`94d459e`), following centred workspace #44, unified stage #43, #42, connected workspace #41 and P1 #38–40.** B0-B4 engineering and P1/P2 reading utility are implemented; human visual acceptance and public release acceptance remain separate |
+| **Milestone** | Main includes Harsh PR66 map proposal (`c809a1b`) and PR67 reliability (`b3184bd`). [PR68](https://github.com/drishya-dev/drishya/pull/68), `codex/multi-file-workspace`, adds integrated Workspace/Modern daily-use improvements and remains for the other builder's review. B0–B4 and P1/P2 base capabilities exist; this is not broad release/native/human acceptance. |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -31,14 +31,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Integrated workspace and independent adoption review
+### Yash with Codex — Modern daily workflow, recovery, reading and HUD
 
-- **When:** 16 October 2026, `codex/multi-file-workspace`, based on integrated main `b3184bd`.
-- **Merged:** PR66 proposal `c809a1b`, PR67 reliability `b3184bd`; preserved Harsh's authored work and both handoffs. Restored the previous centered Modern header (`9b26b64`), retained logo/panel material. Found/fixed queued rejected-attachment retry before merging67 (`7cea284`). React Flow/ELK remains proposed, not adopted.
-- **Delivered:** [82](review/82-developer-workspace.md), strict current UTF-8 (`851cf03`) and multi-file Workspace (`35740b1`): eight tabs, resizable panes, narrow single-pane switch, retained per-file reading, existing import connections, small complete-source local drafts, explicit download/lifetime, captured-reading recovery, native edit/command prompt preparation. Removed redundant quick-reader copy-range controls. No direct source writes or terminal endpoint.
-- **Validation:** Both typechecks/build; full check **395 units/65 files**, subsequent concurrent-draft regression adds one passing test (**396 represented**); final **45 local browser journeys**, including actual existing Codex/Claude redacted recordings, pass. No journal imports, native turns or hosted CI. Browser checks establish unchanged disk/zero submission during preparation, draft export, source reading continuity and responsive/version isolation. Code review repairs documented in82. Private screenshots/store excluded.
-- **Critical review:** Three independent reviewers, consolidated in [83](review/83-independent-developer-review.md). Strong evidence/review utility; readiness roughly5.5–6/10, not a sole IDE replacement. Next: coherent evidence/current-source/correction/check loop, whole-file find, review discoverability and meaningful map neighborhoods. Native-account, human sustained reading, physical/platform/accessibility acceptance stays open. CUA unavailable; source, automated journeys and rendered frames are the evidence.
-- **Publication:** Major Workspace increment is on its own branch for the other builder's review. User package-manager and artwork files are untouched/uncommitted.
+- **When:** 16 October 2026, `codex/multi-file-workspace` / [PR68](https://github.com/drishya-dev/drishya/pull/68), based on integrated main `b3184bd`. Every coherent purpose is a separate commit; do not collapse this working history into a single authored increment.
+- **Merged earlier:** PR66 proposal `c809a1b`, PR67 reliability `b3184bd`, preserving Harsh's authorship; React Flow/ELK remains proposal. Prior centered-header rollback retained as history; latest floating HUD explicitly supersedes its surrounding chrome only.
+- **Delivered:** Eight-tab/two-pane Workspace/current source/local volatile drafts/native preparation ([82](review/82-developer-workspace.md)); consistent tool envelope formatting/readable card minimums; independent edge controls; Modern default; bounded daemon-backed navigation recovery/CAS/privacy/forget; complete merged Home session library and Drishya introduction; sustained live refresh/Follow restart; React185/manual-scroll positioning repairs and error recovery; Markdown Document/Source and fenced exact Copy/Wrap; header HUD/minimized composer with Stop/status/Toolbox; seven effective Modern palettes. Shared actual visualization and native/privacy boundaries remain.
+- **Validation:** Both typechecks, production build and **415 units/68 files pass**. Three real-Git integration cases now have an explicit20s test budget after measuring two-snapshot journeys above5s on Windows; assertions/product limits unchanged. Browser validation: the full156-case run had153 passes,2 explicit opt-in skips and one obsolete palette-parity expectation; its corrected focused rerun passes. Three additional actual redacted recordings (Skeletongraph Codex, Skeletongraph Claude, Drishya) pass history/manual-scroll/text-wrap/multi-file reading checks. Thus157 distinct browser journeys have passing final results across the full run and focused rerun; no single all-green full-suite claim. Five focused HUD/palette/Git journeys also passed earlier. No hosted CI or real native turn. Private stores/screenshots and user package-manager/artwork excluded.
+- **Critical review and remaining work:** [84](review/84-modern-daily-workflow.md) is the ordered complete request queue; [85](review/85-modern-component-review.md) records independent developer/component gaps; [86](review/86-hud-palettes-and-reading.md) records current HUD/palette/reading contract. Next: faithful keyboard/path-line Markdown navigation/list structure, whole-file find/current version continuity, joined evidence/source/correction/check workflow, reader density and useful typed map neighborhoods. Native-account, sustained human reading, physical/platform/accessibility gates remain open. CUA unavailable; automated journeys/source/rendered frames are the evidence.
+- **Publication:** PR68 awaits other-builder review; no automatic merge or CI dispatch. The running local daemon was not silently restarted. Refresh serves the built frontend; new metadata endpoints require a normal restart of the existing local server.
 
 ### Harsh with Codex — Everyday workspace reliability
 
@@ -137,6 +137,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Next/limits:** Human visual preference/comprehension and real native-account/physical/platform/accessibility acceptance remain separate. Local preview on 5175 (`?demo=live`); screenshots and synthetic QA stores stay local and outside candidate files. No real recordings imported or native prompts submitted by this pass. Existing PR #61 remains separate.
 
 ## Next up
+
+**Current ordered work:** [84](review/84-modern-daily-workflow.md) supersedes the historical checklist below for active product/UI tasks. Keep every builder request and review disposition there; use85 for critical findings and86 for current HUD/palette contract. Native/platform/human acceptance remains release work.
 
 **Current backend-first sequence:**
 
@@ -364,3 +366,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 
 **11 October design decision:** Prior Studio becomes default Classic; a distinct Studio organizes captured working files, continuous materials and an evidence/tool desk. Legacy preserves the older design. Backend evidence/controller engines stay shared; a local real-preview reference never publishes private journals or substitutes synthetic evidence. See [47](review/47-studio-workbench.md).
+
+| 2026-10-16 | Persist bounded navigation metadata, never content or grants | Builder requested recovery after accidental/intentional close. Own-store CAS checkpoints re-fetch source and recheck consent; drafts remain volatile/exportable. | review84; working-locations |
+| 2026-10-16 | Modern default with independent overlays and seven semantic palettes | Latest builder HUD/palette direction supersedes earlier three-palette limit. Keep Legacy visualization/backups; correct CSS precedence and collapsed lifecycle feedback. | review85–86 |
+| 2026-10-16 | Keep purpose-specific branch commits and local validation | Builder explicitly requires independent backtracking and no hosted Actions until final publication candidate. Final PR merge method remains governed by repository policy. | PR68; review86 |
