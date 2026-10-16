@@ -644,3 +644,12 @@ test('Workspace Markdown opens as a readable document with an explicit exact-sou
   await document.getByRole('button',{name:'Document',exact:true}).click();
   await expect(document.getByRole('heading',{name:'Workspace guide'})).toBeVisible();
 });
+
+test('an unexpected rendering failure has a usable recovery surface instead of a black screen',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.route(`**/v1/recordings/${ids.codex}/projection`,route=>route.fulfill({json:{...app.projection(ids.codex!),operations:null}}));
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await expect(page.getByRole('heading',{name:'This view could not be displayed'})).toBeVisible();
+  await page.getByRole('button',{name:'All sessions',exact:true}).click();
+  await expect(page.locator('.mh-home')).toBeVisible();
+});
