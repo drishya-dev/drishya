@@ -33,6 +33,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Harsh with Codex — Repository map and live workflow proposal
 
+- **PR:** [#66](https://github.com/drishya-dev/drishya/pull/66) open into main; Yash (`yashdoke7`) review requested. Labels: documentation, area: map, area: canvas, decision. No implementation or merge performed.
+
 - **When:** 16 October 2026, isolated branch `codex/repository-workflow-proposal`, based on main `15974a4`. The builder requested a written proposal and a PR for Yash before implementation.
 - **Proposed:** [Repository map and live workflow](review/repository-map-live-workflow-proposal.md): retain the current 3D overview; compare a bounded optional 2D folder/import focus view with the existing renderer; preserve chronological passages, terminal evidence and shared evidence/navigation owners. React Flow/ELK remain candidates, not adopted dependencies.
 - **Review gate:** Yash should accept/revise/reject the six explicit questions. No visualization/default/native/schema change is approved by this document; agree the first bounded implementation task after review. Current Modern-on-Legacy and Canvas boundaries remain authoritative.

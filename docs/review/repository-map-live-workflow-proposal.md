@@ -2,6 +2,8 @@
 
 16 October 2026 · Harsh with Codex · proposed for Yash's review
 
+Review: [PR #66](https://github.com/drishya-dev/drishya/pull/66), with Yash (`yashdoke7`) requested. Await review before agreeing on implementation.
+
 **Status: proposal only.** This PR records a direction and the decisions needed
 before implementation. Merging this document does not approve React Flow adoption,
 a renderer replacement, a new UI version or a default change. Yash's review and
