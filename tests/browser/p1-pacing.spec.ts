@@ -382,6 +382,7 @@ test('content gets reading width and origin tethers use the visible instrument',
   expect(sourceWidth).toBeLessThanOrEqual(420);
   expect(sourceWidth).toBeGreaterThan((await verification.boundingBox())!.width);
   await page.mouse.move(0, 0);
+  await page.locator('.instrument.k-test').scrollIntoViewIfNeeded();
   await verification.locator('.op-head').hover();
   const tether = page.locator('.origin-thread[data-origin-type="Tool instrument"]');
   await expect(tether).toHaveCount(1);
