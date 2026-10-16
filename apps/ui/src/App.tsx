@@ -10,6 +10,8 @@ import { setMotion, useApp } from './state.ts';
 import { localPreviewId } from './lib/local-preview.ts';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation.tsx';
 import { useExperience } from './lib/experience.ts';
+import { restoreWorkingLocations, useWorkingRecovery } from './lib/working-recovery.ts';
+import { workspaceMemory } from './lib/workspace-memory.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
 
@@ -49,7 +51,9 @@ export function App() {
         const auth = await signIn();
         if (auth === 'ok') {
           const recordings = await daemon.recordings();
-          useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings });
+          const saved=await restoreWorkingLocations().catch(()=>undefined);
+          if(saved)workspaceMemory(daemon).restore(saved);
+          useApp.setState({ source: daemon, config: await daemon.config(), screen: 'home', recordings, resumeRecordingId:saved?.last&&recordings.some(r=>r.id===saved.last)?saved.last:undefined,recoveryState:saved?'saved':'unavailable' });
           const preview = new URLSearchParams(location.search).get('demo') === 'local' ? localPreviewId() : undefined;
           const id = p.recording ? decodeURIComponent(p.recording) : recordings.some(r => r.id === preview) ? preview : undefined;
           if (id) await useApp.getState().openRecording(id, p.at === undefined ? undefined : { at: p.at });
@@ -84,6 +88,7 @@ export function App() {
   }, []);
 
   usePlayback();
+  useWorkingRecovery();
   useKeyboard();
   useLiveUpdates();
 

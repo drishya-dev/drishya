@@ -301,6 +301,7 @@ export function PromptComposer() {
   const [confirmSend, setConfirmSend] = useState(false);
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
   const attachmentRef = useRef(attachments); attachmentRef.current = attachments;
+  useEffect(()=>{if(!attachments.length)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[attachments.length]);
   const [preview, setPreview] = useState<PromptAttachment>();
   const rejectedFiles = useRef<File[]>([]);
   const [canRetryFiles, setCanRetryFiles] = useState(false);

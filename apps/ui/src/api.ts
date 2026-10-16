@@ -122,6 +122,8 @@ export interface ControllerStatus {
 }
 /** Explicit local workspace/controller capabilities; offline bundles never call them. */
 export const workspaceApi = {
+  workingLocations: () => req<import('../../../packages/contracts/src/working-locations.ts').WorkingLocations>('/v1/working-locations'),
+  saveWorkingLocations: (snapshot:import('../../../packages/contracts/src/working-locations.ts').WorkingLocations,keepalive=false) => req<{saved:boolean;revisions:Record<string,number>}>('/v1/working-locations',{method:'PUT',json:snapshot,keepalive}),
   gitStatus: (id: string) => req<{ approved: boolean; scope: 'current-git' }>(`/v1/recordings/${encodeURIComponent(id)}/git`),
   approveGit: (id: string) => req<{ approved: boolean; scope: 'current-git' }>(`/v1/recordings/${encodeURIComponent(id)}/git/approve`, { method: 'POST', json: {} }),
   gitSnapshot: (id: string, start = 0) => req<import('../../daemon/src/git-types.ts').GitSnapshot>(`/v1/recordings/${encodeURIComponent(id)}/git/snapshot?start=${encodeURIComponent(start)}`),

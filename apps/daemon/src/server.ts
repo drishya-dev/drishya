@@ -28,6 +28,7 @@ import { storageUsage } from './storage.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { HarnessController } from './controller.ts';
+import { readWorkingLocations, saveWorkingLocations } from './working-locations.ts';
 
 export interface ServerOptions {
   port?: number;
@@ -206,6 +207,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     const parts = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent); // drop "v1"
     const [a, id, sub, subId] = parts;
     if (a === 'storage' && m === 'GET') return json(res, await storageUsage(app.store.dataDir));
+    if (a === 'working-locations' && m === 'GET') return json(res, readWorkingLocations(app));
+    if (a === 'working-locations' && m === 'PUT') return json(res, saveWorkingLocations(app, await readJson(req,256*1024)));
+    if (a === 'working-locations' && m === 'DELETE') {app.store.db.prepare("DELETE FROM meta WHERE key='ui-working-locations-v1'").run();return json(res,{cleared:true});}
 
     if (a === 'config' && m === 'GET') {
       return json(res, {

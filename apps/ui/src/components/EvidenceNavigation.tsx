@@ -61,6 +61,7 @@ export function useEvidenceState<T>(key: string, initial: T | (() => T)): [T, Di
     const base = previous.visit === visit && previous.key === key ? previous.value : read();
     const next = typeof update === 'function' ? (update as (value: T) => T)(base) : update;
     visit?.memory.set(key, next);
+    if(visit)window.dispatchEvent(new Event('drishya-location-change'));
     if (visit && visit.memory.size > 64) visit.memory.delete(visit.memory.keys().next().value!);
     return { visit, key, value: next };
   });
@@ -84,6 +85,7 @@ export function useEvidenceScroll(ref: RefObject<HTMLElement | null>, key: strin
     const save = () => {
       if (pending) return;
       visit.memory.set(`scroll/${key}`, { top: root.scrollTop, left: root.scrollLeft });
+      window.dispatchEvent(new Event('drishya-location-change'));
       if (visit.memory.size > 64) visit.memory.delete(visit.memory.keys().next().value!);
     };
     const interact = () => { pending = false; };

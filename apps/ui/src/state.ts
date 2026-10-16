@@ -27,6 +27,9 @@ interface State {
   error?: string;
   recordings: ReaderRecording[];
   recordingId?: string;
+  resumeRecordingId?: string;
+  recoveryState?: 'saved' | 'unavailable';
+  recoveryError?: string;
   recording?: RecordingSummary;
   projection?: Projection;
   historyPage?: HistoryPage;
