@@ -243,11 +243,37 @@ test('long captured at-sign scripts retain real syntax colors and exact command 
   const card=page.locator(`article[data-op-id="${op.id}"]`);
   await card.scrollIntoViewIfNeeded();
   const material=card.locator('.command-material');
-  await expect(material.locator('.tk-str')).toContainText("@'");
-  await expect(material.locator('.tk-num')).toHaveText('500');
-  expect(await material.locator('.tk-str').evaluate(el=>getComputedStyle(el).color!==getComputedStyle(el.parentElement!).color)).toBe(true);
+  await expect(material.locator('.tk-str').first()).toHaveText("@'");
+  expect(await material.locator('.tk-str').first().evaluate(el=>getComputedStyle(el).color!==getComputedStyle(el.parentElement!).color)).toBe(true);
   await material.getByRole('button',{name:'Copy command',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(script);
+  await card.getByRole('button',{name:'Show raw request',exact:true}).click();
+  await expect(material.locator('.tk-num')).toHaveText('500');
+  await material.getByRole('button',{name:'Copy captured request',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
+});
+
+test('tool cards retain visible results for short and long input/output combinations',async({page})=>{
+  const original=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+  let bundle=original;
+  await page.route('**/demo/bundle.json',route=>route.fulfill({json:bundle}));
+  for(const kind of ['shell','mcp','other']) for(const longInput of [false,true]) for(const longOutput of [false,true]) {
+    bundle=structuredClone(original);
+    const op=bundle.projection.operations.find((item:any)=>item.kind==='shell');
+    const input=longInput?Array.from({length:200},(_,i)=>`request line ${i}`).join('\n'):'small request';
+    const output='OUTCOME_VISIBLE\n'+(longOutput?'result line\n'.repeat(200):'done');
+    op.kind=kind;op.status='ok';op.detail=kind==='shell'?{kind,command:input,outputPreview:output,exitCode:0}:kind==='mcp'?{kind,server:'review',tool:'check',input:{query:input},resultPreview:output}:{kind,input:{query:input},resultPreview:output};
+    await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+    const card=page.locator(`article[data-op-id="${op.id}"]`);
+    await card.scrollIntoViewIfNeeded();
+    const result=card.locator('.result-content');
+    await expect(result).toContainText('OUTCOME_VISIBLE');
+    const bounds=await card.boundingBox(), outcome=await result.boundingBox();
+    expect(outcome!.y+Math.min(30,outcome!.height),`${kind}/${longInput}/${longOutput}`).toBeLessThan(bounds!.y+bounds!.height);
+    const request=card.locator(kind==='shell'?'.command-request':'.tool-input');
+    if(longInput) expect(await request.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+    if(longOutput) expect(await result.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+  }
 });
 
 test('recovered Modern toolbox preserves actual instrument origins, filters and MCP drawers', async ({ page }) => {

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { toolOutputText } from '../src/lib/tool-output';
 describe('structured tool output display', () => {
+  it('decodes nested MCP execution responses and arrays without dropping mixed evidence',()=>{
+    const result={output:'first\nsecond',exit_code:0};
+    expect(toolOutputText(JSON.stringify({content:[{type:'text',text:JSON.stringify(result)}]})).text).toBe('first\nsecond\nExit code: 0');
+    expect(toolOutputText(JSON.stringify([result,result])).text).toBe('first\nsecond\nExit code: 0\n\nfirst\nsecond\nExit code: 0');
+    const mixed=JSON.stringify([result,{important:'unrecognized'}]);
+    expect(toolOutputText(mixed)).toEqual({text:mixed,decoded:false});
+  });
   it('decodes native execution JSON strings once and retains outcome information', () => {
     const output = 'first line\nsecond line\nconst pattern = "\\n";';
     const raw = JSON.stringify({i:0,status:'fulfilled',value:{output,exit_code:0,wall_time_seconds:1}});

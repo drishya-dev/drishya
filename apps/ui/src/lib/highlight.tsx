@@ -45,6 +45,8 @@ export function tokenize(line: string, lang?: string): Tok[] {
     } else if (line.startsWith('/*', cursor)) {
       const close = line.indexOf('*/', cursor + 2);
       cursor = close < 0 ? end : Math.min(end, close + 2); kind = 'com';
+    } else if (lang === 'shell' && (line.startsWith("@'",cursor) || line.startsWith('@"',cursor) || line.startsWith("'@",cursor) || line.startsWith('"@',cursor))) {
+      cursor += 2; kind = 'str';
     } else if (char === '"' || char === "'" || char === '`') {
       cursor++;
       while (cursor < end) {
