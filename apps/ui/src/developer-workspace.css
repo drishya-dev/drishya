@@ -1,4 +1,20 @@
 /* Dedicated current-file desk. Captured history stays mounted and keeps receiving work. */
+.whole-source {width:max-content;min-width:100%;font:12px/22px var(--mono)!important;}
+.whole-source .ln {display:grid;grid-template-columns:48px minmax(0,1fr);min-height:22px;line-height:22px;}
+.whole-source .ln-tx {white-space:pre;line-height:22px;min-width:0;}
+.whole-source-wrap {width:100%;}
+.whole-source-wrap .ln-tx {white-space:pre-wrap;overflow-wrap:anywhere;}
+:root[data-ui-version=modern] .developer-workspace {top:calc(var(--workspace-header-h,62px) + 12px);}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace.developer-workspace-open>.workspace-bar>.workspace-secondary {display:none;}
+:root[data-ui-version=modern] .desk-tabs {gap:5px;padding:6px 8px;border-bottom:0;min-height:40px;background:var(--s1);}
+:root[data-ui-version=modern] .desk-tab {border:1px solid transparent;border-radius:8px;overflow:hidden;}
+:root[data-ui-version=modern] .desk-tab:has([aria-selected=true]) {border-color:var(--line-2);background:var(--bg);}
+:root[data-ui-version=modern] .desk-tab>[role=tab] {padding:5px 5px 5px 9px;background:none;box-shadow:none;}
+:root[data-ui-version=modern] .desk-tab [role=tab][aria-selected=true] {box-shadow:none;background:none;}
+:root[data-ui-version=modern] .current-file-reader>header {padding:9px 14px;min-height:40px;}
+:root[data-ui-version=modern] .current-file-reader>header h2 {font:12px/1.5 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+:root[data-ui-version=modern] .current-file-reader :is(.current-file-meta,.current-source-tools,.evidence-navigation,.import-context) {padding:5px 12px;gap:5px;font-size:11px;}
+:root[data-ui-version=modern] .current-file-reader .btn {padding:4px 7px;min-height:28px;font-size:11px;}
 .developer-workspace { position:absolute; inset:var(--workspace-tools-bottom,132px) 18px 16px calc(var(--stage-rail,220px) + 6px); z-index:10; display:flex; flex-direction:column; min-width:0; min-height:0; border:1px solid var(--line-2); border-radius:12px; background:var(--s1); box-shadow:0 12px 40px #0003; overflow:hidden; color:var(--t1); font:12px/1.6 var(--sans); }
 .developer-workspace-open :is(.history,.map,.workbench-station,.catalog-toggle,.prompt-composer,.transport,.prompt-position-rail,.prompt-chapter-rail,.follow-control) { visibility:hidden; pointer-events:none; }
 .developer-workspace-open .folder-explorer { z-index:11; }

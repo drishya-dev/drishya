@@ -32,6 +32,12 @@ it('approves only the selected captured workspace and returns bounded redacted c
   expect(page.scope).toBe('current-workspace'); expect(page.returnedLines).toBe(200); expect(page.hasMore).toBe(true);
   expect(page.text).toContain('[REDACTED:'); expect(page.text).not.toContain('abcdefghijklmnopqrstuvw'); expect(page.redacted).toBe(true);
 });
+it('returns the entire redacted file for document reading with the same consent boundary',async()=>{
+  const file=await access.read(id,'a.ts',0,Number.MAX_SAFE_INTEGER);
+  expect(file.start).toBe(0);expect(file.hasMore).toBe(false);expect(file.returnedLines).toBe(file.totalLines);
+  expect(file.text.split('\n')).toHaveLength(file.totalLines);
+  await expect(new WorkspaceAccess(app).read(id,'a.ts',0,Number.MAX_SAFE_INTEGER)).rejects.toMatchObject({status:403});
+});
 it.each(['../outside.ts', '/etc/passwd', 'C:/private.ts', '.env', 'folder/../../a.ts', 'folder\\a.ts', '.local/private.ts'])('rejects protected or escaping path %s', async path => {
   await expect(access.read(id, path)).rejects.toMatchObject({ status: 403 });
 });

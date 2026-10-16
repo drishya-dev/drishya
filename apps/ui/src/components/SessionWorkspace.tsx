@@ -11,6 +11,7 @@ import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { FileIcon } from './FileIcon.tsx';
 import { SourceFind } from './SourceFind.tsx';
+import { WholeSource } from './WholeSource.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 
@@ -113,6 +114,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const hidden = useApp(s => s.foldersHidden);
   const { workspace, approve } = useSessionWorkspace();
   const [query, setQuery] = useWorkspaceState('folders/query', '');
+  const [approving,setApproving] = useState(false);
   const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
   const treeElement = useRef<HTMLDivElement>(null);
   const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
@@ -178,10 +180,10 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   }, [tree]);
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
   if (hidden) return null;
-  return <aside className="folder-explorer spine" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Repository files' : 'Session folders'}>
+  return <aside className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Repository files' : 'Session folders'}>
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => useApp.setState({ foldersHidden: true })}>‹</button></header>
     <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Find repository files' : 'Find session files'} placeholder="Find files…" maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
-    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" onClick={() => void approve().catch(e => setError(e.message))}>Enable workspace reading<small>Read current files in this folder</small></button>}
+    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
       if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
@@ -201,7 +203,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       requestAnimationFrame(() => el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true }));
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
-      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
+      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
         if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }
         else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: row.path }));
         else useApp.setState(workspace?.approved ? { currentFile: row.path } : { filePanel: row.path });
@@ -237,13 +239,12 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
   useEffect(() => { if (file && !readingVersion) setReadingVersion(file.modifiedAt); }, [file, readingVersion]);
   useEffect(() => {
     let active = true; setFile(undefined); setError(undefined);
-    void workspaceApi.file(id, path, start).then(f => { if (active) setFile(f); }).catch(e => { if (active) setError(e.message); });
+    void workspaceApi.document(id, path).then(f => { if (active) setFile(f); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [id, path, start, retry]);
+  }, [id, path, retry]);
   useEffect(() => { setCopied(''); }, [start, retry]);
-  useLayoutEffect(() => { if (activeLine !== undefined) code.current?.querySelector(`[data-source-line="${activeLine}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' }); }, [activeLine, file]);
-  const lines = file?.text.replace(/\n$/, '').split('\n') ?? [];
-  const matches = query ? lines.flatMap((line, index) => line.toLowerCase().includes(query.toLowerCase()) ? [start + index + 1] : []) : [];
+  const lines = file?.text.split('\n') ?? [];
+  const matches = query ? lines.flatMap((line, index) => line.toLowerCase().includes(query.toLowerCase()) ? [index + 1] : []) : [];
   const moveMatch = (direction: 1 | -1) => {
     if (!matches.length) return;
     const current = matches.indexOf(activeLine ?? -1);
@@ -253,11 +254,10 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
     const line = Number(lineInput);
     if (!file || !/^\d+$/.test(lineInput) || !Number.isSafeInteger(line) || line < 1 || line > file.totalLines) { setLineError(`Choose a line from 1 to ${file?.totalLines ?? 0}`); return; }
     setLineError(undefined); setActiveLine(line);
-    if (line <= start || line > start + file.returnedLines) setStart(Math.floor((line - 1) / 200) * 200);
   };
   const copy = async () => {
     if (!file) return;
-    try { await navigator.clipboard.writeText(file.text); setCopied('Copied visible page'); }
+    try { await navigator.clipboard.writeText(file.text); setCopied('Copied file'); }
     catch { setCopied('Copy unavailable · select the text to copy.'); }
   };
   return <ReadingDialog title={path} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader" modeless={explore} style={explore ? undefined : { width: `min(${width}px, calc(100vw - 28px))` }}>
@@ -265,12 +265,12 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
     {file && readingVersion && file.modifiedAt !== readingVersion && <p className="small" role="status">File changed since this reading location · showing current disk content.</p>}
     {!explore && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} label="Resize current source reading space" fromRight />}
     <div className="current-file-meta"><span className="tag" title="Current disk · not a historical snapshot">On disk</span><button className="btn ghost" onClick={() => { useApp.setState({ developerWorkspace: true, explore: false, currentFile: undefined, filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }}>Open in Workspace</button><button className="btn ghost" onClick={() => setRetry(r => r + 1)}>Refresh</button><button className="btn ghost" onClick={() => useApp.setState({ currentFile: undefined, filePanel: path })}>Recorded work on this file</button></div>
-    <div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source page" />
+    <div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source file" scopeLabel="this file" idleLabel="" />
       <form className="source-go" onSubmit={e => { e.preventDefault(); go(); }}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e => { setLineInput(e.target.value); setLineError(undefined); }} /><button className="btn ghost small" disabled={!file}>Go to line</button><button type="button" className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button><span role="status">{lineError}</span></form>
 
     </div>
     <ImportContext path={path} current />
-    {error ? <p className="bad" role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry current source</button></p> : !file ? <p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><CodeView text={file.text} path={path} startLine={file.start + 1} highlightLines={new Set(matches)} activeLine={activeLine} /></div><footer><span title={`Current file version: ${file.modifiedAt}`}>Lines {file.start + 1}–{file.start + file.returnedLines} of {file.totalLines}{file.redacted ? ' · secrets redacted' : ''}</span><button disabled={!start} onClick={() => { setActiveLine(undefined); setStart(s => Math.max(0, s - 200)); }}>Previous lines</button><button disabled={!file.hasMore} onClick={() => { setActiveLine(undefined); setStart(s => s + 200); }}>Next lines</button><button onClick={() => void copy()}>Copy visible page</button><span role="status">{copied}</span></footer></>}
+    {error ? <p className="bad" role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry current source</button></p> : !file ? <p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine}/></div><footer><span title={`Current file version: ${file.modifiedAt}`}>Current disk · {file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 

@@ -80,15 +80,15 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-workspace.png`)});
   const reader=desk.getByRole('region',{name:`Workspace file ${selected[0]}`,exact:true});
   const meta=await reader.locator('footer').innerText();
-  const total=Number(meta.match(/of (\d+)/)?.[1]);
+  const total=Number(meta.match(/(\d+) lines/)?.[1]);
   if(total>400) {
     await reader.getByRole('textbox',{name:`Go to line in ${selected[0]}`,exact:true}).fill('300');
     await reader.getByRole('button',{name:'Go',exact:true}).click();
-    await expect(reader.locator('footer')).toContainText('Lines 201–400');
+    await expect(reader.locator('footer')).toContainText(`${total} lines`);
     await reader.locator('.desk-code').evaluate(node=>{node.scrollTop=120;node.dispatchEvent(new Event('scroll',{bubbles:true}));});
     await desk.getByRole('tab',{name:selected[1]!.split('/').at(-1),exact:true}).click();
     await desk.getByRole('tab',{name:selected[0]!.split('/').at(-1),exact:true}).click();
-    await expect(reader.locator('footer')).toContainText('Lines 201–400');
+    await expect(reader.locator('footer')).toContainText(`${total} lines`);
     await expect.poll(()=>reader.locator('.desk-code').evaluate(node=>node.scrollTop)).toBe(120);
   }
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();

@@ -12,6 +12,7 @@ test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-fresh-')); root = join(dir, 'shop');
   cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
   writeFileSync(join(root,'src/cart/reading.ts'),Array.from({length:450},(_,i)=>`export const reviewLine${i+1} = ${i+1};`).join('\n'));
+  writeFileSync(join(root,'src/cart/large.ts'),Array.from({length:10000},(_,i)=>`export const largeLine${i+1} = ${i+1};`).join('\n'));
   writeFileSync(join(root,'README.md'),'# Workspace guide\n\nA **readable** document.\n\n| Feature | State |\n| --- | --- |\n| Reading | Ready |\n\n> Current source, safely rendered.\n\n```ts\nexport const ready = true;\n```\n');
   const git = (...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true });
   git('init'); git('config', 'user.name', 'Synthetic'); git('config', 'user.email', 'synthetic@example.invalid');
@@ -551,15 +552,15 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await total.locator('.desk-code').focus();
   await page.keyboard.press('Home'); await page.keyboard.press('ArrowRight');
   await expect(desk).toBeVisible();
-  await expect(page.getByRole('button',{name:'Open developer workspace'})).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('.workspace-secondary')).toBeHidden();
   await total.getByRole('button',{name:'Wrap',exact:true}).click();
-  await total.getByRole('searchbox',{name:'Find in src/cart/total.ts loaded page'}).fill('total');
+  await total.getByRole('searchbox',{name:'Find in src/cart/total.ts'}).fill('total');
   await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/discount.ts');
   await page.locator('[data-spine-path="src/cart/discount.ts"]').click();
   await expect(desk.getByRole('tab')).toHaveCount(2);
   await desk.getByRole('tab',{name:'total.ts',exact:true}).click();
   await expect(total.getByRole('button',{name:'Wrap',exact:true})).toHaveAttribute('aria-pressed','true');
-  await expect(total.getByRole('searchbox',{name:'Find in src/cart/total.ts loaded page'})).toHaveValue('total');
+  await expect(total.getByRole('searchbox',{name:'Find in src/cart/total.ts'})).toHaveValue('total');
   await desk.getByRole('tab',{name:'discount.ts',exact:true}).click();
   await desk.getByRole('button',{name:'Split view',exact:true}).click();
   await expect(desk.locator('.desk-document')).toHaveCount(2);
@@ -632,12 +633,12 @@ test('Modern restores source tabs, reading page and Home resume after a hard rel
   const reader=desk.getByRole('region',{name:'Workspace file src/cart/reading.ts',exact:true});
   await reader.getByRole('textbox',{name:'Go to line in src/cart/reading.ts',exact:true}).fill('300');
   await reader.getByRole('button',{name:'Go',exact:true}).click();
-  await expect(reader.locator('footer')).toContainText('Lines 201–400');
+  await expect(reader.locator('footer')).toContainText('450 lines');
   await reader.getByRole('button',{name:'Wrap',exact:true}).click();
   await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain('desk/document/0/src/cart/reading.ts');
   const saved=JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json());
   expect(saved).not.toContain('export const reviewLine');expect(saved).not.toContain('approved');expect(saved).not.toContain('prompt');
-  await page.reload();await expect(desk).toBeVisible();await expect(reader.locator('footer')).toContainText('Lines 201–400');
+  await page.reload();await expect(desk).toBeVisible();await expect(reader.locator('footer')).toContainText('450 lines');
   await expect(reader.getByRole('button',{name:'Wrap',exact:true})).toHaveAttribute('aria-pressed','true');
   await reader.locator('.desk-code').focus();await page.keyboard.press('Alt+w');await expect(reader).toHaveCount(0);
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
@@ -686,6 +687,30 @@ test('Workspace Markdown opens as a readable document with an explicit exact-sou
   await expect(document.locator('.desk-code')).toContainText('# Workspace guide');
   await document.getByRole('button',{name:'Document',exact:true}).click();
   await expect(document.getByRole('heading',{name:'Workspace guide'})).toBeVisible();
+});
+
+test('whole-file Workspace search and line navigation reach distant source with bounded mounted rows',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
+  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
+  const grant=desk.getByRole('button',{name:'Approve workspace reading'});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();
+  await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/large.ts');
+  await page.locator('[data-spine-path="src/cart/large.ts"]').click();
+  const reader=desk.getByRole('region',{name:'Workspace file src/cart/large.ts',exact:true});
+  await expect(reader.locator('footer')).toContainText('10000 lines');
+  await reader.getByRole('searchbox',{name:'Find in src/cart/large.ts',exact:true}).fill('largeLine9000');
+  await expect(reader.locator('.source-find')).toContainText('1 matching line in this file');
+  await reader.getByRole('button',{name:'Next match',exact:true}).click();
+  await expect(reader.locator('[data-source-line="9000"]')).toHaveAttribute('aria-current','location');
+  expect(await reader.locator('[data-source-line]').count()).toBeLessThan(150);
+  await reader.getByRole('textbox',{name:'Go to line in src/cart/large.ts',exact:true}).fill('10000');
+  await reader.getByRole('button',{name:'Go',exact:true}).click();
+  await expect(reader.locator('[data-source-line="10000"]')).toBeVisible();
+  await expect(reader.getByRole('button',{name:'Previous',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toBeHidden();
+  await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toBeVisible();
 });
 
 test('an unexpected rendering failure has a usable recovery surface instead of a black screen',async({page})=>{

@@ -130,6 +130,7 @@ export const workspaceApi = {
   status: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace`),
   approve: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {} }),
   file: (id: string, path: string, start: number) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/file?${new URLSearchParams({ path, start: String(start), count: '200' })}`),
+  document: (id:string,path:string) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/document?${new URLSearchParams({path})}`),
   controller: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller`),
   settings: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/settings`, { method: 'POST', json: {} }),
   prompt: (id: string, prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/prompt`, { method: 'POST', json: { prompt, exclusive, attachments, options } }),
