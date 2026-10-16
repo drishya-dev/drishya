@@ -32,7 +32,7 @@ export function WorkspaceNavigation() {
     ];
     if (mode === 'history') {
       all.push({ key: 'review', name: 'Review recorded changes and checks', detail: 'Captured outcomes, not coverage', run: () => click('.review-open') });
-      all.push({ key: 'questions', name: 'Review questions', detail: 'Your unresolved review decisions', run: () => click('.workbench-review button[data-review-questions]') });
+      all.push({ key: 'questions', name: 'Review questions', detail: 'Your unresolved review decisions', run: () => click('button[data-review-questions]') });
       if (kind === 'daemon' && id && !id.includes('+')) all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => click('.git-open') });
     }
     if (kind === 'daemon') all.push({ key: 'home', name: 'Choose a session', detail: 'Workspace and local-date groups', run: () => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); } });

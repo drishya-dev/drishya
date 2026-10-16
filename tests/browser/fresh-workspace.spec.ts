@@ -409,5 +409,22 @@ test('Modern server restart authentication preserves cached reading and disables
   await expect(page.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
   await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
-  await expect(page.locator('.home')).toBeVisible();
+});
+
+test('Modern offline bundle keeps keyboard review destinations and bounded phone reading', async ({page}) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.keyboard.press('Control+k');
+  const command=page.getByRole('dialog',{name:'Navigate workspace'});
+  await command.getByRole('combobox').fill('Review questions');
+  await command.getByRole('option',{name:/Review questions/}).click();
+  await expect(page.getByRole('dialog',{name:'Review questions',exact:true})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.context().setOffline(true);
+  await page.getByRole('button',{name:'Explore repository map'}).click();
+  await expect(page.locator('.map-tools')).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(page.getByRole('region',{name:'Harness prompt'})).toHaveCount(0);
 });
