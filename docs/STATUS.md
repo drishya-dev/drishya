@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Yash with Codex | Header rollback, PR 66/67 review, multi-file workspace and product review | Modern CSS/Viewer, workspace readers, review and handoff docs |
 
 
 ---

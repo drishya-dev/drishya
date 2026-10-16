@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**16 October active direction:** Restore review 79’s centered translucent Modern header; keep the shared Files/Toolbox gradient and supplied logo. Review and merge PRs 66/67, then audit reader spacing and add a multi-file Workspace destination before fresh independent developer/product reviews. Evaluate editing/run support through native permission boundaries; do not silently add filesystem writes or a terminal to observation Canvas. User package/artwork/spreadsheet files remain excluded.
+
 **15 October branding:** Supplied logo now covers tab/favicon, bookmark/touch and all existing app brand components. Optimized PNGs live in `apps/ui/public/brand/drishya-{32,180,192}.png`; fallback `public/favicon.ico`. Keep original `drishya.png` as source, use the 192 px derivative for UI marks. Build/HTTP/browser checks pass; no hosted CI.
 
 **Merged 15 October:** Modern refinement [PR #65](https://github.com/drishya-dev/drishya/pull/65) squash-merged as `84f76e2`; local `main` fast-forwarded. Reviews 76–80 describe the active shared Legacy visualization, recovered Modern composer/Toolbox, compact Git reader and final breadcrumb header/shared panel gradient. Individual increments remain on local `codex/modern-reading-craft`. Prior local validation applies to the exact merged tree; no hosted CI. User package-manager/artwork changes remain uncommitted.

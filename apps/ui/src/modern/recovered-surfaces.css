@@ -110,3 +110,7 @@
 .modern-composer-input-tools .modern-effort-select { max-width:100px; }
 @media(max-width:500px) { .modern-composer-input-tools select { max-width:100px; }.modern-composer-input-tools .modern-effort-select { max-width:80px; } }
 
+
+/* Own the header grid at narrow widths; Classic’s second-row fallback is not used here. */
+:root[data-ui-version=modern] .modern-session-header .studio-session { grid-column:2; grid-row:1; }
+:root[data-ui-version=modern] .modern-session-header .studio-actions { grid-column:3; grid-row:1; }
