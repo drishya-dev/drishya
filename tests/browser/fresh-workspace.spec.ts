@@ -566,7 +566,7 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await expect(desk.locator('.desk-document')).toHaveCount(2);
   await expect(total).toBeVisible();
   await page.screenshot({path:resolve('.local/developer-workspace-desktop.png')});
-  await total.getByRole('button',{name:'Draft edit',exact:true}).click();
+  await total.getByRole('button',{name:'Edit file',exact:true}).click();
   const editor=total.getByRole('textbox',{name:'Local draft for src/cart/total.ts',exact:true});
   await expect(editor).toBeVisible();
   await editor.fill('export const total = 43;\n');
@@ -579,11 +579,13 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await expect(desk).toHaveCount(0);
   await page.getByRole('button',{name:'Open developer workspace'}).click();
   await expect(editor).toHaveValue('export const total = 43;\n');
-  await total.getByRole('button',{name:'Review in native prompt',exact:true}).click();
+  await total.getByRole('button',{name:'Review edit with harness',exact:true}).click();
   await expect(desk).toHaveCount(0);
   const prompt=page.getByRole('textbox',{name:'Prompt for selected harness session',exact:true});
   await expect(prompt).toHaveValue(/Base SHA-256: [a-f0-9]{64}/);
-  await expect(prompt).toHaveValue(/total = 43/);
+  await page.getByRole('button',{name:'Preview attachment total.ts.drishya-draft.txt',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Attachment: total.ts.drishya-draft.txt',exact:true})).toContainText('total = 43');
+  await page.getByRole('button',{name:'Close Attachment: total.ts.drishya-draft.txt',exact:true}).click();
   expect(readFileSync(join(root,'src/cart/total.ts'),'utf8')).toContain('42');
   expect(submitted).toBe(0);
   await page.getByRole('button',{name:'Open developer workspace'}).click();
@@ -711,6 +713,36 @@ test('whole-file Workspace search and line navigation reach distant source with 
   await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toBeHidden();
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
   await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toBeVisible();
+});
+
+test('Workspace creates an unsent file draft and forwards large contents as a native attachment',async({page})=>{
+  const state={available:true,state:'idle',harness:'codex',tools:[],inventory:'unknown',approvals:[],output:''};let payload:any;
+  await page.route('**/controller',route=>route.fulfill({json:state}));
+  await page.route('**/controller/prompt',route=>{payload=route.request().postDataJSON();return route.fulfill({json:{...state,state:'completed'}});});
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
+  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
+  const grant=desk.getByRole('button',{name:'Approve workspace reading'});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();
+  await desk.getByRole('button',{name:'＋ New file',exact:true}).click();
+  await desk.getByRole('textbox',{name:'New workspace file path',exact:true}).fill('src/created.ts');
+  await desk.getByRole('button',{name:'Create draft',exact:true}).click();
+  const document=desk.getByRole('region',{name:'Workspace file src/created.ts',exact:true});
+  const text='// complete new file\n'+'export const requested = 42;\n'.repeat(3000);
+  await document.getByRole('textbox',{name:'Local draft for src/created.ts',exact:true}).fill(text);
+  expect(payload).toBeUndefined();expect(()=>readFileSync(join(root,'src/created.ts'))).toThrow();
+  await document.getByRole('button',{name:'Review creation with harness',exact:true}).click();
+  const composer=page.getByRole('region',{name:'Harness prompt',exact:true});
+  await expect(composer.getByRole('textbox',{name:'Prompt for selected harness session'})).toHaveValue(/does not already exist/);
+  await expect(composer.getByRole('button',{name:'Preview attachment created.ts.drishya-draft.txt'})).toBeVisible();
+  expect(payload).toBeUndefined();
+  await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
+  await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
+  await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();
+  await expect.poll(()=>payload).toBeDefined();
+  expect(payload.attachments).toEqual([{name:'created.ts.drishya-draft.txt',type:'text',data:text}]);
+  expect(payload.prompt.length).toBeLessThan(2000);
+  expect(()=>readFileSync(join(root,'src/created.ts'))).toThrow();
 });
 
 test('an unexpected rendering failure has a usable recovery surface instead of a black screen',async({page})=>{
