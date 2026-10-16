@@ -1,5 +1,7 @@
 # 86 — HUD, palettes and complete reading
 
+**16 October follow-up:** [87](87-modern-reading-and-component-audit.md) supersedes the page-only current Find, small draft limit and hover-expanding header descriptions below. Whole-file virtual reading, native-attached edit/New file drafts, bounded journal catch-up and wrapped-flow fixes are implemented. Recorded artifacts remain separately paged/evidence-backed. Broader adoption, palette/component audit, native-segment continuity and release acceptance remain open.
+
 16 October 2026. Latest builder direction supersedes84's earlier three-choice palette limit. Preserve Legacy/Canvas backups and the shared captured agent visualization. This is a sequence of independent commits, not a replacement harness or a blanket product-complete claim.
 
 ## User requests and implementation

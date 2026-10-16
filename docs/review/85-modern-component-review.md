@@ -1,5 +1,7 @@
 # 85 — Independent Modern component review
 
+**16 October follow-up:** [87](87-modern-reading-and-component-audit.md) supersedes the page-only current Find, small draft limit and hover-expanding header descriptions below. Whole-file virtual reading, native-attached edit/New file drafts, bounded journal catch-up and wrapped-flow fixes are implemented. Recorded artifacts remain separately paged/evidence-backed. Broader adoption, palette/component audit, native-segment continuity and release acceptance remain open.
+
 16 October 2026. Fresh professional developer/design reviewer, source and six rendered frames; no prior review83 supplied. Installed Emil skill and repository doctrine used. No interactive CUA, real native-account, assistive technology or ten-minute motion acceptance claimed.
 
 **Verdict:** 6/10 as a main agent workspace, 7/10 as an evidence/review companion. Would use for understanding/review; would retain editor and native harness. The largest adoption cost is finding, connecting and reading existing capabilities, not simply adding more features.

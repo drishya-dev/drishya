@@ -31,12 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Long command syntax follow-up
+### Yash with Codex — Whole-file reading and stable Modern workflow
 
-- **When:** 16 October 2026, same PR68 branch; independent bug-fix commit.
-- **Fixed:** Wrapped commands above2000characters previously became entirely uncolored, often visible around PowerShell `@'` script blocks. Shared highlighter now scans forward with bounded spans/characters, colors scoped package/decorator names and preserves every captured character. It remains a lexical aid, not a multiline embedded-language parser. No command/capture/native-policy changes.
-- **Validation:** Both typechecks, production build, **418 units/69 files** and **4 focused local browser journeys pass** (long at-sign string colors/computed CSS/exact Copy, structured output, long labels/mobile bounds, every observed action kind). Earlier broad browser acceptance remains recorded below; no hosted CI or native turn. Private/user package-manager/artwork files excluded.
-- **Next:** Ordered queue84 and critical review85 remain active; this fix does not supersede whole-file find/current-version/investigation/native acceptance tasks. See86 follow-up.
+- **When:** 16 October 2026, `codex/multi-file-workspace` / [PR68](https://github.com/drishya-dev/drishya/pull/68). Builder explicitly requests push/squash-merge after local gates. Later PRs use one coherent commit each; the existing branch retains its earlier purpose increments for backtracking.
+- **Delivered:** [87](review/87-modern-reading-and-component-audit.md): stable larger header and centered glyphs, in-capsule minimize/fresh collapsed folders, whole-file2MiB virtual source Find/Go/Copy, higher compact Workspace/Back,256KiB native-attached Edit/New file drafts, wrapped connectors, decoded execution/MCP arguments/results with raw access, independent input/result allocations, nested-content hover sizing, removed duplicate delayed scroll correction, prompt-rail clearance, passive stopped-journal catch-up and Home update hints/refined native filters. No direct project writes or automatic prompt submission.
+- **Validation:** Both typechecks/build,426units/71files pass.105 distinct selected browser journeys have passing final results across the103-pass sweep and corrected focused reruns; not one all-green full run. Four private actual recordings also pass. No hosted CI/native turn. Review87 records test races, fixes and exact limits;38 records renewed antivirus evidence without a false-positive/fixed claim.
+- **Next:** Native segmented-history continuity, joined evidence/source/correction/check workflow, broader component/palette audit and native/human/platform acceptance. An old journal stopped growing while its newer imported segment was behind; opening the newer one catches up now, automatic stitching is not implemented. Preserve user package/artwork edits and private stores.
 
 ### Yash with Codex — Modern daily workflow, recovery, reading and HUD
 
