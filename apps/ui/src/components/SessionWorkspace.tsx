@@ -113,15 +113,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const hidden = useApp(s => s.foldersHidden);
   const { workspace, approve } = useSessionWorkspace();
   const [query, setQuery] = useWorkspaceState('folders/query', '');
-  const [opened, setOpened] = useWorkspaceState('folders/open', () => {
-    const initial = new Set<string>(['']);
-    // Open the bounded recorded working set; other folders start collapsed.
-    for (const file of projection.files.slice(0, 32)) {
-      const parts = file.path.split('/');
-      for (let n = 1; n < parts.length && initial.size < 256; n++) initial.add(parts.slice(0, n).join('/'));
-    }
-    return initial;
-  });
+  const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
   const treeElement = useRef<HTMLDivElement>(null);
   const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
   const [treeHeight, setTreeHeight] = useState(600);

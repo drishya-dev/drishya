@@ -1,7 +1,7 @@
 /* The repository and agent world remain full height; only controls receive input. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .workspace-header { background:transparent;backdrop-filter:none;border:0; }
 :root[data-ui-version=modern] .modern-session-header .studio-session { position:relative;justify-self:center;width:min(100%,760px);padding:7px 18px;border-radius:18px;background:color-mix(in srgb,var(--s1) 78%,transparent);border:1px solid var(--line);backdrop-filter:blur(16px);min-width:0; }
-:root[data-ui-version=modern] .modern-session-header .studio-session h1 { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5;font-size:12px; }:root[data-ui-version=modern] .modern-session-header .studio-session:is(:hover,:focus-within) h1 { position:absolute;top:0;left:0;right:0;margin:0;padding:22px 18px 10px;white-space:normal;overflow-wrap:anywhere;max-height:150px;overflow:auto;background:var(--s1);border:1px solid var(--line);border-radius:18px;z-index:8; }
+:root[data-ui-version=modern] .modern-session-header .studio-session h1 { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5;font-size:12px;max-width:100%; }
 :root[data-ui-version=modern] .modern-session-header .brand,:root[data-ui-version=modern] .modern-session-header .studio-actions { padding:7px 10px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--s1) 80%,transparent);backdrop-filter:blur(16px); }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer { bottom:auto;max-height:min(75dvh,calc(100dvh - var(--workspace-tools-bottom,132px) - 30px));backdrop-filter:blur(16px);background:color-mix(in srgb,var(--s1) 82%,transparent); }
 :root[data-ui-version=modern] .modern-toolbox { backdrop-filter:blur(16px); }:root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer.open { background:color-mix(in srgb,var(--s1) 86%,transparent);backdrop-filter:blur(16px);box-shadow:0 20px 40px #0007; }
@@ -13,7 +13,7 @@
 @media(prefers-reduced-motion:reduce) { :root[data-ui-version=modern] :is(.studio-session,.modern-session-header .brand,.studio-actions,.folder-explorer,.modern-toolbox,.modern-native-composer) { backdrop-filter:none!important; } }
 @media(max-width:700px) { :root[data-ui-version=modern] .modern-session-header .studio-session {padding:6px 9px;border-radius:11px;}:root[data-ui-version=modern] .modern-session-header .brand {padding:6px;}:root[data-ui-version=modern] .modern-session-header .studio-actions {padding:4px;} }
 
-:root[data-ui-version=modern] .modern-native-composer>.composer-minimize { position:absolute;right:12px;top:-13px;z-index:5; }
+:root[data-ui-version=modern] .modern-native-composer>.composer-minimize { position:absolute;right:10px;top:8px;z-index:5;width:28px;height:28px;border:0;background:transparent;display:grid;place-items:center; }
 :root[data-ui-version=modern] .modern-native-composer.composer-minimized>.composer-minimize { position:static;width:100%;height:100%; }
 
 :root[data-ui-version=modern] .modern-tool-station>.toolbox-collapse { position:absolute;right:9px;top:8px;z-index:5; }
@@ -29,3 +29,15 @@
 :root[data-ui-version=modern] .modern-native-composer>.composer-mini-stop {position:absolute;right:4px;top:4px;width:30px;height:30px;padding:5px;border-radius:9px;background:var(--s3);color:var(--t1);border:1px solid var(--line-2);z-index:6;}
 .composer-mini-stop svg {width:18px;height:18px;fill:currentColor;}
 .composer-minimized:has(.composer-mini-stop)>.composer-minimize {padding-right:36px;}
+
+/* Remove retained-version ornament and keep all three utility hit targets aligned. */
+:root[data-ui-version=modern] .modern-session-header::after {content:none;}
+:root[data-ui-version=modern] .modern-session-header .studio-actions {display:flex;align-items:center;gap:3px;padding:5px;}
+:root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.btn,
+:root[data-ui-version=modern][data-experience=classic] .modern-session-header .workspace-menu>summary {display:grid;place-items:center;width:34px;height:34px;min-height:34px;padding:0;margin:0;line-height:1;list-style:none;}
+:root[data-ui-version=modern] .modern-session-header .workspace-menu {align-self:center;height:34px;}
+:root[data-ui-version=modern] .modern-session-header .workspace-menu>summary::-webkit-details-marker {display:none;}
+:root[data-ui-version=modern] .modern-session-header .studio-actions>.btn::after {content:none!important;}
+:root[data-ui-version=modern] .modern-session-header .studio-actions :is(svg,.modern-utility-glyph) {display:block;width:18px;height:18px;flex:none;margin:0;}
+:root[data-ui-version=modern] .modern-session-header .search-open :is(span,kbd) {display:none;}
+:root[data-ui-version=modern] .modern-native-composer:not(.composer-minimized) .modern-composer-top {padding-right:42px;}

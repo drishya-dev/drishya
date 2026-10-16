@@ -113,6 +113,28 @@ test('Modern chrome fits wide, laptop and phone viewports; panels and settings r
   }
 });
 
+test('Modern header retains its title on hover and click, utilities center, and fresh folders start closed',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const title=page.locator('.modern-session-header h1');
+  const original=await title.textContent(), before=await title.boundingBox();
+  await title.hover();await title.click();
+  await expect(title).toBeVisible();await expect(title).toHaveText(original!);
+  expect(await title.boundingBox()).toEqual(before);
+  expect(await page.locator('.modern-session-header').evaluate(el=>getComputedStyle(el,'::after').content)).toBe('none');
+  for(const selector of ['.settings-open','.workspace-menu>summary','.search-open']) {
+    const button=page.locator(`.modern-session-header ${selector}`),glyph=button.locator('svg');
+    const outer=(await button.boundingBox())!,inner=(await glyph.boundingBox())!;
+    expect(Math.abs(outer.x+outer.width/2-inner.x-inner.width/2)).toBeLessThan(1);
+    expect(Math.abs(outer.y+outer.height/2-inner.y-inner.height/2)).toBeLessThan(1);
+  }
+  const folders=page.locator('.folder-tree .folder-row');await expect(folders.first()).toBeVisible();
+  for(const folder of await folders.all())await expect(folder).toHaveAttribute('aria-expanded','false');
+  const composer=page.getByRole('region',{name:'Harness prompt'}),minimize=composer.getByRole('button',{name:'Minimize prompt',exact:true});
+  const capsule=(await composer.boundingBox())!,control=(await minimize.boundingBox())!;
+  expect(control.y).toBeGreaterThanOrEqual(capsule.y);expect(control.y+control.height).toBeLessThanOrEqual(capsule.y+capsule.height);
+});
+
 test('Modern native composer keeps attachments, outside dismissal and explicit consent', async ({ page }) => {
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
