@@ -1,5 +1,7 @@
 # 84 — Modern daily-workflow follow-up
 
+**17 October:** PR69/70 deliver explicit native-segment navigation and independent bottom prompt/time scrolling. Review90 delivers faithful nested/mixed/numbered Markdown lists; exact keyboard path/line destinations remain next. Broader joined workflow/component/native acceptance below remains open, and recurring McAfee attribution/remediation is independently tracked in38. Do not call the whole list complete.
+
 **16 October follow-up:** [87](87-modern-reading-and-component-audit.md) supersedes the page-only current Find, small draft limit and hover-expanding header descriptions below. Whole-file virtual reading, native-attached edit/New file drafts, bounded journal catch-up and wrapped-flow fixes are implemented. Recorded artifacts remain separately paged/evidence-backed. Broader adoption, palette/component audit, native-segment continuity and release acceptance remain open.
 
 16 October 2026. Active continuation of PR68, after the builder's fresh feedback. Use installed design/motion skills; preserve the shared agent visualization and explicit evidence/native boundaries.
