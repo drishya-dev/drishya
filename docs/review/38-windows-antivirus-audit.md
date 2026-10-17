@@ -1,5 +1,31 @@
 # Windows antivirus attribution audit
 
+## 17 October recurrence and separate managed-runtime update
+
+McAfee appended detections on16 October at22:22:21 IST and17 October at09:21:40 IST. Both retain `Real Protect-PSFL!DC98AC2364A0`, a136,350-byte in-memory Windows PowerShell target and no backing file/hash. Windows PowerShell event400 records the same stdin/`Invoke-Expression` wrapper at09:21:38, PID20976, approximately two seconds before the morning detection. That process has exited; its new parent chain was not retained, so this is a matching recurrence, not fresh definitive parent attribution or a verified false positive.
+
+Read-only process inspection now establishes that the global npm CLI launched two managed0.160.0 app-server processes at09:16:37, while newer desktop executables are also present. The managed `current` link and `auto-update-version` both still point to0.160.0. The installed CLI's supported diagnostic confirms:
+
+```json
+{"status":"running","managedCodexVersion":"0.160.0","cliVersion":"0.163.0","appServerVersion":"0.160.0"}
+```
+
+This explains why updating the desktop app or CLI alone did not establish removal of the older managed runtime. It does not reveal the blocked script contents or prove the latest launch's parent.
+
+The locally installed CLI help exposes a supported, separate package update:
+
+```powershell
+codex app-server daemon version
+codex app-server daemon update
+codex app-server daemon version
+```
+
+**Run the update only after active native work has finished.** Its own help explicitly says it may interrupt running work. This audit did not run it, replace cached binaries, change native configuration or terminate sessions. `--from-cli` exists but copies/pins the CLI package; it is not required for the normal updater and is not the recommended default here. Do not turn off protection or add exclusions.
+
+After updating, verify that the reported running app-server version actually changed, use the harness normally across at least two previously observed hourly intervals, and compare new detection timestamps/process attribution. A newer version is a remediation candidate, not evidence of an antivirus fix. If alerts recur, use a sanitized runtime report through the [official feedback route](https://learn.chatgpt.com/docs/reference/troubleshooting#feedback-and-logs), reviewing any logs before sharing. No report/upload was sent. The report should include the managed/CLI version mismatch, detection signature/size/times, prior captured parent attribution and fresh event400 correlation; exclude personal paths, prompts and journals.
+
+Drishya's inspected controller/native executable/capture scripts still contain no matching PowerShell wrapper launch. No product-side patch can honestly be claimed as repairing this separately managed runtime. Keep Windows packaged/native antivirus acceptance in the release matrix.
+
 ## 16 October recurrence
 
 Read-only inspection finds four new detections at **18:22:08,19:22:12,20:22:15,21:22:18 IST**. They name `Real Protect-PSFL!DC98AC2364A0`, Windows PowerShell5.1 and a136,350-byte in-memory target, with no backing file/hash. This is a changed payload/signature from the88,248-byte October8 record, not proof that the earlier payload was fixed.
