@@ -1,5 +1,19 @@
 # Windows antivirus attribution audit
 
+## 17 October deeper static assessment — updater is the leading explanation
+
+The builder asked to assess threat rather than assume that an assistant knows the purpose of a separate process. Additional read-only checks establish:
+
+- Windows Authenticode verification of the actual managed0.160.0 `codex.exe` reports **Valid**, signed by **OpenAI OpCo, LLC**. This supports executable origin/integrity; it does not certify every script it downloads or every child command.
+- Static inspection of that executable finds the exact observed stdin/`Invoke-Expression` wrapper adjacent to updater-specific error strings, the official `https://chatgpt.com/codex/install.ps1` URL and installer settings including `CODEX_INSTALL_DAEMON_ONLY`, `CODEX_INSTALL_DEFER_SELECTION`, `CODEX_INSTALL_IF_LATEST` and `CODEX_INSTALL_IF_CURRENT`.
+- The old runtime includes a separate managed updater process. Its09:16:37 start precedes the09:21:38 wrapper by about five minutes; previous18:17 starts similarly precede18:22 detections. This timing supports the updater hypothesis but is not a fresh process-parent trace for the morning detection.
+- The [currently published official installer](https://releases.openai.com/codex/install.ps1), read through the web tool without execution, resolves Codex release assets and verifies downloaded archive SHA-256 digests. This is a reference to what the updater is designed to fetch, **not a recovered byte-for-byte copy of the blocked memory payload**.
+- Available PowerShell4104 events did not supply the blocked script body for the morning interval. The McAfee record has no useful payload hash or backing file to compare.
+
+**Assessment:** a legitimate managed-updater/antivirus compatibility conflict is now the leading explanation. There is no evidence from this investigation identifying a Drishya-origin malicious script. However, the exact blocked bytes and McAfee's internal classification rationale remain unavailable, so a confirmed false positive or "safe to allow" verdict would overstate the evidence. A signed parent alone cannot prove a child payload benign. No quarantined content was restored or executed.
+
+Automatic approval review rejected a command that would download an installer reference for static reading; it reported only "blocked by policy". The safer web read succeeded. No installer was executed, no alternate executable download method was used, and no security settings were weakened. The separate supported native updater remains an idle-time remediation candidate, not a proven cure. If its normal update path encounters the same block, retain the error and use the sanitized vendor route rather than forcing execution or adding exclusions.
+
 ## 17 October recurrence and separate managed-runtime update
 
 McAfee appended detections on16 October at22:22:21 IST and17 October at09:21:40 IST. Both retain `Real Protect-PSFL!DC98AC2364A0`, a136,350-byte in-memory Windows PowerShell target and no backing file/hash. Windows PowerShell event400 records the same stdin/`Invoke-Expression` wrapper at09:21:38, PID20976, approximately two seconds before the morning detection. That process has exited; its new parent chain was not retained, so this is a matching recurrence, not fresh definitive parent attribution or a verified false positive.

@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Static updater threat assessment
+
+- **When:**17 October2026, independent documentation increment after PR75 merged as4ec9f78.
+- **Evidence:**[38](review/38-windows-antivirus-audit.md): managed binary has a Valid OpenAI Authenticode signature; the exact observed wrapper sits beside updater-only strings/settings and official installer URL. Startup/detection timing supports the updater hypothesis. Official installer source read without execution; blocked script bytes/hash and fresh parent trace remain unavailable.
+- **Assessment:**Legitimate managed-updater/antivirus conflict is the leading explanation, not a confirmed false positive or safe-to-allow verdict. No Drishya-origin malicious script identified. Automatic review blocked a reference download; safer web source inspection succeeded. No installer execution, protection/configuration change, upload or session termination.
+- **Next:**Idle-time supported runtime update/recurrence validation or sanitized vendor review if blocked; continue selected useful features and core UI/scroll work without calling the whole list complete.
+
 ### Yash with Codex — Feature value and quiet utility navigation
 
 - **When:**17 October2026, `codex/quiet-workspace-navigation`, separate coherent increment.
