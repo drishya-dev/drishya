@@ -133,18 +133,18 @@ export class Ingestor extends EventEmitter {
   }
 
   /** Lists harness sessions on this machine, marking the ones already imported. */
-  async discover(): Promise<DiscoveredSource[]> {
-    return (await this.discoverReport()).sources;
+  async discover(adapterId?:string): Promise<DiscoveredSource[]> {
+    return (await this.discoverReport(adapterId)).sources;
   }
 
   /**
    * Discovery plus a per-adapter error for any location that could not be read (B1, audit A05):
    * a permission failure must not look like a machine with no sessions.
    */
-  async discoverReport(): Promise<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }> {
+  async discoverReport(adapterId?:string): Promise<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }> {
     const errors: DiscoveryError[] = [];
     const lists = await Promise.all(
-      this.adapters.map((a) =>
+      this.adapters.filter(a=>!adapterId||a.descriptor.id===adapterId).map((a) =>
         a.discover().catch((e: unknown) => {
           errors.push({ adapterId: a.descriptor.id, ...describeError(e) });
           return [] as DiscoveredSource[];

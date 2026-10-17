@@ -28,6 +28,7 @@ import { storageUsage } from './storage.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { HarnessController } from './controller.ts';
+import {sessionSegments} from './session-segments.ts';
 import { readWorkingLocations, saveWorkingLocations } from './working-locations.ts';
 
 export interface ServerOptions {
@@ -250,6 +251,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
 
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
+      if(sub==='segments'&&m==='GET') {
+        const recording=app.recording(firstId);
+        if(id.includes('+')||recording.harness!=='codex'||!recording.sourcePath) return json(res,{items:[],partial:false});
+        return json(res,await sessionSegments(recording.sourcePath,await app.ingest.discover('codex')));
+      }
       if (sub === 'refresh' && m === 'POST') {
         if(id.includes('+')) throw new HttpError(400,'Refresh one local session at a time.');
         const recording=app.recording(id);
