@@ -1,5 +1,40 @@
 # 84 — Modern daily-workflow follow-up
 
+## Read this first — complete queue, 17 October
+
+**Not all done.** PR71–73 deliver list fidelity, exact captured prose-reference navigation and an updated antivirus diagnosis. They do not complete the visual or developer-feature queue. This section supersedes stale "next" wording and older test totals farther below; those paragraphs retain the implementation history.
+
+The builder's latest report **reopens upward-scroll acceptance**: scrolling up still sometimes auto-adjusts/skips. Prior repairs and passing bounded browser cases do not establish that this reported case is fixed. Reproduce with the actual long Drishya/Skeletongraph recording, paging/late material and motion/hover combinations; record the scroll writer and selected anchor, then keep a failing regression before a repair. Do not name a particular animation or virtualizer race as the confirmed cause without evidence.
+
+### Where the whole feature list lives
+
+- [82 — Developer feature audit](82-feature-audit.md): all 25 feature/polish items and their code-backed status at the original `b3184bd` snapshot. Later work improves some items; its old totals are not a current product-wide completion count.
+- [83 — Harsh's feature-audit review and top-five plan](83-feature-audit-review-and-plan.md): reviewed recommendations, dependency order and concrete done-when criteria. This is a feature plan, not implemented functionality.
+- [85 — Independent component review](85-modern-component-review.md): component ratings and adoption/reading/design gaps.
+- [Repository/live-workflow proposal](repository-map-live-workflow-proposal.md): PR66's optional bounded focus-map experiment. Merged as a proposal, not approval of React Flow/ELK or replacement of the 3D map. PR67's delivered reliability work and acceptance limits are in [81](81-workspace-reliability.md).
+
+### Current open work
+
+| Order | Work | Current disposition |
+|---|---|---|
+| First | Upward-history auto-scroll/skip | **Open; user still reproduces after 73.** Existing browser coverage is insufficient for this case. |
+| Next | Theme/color refinement | Presets/tokens exist; final visual palette quality and all-surface contrast/consistency pass remain open. Retain Jet Black. |
+| Next | Entire UI through installed skills and Uiverse inspiration | **Open.** Inspect every page/reader/dialog/menu/input, density, dimensions, padding, type, hover/focus/click/exit and resource behavior; not only previously pointed-out components. |
+| Workflow | Source version/base/draft comparison and joined investigation | Open: retain old source while inspecting changes; captured evidence → current source → native correction → resulting recorded check, with return positions and truthful provenance. |
+| Ergonomics | Files/Git sizing, Home density, useful map neighborhoods | Broader component improvements remain; use measured virtualization allocations and typed static/recorded relations. |
+| Feature T1 | Paged command ledger | Not built as an active end-to-end workflow. Follow 83: exact complete commands/output, honest cwd/duration basis, bounded worker query, filtering and deliberate Copy-as-script. No runner. |
+| Feature T2 | Evidence-linked tripwires | Not built. Versioned bounded pattern matches over redacted evidence; exact match/limitations, never a "safe" verdict. Depends on T1 command rows. |
+| Feature T3 | Cross-session evidence search | Existing selected/joined-session search is not the planned all-imported-session query. New bounded worker/store search plus Home journey remains. |
+| Feature T4 | Repeated-work signals | Not built. Depends on T1; factual repetitions with evidence, not claims the agent is stuck or wasting time. |
+| Feature T5 | Per-turn report cards | Not built. Depends on T1/T2/T4; factual prompt-level changes/checks/failures, no invented quality scores. |
+| Broader features | Remaining 82 proposals/polish | Retain all 25 in 82, including blame, packets, mission control, symbols, bookmarks, session comparison, captured usage, commit/PR links, completeness, shortcuts, density and quiet notifications. Recheck current status before implementation; partial prerequisites are not completed workflows. |
+| Acceptance | Native/multi-agent and release checks | Genuine signed-in Claude/Codex attachment/options/approval/stop/reconnect/competing-client journeys, supported delegation, physical low-resource/platform, keyboard/assistive-tech and human ten-minute acceptance remain. |
+| After workflow | Fresh critical developer/product/design review | Open; evaluate switching intent and component usefulness against ordinary native harness/editor workflows. |
+
+T1–T5 were not clearly incorporated into this queue before this correction. They are now explicitly retained alongside the builder's visual/interaction requests; merging their audit/plan did not implement them. Local checks only; hosted CI remains publishing-only. Antivirus attribution/update/recurrence verification is separately tracked in [38](38-windows-antivirus-audit.md), not silently marked fixed.
+
+---
+
 **17 October exact references:**91 delivers keyboard-operable prose file/line actions, captured-range validation/reveal, distinct reading visits and metadata-only line recovery.90 delivers list fidelity; whole current-file find was already delivered by87. Next retain-old/current-source/base/draft comparison and the joined investigation loop, followed by the broader component/palette/native/human/platform queue.38 records the recurring external managed-runtime antivirus investigation and supported idle-time updater. None of these partial increments completes the whole queue.
 
 **17 October:** PR69/70 deliver explicit native-segment navigation and independent bottom prompt/time scrolling. Review90 delivers faithful nested/mixed/numbered Markdown lists; exact keyboard path/line destinations remain next. Broader joined workflow/component/native acceptance below remains open, and recurring McAfee attribution/remediation is independently tracked in38. Do not call the whole list complete.
