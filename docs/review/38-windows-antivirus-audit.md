@@ -1,5 +1,15 @@
 # Windows antivirus attribution audit
 
+## 17 October10:21 — fresh updater parent attribution captured
+
+A bounded read-only process sampler captured Windows PowerShell PID14144 at **10:21:41.823 IST**, parent PID22268. The parent is the managed0.160.0 `codex.exe`; its command arguments include **`app-server daemon pid-update-loop`**. The child command matches the exact stdin/`Invoke-Expression` wrapper. Windows PowerShell event400 independently records PID14144 at10:21:41. McAfee appends `Real Protect-PSFL!DC98AC2364A0` at **10:21:43.503 IST**, with the same136,350-byte in-memory target and no backing file/hash.
+
+**This freshly confirms the launch owner for this occurrence as Codex's managed updater**, not a Drishya test, native controller prompt or background Corepack/pnpm server. The inference about the installer purpose is supported by the embedded updater/installer code described below. The blocked payload's exact bytes and the vendor's classification rationale remain unavailable; a definitive false-positive or safe-to-allow judgment still cannot be made. A legitimate updater/AV compatibility conflict is the leading assessment, not evidence of a malicious Drishya script.
+
+The sampler stored only process IDs/time/path and boolean command classifications in ignored local files; no script body, credentials or prompts. Event subscription was denied by the host, so it used already-permitted read-only process snapshots for four minutes and exited automatically. It did not recreate the blocked launch, leave a watcher installed, disable protection, change native policy, update/stop a coding session or submit anything externally. The fresh event is added to the sanitized upstream evidence; no report was sent.
+
+An update attempt may encounter this same blocked installer path. Do not force the payload through a different execution mechanism or add broad exclusions. The supported native updater/package options need an idle-time version check and recurrence validation; changing a version number alone does not certify remediation. A vendor-reviewed installer/runtime compatibility fix remains the durable route if normal updating is blocked.
+
 ## 17 October deeper static assessment — updater is the leading explanation
 
 The builder asked to assess threat rather than assume that an assistant knows the purpose of a separate process. Additional read-only checks establish:
