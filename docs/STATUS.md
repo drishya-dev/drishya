@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Complete backlog index and reopened scroll acceptance
+
+- **When:**17 October2026, documentation-only after PR73 merged/pushed as2e035e5.
+- **Finding:**84 did not clearly incorporate Harsh's82 feature audit/83 top-five implementation plan. Added an authoritative opening queue, exact links, T1–T5 dispositions, all25-item retention and explicit remaining theme/Uiverse/component/native acceptance. PR66 is proposal;67 delivers reliability. Audit statuses atb3184bd are historical, not current completion totals.
+- **Scroll:** Builder still reports upward auto-scroll/skip after73. Reopened as first priority despite passing narrower regressions; source inspection shows several navigation/follow/measurement scroll writers, but no new exact cause or repair is established. Need actual-session reproduction and a failing regression before claiming fixed.
+- **McAfee:**38 separates previously captured managed-runtime parent attribution from unknown payload purpose/classification. The supported daemon updater is a candidate, not a verified cure. No protection/native setting changes or external submissions.
+
 ### Yash with Codex — Exact captured prose references
 
 - **When:**17 October2026, `codex/markdown-reference-navigation`, one coherent commit/PR after71/72 merged/pushed as08c336a/a886487.
