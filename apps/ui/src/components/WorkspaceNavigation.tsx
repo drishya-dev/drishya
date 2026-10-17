@@ -30,6 +30,7 @@ export function WorkspaceNavigation() {
       { key: 'latest', name: 'Return to latest activity', detail: 'Follow accumulating captured work', run: () => useApp.getState().showHistory() },
       { key: 'settings', name: 'Workspace settings', detail: 'Theme, reading and resources', run: () => useApp.setState({ settingsOpen: true }) },
     ];
+    if(kind==='daemon')all.push({key:'library-search',name:'Search all session evidence',detail:'Find captured text across imported sessions',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-search-library')))});
     if (mode === 'history') {
       if (document.querySelector('details.session-segments')) all.push({key:'newer-work',name:'Newer session work',detail:'Open newer captured work stored separately by the harness',run:()=>requestAnimationFrame(()=>{
         // Let the command dialog restore its prior focus before opening a menu;

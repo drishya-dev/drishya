@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**Implemented selected feature:** [93](93-cross-session-evidence-search.md) delivers T3's imported-library evidence search through a bounded worker/store query, Home action and command navigation, with exact captured-point destinations. No permanent main-canvas panel. Scope/limits and local validation are in93; the other feature and UI/scroll items remain open.
+
 **Latest selection/placement:** [92](92-feature-value-and-placement.md) reviews all25 items for developer value and assigns their UI homes. Prioritize cross-session evidence search; command history is optional inside Review, not another main panel. Findings/repetitions/turn summaries stay under existing Review/prompt navigation. Defer a second dashboard, symbol timeline and OS notifications. Retain native continuation lookup as **Newer session work** inside existing utilities/command navigation, not a header arrow. This is deliberate scope selection, not a claim that all selected features are implemented. Core upward-scroll reliability stays first.
 
 **Not all done.** PR71–73 deliver list fidelity, exact captured prose-reference navigation and an updated antivirus diagnosis. They do not complete the visual or developer-feature queue. This section supersedes stale "next" wording and older test totals farther below; those paragraphs retain the implementation history.
