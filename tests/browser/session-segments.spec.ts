@@ -1,11 +1,18 @@
 import {mkdtempSync,rmSync,writeFileSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
-import {expect,test} from '@playwright/test';
+import {expect,test,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 
 let dir:string,app:App,server:RunningServer,parentId:string,restore:()=>void;
+async function revealNewerWork(page:Page) {
+  const utilities=page.locator('.studio-actions > .workspace-menu');
+  if(await utilities.getAttribute('open')===null)await utilities.locator(':scope > summary').click();
+  const section=page.locator('.session-segments');await expect(section.locator('summary')).toBeVisible();
+  await section.locator('summary').click();
+  return section;
+}
 test.beforeAll(async()=>{
   dir=mkdtempSync(join(tmpdir(),'drishya-segment-browser-'));
   const family='11111111-1111-1111-1111-111111111111',parentThread='22222222-2222-2222-2222-222222222222',childThread='33333333-3333-3333-3333-333333333333';
@@ -31,16 +38,20 @@ test('native segment lookup is authenticated, read-only, and explicit navigation
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${parentId}`);
   await expect(page.locator('.history')).toContainText('EARLIER_NATIVE_SEGMENT');
-  const menu=page.locator('.session-segments');await menu.locator('summary').click();
+  await expect(page.locator('.studio-actions > .session-segments')).toHaveCount(0);
+  const menu=await revealNewerWork(page);
   await expect(menu).toContainText('this history stays available');
   await page.getByRole('heading').first().click();await expect(menu).not.toHaveAttribute('open','');
-  await menu.locator('summary').focus();await page.keyboard.press('Enter');await page.keyboard.press('Escape');await expect(menu.locator('summary')).toBeFocused();
+  await revealNewerWork(page);await menu.locator('summary').focus();await page.keyboard.press('Enter');await page.keyboard.press('Enter');await page.keyboard.press('Escape');await expect(menu.locator('summary')).toBeFocused();
   await menu.locator('summary').click();await menu.getByRole('button',{name:/^Open /}).click();
   await expect(page.locator('.history')).toContainText('NEWER_NATIVE_SEGMENT_CONFIRMED');await expect(menu).toHaveCount(0);
   expect(app.store.listRecordings()).toHaveLength(before+1);expect(prompts).toEqual([]);expect(app.ingest.isLive(parentId)).toBe(false);
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${parentId}`);await expect(page.locator('.history')).toContainText('EARLIER_NATIVE_SEGMENT');
-  await page.setViewportSize({width:390,height:844});await menu.locator('summary').click();
+  await page.setViewportSize({width:390,height:844});await revealNewerWork(page);
   const bounds=await menu.locator(':scope>div').boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(390);
+  await page.getByRole('heading').first().click();await page.keyboard.press('Control+k');
+  const navigation=page.getByRole('dialog',{name:'Navigate workspace'});await navigation.getByRole('combobox').fill('Newer session work');await navigation.getByRole('combobox').press('Enter');
+  await expect(menu).toHaveAttribute('open','');await expect(menu.locator('summary')).toBeFocused();
 });
 
 test('a delayed import cannot pull the user back from Home into another native segment',async({page})=>{
@@ -49,7 +60,7 @@ test('a delayed import cannot pull the user back from Home into another native s
   await page.route('**/v1/import',async route=>{entered();await gate;await route.continue();});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${parentId}`);
-  const menu=page.locator('.session-segments');await menu.locator('summary').click();await menu.getByRole('button',{name:/^Open /}).click();await started;
+  const menu=await revealNewerWork(page);await menu.getByRole('button',{name:/^Open /}).click();await started;
   await page.getByRole('button',{name:'Drishya',exact:true}).click();await expect(page.locator('.home')).toBeVisible();
   const imported=page.waitForResponse(r=>new URL(r.url()).pathname==='/v1/import');release();await imported;
   await expect(page.locator('.home')).toBeVisible();await expect(page.locator('.history')).toHaveCount(0);

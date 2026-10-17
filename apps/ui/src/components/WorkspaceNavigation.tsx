@@ -31,6 +31,15 @@ export function WorkspaceNavigation() {
       { key: 'settings', name: 'Workspace settings', detail: 'Theme, reading and resources', run: () => useApp.setState({ settingsOpen: true }) },
     ];
     if (mode === 'history') {
+      if (document.querySelector('details.session-segments')) all.push({key:'newer-work',name:'Newer session work',detail:'Open newer captured work stored separately by the harness',run:()=>requestAnimationFrame(()=>{
+        // Let the command dialog restore its prior focus before opening a menu;
+        // otherwise that restoration immediately dismisses the new destination.
+        if(useApp.getState().recordingId!==id||useApp.getState().screen!=='viewer')return;
+        const section=document.querySelector<HTMLDetailsElement>('details.session-segments');
+        const menu=section?.closest<HTMLDetailsElement>('details.workspace-menu');
+        if(menu)menu.open=true;
+        if(section){section.open=true;section.querySelector<HTMLElement>('summary')?.focus();}
+      })});
       all.push({ key: 'review', name: 'Review recorded changes and checks', detail: 'Captured outcomes, not coverage', run: () => click('.review-open') });
       all.push({ key: 'questions', name: 'Review questions', detail: 'Your unresolved review decisions', run: () => click('button[data-review-questions]') });
       if (kind === 'daemon' && id && !id.includes('+')) all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => click('.git-open') });
@@ -52,7 +61,7 @@ export function WorkspaceNavigation() {
       }
     }
     return result;
-  }, [query, graph, mode, kind, id, recordings]);
+  }, [query, graph, mode, kind, id, recordings, open]);
   const index = Math.min(active, Math.max(0, destinations.length - 1));
   useEffect(() => { if (open) document.getElementById(`${listId}/${index}`)?.scrollIntoView({ block: 'nearest', behavior: 'instant' }); }, [index, open, listId]);
   const choose = (destination: Destination) => { setOpen(false); destination.run(); };

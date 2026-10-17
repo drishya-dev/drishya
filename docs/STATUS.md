@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Feature value and quiet utility navigation
+
+- **When:**17 October2026, `codex/quiet-workspace-navigation`, separate coherent increment.
+- **Delivered:**[92](review/92-feature-value-and-placement.md) selects/places all25 feature/polish ideas by developer value. Prioritize cross-session search; optional Commands/findings/repeats/turn overview live under existing review/navigation, not permanent canvas panels. Newer native work remains useful, now in the existing utilities menu as Newer session work, with contextual command-palette route and no header arrow/filename suffix.
+- **Validation:**Both typechecks/build and five focused browser journeys pass; repaired nested outside/Escape dismissal and command-dialog focus restoration before showing the destination. Native segment validation/import/late-Home guards retained. No hosted CI/native turn; package/artwork edits excluded.
+- **Next:**Cross-session evidence search as a separate worker/store/UI increment, alongside the still-open core upward-scroll reliability and whole skills/Uiverse/theme queue. Selected features are not all implemented. AV evidence is independently in38.
+
 ### Yash with Codex — Complete backlog index and reopened scroll acceptance
 
 - **When:**17 October2026, documentation-only after PR73 merged/pushed as2e035e5.
