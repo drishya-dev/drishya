@@ -1,5 +1,7 @@
 # 84 — Modern daily-workflow follow-up
 
+**17 October exact references:**91 delivers keyboard-operable prose file/line actions, captured-range validation/reveal, distinct reading visits and metadata-only line recovery.90 delivers list fidelity; whole current-file find was already delivered by87. Next retain-old/current-source/base/draft comparison and the joined investigation loop, followed by the broader component/palette/native/human/platform queue.38 records the recurring external managed-runtime antivirus investigation and supported idle-time updater. None of these partial increments completes the whole queue.
+
 **17 October:** PR69/70 deliver explicit native-segment navigation and independent bottom prompt/time scrolling. Review90 delivers faithful nested/mixed/numbered Markdown lists; exact keyboard path/line destinations remain next. Broader joined workflow/component/native acceptance below remains open, and recurring McAfee attribution/remediation is independently tracked in38. Do not call the whole list complete.
 
 **16 October follow-up:** [87](87-modern-reading-and-component-audit.md) supersedes the page-only current Find, small draft limit and hover-expanding header descriptions below. Whole-file virtual reading, native-attached edit/New file drafts, bounded journal catch-up and wrapped-flow fixes are implemented. Recorded artifacts remain separately paged/evidence-backed. Broader adoption, palette/component audit, native-segment continuity and release acceptance remain open.

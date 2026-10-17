@@ -10,7 +10,7 @@ export function prepareNativeRequest(request: string, source: object, id: string
   const text = [previous, request].filter(Boolean).join('\n\n');
   if (utf8Bytes(text) > PROMPT_BYTES) throw new Error('The combined request exceeds 64 KiB. Shorten the composer draft before preparing this request.');
   drafts.set(state.recordingId,text);
-  useApp.setState({ developerWorkspace:false, explore:false, currentFile:undefined, filePanel:undefined });
+  useApp.getState().set({ developerWorkspace:false, explore:false, currentFile:undefined, filePanel:undefined });
   window.dispatchEvent(new Event('drishya-composer-draft'));
   if(files?.length)window.dispatchEvent(new CustomEvent('drishya-composer-files',{detail:{source,id,files}}));
 }

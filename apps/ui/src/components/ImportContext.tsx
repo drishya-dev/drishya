@@ -24,7 +24,7 @@ export function ImportContext({ path, current = false, openCurrent }: { path: st
       if (!workspace?.approved) await approve();
       if (useApp.getState().recordingId !== id || useApp.getState().source !== source) return;
       if (openCurrent) { openCurrent(target); return; }
-      useApp.setState({ currentFile: target, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
+      useApp.getState().set({ currentFile: target, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
     } catch (error) { setError((error as Error).message); }
     finally { setOpening(undefined); }
   };
@@ -33,13 +33,13 @@ export function ImportContext({ path, current = false, openCurrent }: { path: st
     {entries.slice(page * 8, page * 8 + 8).map(item => <div className="import-destination" key={`${item.direction}/${item.path}`}>
       <div><FileIcon path={item.path} /><span title={item.path}>{item.path}</span><small>{item.direction}</small></div>
       <div className="import-destination-actions">
-        <button className="btn ghost small" aria-label={`Captured work on ${item.path}`} onClick={() => useApp.setState({ developerWorkspace: false, filePanel: item.path, filePanelFocus: undefined, filePanelEvidence: undefined, currentFile: undefined })}>Captured work</button>
+        <button className="btn ghost small" aria-label={`Captured work on ${item.path}`} onClick={() => useApp.getState().set({ developerWorkspace: false, filePanel: item.path, filePanelFocus: undefined, filePanelEvidence: undefined, currentFile: undefined })}>Captured work</button>
         {canReadDisk && <button className={`btn ghost small${current ? ' current-destination' : ''}`} aria-label={`Read current file ${item.path}`} title="Current disk file · not captured historical source" disabled={!!opening} onClick={() => void readDisk(item.path)}>{opening === item.path ? 'Opening…' : 'Read current file ↗'}</button>}
       </div>
     </div>)}
     {error && <p className="bad small" role="alert">{error}</p>}
     {!entries.length && <p className="muted small">No resolved static imports in this index.</p>}
     {entries.length > 8 && <nav aria-label="Import connection pages"><button disabled={!page} onClick={() => setPage(p => p - 1)}>Previous</button><span>{page + 1} / {Math.ceil(entries.length / 8)}</span><button disabled={(page + 1) * 8 >= entries.length} onClick={() => setPage(p => p + 1)}>Next</button></nav>}
-    <button className="btn ghost small" onClick={() => useApp.setState({ developerWorkspace: false, mapFocusPath: path, mapVisible: true, explore: true, filePanel: undefined, currentFile: undefined })}>Focus on map ↗</button>
+    <button className="btn ghost small" onClick={() => useApp.getState().set({ developerWorkspace: false, mapFocusPath: path, mapVisible: true, explore: true, filePanel: undefined, currentFile: undefined })}>Focus on map ↗</button>
   </details>;
 }

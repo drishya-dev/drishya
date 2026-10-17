@@ -361,6 +361,8 @@ code, kbd, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
 .insp-note { color: var(--t2); margin: 0 0 10px; font-size: 13px; }
 .insp-note code, .consent code, .notice code { background: var(--s2); padding: 0 4px; border-radius: 4px; border: 1px solid var(--line); }
 .md-path { cursor: pointer; }
+button.md-path { display: inline; padding: 0; border: 0; border-radius: 4px; background: none; color: inherit; font: inherit; text-align: inherit; vertical-align: baseline; }
+button.md-path:focus-visible { outline: 2px solid var(--t2); outline-offset: 3px; }
 .md-list { padding-inline-start: 1.6em; }
 .md-list > li > p { margin-block: .2em; }
 .md-list > li > .md-list { margin-block: .25em .5em; }

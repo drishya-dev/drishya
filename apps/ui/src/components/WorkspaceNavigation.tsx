@@ -43,7 +43,7 @@ export function WorkspaceNavigation() {
         if (result.length >= 40) break;
         if (node.path.startsWith('.local/') || !node.path.toLowerCase().includes(needle)) continue;
         const currentDisk = graph?.temporal === 'current' && kind === 'daemon';
-        result.push({ key: `file/${node.id}`, name: node.path, detail: currentDisk ? 'Current indexed file · separate disk consent' : 'Recorded file work · available captured evidence only', path: node.path, run: () => useApp.setState(currentDisk ? { currentFile: node.id, filePanel: undefined, explore: false } : { filePanel: node.id, currentFile: undefined, explore: false }) });
+        result.push({ key: `file/${node.id}`, name: node.path, detail: currentDisk ? 'Current indexed file · separate disk consent' : 'Recorded file work · available captured evidence only', path: node.path, run: () => useApp.getState().set(currentDisk ? { currentFile: node.id, filePanel: undefined, explore: false } : { filePanel: node.id, currentFile: undefined, explore: false }) });
       }
       if (kind === 'daemon') for (const recording of recordings) {
         if (result.length >= 40) break;

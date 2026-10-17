@@ -10,7 +10,7 @@ import { useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useApp } from '../state.ts';
 
 /** One bounded page at a time; the daemon's historical slice is never replaced with today's file. */
-export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false, navigationSlot = 'source' }: {
+export function ArtifactReader({ id, kind, path, startLine = 1, fallback, provenance = false, navigationSlot = 'source', requestedLine }: {
   id?: string;
   kind: 'code' | 'output';
   path?: string;
@@ -18,6 +18,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   fallback?: string;
   provenance?: boolean;
   navigationSlot?: string;
+  requestedLine?: number;
 }) {
   const scope = `${navigationSlot}/artifact/${id}`;
   const [pages, setPages] = useEvidenceState(`${scope}/pages`, [0]);
@@ -47,6 +48,23 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const pageStart = pages[index] ?? 0;
   useEffect(() => { setRangeFrom(''); setRangeTo(''); setRangeStatus(''); }, [id, pageStart]);
   const view = useArtifact(id, { scope: 'reader', start: pageStart, count: 200, retry });
+  const followedReference = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (kind !== 'code' || requestedLine === undefined || !id || view.totalLines === undefined) return;
+    const reference = `${id}/${requestedLine}`;
+    if (followedReference.current === reference) return;
+    followedReference.current = reference;
+    const base = view.artifact?.range?.start ?? startLine;
+    const end = Math.min(base + view.totalLines - 1, view.artifact?.range?.end ?? Infinity);
+    setLineInput(String(requestedLine));
+    if (requestedLine < base || requestedLine > end) {
+      setLineError(`Referenced line ${requestedLine} is outside this stored range (${base}–${end}).`);
+      return;
+    }
+    setLineError(undefined); setActiveLine(requestedLine);
+    const offset = requestedLine - base;
+    if (offset < pageStart || offset >= (view.nextStart ?? pageStart)) { setPages([offset]); setIndex(0); }
+  }, [requestedLine, id, kind, startLine, view.totalLines, view.artifact, pageStart, view.nextStart]);
   useEvidenceScroll(reader, `${scope}/${pageStart}`, view.text !== undefined);
   useEvidenceScroll(sourceViewport, `${scope}/${pageStart}/content`, view.text !== undefined);
   useEffect(() => setCopied(undefined), [id, pageStart]);

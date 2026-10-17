@@ -81,6 +81,8 @@ interface State {
   filePanel?: string;
   filePanelFocus?: 'change';
   filePanelEvidence?: string;
+  /** Explicit prose reference, never an inferred captured source range. */
+  filePanelLine?: number;
   filter?: ComposeInput['filter'];
   inspectorTab: 'detail' | 'evidence' | 'explain';
   inspectorWidth: number;
@@ -150,7 +152,9 @@ export const useApp = create<State>((set, get) => ({
   briefingOpen: false,
   searchOpen: false,
 
-  set: (p) => set(p),
+  // An ordinary file destination must not inherit the last prose reference.
+  // Reading-history restoration supplies its exact line explicitly.
+  set: (p) => set(('filePanel' in p || 'currentFile' in p) && !('filePanelLine' in p) ? { ...p, filePanelLine: undefined } : p),
 
   async openRecording(id, opts = {}) {
     const src = get().source;
@@ -159,7 +163,7 @@ export const useApp = create<State>((set, get) => ({
     if (before.recordingId && before.projection && before.mode === 'history') {
       workspaceMemory(src).session(before.recordingId).set('location', {
         developerWorkspace: before.developerWorkspace, selectedOp: before.selectedOp, expandedOp: before.expandedOp, currentFile: before.currentFile,
-        filePanel: before.filePanel, filePanelFocus: before.filePanelFocus, filePanelEvidence: before.filePanelEvidence,
+        filePanel: before.filePanel, filePanelFocus: before.filePanelFocus, filePanelEvidence: before.filePanelEvidence, filePanelLine: before.filePanelLine,
         explore: before.explore, compareAgents: before.compareAgents, mapFocusPath: before.mapFocusPath,
         filter: before.filter, follow: before.follow, held: before.held,
         inspectorTab: before.inspectorTab, inspectorWidth: before.inspectorWidth,
@@ -169,7 +173,7 @@ export const useApp = create<State>((set, get) => ({
     const memory = workspaceMemory(src);
     if (opts.at !== undefined || opts.play) memory.clear(id);
     const saved = memory.session(id).get('location') as (Partial<State> & { start?: number }) | undefined;
-    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, explore: false, compareAgents: false });
+    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     try {

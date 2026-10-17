@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Exact captured prose references
+
+- **When:**17 October2026, `codex/markdown-reference-navigation`, one coherent commit/PR after71/72 merged/pushed as08c336a/a886487.
+- **Delivered:**[91](review/91-exact-markdown-references.md): native keyboard inline reference buttons, captured-work navigation with retained line, bounded artifact range/page reveal, explicit unavailable-line notices, separate line visits and safe navigation-only recovery. Existing ordinary destinations route through the state action to clear stale reference targets. No current-disk substitution, captured-event schema or native policy change.
+- **Validation:**439units/74files, both typechecks/build, six focused new/retained keyboard/search/evidence/replay journeys and three actual private Drishya/Skeletongraph Codex/Claude history/scroll/Workspace journeys pass. Actual Drishya frame inspected; missing Claude workspace root stays explicit. No hosted CI/native prompt; user package/artwork edits excluded.
+- **Next:** Source-version/base/draft comparison; primary joined investigation;84/85/87 component/palette work; native signed-in, human/assistive-tech and physical/platform acceptance. McAfee38 remains a separate unresolved runtime update/recurrence check. The whole list is not complete.
+
 ### Yash with Codex — Recurring Windows antivirus diagnosis
 
 - **When:**17 October2026, separate documentation-only increment after PR71 merged/pushed as08c336a.

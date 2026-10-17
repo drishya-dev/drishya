@@ -38,4 +38,11 @@ describe('bounded evidence navigation', () => {
     expect(trail.move(-1)).toBe(captured);
     expect(map).not.toBe(match);
   });
+  it('retains separate line-reference visits in the same captured file', () => {
+    const trail=new EvidenceTrail();
+    const first=trail.visit({...location('a.ts'),filePanelLine:250});
+    trail.visit({...location('a.ts'),filePanelLine:400});
+    expect(trail.move(-1)).toBe(first);
+    expect(trail.current?.location.filePanelLine).toBe(250);
+  });
 });
