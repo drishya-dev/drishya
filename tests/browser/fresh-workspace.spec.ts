@@ -13,6 +13,7 @@ test.beforeAll(async () => {
   cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
   writeFileSync(join(root,'src/cart/reading.ts'),Array.from({length:450},(_,i)=>`export const reviewLine${i+1} = ${i+1};`).join('\n'));
   writeFileSync(join(root,'src/cart/large.ts'),Array.from({length:10000},(_,i)=>`export const largeLine${i+1} = ${i+1};`).join('\n'));
+  writeFileSync(join(root,'src/cart/comparison.ts'),Array.from({length:1500},(_,i)=>`export const baseLine${i+1} = ${i+1};`).join('\n'));
   writeFileSync(join(root,'README.md'),'# Workspace guide\n\nA **readable** document.\n\n| Feature | State |\n| --- | --- |\n| Reading | Ready |\n\n> Current source, safely rendered.\n\n```ts\nexport const ready = true;\n```\n');
   const git = (...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true });
   git('init'); git('config', 'user.name', 'Synthetic'); git('config', 'user.email', 'synthetic@example.invalid');
@@ -632,6 +633,24 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await expect(editor).toBeVisible();
   await editor.fill('export const total = 43;\n');
   await expect(total).toContainText('lost on reload');
+  await total.getByRole('button',{name:'Compare draft',exact:true}).click();
+  const comparison=total.getByRole('region',{name:'Draft comparison for src/cart/total.ts'});
+  await expect(comparison).toContainText('not applied to disk');
+  await expect(comparison.locator('.diff-scroll')).toContainText('42');
+  await expect(comparison.locator('.diff-scroll')).toContainText('43');
+  await comparison.getByRole('button',{name:'Side by side',exact:true}).click();
+  await expect(comparison.getByRole('region',{name:'Local draft side by side'})).toBeVisible();
+  await expect(comparison).not.toContainText('Captured patch only');
+  await comparison.getByRole('searchbox',{name:'Find in patch',exact:true}).fill('total');
+  const other=desk.getByRole('region',{name:'Workspace file src/cart/discount.ts',exact:true});
+  await other.getByRole('button',{name:'Edit file',exact:true}).click();
+  await other.getByRole('textbox',{name:'Local draft for src/cart/discount.ts',exact:true}).fill('export const alternate = 7;\n');
+  await expect(comparison.getByRole('button',{name:'Side by side',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(comparison.getByRole('searchbox',{name:'Find in patch',exact:true})).toHaveValue('total');
+  await other.getByRole('button',{name:'Discard draft',exact:true}).click();
+  await page.screenshot({path:resolve('.local/workspace-draft-patch.png')});
+  await total.getByRole('button',{name:'Edit draft',exact:true}).click();
+  await expect(editor).toHaveValue('export const total = 43;\n');
   const downloadPromise=page.waitForEvent('download');
   await total.getByRole('button',{name:'Download draft',exact:true}).click();
   const download=await downloadPromise;
@@ -665,6 +684,39 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x+box.width).toBeLessThanOrEqual(390);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({path:resolve('.local/developer-workspace-phone.png')});
+});
+
+test('Workspace large draft comparison retains complete text, editing state and phone bounds',async({page})=>{
+  await page.setViewportSize({width:1440,height:960});
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
+  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
+  const approve=desk.getByRole('button',{name:'Approve workspace reading'});if(await approve.isVisible())await approve.click();
+  await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/comparison.ts');
+  await page.locator('[data-spine-path="src/cart/comparison.ts"]').click();
+  const document=desk.getByRole('region',{name:'Workspace file src/cart/comparison.ts',exact:true});
+  await document.getByRole('button',{name:'Edit file',exact:true}).click();
+  const editor=document.getByRole('textbox',{name:'Local draft for src/cart/comparison.ts',exact:true});
+  const draft=Array.from({length:1500},(_,i)=>`export const draftLine${i+1} = ${i+1};`).join('\n');
+  await editor.fill(draft);
+  await editor.evaluate((element:HTMLTextAreaElement)=>{element.setSelectionRange(110,130);element.scrollTop=250;});
+  await document.getByRole('button',{name:'Compare draft',exact:true}).click();
+  const comparison=document.getByRole('region',{name:'Draft comparison for src/cart/comparison.ts'});
+  await expect(comparison).toContainText('Large comparison');
+  await expect(comparison.getByRole('textbox',{name:'Compared draft for src/cart/comparison.ts',exact:true})).toHaveValue(draft);
+  await expect(comparison.getByRole('textbox',{name:'Draft base for src/cart/comparison.ts',exact:true})).toHaveValue(readFileSync(join(root,'src/cart/comparison.ts'),'utf8'));
+  await page.screenshot({path:resolve('.local/draft-comparison-desktop.png')});
+  await page.setViewportSize({width:390,height:844});
+  expect(await comparison.evaluate(element=>element.scrollWidth-element.clientWidth)).toBeLessThanOrEqual(1);
+  const last=await comparison.getByRole('textbox',{name:'Compared draft for src/cart/comparison.ts',exact:true}).boundingBox();
+  expect(last!.height).toBeGreaterThan(40);expect(last!.y+last!.height).toBeLessThanOrEqual(844);
+  await page.screenshot({path:resolve('.local/draft-comparison-phone.png')});
+  await page.setViewportSize({width:1440,height:960});
+  await document.getByRole('button',{name:'Edit draft',exact:true}).click();
+  await expect(editor).toHaveValue(draft);
+  expect(await editor.evaluate((element:HTMLTextAreaElement)=>({start:element.selectionStart,end:element.selectionEnd,top:element.scrollTop}))).toEqual({start:110,end:130,top:250});
+  expect(readFileSync(join(root,'src/cart/comparison.ts'),'utf8')).not.toContain('draftLine');
 });
 
 test('Modern navigation keeps two actions at each edge, readable and outside the history viewport',async({page})=>{

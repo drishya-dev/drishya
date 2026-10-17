@@ -1,4 +1,17 @@
 /* Dedicated current-file desk. Captured history stays mounted and keeps receiving work. */
+.desk-editor[hidden] {display:none;}
+.desk-draft-comparison {display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden;}
+.desk-comparison-context {display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--t2);font:11px/1.6 var(--sans);flex:none;}
+.desk-comparison-context small {display:block;color:var(--t3);font-size:10px;}
+.desk-comparison-counts {display:flex;gap:10px;margin-left:auto;font:11px/1.6 var(--mono);}
+.desk-draft-comparison>.diff-reader {display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:10px 12px;}
+.desk-draft-comparison .diff-scroll {flex:1;min-height:0;max-height:none;overflow:auto;}
+.desk-draft-comparison :is(.reader-tools,.source-find,.reader-pages) {flex:none;}
+.desk-comparison-empty,.desk-comparison-note {padding:14px;margin:0;color:var(--t2);font-size:12px;}
+.desk-comparison-texts {display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;min-height:0;padding:0 12px 12px;}
+.desk-comparison-texts label {display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;color:var(--t2);font-size:11px;}
+.desk-comparison-texts textarea {flex:1;min-width:0;min-height:0;resize:none;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--t1);font:12px/1.8 var(--mono);white-space:pre;overflow:auto;}
+@media(max-width:650px) {.desk-comparison-texts {grid-template-columns:1fr;grid-template-rows:1fr 1fr;}}
 .whole-source {width:max-content;min-width:100%;font:12px/22px var(--mono)!important;}
 .whole-source .ln {display:grid;grid-template-columns:48px minmax(0,1fr);min-height:22px;line-height:22px;}
 .whole-source .ln-tx {white-space:pre;line-height:22px;min-width:0;}

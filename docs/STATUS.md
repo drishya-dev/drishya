@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Local Workspace draft comparison
+
+- **When:** 17 October 2026, `codex/workspace-draft-comparison`, separate coherent commit/PR after79 merged as8235360.
+- **Delivered:** [95](review/95-workspace-draft-comparison.md): inline Compare draft / Edit draft; retained-base provenance; bounded Changes/Side by side, Find/Wrap/hunk/page navigation and complete-text fallback. Editor selection/scroll is retained. Per-draft revision prevents another pane's edits from resetting the comparison, without changing draft text or persisting bodies. No new permanent panel, endpoint, dependency, schema or native policy.
+- **Validation:** Both type checks/build and445 units/76 files pass. Six focused Edge journeys pass together: current Git, two-file drafts/comparison/native preparation, large comparison/phone/selection recovery, Markdown, whole-file Find and unsent New file attachment. Screenshots inspected; no native turn or disk mutation. The expanded phone Files overlay remains a broader navigation/audit item. No hosted CI/private content; user package/artwork edits excluded.
+- **Next:** Continue84's full UI/skills/Uiverse/palette audit, retained/refreshed/captured-source version comparisons and joined evidence→correction→recorded-check workflow. Optional T1 Commands and related findings/repetitions/turn overviews remain under92's quiet Review placement. Local comparison is a completed slice, not a claim the whole queue is done.
+
 ### Yash with Codex — Manual history scroll stability
 
 - **When:** 17 October 2026, `codex/manual-scroll-stability`; one focused commit/PR.
