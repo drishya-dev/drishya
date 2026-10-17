@@ -9,3 +9,41 @@ export async function pointAtHistory(page: Page, history: Locator = page.locator
   });
   await page.mouse.move(point.x, point.y);
 }
+
+/** Sample every mounted material, not only the first visible item: a whole-card
+ * jump can replace that first item and make a first-item-only check pass. */
+export async function beginReadingSamples(page: Page) {
+  await page.evaluate(() => {
+    const samples = { frames: 0, jumps: [] as { before: number; after: number }[], running: true };
+    (window as any).__readingSamples = samples;
+    let previous = new Map<string, number>();
+    const tick = () => {
+      if (!samples.running) return;
+      const history = document.querySelector('.history');
+      if (!history) { samples.jumps.push({ before: 0, after: Infinity }); return; }
+      const bounds = history.getBoundingClientRect();
+      const next = new Map<string, number>();
+      for (const node of history.querySelectorAll<HTMLElement>('[data-op-id],[data-prose-id]')) {
+        const id = node.dataset.opId ?? node.dataset.proseId!;
+        const top = node.getBoundingClientRect().top;
+        const before = previous.get(id);
+        if (before !== undefined && before > bounds.top + 40 && before < bounds.bottom - 140 && (top - before < -5 || top - before > 200)) samples.jumps.push({ before, after: top });
+        next.set(id, top);
+      }
+      previous = next;
+      samples.frames++;
+      // ResizeObserver runs after RAF callbacks and before paint. Sample from a
+      // task after that rendering step, not its deliberately uncorrected geometry.
+      requestAnimationFrame(() => setTimeout(tick, 0));
+    };
+    requestAnimationFrame(() => setTimeout(tick, 0));
+  });
+}
+
+export async function finishReadingSamples(page: Page): Promise<{ frames: number; jumps: { before: number; after: number }[] }> {
+  return page.evaluate(() => {
+    const samples = (window as any).__readingSamples;
+    samples.running = false;
+    return { frames: samples.frames, jumps: samples.jumps };
+  });
+}

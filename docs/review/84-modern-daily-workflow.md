@@ -2,13 +2,15 @@
 
 ## Read this first — complete queue, 17 October
 
+**Latest scroll repair:** [94](94-manual-history-scroll.md) records the reproduced delayed anchor correction and virtual-run measurement gap, the pre-paint repair, preserved placeholder allocation and stronger delayed-page/post-render regression. This closes that reproduced case after local validation; broader platform/input-device/human acceptance remains open. Continue the remaining UI/theme and selected workflow queue below.
+
 **Implemented selected feature:** [93](93-cross-session-evidence-search.md) delivers T3's imported-library evidence search through a bounded worker/store query, Home action and command navigation, with exact captured-point destinations. No permanent main-canvas panel. Scope/limits and local validation are in93; the other feature and UI/scroll items remain open.
 
 **Latest selection/placement:** [92](92-feature-value-and-placement.md) reviews all25 items for developer value and assigns their UI homes. Prioritize cross-session evidence search; command history is optional inside Review, not another main panel. Findings/repetitions/turn summaries stay under existing Review/prompt navigation. Defer a second dashboard, symbol timeline and OS notifications. Retain native continuation lookup as **Newer session work** inside existing utilities/command navigation, not a header arrow. This is deliberate scope selection, not a claim that all selected features are implemented. Core upward-scroll reliability stays first.
 
 **Not all done.** PR71–73 deliver list fidelity, exact captured prose-reference navigation and an updated antivirus diagnosis. They do not complete the visual or developer-feature queue. This section supersedes stale "next" wording and older test totals farther below; those paragraphs retain the implementation history.
 
-The builder's latest report **reopens upward-scroll acceptance**: scrolling up still sometimes auto-adjusts/skips. Prior repairs and passing bounded browser cases do not establish that this reported case is fixed. Reproduce with the actual long Drishya/Skeletongraph recording, paging/late material and motion/hover combinations; record the scroll writer and selected anchor, then keep a failing regression before a repair. Do not name a particular animation or virtualizer race as the confirmed cause without evidence.
+The builder's report after73 **reopened upward-scroll acceptance**: scrolling up still sometimes auto-adjusted/skipped. That investigation is now recorded in94: actual long recordings and delayed variable-height paging identified the scroll writer and allocation gap, with a baseline-failing regression before the repair. Earlier bounded tests had missed it. Keep broader human/platform/input-device acceptance open rather than treating one repaired race as universal proof.
 
 ### Where the whole feature list lives
 
@@ -21,14 +23,14 @@ The builder's latest report **reopens upward-scroll acceptance**: scrolling up s
 
 | Order | Work | Current disposition |
 |---|---|---|
-| First | Upward-history auto-scroll/skip | **Open; user still reproduces after 73.** Existing browser coverage is insufficient for this case. |
+| Reliability | Upward-history auto-scroll/skip | Reproduced delayed correction and newly mounted allocation case repaired in94, with a baseline-failing regression and actual-session checks. Broader human/platform/input-device acceptance remains. |
 | Next | Theme/color refinement | Presets/tokens exist; final visual palette quality and all-surface contrast/consistency pass remain open. Retain Jet Black. |
 | Next | Entire UI through installed skills and Uiverse inspiration | **Open.** Inspect every page/reader/dialog/menu/input, density, dimensions, padding, type, hover/focus/click/exit and resource behavior; not only previously pointed-out components. |
 | Workflow | Source version/base/draft comparison and joined investigation | Open: retain old source while inspecting changes; captured evidence → current source → native correction → resulting recorded check, with return positions and truthful provenance. |
 | Ergonomics | Files/Git sizing, Home density, useful map neighborhoods | Broader component improvements remain; use measured virtualization allocations and typed static/recorded relations. |
 | Feature T1 | Paged command ledger | Not built as an active end-to-end workflow. Follow 83: exact complete commands/output, honest cwd/duration basis, bounded worker query, filtering and deliberate Copy-as-script. No runner. |
 | Feature T2 | Evidence-linked tripwires | Not built. Versioned bounded pattern matches over redacted evidence; exact match/limitations, never a "safe" verdict. Depends on T1 command rows. |
-| Feature T3 | Cross-session evidence search | Existing selected/joined-session search is not the planned all-imported-session query. New bounded worker/store search plus Home journey remains. |
+| Feature T3 | Cross-session evidence search | Delivered by93/PR77: bounded imported-library worker/store search, Home/command-menu journey and exact captured-point navigation. |
 | Feature T4 | Repeated-work signals | Not built. Depends on T1; factual repetitions with evidence, not claims the agent is stuck or wasting time. |
 | Feature T5 | Per-turn report cards | Not built. Depends on T1/T2/T4; factual prompt-level changes/checks/failures, no invented quality scores. |
 | Broader features | Remaining 82 proposals/polish | Retain all 25 in 82, including blame, packets, mission control, symbols, bookmarks, session comparison, captured usage, commit/PR links, completeness, shortcuts, density and quiet notifications. Recheck current status before implementation; partial prerequisites are not completed workflows. |

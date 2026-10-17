@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { pointAtHistory } from './history-gestures.ts';
+import { pointAtHistory, beginReadingSamples, finishReadingSamples } from './history-gestures.ts';
 import { expect,test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer,type RunningServer } from '../../apps/daemon/src/server.ts';
@@ -24,7 +24,7 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await expect(page.locator('.home')).toBeVisible();
   await expect(page.locator('.mh-session').first()).toBeVisible();
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-home.png`)});
-  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(id)}`);
+  await page.goto(`${server.url}/?experience=modern#/r/${encodeURIComponent(id)}`);
   await expect(page.locator('.viewer')).toBeVisible();
   const recoveredDesk=page.getByRole('region',{name:'Developer workspace',exact:true});
   if(await recoveredDesk.isVisible())await recoveredDesk.getByRole('button',{name:'Back to agent',exact:true}).click();
@@ -50,6 +50,19 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
     expect(stability,'Captured material should not snap into a whole-card position after manual scrolling').toBeLessThan(3);
   }
   const latest=page.getByRole('button',{name:/Back to latest/});if(await latest.isVisible())await latest.click();
+  await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
+  await page.waitForTimeout(400);
+  await pointAtHistory(page,history);
+  await beginReadingSamples(page);
+  for(let n=0;n<95;n++) {
+    await page.mouse.wheel(0,-145);
+    await page.waitForTimeout(n%7===0?240:35);
+  }
+  await page.waitForTimeout(300);
+  const reading=await finishReadingSamples(page);
+  expect(reading.frames).toBeGreaterThan(100);
+  expect(reading.jumps,'Actual captured material must not jump out and back while older pages mount').toEqual([]);
+  if(await latest.isVisible())await latest.click();
   await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
   const textBlocks=page.locator('.prose .md-code-text');
   for(const block of await textBlocks.all())expect(await block.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);

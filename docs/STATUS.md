@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Manual history scroll stability
+
+- **When:** 17 October 2026, `codex/manual-scroll-stability`; one focused commit/PR.
+- **Delivered:** [94](review/94-manual-history-scroll.md): reproduced delayed reading-anchor correction and virtual-run measurement gaps. Newly mounted allocations and anchor recovery now reconcile before paint; settlement only records the current position. Paged-out placeholders retain known heights and do not overwrite real measurements. No new motion, wheel interception or capture/projection/schema change.
+- **Validation:** Both type checks, production build and 441 units across 75 files pass. A delayed, variable-height paging regression fails on the original code and passes after repair. All13 selected Edge journeys pass together, including actual Drishya/Skeletongraph Codex/Claude history and Workspace, 6,000-command capture-anchor/search/replay, hover/reduced motion and camera follow. Claude also passes twice separately after the late-artifact observer repair. Post-render sampling avoids treating pre-paint ResizeObserver geometry as a displayed frame. Broad platform/input-device/physical low-resource and human acceptance remains open. No hosted CI/private content; user package/artwork edits excluded.
+- **Next:** Continue84's whole UI/skills/Uiverse/palette pass, source/base/draft comparison and92's useful secondary developer tools. T3 is already delivered in93; optional Commands/findings/repetitions/turn overviews remain planned behind Review/navigation. Fresh AV updater attribution stays separate in38.
+
 ### Yash with Codex — Fresh recurring-alert updater attribution
 
 - **When:**17 October2026, independent documentation increment after PR77.
