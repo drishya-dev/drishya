@@ -1,4 +1,11 @@
 /* Dedicated current-file desk. Captured history stays mounted and keeps receiving work. */
+@media(max-width:820px) {.folder-explorer header .icon-btn {width:32px;min-width:32px;height:32px;min-height:32px;padding:8px;border-radius:7px;background:var(--s2);}.folder-explorer header .icon-btn svg {width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;}}
+.folder-explorer .folder-tree {overscroll-behavior:contain;}
+.folder-explorer .ux-search input:focus-visible {outline:0;box-shadow:none;}
+.folder-explorer .ux-search:focus-within {outline:1px solid var(--t3);outline-offset:1px;}
+.folder-explorer button,.desk-header [data-workspace-files-trigger] {touch-action:manipulation;}
+@media(pointer:coarse) {.folder-explorer input {font-size:16px!important;}.folder-explorer header .icon-btn {width:44px;min-width:44px;height:44px;min-height:44px;}.desk-header [data-workspace-files-trigger] {min-height:44px;}.folder-explorer button {-webkit-tap-highlight-color:transparent;}.folder-explorer button:active {background:var(--s3);}}
+@media(hover:none) {.folder-explorer .folder-tree button:hover:not(:focus-visible):not(:active) {background:transparent;color:var(--t2);}}
 .desk-editor[hidden] {display:none;}
 .desk-draft-comparison {display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden;}
 .desk-comparison-context {display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--t2);font:11px/1.6 var(--sans);flex:none;}

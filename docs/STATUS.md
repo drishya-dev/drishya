@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Responsive Workspace Files navigation
+
+- **When:**17 October2026, `codex/responsive-workspace-files`; one coherent commit/PR after80 merged as1dd1076.
+- **Delivered:**[96](review/96-responsive-workspace-files.md): chooser below the measured narrow Workspace header, local Files access, close/outside/Escape dismissal, selected-document focus, responsive default/explicit-preference separation and neutral/coarse-pointer search/close polish. Folder scroll recovery retained; no new source grant, native turn, direct write, endpoint or dependency.
+- **Validation:**Both typechecks/build and445 units/76 files pass; final UI typecheck rerun. Ten selected Edge journeys pass together and the three new responsive cases pass after final focus refinements.390px frames inspected. Physical-phone/platform acceptance remains open under mobile-native; no hosted CI/private content. User package/artwork edits excluded.
+- **Next:**84's whole-component/Uiverse/palette audit, source-version comparison and joined investigation workflow.92's optional Review tools remain planned; this fixes a reproduced navigation case without claiming the whole queue complete.
+
 ### Yash with Codex — Local Workspace draft comparison
 
 - **When:** 17 October 2026, `codex/workspace-draft-comparison`, separate coherent commit/PR after79 merged as8235360.
