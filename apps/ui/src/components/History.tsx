@@ -488,7 +488,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       <Origins scene={scene} projection={projection} isProgrammaticScroll={isProgrammaticScroll} />
       <FlowConnections projection={projection} />
     </div>
-      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index }))} activeId={activePrompt} open={({ id, index }) => {
+      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index,time:ps.turnTime }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
           set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
           navigationBoundary.current = { step: scene.step, projection };

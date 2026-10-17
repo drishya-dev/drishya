@@ -536,7 +536,7 @@
 .send-prompt svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .connected-workspace .composer-actions .send-prompt:disabled { opacity: .35; }
 /* Prompt chapters use their own equal-rank rail, not estimated document pixels. */
-.connected-workspace .history-prompt-marks { top: 50%; bottom: auto; right: calc(var(--stage-rail) + 8px); transform: translateY(-50%); width: 28px; max-height: calc(100dvh - 240px); display: flex; flex-direction: column; gap: 2px; pointer-events: auto; overflow: visible; }
+.connected-workspace .history-prompt-marks { top: auto; bottom: var(--prompt-rail-bottom,48px); right: calc(var(--stage-rail) + 8px); transform: none; width: 28px; max-height: var(--prompt-rail-max-height,calc(100dvh - 240px)); display: flex; flex-direction: column; gap: 2px; pointer-events: auto; overflow: visible; }
 .history-prompt-marks button { position: relative; left: auto; flex: 1 1 16px; min-height: 3px; width: 28px; height: 16px; padding: 0; transform: none; display: flex; align-items: center; }
 .history-prompt-marks button::before { display: none; }
 .connected-workspace .complete-prompt-rail { display: block; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; }

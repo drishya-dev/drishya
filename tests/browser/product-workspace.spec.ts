@@ -803,6 +803,7 @@ test('paged prompt rail spans the full session and loads an older chapter on sel
   await expect(page.locator('.turn').first()).toBeInViewport();
   await expect(rail.getByRole('button').first()).toHaveAttribute('aria-current', 'location');
   await rail.getByRole('button').first().hover();
+  await expect(page.locator('.prompt-rail-preview time')).toHaveAttribute('datetime','2026-10-09T00:00:00Z');
   await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 3).map(node => Math.round(node.getBoundingClientRect().width)))).toEqual([24, 16, 8]);
 });
 

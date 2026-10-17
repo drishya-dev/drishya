@@ -58,6 +58,8 @@ export interface ScenePassage {
   matchesFilter: boolean;
   /** A user turn that opened this passage, if one did. */
   turnPrompt?: string;
+  /** Captured timestamp of the turn that opens this passage, when supplied. */
+  turnTime?: string;
 }
 
 export interface SceneAgent {
@@ -136,13 +138,13 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const ended = new Map<string, number>();
   const proseAt = new Map<string, number>();
   const stoppedAgents = new Set<string>();
-  const turnAt: { step: number; prompt?: string }[] = [];
+  const turnAt: { step: number; prompt?: string; time?:string }[] = [];
   applied.forEach((it, i) => {
     if (it.type === 'op-start') started.set(it.operationId, i);
     else if (it.type === 'op-end') ended.set(it.operationId, i);
     else if (it.type === 'prose') proseAt.set(it.proseId, i);
     else if (it.type === 'agent-stop') stoppedAgents.add(it.agentId);
-    else if (it.type === 'turn') turnAt.push({ step: i, prompt: it.prompt });
+    else if (it.type === 'turn') turnAt.push({ step: i, prompt: it.prompt,time:it.time });
   });
 
   const stateOf = (op: Operation): OpState => {
@@ -208,6 +210,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       settled: latestByAgent.get(ps.agentId) !== ps.id,
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,
+      ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
     };
   });
 

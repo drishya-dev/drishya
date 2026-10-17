@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Bottom prompt timeline and independent page scrolling
+
+- **When:** 17 October 2026, `codex/prompt-timeline-scroll`, one focused commit/PR after69 merged/pushed as574973a. Builder explicitly requests merge after local checks.
+- **Delivered:** [89](review/89-bottom-prompt-timeline.md): bottom-anchored timeline grows upward, only the topmost marker clears intersecting Workspace/header controls, complete independently scrollable virtual prompt list, captured timestamps in previews/global outlines, far-right Modern page scrollbar with preserved center allocation. Composer/Tools/Follow bottom clearance adapts on phones. No event schema or native permission changes.
+- **Validation:**431units/72files, both typechecks/build; five focused prompt/navigation/browser journeys pass. Four golden updates add captured turn times only; missing time is never invented. Actual Drishya continuation history/manual-scroll/multi-file Workspace also passes; details in89. No hosted CI/native turn. User package/artwork edits preserved.
+- **Next:** Continue84/85/87: joined evidence/source/correction/check workflow, broader component/palette audit, native signed-in and human/platform/accessibility acceptance. Review88 remains explicit segment navigation, not automatic stitching.
+
 ### Yash with Codex — Native segment navigation
 
 - **When:** 17 October 2026; branch `codex/native-segment-navigation`, one focused commit/PR after merged68 (45a09e7).
