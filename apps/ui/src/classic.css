@@ -2,9 +2,8 @@
    brought over from Studio without importing Studio's alternative source layout. */
 :root { --ease-out: cubic-bezier(.23, 1, .32, 1); }
 .workspace-menu > div { max-height: min(70dvh, var(--menu-max-height, 70dvh)); overflow-y: auto; overscroll-behavior: contain; }
-.studio-actions .session-segments {position:static;}
-.session-segments>summary {color:var(--focus);font-size:18px;}
-.session-segments>div {width:min(330px,calc(100vw - 32px));padding:12px;}
+.session-segments>summary {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px;cursor:pointer;font:12px/1.5 var(--sans);color:var(--t1);}
+.session-segments>div {position:static;width:auto;padding:0 8px 8px;border:0;box-shadow:none;background:none;}
 .session-segments>div>strong {display:block;font:500 12px/1.6 var(--sans);color:var(--t1);}
 .session-segments>div>p {margin:7px 0 10px;font:11px/1.7 var(--sans);color:var(--t2);overflow-wrap:anywhere;}
 .session-segments>div>.btn {width:100%;display:flex;justify-content:space-between;gap:10px;text-align:left;margin-top:5px;font-size:11px;}
