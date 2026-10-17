@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**Local draft comparison:** [95](95-workspace-draft-comparison.md) adds Compare draft within Workspace, with retained-base provenance, bounded Changes/Side by side and complete-text fallback, plus independent per-draft reading identity. This completes that local slice only; refreshed-source/version comparison and the joined evidence→native correction→recorded-check journey remain open.
+
 **Latest scroll repair:** [94](94-manual-history-scroll.md) records the reproduced delayed anchor correction and virtual-run measurement gap, the pre-paint repair, preserved placeholder allocation and stronger delayed-page/post-render regression. This closes that reproduced case after local validation; broader platform/input-device/human acceptance remains open. Continue the remaining UI/theme and selected workflow queue below.
 
 **Implemented selected feature:** [93](93-cross-session-evidence-search.md) delivers T3's imported-library evidence search through a bounded worker/store query, Home action and command navigation, with exact captured-point destinations. No permanent main-canvas panel. Scope/limits and local validation are in93; the other feature and UI/scroll items remain open.
@@ -26,7 +28,7 @@ The builder's report after73 **reopened upward-scroll acceptance**: scrolling up
 | Reliability | Upward-history auto-scroll/skip | Reproduced delayed correction and newly mounted allocation case repaired in94, with a baseline-failing regression and actual-session checks. Broader human/platform/input-device acceptance remains. |
 | Next | Theme/color refinement | Presets/tokens exist; final visual palette quality and all-surface contrast/consistency pass remain open. Retain Jet Black. |
 | Next | Entire UI through installed skills and Uiverse inspiration | **Open.** Inspect every page/reader/dialog/menu/input, density, dimensions, padding, type, hover/focus/click/exit and resource behavior; not only previously pointed-out components. |
-| Workflow | Source version/base/draft comparison and joined investigation | Open: retain old source while inspecting changes; captured evidence → current source → native correction → resulting recorded check, with return positions and truthful provenance. |
+| Workflow | Source version/base/draft comparison and joined investigation | Local retained-base/draft comparison delivered in95. Still open: retained/refreshed disk versions, captured-version comparisons and captured evidence → current source → native correction → resulting recorded check, with truthful provenance/return positions. |
 | Ergonomics | Files/Git sizing, Home density, useful map neighborhoods | Broader component improvements remain; use measured virtualization allocations and typed static/recorded relations. |
 | Feature T1 | Paged command ledger | Not built as an active end-to-end workflow. Follow 83: exact complete commands/output, honest cwd/duration basis, bounded worker query, filtering and deliberate Copy-as-script. No runner. |
 | Feature T2 | Evidence-linked tripwires | Not built. Versioned bounded pattern matches over redacted evidence; exact match/limitations, never a "safe" verdict. Depends on T1 command rows. |
