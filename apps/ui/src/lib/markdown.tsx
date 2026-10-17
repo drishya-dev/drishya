@@ -4,14 +4,15 @@
 import { createElement, type ReactNode } from 'react';
 import { FencedCode } from '../components/FencedCode.tsx';
 
-export function Markdown({ text, onPath, document = false }: { text: string; onPath?: (p: string) => void; document?: boolean }) {
+type PathAction = (path: string, line?: number) => void;
+export function Markdown({ text, onPath, document = false }: { text: string; onPath?: PathAction; document?: boolean }) {
   return renderMarkdown(text, onPath, document, 0);
 }
 
 const listMarker = (line: string) => /^( *)([-+*]|\d{1,9}[.)])([ \t]+)(.*)$/.exec(line);
 const orderedMarker = (marker: string) => /^\d/.test(marker);
 
-function renderMarkdown(text: string, onPath: ((p: string) => void) | undefined, document: boolean, depth: number): ReactNode {
+function renderMarkdown(text: string, onPath: PathAction | undefined, document: boolean, depth: number): ReactNode {
   // Malformed/extremely nested captured content must remain readable without
   // making transcript rendering recursively unbounded.
   if (depth >= 32) return <FencedCode text={text} language="text" />;
@@ -92,7 +93,7 @@ function renderMarkdown(text: string, onPath: ((p: string) => void) | undefined,
   return <>{blocks}</>;
 }
 
-function inline(s: string, onPath?: (p: string) => void): ReactNode[] {
+function inline(s: string, onPath?: PathAction): ReactNode[] {
   const out: ReactNode[] = [];
   const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(([^)]+)\))|(\*[^*\n]+\*|(?<![\w_])_[^_\n]+_(?![\w_]))/g;
   let last = 0;
@@ -102,12 +103,10 @@ function inline(s: string, onPath?: (p: string) => void): ReactNode[] {
     if (i > last) out.push(s.slice(last, i));
     if (m[1]) {
       const code = m[1].slice(1, -1);
-      const looksPath = /^[\w./-]+\.\w{1,5}(:\d+)?$/.test(code);
+      const reference = /^((?:[A-Za-z]:)?[\p{L}\p{N}_./@\\ ()-]+\.[\p{L}\p{N}_-]{1,12})(?::([1-9]\d{0,8}))?$/u.exec(code);
       out.push(
-        looksPath && onPath ? (
-          <code key={k++} className="md-path" onClick={() => onPath(code.replace(/:\d+$/, ''))}>
-            {code}
-          </code>
+        reference && onPath ? (
+          <button type="button" key={k++} className="md-path" aria-label={`Open captured work for ${reference[1]}${reference[2] ? ` at line ${reference[2]}` : ''}`} onClick={() => onPath(reference[1]!, reference[2] ? Number(reference[2]) : undefined)}><code>{code}</code></button>
         ) : (
           <code key={k++}>{code}</code>
         ),

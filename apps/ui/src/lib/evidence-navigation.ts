@@ -2,6 +2,7 @@ export interface EvidenceLocation {
   filePanel?: string;
   filePanelFocus?: 'change';
   filePanelEvidence?: string;
+  filePanelLine?: number;
   currentFile?: string;
   selectedOp?: string;
   explore: boolean;
@@ -15,7 +16,7 @@ export interface EvidenceVisit {
   memory: Map<string, unknown>;
 }
 
-const identity = (location: EvidenceLocation) => JSON.stringify([location.currentFile, location.filePanel, location.filePanelFocus, location.filePanelEvidence, location.selectedOp, location.explore]);
+const identity = (location: EvidenceLocation) => JSON.stringify([location.currentFile, location.filePanel, location.filePanelFocus, location.filePanelEvidence, location.filePanelLine, location.selectedOp, location.explore]);
 
 /** Ephemeral bounded reading visits. No fetched source cache or capability grants. */
 export class EvidenceTrail {

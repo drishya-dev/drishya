@@ -13,6 +13,7 @@ export function EvidenceNavigationProvider({ children }: { children: ReactNode }
   const filePanel = useApp(s => s.filePanel);
   const filePanelFocus = useApp(s => s.filePanelFocus);
   const filePanelEvidence = useApp(s => s.filePanelEvidence);
+  const filePanelLine = useApp(s => s.filePanelLine);
   const currentFile = useApp(s => s.currentFile);
   const selectedOp = useApp(s => s.selectedOp);
   const explore = useApp(s => s.explore);
@@ -28,7 +29,7 @@ export function EvidenceNavigationProvider({ children }: { children: ReactNode }
     if (mode === 'history') memory.set('evidence/trail', value);
     return value;
   }, [memory, source, id, mode, cutoff]);
-  const location: EvidenceLocation = { filePanel, filePanelFocus, filePanelEvidence, currentFile, selectedOp, explore, inspectorTab, inspectorWidth };
+  const location: EvidenceLocation = { filePanel, filePanelFocus, filePanelEvidence, filePanelLine, currentFile, selectedOp, explore, inspectorTab, inspectorWidth };
   if (!loaded) return <>{children}</>;
   const visit = trail.visit(location);
   return <NavigationContext.Provider value={{ trail, visit }}>{children}</NavigationContext.Provider>;

@@ -29,6 +29,7 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const canvas = useExperience() === 'canvas';
   const focusChange = useApp(s => s.filePanelFocus === 'change');
   const preferred = useApp(s => s.filePanelEvidence);
+  const requestedLine = useApp(s => s.filePanelLine);
   const explore = useApp(s => s.explore);
   const { workspace, approve } = useSessionWorkspace();
   const [diskError, setDiskError] = useState<string>();
@@ -84,13 +85,17 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
     }
     return items;
   }, [page, path, compare, left, right, preferred, projection]);
-  const first = choices.find((item) => item.key === left?.key) ?? choices.find(item => item.key === preferred) ?? (focusChange ? choices.find(item => item.patch) ?? choices.find(item => item.operation.kind === 'write' || item.operation.kind === 'edit') : undefined) ?? choices[0];
+  const referenced = requestedLine === undefined ? undefined : choices.find(item => {
+    const detail = item.operation.detail;
+    return detail.kind === 'read' && requestedLine >= detail.startLine && requestedLine < detail.startLine + detail.lineCount;
+  });
+  const first = choices.find((item) => item.key === left?.key) ?? choices.find(item => item.key === preferred) ?? referenced ?? (focusChange ? choices.find(item => item.patch) ?? choices.find(item => item.operation.kind === 'write' || item.operation.kind === 'edit') : undefined) ?? choices[0];
   const second = choices.find((item) => item.key === right?.key) ?? choices.at(-1);
   useEffect(() => { if (!left && first) setLeft(first); }, [left, first]);
-  const close = () => useApp.setState({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
+  const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
   return <ReadingDialog title={`Work on ${path}`} close={close} className="file-workspace" modeless={explore || canvas}>
     <EvidenceNavigation />
-    <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}</span></div>
+    <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}{requestedLine !== undefined && ` · Referenced line ${requestedLine} · captured ranges only`}</span></div>
     <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
       {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} label="Resize file action history" />}
       <nav ref={trail} className="file-trail" aria-label="File action history">
@@ -110,12 +115,12 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
         {page && page.total > 24 && <div className="file-pagination"><button className="btn" disabled={start === 0} onClick={() => { setLeft(first); setStart(Math.max(0, start - 24)); }}>Previous</button><span>{start + 1}–{Math.min(start + 24, page.total)} / {page.total}</span><button className="btn" disabled={start + 24 >= page.total} onClick={() => { setLeft(first); setStart(start + 24); }}>Next</button></div>}
       </nav>
       <section ref={reading} className="file-evidence-reading" aria-label="File evidence">
-        <div className="file-evidence-toolbar"><strong>Historical evidence</strong>{!canvas && source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" title={workspace.root} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.setState({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}<button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button><button className="btn" aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{compare ? 'Single evidence' : 'Compare evidence'}</button></div>
+        <div className="file-evidence-toolbar"><strong>Historical evidence</strong>{!canvas && source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" title={workspace.root} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.getState().set({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}<button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button><button className="btn" aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{compare ? 'Single evidence' : 'Compare evidence'}</button></div>
 
         {!canvas && <ImportContext path={path} />}
         {diskError && <p className="bad" role="alert">{diskError}</p>}
         {choices.length > 0 ? <div className={`file-evidence-columns${compare ? ' paired' : ''}`}>
-          <EvidenceColumn choices={choices} value={first} choose={(key) => setLeft(choices.find((item) => item.key === key))} label="First evidence" path={path} />
+          <EvidenceColumn choices={choices} value={first} choose={(key) => setLeft(choices.find((item) => item.key === key))} label="First evidence" path={path} requestedLine={requestedLine} />
           {compare && <EvidenceColumn choices={choices} value={second} choose={(key) => setRight(choices.find((item) => item.key === key))} label="Second evidence" path={path} />}
         </div> : page && <p className="muted">No source bytes or patch were captured for these actions. Open an action to inspect the evidence that is available.</p>}
       </section>
@@ -123,14 +128,14 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   </ReadingDialog>;
 }
 
-function EvidenceColumn({ choices, value, choose, label, path }: { choices: FileEvidence[]; value?: FileEvidence; choose: (key: string) => void; label: string; path: string }) {
+function EvidenceColumn({ choices, value, choose, label, path, requestedLine }: { choices: FileEvidence[]; value?: FileEvidence; choose: (key: string) => void; label: string; path: string; requestedLine?: number }) {
   return <section className="file-evidence-column"><label><span className="muted small">{label}</span><select aria-label={label} value={value?.key ?? ''} onChange={(e) => choose(e.target.value)}>{choices.map((item) => <option key={item.key} value={item.key}>{item.operation.title} · {item.label}</option>)}</select></label>
     {value && <div key={value.key} className="file-evidence-material">
       <p className="small">{value.label}</p>
       {value.snippet !== undefined ? <>
         <p className="muted small">Exact captured search result · surrounding file was not captured by this result{value.startLine === undefined ? ' · line number not reported' : ''}</p>
-        {value.startLine === undefined ? <Output text={value.snippet} /> : <CodeView text={value.snippet} path={path} startLine={value.startLine} />}
-      </> : value.patch && value.operation.detail.kind === 'edit' ? <DiffReader hunks={value.operation.detail.hunks} path={path} navigationKey={`${label}/${value.key}`} /> : <ArtifactReader id={value.artifactId} kind="code" path={path} startLine={value.startLine} navigationSlot={label} provenance />}
+        {value.startLine === undefined ? <Output text={value.snippet} /> : <CodeView text={value.snippet} path={path} startLine={value.startLine} activeLine={requestedLine} />}
+      </> : value.patch && value.operation.detail.kind === 'edit' ? <DiffReader hunks={value.operation.detail.hunks} path={path} navigationKey={`${label}/${value.key}`} /> : <ArtifactReader id={value.artifactId} kind="code" path={path} startLine={value.startLine} navigationSlot={label} requestedLine={requestedLine} provenance />}
       {value.operation.kind === 'edit' && <VerificationPanel op={value.operation} onOpen={(id) => { const state = useApp.getState(); state.select(id); state.set({ filePanel: undefined, explore: false }); }} />}
     </div>}
   </section>;

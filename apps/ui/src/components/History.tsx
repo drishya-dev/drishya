@@ -572,7 +572,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
           {open ? ' · collapse' : ' · show'}
         </button>
       )}
-      {open && <Markdown text={pr.text} onPath={(p) => set({ hoveredPath: p })} />}
+      {open && <Markdown text={pr.text} onPath={(path, line) => set({ hoveredPath: path, filePanel: path, filePanelLine: line, filePanelEvidence: undefined, filePanelFocus: undefined, currentFile: undefined, selectedOp: undefined, follow: false, held: true })} />}
       {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); }}>{full ? 'Close full captured text' : 'Preview · read full captured text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
     </div>
   );

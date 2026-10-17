@@ -113,7 +113,7 @@ function GitReader({ close }: { close: () => void }) {
             {snapshot.totalAllowed === undefined && snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
           </aside>
           <section>{file && <>
-            <header><strong>{file.path}</strong><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.setState({ currentFile: file.path }); }}>Open on disk</button><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.setState({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button></header>
+            <header><strong>{file.path}</strong><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button></header>
             <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} /></div>
             {file.status !== '??' && <footer>
               <label><input type="checkbox" disabled={busy || checking} checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label>
