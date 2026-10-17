@@ -6,10 +6,12 @@ import { useLayoutEffect, useRef } from 'react';
 import { useApp } from '../state.ts';
 import { useExperience } from '../lib/experience.ts';
 import { agentColor, agentName } from '../lib/identity.ts';
+import { useNarrowWorkspace } from '../lib/responsive-workspace.ts';
 
 export function WorkspaceBar() {
   const bar = useRef<HTMLElement>(null);
   const experience = useExperience();
+  const narrow = useNarrowWorkspace();
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   useLayoutEffect(() => {
     const element = bar.current;
@@ -30,10 +32,10 @@ export function WorkspaceBar() {
   const filter = useApp((s) => s.filter);
   const multipleAgents = useApp(s => (s.projection?.agents.length ?? 0) > 1);
   const foldersHidden = useApp(s => s.foldersHidden);
-  const foldersShown = foldersHidden === false || experience !== 'studio' && foldersHidden !== true && window.innerWidth > 820;
+  const foldersShown = foldersHidden === false || experience !== 'studio' && foldersHidden !== true && !narrow;
   return <nav ref={bar} className="workspace-bar" aria-label="Workspace views">
     <span className="workspace-context sr-only">{source?.sample === 'growing' ? recording?.live ? 'Synthetic live demonstration · Publishing sample events' : 'Synthetic live demonstration · Sample complete' : source?.sample ? 'Synthetic recording' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local recording'}</span>
-    <div className="workspace-leading">    <div className="workspace-toggles"><button aria-label={modern ? 'Show files' : 'Show session folders'} aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg>{modern ? 'Files' : 'Folders'}</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ developerWorkspace: false, mapVisible: true, explore: !explore, selectedOp: undefined, expandedOp: undefined })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7" /><circle cx="5" cy="5" r="3" /><circle cx="19" cy="5" r="3" /><circle cx="5" cy="19" r="3" /><circle cx="19" cy="19" r="3" /></svg>{modern ? 'Repository' : 'Map'}</button>{experience === 'legacy' && multipleAgents && <button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button>}</div>
+    <div className="workspace-leading">    <div className="workspace-toggles"><button data-workspace-files-trigger aria-label={modern ? 'Show files' : 'Show session folders'} aria-pressed={foldersShown} onClick={() => useApp.setState({ foldersHidden: foldersShown })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg>{modern ? 'Files' : 'Folders'}</button><button aria-label="Explore repository map" aria-pressed={explore} onClick={() => useApp.setState({ developerWorkspace: false, mapVisible: true, explore: !explore, selectedOp: undefined, expandedOp: undefined })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7" /><circle cx="5" cy="5" r="3" /><circle cx="19" cy="5" r="3" /><circle cx="5" cy="19" r="3" /><circle cx="19" cy="19" r="3" /></svg>{modern ? 'Repository' : 'Map'}</button>{experience === 'legacy' && multipleAgents && <button role="switch" aria-label="Agent overview" aria-checked={compare} onClick={() => useApp.setState({ compareAgents: !compare, explore: false })}>Agents <span className={`mini-switch${compare ? ' on' : ''}`} /></button>}</div>
     {source?.sample === 'growing' && <span className={`sample-state${recording?.live ? ' live' : ''}`}><i aria-hidden="true" />{recording?.live ? 'Live demo' : 'Demo complete'}</span>}
     {source?.sample === 'growing' && recording?.live && <button className="btn ghost sample-complete" onClick={() => source.completeSample?.()}>Show complete sample</button>}
     {(source?.sample === 'recorded' || source?.sample === 'growing' && !recording?.live) && <button className="btn ghost sample-watch" onClick={() => { const next = new URL(location.href); next.searchParams.set('demo', 'live'); next.searchParams.delete('at'); next.hash = ''; location.assign(next.href); }}>{source.sample === 'growing' ? 'Watch demo again' : 'Watch live demo'}</button>}

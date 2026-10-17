@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**Responsive Files navigation:** [96](96-responsive-workspace-files.md) fixes the reproduced narrow Workspace chooser/header overlap, adds a local Files trigger and normal dismissal/focus recovery, and keeps responsive defaults distinct from explicit preferences. Desktop and touch-emulated checks pass; physical-phone acceptance and the wider component audit remain open.
+
 **Local draft comparison:** [95](95-workspace-draft-comparison.md) adds Compare draft within Workspace, with retained-base provenance, bounded Changes/Side by side and complete-text fallback, plus independent per-draft reading identity. This completes that local slice only; refreshed-source/version comparison and the joined evidence→native correction→recorded-check journey remain open.
 
 **Latest scroll repair:** [94](94-manual-history-scroll.md) records the reproduced delayed anchor correction and virtual-run measurement gap, the pre-paint repair, preserved placeholder allocation and stronger delayed-page/post-render regression. This closes that reproduced case after local validation; broader platform/input-device/human acceptance remains open. Continue the remaining UI/theme and selected workflow queue below.
