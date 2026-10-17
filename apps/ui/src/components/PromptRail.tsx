@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-export interface PromptChapter { id: string; label: string; index: number }
+export interface PromptChapter { id: string; label: string; index: number; time?:string }
 const ROW = 16;
 
 /** All chapters are addressable; only the visible rail rows enter the DOM. */
@@ -14,9 +14,27 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
   useLayoutEffect(() => {
     const node = rail.current;
     if (!node) return;
-    const measure = () => setViewport({ top: node.scrollTop, height: node.clientHeight });
-    const observer = new ResizeObserver(measure); observer.observe(node); measure();
-    return () => observer.disconnect();
+    const viewer=node.closest('.viewer')??document.querySelector('.viewer');
+    const observed=new Set<Element>();let observer:ResizeObserver;
+    const measure = () => {
+      const controls=[...(viewer??document).querySelectorAll<HTMLElement>('.workspace-header,.workspace-leading,.workspace-secondary,.prompt-composer,.catalog-toggle,.workspace-follow,.follow-pill')];
+      for(const control of controls) if(!observed.has(control)){observer.observe(control);observed.add(control);}
+      const bounds=node.getBoundingClientRect();let top=16,bottom=48;
+      for(const control of controls) {
+        const r=control.getBoundingClientRect();
+        if(!r.width||!r.height||r.right<=bounds.left||r.left>=bounds.right) continue;
+        if(control.matches('.prompt-composer')) {if(control.matches('.open'))bottom=Math.max(bottom,innerHeight-r.top+12);}
+        else if(control.matches('.catalog-toggle,.workspace-follow,.follow-pill')) bottom=Math.max(bottom,innerHeight-r.top+12);
+        else top=Math.max(top,r.bottom+14);
+      }
+      node.style.setProperty('--prompt-rail-bottom',`${bottom}px`);
+      node.style.setProperty('--prompt-rail-max-height',`${Math.max(0,innerHeight-top-bottom)}px`);
+      setViewport(old=>old.top===node.scrollTop&&old.height===node.clientHeight?old:{top:node.scrollTop,height:node.clientHeight});
+    };
+    observer = new ResizeObserver(measure);observer.observe(node);measure();
+    const changes=new MutationObserver(measure);if(viewer)changes.observe(viewer,{childList:true,attributes:true,attributeFilter:['class']});
+    window.addEventListener('resize',measure);
+    return () => {observer.disconnect();changes.disconnect();window.removeEventListener('resize',measure);};
   }, []);
   useLayoutEffect(() => {
     const node = rail.current;
@@ -32,7 +50,7 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
     setPreview({ ordinal, top: Math.max(80, Math.min(innerHeight - 150, r.top)), left: Math.max(8, r.left - 274) });
   };
   return <>
-    <nav ref={rail} tabIndex={0} className="history-prompt-marks complete-prompt-rail" aria-label="Prompt positions in history" style={{ height: `min(${chapters.length * ROW}px, calc(100dvh - 240px))` }} onKeyDown={e => {
+    <nav ref={rail} tabIndex={0} className="history-prompt-marks complete-prompt-rail" aria-label="Prompt positions in history" style={{ height: chapters.length * ROW }} onKeyDown={e => {
       if (!['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) return;
       e.preventDefault();
       const current = Number((e.target as HTMLElement).closest<HTMLElement>('[data-prompt-ordinal]')?.dataset.promptOrdinal ?? active + 1) - 1;
@@ -49,6 +67,6 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
         })}
       </div>
     </nav>
-    {preview && chapters[preview.ordinal] && createPortal(<div className="prompt-rail-preview" style={{ position: 'fixed', top: preview.top, left: preview.left, right: 'auto', opacity: 1, visibility: 'visible', transform: 'none', zIndex: 80 }}><small>Prompt {preview.ordinal + 1} of {chapters.length}</small><span>{chapters[preview.ordinal]!.label}</span></div>, document.body)}
+    {preview && chapters[preview.ordinal] && createPortal(<div className="prompt-rail-preview" style={{ position: 'fixed', top: preview.top, left: preview.left, right: 'auto', opacity: 1, visibility: 'visible', transform: 'none', zIndex: 80 }}><small>Prompt {preview.ordinal + 1} of {chapters.length}</small>{chapters[preview.ordinal]!.time&&<time dateTime={chapters[preview.ordinal]!.time}>{new Date(chapters[preview.ordinal]!.time!).toLocaleString()}</time>}<span>{chapters[preview.ordinal]!.label}</span></div>, document.body)}
   </>;
 }

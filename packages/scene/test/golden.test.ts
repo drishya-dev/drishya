@@ -41,6 +41,11 @@ function stable(v: unknown): unknown {
 }
 
 describe('scene composer', () => {
+  it('carries captured prompt times into reading outlines without inventing missing times',()=>{
+    expect(compose(p,{step:p.timeline.length}).passages.some(passage=>passage.turnPrompt&&passage.turnTime)).toBe(true);
+    const withoutTimes={...p,timeline:p.timeline.map(item=>({...item,time:undefined}))};
+    expect(compose(withoutTimes,{step:p.timeline.length}).passages.every(passage=>passage.turnTime===undefined)).toBe(true);
+  });
   it('withholds a late result and its bytes until the result step', () => {
     const op = p.operations.find((o) => o.detail.kind === 'read' && o.detail.excerptArtifactId)!;
     const call = p.timeline.findIndex((it) => it.type === 'op-start' && it.operationId === op.id);

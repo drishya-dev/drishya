@@ -138,7 +138,8 @@
       ],
       "settled": true,
       "matchesFilter": true,
-      "turnPrompt": "Free orders don't reach checkout — a cart with the LAUNCH100 code (100% off) is rejected with missing-total, and the free-order test in test/checkout.test.ts fails. Find out why and fix it."
+      "turnPrompt": "Free orders don't reach checkout — a cart with the LAUNCH100 code (100% off) is rejected with missing-total, and the free-order test in test/checkout.test.ts fails. Find out why and fix it.",
+      "turnTime": "2026-09-21T10:00:00.000Z"
     },
     {
       "id": "psg_s_rec#3.toolu_synthetic0001",
@@ -434,7 +435,8 @@
       ],
       "settled": true,
       "matchesFilter": true,
-      "turnPrompt": "Review the uncommitted change to the checkout guard. Is it correct, and is it tested?"
+      "turnPrompt": "Review the uncommitted change to the checkout guard. Is it correct, and is it tested?",
+      "turnTime": "2026-09-21T10:20:01.000Z"
     },
     {
       "id": "psg_s_rec#2.call_synthetic1",

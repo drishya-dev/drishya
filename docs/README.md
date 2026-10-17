@@ -1,5 +1,7 @@
 # Drishya documentation — map and precedence
 
+**Latest — 17 October:** [89 — Bottom prompt timeline](review/89-bottom-prompt-timeline.md) supersedes87 top anchoring: independent bottom-anchored prompt/time navigation, measured top-marker clearance and far-right Modern page scrolling. [88](review/88-native-session-segments.md) governs explicit native-segment navigation (merged PR69,574973a).
+
 **17 October:** [88 — Native segments](review/88-native-session-segments.md) adds evidence-backed navigation to newer Codex journal segments and records the corrected bottom-anchored prompt-timeline direction. PR68 is merged as45a09e7; follow-ups use one coherent commit per PR.
 
 **Latest — 16 October:** [87 — Modern reading/component audit](review/87-modern-reading-and-component-audit.md) governs the stable header, whole-file virtual source reading,256KiB native-attached drafts/New file, wrapped connections, input/result allocation and bounded journal catch-up. It supersedes86's hover-expanding title and82/84/85's page-only current-source search/draft-size descriptions. Native-segment continuity, broader component/palette polish and release acceptance remain explicitly open. [38](review/38-windows-antivirus-audit.md) records fresh recurrence evidence and attribution limits. Later work uses one coherent commit per PR at the builder's request;68 retains its earlier purpose commits and squash-merges to one main commit.
