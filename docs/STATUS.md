@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Recurring Windows antivirus diagnosis
+
+- **When:**17 October2026, separate documentation-only increment after PR71 merged/pushed as08c336a.
+- **Finding:**[38](review/38-windows-antivirus-audit.md): new09:21:40 McAfee detection follows the same09:21:38 PowerShell wrapper. Supported native diagnostic confirms CLI0.163.0 but managed/running app-server0.160.0. Global CLI is parent of currently running old app-servers; the alert process's parent is no longer available. Earlier direct attribution remains evidence, not proof for every recurrence.
+- **Action:** Document the supported separate `codex app-server daemon update` plus before/after version check and recurrence validation. Not run while native work is active because its own help warns of interruption. No native config/binary edits, protection exclusions, uploads, session termination or verified-fix claim. Official feedback guidance checked; local metadata only.
+- **Next:** Idle-time managed-runtime update/verification; continue exact keyboard path/line reading and84/85/87 product queue. All-list completion is explicitly false.
+
 ### Yash with Codex — Faithful Markdown instruction lists
 
 - **When:**17 October2026, `codex/faithful-markdown-lists`, one coherent commit/PR.
