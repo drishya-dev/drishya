@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | Main includes Harsh PR66 map proposal (`c809a1b`) and PR67 reliability (`b3184bd`). [PR68](https://github.com/drishya-dev/drishya/pull/68), `codex/multi-file-workspace`, adds integrated Workspace/Modern daily-use improvements and remains for the other builder's review. B0–B4 and P1/P2 base capabilities exist; this is not broad release/native/human acceptance. |
+| **Milestone** | PR68 merged/pushed as45a09e7. Review88 adds evidence-backed native Codex segment navigation; automatic history stitching and release/native/human acceptance remain open. Follow-ups use one coherent commit per PR. |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -30,6 +30,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — Native segment navigation
+
+- **When:** 17 October 2026; branch `codex/native-segment-navigation`, one focused commit/PR after merged68 (45a09e7).
+- **Delivered:** [88](review/88-native-session-segments.md): authenticated bounded native-parent lookup, only Codex discovery, explicit header navigation to newer segments, safe untitled header fallback, outside/Escape/phone geometry and stale-import guards. No silent stitching, native prompt/watch, event schema or policy changes. Actual old Drishya journal positively matches one newer native-linked segment.
+- **Validation:** Full430units/72files, both typechecks/build; four focused browser journeys pass (two segment flows plus header/responsive checks). Real metadata check is read-only; no private source identifiers committed. No hosted CI/native turn. Builder requests merge after verification.
+- **Next separate PR:** Restore bottom-anchored prompt timeline; only its uppermost marker needs Workspace clearance. Independent timeline scrolling and timestamp previews, page scrollbar at the far-right edge. This supersedes87 top-anchoring. Then resume84/85/87 product work.
 
 ### Yash with Codex — Whole-file reading and stable Modern workflow
 

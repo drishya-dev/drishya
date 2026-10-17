@@ -80,6 +80,7 @@ export interface DataSource {
   setLive(id: string, on: boolean): Promise<boolean>;
   /** One bounded passive read of an already imported local journal. No persistent watch. */
   refreshRecording?(id:string):Promise<{added:number;more:boolean}>;
+  sessionSegments?(id:string):Promise<{items:{source:DiscoveredSource;boundary:{ordinal:number;bytes:number}}[];partial:boolean}>;
   /** Without `consent`, returns the preview. With the preview's digest as `consent`, sends exactly that request. */
   explain(id: string, operationId: string, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
   briefing(id: string, range: { from?: number; to?: number }, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
@@ -207,6 +208,7 @@ export const daemon: DataSource = {
   search: async (id, q) => (await req<{ hits: { observationId: string; snippet: string }[] }>(`/v1/recordings/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`)).hits,
   setLive: async (id, on) => (await req<{ live: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/live`, { method: 'POST', json: { on } })).live,
   refreshRecording: id => req(`/v1/recordings/${encodeURIComponent(id)}/refresh`,{method:'POST',json:{}}),
+  sessionSegments: id=>req(`/v1/recordings/${encodeURIComponent(id)}/segments`),
   explain: (id, operationId, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/explain`, { method: 'POST', json: { operationId, consent } }),
   briefing: (id, range, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/briefing`, { method: 'POST', json: { ...range, consent } }),
   exportUrl: (id) => `/v1/recordings/${encodeURIComponent(id)}/export`,
