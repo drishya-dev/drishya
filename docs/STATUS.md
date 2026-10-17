@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | PR68 merged/pushed as45a09e7. Review88 adds evidence-backed native Codex segment navigation; automatic history stitching and release/native/human acceptance remain open. Follow-ups use one coherent commit per PR. |
+| **Milestone** | PR68–70 merged/pushed (45a09e7/574973a/f2af0c8). Explicit native-segment navigation and independent bottom prompt scrolling delivered. Review90 continues faithful reading; joined workflow, broad component and native/human/platform acceptance remain open. One coherent commit per PR. |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -30,6 +30,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — Faithful Markdown instruction lists
+
+- **When:**17 October2026, `codex/faithful-markdown-lists`, one coherent commit/PR.
+- **Delivered:**[90](review/90-faithful-markdown-lists.md): nested/mixed list structure, captured starting/discontinuous ordinals, item paragraphs/quotes/fences, safe bounded-depth fallback and compact reading spacing. No source/provenance/native/schema changes.
+- **Validation:**435units/73files, both typechecks/build, focused1440/900/390px browser and actual private Drishya continuation history/scroll/Workspace pass. Local only; user package/artwork changes excluded.
+- **Next:** Exact keyboard path/line destinations, source/draft comparison, joined investigation and the remaining84/85/87 audit/acceptance list. McAfee recurrence diagnosis stays separate in38; no antivirus fix claimed.
 
 ### Yash with Codex — Bottom prompt timeline and independent page scrolling
 

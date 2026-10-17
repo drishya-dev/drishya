@@ -5,6 +5,16 @@ import { createElement, type ReactNode } from 'react';
 import { FencedCode } from '../components/FencedCode.tsx';
 
 export function Markdown({ text, onPath, document = false }: { text: string; onPath?: (p: string) => void; document?: boolean }) {
+  return renderMarkdown(text, onPath, document, 0);
+}
+
+const listMarker = (line: string) => /^( *)([-+*]|\d{1,9}[.)])([ \t]+)(.*)$/.exec(line);
+const orderedMarker = (marker: string) => /^\d/.test(marker);
+
+function renderMarkdown(text: string, onPath: ((p: string) => void) | undefined, document: boolean, depth: number): ReactNode {
+  // Malformed/extremely nested captured content must remain readable without
+  // making transcript rendering recursively unbounded.
+  if (depth >= 32) return <FencedCode text={text} language="text" />;
   const blocks: ReactNode[] = [];
   const lines = text.replace(/\r/g, '').split('\n');
   let i = 0;
@@ -19,7 +29,7 @@ export function Markdown({ text, onPath, document = false }: { text: string; onP
     }
     if (document && /^\s*>/.test(line)) {
       const quote:string[]=[];while(i<lines.length && /^\s*>/.test(lines[i]!))quote.push(lines[i++]!.replace(/^\s*> ?/,''));
-      blocks.push(<blockquote key={key++}><Markdown text={quote.join('\n')} /></blockquote>);continue;
+      blocks.push(<blockquote key={key++}>{renderMarkdown(quote.join('\n'), onPath, document, depth + 1)}</blockquote>);continue;
     }
     if (document && /^\s*(---+|\*\*\*+)\s*$/.test(line)) {blocks.push(<hr key={key++}/>);i++;continue;}
     const fence = /^\s*```(\w*)/.exec(line);
@@ -31,18 +41,34 @@ export function Markdown({ text, onPath, document = false }: { text: string; onP
       blocks.push(<FencedCode key={key++} text={code.join('\n')} language={fence[1] ?? ''}/>);
       continue;
     }
-    if (/^\s*([-*]|\d+\.)\s+/.test(line)) {
-      const items: string[] = [];
-      const ordered = /^\s*\d+\./.test(line);
-      while (i < lines.length && /^\s*([-*]|\d+\.)\s+/.test(lines[i]!)) items.push(lines[i++]!.replace(/^\s*([-*]|\d+\.)\s+/, ''));
-      const Tag = ordered ? 'ol' : 'ul';
-      blocks.push(
-        <Tag key={key++}>
-          {items.map((it, j) => (
-            <li key={j}>{inline(it, onPath)}</li>
-          ))}
-        </Tag>,
-      );
+    const marker = listMarker(line);
+    if (marker) {
+      const indent = marker[1]!.length, ordered = orderedMarker(marker[2]!);
+      const start = ordered ? Number.parseInt(marker[2]!, 10) : undefined;
+      const items: ReactNode[] = [];
+      while (i < lines.length) {
+        const item = listMarker(lines[i]!);
+        if (!item || item[1]!.length !== indent || orderedMarker(item[2]!) !== ordered) break;
+        const contentIndent = indent + item[2]!.length + item[3]!.length;
+        const body = [item[4]!]; i++;
+        let blank = false, fenced = /^```/.test(item[4]!);
+        while (i < lines.length) {
+          const next = lines[i]!, nextMarker = listMarker(next);
+          if (nextMarker && nextMarker[1]!.length <= indent) break;
+          const spaces = /^ */.exec(next)![0].length;
+          if (next.trim() && spaces <= indent) {
+            // Lazy paragraph continuation is valid, but a new block or a
+            // paragraph after a blank line belongs outside this list item.
+            if (blank || /^(#{1,6}\s|>|```)/.test(next)) break;
+          }
+          const content = next.slice(Math.min(spaces, contentIndent));
+          if (/^```/.test(content)) fenced = !fenced;
+          body.push(content); i++; blank = !next.trim() && !fenced;
+        }
+        const ordinal = ordered ? Number.parseInt(item[2]!, 10) : undefined;
+        items.push(<li key={items.length} value={ordered && ordinal !== start! + items.length ? ordinal : undefined}>{renderMarkdown(body.join('\n'), onPath, document, depth + 1)}</li>);
+      }
+      blocks.push(ordered ? <ol className="md-list" key={key++} start={start === 1 ? undefined : start}>{items}</ol> : <ul className="md-list" key={key++}>{items}</ul>);
       continue;
     }
     const h = /^(#{1,6})\s+(.*)$/.exec(line);
@@ -56,7 +82,7 @@ export function Markdown({ text, onPath, document = false }: { text: string; onP
       continue;
     }
     const para: string[] = [];
-    while (i < lines.length && lines[i]!.trim() && !/^\s*(```|([-*]|\d+\.)\s+|#{1,6}\s)/.test(lines[i]!)) {
+    while (i < lines.length && lines[i]!.trim() && !listMarker(lines[i]!) && !/^\s*(```|#{1,6}\s)/.test(lines[i]!)) {
       if(document && para.length && i+1<lines.length && lines[i]!.includes('|') && /^\s*\|?\s*:?-{3,}/.test(lines[i+1]!))break;
       if(document && para.length && /^\s*>/.test(lines[i]!))break;
       para.push(lines[i++]!);

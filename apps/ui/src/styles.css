@@ -361,6 +361,9 @@ code, kbd, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
 .insp-note { color: var(--t2); margin: 0 0 10px; font-size: 13px; }
 .insp-note code, .consent code, .notice code { background: var(--s2); padding: 0 4px; border-radius: 4px; border: 1px solid var(--line); }
 .md-path { cursor: pointer; }
+.md-list { padding-inline-start: 1.6em; }
+.md-list > li > p { margin-block: .2em; }
+.md-list > li > .md-list { margin-block: .25em .5em; }
 .json, .sent { font: 11.5px/1.55 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; color: var(--t2); margin: 0; }
 .insp-body .code, .insp-body .output { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 4px; }
 .insp-body .output { padding: 8px 10px; max-height: 60vh; overflow: auto; }
