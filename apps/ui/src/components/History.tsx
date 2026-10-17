@@ -288,9 +288,21 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   // A late record can insert steps ahead of the reader. Restore the same captured passage
   // and pixel offset after React updates it, instead of trusting an old array index.
   useLayoutEffect(() => {
+    // Newly mounted runs must replace their estimates in this same commit. Waiting
+    // for ResizeObserver lets a frame expose their extra height, then jumps back.
+    let changed = false;
+    if (!pointerFocus.current) for (const node of ref.current?.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]') ?? []) {
+      if (node.dataset.unloaded === 'true') continue;
+      const height = node.getBoundingClientRect().height;
+      if (Math.abs((measurements.current.get(node.dataset.passageId!) ?? 0) - height) > .5) {
+        measurements.current.set(node.dataset.passageId!, height);
+        changed = true;
+      }
+    }
+    if (changed) setMeasurementVersion(n => n + 1);
     // Correct measured spacer changes before paint, using the latest user-scroll anchor.
     restoreReading(true);
-  }, [scene.passages, follow, compareAgents, explore, theme, measurementVersion]);
+  }, [scene.passages, layout, follow, compareAgents, explore, theme, measurementVersion]);
 
   // A passage can grow after its artifact arrives or its width changes. Record the actual slot
   // height, then reflow spacers; preserve the captured passage/pixel anchor while detached.
@@ -300,6 +312,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const observer = new ResizeObserver((entries) => {
       let changed = false;
       for (const entry of entries) {
+        // A paged-out placeholder retains its last real allocation; it is not a
+        // fresh measurement of the captured passage that will replace it.
+        if ((entry.target as HTMLElement).dataset.unloaded === 'true') continue;
         const id = (entry.target as HTMLElement).dataset.passageId;
         if (!id) continue;
         const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height;
@@ -312,6 +327,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         // Measurements may resolve while a button is pressed. Keep the current spacer
         // layout until activation; rebuilding it now can put another passage under it.
         if (pointerFocus.current) return;
+        // Artifact text can resize between React commits. ResizeObserver delivers
+        // before paint; preserve reading now, not after a later React revision.
+        restoreReading(true);
         setMeasurementVersion((n) => n + 1);
         // A burst can detach follow before this observer's closure is replaced.
         if (useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) {
@@ -414,9 +432,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     navigationFrame.current = requestAnimationFrame(() => {
       navigationFrame.current = requestAnimationFrame(() => {
         navigating.current = false;
-        // Capture can finish while a user scroll is settling. Restore the anchor recorded
-        // by that scroll; adopting the reflowed position here would silently lose it.
-        restoreReading();
+        // Layout changes restore in the layout effect, before paint. Never apply
+        // an older scroll event's anchor later over a new wheel/native position.
+        rememberReading();
         navigationFrame.current = undefined;
       });
     });
@@ -452,7 +470,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       if (navigationFrame.current !== undefined) cancelAnimationFrame(navigationFrame.current);
       navigationFrame.current = requestAnimationFrame(() => {
         navigationFrame.current = requestAnimationFrame(() => {
-          rememberReading(); navigating.current = false; restoreReading(); navigationFrame.current = undefined;
+          rememberReading(); navigating.current = false; navigationFrame.current = undefined;
         });
       });
     }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) { userScrollUntil.current = performance.now() + 750; readingAtStart.current = false; } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { readingAtStart.current = false; cancelledNavigation.current = intent; pendingNavigation.current = undefined; } if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
@@ -476,8 +494,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         {layout.runs.flatMap((run) => [
           ...(run.before > 0 ? [<div key={`gap-${run.start}`} aria-hidden="true" style={{ height: run.before }} />] : []),
           ...scene.passages.slice(run.start, run.end).map((ps) => (
-            <div className="passage-slot" data-passage-id={ps.id} key={ps.id}>
-              {ps.unloaded ? <div className="muted" style={{ minHeight: ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />}
+            <div className="passage-slot" data-passage-id={ps.id} data-unloaded={ps.unloaded || undefined} key={ps.id}>
+              {ps.unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />}
             </div>
           )),
         ])}
