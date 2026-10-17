@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Cross-session evidence search
+
+- **When:**17 October2026, `codex/cross-session-evidence-search`, selected T3 from83/92; one coherent commit/PR.
+- **Delivered:**[93](review/93-cross-session-evidence-search.md): one read-only imported-library FTS query behind worker/store, bounded50-result keyset pages, exact workspace/harness/UTC-date filters, Home/command-menu modal, stale-query guards and exact observation navigation. No new permanent canvas panel, schema/migration/dependency or native action.
+- **Validation:**441units/75files and both typechecks/build; five focused Home/search journeys plus actual private-library search pass. Phone layout inspected; initial focus/Escape and stale-response assertions retained. Single actual-store query samples78ms including startup/5ms/3ms, not a universal gate claim. Final DTO/harness additions pass focused API/worker tests. No hosted CI/private content; package/artwork edits excluded.
+- **Next:**Core upward-scroll report, full skills/Uiverse/theme audit, source-version/draft comparison and joined review workflow. Optional Commands/findings/repetition/turn summaries stay planned under existing Review; no claim all92 work is implemented. Fresh AV updater trace is separately tracked in38.
+
 ### Yash with Codex — Static updater threat assessment
 
 - **When:**17 October2026, independent documentation increment after PR75 merged as4ec9f78.

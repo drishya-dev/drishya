@@ -11,6 +11,13 @@ let app:App,server:RunningServer;
 test.skip(!store || !ids.length,'Opt in with a local redacted store and explicit recording IDs.');
 test.beforeAll(async()=>{if(!store || !ids.length)return;app=new App(store);server=await startServer({app,port:0});});
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();});
+test('actual imported evidence is searchable across the local library without a native turn',async({page})=>{
+  const result=await app.history.searchLibrary({q:'test',count:5});test.skip(!result.items.length,'This opted-in store has no indexed test text.');
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.getByRole('button',{name:'Search evidence',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'Search session evidence'});await dialog.getByRole('searchbox').fill('test');await expect(dialog.locator('.library-search-results>button').first()).toBeVisible();
+  await dialog.locator('.library-search-results>button').first().click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toBeVisible();
+  await page.screenshot({path:resolve('.local/review-actual-library-search.png')});
+});
 for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: history and multi-file workspace`,async({page})=>{
   await page.setViewportSize({width:1440,height:960});
   await page.goto(server.launchUrl);

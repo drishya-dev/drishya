@@ -198,7 +198,8 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
   try {
     const a = message.args;
     let value: unknown;
-    if (message.method === 'page') value = page(a.id, a.query);
+    if (message.method === 'search-library') value = source.searchLibrary(a.query);
+    else if (message.method === 'page') value = page(a.id, a.query);
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);

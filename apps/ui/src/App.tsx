@@ -1,3 +1,4 @@
+import {LibrarySearch} from './components/LibrarySearch.tsx';
 import { useEffect } from 'react';
 import { dwellFor } from '@drishya/scene';
 import { bundleSource, daemon, loadBundle, signIn } from './api.ts';
@@ -128,7 +129,7 @@ export function App() {
     if (screen === 'home') return <Home openDemo={(growing = false) => openBundle(DEMO_URL, growing).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
     return <Viewer />;
   };
-  return <ProductShell>{render()}<ConnectionNotice />{experience !== 'canvas' && <WorkspaceNavigation />}</ProductShell>;
+  return <ProductShell>{render()}<LibrarySearch/><ConnectionNotice />{experience !== 'canvas' && <WorkspaceNavigation />}</ProductShell>;
 }
 
 function ConnectionNotice() {

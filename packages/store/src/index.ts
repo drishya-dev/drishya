@@ -11,6 +11,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, ren
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import type { BlobText, Observation, RecordingSummary } from '@drishya/contracts';
+import type { LibrarySearchQuery, LibrarySearchPage } from './search-types.ts';
 
 // 2: revisions. 3: normalized observation clock. 4: local reading boundaries.
 export const SCHEMA_VERSION = 4;
@@ -639,6 +640,25 @@ export class Store {
     const safe = query.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
     if (!safe) return [];
     return (this.q(`SELECT observation_id, snippet(search, 0, '«', '»', '…', 12) AS snippet FROM search WHERE search MATCH ? AND recording_id = ? LIMIT ?`).all(safe, recordingId, limit) as any[]).map((r) => ({ observationId: r.observation_id, snippet: r.snippet }));
+  }
+
+  /** One worker-side FTS query, never an unbounded list of recording IDs. */
+  searchLibrary(query: LibrarySearchQuery): LibrarySearchPage {
+    if(query.q.length>200)throw new Error('Library search is limited to 200 characters');
+    const safe = query.q.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map(t => `"${t}"`).join(' ');
+    if (!safe) return {items:[]};
+    const count=Math.max(1,Math.min(50,Math.trunc(query.count??50)));
+    const where=['search MATCH ?', 'search.rowid < ?'];
+    const args: (string|number)[]=[safe,query.before??Number.MAX_SAFE_INTEGER];
+    for(const [value,column] of [[query.root,'r.workspace_root ='],[query.harness,'r.harness ='],[query.from,'o.clock_time >='],[query.to,'o.clock_time <=']] as const) {
+      if(!value)continue;where.push(`${column} ?`);args.push(value);
+    }
+    const rows=this.q(`SELECT search.rowid AS cursor, search.recording_id AS recordingId,search.observation_id AS observationId,
+      substr(snippet(search,0,'','', '…',20),1,1600) AS snippet,r.title,r.workspace_root AS workspaceRoot,r.harness,o.source_time AS sourceTime
+      FROM search JOIN observations o ON o.id=search.observation_id AND o.recording_id=search.recording_id
+      JOIN recordings r ON r.id=search.recording_id WHERE ${where.join(' AND ')} ORDER BY search.rowid DESC LIMIT ?`).all(...args,count+1) as unknown as (LibrarySearchPage['items'][number]&{cursor:number})[];
+    const page=rows.slice(0,count);
+    return {items:page.map(({cursor,...row})=>({...row,title:row.title??undefined,workspaceRoot:row.workspaceRoot??undefined,sourceTime:row.sourceTime??undefined})),...(rows.length>count?{nextBefore:page.at(-1)!.cursor}:{})};
   }
 
   addBookmark(recordingId: string, step: number, note: string) {
