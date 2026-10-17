@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Fresh recurring-alert updater attribution
+
+- **When:**17 October2026, independent documentation increment after PR77.
+- **Confirmed:**[38](review/38-windows-antivirus-audit.md): read-only sampler catches PowerShell PID14144 at10:21:41.823, parent22268 managed0.160.0 Codex `app-server daemon pid-update-loop`. Independent PowerShell400 at10:21:41 and McAfee10:21:43.503 match wrapper/signature/size. This occurrence is from the updater, not Drishya/Corepack/test commands.
+- **Limits:**Blocked bytes/hash and vendor classification rationale remain unavailable. Legitimate updater/AV conflict is the leading assessment, not certified benignness or a verified remedy. No blocked script execution, installer/protection/config change, native-session interruption or upload. Bounded four-minute metadata sampler exited; nothing installed persistently.
+- **Next:**Supported idle-time update/recurrence or vendor-reviewed compatibility resolution; product core scroll/theme/UI queue remains open.92/93 record selected useful features and quiet placement.
+
 ### Yash with Codex — Cross-session evidence search
 
 - **When:**17 October2026, `codex/cross-session-evidence-search`, selected T3 from83/92; one coherent commit/PR.
