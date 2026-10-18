@@ -1,3 +1,4 @@
+import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
 import { Worker } from 'node:worker_threads';
 import type { ArtifactSlice, Operation } from '@drishya/contracts';
 import type { BlobSearchResult } from '@drishya/store';
@@ -48,6 +49,7 @@ export class HistoryService {
   }
 
   page(id: string, query: HistoryQuery = {}) { return this.request<HistoryPage>('page', { id, query }); }
+  commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   since(id: string, after: number, page = 0) { return this.request<SinceSnapshot>('since', { id, after, page }); }

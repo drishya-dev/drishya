@@ -56,6 +56,12 @@ describe('worker-owned history pages', () => {
     const digest = await app.history.since(recordingId, -1);
     expect(digest.newSteps).toBe(page.scene.total);
     expect(digest.counts.tests).toBe(70);
+    const commands=await app.history.commands(recordingId,{});
+    expect(commands.total).toBe(70);expect(commands.items).toHaveLength(25);
+    expect(commands.items.every(row=>row.command==='npm test')).toBe(true);
+    const older=await app.history.commands(recordingId,{cursor:commands.older});
+    expect(older.items).toHaveLength(25);expect(new Set([...commands.items,...older.items].map(row=>row.id)).size).toBe(50);
+
     expect(digest.tests).toHaveLength(20);
     const next = await app.history.since(recordingId, -1, 1);
     const last = await app.history.since(recordingId, -1, 3);
