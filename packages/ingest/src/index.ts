@@ -230,8 +230,8 @@ export class Ingestor extends EventEmitter {
         backlog: more,
         sources,
       });
-      if (added) {
-        const cur = this.store.getRecording(recordingId)!;
+      const cur = this.store.getRecording(recordingId)!;
+      if (added || (!cur.workspaceRoot && !prev?.lastReadAt)) {
         // Collection must not rebuild/render all prior work just to obtain a list label.
         // These fields are sanitized captured metadata; full reduction is a reader concern.
         {
@@ -241,6 +241,8 @@ export class Ingestor extends EventEmitter {
             ...(!cur.workspaceRoot && meta.workspaceRoot ? { workspaceRoot: meta.workspaceRoot } : {}),
           });
         }
+      }
+      if (added) {
         const ev: ChangeEvent = { type: 'recording', recordingId, revision: cur.revision ?? 0, observationCount: cur.observationCount, added, live: cur.live };
         this.emit('change', ev);
       }

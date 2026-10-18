@@ -84,7 +84,9 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     create(); node.addEventListener('webglcontextlost', lost); node.addEventListener('webglcontextrestored', create);
     return () => { renderer.current?.dispose(); node.removeEventListener('webglcontextlost', lost); node.removeEventListener('webglcontextrestored', create); };
   }, [depth, lowResource]);
-  const { workspace } = useSessionWorkspace();
+  const { workspace,approve } = useSessionWorkspace();
+  const source=useApp(s=>s.source),recordingId=useApp(s=>s.recordingId),capturedFiles=useApp(s=>s.projection?.files);
+  const [openingCurrent,setOpeningCurrent]=useState(false),[readError,setReadError]=useState(''),[focusNotice,setFocusNotice]=useState<string>();
   const resolvedTheme = useResolvedTheme();
   const hoveredPath = useApp((s) => s.hoveredPath);
   const set = useApp((s) => s.set);
@@ -123,6 +125,9 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const [tip, setTip] = useState<{ node: MapGroup; x: number; y: number }>();
   const [query, setQuery] = useWorkspaceState('map/query', '');
   const [observedOnly, setObservedOnly] = useWorkspaceState('map/observed', false);
+  const [changesOnly,setChangesOnly]=useWorkspaceState('map/changed',false);
+  const changedPaths=useMemo(()=>new Set(capturedFiles?.filter(file=>file.roles.includes('write')).map(file=>file.path)??[]),[capturedFiles]);
+  const changedCount=useMemo(()=>graph?.nodes.filter(node=>changedPaths.has(node.id)).length??0,[graph,changedPaths]);
   const [connectionsOpen, setConnectionsOpen] = useWorkspaceState('map/connections', false);
   const [connectionFile, setConnectionFile] = useWorkspaceState<string | undefined>('map/file', undefined);
   const [connectionPage, setConnectionPage] = useWorkspaceState('map/page', 0);
@@ -131,7 +136,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const observedKey = heat.map(cell => cell.path).join('\0');
   const observedPaths = useMemo(() => new Set(observedKey ? observedKey.split('\0') : []), [observedKey]);
   const observedCount = useMemo(() => graph?.nodes.filter(node => observedPaths.has(node.id)).length ?? 0, [graph, observedPaths]);
-  const viewGraph = useMemo(() => graph && explore && connectionsOpen && neighborhood && connectionFile ? neighborhoodGraph(graph, connectionFile) : graph && observedOnly ? observedGraph(graph, observedPaths) : graph, [graph, explore, connectionsOpen, neighborhood, connectionFile, observedOnly, observedPaths]);
+  const viewGraph = useMemo(() => graph && explore && connectionsOpen && neighborhood && connectionFile ? neighborhoodGraph(graph, connectionFile) : graph && explore && changesOnly ? observedGraph(graph,changedPaths) : graph && observedOnly ? observedGraph(graph, observedPaths) : graph, [graph, explore, connectionsOpen, neighborhood, connectionFile, observedOnly, observedPaths,changesOnly,changedPaths]);
   const detail = useMemo(() => viewGraph ? mapDetail(viewGraph, cam.k) : undefined, [viewGraph, cam.k]);
   const connections = useMemo(() => graph && connectionsOpen && connectionFile ? importConnections(graph, connectionFile) : undefined, [graph, connectionsOpen, connectionFile]);
   const passageFiles = useMemo(() => graph?.nodes.filter(node => passagePaths.includes(node.id)).slice(0, 12) ?? [], [graph, passagePaths]);
@@ -152,10 +157,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     animateCam({ k, x: (related.length && size.w > 900 ? size.w / 2 - 70 : size.w / 2) - (fit.ox + (minX + maxX) / 2 * fit.sx) * k, y: top + usableHeight / 2 - (fit.oy + (minY + maxY) / 2 * fit.sy) * k });
   };
   useEffect(() => {
-    if (!explore || !requestedFocus || !graph || !size.w || !size.h) return;
-    const node = graph.nodes.find(node => node.id === requestedFocus);
+    if (!explore || !requestedFocus || !graph || graph.approvalNeeded || !size.w || !size.h) return;
+    const node = graph.nodes.find(node => node.id === requestedFocus||node.path===requestedFocus);
+    setFocusNotice(node?undefined:requestedFocus);
     set({ mapFocusPath: undefined });
-    if (node) { setConnectionsOpen(true); setObservedOnly(false); setNeighborhood(true); focusFile(node, true); }
+    if (node) { setConnectionsOpen(true); setChangesOnly(false); setObservedOnly(false); setNeighborhood(true); focusFile(node, true); }
   }, [explore, requestedFocus, graph, size.w, size.h]);
   const zoomGroup = (node: MapGroup) => {
     holdOrientation();
@@ -166,6 +172,12 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     animateCam({ k, x: size.w / 2 - x * k, y: size.h / 2 - y * k });
     setTip(undefined);
   };
+  useLayoutEffect(()=>{
+    const map=wrap.current,tools=map?.querySelector<HTMLElement>('.map-tools');if(!map||!tools)return;
+    const measure=()=>map.style.setProperty('--map-controls-bottom',`${tools.getBoundingClientRect().bottom-map.getBoundingClientRect().top}px`);
+    const observer=new ResizeObserver(measure);observer.observe(tools);observer.observe(map);const header=map.closest('.viewer')?.querySelector('.workspace-header');if(header)observer.observe(header);measure();
+    return()=>{observer.disconnect();map.style.removeProperty('--map-controls-bottom');};
+  },[explore]);
   const displayNodes = detail?.nodes ?? [];
   const depths = useMemo(() => new Map(displayNodes.map(node => [node.id, node.members ? node.members.reduce((sum, id) => sum + fileDepth(id), 0) / node.members.length : fileDepth(node.id)])), [detail]);
   useEffect(() => {
@@ -397,7 +409,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       data-map-yaw={yaw.toFixed(5)}
       data-map-pitch={pitch.toFixed(5)}
       data-map-zoom={cam.k.toFixed(5)}
-      data-map-scope={explore && connectionsOpen && neighborhood ? 'direct-neighborhood' : observedOnly ? 'observed' : 'all'}
+      data-map-scope={explore && connectionsOpen && neighborhood ? 'direct-neighborhood' : explore&&changesOnly?'changes':observedOnly ? 'observed' : 'all'}
       className={`map${explore ? ' exploring' : ''}`}
       onWheel={(e) => {
         if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-file-label, .map-connections')) return;
@@ -461,7 +473,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
         <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find a file on the map" placeholder="Find a file…" maxLength={200} value={query} onChange={(e) => setQuery(e.target.value)} />{query && <button aria-label="Clear map search" onClick={() => setQuery('')}>×</button>}</label>
-        <div className="map-scope" role="group" aria-label="Files shown on the map"><button aria-pressed={!observedOnly && !neighborhood} onClick={() => { setObservedOnly(false); setNeighborhood(false); }}>All files</button><button aria-pressed={observedOnly && !neighborhood} onClick={() => { setObservedOnly(true); setNeighborhood(false); }}>Observed <small>{observedCount}</small></button></div>
+        <div className="map-scope" role="group" aria-label="Files shown on the map"><button aria-pressed={!observedOnly && !changesOnly && !neighborhood} onClick={() => { setObservedOnly(false); setChangesOnly(false); setNeighborhood(false); }}>All files</button><button aria-pressed={observedOnly && !changesOnly && !neighborhood} onClick={() => { setObservedOnly(true); setChangesOnly(false); setNeighborhood(false); }}>Observed <small>{observedCount}</small></button><button aria-pressed={changesOnly&&!neighborhood} title="Indexed locations of captured edit/write calls; not a current Git diff" onClick={()=>{setChangesOnly(true);setObservedOnly(false);setNeighborhood(false);}}>Changes <small>{changedCount}</small></button></div>{changesOnly&&!neighborhood&&<small className="map-scope-note">Captured change locations · {changedCount} indexed{changedPaths.size>changedCount?` · ${changedPaths.size-changedCount} outside this map`: ''}</small>}{focusNotice&&<div className="map-focus-notice" role="status"><span>{focusNotice} is not in this index.</span><button className="btn ghost" onClick={()=>{set({filePanel:focusNotice,currentFile:undefined});setFocusNotice(undefined);}}>Open captured work</button></div>}
         <button className="map-connections-toggle" role="switch" aria-checked={connectionsOpen} onClick={() => {
           setConnectionsOpen(!connectionsOpen);
           if (!connectionsOpen && graph) { const node = graph.nodes.find(n => n.id === hoveredPath) ?? passageFiles[0] ?? graph.nodes.find(n => observedPaths.has(n.id)); if (node) focusFile(node); }
@@ -481,17 +493,21 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
           {tip && <button className="btn" onClick={() => { set({ filePanel: tip.node.id, currentFile: undefined }); }}>Open recorded work on this file</button>}
         </div>}
       </div>}
-      {explore && observedOnly && !viewGraph?.nodes.length && <p className="map-empty">No captured file locations in this view yet.</p>}
+      {explore && (observedOnly||changesOnly) && !viewGraph?.nodes.length && <p className="map-empty">No indexed captured {changesOnly?'change ':''}locations in this view.</p>}
       {explore && connectionsOpen && <section className="map-connections" aria-label="Direct import connections">
         <header><strong>Direct imports</strong><button className="icon-btn" aria-label="Close import paths" onClick={() => setConnectionsOpen(false)}>×</button></header>
         <p className="muted small">{graph?.temporal === 'current' ? 'Current repository imports' : 'Imports from the saved map'} · static relationships</p>
         {!!passageFiles.length && <div className="map-passage-files" aria-label="Files in the current passage"><small>Current passage</small>{passageFiles.map(node => <button key={node.id} aria-pressed={connectionFile === node.id} onClick={() => focusFile(node)}>{node.path}</button>)}</div>}
         {connections?.root ? <><code className="map-connection-root">{connections.root.path}</code><div className="map-neighbors">{connections.neighbors.slice(connectionPage * 12, connectionPage * 12 + 12).map(({ node, direction }, i) => <button key={`${direction}/${node.id}/${i}`} onClick={() => focusFile(node)}><small>{direction}</small><span>{node.path}</span><span aria-hidden="true">↗</span></button>)}</div>
-          <button className="btn ghost small" aria-pressed={neighborhood} onClick={() => { setNeighborhood(!neighborhood); if (!neighborhood) focusFile(connections.root!, true); }}>{neighborhood ? 'Show full map' : 'Focus direct neighborhood'}</button>
+          <button className="btn ghost small" aria-pressed={neighborhood} onClick={() => { setNeighborhood(!neighborhood); if(neighborhood){setChangesOnly(false);setObservedOnly(false);} if (!neighborhood) focusFile(connections.root!, true); }}>{neighborhood ? 'Show full map' : 'Focus direct neighborhood'}</button>
           {!connections.total && <p className="muted small">No resolved direct imports on this map.</p>}
           {connections.neighbors.length > 12 && <div className="folder-pages"><button disabled={!connectionPage} onClick={() => setConnectionPage(p => p - 1)}>Previous</button><span>{connectionPage + 1} / {Math.ceil(connections.neighbors.length / 12)}</span><button disabled={(connectionPage + 1) * 12 >= connections.neighbors.length} onClick={() => setConnectionPage(p => p + 1)}>Next</button></div>}
           {connections.total > 64 && <p className="muted small">First 64 of {connections.total} direct imports shown.</p>}
           <button className="btn" onClick={() => set({ filePanel: connections.root!.id, currentFile: undefined })}>Open recorded work</button>
+          {source?.kind==='daemon'&&recordingId&&!recordingId.includes('+')&&workspace?.root&&<button className="btn ghost" disabled={openingCurrent} onClick={()=>{setOpeningCurrent(true);setReadError('');const path=connections.root!.path;void (workspace.approved?Promise.resolve():approve()).then(()=>{if(useApp.getState().recordingId===recordingId&&useApp.getState().source===source)set({currentFile:path,filePanel:undefined});}).catch(error=>setReadError(error.message)).finally(()=>setOpeningCurrent(false));}}>{openingCurrent?'Opening…':workspace.approved?'Read current file':'Approve reading & open file'}</button>}
+          {source?.kind==='daemon'&&workspace?.root&&!workspace.approved&&<p className="muted small">Approves current-file reading in {workspace.root}. Captured work remains separate.</p>}
+          {readError&&<p role="alert" className="bad small">{readError}</p>}
+
         </> : <p className="muted small">Choose a file using the map or search.</p>}
       </section>}
       {explore && <div className="map-zoom" aria-label="Repository zoom">

@@ -280,3 +280,23 @@ test('actual Review findings, prompt overview and packet stay bounded in both ha
     }
   }
 });
+
+
+test('actual captured changes open import neighborhoods and current source without crowded phone controls',async({page})=>{
+  test.setTimeout(90000);
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  for(const id of [ids[0]!,ids.at(-1)!]){
+    await page.setViewportSize({width:1440,height:960});
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+    await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
+    const review=page.getByRole('dialog',{name:'Review work',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();
+    const consent=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await consent.isVisible())await consent.click();
+    const drawer=page.getByRole('region',{name:'Direct import connections',exact:true});
+    const missing=page.locator('.map-focus-notice');await expect(drawer.locator('.map-connection-root').or(missing)).toBeVisible();
+    if(await missing.isVisible()){await missing.getByRole('button',{name:'Open captured work',exact:true}).click();await expect(page.locator('dialog.file-workspace')).toBeVisible();continue;}
+    await expect(drawer.locator('.map-connection-root')).toHaveText(path);await expect(drawer).toContainText('static relationships');
+    const read=drawer.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/});await expect(read).toBeVisible();await read.click();
+    const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button').click();
+    for(const width of [1440,390]){await page.setViewportSize({width,height:960});const tools=(await page.locator('.map-tools').boundingBox())!,box=(await drawer.boundingBox())!,zoom=(await page.locator('.map-zoom').boundingBox())!;if(width===390){expect(box.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(box.y+box.height).toBeLessThanOrEqual(zoom.y);}expect(box.x+box.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-task-${id}-${width}.png`)});}
+  }
+});

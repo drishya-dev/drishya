@@ -40,6 +40,15 @@ function claudeLine(rec: Record<string, unknown>) {
 }
 
 describe('import', () => {
+  it('recovers an older missing workspace on the first sync without new journal content',async()=>{
+    const imported=await ingest.importSource('claude-code',join(fixtures,'claude/checkout-fix.jsonl'));
+    expect(store.getRecording(imported.recordingId)?.workspaceRoot).toBe('/home/dev/shop');
+    store.db.prepare('UPDATE recordings SET workspace_root=NULL WHERE id=?').run(imported.recordingId);
+    await ingest.close();ingest=new Ingestor(store);
+    const result=await ingest.sync(imported.recordingId);
+    expect(result.added).toBe(0);
+    expect(store.getRecording(imported.recordingId)?.workspaceRoot).toBe('/home/dev/shop');
+  });
   it('catches up stopped journals without sealing an unfinished append or starting a watch',async()=>{
     const path=join(dir,'catchup.jsonl');
     writeFileSync(path,JSON.stringify({type:'session_meta',payload:{id:'catchup',cwd:'/w'}})+'\n');

@@ -31,6 +31,21 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Captured-change map investigation
+
+- **When:**18 October2026, `codex/map-investigation`; Review102 merged as9107012.
+- **Delivered:**Review change paths focus typed static-import neighborhoods, with distinct captured/current destinations and explicit reading consent. All/Observed/Changes scopes retain metadata-only preference and disclose absent index locations. Measured controls clear navigation; phone drawers clear controls/zoom. Workspace status resolves independently of native CLI failure. Root recovery now skips title-only Claude headers and companion roots; first sync also repairs older missing summary roots without a journal append.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Changes and map are separate investigations | Exact change-to-import-to-source route | Make the map useful without inferred causal links |
+| Fixed map control offsets overlap navigation | Measured navigation clearance and bounded phone drawer | Keep complete labels and targets available |
+| Title-only metadata can hide captured workspace | Main root-bearing metadata chosen independently | Restore current-file access without inventing a root |
+| CLI failure discards reading status | Independent reading/controller resolution | Observation and approved reading do not require a working controller |
+
+- **Validation:**Both TS/build and466units/83files pass. Initial seven browser regressions: six pass, one queued-wheel test flake; corrected the test to enqueue one upward burst, then both final affected journeys pass. Final map journey also passes after consent/overlap refinements. Actual Codex indexed/current-reading and Claude unavailable-index fallback pass; desktop/phone frames inspected. No native prompt, direct project write, dependency change or hosted CI.
+- **Next:**Independent critics have found a saved-file-reference recovery crash and misleading nested-command outcomes. Address these before broader UI/theme acceptance; record selected findings in TASKS.
+
 ### Yash with Codex — Factual Review workflow
 
 - **When:**18 October2026, `codex/review-workflow`; Commands101 merged as001d327.

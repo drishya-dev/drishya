@@ -41,9 +41,15 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
   const refresh = async () => {
     if (!eligible) return;
     const request = ++revision.current;
-    const [w, c] = await Promise.all([workspaceApi.status(id!), workspaceApi.controller(id!)]);
-    if (useApp.getState().source !== source || useApp.getState().recordingId !== id || request !== revision.current) return;
-    setWorkspace(w); setController(c); setError(undefined);
+    const current=()=>useApp.getState().source===source&&useApp.getState().recordingId===id&&request===revision.current;
+    // Reading access must not depend on an installed or responsive native CLI.
+    const results=await Promise.allSettled([
+      workspaceApi.status(id!).then(value=>{if(current())setWorkspace(value);}),
+      workspaceApi.controller(id!).then(value=>{if(current())setController(value);}),
+    ]);
+    if(!current())return;
+    const errors=results.flatMap((result,index)=>result.status==='rejected'?[`${index===0?'Workspace':'Native runtime'}: ${result.reason.message}`]:[]);
+    setError(errors.join(' · ')||undefined);
   };
   useEffect(() => {
     setWorkspace(undefined); setController(undefined); setError(undefined); setSubmitting(false);

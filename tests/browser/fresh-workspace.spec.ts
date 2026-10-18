@@ -1429,3 +1429,21 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download Markdown',exact:true}).click();const file=await download;expect(readFileSync((await file.path())!,'utf8')).toBe(text);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/review-packet-${width}.png`)});}
 });
+
+
+test('captured changes lead to typed map connections, current reading and a persistent change scope',async({page})=>{
+  await page.route('**/controller',route=>route.fulfill({status:503,json:{error:'Synthetic native runtime unavailable'}}));
+  const id=ids['claude-code']!;
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
+  const review=page.getByRole('dialog',{name:'Review work',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();await expect(review).toHaveCount(0);
+  const approve=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await approve.isVisible())await approve.click();
+  const connections=page.getByRole('region',{name:'Direct import connections',exact:true});await expect(connections.locator('.map-connection-root')).toHaveText(path);
+  await expect(connections).toContainText('static relationships');await connections.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/}).click();
+  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button').click();
+  await connections.getByRole('button',{name:'Show full map',exact:true}).click();const changes=page.getByRole('button',{name:/^Changes /});await changes.click();await expect(changes).toHaveAttribute('aria-pressed','true');await expect(page.locator('.map-scope-note')).toContainText('Captured change locations');
+  const toggle=page.getByRole('switch',{name:'Import paths',exact:true});if(await toggle.getAttribute('aria-checked')==='true')await toggle.click();
+  await page.getByRole('button',{name:'Back to work',exact:true}).click();await page.getByRole('button',{name:'Explore repository map',exact:true}).click();await expect(changes).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('textbox',{name:'Find a file on the map',exact:true}).fill(path);await page.locator('.map-matches').getByRole('button',{name:path,exact:true}).click();if(await toggle.getAttribute('aria-checked')!=='true')await toggle.click();
+  for(const width of [1440,390]){await page.setViewportSize({width,height:900});await expect(connections).toBeVisible();for(const control of await page.locator('.map-tools button:visible').all())expect(await control.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);const tools=(await page.locator('.map-tools').boundingBox())!,reader=(await connections.boundingBox())!;for(const control of await page.getByRole('navigation',{name:'Workspace views'}).locator('button:visible').all()){const b=(await control.boundingBox())!;expect(tools.y).toBeGreaterThanOrEqual(b.y+b.height);}if(width===390)expect(reader.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(reader.x+reader.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-investigation-${width}.png`)});}
+});

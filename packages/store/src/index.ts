@@ -568,7 +568,11 @@ export class Store {
   }
 
   captureMetadata(recordingId: string): { title?: string; workspaceRoot?: string } {
-    const meta = this.q("SELECT body FROM observations WHERE recording_id = ? AND kind = 'session.meta' ORDER BY seq LIMIT 1").get(recordingId) as { body: string } | undefined;
+    // Title-only metadata can precede the native session header. It must not hide
+    // a later captured root, nor may a companion agent choose the workspace.
+    const meta = this.q(`SELECT body FROM observations WHERE recording_id = ? AND kind = 'session.meta' AND agent_id = 'agent:main'
+      AND (COALESCE(json_extract(body,'$.workspaceRoot'),'')<>'' OR COALESCE(json_extract(body,'$.payload.cwd'),'')<>'')
+      ORDER BY seq LIMIT 1`).get(recordingId) as { body: string } | undefined;
     const user = this.q("SELECT body FROM observations WHERE recording_id = ? AND kind = 'message.user' AND agent_id = 'agent:main' ORDER BY seq LIMIT 1").get(recordingId) as { body: string } | undefined;
     const observation = meta ? JSON.parse(meta.body) as Observation : undefined;
     const payload = observation?.payload as { title?: string; cwd?: string } | undefined;
