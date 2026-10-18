@@ -35,7 +35,7 @@ export function EvidenceNavigationProvider({ children }: { children: ReactNode }
   return <NavigationContext.Provider value={{ trail, visit }}>{children}</NavigationContext.Provider>;
 }
 
-export function EvidenceNavigation({ hideEmpty = false }: { hideEmpty?: boolean }) {
+export function EvidenceNavigation({ hideEmpty = false, compact = false }: { hideEmpty?: boolean; compact?: boolean }) {
   const context = useContext(NavigationContext);
   if (!context) return null;
   if (hideEmpty && !context.trail.canBack && !context.trail.canForward) return null;
@@ -46,7 +46,7 @@ export function EvidenceNavigation({ hideEmpty = false }: { hideEmpty?: boolean 
     app.select(target.location.selectedOp);
     useApp.setState({ ...target.location, follow: false });
   };
-  return <nav className="evidence-navigation" aria-label="Reading history"><button className="btn ghost small" aria-label="Back in reading history" title="Return to the previous evidence and reading position" disabled={!context.trail.canBack} onClick={() => go(-1)}>← Back</button><button className="btn ghost small" aria-label="Forward in reading history" title="Reopen the next evidence and reading position" disabled={!context.trail.canForward} onClick={() => go(1)}>Forward →</button></nav>;
+  return <nav className={`evidence-navigation${compact?' compact':''}`} aria-label="Reading history"><button className="btn ghost small" aria-label="Back in reading history" title="Return to the previous evidence and reading position" disabled={!context.trail.canBack} onClick={() => go(-1)}>{compact?'←':'← Back'}</button><button className="btn ghost small" aria-label="Forward in reading history" title="Reopen the next evidence and reading position" disabled={!context.trail.canForward} onClick={() => go(1)}>{compact?'→':'Forward →'}</button></nav>;
 }
 
 /** Bounded controls and at most two selected evidence references per file visit.

@@ -8,6 +8,8 @@
 
 **18 October Review navigation:** Compact page arrows/count/limits caption and top-aligned outcome groups. Both typechecks/build,70-check pagination at320/390/1440px and actual desktop/phone surface survey pass; phone frame inspected. TASKS checkbox updated; current-file control density is next.
 
+**18 October current reader:** History/actions share one row; compact Find/Go/Wrap/import/footer chrome; remove inherited 48vh source cap in Modern. Both typechecks/build and447units/77files pass, Legacy/Modern/import reader journeys plus keyboard navigation and actual desktop/phone survey pass. Source-allocation guard at1440/390/320px passes; frames inspected. Review pager95 merged as b98186b; both bounded tasks ticked in TASKS. Next editable-source ergonomics/current-version comparison/joined workflow; not whole UI/theme completion.
+
 **Workspace reality:** Existing-file and New file editing already work as256KiB/5000-line memory-only drafts, with base comparison, download/discard and explicit attached request preparation for the native harness. No direct disk-save/terminal endpoint, no persisted draft bodies, no claim hash instructions are enforced transactions. Edit entry is clearer now; its real signed-in end-to-end acceptance remains open in TASKS.
 
 **Verification:** Latest functional typechecks/build and447units/77files pass. Broad browser run174passed/6skipped/4failed; all4 repaired cases pass together on targeted rerun (103), not a second clean full-run claim. Three actual redacted Drishya/Skeletongraph Codex/Claude long histories and desktop/phone surfaces checked. Restored boxes pass12 length/type combinations and actual command check. Private material stays under.local.
