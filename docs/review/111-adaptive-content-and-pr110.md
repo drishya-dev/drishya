@@ -46,6 +46,10 @@ For image capture, both builders must agree the event/artifact seam and explicit
 
 Acceptance corpus: both harnesses and MCP; direct/wrapped/multiple calls; mixed text/image/resource blocks; omitted/missing/expired/remote/protected paths; huge dimensions/decompression bombs, malformed MIME/base64/SVG/HTML; empty/truncated/partial objects and tables; burst/late live outputs; replay/hover/internal scroll; keyboard/copy/zoom, phone, reduced motion/resources, offline bundles and export. Measure memory/decode cost; no new capability is complete after a path/icon test.
 
+## Later integration
+
+18 October: selected captured-source comparison and map handover/fit/import-arrow work is integrated in7198cb0, crediting Harsh. Duplicate review/version owners remain excluded; PR110 itself is still open. [Review112](112-git-threads-integration.md) records the implementation and current graph direction.
+
 ## PR110 disposition
 
 Reviewed PR110 `workspace: add bounded review and source-version workflows` at `d071ff3409a0960c6b667b82896656edd1c3b84c` against main `ffef565` and the then-uncommitted Git atlas (now PR111). **Left open and unmerged.** The API reports merge conflicts. Its local verification describes its branch, not the combined current product; do not treat that as integration acceptance.

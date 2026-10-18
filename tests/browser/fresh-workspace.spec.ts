@@ -498,10 +498,10 @@ test('local Git atlas connects real branches and commits with root/merge patches
   git(['update-ref','refs/heads/atlas-feature',feature]);git(['update-ref','refs/heads/atlas-merge',merge]);git(['tag','atlas-root',base]);
   await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedHash:string}).copiedHash=text;}}}));
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await page.getByRole('button',{name:'Git review',exact:true}).click();await page.getByRole('button',{name:'Branches & commits ↗',exact:true}).click();
+  await page.getByRole('button',{name:'Git graph',exact:true}).click();
   const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();
   if(await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).isVisible())await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).click();
-  const merged=atlas.locator(`[data-commit-hash="${merge}"]`);await expect(merged).toBeVisible();await expect(merged.locator('.atlas-rail')).toBeVisible();expect(await merged.locator('.atlas-rail path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.click();
+  const merged=atlas.locator(`[data-commit-hash="${merge}"]`);await expect(merged).toBeVisible();await expect(atlas.locator('.thread-links')).toBeVisible();expect(await atlas.locator('.thread-links path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await merged.click();
   const parents=atlas.getByRole('combobox',{name:'Commit comparison parent',exact:true});await expect(parents.locator('option')).toHaveCount(2);await parents.selectOption('1');await expect(parents).toHaveValue('1');
   await expect(atlas.locator('.atlas-message pre')).toContainText('Atlas merge fixture');await expect(atlas).toContainText('No changed paths against this parent.');
   await atlas.getByRole('textbox',{name:'Find Git branches and tags',exact:true}).fill('atlas-root');
@@ -512,7 +512,7 @@ test('local Git atlas connects real branches and commits with root/merge patches
   await atlas.getByRole('button',{name:'Copy commit hash',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedHash:string}).copiedHash)).toBe(base);
   await page.screenshot({path:resolve('.local/git-atlas-desktop.png')});
   for(const width of [390,320]){await page.setViewportSize({width,height:844});await expect(atlas.getByRole('region',{name:'Selected commit',exact:true})).toBeVisible();expect(await atlas.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/git-atlas-${width}.png`)});}
-  await atlas.getByRole('button',{name:'← Commits',exact:true}).click();await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await rootCommit.click();
+  await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await rootCommit.click();
   await atlas.getByRole('button',{name:'Current file',exact:true}).click();await expect(atlas).toHaveCount(0);await expect(page.locator('.current-file-reader')).toBeVisible();
 });
 
@@ -1640,4 +1640,34 @@ test('a restored current reader requests fresh consent and keeps inspector navig
   await reader.getByRole('button',{name:'Approve current-file reading',exact:true}).click();await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();expect(reads).toBeGreaterThan(0);await expect(reader.getByRole('alert')).toHaveCount(0);
   await reader.locator(':scope>header button[aria-label^="Close "]').click();const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
   await workspace.click();await expect(inspector).toHaveCount(0);const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk.getByRole('tablist')).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(inspector).toBeVisible();
+});
+
+test('captured excerpt comparison uses current reader consent, exact positions and phone-safe diff',async({page})=>{
+  const file=join(root,'comparison.ts'),journal=join(dir,'comparison.jsonl'),timestamp='2026-10-18T00:00:00Z';
+  writeFileSync(file,'export const untouched=1;\nexport const current=2;\n');
+  const rows=[{type:'user',uuid:'compare-user',sessionId:'compare',cwd:root,message:{role:'user',content:'Read comparison.ts'},timestamp},{type:'assistant',uuid:'compare-call',cwd:root,timestamp,message:{role:'assistant',content:[{type:'tool_use',id:'compare-read',name:'Read',input:{file_path:file,offset:2,limit:1}}]}},{type:'user',uuid:'compare-result',cwd:root,timestamp,toolUseResult:{file:{filePath:file,content:'export const captured=1;',startLine:2,numLines:1,totalLines:2}},message:{role:'user',content:[{type:'tool_result',tool_use_id:'compare-read',content:'2→export const captured=1;'}]}}];
+  writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('claude-code',journal)).recordingId;
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  await expect(page.locator('.history')).toBeVisible();
+  const grant=page.getByRole('button',{name:/^Enable workspace reading/});await expect(grant).toBeVisible();await grant.click();await expect(grant).toHaveCount(0);
+  await page.getByRole('treeitem',{name:'comparison.ts',exact:true}).click();
+  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();
+  const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare captured source with disk',exact:true}).click();
+  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('moved code is not mapped');
+  expect(await comparison.locator('.diff-scroll').textContent()).not.toContain('untouched');
+  await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({path:resolve('.local/captured-disk-comparison-phone.png')});
+});
+
+test('Git timeline scrolls into older history without commit-range pages and keeps compact controls reachable',async({page})=>{
+  const git=(args:string[],input?:string)=>execFileSync('git',['-c','core.fsmonitor=false',...args],{cwd:root,encoding:'utf8',windowsHide:true,input}).trim();
+  const tree=git(['rev-parse','HEAD^{tree}']);let tip=git(['rev-parse','HEAD']);for(let index=0;index<82;index++)tip=git(['commit-tree',tree,'-p',tip],`Continuous fixture ${index}\n`);git(['update-ref','refs/heads/main',tip]);
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await expect(page.locator('.modern-composer-identity')).toContainText('Codex');await expect(page.locator('.modern-composer-intro')).toHaveCount(0);await expect(page.locator('.modern-composer-location code')).toHaveCount(0);await expect(page.locator('.modern-composer-identity>svg')).toHaveCount(0);
+  for(const width of [390,320,1440]){await page.setViewportSize({width,height:960});await expect.poll(async()=>{const boxes=await page.getByRole('navigation',{name:'Workspace views',exact:true}).locator('button:visible').evaluateAll(elements=>elements.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));return boxes.every((a,index)=>a.x>=0&&a.right<=width&&boxes.slice(index+1).every(b=>a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y));}).toBe(true);}
+  await page.getByRole('button',{name:'Git graph',exact:true}).click();const atlas=page.getByRole('dialog',{name:'Git history',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
+  await expect(atlas.locator('.atlas-commit')).toHaveCount(50);await expect(atlas.getByRole('navigation',{name:'Commit pages'})).toHaveCount(0);
+  const graph=atlas.getByLabel('Commits; drag background to pan',{exact:true});await graph.focus();await page.keyboard.press('PageUp');await expect.poll(()=>atlas.locator('.atlas-commit').count()).toBeGreaterThan(50);
+  await atlas.getByLabel('Choose Git commit',{exact:true}).selectOption(tip);await expect(atlas.locator('.atlas-message')).toContainText('Continuous fixture 81');await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();
+  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await page.screenshot({path:resolve('.local/git-thread-continuous.png')});
 });

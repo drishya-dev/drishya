@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from './legacy-test.ts';
@@ -30,4 +30,13 @@ test('wrapped test facts appear inside Shell, stay bounded and keep raw evidence
   await expect(card).toContainText('"exit_code":1');
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('unverified edits and creations show an explained neutral mark instead of a question mark',async({page})=>{
+  const timestamp='2026-10-18T00:00:00Z',patch='*** Begin Patch\n*** Add File: new.ts\n+export const value=1;\n*** Update File: old.ts\n@@\n-old\n+new\n*** End Patch';
+  const path=join(dir,'unknown-patch.jsonl'),rows=[{timestamp,type:'session_meta',payload:{id:'unknown-patch',cwd:dir}},{timestamp,type:'response_item',payload:{type:'custom_tool_call',name:'exec',input:`text(await tools.apply_patch(${JSON.stringify(patch)}));`,call_id:'wrapped'}},{timestamp,type:'response_item',payload:{type:'custom_tool_call_output',call_id:'wrapped',output:'{}'}}];
+  writeFileSync(path,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('codex',path)).recordingId;
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  const marks=page.locator('.op .state-unknown');await expect(marks).toHaveCount(2);
+  for(const mark of await marks.all()){await expect(mark).toHaveText('—');await expect(mark).toHaveAttribute('aria-label','Change unverified');await expect(mark).toHaveAttribute('title',/does not expose/);}
 });

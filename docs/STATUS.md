@@ -31,6 +31,32 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Continuous spectral Git threads
+
+- **When:**18 October2026, `codex/branch-threads-integration`; selective PR110 work is commit7198cb0.
+- **Delivered:**[112](review/112-git-threads-integration.md): graph-first local Git timeline with actual fork/merge paths, continuous edge loading/anchor preservation, six retained metadata slices/300nodes, explicit bounds, hover/focus details, exact file/patch reading and direct right-side entry. The attached reference informs32px primary cyan/blue/white/violet/pink fiber material, four times the earlier8px band; branches use the same texture, weighted by loaded segment commits and capped at16px. Extra texture strokes are bounded separately and reduced in low-resource mode. Composer identity trimmed. No event-schema change, writes or network Git fetch.
+- **Validation:**Both TS checks/build and496units/89files pass. Focused continuous/root/merge/phone journeys pass; actual three-session Codex/Claude desktop/phone graph coverage and frame inspection. Seven prior focused comparison/map/status/graph journeys pass. No hosted CI or native turn; physical/human acceptance remains open. TASKS holds compact test bars/media/native/UI work separately unfinished.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Linear rail and commit-range pages | Continuously scrollable graph with real parent paths | Make fork/merge structure navigable |
+| Thin warm8px line |32px fine spectral fiber ribbon, branch cap16px | Match the supplied attached material and requested weight |
+| New metadata resets fit | Shared-anchor preservation | Keep investigation stable while loading history |
+| Long composer identity sentence | Harness/workspace/status, details on demand | Reclaim input space |
+
+### Yash with Codex — Selective review integration and neutral result marks
+
+- **When:**18 October2026, `codex/branch-threads-integration`; selected source ideas/fixes from Harsh PR110 at d071ff3.
+- **Integrated:**Captured source vs separately approved current disk using current readers/version owners, exact line positions, complete bounded material, derived provenance labels and stale source/request guards. Missing positions/partial/oversized material fails explicitly. Narrow Files exits map, refit after whole-map consent, current-index importer→dependency arrows capped at40; newer map labels/occlusion/palettes retained. Did not adopt duplicate ReviewTools/history index/source-version class/follow-up state.
+- **Tool marks:**Unknown nested edit/creation is Change unverified with a neutral dash and explanation; other missing results remain neutral. Shared History now actually renders that mark rather than its hardcoded question mark. No inferred success or reducer/schema change.
+- **Validation:**Both TS/build and493units/89files. Five focused Git/source/map browser cases and actual three-session Git journey pass; comparison phone and graph frames inspected. Final shared unknown-mark and map/graph style checks recorded with the graph increment. No native turn/hosted CI; user package/logo files excluded.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Captured source and current disk require separate reading | Explicit bounded comparison in the existing reader | Keep historical evidence and current state distinct and accessible |
+| Files click can leave the map active | Explicit exit plus approved-map fit and regression | Restore the requested file tree |
+| Question mark on a proposed edit | Neutral mark, accessible unverified-change explanation | Make missing nested results understandable without fabricating success |
+
 ### Yash with Codex — Adaptive visual-content audit and PR110 review
 
 - **When:**18 October2026, after Git atlas PR111 merged as ea05492.

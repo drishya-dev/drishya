@@ -1,0 +1,12 @@
+import {expect,it} from 'vitest';
+import type {ArtifactSlice} from '@drishya/contracts';
+import type {CurrentFile} from '../src/api.ts';
+import {capturedDiskPair} from '../src/lib/captured-disk.ts';
+const captured:ArtifactSlice={artifact:{id:'a',kind:'excerpt',range:{start:2,end:3},observedAtSequence:1,bytes:8,lineCount:2,availability:'complete',provenance:{kind:'captured',observationIds:['o']},redacted:false},available:true,start:0,text:'old2\nold3',returnedLines:2,totalLines:2,totalBytes:9,truncated:false,hasMore:false};
+const disk:CurrentFile={path:'a.ts',scope:'current-workspace',text:'one\nnew2\nnew3\nfour',start:0,totalLines:4,returnedLines:4,hasMore:false,redacted:false,modifiedAt:'now'};
+it('compares exact captured line positions rather than the whole current file',()=>{expect(capturedDiskPair(captured,disk)).toEqual({before:'old2\nold3',after:'new2\nnew3',label:'Captured lines 2–3'});});
+it('rejects unavailable, partial, oversized and unpositioned material',()=>{
+  for(const patch of [{available:false},{hasMore:true},{truncated:true},{totalBytes:300000},{start:3}])expect(()=>capturedDiskPair({...captured,...patch},disk)).toThrow();
+  expect(()=>capturedDiskPair({...captured,artifact:{...captured.artifact,range:undefined}},disk)).toThrow('position');
+  expect(()=>capturedDiskPair({...captured,artifact:{...captured.artifact,kind:'snapshot',availability:'partial'}},disk)).toThrow();
+});

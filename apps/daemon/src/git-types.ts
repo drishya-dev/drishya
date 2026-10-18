@@ -8,7 +8,7 @@ export interface GitOmission { path: string; reason: 'content-limit' | 'process-
 
 export interface GitReference { id:string; name:string; kind:'branch'|'remote'|'tag'; tip:string; current:boolean }
 export interface GitCommit { hash:string; parents:string[]; author:string; time:string; subject:string; labels:string[]; omittedLabels:number }
-export interface GitHistoryPage {
+export interface GitHistoryPage {mainline?:{name:string;tip:string};
   generation:string; head:string; branch:string; shallow:boolean; sampledAt:string;
   commits:GitCommit[]; start:number; more:boolean; limit:number;
   references:GitReference[]; referenceStart:number; referenceCount:number; referenceTotal:number;

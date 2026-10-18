@@ -733,7 +733,7 @@ function StateMark({ state,op }: { state: SceneOp['state'];op:Operation }) {
   if (state === 'running') return <span className="state state-running" aria-label="running" />;
   if (state === 'error') return <span className="state state-error" aria-label="failed">✕</span>;
   if (state === 'ok') return <span className="state state-ok" aria-label="done">✓</span>;
-  return <span className="state state-unknown" aria-label="outcome not captured">?</span>;
+  return <span className="state state-unknown" aria-label={outcome.label} title={outcome.explanation}>{outcome.mark}</span>;
 }
 
 function ResultArea({ state, resolving, children }: { state: Operation['status']; resolving: boolean; children?: React.ReactNode }) {
