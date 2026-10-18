@@ -21,3 +21,7 @@
 .data-inspection{margin-block:6px}.data-inspection>button{font-size:12px}
 @media(max-width:600px){.structured-data-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.data-reader-body{padding:12px}.data-reader-toolbar button{font-size:12px}}
 @media(pointer:coarse){.data-reader-toolbar button,.data-selection button,.data-inspection>button{min-height:44px}}
+@media(prefers-reduced-motion:no-preference){
+ :root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.data-reader-toolbar button,.data-selection button,.data-inspection>button){transition:background-color 130ms var(--ease-out),transform 130ms var(--ease-out)}
+ :root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.data-reader-toolbar button,.data-selection button,.data-inspection>button):active{transform:scale(.98)}
+}

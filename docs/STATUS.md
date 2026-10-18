@@ -25,7 +25,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Reading-window interaction motion | ProductShell, focused browser tests/docs |
 
 
 ---
@@ -36,7 +35,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **When:**18 October2026, `codex/structured-result-reader`.
 - **Delivered:**Shared History/Inspector on-demand Tree/Table/Original reading, virtual rows and full supported field access, search, exact pointers/value/original copy, keyboard and phone bounds. Complete supplied preview only; no new artifact fetch, current-file/media inference or native write. Graph remains deferred. [114](review/114-structured-result-reading.md).
-- **Validation:**Both TS/build;517units/92files.1200-row/late-field/tree/search/original/320px journey, existing external preview journey and actual three-session Codex/Claude test-reading regression pass. Broader motion remains unchecked in TASKS; native/physical/assistive-tech acceptance remains open.
+- **Validation:**Both TS/build;517units/92files.1200-row/late-field/tree/search/original/320px journey, existing external preview journey and actual three-session Codex/Claude test-reading regression pass. Follow-up shared reader exit/actual-frame reversal, keyboard/reduced-motion/focus/settings and folder-state browser checks pass. Broader motion remains unchecked in TASKS; native/physical/assistive-tech acceptance remains open.
 
 
 ### Yash with Codex — Compact test evidence and the actual horizontal prompt row

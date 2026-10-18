@@ -28,3 +28,29 @@ test('JSON reading reaches late rows and fields with bounded DOM and exact origi
  await page.screenshot({path:resolve('.local/structured-data-phone.png')});
  await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toHaveCount(0);
 });
+
+test('reading windows reverse from their actual entrance and dismiss immediately for keyboard or reduced motion',async({page})=>{
+ await page.addInitScript(()=>{
+  const original=Element.prototype.animate;(window as any).__readerMotion=[];
+  Element.prototype.animate=function(frames,options){if(this instanceof HTMLDialogElement)(window as any).__readerMotion.push({frames,options});return original.call(this,frames,options);};
+ });
+ const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+ const op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.detail.resultPreview='{"answer":42}';
+ await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));
+ await page.goto(new URL('/?demo&experience=modern',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
+ const trigger=page.locator(`article[data-op-id="${op.id}"]`).getByRole('button',{name:'Inspect data'}).first();await trigger.click();
+ const dialog=page.getByRole('dialog',{name:'Captured data'});
+ const before=await dialog.evaluate(element=>{const animation=element.getAnimations()[0];animation.pause();animation.currentTime=70;const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};});
+ await dialog.getByRole('button',{name:'Close Captured data'}).click({force:true});
+ const frames=await page.evaluate(()=>(window as any).__readerMotion.at(-1).frames);
+ expect(frames[0].opacity).toBe(before.opacity);expect(frames[0].transform).toBe(before.transform);
+ await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
+ await trigger.click();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
+ const exits=await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length);expect(exits).toBe(1);
+ await page.emulateMedia({reducedMotion:'reduce'});await trigger.click();await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);
+ expect(await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length)).toBe(1);
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.getByRole('button',{name:'Workspace settings',exact:true}).click();const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});await settings.getByRole('button',{name:'Close Workspace settings'}).click();await expect(settings).toHaveCount(0);
+ expect(await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length)).toBe(2);
+ const folder=page.getByRole('treeitem',{name:'src',exact:true});await folder.click();await expect(folder).toHaveAttribute('aria-expanded','true');expect(await folder.locator('.folder-disclosure').evaluate(element=>getComputedStyle(element).transitionDuration)).toBe('0.14s');
+ await folder.focus();await page.keyboard.press('ArrowLeft');await expect(folder).toHaveAttribute('aria-expanded','false');expect(await folder.locator('.folder-disclosure').evaluate(element=>getComputedStyle(element).transitionDuration)).toBe('0s');
+});

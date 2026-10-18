@@ -37,6 +37,11 @@
 .mh-workspace.selected {box-shadow:inset 2px 0 var(--modern-accent);}
 .mh-refresh[aria-busy=true] {color:var(--t3);}
 .mh-refresh {min-width:144px;justify-content:center;}
+:root[data-ui-version=modern] .folder-row>.folder-disclosure {display:inline-grid;place-items:center;transform:rotate(0deg);transform-origin:center;}
+:root[data-ui-version=modern] .folder-row[aria-expanded=true]>.folder-disclosure {transform:rotate(90deg);}
+@media(prefers-reduced-motion:no-preference) {
+ :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .folder-row>.folder-disclosure {transition:transform 140ms var(--ease-out);}
+}
 :root[data-ui-version=modern] .product-dialog:not(.settings-dialog):not(.git-review-dialog)>header .icon-btn {
   display:grid;place-items:center;min-width:32px;min-height:32px;padding:6px;flex:none;
 }
