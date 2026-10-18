@@ -372,6 +372,7 @@ test('long captured at-sign scripts retain real syntax colors and exact command 
   const card=page.locator(`article[data-op-id="${op.id}"]`);
   await card.scrollIntoViewIfNeeded();
   const material=card.locator('.command-material');
+  await expect(card.locator('.op-title')).toHaveText(script);
   await expect(material.locator('.tk-str').first()).toHaveText("@'");
   expect(await material.locator('.tk-str').first().evaluate(el=>getComputedStyle(el).color!==getComputedStyle(el.parentElement!).color)).toBe(true);
   await material.getByRole('button',{name:'Copy command',exact:true}).click();
@@ -379,6 +380,22 @@ test('long captured at-sign scripts retain real syntax colors and exact command 
   await card.getByRole('button',{name:'Show raw request',exact:true}).click();
   await expect(material.locator('.tk-num')).toHaveText('500');
   await material.getByRole('button',{name:'Copy captured request',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
+});
+
+test('multi-statement captured requests keep every command visible and copyable',async({page})=>{
+  const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+  const op=bundle.projection.operations.find((item:any)=>item.kind==='shell');
+  const command='text(await tools.exec_command({cmd:"git status"})); text(await tools.exec_command({cmd:"git diff"}));';
+  op.detail.command=command;
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedCommand:string}).copiedCommand=text;}}}));
+  await page.route('**/demo/bundle.json',route=>route.fulfill({json:bundle}));
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  const card=page.locator(`article[data-op-id="${op.id}"]`);
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.locator('.command-material code')).toContainText(command);
+  await expect(card.getByRole('button',{name:'Show raw request',exact:true})).toHaveCount(0);
+  await card.getByRole('button',{name:'Copy command',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
 });
 
