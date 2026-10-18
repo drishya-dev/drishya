@@ -306,3 +306,5 @@ Before any visual work ships, it passes three tests:
 And one aspiration that sits above all three: **someone watching over your shoulder should stop and ask what that is.**
 
 **18 October attached Git timeline reference:** The main history ribbon is32px, four times the earlier8px experiment, with dense fine cyan/blue/white/violet/pink fibers and occasional pale warm strands. Branches share this material, weighted by loaded segment population and capped at16px. These are render strokes on actual parent edges, not additional commits or relationships; no looping particles or invented topology. See [112](review/112-git-threads-integration.md).
+
+**18 October spatial correction:** A dense volumetric many-thread bundle, not two helices/DNA and not a flat strip that pinches to zero. Retain nearly uniform main diameter while the path rises/dips/overlaps in depth; branches peel from the outer rim at real fork/merge positions. Depth is presentation only. See review112’s spatial correction.

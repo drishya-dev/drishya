@@ -42,3 +42,24 @@ Direct pan/zoom follows input without queued choreography. Hover material is imm
 Both TypeScript checks and production build pass. The496-test/89-file full local suite passes, including the5-case graph/window/weight checks. Seven focused browser journeys pass (source/unknown marks/map/graph/continuous history/phone navigation), and an actual three-session Codex/Claude desktop/phone Git journey passes. A final two-case graph/continuous-history run covers the last geometry/weight changes. Desktop/phone/source-comparison frames inspected. Early synthetic status-fixture failures came from inconsistent manually altered demo passages; the retained test uses genuine observations instead. The real phone test found overlapping commit targets; they were repaired with scale-aware targets and dense labels.
 
 No hosted CI, real native turn or physical/assistive-tech acceptance was run. The final attached-image texture and32px/16px weights were checked in two focused graph journeys and actual-session desktop/phone frames; this is not a pixel reproduction. Whole-product visual/media/native finishing remains open in TASKS.
+
+## Spatial bundle correction —18 October
+
+PR112 merged as cb2a674. Harsh PR110 is still open/conflicted, not merged wholesale; its distinct work is already integrated and credited above.
+
+The builder rejected flat ribbon edge-on collapse and a DNA-like double-thread appearance. Keep a dense many-fiber bundle with nearly uniform diameter, moving through depth/up/down; only subtle2% width variation. Branches peel from the outer visible rim at their real Git fork/merge positions, not from inside the core. Do not relocate historical forks to the newest commit just for the picture.
+
+Further primary reference: [Bo Zonneveld’s Loki concept collection](https://www.bozonneveld.com/loki), including The Sacred Timeline, Individual Timeline Strands and Branching Universe material. Image search also returned the branching-universe artwork and final branching sequence. These support art direction; do not imply artwork is bundled or perfectly reproduced.
+
+`gitRibbonGeometry` samples the existing actual parent curves in XYZ, uses a volumetric cross-section for the fibers and projects them into SVG. Long branch curves split into at most3pieces for depth sorting; main curves stay one piece. Projected DOM commit targets track the same positions. Orbit toggles vertical drag or Up/Down keyboard rotation around the time axis; normal drag pans. Fit restores the default angle. This is an orthographic spatial bundle, not a freely orbitable WebGL scene or additional Git metadata. There is no looping movement. Orbit never changes parent relationships or node identity.
+
+Diameter remains near32px at every viewing angle, instead of shrinking to zero. Branch width remains capped at half, with a small nonzero rim neck. Low-zoom branch positions retain visible separation from the main bundle. At most2,000actual edges,6,000mesh pieces and6,000fiber strokes (1,200in low resources); geometry samples12intervals/piece or5low-resource. Recompute on deliberate navigation/orbit only, no animation loop or external dependency.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Flat parallel translated strokes | XYZ fiber bundle and depth-sorted pieces | Give crossings and layering actual spatial geometry |
+| Width collapses as a flat strip turns | Volumetric fibers with nearly stable diameter | Avoid DNA-like zero-width pinches |
+| Fork leaves the visible core | Rim attachment with a small neck | Let a thinner bundle peel from the outside |
+| Pan/zoom only | Explicit orbit drag/keyboard mode; ordinary pan retained | Inspect depth without hijacking scroll |
+
+Validation: both TypeScript checks and production build;10focused geometry/window/topology cases pass, including all-angle diameter, rim exits, depth order, identity, determinism and texture budgets. Two synthetic graph/continuous-history browser journeys and the actual three-session Codex/Claude desktop/phone journey check navigation and orbit; frames inspected. No hosted CI/native turn or broad hardware/assistive-tech certification.
