@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Adaptive visual-content audit and PR110 review
+
+- **When:**18 October2026, after Git atlas PR111 merged as ea05492.
+- **Investigated:**Actual redacted Codex/Claude histories and capture/privacy/artifact/readers. Content-first matrix in [audit111](review/111-adaptive-content-and-pr110.md) covers images/browser/data/documents/web/source/test/native/delegation/process/media, including MCP and wrapped calls. Native image bytes are currently omitted; no new image persistence, reader or schema claimed. TASKS records investigation complete and implementations/acceptance separately unchecked.
+- **PR110:**Reviewed d071ff3 against current owners. Left open/unmerged: Commands/findings/prompts/source comparisons/follow-up overlap existing implementations; conflicting source-version exports would break callers if merged blindly. Captured-to-current range comparison and bounded import directions/map-return regression remain useful selective candidates in TASKS. No message/comment sent to Harsh.
+- **Validation:**Read-only SQLite metadata/signature audit and code/diff review; no private content committed. Documentation links/unique checklist checked. Git implementation checks remain in the next block. Hosted CI not run.
+
 ### Yash with Codex — Local Git branch atlas
 
 - **When:**18 October2026, `codex/local-git-atlas`.
