@@ -77,7 +77,7 @@ test('actual session palette and settings survey keeps readable controls at desk
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(ids[0]!)}`);
   await expect(page.locator('.history')).toBeVisible();
   const metrics=[];
-  for(const label of ['Jet Black','Midnight','Paper','Catppuccin Mocha','Tokyo Night','Nord','Gruvbox Dark']) {
+  for(const label of ['Jet Black','Deep Ocean','Porcelain','Orchid','Blueprint','Evergreen','Copper']) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
     await settings.getByRole('button',{name:label,exact:true}).click();
@@ -92,6 +92,10 @@ test('actual session palette and settings survey keeps readable controls at desk
     await settings.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     expect(await page.locator('.history').evaluate(node=>node.scrollWidth-node.clientWidth),`${label} history should not gain horizontal overflow`).toBeLessThanOrEqual(1);
     await page.screenshot({path:resolve(`.local/palette-${label.replaceAll(' ','-')}-history.png`),animations:'disabled'});
+    await page.locator('.history').evaluate(node=>node.scrollTop=0);
+    await expect(page.locator('.history .op').first()).toBeVisible();
+    await page.locator('.history .op').first().scrollIntoViewIfNeeded();
+    await page.screenshot({path:resolve(`.local/palette-${label.replaceAll(' ','-')}-material.png`),animations:'disabled'});
   }
   writeFileSync(resolve('.local/palette-survey.json'),JSON.stringify(metrics,null,2));
   await page.setViewportSize({width:390,height:844});

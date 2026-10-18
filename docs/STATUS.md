@@ -31,6 +31,21 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Rebuilt Modern palette materials
+
+- **When:**18 October2026, `codex/theme-materials`. Current reader96 merged as d37cb43.
+- **Delivered:**Six new Modern color compositions: Deep Ocean, Porcelain, Orchid, Blueprint, Evergreen and Copper. Keep Jet Black's base colors and all saved palette IDs. Legacy retains its own choices. Explicit source/external/pass/fail/edited/graph colors, derived status washes, neutral raised chrome, coherent selection ink and matching swatches replace incomplete inherited theme combinations. No action sizing, choreography or capture/controller changes.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Derivative theme names with broadly tinted surfaces | Distinct dark materials and a warm off-white alternative | Establish a coherent visual hierarchy rather than recoloring every layer equally |
+| Alternatives inherit unrelated sage/status colors | Complete semantic ink and derived washes per palette | Keep code, diffs, statuses and controls consistent |
+| Preview cards mix old swatches with new palette values | Canvas, two surfaces and accent match the selected theme | Make choices predictable |
+
+- **Validation:**Both typechecks/build, expanded contrast guard for text/syntax/source/external/status/focus on all four solid surfaces, Home/session palette journey and actual desktop/phone Settings/material survey pass. Actual command, prose and Settings frames inspected. These are bounded checks, not a claim every surface/human preference is accepted. No hosted CI, native turn or private capture committed; user package/artwork excluded.
+- **Next:**TASKS remains the single queue. Editable-source ergonomics, retained-version comparison, joined native correction and whole-product/palette acceptance remain open.
+
+
 ### Yash with Codex — Current-source reading allocation
 
 - **When:**18 October2026, `codex/current-reader-controls`; Review pager95 merged as b98186b.
