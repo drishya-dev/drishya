@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Native composer target and control clearance
+
+- **When:**18 October2026, `codex/composer-target-context`, separate increment after86 merged asdb33958.
+- **Delivered:**[102](review/102-composer-target-navigation.md): visible root/recording/state, compact phone settings glyph, measured floating phone Tools/Follow row clear of Send, direct command-menu Files/Workspace and16px coarse-pointer inputs. Existing native policy/consent/attachments/submission/Stop/evidence owners unchanged.
+- **Validation:**Both typechecks/build and447units/77files pass; six focused Edge journeys plus final four targeted/touch cases pass. Explicit target/geometry/navigation/minimized lifecycle and both harness forwarding/attachments/options covered; phone frame inspected. Paper browser expectation updated to101's intended canvas. No hosted CI/actual native turn/private content; package/artwork excluded.
+- **Next:**Full surface/browser audit, readers/menus/evidence/search/map presentation.84/92 source-version/joined workflow and selected optional features remain separate; physical/native/assistive-tech/human/platform acceptance stays open.
+
 ### Yash with Codex — Palette contrast and quiet prose reading
 
 - **When:**18 October2026, `codex/palette-reading-contrast`; one focused increment after85 merged as601d3d7.

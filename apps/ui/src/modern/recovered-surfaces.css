@@ -1,11 +1,16 @@
 /* Recovered from the pre-reset Modern surfaces, with shared native/evidence owners. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer.open { width:min(590px,calc(100% - 44px)); padding:0; border-radius:16px; background:linear-gradient(150deg,var(--s2),var(--s1)); box-shadow:0 15px 40px #0004,inset 0 1px #ffffff08; border:1px solid var(--line-2); overflow:visible; }
 .modern-composer-top { display:flex; align-items:center; gap:9px; padding:12px 15px 0; min-width:0; }
+.modern-composer-target {display:flex;flex:1;min-width:0;flex-direction:column;gap:3px;}
+.modern-composer-location {display:flex;align-items:center;gap:8px;min-width:0;color:var(--t2);font:11px/1.5 var(--sans);}
+.modern-composer-location>span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.modern-composer-location>code {font:10px/1.5 var(--mono);color:var(--t3);flex:none;}
+.native-options-glyph {width:15px;height:15px;fill:var(--s1);stroke:currentColor;stroke-width:1.5;flex:none;}
 .modern-composer-identity { display:flex; align-items:center; gap:8px; font:11px/1.5 var(--sans); color:var(--t1); flex:none; }
 .modern-composer-identity svg { width:14px; height:14px; fill:none; stroke:var(--focus); stroke-width:1.5; }
-.modern-composer-state { font-size:9px; color:var(--t3); min-width:0; max-width:100px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+.modern-composer-state { font-size:11px; color:var(--t2); min-width:0; max-width:110px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-options { position:static; margin:0 0 0 auto; max-width:none; }
-:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-options>summary { font-size:9px; padding:4px 0 4px 6px; }
+:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-options>summary { display:flex;align-items:center;gap:5px;font-size:10px; padding:4px 0 4px 6px; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-options-menu { position:absolute; right:8px; left:auto; bottom:calc(100% - 4px); width:min(350px,calc(100vw - 40px)); max-height:min(430px,55dvh); padding:15px; overflow:auto; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer form { padding:0; margin:0; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer textarea { padding:12px 15px 8px; min-height:52px; border:0; border-radius:0; background:none; font:13px/1.7 var(--sans); }
@@ -107,7 +112,7 @@
  :root[data-ui-version=modern] .modern-session-header .studio-actions { gap:4px; }
  :root[data-ui-version=modern] .modern-session-header .search-open { width:31px; padding:7px; }
  :root[data-ui-version=modern] .modern-session-header .search-open>span,:root[data-ui-version=modern] .modern-session-header .search-open>kbd { display:none; }
- .modern-composer-top { gap:6px; padding-inline:12px; }.modern-composer-identity { font-size:10px; }.modern-composer-state { display:none; }
+ .modern-composer-top { gap:6px; padding-inline:12px; }.modern-composer-identity { font-size:11px; }.modern-composer-state {display:block;font-size:10px;max-width:82px;flex:none;}.modern-native-composer .native-options>summary>span {display:none;}.modern-native-composer .native-options-glyph {width:18px;height:18px;}
  .modern-git-context { padding:10px 14px 0; }.modern-git-context small { font-size:9px; }
  .modern-review-control { right:14px!important; }
 }
@@ -122,3 +127,18 @@
 /* Own the header grid at narrow widths; Classic’s second-row fallback is not used here. */
 :root[data-ui-version=modern] .modern-session-header .studio-session { grid-column:2; grid-row:1; }
 :root[data-ui-version=modern] .modern-session-header .studio-actions { grid-column:3; grid-row:1; }
+
+@media(max-width:600px) { .modern-composer-intro {display:none;} }
+@media(pointer:coarse) {
+ :root[data-ui-version=modern] .modern-native-composer textarea,
+ :root[data-ui-version=modern] .native-options-menu select,
+ :root[data-ui-version=modern] .workspace-navigation-query,
+ :root[data-ui-version=modern] .library-search :is(input,select) {font-size:16px!important;}
+ :root[data-ui-version=modern] .modern-native-composer .native-options>summary {min-height:36px;min-width:36px;justify-content:center;}
+}
+/* Ordinary phone controls share a floating row above the measured composer. */
+@media(max-width:820px) {
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .history-transport {bottom:calc(var(--composer-gap,12px) + 4px);}
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer):has(.history-transport) .catalog-toggle {left:14px;right:auto;bottom:calc(var(--composer-gap,12px) + 4px);}
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer):has(.history-transport) .follow-pill {right:132px;bottom:calc(var(--composer-gap,12px) + 4px);}
+}
