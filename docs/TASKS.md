@@ -11,7 +11,7 @@
 - [x] Restore the previous tool boxes after rejecting PR88: original input/output allocation, hover limits, separator and spacing. Keep independent Follow/prose fixes. PR92.
 - [x] Consolidate the scattered active queues into this checklist; link it from the repo instructions and docs entry points.
 - [x] Make existing Workspace editing easier to find: leading Edit file action with mode icon/context, active-pane editor focus on entry/return from comparison, neutral editor focus. Existing-file/New file, two-pane/narrow and three actual-session checks pass. Native disk application remains a separate unchecked acceptance task below.
-- [ ] Compact narrow **Review work** pagination; avoid tall wrapped navigation controls without hiding page/count information.
+- [x] Compact **Review work** pagination: short labeled arrows, separate page count and limits note; no tall wrapped buttons. All70 recorded checks remain reachable;320/390/1440px and actual desktop/phone survey pass. Outcome groups stay top-aligned instead of stretching across the file list.
 - [ ] Reduce repeated current-file reader controls/padding; preserve useful file identity, whole-file navigation and available reading space.
 - [ ] Improve the editable draft surface itself: syntax/line-number/indentation ergonomics, useful keyboard behavior and matching reader presentation; current editing uses a bounded textarea, not a complete IDE editor.
 - [ ] Retain an older current-source version when disk changes; provide explicit keep/refresh/compare against the newly read version and disclose stale bases before native edit handoff.
