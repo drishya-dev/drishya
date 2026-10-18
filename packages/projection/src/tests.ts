@@ -6,18 +6,38 @@ import type { TestSummary } from '@drishya/contracts';
 const RUNNER = /^(npx\s+|pnpm\s+(exec\s+|dlx\s+)?|yarn\s+|bunx?\s+|uv\s+run\s+|poetry\s+run\s+)?(vitest|jest|mocha|ava|playwright\s+test|pytest|py\.test|(python3?|py(\s+-3(\.\d+)?)?)(\.exe)?\s+-m\s+(pytest|unittest)|go\s+test|cargo\s+(test|nextest)|dotnet\s+test|mvn\w*\s+test|\.?\/?gradlew?\w*\s+test|rspec|phpunit|deno\s+test)(\s|$)/i;
 const SCRIPT = /^(npm|pnpm|yarn|bun)\s+(run\s+)?test(:[\w-]+)?(\s|$)/i;
 const PREFIX = /^((cd\s+("[^"]*"|'[^']*'|\S+))|(timeout\s+\d+[smh]?)|(env\s+)|(sudo\s+)|([A-Z_][A-Z0-9_]*=("[^"]*"|'[^']*'|\S*)))\s*/;
+const NODE_RUNNER=/^node(?:\.exe)?\s+["']?(?:[^\s"']*[/\\])?(?:vitest(?:\.m?js)?|jest(?:\.m?js)?|(?:@playwright[/\\]test|playwright)[/\\]cli\.js["']?\s+test)(?:["']?\s|["']?$)/i;
+
+/** Separators inside quoted patterns/scripts are data, not executable segments. */
+function commandSegments(body:string):string[] {
+  const parts:string[]=[];let quote='',start=0;
+  for(let i=0;i<body.length;i++){
+    const char=body[i]!;
+    if(quote){
+      if(char==='\\'&&quote!=="'"){i++;continue;}
+      if(char===quote){if(body[i+1]===quote&&quote!== '`'){i++;continue;}quote='';}
+      continue;
+    }
+    if(char==='"'||char==="'"||char==='`'){quote=char;continue;}
+    if(char==='\\'){i++;continue;}
+    if(char===';'||char==='|'||char==='\n'||char==='\r'||char==='&'&&body[i+1]==='&'){
+      parts.push(body.slice(start,i));if(body[i+1]===char)i++;start=i+1;
+    }
+  }
+  parts.push(body.slice(start));return parts;
+}
 
 export function isTestCommand(cmd: string): boolean {
   // Heredoc and PowerShell here-string bodies are data being written, not commands being run.
   const body = cmd.replace(/<<-?\s*(['"]?)(\w+)\1[\s\S]*?\n\s*\2\b/g, '<<heredoc').replace(/@(['"])\r?\n[\s\S]*?\r?\n\1@/g, '@heredoc@');
-  for (let seg of body.split(/\s*(?:&&|\|\||;|\||\r?\n)\s*/)) {
+  for (let seg of commandSegments(body)) {
     seg = seg.trim();
     for (let i = 0; i < 5; i++) {
       const m = PREFIX.exec(seg);
       if (!m || !m[0]) break;
       seg = seg.slice(m[0].length);
     }
-    if (RUNNER.test(seg) || SCRIPT.test(seg)) return true;
+    if (RUNNER.test(seg) || SCRIPT.test(seg) || NODE_RUNNER.test(seg)) return true;
   }
   return false;
 }

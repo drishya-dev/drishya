@@ -13,6 +13,7 @@ import { VerificationPanel } from './Verification.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { EvidenceNavigation } from './EvidenceNavigation.tsx';
 import { ReviewQuestionEditor } from './ReviewQuestions.tsx';
+import {operationOutcome} from '../lib/operation-outcome.ts';
 
 export function Inspector({ projection }: { projection: Projection }) {
   const width = useApp(s => s.inspectorWidth);
@@ -24,6 +25,7 @@ export function Inspector({ projection }: { projection: Projection }) {
   const select = useApp((s) => s.select);
   const op = projection.operations.find((o) => o.id === selected);
   if (!op) return null;
+  const outcome=operationOutcome(op);
   const agent = projection.agents.find((a) => a.id === op.agentId);
   const links = projection.links.filter((l) => (l.from === op.id || l.to === op.id || op.observationIds.includes(l.from) || op.observationIds.includes(l.to)) && l.relation !== 'tool-result');
 
@@ -43,7 +45,7 @@ export function Inspector({ projection }: { projection: Projection }) {
       </h2>
       <EvidenceNavigation />
       <div className="insp-status">
-        <span className={`pill st-${op.status}`}>{op.status === 'ok' ? 'Succeeded' : op.status === 'error' ? 'Failed' : op.status === 'running' ? 'Running' : 'Outcome not captured'}</span>
+        <span className={`pill st-${outcome.tone}`} title={outcome.explanation}>{outcome.label}</span>
         <ProvenanceBadge p={op.classification} />
       </div>
       <nav className="tabs" role="tablist">

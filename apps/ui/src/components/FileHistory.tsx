@@ -46,8 +46,13 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const [retry, setRetry] = useState(0);
   const [response, setResponse] = useState<{ key: string; operations: Operation[]; total: number }>();
   const [failure, setFailure] = useState<{ key: string; message: string }>();
-  const [left, setLeft] = useEvidenceState<FileEvidence | undefined>('file/left', undefined);
-  const [right, setRight] = useEvidenceState<FileEvidence | undefined>('file/right', undefined);
+  const [savedLeft, setLeft] = useEvidenceState<FileEvidence | string | undefined>('file/left', undefined);
+  const [savedRight, setRight] = useEvidenceState<FileEvidence | string | undefined>('file/right', undefined);
+  const valid=(item:FileEvidence|string|undefined):item is FileEvidence=>!!item&&typeof item==='object'&&!!item.operation&&typeof item.operation.title==='string'&&!!item.operation.detail;
+  const reference=(item:FileEvidence|string|undefined)=>typeof item==='string'?item:typeof item?.key==='string'?item.key:undefined;
+  const left=valid(savedLeft)?savedLeft:undefined,right=valid(savedRight)?savedRight:undefined;
+  const leftKey=reference(savedLeft),rightKey=reference(savedRight);
+  const [recoveryError,setRecoveryError]=useState('');
   const [compare, setCompare] = useEvidenceState('file/compare', false);
   const trail = useRef<HTMLElement>(null);
   const reading = useRef<HTMLElement>(null);
@@ -85,16 +90,33 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
     }
     return items;
   }, [page, path, compare, left, right, preferred, projection]);
+  useEffect(()=>{
+    let active=true;setRecoveryError('');
+    const recover=async(key:string|undefined,loaded:FileEvidence|undefined,save:typeof setLeft)=>{
+      if(!key||loaded)return;
+      let item=choices.find(item=>item.key===key);
+      if(!item&&source?.history){
+        const operationId=key.replace(/\/(read|patch|before|after|search\/\d+)$/,'');
+        if(operationId===key)return;
+        const response=await source.history(recordingId,{selectedOperationId:operationId,count:1});
+        item=response.projection.operations.flatMap(op=>fileEvidence(op,path)).find(item=>item.key===key);
+      }
+      if(active){if(item)save(item);else setRecoveryError('Saved captured evidence is unavailable. Choose an item from the action history.');}
+    };
+    void Promise.all([recover(leftKey,left,setLeft),compare?recover(rightKey,right,setRight):undefined]).catch(()=>{if(active)setRecoveryError('Could not restore the saved evidence. Reopen an item from the action history.');});
+    return()=>{active=false;};
+  },[source,recordingId,path,leftKey,rightKey,left,right,compare,page]);
   const referenced = requestedLine === undefined ? undefined : choices.find(item => {
     const detail = item.operation.detail;
     return detail.kind === 'read' && requestedLine >= detail.startLine && requestedLine < detail.startLine + detail.lineCount;
   });
-  const first = choices.find((item) => item.key === left?.key) ?? choices.find(item => item.key === preferred) ?? referenced ?? (focusChange ? choices.find(item => item.patch) ?? choices.find(item => item.operation.kind === 'write' || item.operation.kind === 'edit') : undefined) ?? choices[0];
-  const second = choices.find((item) => item.key === right?.key) ?? choices.at(-1);
-  useEffect(() => { if (!left && first) setLeft(first); }, [left, first]);
+  const first = leftKey?choices.find(item=>item.key===leftKey):choices.find(item => item.key === preferred) ?? referenced ?? (focusChange ? choices.find(item => item.patch) ?? choices.find(item => item.operation.kind === 'write' || item.operation.kind === 'edit') : undefined) ?? choices[0];
+  const second = rightKey?choices.find(item=>item.key===rightKey):choices.at(-1);
+  useEffect(() => { if (!leftKey && first) setLeft(first); }, [leftKey, first]);
   const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
   return <ReadingDialog title={`Work on ${path}`} close={close} className="file-workspace" modeless={explore || canvas}>
     <EvidenceNavigation />
+    {recoveryError&&<p role="status" className="file-workspace-intro">{recoveryError}</p>}
     <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}{requestedLine !== undefined && ` · Referenced line ${requestedLine} · captured ranges only`}</span></div>
     <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
       {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} label="Resize file action history" />}

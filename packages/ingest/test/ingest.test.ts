@@ -40,6 +40,19 @@ function claudeLine(rec: Record<string, unknown>) {
 }
 
 describe('import', () => {
+  it('preserves unreported process exits and does not classify quoted runner mentions as tests',async()=>{
+    const path=join(dir,'wrapper-outcomes.jsonl');
+    const command='text(await tools.exec_command({cmd:"rg -n \'palette|mocha|tokyo\' themes.css"}));';
+    writeFileSync(path,[
+      {type:'session_meta',payload:{id:'wrappers',cwd:'/w'}},
+      {type:'response_item',payload:{type:'function_call',name:'exec',call_id:'wrapper',arguments:JSON.stringify({code:command})}},
+      {type:'response_item',payload:{type:'function_call_output',call_id:'wrapper',output:'Script completed\nOutput:\nCaptured nested command failed'}},
+    ].map(row=>JSON.stringify(row)).join('\n')+'\n');
+    const {recordingId}=await ingest.importSource('codex',path);
+    const op=ingest.projection(recordingId).operations[0]!;
+    expect(op.kind).toBe('shell');expect(op.status).toBe('ok');
+    expect(op.detail).toMatchObject({kind:'shell',exitCode:null});
+  });
   it('recovers an older missing workspace on the first sync without new journal content',async()=>{
     const imported=await ingest.importSource('claude-code',join(fixtures,'claude/checkout-fix.jsonl'));
     expect(store.getRecording(imported.recordingId)?.workspaceRoot).toBe('/home/dev/shop');

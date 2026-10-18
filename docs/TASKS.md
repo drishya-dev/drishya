@@ -8,6 +8,16 @@
 
 ## Current priorities
 
+- [x] Independent-review repair: persist exact file-evidence keys only, re-fetch references before rendering and handle legacy/missing selections without crashing. A failed screen resets on session navigation. Unit/persistence, reload/unavailable and injected-reader-failure browser checks plus the originally failing actual Claude session pass.
+- [x] Independent-review repair: unreported process exits stay null; neutral Tool returned distinguishes wrapper receipts from command success in history/Inspector/Commands/Canvas. Quote-aware test classification rejects runner names in patterns/scripts; direct Node runner paths are recognized. Actual false-Test and nested Git-failure examples rechecked. No regex-based failure inference.
+- [ ] Findings: open every matching captured operation through bounded pages/filtering rather than only first/latest samples; keep exact membership and current-source distinctions.
+- [ ] Command scanning: prioritize a safely decoded literal command while retaining full orchestration source/raw access; never imply all nested calls executed or infer nested outcomes.
+- [ ] Navigation clarity: make Files/current Workspace/Repository purposes and destinations clearer, with a joined investigation route rather than more resident buttons.
+- [ ] Phone density/occlusion: review Files overlay, map import drawer and composer ownership; compact returning-user Home so session discovery takes priority over introduction.
+- [ ] Reading consistency: current Markdown Document/Source parity, reader/editor type sizing and useful session repository/harness context. Preserve exact source lines.
+- [ ] Packet usefulness: deliberate evidence selection and useful portable references; no auto-sharing or private current-work inclusion.
+
+
 - [x] Auto-hide native scrollbars after inactivity, restoring them on scroll/nearby pointer use without changing layout or the independent prompt timeline. Keep resizing functional with a cursor-only edge rather than a visible Explorer/reader resize bar; retain keyboard resizing and forced-colors focus visibility.
 
 - [x] Repair live session freshness: live observation/history is the default, independent of Follow. Incoming content must update while reading older work, with Follow controlling only the viewport; replay is explicitly selected. Both journal formats update with Follow off; visibility/reconnection rechecks revisions. Real-account/platform acceptance remains below.
@@ -43,7 +53,7 @@
 - [x] Rebuild the six Modern alternatives: Deep Ocean, Porcelain, Orchid, Blueprint, Evergreen and Copper. Preserve Jet Black and stored IDs; complete semantic/status/graph/syntax tokens, selections and accurate swatches. Local text/status contrast guard, Home/session journey and actual desktop/phone Settings/material survey pass. Legacy palettes stay separate.
 - [ ] Check **each palette across every surface**, including actual code/diffs/tests/menus/editor, translucent compositing, light-theme balance and semantic status contrast. A palette selector/token test is not the completed theme pass.
 - [ ] Evaluate motion with actual live/replay sessions: origin→whole material→settle, hover entry/exit/switching, reflow/scroll, burst/late results and ten-minute calm. No fake typing/reasoning or copied evidence.
-- [ ] Repeat independent critical developer/product/design review after the investigation loop: component ratings, switching intent versus native chat/IDE, daily missing tasks, readability, motion, density and useful improvements. Implement selected findings here rather than starting another queue.
+- [x] Repeat independent critical developer/product/design review: three memory-free reviewers used actual redacted Codex/Claude histories and rated adoption, utility, UI and workflows. They prefer a review companion today, not a sole IDE/native replacement. Review-time design polish6.3/10, utility6/10; one reviewer replacement2/10 vs companion7/10. Critical crash/outcome/map-overlap findings repaired; selected remaining improvements are priorities above. Signed-in native, ten-minute/physical/all-theme acceptance were not tested.
 
 ## Developer workflows and selected additions
 

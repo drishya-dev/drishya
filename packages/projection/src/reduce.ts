@@ -32,7 +32,7 @@ import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
 
-export const REDUCER_VERSION = 'r3';
+export const REDUCER_VERSION = 'r4';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -772,7 +772,8 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
     case 'shell': {
       const d = op.detail;
       const out = [c.text(outcome.stdout as TextValue) ?? resultText ?? '', c.text(outcome.stderr as TextValue) ?? ''].filter(Boolean).join('\n');
-      d.exitCode = p.exitCode ?? (p.isError ? null : 0);
+      // A successful tool/wrapper return is not a captured process exit code.
+      d.exitCode = p.exitCode ?? null;
       d.outputPreview = tail(out, PREVIEW);
       if (out.length > PREVIEW) {
         d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out`, kind: 'output', observedAtSequence: seq, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });

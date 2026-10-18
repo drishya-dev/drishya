@@ -1,3 +1,4 @@
+import {operationOutcome} from '../lib/operation-outcome.ts';
 import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Projection } from '@drishya/contracts';
@@ -288,7 +289,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
         if (!target || !op || !visible(target)) continue;
         motionTarget = target;
         emitted.add(`outcome:${id}`);
-        const rect = contour(target, 'Resolve', colour(op.status === 'error' ? '--fail' : op.status === 'ok' ? '--pass' : '--t3'));
+        const rect = contour(target, 'Resolve', colour(op.status === 'error' ? '--fail' : operationOutcome(op).tone === 'ok' ? '--pass' : '--t3'));
         play(rect, [{ opacity: .7 }, { opacity: 0 }], 420);
       }
       for (const id of plan.prose) {
