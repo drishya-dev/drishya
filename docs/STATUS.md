@@ -31,6 +31,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Sessions-first Home and navigation handovers
+
+- **When:**18 October2026, `codex/home-reading-priority`; adjustable readers108 merged asa06ce1d.
+- **Delivered:**Modern Home prioritizes sessions when an inventory exists; About retains an explicit boolean introduction preference. Phone workspace selection is an on-demand bounded virtual chooser with outside/Escape/blur dismissal and focus return, freeing session space. Workspace→Repository/latest/Files destinations clear previous owners rather than appearing behind them; existing help distinguishes file reading, local drafts and import relationships.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Returning users repeatedly see the large intro | Compact sessions heading and optional retained introduction | Prioritize returning to work |
+| Phone workspace choices reserve96px permanently |54px chooser with the same virtual list on demand | Make session discovery easier without dropping workspaces |
+| Command destinations can remain behind Workspace | Explicit reading-owner handover | Open the view the user requested |
+
+- **Validation:**Both TS/build, focused Home metadata unit checks, six Home/navigation browser journeys and actual library desktop/phone/short-window checks pass. Actual inventory612sessions/323workspaces, including deep virtual chooser selection. Phone frame inspected. A new compact refresh-label specificity overflow was reproduced and repaired; no hiding source content or weakening checks. Design skill applied; Uiverse collections reviewed as reference (https://uiverse.io/), no copied components or dependencies. No native turn or hosted CI.
+- **Next:**Remaining whole-product Uiverse/palette/motion/readers, session identity/packet and native/platform acceptance stay in TASKS.
+
 ### Yash with Codex — Adjustable reading surfaces
 
 - **When:**18 October2026, `codex/adjustable-readers`; command presentation107 merged as3f66683.

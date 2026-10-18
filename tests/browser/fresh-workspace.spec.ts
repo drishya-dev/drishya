@@ -129,9 +129,39 @@ test('Home surfaces changed imported journals and keeps filter menus keyboard ac
   await filter.selectOption('codex');await expect(filter).toHaveValue('codex');
   await filter.focus();await page.keyboard.press('Space');await page.keyboard.press('Escape');
   await expect(filter).toBeFocused();await expect(filter).toHaveValue('codex');
-  await filter.click();await page.getByRole('heading',{name:'Your agents. In view.'}).click();
+  await filter.click();await page.getByRole('heading',{name:'Your sessions.'}).click();
   await expect(filter).toHaveValue('codex');
   await page.screenshot({path:resolve('.local/home-refined-filters.png')});
+});
+
+test('workspace destinations leave the previous owner and reveal the requested view',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
+  const go=async(name:string)=>{await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(name);await nav.getByRole('option').filter({hasText:name}).click();};
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();await expect(desk).toBeVisible();
+  await go('Explore repository map');await expect(desk).toHaveCount(0);await expect(page.locator('.map-tools')).toBeVisible();
+  await go('Browse workspace files');await expect(page.locator('.map-tools')).toHaveCount(0);await expect(page.getByRole('textbox',{name:'Find repository files',exact:true})).toBeFocused();
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();await expect(desk).toBeVisible();
+  await go('Return to latest activity');await expect(desk).toHaveCount(0);await expect(page.locator('.history')).toBeVisible();await expect(page.locator('.map-tools')).toHaveCount(0);
+});
+
+test('Home prioritizes sessions and its compact phone workspace chooser dismisses and recovers',async({page})=>{
+  await page.setViewportSize({width:390,height:844});await page.goto(server.launchUrl);
+  const about=page.getByRole('button',{name:'About Drishya',exact:true}),picker=page.getByRole('button',{name:'Choose workspace',exact:true});
+  await expect(about).toHaveAttribute('aria-expanded','false');
+  expect((await page.locator('.mh-session-list').boundingBox())!.height).toBeGreaterThan(350);
+  await about.click();await expect(about).toHaveAttribute('aria-expanded','true');await expect(page.locator('#home-introduction')).toBeVisible();
+  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('home/intro');
+  await page.reload();await expect(about).toHaveAttribute('aria-expanded','true');await about.click();
+  await picker.click();await expect(picker).toHaveAttribute('aria-expanded','true');
+  await page.keyboard.press('Escape');await expect(picker).toHaveAttribute('aria-expanded','false');await expect(picker).toBeFocused();
+  await picker.click();await page.getByRole('heading',{name:'Your sessions.',exact:true}).click();await expect(picker).toHaveAttribute('aria-expanded','false');
+  await picker.click();const option=page.locator('.mh-workspace-options .mh-workspace').nth(1);await expect(option).toBeVisible();const name=await option.locator('strong').innerText();await option.click();
+  await expect(picker).toHaveAttribute('aria-expanded','false');await expect(picker).toContainText(name);await expect(picker).toBeFocused();
+  await expect(page.locator('.mh-results>header h2')).toHaveText(name);
+  for(const width of [320,390,844]){await page.setViewportSize({width,height:844});expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/home-session-priority-${width}.png`)});}
+  await page.setViewportSize({width:320,height:844});await about.click();expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
 });
 
 test('Home dense sessions remain reachable through virtualization and responsive resizing',async({page})=>{

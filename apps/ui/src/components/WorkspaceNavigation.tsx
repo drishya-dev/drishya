@@ -27,8 +27,8 @@ export function WorkspaceNavigation() {
     const click = (selector: string) => document.querySelector<HTMLButtonElement>(selector)?.click();
     const all: Destination[] = [
       { key: 'search', name: 'Search captured work', detail: 'Recorded prose, commands and evidence', run: () => useApp.setState({ searchOpen: true }) },
-      { key: 'map', name: 'Explore repository map', detail: 'Current index or captured file locations', run: () => useApp.setState({ explore: true, mapVisible: true }) },
-      { key: 'latest', name: 'Return to latest activity', detail: 'Follow accumulating captured work', run: () => useApp.getState().showHistory() },
+      { key: 'map', name: 'Explore repository map', detail: 'File/import relationships and captured locations', run: () => useApp.getState().set({ developerWorkspace:false, currentFile:undefined, filePanel:undefined, selectedOp:undefined, expandedOp:undefined, explore:true, mapVisible:true, follow:false, held:true }) },
+      { key: 'latest', name: 'Return to latest activity', detail: 'Leave reading spaces and follow captured work', run: () => {useApp.getState().set({developerWorkspace:false,explore:false,currentFile:undefined,filePanel:undefined});useApp.getState().showHistory();} },
       { key: 'settings', name: 'Workspace settings', detail: 'Theme, reading and resources', run: () => useApp.setState({ settingsOpen: true }) },
     ];
     if(kind==='daemon')all.push({key:'library-search',name:'Search all session evidence',detail:'Find captured text across imported sessions',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-search-library')))});
@@ -50,7 +50,7 @@ export function WorkspaceNavigation() {
         all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => click('.git-open') });
         all.push({ key: 'workspace', name: 'Open developer workspace', detail: 'Read current files and prepare local drafts with workspace consent', run: () => { if(!useApp.getState().developerWorkspace)click('[aria-label="Open developer workspace"]'); } });
       }
-      all.push({key:'files',name:'Browse workspace files',detail:'Indexed paths and captured file evidence',run:()=>{useApp.setState({foldersHidden:false,explore:false});requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('.folder-explorer input')?.focus({preventScroll:true}));}});
+      all.push({key:'files',name:'Browse workspace files',detail:'Current files after consent; otherwise captured paths and work',run:()=>{useApp.getState().set({foldersHidden:false,explore:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('.folder-explorer input')?.focus({preventScroll:true}));}});
     }
     if (kind === 'daemon') all.push({ key: 'home', name: 'Choose a session', detail: 'Workspace and local-date groups', run: () => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); } });
     const needle = query.trim().toLowerCase();
