@@ -69,3 +69,14 @@ it('does not turn Claude session roots into command cwd or joined argv into an e
   expect(commands).toHaveLength(2);expect(commands.every(command=>!command.complete)).toBe(true);
   await expect(app.history.reviewScript(recording,[commands[0]!.id])).rejects.toThrow('complete');
 });
+
+it('bounds command and occurrence responses independently of a thousand-operation recording',async()=>{
+  const path=join(dir,'large-review.jsonl'),timestamp='2026-10-18T00:00:00Z';
+  const rows:unknown[]=[{timestamp,type:'session_meta',payload:{id:'large-review',cwd:dir}}];
+  for(let i=0;i<1000;i++)rows.push({timestamp,type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`large-${i}`,arguments:JSON.stringify({cmd:'pnpm test -- repeated-large',workdir:dir})}},{timestamp,type:'response_item',payload:{type:'function_call_output',call_id:`large-${i}`,output:'Exit code: 1\nOutput:\nFAIL synthetic'}});
+  writeFileSync(path,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const recording=(await app.ingest.importSource('codex',path)).recordingId;
+  const page=await app.history.review(recording,{section:'commands',count:20});expect(page.total).toBe(1000);expect(page.items).toHaveLength(20);expect(Buffer.byteLength(JSON.stringify(page))).toBeLessThan(32000);
+  const repeated=await app.history.review(recording,{section:'repeats'}),repeat=repeated.items[0] as {id:string;operationIds:string[]};expect(repeat.operationIds).toEqual([]);
+  const first=await app.history.review(recording,{section:'repeats',repeatId:repeat.id,start:0,count:20});const last=await app.history.review(recording,{section:'repeats',repeatId:repeat.id,start:980,count:20});
+  expect(first.total).toBe(1000);expect(first.occurrences).toHaveLength(20);expect(last.occurrences).toHaveLength(20);expect(last.occurrences![0]!.operationId).not.toBe(first.occurrences![0]!.operationId);
+});

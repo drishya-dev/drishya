@@ -65,6 +65,14 @@ async function verifyRecordings(base: string, cookie: string) {
   const history = await fetch(`${base}/v1/recordings/${id}/history`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ count: 1 }) });
   assert.equal(history.status, 200, await history.clone().text());
   assert.equal((await history.json()).loadedPassageIds.length, 1);
+  const review = await fetch(`${base}/v1/recordings/${id}/review-tools`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ section: 'commands', count: 1 }) });
+  assert.equal(review.status, 200, await review.clone().text());
+  const commands = await review.json();
+  assert.equal(commands.items.length, 1);
+  assert.ok(commands.total >= 1);
+  const command = await fetch(`${base}/v1/recordings/${id}/review-command?${new URLSearchParams({ operationId: commands.items[0].id })}`, { headers: { cookie } });
+  assert.equal(command.status, 200);
+  assert.ok((await command.json()).text.length > 0);
 }
 
 try {
