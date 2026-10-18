@@ -28,7 +28,15 @@ function value(input:unknown,depth=0):unknown {
 
 function entries(input:unknown,allowed:RegExp):[string,unknown][] {
   if(!Array.isArray(input))return [];
-  return input.slice(-64).flatMap(pair=>Array.isArray(pair)&&typeof pair[0]==='string'&&pair[0].length<=1400&&allowed.test(pair[0])?[[pair[0],value(pair[1])] as [string,unknown]]:[]);
+  return input.slice(-64).flatMap(pair=>{
+    if(!Array.isArray(pair)||typeof pair[0]!=='string'||pair[0].length>1400||!allowed.test(pair[0]))return [];
+    // Retained file selections contain live operations in memory. Persist only
+    // their exact reference; the reader must fetch evidence again after restart.
+    const item=/^file\/(left|right)$/.test(pair[0])&&record(pair[1])?pair[1].key:pair[1];
+    // The trail is structurally sanitized below; sanitizing its nested memory
+    // first would erase reference keys before they can become scalar IDs.
+    return [[pair[0],pair[0]==='evidence/trail'?item:value(item)] as [string,unknown]];
+  });
 }
 function readerValue(key:string,item:unknown) {
   if(key.startsWith('scroll/'))return record(item)&&typeof item.top==='number'&&typeof item.left==='number';

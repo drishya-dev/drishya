@@ -31,6 +31,21 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Independent critics and reliability repairs
+
+- **When:**18 October2026, `codex/review-reliability`; map103 merged as5938ef5.
+- **Review:**Three independent first-hand critics used existing redacted Codex/Claude histories, Modern primary. Developer utility6/10, design polish6.3/10; companion7/10 versus native/IDE replacement2/10 from one critic. These are subjective agent judgments, not user research. They valued exact evidence search, current source, split reading and guarded handoff. They found a reproducible saved-file recovery crash, ambiguous outer-success marks, a false Test classification from quoted `mocha`, map overlap (repaired103), and investigation/navigation/mobile density gaps. Complete private reports/screenshots stay under.local; selected remaining work is in TASKS, not a new queue.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Restored metadata object is treated as loaded file evidence | Exact reference keys persist; evidence re-fetches or gives an unavailable state | Avoid crashes and persisted source bodies |
+| Failed view stays failed when navigating elsewhere | Boundary resets on hash navigation | A bad reader must not trap healthy sessions |
+| Missing exit is represented as0; outer success gets a tick | Missing exit remains null; wrapper receipt is neutral Tool returned | Separate transport completion from nested command success |
+| Quoted search separators promote runner mentions to tests | Quote-aware splitting plus explicit direct Node runners | Preserve truthful verification headlines |
+
+- **Validation:**Both TS/build,470units/84files and four focused browser journeys pass. Actual original recovery-state store across all three sessions opens without a boundary; the Claude failure is repaired. Actual false-Test command is now Shell; nested Git failure retains null exit and Commands renders Tool returned. No native turn/regex failure guessing, direct writes, source-body recovery persistence or hosted CI.
+- **Next:**Findings membership, command scanning, quieter mobile navigation/current Markdown consistency, remaining all-pages/palette/motion and real native/platform gates remain in TASKS.
+
 ### Yash with Codex — Captured-change map investigation
 
 - **When:**18 October2026, `codex/map-investigation`; Review102 merged as9107012.

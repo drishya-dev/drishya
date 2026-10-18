@@ -82,12 +82,17 @@ describe('test output parsing (derived)', () => {
     expect(isTestCommand('py -3 -m pytest tests\\test_env.py -q')).toBe(true);
     expect(isTestCommand('CI=1 pnpm vitest run')).toBe(true);
     expect(isTestCommand('npm install')).toBe(false);
+    expect(isTestCommand('node node_modules/vitest/vitest.mjs run')).toBe(true);
+    expect(isTestCommand('node node_modules/@playwright/test/cli.js test')).toBe(true);
   });
 
   it('does not mistake a mention of a runner for running it', () => {
     expect(isTestCommand("cat > run.py <<'EOF'\nimport pytest\npytest.main()\nEOF")).toBe(false);
     expect(isTestCommand("Select-String -Path requirements.txt -Pattern 'pytest-timeout'")).toBe(false);
     expect(isTestCommand('grep -rl pytest tests | head')).toBe(false);
+    expect(isTestCommand("rg -n 'palette|mocha|tokyo' themes.css")).toBe(false);
+    expect(isTestCommand('text(await tools.exec_command({cmd:"rg -n \'palette|mocha|tokyo\' themes.css"}));')).toBe(false);
+    expect(isTestCommand('printf "first; npm test\\npytest"')).toBe(false);
   });
 
   it('parses quiet pytest output', () => {

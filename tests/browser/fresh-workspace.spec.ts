@@ -1447,3 +1447,27 @@ test('captured changes lead to typed map connections, current reading and a pers
   await page.getByRole('textbox',{name:'Find a file on the map',exact:true}).fill(path);await page.locator('.map-matches').getByRole('button',{name:path,exact:true}).click();if(await toggle.getAttribute('aria-checked')!=='true')await toggle.click();
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});await expect(connections).toBeVisible();for(const control of await page.locator('.map-tools button:visible').all())expect(await control.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);const tools=(await page.locator('.map-tools').boundingBox())!,reader=(await connections.boundingBox())!;for(const control of await page.getByRole('navigation',{name:'Workspace views'}).locator('button:visible').all()){const b=(await control.boundingBox())!;expect(tools.y).toBeGreaterThanOrEqual(b.y+b.height);}if(width===390)expect(reader.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(reader.x+reader.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-investigation-${width}.png`)});}
 });
+
+
+test('saved captured file selections recover as references and unavailable selections do not crash',async({page})=>{
+  const id=ids['claude-code']!;
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
+  const reader=page.locator('dialog.file-workspace'),choice=reader.getByRole('combobox',{name:'First evidence',exact:true});await expect(choice.locator('option').first()).toBeAttached();
+  const key=(await choice.locator('option').last().getAttribute('value'))!;await choice.selectOption(key);
+  await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain(key);
+  await page.reload();await expect(reader).toBeVisible();await expect(choice).toHaveValue(key);await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+  await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries:[['location',{filePanel:'src/checkout/guard.ts'}],['evidence/trail',{cursor:0,visits:[{id:0,location:{filePanel:'src/checkout/guard.ts'},memory:[['file/left','missing/read']]}]}]]}]}}):route.continue());
+  await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('status').filter({hasText:'Saved captured evidence is unavailable'})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+});
+
+
+test('a failed reader screen can recover by navigating to a healthy session',async({page})=>{
+  const id=ids['claude-code']!;
+  await page.route(`**/v1/recordings/${id}/file-operations?*`,route=>route.fulfill({json:{operations:[null],total:1}}));
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
+  await expect(page.getByText('This view could not be displayed',{exact:true})).toBeVisible();
+  await page.evaluate(id=>{location.hash=`/r/${id}`;},ids.codex!);
+  await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+});

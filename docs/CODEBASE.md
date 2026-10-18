@@ -1,5 +1,8 @@
 # Codebase — the system as built
 
+**18 October evidence/recovery correction:**Reducer r4 leaves unreported shell exits null and splits test-command segments only outside quotes, including direct Node runner paths. Presentation uses scoped neutral Tool returned for successful wrappers/unreported exits rather than claiming nested process success. Captured status is not changed by searching output for failure words. File-evidence navigation stores only the exact selection key; the reader rehydrates bounded captured history and validates loaded objects before rendering. Missing/legacy references are unavailable, never fabricated source. Screen failures reset on hash navigation.
+
+
 **18 October map investigation:**Review change paths request an exact indexed file, retain focus while indexing consent is pending and disclose absent locations. `map/changed` is bounded navigation metadata; it filters captured edit/write paths, not current Git. Static direct imports/importers link to captured work or explicit approved current-file reading. Map controls measure navigation/drawer clearance. Workspace status is resolved independently from controller status. Store metadata selects the first root-bearing main session header independently of titles; ingest repairs a missing summary on its first sync even without new bytes. No journal/config/project writes or event-schema changes.
 
 

@@ -7,6 +7,15 @@ import type { ReplayBundle } from '@drishya/contracts';
 import { EvidenceTrail } from '../src/lib/evidence-navigation.ts';
 
 describe('bounded workspace navigation memory', () => {
+  it('persists file selections only as exact references and drops legacy empty objects',()=>{
+    const memory=new WorkspaceMemory(),trail=new EvidenceTrail();
+    const visit=trail.visit({filePanel:'file.ts',explore:false,inspectorTab:'detail',inspectorWidth:760});
+    visit.memory.set('file/left',{key:'operation/read',operation:{title:'PRIVATE_BODY'},snippet:'PRIVATE_SOURCE'});
+    visit.memory.set('file/right',{});memory.session('r').set('evidence/trail',trail);
+    const snapshot=JSON.stringify(memory.snapshot());
+    expect(snapshot).toContain('operation/read');expect(snapshot).not.toContain('PRIVATE_');
+    expect(snapshot).not.toContain('file/right');
+  });
   it('retains only bounded Files/Git reading dimensions and boolean file-list visibility',()=>{
     const memory=new WorkspaceMemory(), session=memory.session('r');
     session.set('git/width',1040);session.set('git/filesHidden',true);session.set('folders/width',360);

@@ -1,4 +1,5 @@
 import { CommandText } from './CommandText.tsx';
+import {operationOutcome} from '../lib/operation-outcome.ts';
 import { ToolInput } from './ToolInput.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -642,7 +643,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       <header className="op-head">
         <MaterialGlyph material={presentation.material} />
         {experience !== 'legacy' ? <span className="studio-action-identity"><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
-        <StateMark state={so.state} />
+        <StateMark state={so.state} op={op} />
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {
             e.stopPropagation();
@@ -723,7 +724,9 @@ function ExpandedOperation({ op }: { op: Operation }) {
   }
 }
 
-function StateMark({ state }: { state: SceneOp['state'] }) {
+function StateMark({ state,op }: { state: SceneOp['state'];op:Operation }) {
+  const outcome=operationOutcome({...op,status:state});
+  if(outcome.tone==='returned')return <span className="state state-returned" aria-label={outcome.label} title={outcome.explanation}>{outcome.mark}</span>;
   if (state === 'running') return <span className="state state-running" aria-label="running" />;
   if (state === 'error') return <span className="state state-error" aria-label="failed">✕</span>;
   if (state === 'ok') return <span className="state state-ok" aria-label="done">✓</span>;

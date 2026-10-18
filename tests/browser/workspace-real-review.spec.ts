@@ -300,3 +300,15 @@ test('actual captured changes open import neighborhoods and current source witho
     for(const width of [1440,390]){await page.setViewportSize({width,height:960});const tools=(await page.locator('.map-tools').boundingBox())!,box=(await drawer.boundingBox())!,zoom=(await page.locator('.map-zoom').boundingBox())!;if(width===390){expect(box.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(box.y+box.height).toBeLessThanOrEqual(zoom.y);}expect(box.x+box.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-task-${id}-${width}.png`)});}
   }
 });
+
+
+test('actual saved-file recovery and wrapper receipts stay readable without false process success',async({page})=>{
+  test.setTimeout(90000);
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  for(const id of ids){await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);const reader=page.locator('dialog.file-workspace');if(await reader.isVisible()){await expect(reader.getByRole('combobox',{name:'First evidence',exact:true}).locator('option').first()).toBeAttached();await reader.locator(':scope>header button').click();}}
+  const id=ids[1]??ids[0]!;const p=app.projection(id),op=p.operations.find(op=>op.id.endsWith('call_11c1eb358f694f7f9615e6c41a01c28d'));
+  if(op){expect(op.detail).toMatchObject({kind:'shell',exitCode:null});expect(op.status).toBe('ok');}
+  const first=app.projection(ids[0]!).operations.find(op=>op.id.endsWith('call_f6888c848b4f4ae1b3c12cfa6c0ab590'));if(first)expect(first.kind).toBe('shell');
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();const commands=page.getByRole('dialog',{name:'Captured commands',exact:true});await expect(commands.locator('.commands-caption')).toContainText('Tool return does not prove');await commands.getByRole('searchbox',{name:'Filter captured command previews',exact:true}).fill('git commit');await expect(commands.locator('.command-outcome').first()).toHaveText('Tool returned');await page.screenshot({path:resolve('.local/review-wrapper-receipts.png')});
+});

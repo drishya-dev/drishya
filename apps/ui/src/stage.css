@@ -671,3 +671,5 @@
 @media(max-width:820px) {
   .connected-workspace .map-connections {top:calc(var(--map-controls-bottom,var(--workspace-header-h,100px)) + 8px);bottom:auto;max-height:max(64px,calc(100% - var(--map-controls-bottom,200px) - max(96px,var(--composer-gap,96px)) - 16px));}
 }
+
+.state.state-returned,.pill.st-returned,.command-outcome.outcome-returned {color:var(--t2);}
