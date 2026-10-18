@@ -688,6 +688,13 @@ test('Modern review pages reach every captured check beyond the first twenty wit
   await expect(checks.locator('.review-item')).toHaveCount(20);
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
   await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toContainText('Page 1 of 4');
+  for(const width of [390,320,1440]) {
+    await page.setViewportSize({width,height:900});
+    const pages=review.getByRole('navigation',{name:'Recorded review pages'});
+    expect((await pages.boundingBox())!.height).toBeLessThanOrEqual(90);
+    expect(await pages.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(review.getByRole('button',{name:'Previous review page',exact:true})).toBeDisabled();
+  }
   await review.getByRole('button',{name:'Next review page',exact:true}).click();
   await expect(checks).toContainText('review-case-20');
   await expect(checks).not.toContainText('review-case-0 ');
