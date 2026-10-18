@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { writeFileSync } from 'node:fs';
 import { pointAtHistory, beginReadingSamples, finishReadingSamples } from './history-gestures.ts';
 import { expect,test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
@@ -11,6 +12,38 @@ let app:App,server:RunningServer;
 test.skip(!store || !ids.length,'Opt in with a local redacted store and explicit recording IDs.');
 test.beforeAll(async()=>{if(!store || !ids.length)return;app=new App(store);server=await startServer({app,port:0});});
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();});
+test('actual session palette and settings survey keeps readable controls at desktop and phone sizes',async({page})=>{
+  await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(ids[0]!)}`);
+  await expect(page.locator('.history')).toBeVisible();
+  const metrics=[];
+  for(const label of ['Jet Black','Midnight','Paper','Catppuccin Mocha','Tokyo Night','Nord','Gruvbox Dark']) {
+    await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+    const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
+    await settings.getByRole('button',{name:label,exact:true}).click();
+    await page.screenshot({path:resolve(`.local/palette-${label.replaceAll(' ','-')}-settings.png`),animations:'disabled'});
+    await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+    await expect(settings.getByRole('combobox',{name:'Exposed reasoning detail',exact:true})).toBeVisible();
+    metrics.push(await settings.evaluate((dialog,label)=>{
+      const read=(element:Element)=>{const style=getComputedStyle(element);return {color:style.color,background:style.backgroundColor,font:style.fontSize};};
+      const root=getComputedStyle(document.documentElement);
+      return {label,tokens:Object.fromEntries(['--bg','--s1','--s2','--s3','--t1','--t2','--t3','--t4','--focus','--pass','--fail','--syntax-keyword','--syntax-string','--syntax-function','--syntax-number'].map(key=>[key,root.getPropertyValue(key).trim()])),body:read(dialog),select:read(dialog.querySelector('select')!),secondary:read(dialog.querySelector('.setting-row small')!)};
+    },label));
+    await settings.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
+    await page.screenshot({path:resolve(`.local/palette-${label.replaceAll(' ','-')}-history.png`),animations:'disabled'});
+  }
+  writeFileSync(resolve('.local/palette-survey.json'),JSON.stringify(metrics,null,2));
+  await page.setViewportSize({width:390,height:844});
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+  const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
+  for(const name of ['Appearance','Reading','Playback','Privacy','Keyboard','UI versions']) {
+    await settings.getByRole('tab',{name,exact:true}).click();
+    const panel=settings.locator('.modern-settings-content');
+    expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth),`${name} must fit its narrow reading space`).toBeLessThanOrEqual(1);
+    await page.screenshot({path:resolve(`.local/settings-phone-${name.replaceAll(' ','-')}.png`)});
+  }
+});
 test('actual current Git review supports expanded patch reading without repository writes',async({page})=>{
   const id=ids[0]!;test.skip(!app.recording(id).workspaceRoot,'This recording has no current local workspace.');
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);

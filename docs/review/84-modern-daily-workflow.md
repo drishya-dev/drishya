@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October Settings/palette survey:** [100](100-settings-palette-survey.md) audits seven actual-session palettes and six narrow Settings sections; fixes section offsets/orientation, consistent glyphs, progressive native picker and touch controls. Next measured tertiary/syntax contrast and quiet unboxed prose/map separation, then remaining untouched components/workflow. No claim of whole-product visual/accessibility completion.
+
 **18 October Files sizing:** [99](99-files-reading-width.md) adds a bounded adjustable Files rail, viewport-aware preference recovery, current Workspace clearance and stable agent allocation while Files is minimized. Actual long histories and multi-file reading checked across both harnesses. Continue the remaining untouched UI/palette/workflow queue; this is a layout slice.
 
 **18 October UI/theme order:** Refine geometry and reading interactions first, judge palettes on real material alongside those changes, retain Jet Black. [98](98-git-reading-space.md) adds bounded resizable Git reading and a collapsible/disambiguated file rail; broader Files/reader/menu/theme work remains open.

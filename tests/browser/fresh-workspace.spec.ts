@@ -54,6 +54,32 @@ test('opening stored history catches up its native journal without enabling a li
   expect(app.ingest.isLive(recordingId)).toBe(false);
 });
 
+test('Modern settings resets section reading, follows responsive tab orientation and retains native select semantics',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+  const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
+  const nav=settings.getByRole('tablist',{name:'Settings sections',exact:true});
+  await expect(nav).toHaveAttribute('aria-orientation','vertical');
+  await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+  const panel=settings.locator('.modern-settings-content');
+  await panel.evaluate(node=>{node.scrollTop=node.scrollHeight;});
+  await expect.poll(()=>panel.evaluate(node=>node.scrollTop)).toBeGreaterThan(0);
+  await settings.getByRole('tab',{name:'Appearance',exact:true}).click();
+  await expect.poll(()=>panel.evaluate(node=>node.scrollTop)).toBe(0);
+  await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+  const select=settings.getByRole('combobox',{name:'Exposed reasoning detail',exact:true});
+  await select.selectOption('collapsed');await select.focus();await page.keyboard.press('Space');await page.keyboard.press('Escape');
+  await expect(select).toBeFocused();await expect(select).toHaveValue('collapsed');await expect(settings).toBeVisible();
+  await page.setViewportSize({width:390,height:844});await expect(nav).toHaveAttribute('aria-orientation','horizontal');
+  await settings.getByRole('tab',{name:'Reading',exact:true}).focus();await page.keyboard.press('End');
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toBeFocused();
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveAttribute('aria-selected','true');
+  expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({path:resolve('.local/settings-phone-navigation-refined.png')});
+  await page.keyboard.press('Escape');await expect(settings).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Workspace settings',exact:true})).toBeFocused();
+});
+
 test('Home surfaces changed imported journals and keeps filter menus keyboard accessible',async({page})=>{
   const recording=app.store.getRecording(ids.codex!)!;
   await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[{adapterId:'codex',harness:'codex',path:'synthetic-current.jsonl',cwd:root,title:recording.title,modifiedAt:new Date().toISOString(),bytes:999999999,importedRecordingId:recording.id}],errors:[]}}));
