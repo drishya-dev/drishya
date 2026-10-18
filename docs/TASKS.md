@@ -8,6 +8,8 @@
 
 ## Current priorities
 
+- [x] **Explorer preview overlap correction (builder screenshot):** old saved modal geometry is clamped into the adjacent right reading lane, below navigation and above the logical composer bounds; the independent prompt rail moves to the free right edge. All four resize edges and movement obey the same bounds. Desktop/laptop/phone, reload, prompt collapse/expand, and actual long Blueprint/Codex/Claude previews checked. Full Workspace hides right navigation and starts alongside Files rather than below the Git stack. Review118. Resource-reference work remains saved for continuation; physical browser-zoom/device acceptance remains open.
+
 - [x] **Right navigation and compact file-peek presentation (builder correction):** Workspace below Git review/Git graph; measure the portal reader top from those controls, avoid Toolbox/full-Workspace conflicts, and remove oversized duplicate reader toolbar rows while keeping source truth and useful actions.
 
 - [x] **Last-action/prompt gap (builder correction):** keep one measured composer clearance in full-height history end padding, reduce the extra70px to8px and the final passage margin; expanded/minimized prompt, real long sessions and phone verified.

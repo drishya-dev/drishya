@@ -1774,7 +1774,7 @@ test('file peek keeps tabs beside agent, replaces preview and anchors all four r
  }
  const before=(await reader.boundingBox())!,title=reader.locator('header h2'),titleBox=(await title.boundingBox())!;
  await page.mouse.move(titleBox.x+titleBox.width/2,titleBox.y+titleBox.height/2);await page.mouse.down();await page.mouse.move(titleBox.x+titleBox.width/2-45,titleBox.y+titleBox.height/2+20,{steps:5});await page.mouse.up();
- const moved=(await reader.boundingBox())!;expect(Math.abs(moved.x-before.x+45)).toBeLessThan(2);expect(Math.abs(moved.y-before.y-20)).toBeLessThan(2);
+ const moved=(await reader.boundingBox())!;expect(Math.abs(moved.x-Math.max(page.viewportSize()!.width*.48,before.x-45))).toBeLessThan(2);expect(Math.abs(moved.y-before.y-20)).toBeLessThan(2);
  await page.screenshot({path:resolve('.local/tabbed-file-peek.png')});
  await reader.getByRole('button',{name:'Close preview tab src/cart/total.ts'}).click();await expect(reader.getByRole('tab')).toHaveCount(2);
  await reader.getByRole('button',{name:'Reset File reader window layout'}).click();
@@ -1821,8 +1821,29 @@ test('Files single click replaces preview and double click keeps a file without 
  await page.setViewportSize({width:390,height:844});const show=page.getByRole('button',{name:'Show files',exact:true});if(await show.getAttribute('aria-pressed')==='false')await show.click();await files.locator('[data-spine-path="README.md"]').click();await expect(reader.locator('header h2')).toHaveText('README.md');await expect(files).toHaveCount(0);
  await page.setViewportSize({width:1440,height:900});await reader.getByRole('button',{name:'Open in Workspace',exact:true}).click();
  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk).toBeVisible();
- const workspaceButton=(await page.getByRole('button',{name:'Open developer workspace',exact:true}).boundingBox())!,git=(await page.getByRole('button',{name:'Git review',exact:true}).boundingBox())!,deskBox=(await desk.boundingBox())!;
- expect(workspaceButton.y).toBeGreaterThanOrEqual(git.y+git.height+4);expect(deskBox.y).toBeGreaterThanOrEqual(workspaceButton.y+workspaceButton.height+6);await expect(page.locator('.modern-tool-station')).toBeHidden();
+ await expect(page.locator('.workspace-secondary')).toBeHidden();
+ const leading=(await page.locator('.workspace-leading').boundingBox())!,deskBox=(await desk.boundingBox())!;expect(deskBox.y).toBeLessThanOrEqual(leading.y+leading.height+16);await expect(page.locator('.modern-tool-station')).toBeHidden();
  await page.screenshot({path:resolve('.local/workspace-right-stack.png')});
 
+});
+
+test('restored Explorer preview stays beside history and above prompt across window changes',async({page})=>{
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id:ids.codex,entries:[['location',{currentFile:'README.md'}],['surface/File reader',{x:400,y:64,width:850,height:1000}]]}]}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+ const grant=page.getByRole('button',{name:/Enable workspace reading/});if(await grant.isVisible())await grant.click();
+ const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();
+ for(const width of [1920,1440,1000]){
+  await page.setViewportSize({width,height:900});
+  for(const collapsed of [false,true]){
+   if(collapsed)await page.locator('.prompt-composer').getByRole('button',{name:'Minimize prompt',exact:true}).click();
+   await expect.poll(async()=>{const r=(await reader.boundingBox())!,p=(await page.locator('.prompt-composer').boundingBox())!;return r.y+r.height-p.y;}).toBeLessThanOrEqual(-8);
+   const r=(await reader.boundingBox())!,controls=(await page.locator('.workspace-secondary').boundingBox())!,h=(await page.locator('.history').boundingBox())!;
+   expect(r.x).toBeGreaterThanOrEqual(width*.48-1);expect(r.x+r.width).toBeLessThanOrEqual(width-47);expect(r.y).toBeGreaterThanOrEqual(controls.y+controls.height+8);expect(h.x+h.width).toBeLessThanOrEqual(r.x+1);
+   if(collapsed)await page.locator('.prompt-composer').getByRole('button',{name:'Expand prompt',exact:true}).click();
+  }
+ }
+ await page.screenshot({path:resolve('.local/explorer-preview-safe.png')});
+ await page.setViewportSize({width:390,height:844});expect((await reader.boundingBox())!.width).toBeLessThanOrEqual(390);
+ await page.setViewportSize({width:1440,height:900});await page.reload();await expect(reader).toBeVisible();
+ await expect.poll(async()=>{const r=(await reader.boundingBox())!,p=(await page.locator('.prompt-composer').boundingBox())!;return r.y+r.height-p.y;}).toBeLessThanOrEqual(-8);
 });

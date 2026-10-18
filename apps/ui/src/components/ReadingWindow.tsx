@@ -1,11 +1,11 @@
 import {useLayoutEffect,useRef,useState,type CSSProperties,type RefObject,type PointerEvent} from 'react';
 import {useWorkspaceState} from '../lib/workspace-memory-react.ts';
-import {readingWindowLayout,resizeReadingWindow,type ReadingWindowLayout,type ReadingEdge,type WindowRect} from '../lib/reading-window.ts';
+import {readingWindowLayout,resizeReadingWindow,type ReadingWindowLayout,type ReadingEdge,type WindowRect,type ReadingWindowBounds} from '../lib/reading-window.ts';
 
 /** One geometry owner anchors direct manipulation; it never changes evidence or drafts. */
 export function useReadingWindow(ref:RefObject<HTMLDialogElement|null>,id:string|undefined) {
  const [saved,setSaved]=useWorkspaceState<ReadingWindowLayout>(id?`surface/${id}`:undefined,{});
- const [viewport,setViewport]=useState(()=>({width:innerWidth,height:innerHeight,top:64}));
+ const [viewport,setViewport]=useState<ReadingWindowBounds>(()=>({width:innerWidth,height:innerHeight,top:64}));
  const [size,setSize]=useState({width:0,height:0});
  const enabled=!!id&&document.documentElement.dataset.uiVersion==='modern'&&viewport.width>820;
  const drag=useRef<{pointer:number;x:number;y:number;rect:WindowRect;edge?:ReadingEdge}|null>(null);
@@ -13,15 +13,26 @@ export function useReadingWindow(ref:RefObject<HTMLDialogElement|null>,id:string
   if(!id||!ref.current)return;
   const measure=()=>{
    const header=document.querySelector('.workspace-header')?.getBoundingClientRect();
-   setViewport(previous=>{const next={width:innerWidth,height:innerHeight,top:(header?.bottom??52)+12};return previous.width===next.width&&previous.height===next.height&&previous.top===next.top?previous:next;});
+   const peek=ref.current?.classList.contains('file-peek-reader')&&innerWidth>820;
+   const controls=document.querySelector('.workspace-secondary')?.getBoundingClientRect();
+   const composer=document.querySelector<HTMLElement>('.prompt-composer');
+   // Layout height ignores the composer's finite scale animation; geometry must not chase it.
+   const bottom=peek&&composer?innerHeight-composer.offsetHeight-(parseFloat(getComputedStyle(composer).bottom)||0)-12:innerHeight-12;
+   const top=peek?Math.min(Math.max(100,(controls?.bottom??124)+12),bottom-120):(header?.bottom??52)+12;
+   const next:ReadingWindowBounds={width:innerWidth,height:innerHeight,top,...(peek?{left:Math.round(innerWidth*.48),right:innerWidth-48,bottom}:{})};
+   setViewport(previous=>JSON.stringify(previous)===JSON.stringify(next)?previous:next);
    const node=ref.current!;setSize(previous=>previous.width===node.offsetWidth&&previous.height===node.offsetHeight?previous:{width:node.offsetWidth,height:node.offsetHeight});
   };
-  const observer=new ResizeObserver(measure);observer.observe(ref.current);const header=document.querySelector('.workspace-header');if(header)observer.observe(header);
+  const observer=new ResizeObserver(measure);observer.observe(ref.current);const header=document.querySelector('.workspace-header');if(header)observer.observe(header);for(const selector of ['.prompt-composer','.workspace-secondary']){const element=document.querySelector(selector);if(element)observer.observe(element);}
   window.addEventListener('resize',measure);measure();return()=>{observer.disconnect();window.removeEventListener('resize',measure);};
  },[id,ref]);
  useLayoutEffect(()=>{drag.current=null;},[id,viewport.width,viewport.height]);
- const layout=readingWindowLayout(saved,size,viewport);
- const style:CSSProperties=enabled?{...(layout.width!==undefined?{width:layout.width}:{}),...(layout.height!==undefined?{height:layout.height}:{}),maxWidth:viewport.width-24,maxHeight:Math.max(120,viewport.height-viewport.top-12),...(layout.x!==undefined?{position:'fixed',left:layout.x,top:layout.y,right:'auto',bottom:'auto',margin:0}: {})}:{};
+ const peek=enabled&&ref.current?.classList.contains('file-peek-reader');
+ const maxWidth=(viewport.right??viewport.width-12)-(viewport.left??12),maxHeight=(viewport.bottom??viewport.height-12)-viewport.top;
+ // Old modal coordinates are constrained to the adjacent reading lane, including on restore.
+ const preference=peek?{width:Math.min(600,innerWidth*.44),height:Math.max(120,maxHeight-40),x:(viewport.right??innerWidth-48)-Math.min(600,innerWidth*.44),y:viewport.top+20,...saved}:saved;
+ const layout=readingWindowLayout(preference,size,viewport);
+ const style:CSSProperties=enabled?{...(layout.width!==undefined?{width:layout.width}:{}),...(layout.height!==undefined?{height:layout.height}:{}),maxWidth,maxHeight:Math.max(120,maxHeight),...(layout.x!==undefined?{position:'fixed',left:layout.x,top:layout.y,right:'auto',bottom:'auto',margin:0}: {})}:{};
  useLayoutEffect(()=>{window.dispatchEvent(new Event('drishya-reading-layout'));},[layout.x,layout.y,layout.width,layout.height]);
  const reset=()=>setSaved({});
  const move=(x:number,y:number)=>setSaved(previous=>readingWindowLayout({...previous,width:previous.width??size.width,height:previous.height??size.height,x,y},size,viewport));
@@ -40,6 +51,6 @@ export function useReadingWindow(ref:RefObject<HTMLDialogElement|null>,id:string
  const headerDrag=enabled?{onPointerDown:(event:PointerEvent<HTMLElement>)=>{if((event.target as Element).closest('button,a,input,select,textarea,summary,[role=tab], [role=separator]'))return;begin(event);},...events}:{};
  return {enabled,style,reset,headerDrag,controls:enabled?<button className="icon-btn reading-window-move" aria-label={`Move ${id} window`} title="Drag title bar to move · arrow keys reposition · Home docks" onPointerDown={event=>begin(event)} {...events}
   onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Home'){setSaved(previous=>({...(previous.width!==undefined?{width:previous.width}:{}),...(previous.height!==undefined?{height:previous.height}:{})}));return;}const box=ref.current!.getBoundingClientRect(),step=event.shiftKey?48:16;move(box.left+(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0),box.top+(event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0));}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg></button>:null,
-  heightControl:enabled?(['left','right','top','bottom'] as const).map(edge=><div key={edge} className={`reading-window-edge edge-${edge}${edge==='bottom'?' reading-window-height':''}`} role="separator" aria-label={edge==='bottom'?`Resize ${id} window height`:`Resize ${id} window ${edge}`} aria-orientation={edge==='left'||edge==='right'?'vertical':'horizontal'} aria-valuenow={Math.round(edge==='left'||edge==='right'?(layout.width??size.width):(layout.height??size.height))} aria-valuemin={edge==='left'||edge==='right'?360:220} aria-valuemax={edge==='left'||edge==='right'?viewport.width-24:viewport.height-viewport.top-12} tabIndex={0} title={`Drag ${edge} edge · double-click to reset`} onPointerDown={event=>begin(event,edge)} {...events} onDoubleClick={reset}
+  heightControl:enabled?(['left','right','top','bottom'] as const).map(edge=><div key={edge} className={`reading-window-edge edge-${edge}${edge==='bottom'?' reading-window-height':''}`} role="separator" aria-label={edge==='bottom'?`Resize ${id} window height`:`Resize ${id} window ${edge}`} aria-orientation={edge==='left'||edge==='right'?'vertical':'horizontal'} aria-valuenow={Math.round(edge==='left'||edge==='right'?(layout.width??size.width):(layout.height??size.height))} aria-valuemin={edge==='left'||edge==='right'?360:220} aria-valuemax={edge==='left'||edge==='right'?maxWidth:maxHeight} tabIndex={0} title={`Drag ${edge} edge · double-click to reset`} onPointerDown={event=>begin(event,edge)} {...events} onDoubleClick={reset}
    onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;event.preventDefault();event.stopPropagation();const node=ref.current!,box=node.getBoundingClientRect();const reverse=edge==='left'||edge==='top';const delta=event.key==='Home'?(reverse?100000:-100000):event.key==='End'?(reverse?-100000:100000):['ArrowRight','ArrowDown'].includes(event.key)?32:-32;setSaved(resizeReadingWindow({x:box.x,y:box.y,width:box.width,height:box.height},edge,delta,viewport));}}/>):null};
 }

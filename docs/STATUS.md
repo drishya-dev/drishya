@@ -31,11 +31,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Explicit captured CSV/TSV reading
+### Yash with Codex — Explorer preview safe layout
 
-- **When:**18 October2026, `codex/delimited-result-reader`.
-- **Delivered:**Shared native/plain/MCP literal-text field candidates and selected JSON-string handoff; explicit CSV/TSV and first-record names, virtual/searchable grid, keyboard cells and exact original/cell copy. Preserves multiline quoting, duplicate names, missing/empty cells and literal formulas. Whole-grid rejection on malformed/oversized input; captured text completeness stays explicit. Open strings are ephemeral snapshots only. [117](review/117-delimited-result-reading.md).
-- **Validation:**Both TypeScript projects/build;534units/96files. Five structured-reader browser checks cover native/MCP1200records, malformed fallback, keyboard/copy, mixed siblings/no remote loads,320/390px and existing JSON/motion behavior. Three actual Drishya/Skeletongraph Codex/Claude long-history/editor regressions pass. No schema/API/native write/dependency/telemetry/body persistence/hosted CI. CSV subtask checked in TASKS; general selector/documents/media and broader UI/native/platform acceptance remain open.
+- **When:**18 October2026, `codex/peek-safe-layout`.
+- **Delivered:**Restored tall centred preview geometry is bounded by its adjacent reading lane, navigation, composer and independent time-rail clearance. Shared move/four-edge resize constraints handle viewport/composer changes. Workspace hides the right navigation and rises to the Files row instead of reserving the Git stack. [118](review/118-explorer-preview-bounds.md).
+- **Validation:**Both TS/build;535units/96files. Four focused browser journeys, actual Markdown/Workspace transfer and actual three-session Drishya/Skeletongraph Codex/Claude tabs/phone reading, including old oversized geometry and long Blueprint. No project/native writes or hosted CI. Resource-reader WIP is preserved in the named stash; broad TASKS remain open.
 
 
 ### Yash with Codex — Bounded captured JSON reading

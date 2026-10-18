@@ -35,3 +35,16 @@ it('retains bounded peek references and window width without source bodies',()=>
  const valid=workingLocations({version:1,sessions:[{id:'rec_test',entries:[['peek/tabs',{files:['src/a.ts'],preview:'src/b.ts'}]]}]}).sessions[0]!.entries;
  expect(valid).toEqual([['peek/tabs',{files:['src/a.ts'],preview:'src/b.ts'}]]);
 });
+
+it('keeps restored file peeks in their reading lane above the composer and away from the time rail',()=>{
+ const bounds={width:1440,height:900,top:174,left:691,right:1392,bottom:660};
+ const restored=readingWindowLayout({x:400,y:64,width:850,height:1000},{width:850,height:1000},bounds);
+ expect(restored).toEqual({x:691,y:174,width:701,height:486});
+ for(const edge of ['left','right','top','bottom'] as const){
+  const result=resizeReadingWindow(restored as {x:number;y:number;width:number;height:number},edge,edge==='left'||edge==='top'?-9999:9999,bounds);
+  expect(result.x).toBeGreaterThanOrEqual(bounds.left);expect(result.y).toBeGreaterThanOrEqual(bounds.top);
+  expect(result.x+result.width).toBeLessThanOrEqual(bounds.right);expect(result.y+result.height).toBeLessThanOrEqual(bounds.bottom);
+ }
+ const smaller=readingWindowLayout(restored,{width:701,height:486},{...bounds,bottom:520,right:1200});
+ expect(smaller.height).toBe(346);expect(smaller.width).toBe(509);
+});
