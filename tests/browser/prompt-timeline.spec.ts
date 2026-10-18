@@ -24,6 +24,10 @@ test('bottom-anchored prompt timeline scrolls independently and the page scrollb
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   const rail=page.getByRole('navigation',{name:'Prompt positions in history'}),history=page.locator('.history');
   await expect(rail).toBeVisible();await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
+  for(const name of ['Minimize prompt','Expand prompt']) {
+    await page.getByRole('button',{name,exact:true}).click();
+    await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
+  }
   const geometry=await rail.evaluate(el=>{const r=el.getBoundingClientRect(),work=document.querySelector('.workspace-secondary')!.getBoundingClientRect(),h=document.querySelector('.history')!.getBoundingClientRect();return {top:r.top,bottom:r.bottom,workBottom:work.bottom,historyRight:h.right,viewport:innerWidth,transform:getComputedStyle(el).transform};});
   expect(geometry.historyRight).toBe(geometry.viewport);expect(geometry.transform).toBe('none');expect(geometry.top-geometry.workBottom).toBeGreaterThanOrEqual(13);expect(960-geometry.bottom).toBe(48);
   await expect(rail.getByRole('button').last()).toHaveAttribute('data-prompt-ordinal','160');

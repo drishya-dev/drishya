@@ -13,7 +13,7 @@ The full pre-repair suite at PR87 returned **174 passed,6 skipped,4 failed**. Th
 
 - **Fixed here:** the prose veil added24px of horizontal scroll extent. The existing nested-list/ordinal/narrow-reading regression fails on the previous build and passes with bounded horizontal inset at1440/900/390px.
 - **Open:** two older origin-motion tests assume nested Files rows are already expanded. Their timeouts occur while finding those rows, after the preceding motion assertions pass. Update the journeys to open the actual tree before evaluating origins; preserve the default closed tree.
-- **Open:** initial follow stops72px short of the final history bottom in the160-prompt test. Reproduces alone; investigate late composer/history allocation rather than weakening the assertion.
+- **Fixed subsequently in[105](105-follow-composer-clearance.md):** initial follow stops72px short of the final history bottom in the160-prompt test. Reproduces alone; investigate late composer/history allocation rather than weakening the assertion.
 
 The new opt-in actual-session surface journey passes at1440 and390px: recorded review, changed-file evidence, questions, usage, current source, approved Workspace navigation and typed map import connections. Dialogs stay inside the viewport and the document does not acquire horizontal overflow. Frames remain private under.local and were inspected. These assertions are geometry/navigation checks, not proof every surface is visually finished.
 
