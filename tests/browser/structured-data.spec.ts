@@ -88,3 +88,17 @@ test('malformed delimited text keeps the exact source and never shows a partial 
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
  const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Inspect delimited text'}).click();const dialog=page.getByRole('dialog',{name:'Captured delimited text'});await dialog.getByRole('button',{name:'CSV',exact:true}).click();await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog).toContainText('Unclosed quoted cell');await expect(dialog.locator('.data-original')).toHaveText(raw);await page.screenshot({path:resolve('.local/delimited-malformed.png')});
 });
+
+for(const kind of ['shell','wrapped-shell','mcp'] as const)test(`${kind} offers one complete JSON view even when its text preview is folded`,async({page})=>{
+ const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+ const op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.artifactIds=[];
+ const body=JSON.stringify({items:Array.from({length:20},(_,i)=>({id:i,label:`captured row ${i}`}))},null,2);
+ const raw=kind==='wrapped-shell'?JSON.stringify({output:body,exit_code:0}):body;
+ if(kind==='mcp')op.detail={kind:'mcp',server:'records',tool:'list',input:{},resultPreview:raw};
+ else{op.kind='shell';op.origin={type:'native',tool:'shell_command'};op.detail={kind:'shell',command:'read captured data',outputPreview:raw,exitCode:0};}
+ await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();const views=card.getByRole('group',{name:'Captured result views',exact:true});await expect(views).toHaveCount(1);
+ const trigger=views.getByRole('button',{name:'Inspect data',exact:true});await expect(trigger).toHaveCount(1);await trigger.click();
+ const reader=page.getByRole('dialog',{name:'Captured data',exact:true});await expect(reader).toBeVisible();await reader.getByRole('button',{name:'Original',exact:true}).click();await expect(reader.locator('.data-original')).toHaveText(raw);
+ await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(trigger).toBeFocused();await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toHaveCount(0);
+});

@@ -1,14 +1,12 @@
-import {ResourceInspection} from './CapturedResources.tsx';
+import {CapturedResultViews} from './CapturedResultViews.tsx';
 import {useMemo} from 'react';
-import {DelimitedInspection} from './DelimitedDataReader.tsx';
 import {CapturedOutcomes} from './CapturedOutcomes.tsx';
 import { toolOutputText } from '../lib/tool-output.ts';
 import { ToolOutput } from './ToolOutput.tsx';
-import {DataInspection} from './StructuredDataReader.tsx';
 /** Render only the captured preview. React escapes every value; no remote HTML or execution. */
-export function StructuredResult({text}:{text:string}){const decoded=useMemo(()=>toolOutputText(text).decoded,[text]);return <><CapturedOutcomes output={text}/><ResultBody text={text} decoded={decoded}/><DataInspection text={text}/>{!decoded&&<><DelimitedInspection text={text}/><ResourceInspection text={text}/></>}</>;}
+export function StructuredResult({text}:{text:string}){const decoded=useMemo(()=>toolOutputText(text).decoded,[text]);return <><CapturedOutcomes output={text}/><ResultBody text={text} decoded={decoded}/><CapturedResultViews text={text}/></>;}
 function ResultBody({ text,decoded }: { text: string;decoded:boolean }) {
-  if(decoded) return <ToolOutput text={text}/>;
+  if(decoded) return <ToolOutput text={text} inspect={false}/>;
   let value: unknown;
   try { value = JSON.parse(text); } catch { return <pre className="output result-prose">{text}</pre>; }
   const scalar = (v: unknown) => v === null || ['string', 'number', 'boolean'].includes(typeof v);

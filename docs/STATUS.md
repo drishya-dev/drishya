@@ -31,6 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex - Shared captured-result view selection
+
+- **When:**18 October2026, `codex/captured-result-views`.
+- **Delivered:**One bounded supplied-text selector and result-control owner for JSON, delimited and resource modes. Native shell JSON gains data inspection; folded terminal/error excerpts inspect the whole supplied preview, with no duplicate candidates or excerpt-derived false grids. Open readers snapshot selected text/fields; stable owners survive raw/decoded and folded/unfolded body changes. [120](review/120-shared-result-views.md).
+- **Validation:**Both TS/build;542units/98files; ten structured/resource browser journeys including plain shell/wrapped shell/MCP exact-original inspection and focus; actual three-session long-history/multi-file regressions pass. Final body-owner extraction rechecked with UI TS/build and all ten focused journeys. No capture/schema/API/dependency/body persistence/native write/hosted CI. Media/artifact transport, full selector acceptance and broad UI tasks remain open.
+
 ### Yash with Codex - Captured resource references and documents
 
 - **When:**18 October2026, `codex/resource-previews`.

@@ -6,8 +6,8 @@ import {DataInspection} from './StructuredDataReader.tsx';
 import {DelimitedInspection} from './DelimitedDataReader.tsx';
 import './captured-resources.css';
 
-export function ResourceInspection({text}:{text:string}){
- const references=useMemo(()=>capturedResources(text),[text]),[opened,setOpened]=useState<ResourceSelection>();
+export function ResourceInspection({text,candidates}:{text:string;candidates?:ResourceSelection|null}){
+ const references=useMemo(()=>candidates===undefined?capturedResources(text):candidates,[text,candidates]),[opened,setOpened]=useState<ResourceSelection>();
  if(!references&&!opened)return null;
  return <div className="data-inspection" onClick={event=>event.stopPropagation()}>{references&&<button onClick={()=>setOpened(references)}>Inspect resources · {references.items.length}{references.limited?'+':''}</button>}{opened&&<ResourceReader resources={opened} close={()=>setOpened(undefined)}/>}</div>;
 }

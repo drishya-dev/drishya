@@ -3,8 +3,8 @@ import {ReadingDialog} from './ProductShell.tsx';
 import {delimitedBlocks,delimitedData,type DelimitedBlock,type Delimiter} from '../lib/delimited-data.ts';
 import './structured-data.css';
 
-export function DelimitedInspection({text}:{text:string}){
- const blocks=useMemo(()=>delimitedBlocks(text),[text]),[opened,setOpened]=useState<DelimitedBlock[]>();
+export function DelimitedInspection({text,candidates}:{text:string;candidates?:DelimitedBlock[]}){
+ const blocks=useMemo(()=>candidates??delimitedBlocks(text),[text,candidates]),[opened,setOpened]=useState<DelimitedBlock[]>();
  if(!blocks.length&&!opened)return null;
  return <div className="data-inspection" onClick={event=>event.stopPropagation()}>{blocks.length>0&&<button type="button" onClick={()=>setOpened(blocks)}>Inspect delimited text</button>}{opened&&<DelimitedReader blocks={opened} close={()=>setOpened(undefined)}/>}</div>;
 }
