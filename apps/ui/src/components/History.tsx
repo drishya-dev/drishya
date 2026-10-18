@@ -102,8 +102,14 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       materialPositions.current = next;
     };
     measure();
-    const observer = new ResizeObserver(measure);
-    const inner = history.querySelector('.history-inner'); if (inner) observer.observe(inner);
+    const inner = history.querySelector('.history-inner');
+    const observer = new ResizeObserver(entries => {
+      measure();
+      // Composer clearance changes padding after the first layout. It changes the
+      // scroll destination without changing any passage's measured content height.
+      if (entries.some(entry => entry.target === inner) && useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) followLatest();
+    });
+    if (inner) observer.observe(inner, { box: 'border-box' });
     for (const card of history.querySelectorAll('article[data-op-id]')) observer.observe(card);
     return () => observer.disconnect();
   }, [scene.passages, follow, lowResource, measurementVersion, viewport.height]);
@@ -350,21 +356,11 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (!follow && !readingAnchor.current) rememberReading();
   }, [layout]);
 
-  const resizeFollow = useRef(followLatest);
-  resizeFollow.current = followLatest;
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const observer = new ResizeObserver(() => {
-      setViewport((old) => old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight });
-      // Header/composer measurements can change inner padding without changing
-      // a passage's height. Follow that real scroll extent too, using the latest
-      // navigation guard so resize never pulls a deliberate reader back down.
-      if (useApp.getState().follow) resizeFollow.current();
-    });
+    const observer = new ResizeObserver(() => setViewport((old) => old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight }));
     observer.observe(el);
-    const inner = el.querySelector('.history-inner');
-    if (inner) observer.observe(inner, { box: 'border-box' });
     return () => observer.disconnect();
   }, []);
 

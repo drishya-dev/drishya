@@ -73,10 +73,12 @@ test('Studio native workspace connects its composer, attachments, approval and e
   await expect(page.getByRole('dialog', { name: 'src/actual.ts', exact: true })).toContainText('fromSelectedWorkspace');
 });
 
-test('current source reading finds, navigates and wraps bounded disk pages without replacing captured evidence', async ({ page }) => {
-  await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
-  const folders = page.getByRole('complementary', { name: 'Session folders' });
+for(const version of ['classic','modern']) test(`${version}: current source reading finds, navigates and wraps bounded disk pages without replacing captured evidence`, async ({ page }) => {
+  const target=new URL(server.launchUrl);target.searchParams.set('experience',version);
+  await page.goto(target.href);
+  const session=version==='modern'?page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}):page.getByRole('button', { name: /Connected workspace synthetic session/ });
+  await session.click();
+  const folders = page.getByRole('complementary', { name: version==='modern'?'Repository files':'Session folders' });
   const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
   await expect(folders).not.toHaveAttribute('data-reading-access','checking');
   if (await enable.count()) {await enable.click();await expect(folders.locator('.workspace-grant')).toHaveCount(0);}
@@ -100,6 +102,14 @@ test('current source reading finds, navigates and wraps bounded disk pages witho
   await expect(reader.locator('[data-source-line="205"]')).toHaveAttribute('aria-current', 'location');
   await reader.getByRole('button', { name: 'Wrap lines', exact: true }).click();
   await expect(reader.locator('.current-file-code')).toHaveClass(/wrap-source/);
+  for(const width of version==='modern'?[1440,390,320]:[]) {
+    await page.setViewportSize({width,height:844});
+    const allocation=await reader.evaluate(el=>({ratio:el.querySelector('.current-file-code')!.getBoundingClientRect().height/el.getBoundingClientRect().height,overflow:el.scrollWidth-el.clientWidth}));
+    await page.screenshot({path:resolve(`.local/current-reader-${width}.png`),animations:'disabled'});
+    expect(allocation.ratio,`${width}px: most of the current-file reader should remain source space`).toBeGreaterThanOrEqual(.62);
+    expect(allocation.overflow).toBeLessThanOrEqual(1);
+  }
+  await page.setViewportSize({width:1440,height:900});
   await page.screenshot({ path: resolve('.local/source-reader-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(reader.getByRole('button', { name: 'Copy file' })).toBeVisible();

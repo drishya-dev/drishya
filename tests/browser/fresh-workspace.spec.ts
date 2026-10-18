@@ -393,8 +393,8 @@ test('tool cards retain visible results for short and long input/output combinat
     const bounds=await card.evaluate(el=>{const card=el.getBoundingClientRect(),result=el.querySelector('.result-content')!.getBoundingClientRect();return {bottom:card.bottom,outcome:result.top+Math.min(30,result.height)};});
     expect(bounds.outcome,`${kind}/${longInput}/${longOutput}`).toBeLessThan(bounds.bottom);
     const request=card.locator(kind==='shell'?'.command-request':'.tool-input');
-    expect(await request.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(109);
-    expect(await result.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(121);
+    expect(await request.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(88);
+    expect(await result.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(142);
     if(longInput) expect(await request.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
     if(longOutput) expect(await result.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
     if(kind==='shell'&&longInput&&longOutput) {
@@ -404,9 +404,9 @@ test('tool cards retain visible results for short and long input/output combinat
         const request=el.querySelector('.command-request')!,result=el.querySelector('.result-content')!,area=el.querySelector('.result-area')!;
         return {input:parseFloat(getComputedStyle(request).maxHeight),output:parseFloat(getComputedStyle(result).maxHeight),height:parseFloat((el as HTMLElement).style.getPropertyValue('--hover-height')),rule:getComputedStyle(area).borderTopWidth,padding:getComputedStyle(area).paddingTop};
       });
-      expect(allocation.input).toBeCloseTo(Math.min((await page.viewportSize())!.height*.24+21,201),0);
-      expect(allocation.output).toBeCloseTo(Math.max(121,allocation.height-301),0);
-      expect(allocation.rule).toBe('0px');expect(allocation.padding).toBe('0px');
+      expect(allocation.input).toBeCloseTo(Math.min((await page.viewportSize())!.height*.24,180),0);
+      expect(allocation.output).toBeCloseTo(Math.max(142,allocation.height-280),0);
+      expect(allocation.rule).toBe('1px');expect(allocation.padding).toBe('6px');
       await page.keyboard.press('Escape');
     }
   }
@@ -688,6 +688,13 @@ test('Modern review pages reach every captured check beyond the first twenty wit
   await expect(checks.locator('.review-item')).toHaveCount(20);
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
   await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toContainText('Page 1 of 4');
+  for(const width of [390,320,1440]) {
+    await page.setViewportSize({width,height:900});
+    const pages=review.getByRole('navigation',{name:'Recorded review pages'});
+    expect((await pages.boundingBox())!.height).toBeLessThanOrEqual(90);
+    expect(await pages.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(review.getByRole('button',{name:'Previous review page',exact:true})).toBeDisabled();
+  }
   await review.getByRole('button',{name:'Next review page',exact:true}).click();
   await expect(checks).toContainText('review-case-20');
   await expect(checks).not.toContainText('review-case-0 ');
@@ -756,6 +763,8 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await total.getByRole('button',{name:'Edit file',exact:true}).click();
   const editor=total.getByRole('textbox',{name:'Local draft for src/cart/total.ts',exact:true});
   await expect(editor).toBeVisible();
+  await expect(editor).toBeFocused();
+  await expect(total.getByRole('button',{name:'Read source',exact:true})).toHaveAttribute('title','Return to current source; your local draft is retained');
   await editor.fill('export const total = 43;\n');
   await expect(total).toContainText('lost on reload');
   await total.getByRole('button',{name:'Compare draft',exact:true}).click();
@@ -776,6 +785,7 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await page.screenshot({path:resolve('.local/workspace-draft-patch.png')});
   await total.getByRole('button',{name:'Edit draft',exact:true}).click();
   await expect(editor).toHaveValue('export const total = 43;\n');
+  await expect(editor).toBeFocused();
   const downloadPromise=page.waitForEvent('download');
   await total.getByRole('button',{name:'Download draft',exact:true}).click();
   const download=await downloadPromise;
@@ -1069,6 +1079,7 @@ test('Workspace creates an unsent file draft and forwards large contents as a na
   await desk.getByRole('textbox',{name:'New workspace file path',exact:true}).fill('src/created.ts');
   await desk.getByRole('button',{name:'Create draft',exact:true}).click();
   const document=desk.getByRole('region',{name:'Workspace file src/created.ts',exact:true});
+  await expect(document.getByRole('textbox',{name:'Local draft for src/created.ts',exact:true})).toBeFocused();
   const text='// complete new file\n'+'export const requested = 42;\n'.repeat(3000);
   await document.getByRole('textbox',{name:'Local draft for src/created.ts',exact:true}).fill(text);
   expect(payload).toBeUndefined();expect(()=>readFileSync(join(root,'src/created.ts'))).toThrow();

@@ -14,6 +14,11 @@
 @media(pointer:coarse) {.folder-explorer input {font-size:16px!important;}.folder-explorer header .icon-btn {width:44px;min-width:44px;height:44px;min-height:44px;}.desk-header [data-workspace-files-trigger] {min-height:44px;}.folder-explorer button {-webkit-tap-highlight-color:transparent;}.folder-explorer button:active {background:var(--s3);}}
 @media(hover:none) {.folder-explorer .folder-tree button:hover:not(:focus-visible):not(:active) {background:transparent;color:var(--t2);}}
 .desk-editor[hidden] {display:none;}
+.desk-document>header .desk-edit-toggle {display:inline-flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--line-2);color:var(--t1);}
+.desk-edit-toggle svg {width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;flex:none;}
+.desk-edit-toggle[data-editing] svg {color:var(--edited);}
+.desk-edit-toggle:focus-visible {outline:2px solid var(--focus);outline-offset:2px;}
+.desk-editor:focus-visible {outline:1px solid var(--line-3);outline-offset:-1px;}
 .desk-draft-comparison {display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden;}
 .desk-comparison-context {display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--t2);font:11px/1.6 var(--sans);flex:none;}
 .desk-comparison-context small {display:block;color:var(--t3);font-size:10px;}
@@ -98,5 +103,34 @@
 
 :root[data-experience=studio] .connected-workspace .history { top:var(--workspace-tools-bottom,126px); }
 .current-file-reader>.import-context { padding:10px 20px;border-bottom:1px solid var(--line);font-size:12px;flex:none; }
+/* Current source owns the space; repeated history/actions share one compact row. */
+:root[data-ui-version=modern] .current-file-reader .current-file-meta {padding:5px 10px;gap:4px;border-bottom:1px solid var(--line);}
+:root[data-ui-version=modern] .current-file-meta .tag {padding:0 2px;border:0;background:transparent;white-space:nowrap;}
+:root[data-ui-version=modern] .current-file-meta .evidence-navigation.compact {padding:0;margin-right:3px;gap:2px;}
+:root[data-ui-version=modern] .current-file-meta .evidence-navigation.compact button,
+:root[data-ui-version=modern] .current-file-meta .current-reader-icon {display:grid;place-items:center;width:28px;height:28px;padding:4px;}
+.current-reader-icon svg {width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;}
+:root[data-ui-version=modern] .current-file-reader .current-source-tools {padding:6px 12px;gap:4px 12px;}
+:root[data-ui-version=modern] .current-source-tools .source-find {margin:0;}
+:root[data-ui-version=modern] .current-source-tools .source-find input {min-width:0;max-width:none;}
+:root[data-ui-version=modern] .current-source-tools [role=status]:empty {display:none;}
+:root[data-ui-version=modern] .current-file-reader>.import-context {margin:0;padding:6px 12px;font-size:11px;border-top:0;}
+:root[data-ui-version=modern] .current-file-reader>.import-context>summary {padding:2px 0;}
+/* Override the older shared 48vh cap: this is already a bounded flex reader. */
+:root[data-ui-version=modern] .current-file-reader .current-file-code.source-reading {max-height:none;padding:10px 12px;}
+:root[data-ui-version=modern] .current-file-reader>footer {padding:6px 12px;gap:6px;align-items:center;}
+:root[data-ui-version=modern] .current-file-reader>footer>span {flex:0 1 auto;margin:0;}
+:root[data-ui-version=modern] .current-file-reader>footer>span:first-child {flex:1 1 auto;}
+@media(max-width:700px) {
+ :root[data-ui-version=modern] .current-source-tools {display:flex;flex-wrap:wrap;}
+ :root[data-ui-version=modern] .current-source-tools .source-find {flex:1 1 220px;}
+ :root[data-ui-version=modern] .current-source-tools .source-go {display:flex;flex-wrap:wrap;align-items:center;gap:4px;}
+}
+@media(pointer:coarse) {
+ :root[data-ui-version=modern] .current-file-reader :is(.btn,.current-reader-icon) {min-height:44px;}
+ :root[data-ui-version=modern] .current-file-reader :is(input,.evidence-navigation.compact button,.current-reader-icon) {min-height:44px;}
+ :root[data-ui-version=modern] .current-file-meta :is(.evidence-navigation.compact button,.current-reader-icon) {width:44px;min-width:44px;}
+ :root[data-ui-version=modern] .current-source-tools input {font-size:16px;}
+}
 
 :root[data-ui-version=classic] .connected-workspace .workbench-station { top:var(--workspace-tools-bottom,160px);max-height:calc(100% - var(--workspace-tools-bottom,160px) - 100px); }

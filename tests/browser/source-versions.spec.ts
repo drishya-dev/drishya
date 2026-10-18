@@ -24,6 +24,9 @@ test.afterAll(async () => { if (server)
         throw new Error('Unsafe temporary directory');
     rmSync(dir, { recursive: true, force: true });
 } });
+test.beforeEach(async({request})=>{
+    await request.delete(`${server.url}/v1/working-locations`,{headers:{authorization:`Bearer ${server.token}`,'content-type':'application/json'}});
+});
 test('disk changes disclose retained/new versions and preserve the exact local draft', async ({ page }) => {
     let submissions = 0;
     await page.route('**/controller/prompt', route => { submissions++; void route.abort(); });
@@ -52,6 +55,7 @@ test('disk changes disclose retained/new versions and preserve the exact local d
     await expect(desk.getByRole('region', { name: 'Source version comparison' })).toContainText('localDraftValue');
     await desk.getByRole('button', { name: 'Read newer disk version' }).click();
     await expect(editor).toHaveValue('export const localDraftValue = 2;\n');
+    await expect(desk).toContainText('Draft base differs from the latest disk sample');
     await desk.getByRole('button', { name: 'Review edit with harness' }).click();
     await expect(page.getByRole('textbox', { name: 'Prompt for selected harness session' })).toHaveValue(/Base SHA-256:/);
     expect(submissions).toBe(0);
@@ -67,11 +71,33 @@ test('disk changes disclose retained/new versions and preserve the exact local d
     await expect(page.getByRole('dialog', { name: 'Review work' })).toContainText('Preparation is not submission');
     await expect(page.getByRole('dialog', { name: 'Review work' })).toContainText('1 failed operation');
 });
+
+test('two panes share newer-version disclosure and adopting one leaves the other readable',async({page})=>{
+    writeFileSync(join(root,'index.ts'),'export const sharedReading = 4;\n');
+    await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+    const grant=page.getByRole('button',{name:'Enable workspace reading'});if(await grant.count())await grant.click();
+    await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
+    await page.getByRole('treeitem',{name:/index.ts/}).click();
+    await page.getByRole('button',{name:'Split view',exact:true}).click();
+    await page.locator('.desk-pane').nth(1).click();await page.getByRole('treeitem',{name:/index.ts/}).click();
+    const panes=page.locator('.desk-pane');await expect(panes.nth(0)).toContainText('sharedReading');await expect(panes.nth(1)).toContainText('sharedReading');
+    writeFileSync(join(root,'index.ts'),'export const sharedNewer = 5;\n');
+    await panes.nth(0).getByRole('button',{name:'Check disk version'}).click();
+    await expect(panes.nth(0)).toContainText('A newer disk version');await expect(panes.nth(1)).toContainText('A newer disk version');
+    await panes.nth(1).getByRole('button',{name:'Compare disk versions'}).click();
+    await expect(panes.nth(1).getByRole('region',{name:'Source version comparison'})).toContainText('sharedNewer');
+    await panes.nth(0).getByRole('button',{name:'Read newer disk version'}).click();
+    await expect(panes.nth(1).getByRole('region',{name:'Source version comparison'})).toHaveCount(0);
+    await expect(panes.nth(0).locator('.desk-code')).toContainText('sharedNewer');await expect(panes.nth(1).locator('.desk-code')).toContainText('sharedNewer');
+});
 test('captured source compares exact stored ranges with a separately approved disk sample', async ({ page }) => {
+    writeFileSync(join(root,'index.ts'),'export const externalDiskValue = 3;\n');
     await page.goto(server.launchUrl);
     await expect(page.locator('.home')).toBeVisible();
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
     await expect(page.locator('.history')).toBeVisible();
+    const grant=page.getByRole('button',{name:'Enable workspace reading'});if(await grant.count())await grant.click();
     await page.getByRole('button', { name: 'Open developer workspace', exact: true }).click();
     await page.getByRole('treeitem', { name: /index.ts/ }).click();
     await page.getByRole('region', { name: 'Workspace file index.ts' }).getByRole('button', { name: 'Recorded work', exact: true }).click();

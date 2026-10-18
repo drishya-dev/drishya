@@ -21,3 +21,12 @@ it('bounds source memory, refuses oversized replacements and permits explicit re
     store.forget('a', 'file0');
     expect(store.offer('a', 'ninth', file('small'))).toBeDefined();
 });
+it('shares retained versions without a slow second pane clearing newer evidence',()=>{
+    const store=new SourceVersions();let notices=0;const stop=store.subscribe(()=>notices++);
+    store.offer('a','index.ts',file('base'));
+    const older=store.begin('a','index.ts'),newer=store.begin('a','index.ts');
+    store.offer('a','index.ts',file('new','new'),newer);
+    store.offer('a','index.ts',file('base'),older);
+    expect(store.get('a','index.ts')).toMatchObject({reading:{text:'base'},newer:{text:'new'}});
+    expect(notices).toBe(2);store.adopt('a','index.ts');expect(notices).toBe(3);stop();
+});

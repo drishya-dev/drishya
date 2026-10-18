@@ -275,17 +275,21 @@ test('file relationships start at measured renderer nodes and fall back when the
     const response = await route.fetch();
     const bundle = await response.json();
     const node = bundle.graph.nodes.find((node: { path: string }) => node.path === 'test/checkout.test.ts');
-    // Classic's wider right rail covers the previous .86 fixture position.
-    node.x = .76; node.y = .35;
+    // Keep this fixed planar fixture above the settled action row, outside prose.
+    // The previous .76/.35 position was covered by the card after its final reflow.
+    node.x = .8; node.y = .2;
     await route.fulfill({ response, json: bundle });
   });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
   const edit = page.locator('article.op-edit').last();
+  await page.evaluate(()=>document.fonts.ready);
   await expect.poll(async () => { const reads = await page.locator('article.op-read').count(); return reads > 0 && reads === await page.locator('article.op-read .read-preview').count(); }).toBe(true);
   await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect.poll(() => page.locator('.history').evaluate(el => [...el.querySelectorAll('article')].flatMap(card => card.getAnimations()).filter(a => a.id.startsWith('surface-') && a.playState === 'running').length)).toBe(0);
+  const follow=page.getByRole('switch',{name:'Automatically follow new work',exact:true});
+  if(await follow.getAttribute('aria-checked')==='true')await follow.click();
   await expect(page.locator('.map [data-origin-file="test/checkout.test.ts"]')).toHaveAttribute('data-origin-visible', 'true');
   await page.mouse.move(0, 0);
   await edit.locator('.op-head').hover();

@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | PR79–81 merged/pushed: reproduced manual-scroll repair, local draft comparison and responsive Files navigation. Review97 continues Home readability;84 retains the whole component/palette and joined-workflow queue. Native/human/platform acceptance remains open. One coherent commit per PR; local checks only. |
+| **Milestone** | [TASKS.md](TASKS.md) is the single current checkbox list. Modern UI/themes and native workflow finishing remain open; local draft editing exists. Previous tool boxes restored by PR92. One coherent commit per PR; local checks only. |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -25,13 +25,90 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Complete interface acceptance sweep | Actual-session surface survey, four full-suite findings and review103 |
-| Harsh with Codex | Remaining review tools, source-version workflow and reproduced CI repairs | Derived review worker/API, review tools, Workspace comparison, History inner-size follow, reliability CSS/test setup and review105; Yash retains the wider surface survey |
+| Harsh with Codex | Remaining review tools, source-version workflow and reproduced CI repairs | Derived review worker/API, review tools, Workspace comparison, History inner-size follow, reliability CSS/test setup and review106; preserve Yash’s merged surface repairs |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Current-source reading allocation
+
+- **When:**18 October2026, `codex/current-reader-controls`; Review pager95 merged as b98186b.
+- **Delivered:**Shared compact reading-history arrows in the action row; short visible Workspace/Go/Wrap with stable accessible names, explicit refresh/evidence icons and unchanged current/captured destinations. Hide empty current import context, reduce margins/footer chrome and override the inherited 48vh source cap in Modern. Keep real import connections and full find/line/wrap/copy behavior. TASKS checkbox updated; no new task list.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Separate history/action strips | Compact arrows and actions together | Return vertical space to source |
+| Source capped at48vh inside a larger bounded reader | Source fills remaining flex space | Remove the unexplained unused lower area |
+| Import summary has stacked margins and padding even when empty | Omit empty context; compact meaningful connections | Keep useful information with less repeated chrome |
+| Repeated disk label and spacious footer | One On disk qualifier and compact line-count/copy footer | Keep provenance clear without repeating it |
+
+- **Validation:**Both typechecks/build and447units/77files pass. Three focused reader journeys cover retained Legacy, Modern and import destinations; Modern source allocation reaches at least62% at1440/390/320px with active Find and Wrap, no horizontal dialog overflow. The pre-cap-fix Modern layout failed this guard. Keyboard evidence navigation and actual desktop/phone surface journey pass; settled frames inspected. No hosted CI/native turn/private content; package/artwork excluded. Physical/touch acceptance remains open; coarse-pointer controls have44px targets/16px inputs.
+- **Next:**Use TASKS for editable-source ergonomics, retained-version comparison and joined native correction/check workflow. Whole UI/themes/native/human finishing remains open.
+
+### Yash with Codex — Compact recorded review navigation
+
+- **When:**18 October2026, `codex/review-navigation-density`.
+- **Delivered:**Short Previous/Next arrows with stable accessible names, separate live page count and page-limit note; responsive bounded grid,44px coarse-pointer targets. Right outcome groups align at the top. Paging/data/evidence behavior unchanged; TASKS checkbox updated.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Long page labels and limits compete in one flex row | Three compact controls and separate limits caption | Preserve information without tall phone chrome |
+| Outcome groups stretch to match a long file column | Top-aligned groups | Keep related facts together |
+
+- **Validation:**Both typechecks/build pass. Existing70-check paging journey strengthened for320/390/1440px fails on the old layout and passes on the new; final-page counts/destination still verified. Actual desktop/phone surface journey passes; phone frame inspected. No hosted CI/native turn/private content; package/artwork excluded.
+- **Next:**Continue TASKS current-source controls and editable-source ergonomics; broader UI/themes and native acceptance remain open.
+
+### Yash with Codex — Clear Workspace edit entry and focus
+
+- **When:**18 October2026, `codex/workspace-edit-entry`; checklist93 merged as ee286ef.
+- **Delivered:**Leading neutral Edit file action with pencil/read icon and truthful local-draft/harness context. Focus the real editor on entering edit mode or returning from comparison, only in the active pane; do not reset selection or create duplicate text. Workspace introduction mentions editing. TASKS checkbox updated; full editor-grade syntax/indentation remains explicitly open.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Edit file trails secondary navigation with equal emphasis | Leading raised neutral action and mode icon | Make the existing workflow discoverable |
+| Entering editing leaves focus on the old action | Focus the active editor without scrolling | Typing should act on the file the user chose |
+| Comparison returns focus to its toolbar | Return to the same mounted editor | Preserve selection and continue editing immediately |
+| Generic full accent outline | Neutral inset editor boundary | Show focus without a large colored box |
+
+- **Validation:**Baseline focus assertion fails before the repair. Both typechecks/build and447units/77files pass. Three focused existing-file/comparison/New file journeys and all three actual Drishya/Skeletongraph histories/Workspace/edit-entry journeys pass; final two-case CSS rerun passes. Actual frame inspected; drafts discarded without submitting native work or writing project files. No hosted CI/private content; package/artwork excluded.
+- **Next:**Use TASKS.md only for the current queue. UI/theme finishing, improved editable source presentation, current-source version comparison and real native edit/create acceptance remain open.
+
+### Yash with Codex — One current product checklist
+
+- **When:**18 October2026, `codex/single-product-checklist`; box restoration92 merged as8547fec.
+- **Delivered:**TASKS.md consolidates implementation, unfinished UI/theme/component work, Workspace editing/native write boundary, selected features, deferred ideas and release checks with checkboxes. AGENTS/README link it;84/85/92 are historical evidence, not competing queues. CONTINUITY is a compact handoff pointing to it.
+- **Validation:**Local Markdown link/checkbox inspection; no runtime changes or hosted CI. User package/artwork excluded.
+- **Next:**Follow TASKS; improve existing Workspace edit discoverability and editor focus without implying direct disk saves.
+
+### Yash with Codex — Restore the previous tool boxes
+
+- **When:**18 October2026, `codex/restore-exchange-layout`.
+- **Delivered:**Builder rejected104/PR88; restore the exact preceding request/result CSS and update retained length/hover expectations. Later independent prose/Follow repairs remain.
+- **Validation:**Local UI build and12 synthetic length/type combinations plus actual captured command pass. No hosted CI; preserve user package/artwork.
+- **Next:**One authoritative checked work list, then make existing Workspace editing easier to find; UI/themes remain partly complete.
+
+### Yash with Codex — Complete original failed-case acceptance
+
+- **When:**18 October2026, `codex/origin-tree-acceptance`; PR90 merged/pushed asd35cabe.
+- **Delivered:**103 final result: explicitly open Files ancestors, settle font/camera geometry and place the synthetic planar point outside the final card. Compare node/path geometry in one frame; retain map occlusion and map-off reference assertions. No runtime change in this increment.
+- **Validation:**Both origin journeys pass, then all four original full-suite failures pass together. UI rebuild passes; latest functional type/unit check447units/77files passes. Original full run174passed/6skipped/4failed remains recorded; targeted closure does not invent a second clean full run. No hosted CI/native turn/private content.
+- **Next:**84 narrow Review pagination/current-source control density; source-version/joined workflow and92 selected secondary tools remain. Physical/native/assistive-tech/human release acceptance stays open. Preserve package/artwork.
+
+### Yash with Codex — Follow measured composer clearance
+
+- **When:**18 October2026, `codex/follow-composer-resize`; PR89 merged/pushed as5b59d0e.
+- **Delivered:**[105](review/105-follow-composer-clearance.md): border-box history observation accounts for late composer padding and uses existing Follow while respecting detached reading/clicked destinations. No timing/wheel/native/capture change.
+- **Validation:**Both typechecks/build and447units/77files pass; two initial plus three final focused journeys and all three actual long-history/Workspace journeys pass, including95 upward-wheel samples each. No hosted CI/native turn/private content.
+- **Next:**Fix two old closed-tree origin-test assumptions and record103 final acceptance.84/92 retain broader feature/polish/release work.
+
+### Yash with Codex — Actual-surface acceptance and prose overflow
+
+- **When:**18 October2026, `codex/interface-acceptance-repairs`; PR88 merged/pushed as497b1b3.
+- **Delivered:**[103](review/103-interface-acceptance-sweep.md): bounded prose veil horizontal extent and repeatable opt-in actual-session review/evidence/questions/usage/current source/Workspace/map survey at1440/390px. Private frames inspected; loading/recovery races removed from the survey setup.
+- **Validation:**UI build and both focused browser journeys pass; preceding full type/unit check447units/77files passes. Broad pre-repair browser run174passed/6skipped/4failed, honestly retained in103. No hosted CI/native turn/private content.
+- **Next:**Repair two closed-tree motion journeys and reproduced72px initial-follow gap. Narrow Review pagination/current-source controls remain polish findings;84/92 keep feature/native/human scope.
 
 ### Yash with Codex — Request/result reading balance
 
