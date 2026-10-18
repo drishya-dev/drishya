@@ -1,4 +1,5 @@
 import { CommandText } from './CommandText.tsx';
+import {commandDisplay} from '../lib/command-display.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
 import { ToolInput } from './ToolInput.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
@@ -620,6 +621,8 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const measureSource = useCallback((text: string) => setSourceWidth(Math.max(280, Math.min(420, readingWidth(...text.split('\n').slice(0, 12))))), []);
   const readingAllocation = presentation.width ?? sourceWidth;
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
+  const command = op.detail.kind === 'shell' || op.detail.kind === 'test' ? commandDisplay(op.detail.command) : undefined;
+  const displayTitle = command?.decoded ? command.text : op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '');
   return (
     <article ref={card}
       data-op-id={op.id}
@@ -642,7 +645,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
     >
       <header className="op-head">
         <MaterialGlyph material={presentation.material} />
-        {experience !== 'legacy' ? <span className="studio-action-identity"><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
+        {experience !== 'legacy' ? <span className="studio-action-identity"><span className="op-title" title={displayTitle}>{displayTitle}</span><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
         <StateMark state={so.state} op={op} />
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {

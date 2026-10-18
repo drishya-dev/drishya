@@ -2,6 +2,8 @@
 
 **One work list:**[TASKS.md](TASKS.md). Update its checkboxes in each coherent increment. Do not maintain another active queue in numbered reviews or this handoff.
 
+**18 October command presentation / adjustable-window request:**Whole-request validation replaces prefix-only command decoding; supported single literal calls show the command in Modern headings with exact raw access, while multi-call/dynamic/truncated/trailing sources remain intact. Four unit tests/both TS/build/two browser copy-highlight journeys pass. TASKS now includes bounded user-adjustable Workspace/workflow tabs/panes, Git and readers with layout reset/recovery/keyboard/viewport safeguards. Existing widths/splits are implemented; the additional window audit/controls remain unchecked. No box size/motion or capture/outcome changes.
+
 **Latest builder direction,18 October:** Restore the tool boxes before PR88; the one-line allocation/spacing experiment looked worse. PR92 is merged as8547fec and restores the exact previous exchange CSS. Keep independent prose-overflow and Follow repairs from89/90. UI/theme finishing is partly complete, not finished. Keep shared Legacy visualization in Modern and Jet Black available; use installed Emil/design/motion skills.
 
 **18 October edit entry:** Leading neutral Edit file/read-source action with icon; active-pane editor focus on entry and return from comparison, neutral focus boundary. Baseline focus failure repaired; both typechecks/build,447units/77files, three focused Workspace journeys and all three actual session/edit-entry journeys pass (final two-case CSS rerun also passes). Checklist93 merged as ee286ef. TASKS records this bounded task as checked; editor-grade presentation and native disk application remain open.

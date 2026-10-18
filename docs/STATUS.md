@@ -31,6 +31,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Complete command presentation and adjustable-window inventory
+
+- **When:**18 October2026, `codex/command-readability`; current reading106 merged as6c5662c.
+- **Delivered:**Static command decoding now validates the whole request, including supported output wrappers/reordered literal fields. Multi-call/trailing/dynamic/truncated requests stay complete source. Modern action headings prioritize a safely decoded command; exact raw request/copy remain available. Added the builder's adjustable-window requirement to TASKS, covering Workspace/workflow tabs/panes, Git, Files and reading windows with bounded layout recovery/reset/keyboard controls. Existing widths/split resizing remain; missing window controls are still unchecked.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Prefix decoding can hide later statements | Only a complete supported literal call decodes | Retain every captured command |
+| Modern heading emphasizes orchestration syntax | Safely decoded command with unchanged tool identity | Make actual work easier to scan |
+| Every decoded label says JSON | Format-neutral decoded argument label | Script wrappers are not JSON documents |
+
+- **Validation:**Four parser tests, both typechecks/build and two browser journeys pass: long at-sign script highlighting/exact copy/raw access plus complete multi-statement copy. Core box dimensions/motion, capture classification and outcome status are unchanged. No native turn or hosted CI.
+- **Next:**User-adjustable window implementation and remaining UI/native/platform acceptance remain in TASKS.
+
 ### Yash with Codex — Current reading consistency
 
 - **When:**18 October2026, `codex/current-reading-polish`; findings105 merged asd9382e3.
