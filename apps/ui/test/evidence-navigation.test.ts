@@ -46,3 +46,11 @@ describe('bounded evidence navigation', () => {
     expect(trail.current?.location.filePanelLine).toBe(250);
   });
 });
+
+it('a repeated current-file selection restores metadata while captured source visits stay distinct',()=>{
+ const trail=new EvidenceTrail(),disk={...location(),currentFile:'a.ts'};
+ const first=trail.visit(disk);first.memory.set('disk/query','needle');first.memory.set('scroll/disk/source',{top:80,left:0});
+ trail.visit({...disk,currentFile:'b.ts'});
+ const returned=trail.visit(disk);expect(returned.memory.get('disk/query')).toBe('needle');expect(returned.memory).not.toBe(first.memory);
+ const captured=trail.visit(location('a.ts'));expect(captured.memory.size).toBe(0);
+});

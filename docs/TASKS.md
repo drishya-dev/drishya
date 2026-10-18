@@ -8,6 +8,15 @@
 
 ## Current priorities
 
+- [x] **Right navigation and compact file-peek presentation (builder correction):** Workspace below Git review/Git graph; measure the portal reader top from those controls, avoid Toolbox/full-Workspace conflicts, and remove oversized duplicate reader toolbar rows while keeping source truth and useful actions.
+
+- [x] **Last-action/prompt gap (builder correction):** keep one measured composer clearance in full-height history end padding, reduce the extra70px to8px and the final passage margin; expanded/minimized prompt, real long sessions and phone verified.
+
+- [x] **Pause the session-name capsule (builder correction):** remove the Modern central header capsule for now, retaining Home/search/settings/session-menu controls and reconnect status; let the builder compare the extra visual space.
+
+- [x] **Tabbed file peek beside the agent (builder addition):** single-click replaces a preview, double-click keeps a tab; closing/switching/restoring tabs retains references/geometry and reading metadata within the existing eight-visit trail, without storing source bodies. Keep the agent visualization visible in a measured adjacent area rather than entering full Workspace, with bounded phone fallback and clear Workspace handoff. Drag the non-interactive title/tab-bar area, not only a move button. Resize from all four edges with the grabbed/opposite edges behaving correctly, persisted/clamped geometry, keyboard equivalents and reset. Preserve captured/current evidence and workspace consent; Real Drishya/Skeletongraph Codex/Claude, reload/fresh consent, desktop/phone overflow, rapid actions and all edge directions verified. See review116 for exact bounds.
+
+
 - [x] **Simplify Workspace controls (builder addition):** frequent New/edit/compare/harness-review controls remain visible; layout/reset and file navigation/download/discard move into compact owner-scoped Actions menus. Outside click, Escape/focus return, keyboard rows, bounded short-phone menus and a two-row phone header checked. Editing/drafts, source truth and split-pane use retained. Actual Codex/Claude multi-file journeys pass. This is the first bounded simplification; broad nested-control/UI acceptance remains in the motion pass below.
 
 - [x] **Prompt and Toolbox toggles:** one200ms transform from the actual measured surface; translation/scale move together, interrupted reversal uses current bounds, compact labels keep their size. No animated layout height, typing/capture listeners or duplicate content. Keyboard/reduced-motion/low-resource bypass; resize/session changes cancel. Composer clearance uses logical border-box height. Fixed inherited phone dock stacking that covered Minimize. Desktop/phone and actual three-session checks pass.
