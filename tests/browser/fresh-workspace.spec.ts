@@ -1471,3 +1471,22 @@ test('a failed reader screen can recover by navigating to a healthy session',asy
   await page.evaluate(id=>{location.hash=`/r/${id}`;},ids.codex!);
   await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
 });
+
+
+test('finding membership reaches every captured operation with filters, exact opening and phone bounds',async({page})=>{
+  const journal=join(dir,'finding-members.jsonl'),rows:unknown[]=[{type:'session_meta',payload:{id:'finding-members',cwd:root}}];
+  for(let n=0;n<70;n++){rows.push({type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`member-${n}`,arguments:JSON.stringify({cmd:'npm test -- stable-command'})}});rows.push({type:'response_item',payload:{type:'function_call_output',call_id:`member-${n}`,output:JSON.stringify({output:'1 passed',metadata:{exit_code:0}})}});}
+  writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const {recordingId:id}=await app.ingest.importSource('codex',journal);
+  const findings=await app.history.reviewInsights(id),finding=findings.findings.find(item=>item.kind==='repeated-command')!;
+  const endpoint=`${server.url}/v1/recordings/${id}/finding-members?key=${encodeURIComponent(finding.key)}`;
+  expect((await page.request.get(endpoint)).status()).toBe(401);
+  const headers={authorization:`Bearer ${server.token}`};expect((await page.request.get(endpoint+'&page=-1',{headers})).status()).toBe(400);expect((await page.request.get(endpoint+'&page=0.5',{headers})).status()).toBe(400);expect((await page.request.get(endpoint+'&q='+encodeURIComponent('x'.repeat(201)),{headers})).status()).toBe(400);
+  expect((await (await page.request.get(endpoint+'&page=2',{headers})).json()).items).toHaveLength(20);
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Review findings');await nav.getByRole('option').filter({hasText:'Review findings'}).click();
+  const dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await expect(dialog.locator('.finding-member')).toHaveCount(25);
+  await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.getByText('Page 2 of 3 · up to 25 per page',{exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.locator('.finding-member')).toHaveCount(20);
+  const filter=dialog.getByRole('searchbox',{name:'Filter finding members',exact:true});await filter.fill('no such member');await expect(dialog.locator('.finding-member')).toHaveCount(0);await filter.fill('');await expect(dialog.locator('.finding-member')).toHaveCount(25);
+  for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/finding-members-${width}.png`)});}
+  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toContainText('stable-command');
+});

@@ -1,4 +1,4 @@
-import type {ReviewInsightsPage} from '../../../packages/scene/src/review-insights.ts';
+import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
 import { Worker } from 'node:worker_threads';
 import type { ArtifactSlice, Operation } from '@drishya/contracts';
@@ -50,7 +50,8 @@ export class HistoryService {
   }
 
   page(id: string, query: HistoryQuery = {}) { return this.request<HistoryPage>('page', { id, query }); }
-  reviewInsights(id:string,page=0) {return this.request<ReviewInsightsPage>('review-insights',{id,page});}
+  findingMembers(id:string,key:string,page=0,q='') {return this.request<FindingMembers>('finding-members',{id,key,page,q});}
+  reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }

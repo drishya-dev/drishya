@@ -1,5 +1,8 @@
 # Codebase — the system as built
 
+**18 October finding membership:**Authenticated `GET …/finding-members?key&page&q` returns up to25thin members and complete/filtered counts from the existing whole-history worker. Exact repeated-command/artifact identity is shared with summaries; preview queries do not scan full input/output blobs. Capture gaps are distinct records and can link to next captured activity. `review-insights?kind=` filters factual condition categories before pagination. No capture schema or runtime dependency change.
+
+
 **18 October evidence/recovery correction:**Reducer r4 leaves unreported shell exits null and splits test-command segments only outside quotes, including direct Node runner paths. Presentation uses scoped neutral Tool returned for successful wrappers/unreported exits rather than claiming nested process success. Captured status is not changed by searching output for failure words. File-evidence navigation stores only the exact selection key; the reader rehydrates bounded captured history and validates loaded objects before rendering. Missing/legacy references are unavailable, never fabricated source. Screen failures reset on hash navigation.
 
 
