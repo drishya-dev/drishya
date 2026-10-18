@@ -91,7 +91,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  if(modern)return <SessionHome recordings={recordings} sources={sources} now={now} busy={busy} error={[err,...sourceErrors.map(e=>`${HARNESS_LABEL[e.adapterId]??e.adapterId}: ${e.message}`)].filter(Boolean).join(' · ')} refresh={()=>void refresh().catch(e=>setErr(e.message))} openDemo={()=>openDemo(true)} onOpen={(session,live)=>void open(session,live)}/>;
+  if(modern)return <SessionHome recordings={recordings} sources={sources} now={now} busy={busy} error={[err,...sourceErrors.map(e=>`${HARNESS_LABEL[e.adapterId]??e.adapterId}: ${e.message}`)].filter(Boolean).join(' · ')} refresh={()=>refresh().catch(e=>setErr(e.message))} openDemo={()=>openDemo(true)} onOpen={(session,live)=>void open(session,live)}/>;
 
   return (
     <div className="home">

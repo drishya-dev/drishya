@@ -31,6 +31,23 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Modern navigation and utility polish
+
+- **When:**18 October2026, `codex/interface-polish`; prior connected-workflow batch99 merged as e4c3a02.
+- **Delivered:**Home keeps the selected workspace when filtering removes its final match, adds clear-search/Escape and clear-filters actions plus refresh progress, and supports Arrow/Page/Home/End navigation through every session while mounting only the visible window. Utilities have coherent grouped sections, consistent readable row targets and keyboard traversal of visible rows only. Retain outside dismissal/Escape and neutral focus/press feedback. Reader close targets improve without expanding compact Git chrome. A real large-repository check exposed a graph-group label intercepting file-search clicks; map controls now have an explicit layer above graph labels. Legacy presentation and core card choreography stay shared.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Empty selected workspace falls back to other workspaces | An honest empty result with direct clearing controls | Preserve the user's filter scope |
+| Keyboard cannot reach unmounted sessions | Jump/arrow navigation mounts and focuses the bounded target window | Make long libraries usable without a mouse |
+| Utility rows mix weights and nested disclosures | Grouped sections, consistent targets and visible-row navigation | Reduce search and avoid focusing hidden actions |
+| Real graph labels cover file search | Map controls stack above map labels | Keep repository navigation clickable at any density |
+
+- **Design:**Applied installed Emil/animate skills. Consulted [Uiverse](https://uiverse.io/) for control/hover/form composition; implementation is original and uses existing theme tokens, not copied effects or another library. Pointer feedback is brief and reversible; keyboard/reduced-motion paths stay immediate. This is a bounded cross-component pass, not completion of the all-pages Uiverse/theme checklist.
+- **Validation:**Both typechecks/build pass. Broad connected/Modern regression run70passed/1failed; compact Git-header regression repaired and all four affected Home/Git/utility journeys pass together. Two actual surface/Home journeys pass across recorded material/current source/Review/usage/map and desktop/phone/short-window Home. The deterministic spatial-label/search-overlap regression also passes; frames inspected. No backend/API/schema/dependency/project-write change, hosted CI or native turn. User package-manager files/artwork excluded.
+- **Next:**TASKS keeps full UI/theme/motion and actual native investigation acceptance open, alongside optional Commands/findings/review-packet work. Do not mark the whole product complete from this batch.
+
+
 ### Yash with Codex — Connected reading and quiet controls
 
 - **When:**18 October2026, `codex/workflow-finishing`; grouped related work per the latest builder direction. Code editor98 merged as9a354c3.
