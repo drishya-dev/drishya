@@ -842,6 +842,39 @@ test('touch file chooser keeps readable inputs and touch-sized dismissal without
   } finally {await context.close();}
 });
 
+test('Files width is adjustable without covering Workspace or moving history on minimize',async({page})=>{
+  await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const files=page.getByRole('complementary',{name:'Repository files',exact:true});
+  const resize=files.getByRole('separator',{name:'Resize Files reading space',exact:true});
+  await resize.focus();await page.keyboard.press('End');
+  await expect.poll(()=>files.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(420);
+  const history=page.locator('.history'), before=(await history.boundingBox())!;
+  expect(before.x).toBeGreaterThan((await files.boundingBox())!.x+420);
+  await files.getByRole('button',{name:'Minimize files',exact:true}).click();
+  await expect(files).toHaveCount(0);expect((await history.boundingBox())!.x).toBe(before.x);
+  await page.getByRole('button',{name:'Show files',exact:true}).click();
+  await expect.poll(()=>files.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(420);
+  const grip=(await resize.boundingBox())!,left=(await files.boundingBox())!.x;
+  await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();
+  await page.mouse.move(left+330,grip.y+grip.height/2,{steps:5});await page.mouse.up();
+  await expect.poll(()=>files.evaluate(node=>Math.abs(node.getBoundingClientRect().width-330))).toBeLessThanOrEqual(1);
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
+  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk).toBeVisible();
+  expect((await desk.boundingBox())!.x).toBeGreaterThan((await files.boundingBox())!.x+(await files.boundingBox())!.width);
+  await files.getByRole('button',{name:'Minimize files',exact:true}).click();
+  await expect.poll(()=>desk.evaluate(node=>Math.round(node.getBoundingClientRect().left))).toBe(18);
+  await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
+  await page.getByRole('button',{name:'Show files',exact:true}).click();
+  await resize.focus();await page.keyboard.press('End');
+  await page.setViewportSize({width:900,height:960});
+  await expect.poll(()=>files.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(288);
+  await page.setViewportSize({width:1440,height:960});
+  await expect.poll(()=>files.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(420);
+  await page.screenshot({path:resolve('.local/files-adjustable-width.png')});
+});
+
 test('Modern navigation keeps two actions at each edge, readable and outside the history viewport',async({page})=>{
   await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);

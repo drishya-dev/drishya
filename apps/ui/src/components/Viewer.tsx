@@ -144,6 +144,8 @@ function WorkspaceViewer() {
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    const column = el.querySelector('.history-inner');
+    if (column) ro.observe(column);
     return () => ro.disconnect();
   }, [!!projection, foldersHidden, explore, inspectorWidth, experience]);
 
