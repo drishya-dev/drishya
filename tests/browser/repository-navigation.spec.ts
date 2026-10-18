@@ -59,4 +59,7 @@ test('a repository scan in map view fits the new layout and exposes real import 
   await expect(page.locator('.map-file-label[aria-label="index.ts"] strong')).toHaveText('index.ts');
   expect(['#000','#000000']).toContain(await page.locator('.viewer').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim()));
   await page.screenshot({path:resolve('.local/repository-directions-desktop.png')});
+  await page.getByRole('button',{name:'Show files',exact:true}).click();
+  await expect(page.getByRole('complementary',{name:'Repository files'})).toBeVisible();
+  await expect(page.getByRole('tree',{name:'Workspace files'})).toBeVisible();
 });
