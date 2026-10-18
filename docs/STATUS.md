@@ -25,11 +25,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Yash with Codex | Complete interface acceptance sweep | Actual-session surface survey, four full-suite findings and review103 |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Request/result reading balance
+
+- **When:**18 October2026, `codex/tool-exchange-balance`; isolated builder feedback during the broader audit.
+- **Delivered:**[104](review/104-tool-exchange-balance.md):21px transferred from result to request preview, mirrored in hover; redundant result rule/padding removed and control gaps compacted. No captured text trimming or motion/native change.
+- **Validation:**Both typechecks/build and447units/77files pass. Twelve short/long/type combinations, two wheel/hover cases and actual-session command check pass; frame inspected. Full pre-change browser run174passed/6skipped/4failed, to investigate in103. No hosted CI/private content.
+- **Next:**Finish acceptance findings: prose veil overflow, closed-tree assumptions in two older motion tests, prompt-follow bottom offset. Continue84/92 afterward; preserve user package/artwork.
 
 ### Yash with Codex — Native composer target and control clearance
 

@@ -359,10 +359,15 @@
 
 /* Input never consumes the entire preview: both parts retain independent reading space. */
 :root[data-experience] .connected-workspace .history .op[data-tool-exchange]:not(.expanded) .op-body { overflow: auto; mask-image: none; -webkit-mask-image: none; }
-:root[data-experience] .history .op[data-tool-exchange]:not(.expanded) :is(.command-request,.tool-input,.web>.query) { max-height: 88px; overflow: auto; min-width: 0; scrollbar-width: thin; }
-:root[data-experience] .history .op[data-tool-exchange]:not(.expanded) .result-content { max-height: 142px; overflow: auto; scrollbar-width: thin; }
-:root[data-experience] .history .op[data-tool-exchange][data-hover-reading] :is(.command-request,.tool-input,.web>.query) { max-height: min(24dvh,180px); }
-:root[data-experience] .history .op[data-tool-exchange][data-hover-reading] .result-content { max-height: max(142px,calc(var(--hover-height) - 280px)); }
+:root[data-experience] .history .op[data-tool-exchange] { --exchange-line: 21px; }
+:root[data-experience] .history .op[data-tool-exchange]:not(.expanded) :is(.command-request,.tool-input,.web>.query) { max-height: calc(88px + var(--exchange-line)); overflow: auto; min-width: 0; scrollbar-width: thin; }
+:root[data-experience] .history .op[data-tool-exchange]:not(.expanded) .result-content { max-height: calc(142px - var(--exchange-line)); overflow: auto; scrollbar-width: thin; }
+:root[data-experience] .history .op[data-tool-exchange][data-hover-reading] :is(.command-request,.tool-input,.web>.query) { max-height: min(calc(24dvh + var(--exchange-line)),calc(180px + var(--exchange-line))); }
+:root[data-experience] .history .op[data-tool-exchange][data-hover-reading] .result-content { max-height: max(calc(142px - var(--exchange-line)),calc(var(--hover-height) - 280px - var(--exchange-line))); }
+/* The request surface already separates the exchange; avoid a second rule and stacked gaps. */
+:root[data-experience] .history .op[data-tool-exchange] .result-area { border-top: 0; padding-top: 0; }
+:root[data-experience] .history .op[data-tool-exchange] .command-material { margin-bottom: 4px; }
+:root[data-experience] .history .op[data-tool-exchange] .structured-output-controls { margin: 0 0 4px; }
 
 /* Do not clip the world above the composer: use document padding, not a shortened viewport. */
 .connected-workspace .history { bottom: 0; }

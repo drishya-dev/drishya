@@ -393,8 +393,22 @@ test('tool cards retain visible results for short and long input/output combinat
     const bounds=await card.evaluate(el=>{const card=el.getBoundingClientRect(),result=el.querySelector('.result-content')!.getBoundingClientRect();return {bottom:card.bottom,outcome:result.top+Math.min(30,result.height)};});
     expect(bounds.outcome,`${kind}/${longInput}/${longOutput}`).toBeLessThan(bounds.bottom);
     const request=card.locator(kind==='shell'?'.command-request':'.tool-input');
+    expect(await request.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(109);
+    expect(await result.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(121);
     if(longInput) expect(await request.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
     if(longOutput) expect(await result.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+    if(kind==='shell'&&longInput&&longOutput) {
+      await card.locator('.op-title').hover();
+      await expect(card).toHaveAttribute('data-hover-reading','focused');
+      const allocation=await card.evaluate(el=>{
+        const request=el.querySelector('.command-request')!,result=el.querySelector('.result-content')!,area=el.querySelector('.result-area')!;
+        return {input:parseFloat(getComputedStyle(request).maxHeight),output:parseFloat(getComputedStyle(result).maxHeight),height:parseFloat((el as HTMLElement).style.getPropertyValue('--hover-height')),rule:getComputedStyle(area).borderTopWidth,padding:getComputedStyle(area).paddingTop};
+      });
+      expect(allocation.input).toBeCloseTo(Math.min((await page.viewportSize())!.height*.24+21,201),0);
+      expect(allocation.output).toBeCloseTo(Math.max(121,allocation.height-301),0);
+      expect(allocation.rule).toBe('0px');expect(allocation.padding).toBe('0px');
+      await page.keyboard.press('Escape');
+    }
   }
 });
 
