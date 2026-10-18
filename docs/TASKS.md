@@ -27,7 +27,7 @@
 - [x] Measured adjustable Files and Git reading spaces; retained preferences and narrow Files navigation. Reviews96/98/99.
 - [x] Composer target/recording/state are visible; compact phone controls clear Send; attachments, native settings and minimized Stop use existing owners. Review102.
 - [x] Prose background no longer adds horizontal overflow. Follow accounts for late composer clearance. Reviews103/105.
-- [x] Requested true-black Jet canvas, literal basename/directory map labels, bounded selected import arrows and map-control clearance. Whole-repository601-file navigation/keyboard/search reaches both ends with bounded rows; the original stuck state was not reproduced exactly. Review106.
+- [x] Requested true-black Jet canvas, literal basename/directory map labels, bounded selected import arrows and map-control clearance. Whole-repository601-file navigation reaches both ends with bounded rows. Reproduced Files-from-map failure: explicit Files now leaves map mode and exposes the full tree, rather than toggling a CSS-hidden list. Review106.
 - [ ] Review **Home**: intro, complete workspace/session inventory, filtering/dropdowns, long names, search, keyboard/empty/loading/failure states, responsive row density.
 - [ ] Review **header and edge panels**: title/minimize/menu alignment, hit targets, overflow, tool/MCP/agent disclosures, no duplicate controls or reserved middle blank space.
 - [ ] Review **composer**: compact draft/attachments, file/folder/image/paste previews, permissions/model/effort, send/stop/approval/error/reconnect states, professional focus/menus and edge translucency.
@@ -72,7 +72,7 @@
 ## Reliability and release
 
 - [x] Reproduced black-screen/render-loop and delayed upward-scroll anchor issues have bounded fixes/regressions; actual long histories from both harnesses exercised. Broad platform acceptance remains open.
-- [x] Latest functional typechecks/build and447 unit tests pass. Broad browser run:174 passed/6 skipped/4 failed; all four repaired cases pass together on targeted rerun. Review103 records this honestly; no second full-green-run claim.
+- [x] Final combined functional typechecks/build,460 unit tests/81files, isolated offline package/review APIs/restart and unchanged demo pass. Complete Edge browser run:186 passed/8 opt-in skipped,194 total,9.8minutes,exit0. Review106 records final scope; native/private/ten-minute opt-ins and physical release gates remain separate.
 - [x] McAfee recurrence investigated: fresh trace attributes the matching script wrapper to the signed managed Codex updater, not Drishya/pnpm. Blocked payload is unavailable; no certified false-positive/safety claim or antivirus bypass. Review38.
 - [ ] Verify a supported idle-time managed-runtime update resolves the recurring AV conflict; do not interrupt active work or change antivirus protection.
 - [ ] Physical lower-resource/lower-core/Windows/macOS/Linux acceptance; memory/large-repo/long-session performance, actual phone/input devices and GPU fallback where supported.

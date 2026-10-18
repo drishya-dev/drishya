@@ -25,12 +25,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Harsh with Codex | Remaining review tools, source-version workflow and reproduced CI repairs | Derived review worker/API, review tools, Workspace comparison, History inner-size follow, reliability CSS/test setup and review106; preserve Yash’s merged surface repairs |
 
 
 ---
 
 ## Last session
+
+### Harsh with Codex — Bounded review/source workflows and repository return
+
+- **When:**18 October2026, `codex/remaining-review-workflows`; integrates Yash's main through `d37cb43`. Final functional code `b4ba138`; later edits record acceptance only.
+- **Delivered:**[106](review/106-review-workflows-and-source-versions.md): worker-paged Commands/findings/repetitions/prompt summaries, exact output and deliberate script-copy review; volatile retained/current/draft/captured-range comparison; concurrent-pane guards, stale-base disclosure and anchored native preparation/subsequent-evidence return. No captured schema, runtime dependency, automatic submission, direct project/harness write or telemetry.
+- **Repository/UI:**True-black Jet, literal basename/parent labels and selected importer→dependency arrows. Reproduced Files-from-map failure now returns to the complete tree;601-file navigation/keyboard/search stays bounded. Preserve Yash's restored exchange layout, editor focus and compact readers/pager; retain his independent Follow/prose fixes instead of duplicate implementations. Emil is absent here; the builder explicitly approved installed redesign-existing-projects plus repo rules.
+- **Final local checks:**Frozen offline install; both typechecks; **460 tests/81 files**; production build; isolated offline package install/import/authenticated API/new review endpoints/persisted restart; unchanged demo bundle. **Complete final Edge run:186 passed/8 opt-in skipped,194 total,9.8minutes**, exit0. Earlier diagnostic browser runs were repaired/interrupted and are not substituted for this final complete run. Logs/private frames stay under.local.
+- **Local preview:**Normal-store server running on7878; restarted only after all native controllers were idle, preserving its prior passive-watch selection. Health/UI/new review API verified against already imported evidence. No real native prompt/approval/model call or new real import; native-account checks remain explicitly assigned to the builder.
+- **Handoff:**`TASKS.md` is the sole current product checklist. Selected implementation boxes are ticked; the complete native apply/conflict/check journey, broader editor/UI/human/physical/platform/accessibility acceptance and deferred proposals remain honestly open. Peer review before merge; no hosted CI dispatched.
 
 ### Yash with Codex — Current-source reading allocation
 

@@ -2,7 +2,7 @@
 
 18 October 2026 · Harsh with Codex · local implementation on `codex/remaining-review-workflows`.
 
-The builder authorizes completing review84/92's selected unfinished work, plus a reported whole-repository navigation problem, clearer map names/direction and a true jet-black background. The required Emil skill is absent on this machine; the builder explicitly approved the installed `redesign-existing-projects` skill and Drishya's rules instead, and authorized regression tests/local CI. Yash's review103 acceptance sweep remains separately claimed.
+The builder authorizes completing review84/92's selected unfinished work, plus a reported whole-repository navigation problem, clearer map names/direction and a true jet-black background. The required Emil skill is absent on this machine; the builder explicitly approved the installed `redesign-existing-projects` skill and Drishya's rules instead, and authorized regression tests/local CI. Yash separately claimed review103 at branch start; his subsequent main fixes are integrated below.
 
 ## Repository increment
 
@@ -12,6 +12,8 @@ The builder authorizes completing review84/92's selected unfinished work, plus a
 - Move map controls below measured workspace controls. Jet Black's canvas token is exactly black; other saved palettes remain available.
 
 Both typechecks, production UI build, five map label/detail unit tests and two synthetic601-file Edge journeys pass. Desktop frames inspected. The basic full-project approval test also passed on the preceding build: this is bounded navigation hardening, not proof that the builder's exact original stuck-page case was reproduced. Human/physical-device acceptance remains open.
+
+**Later reproduced navigation failure:** after the complete-map scan, Files still reported its old pressed state while exploring CSS hid the tree. Clicking it could hide the list altogether instead of returning to files. A retained regression fails on that build and passes when Files explicitly exits map mode and reports its actual visible state. This repairs that concrete return path; keyboard/search/top/bottom access remains covered by the601-file journey.
 
 ## Recorded review tools
 
@@ -31,3 +33,13 @@ Workspace retains up to eight files/two256KiB redacted versions per file in vola
 Recorded source also compares a complete stored snapshot or exact excerpt range with a separately consented current disk sample. Partial/unlocated snapshots are not presented as whole files; excerpt comparisons use the same line positions, not an invented moved-code mapping. The bounded shared diff supports Changes/Side by side/Find/Wrap, with complete-text fallback beyond its LCS budget. Source comparisons are derived, not captured patches or applied edits.
 
 Two focused synthetic source/draft/follow-up/captured-range journeys pass, including unchanged disk/draft and zero native submissions. The actual signed-in lifecycle, genuine delegation, physical low-resource/platform, human ten-minute and assistive-technology acceptance remain assigned release work. Yash's separately claimed review103 full surface/four-finding audit is not declared finished by this increment. Broader82 proposals explicitly deferred in92 remain deferred.
+
+## Integration and acceptance record
+
+While this branch was under local verification, main advanced through `d37cb43` (PR89–96). Merge `6617f12` preserves Yash's restored pre-PR88 exchange allocation, bounded prose veil, padding-aware Follow, settled origin regressions, leading/focused Edit action and compact Review/current-source readers. Duplicate local Follow/prose fixes were removed in favour of his implementations. Local test expectations follow literal accessible map paths, true black and locale-specific number grouping. Review106 was renamed after main added the separate review105 Follow record.
+
+`docs/TASKS.md` is the sole active product checklist. This record describes the delivered bounded code and its checks; it is not a second queue. The implemented follow-up routes do not complete the human-owned native apply/conflict/approval/check lifecycle. Concurrent panes share version disclosure, ignore older request responses, retain the editor selection and clear comparison state together after explicit adoption. Known stale draft bases remain visible and are disclosed in prepared native requests; no base is silently rebased.
+
+**Final combined candidate:** functional code `b4ba138`, main integrated through `d37cb43`. Frozen offline install, both typechecks,460 tests/81files and production build pass. Isolated offline CLI install/import/authenticated API/new review endpoints/persisted restart and unchanged demo pass. The complete final Windows Edge run exits0 with **186 passed/8 opt-in skipped,194 total,9.8minutes**. Opt-ins are real/private-recording surveys and sustained ten-minute acceptance; genuine native-account and physical/human release work remain separate. Earlier failed/interrupted runs were diagnostic, not substituted for this complete final pass.
+
+The thousand-command daemon regression returns20 command rows below32KiB and separately pages all1,000 repetition occurrences; source retention/pending reads are bounded and subscribed only by mounted panes. This verifies the stated response/state bounds, not broad hardware performance certification. An authenticated read-only check confirms the actual normal-store server serves the new review endpoint without a native turn. Final logs and private frames remain ignored under.local.
