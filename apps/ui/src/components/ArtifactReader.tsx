@@ -202,7 +202,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   );
 }
 
-export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope = 'captured' }: { hunks: Hunk[]; path?: string; navigationKey?: string; scope?: 'captured' | 'current-git' | 'local-draft' }) {
+export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope = 'captured', labels }: { hunks: Hunk[]; path?: string; navigationKey?: string; scope?: 'captured' | 'current-git' | 'local-draft' | 'source-comparison'; labels?:{before:string;after:string} }) {
   const [offset, setOffset] = useEvidenceState(`diff/${navigationKey}/offset`, () => firstChangeOffset(hunks));
   const [layout, setLayout] = useEvidenceState<'unified' | 'split'>(`diff/${navigationKey}/layout`, 'unified');
   const [query, setQuery] = useEvidenceState(`diff/${navigationKey}/query`, '');
@@ -231,9 +231,9 @@ export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope
     {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
     <div ref={viewport} className="diff-scroll" tabIndex={0} role="region" aria-label="Patch content">
       <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} activeOffset={active} showRemaining={false} /></div>
-      <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} scope={scope} /></div>
+      <div className="split-change"><ChangeColumns hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} scope={scope} labels={labels} /></div>
     </div>
-    {(offset > 0 || total > pageSize) && <nav className="reader-pages" aria-label={scope === 'captured' ? 'Captured change pages' : scope === 'local-draft' ? 'Local draft change pages' : 'Current Git change pages'}>
+    {(offset > 0 || total > pageSize) && <nav className="reader-pages" aria-label={scope === 'source-comparison'?'Source comparison pages':scope === 'captured' ? 'Captured change pages' : scope === 'local-draft' ? 'Local draft change pages' : 'Current Git change pages'}>
       <button className="btn" disabled={offset === 0} onClick={() => setOffset(n => Math.max(0, n - pageSize))}>Previous change lines</button>
       <span className="muted small">{offset + 1}–{Math.min(total, offset + pageSize)} of {total} patch lines</span>
       <button className="btn" disabled={offset + pageSize >= total} onClick={() => setOffset(n => n + pageSize)}>Next change lines</button>

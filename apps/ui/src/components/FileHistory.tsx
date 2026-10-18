@@ -13,6 +13,7 @@ import { ImportContext } from './ImportContext.tsx';
 import { CodeView, Output } from './common.tsx';
 import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useExperience } from '../lib/experience.ts';
+import { CapturedSourceComparison } from './CapturedSourceComparison.tsx';
 
 /** Global bounded file history; the loaded passage window is never mistaken for the whole session. */
 export function FileHistory({ projection }: { projection: Projection }) {
@@ -137,6 +138,7 @@ function EvidenceColumn({ choices, value, choose, label, path, requestedLine }: 
         {value.startLine === undefined ? <Output text={value.snippet} /> : <CodeView text={value.snippet} path={path} startLine={value.startLine} activeLine={requestedLine} />}
       </> : value.patch && value.operation.detail.kind === 'edit' ? <DiffReader hunks={value.operation.detail.hunks} path={path} navigationKey={`${label}/${value.key}`} /> : <ArtifactReader id={value.artifactId} kind="code" path={path} startLine={value.startLine} navigationSlot={label} requestedLine={requestedLine} provenance />}
       {value.operation.kind === 'edit' && <VerificationPanel op={value.operation} onOpen={(id) => { const state = useApp.getState(); state.select(id); state.set({ filePanel: undefined, explore: false }); }} />}
+      <CapturedSourceComparison key={value.key} evidence={value} path={path}/>
     </div>}
   </section>;
 }
