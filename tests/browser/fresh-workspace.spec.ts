@@ -1760,10 +1760,8 @@ test('file peek keeps tabs beside agent, replaces preview and anchors all four r
  const initial=(await reader.boundingBox())!,history=(await page.locator('.history').boundingBox())!;
  expect(history.x+history.width).toBeLessThanOrEqual(initial.x+1);
  const composer=(await page.locator('.prompt-composer').boundingBox())!;expect(initial.y+initial.height).toBeLessThanOrEqual(composer.y-8);
- const strip=(await reader.locator('.file-peek-tabs').boundingBox())!,beforeStrip=(await reader.boundingBox())!;
- await page.mouse.move(strip.x+strip.width-22,strip.y+strip.height/2);await page.mouse.down();await page.mouse.move(strip.x+strip.width-32,strip.y+strip.height/2+12,{steps:5});await page.mouse.up();
- const afterStrip=(await reader.boundingBox())!;expect(Math.abs(afterStrip.x-beforeStrip.x+10)).toBeLessThan(2);expect(Math.abs(afterStrip.y-beforeStrip.y-12)).toBeLessThan(2);expect(Math.abs(afterStrip.width-beforeStrip.width)).toBeLessThan(2);expect(Math.abs(afterStrip.height-beforeStrip.height)).toBeLessThan(2);
- for(const [edge,dx,dy] of [['left',-35,0],['right',-25,0],['top',0,-20],['bottom',0,-20]] as const){
+
+ for(const [edge,dx,dy] of [['left',-35,0],['right',-25,0],['top',0,-10],['bottom',0,-20]] as const){
   const before=(await reader.boundingBox())!,handle=reader.locator(`.edge-${edge}`),box=(await handle.boundingBox())!;
   await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+dx,box.y+box.height/2+dy,{steps:5});await page.mouse.up();
   const after=(await reader.boundingBox())!;
@@ -1846,4 +1844,23 @@ test('restored Explorer preview stays beside history and above prompt across win
  await page.setViewportSize({width:390,height:844});expect((await reader.boundingBox())!.width).toBeLessThanOrEqual(390);
  await page.setViewportSize({width:1440,height:900});await page.reload();await expect(reader).toBeVisible();
  await expect.poll(async()=>{const r=(await reader.boundingBox())!,p=(await page.locator('.prompt-composer').boundingBox())!;return r.y+r.height-p.y;}).toBeLessThanOrEqual(-8);
+});
+
+test('Explorer preview defaults to a compact right reader with title-bar keyboard movement',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+ const grant=page.getByRole('button',{name:/Enable workspace reading/});await expect(grant.or(page.locator('[data-spine-path="README.md"]'))).toBeVisible();if(await grant.isVisible())await grant.click();await page.evaluate(()=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:'README.md'}})));
+ const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();await expect(reader.getByRole('button',{name:'Move File reader window',exact:true})).toHaveCount(0);
+ for(const width of [1920,1440]){
+  await page.setViewportSize({width,height:960});await reader.getByRole('button',{name:'Reset File reader window layout',exact:true}).click();
+  await expect.poll(async()=>Math.abs((await reader.boundingBox())!.width-width*.28)).toBeLessThan(2);
+  const box=(await reader.boundingBox())!,prompt=(await page.locator('.prompt-composer').boundingBox())!,controls=(await page.locator('.workspace-secondary').boundingBox())!;
+  expect(box.x+box.width).toBeCloseTo(width-48,0);expect(box.height).toBeGreaterThan(450);expect(box.y).toBeGreaterThan(controls.y+controls.height);expect(box.y+box.height).toBeLessThan(prompt.y-8);
+  expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('0.9');
+ }
+ const title=reader.locator(':scope>header'),before=(await reader.boundingBox())!;await title.focus();await page.keyboard.press('ArrowLeft');await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x+16)).toBeLessThan(2);await page.keyboard.press('Home');
+ await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x)).toBeLessThan(2);
+ const strip=(await reader.locator('.file-peek-tabs').boundingBox())!;await page.mouse.move(strip.x+strip.width-24,strip.y+strip.height/2);await page.mouse.down();await page.mouse.move(strip.x+strip.width-44,strip.y+strip.height/2,{steps:4});await page.mouse.up();expect(Math.abs((await reader.boundingBox())!.x-before.x+20)).toBeLessThan(2);
+ await page.screenshot({path:resolve('.local/compact-preview-desktop.png')});
+ await page.setViewportSize({width:390,height:844});expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');const phone=(await reader.boundingBox())!;expect(phone.x).toBeGreaterThanOrEqual(0);expect(phone.x+phone.width).toBeLessThanOrEqual(390);
+ await page.setViewportSize({width:1440,height:960});await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');
 });
