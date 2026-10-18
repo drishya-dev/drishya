@@ -1,3 +1,4 @@
+import {GitHistory} from './GitHistory.tsx';
 import {ReviewInsights} from './ReviewInsights.tsx';
 import {CapturedCommands} from './CapturedCommands.tsx';
 import { NativeReturn } from './NativeReturn.tsx';
@@ -157,10 +158,10 @@ function WorkspaceViewer() {
   // A backward seek must conceal later evidence until its as-of page arrives.
   const awaitingEarlierPage = !!historyPage && scene.step > step;
 
-  if (experience === 'canvas') return <><CapturedCommands/><ReviewInsights/><div inert={awaitingEarlierPage} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined }}><CanvasWorkspace key={recordingId} scene={scene} projection={historical} graph={graph} /><FileHistory projection={historical} /></div>{awaitingEarlierPage && <div className="center notice" role="status">Opening the earlier captured page…</div>}</>;
+  if (experience === 'canvas') return <><CapturedCommands/><ReviewInsights/><GitHistory/><div inert={awaitingEarlierPage} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined }}><CanvasWorkspace key={recordingId} scene={scene} projection={historical} graph={graph} /><FileHistory projection={historical} /></div>{awaitingEarlierPage && <div className="center notice" role="status">Opening the earlier captured page…</div>}</>;
 
   return (
-    <><CapturedCommands/><ReviewInsights/>
+    <><CapturedCommands/><ReviewInsights/><GitHistory/>
     <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${developerWorkspace ? ' developer-workspace-open' : ''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <WorkspaceHeader scene={scene} projection={projection} />{experience === 'studio' ? <WorkbenchSources projection={historical} /> : <WorkspaceBar />}
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}

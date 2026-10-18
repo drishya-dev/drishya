@@ -148,6 +148,22 @@ test('actual library Home keeps sessions readable at desktop, phone and short-wi
   const last=groups.locator('.mh-workspace').last();await expect(last).toBeVisible();const name=await last.locator('strong').innerText();await last.click();
   await expect(picker).toHaveAttribute('aria-expanded','false');await expect(picker).toContainText(name);await expect(page.locator('.mh-results>header h2')).toHaveText(name);
 });
+
+test('actual local Git histories expose connected commits and bounded desktop/phone changes',async({page})=>{
+  test.setTimeout(120000);
+  await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
+  for(const id of ids){
+    await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+    await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Explore Git branches and commits');await nav.getByRole('option').filter({hasText:'Explore Git branches and commits'}).click();
+    const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();const grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
+    await expect(atlas.locator('.atlas-commit').first()).toBeVisible();await expect(atlas.getByRole('alert')).toHaveCount(0);expect(await atlas.locator('.atlas-commit').count()).toBeLessThanOrEqual(50);
+    await expect(atlas.locator('.atlas-message pre')).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-desktop.png`)});
+    await page.setViewportSize({width:390,height:844});await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-phone-graph.png`)});
+    await atlas.locator('.atlas-commit').first().click();await expect(atlas.getByRole('region',{name:'Selected commit',exact:true})).toBeVisible();expect(await atlas.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(atlas.locator('.atlas-message pre')).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-phone-detail.png`)});await atlas.getByRole('button',{name:'Close Git history',exact:true}).click();
+  }
+});
 test('actual imported evidence is searchable across the local library without a native turn',async({page})=>{
   const result=await app.history.searchLibrary({q:'test',count:5});test.skip(!result.items.length,'This opted-in store has no indexed test text.');
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.getByRole('button',{name:'Search evidence',exact:true}).click();
