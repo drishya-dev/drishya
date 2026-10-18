@@ -80,6 +80,37 @@ test('Modern settings resets section reading, follows responsive tab orientation
   await expect(page.getByRole('button',{name:'Workspace settings',exact:true})).toBeFocused();
 });
 
+test('Modern composer keeps its target and state visible, with direct Files and Workspace navigation',async({page})=>{
+  const state={available:true,state:'idle',harness:'codex',tools:[],inventory:'unknown',approvals:[],output:''};
+  await page.route('**/controller',route=>route.fulfill({json:state}));
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const composer=page.getByRole('region',{name:'Harness prompt',exact:true});
+  for(const width of [1440,600,390]) {
+    await page.setViewportSize({width,height:900});
+    await expect(composer.locator('.modern-composer-location')).toContainText('shop');
+    await expect(composer.locator('.modern-composer-location code')).toHaveText(ids.codex!.slice(-8));
+    await expect(composer.locator('.modern-composer-state')).toBeVisible();
+    expect(await composer.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+    const promptBox=(await composer.boundingBox())!;
+    for(const control of [page.getByRole('button',{name:'Tools',exact:true}),page.getByRole('switch',{name:'Automatically follow new work',exact:true})]) {
+      if(!await control.isVisible())continue;
+      await expect.poll(async()=>{const box=(await control.boundingBox())!;return Math.max(0,Math.min(box.x+box.width,promptBox.x+promptBox.width)-Math.max(box.x,promptBox.x))*Math.max(0,Math.min(box.y+box.height,promptBox.y+promptBox.height)-Math.max(box.y,promptBox.y));}).toBeLessThan(1);
+    }
+  }
+  await page.screenshot({path:resolve('.local/composer-visible-target-phone.png')});
+  await page.keyboard.press('Control+k');
+  const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});
+  await expect(nav).toBeVisible();
+  await nav.getByRole('combobox').fill('Open developer workspace');await page.keyboard.press('Enter');
+  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk).toBeVisible();
+  await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
+  await page.keyboard.press('Control+k');await nav.getByRole('combobox').fill('Browse workspace files');await page.keyboard.press('Enter');
+  await expect(page.getByRole('complementary',{name:'Repository files',exact:true})).toBeVisible();
+  await expect(page.getByRole('textbox',{name:'Find repository files',exact:true})).toBeFocused();
+});
+
 test('Home surfaces changed imported journals and keeps filter menus keyboard accessible',async({page})=>{
   const recording=app.store.getRecording(ids.codex!)!;
   await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[{adapterId:'codex',harness:'codex',path:'synthetic-current.jsonl',cwd:root,title:recording.title,modifiedAt:new Date().toISOString(),bytes:999999999,importedRecordingId:recording.id}],errors:[]}}));
@@ -856,6 +887,7 @@ test('touch file chooser keeps readable inputs and touch-sized dismissal without
     const refresh=await page.getByRole('button',{name:'Refresh sessions',exact:true}).boundingBox();
     expect(refresh!.width).toBeGreaterThanOrEqual(44);expect(refresh!.height).toBeGreaterThanOrEqual(44);
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+    expect(await page.getByRole('textbox',{name:'Prompt for selected harness session',exact:true}).evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);
     await page.getByRole('button',{name:'Open developer workspace',exact:true}).tap();
     const explorer=page.getByRole('complementary',{name:'Repository files'});
     await expect(explorer).toBeVisible();
@@ -1058,7 +1090,7 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     await page.getByRole('button',{name:name!,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
-    const expectedBase:Record<string,string>={jet:'#0a0a0a',paper:'#f9fafb',midnight:'#0b0f19',mocha:'#11111b',tokyo:'#16161e',nord:'#242933',gruvbox:'#1d2021'};
+    const expectedBase:Record<string,string>={jet:'#0a0a0a',paper:'#f2f3f5',midnight:'#0b0f19',mocha:'#11111b',tokyo:'#16161e',nord:'#242933',gruvbox:'#1d2021'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
     const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#2563eb',midnight:'#38bdf8',mocha:'#b4befe',tokyo:'#7aa2f7',nord:'#88c0d0',gruvbox:'#fe8019'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
