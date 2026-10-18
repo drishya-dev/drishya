@@ -14,6 +14,11 @@
 @media(pointer:coarse) {.folder-explorer input {font-size:16px!important;}.folder-explorer header .icon-btn {width:44px;min-width:44px;height:44px;min-height:44px;}.desk-header [data-workspace-files-trigger] {min-height:44px;}.folder-explorer button {-webkit-tap-highlight-color:transparent;}.folder-explorer button:active {background:var(--s3);}}
 @media(hover:none) {.folder-explorer .folder-tree button:hover:not(:focus-visible):not(:active) {background:transparent;color:var(--t2);}}
 .desk-editor[hidden] {display:none;}
+.desk-document>header .desk-edit-toggle {display:inline-flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--line-2);color:var(--t1);}
+.desk-edit-toggle svg {width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;flex:none;}
+.desk-edit-toggle[data-editing] svg {color:var(--edited);}
+.desk-edit-toggle:focus-visible {outline:2px solid var(--focus);outline-offset:2px;}
+.desk-editor:focus-visible {outline:1px solid var(--line-3);outline-offset:-1px;}
 .desk-draft-comparison {display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden;}
 .desk-comparison-context {display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--t2);font:11px/1.6 var(--sans);flex:none;}
 .desk-comparison-context small {display:block;color:var(--t3);font-size:10px;}

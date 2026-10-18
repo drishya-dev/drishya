@@ -756,6 +756,8 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await total.getByRole('button',{name:'Edit file',exact:true}).click();
   const editor=total.getByRole('textbox',{name:'Local draft for src/cart/total.ts',exact:true});
   await expect(editor).toBeVisible();
+  await expect(editor).toBeFocused();
+  await expect(total.getByRole('button',{name:'Read source',exact:true})).toHaveAttribute('title','Return to current source; your local draft is retained');
   await editor.fill('export const total = 43;\n');
   await expect(total).toContainText('lost on reload');
   await total.getByRole('button',{name:'Compare draft',exact:true}).click();
@@ -776,6 +778,7 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await page.screenshot({path:resolve('.local/workspace-draft-patch.png')});
   await total.getByRole('button',{name:'Edit draft',exact:true}).click();
   await expect(editor).toHaveValue('export const total = 43;\n');
+  await expect(editor).toBeFocused();
   const downloadPromise=page.waitForEvent('download');
   await total.getByRole('button',{name:'Download draft',exact:true}).click();
   const download=await downloadPromise;
@@ -1069,6 +1072,7 @@ test('Workspace creates an unsent file draft and forwards large contents as a na
   await desk.getByRole('textbox',{name:'New workspace file path',exact:true}).fill('src/created.ts');
   await desk.getByRole('button',{name:'Create draft',exact:true}).click();
   const document=desk.getByRole('region',{name:'Workspace file src/created.ts',exact:true});
+  await expect(document.getByRole('textbox',{name:'Local draft for src/created.ts',exact:true})).toBeFocused();
   const text='// complete new file\n'+'export const requested = 42;\n'.repeat(3000);
   await document.getByRole('textbox',{name:'Local draft for src/created.ts',exact:true}).fill(text);
   expect(payload).toBeUndefined();expect(()=>readFileSync(join(root,'src/created.ts'))).toThrow();

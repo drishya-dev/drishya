@@ -25,12 +25,26 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Restore boxes; consolidate checklist; Workspace editing clarity | stage.css, exchange checks, TASKS and Workspace controls |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Clear Workspace edit entry and focus
+
+- **When:**18 October2026, `codex/workspace-edit-entry`; checklist93 merged as ee286ef.
+- **Delivered:**Leading neutral Edit file action with pencil/read icon and truthful local-draft/harness context. Focus the real editor on entering edit mode or returning from comparison, only in the active pane; do not reset selection or create duplicate text. Workspace introduction mentions editing. TASKS checkbox updated; full editor-grade syntax/indentation remains explicitly open.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Edit file trails secondary navigation with equal emphasis | Leading raised neutral action and mode icon | Make the existing workflow discoverable |
+| Entering editing leaves focus on the old action | Focus the active editor without scrolling | Typing should act on the file the user chose |
+| Comparison returns focus to its toolbar | Return to the same mounted editor | Preserve selection and continue editing immediately |
+| Generic full accent outline | Neutral inset editor boundary | Show focus without a large colored box |
+
+- **Validation:**Baseline focus assertion fails before the repair. Both typechecks/build and447units/77files pass. Three focused existing-file/comparison/New file journeys and all three actual Drishya/Skeletongraph histories/Workspace/edit-entry journeys pass; final two-case CSS rerun passes. Actual frame inspected; drafts discarded without submitting native work or writing project files. No hosted CI/private content; package/artwork excluded.
+- **Next:**Use TASKS.md only for the current queue. UI/theme finishing, improved editable source presentation, current-source version comparison and real native edit/create acceptance remain open.
 
 ### Yash with Codex — One current product checklist
 

@@ -239,6 +239,12 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
     await expect(reader.locator('footer')).toContainText(`${total} lines`);
     await expect.poll(()=>reader.locator('.desk-code').evaluate(node=>node.scrollTop)).toBe(120);
   }
+  await reader.getByRole('button',{name:'Edit file',exact:true}).click();
+  const editor=reader.getByRole('textbox',{name:`Local draft for ${selected[0]}`,exact:true});
+  await expect(editor).toBeFocused();
+  await expect(reader.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
+  await page.screenshot({path:resolve(`.local/review-actual-${index+1}-editor.png`)});
+  await reader.getByRole('button',{name:'Discard draft',exact:true}).click();
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
   await expect(page.locator('.history')).toBeVisible();
 });
