@@ -1,5 +1,5 @@
 import { ToolInput } from './ToolInput.tsx';
-import { ToolOutput } from './ToolOutput.tsx';
+import {StructuredResult} from './StructuredResult.tsx';
 import { useEffect, useMemo, useState } from 'react';
 import type { EvidenceLink, Operation, Projection } from '@drishya/contracts';
 import { stepOfOperation } from '@drishya/scene';
@@ -153,16 +153,14 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
           <h4>Input</h4>
           <ToolInput value={d.input}/>
           <h4>Result</h4>
-          <CapturedOutcomes output={d.resultPreview}/>
-          <ToolOutput text={d.resultPreview || '—'}/>
+          <StructuredResult text={d.resultPreview || '—'}/>
         </>
       );
     case 'web':
       return (
         <>
           <p className="insp-note">{d.url ? <>Fetched <code>{d.url}</code></> : <>Searched the web for <code>{d.query}</code></>}</p>
-          <CapturedOutcomes output={d.resultPreview}/>
-          <ToolOutput text={d.resultPreview || '—'}/>
+          <StructuredResult text={d.resultPreview || '—'}/>
         </>
       );
     case 'spawn': {
@@ -178,8 +176,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
             </button>
           )}
           <h4>Report returned</h4>
-          <CapturedOutcomes output={d.resultPreview}/>
-          <ToolOutput text={d.resultPreview || '—'}/>
+          <StructuredResult text={d.resultPreview || '—'}/>
         </>
       );
     }
@@ -197,8 +194,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
           <h4>Input</h4>
           <ToolInput value={d.input}/>
           <h4>Result</h4>
-          <CapturedOutcomes output={d.resultPreview}/>
-          <ToolOutput text={d.resultPreview || '—'}/>
+          <StructuredResult text={d.resultPreview || '—'}/>
         </>
       );
   }

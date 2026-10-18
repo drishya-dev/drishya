@@ -1,5 +1,9 @@
 # Continue here — current handoff
 
+**18 October structured JSON:** on-demand shared History/Inspector Tree/Table/Original reading is implemented for complete supplied preview JSON, with bounded model/DOM/search, exact original/value copy and phone/keyboard containment. Both TS/build,517units/92files, dense-data/existing-result journeys and actual three-session Codex/Claude regression pass. Full-artifact recovery/CSV/media remain open; next coherent task is shared reading-window exit motion and the broader unchecked interaction pass. Review114 records scope.
+
+**Latest additional direction:** TASKS includes a whole-product interaction-motion pass: every button/folder/view/popup and prompt open/close should transition purposefully toward its result, with continuous/interruption/reduced-motion safeguards. Continue structured reading first; graph art direction stays deferred.
+
 **One work list:**[TASKS.md](TASKS.md). Update its checkboxes in each coherent increment. Do not maintain another active queue in numbered reviews or this handoff.
 
 **18 October next queue / graph deferred:** Builder paused graph presentation; leave graph source alone. Prompt symbol and basename now share one horizontal row with9px spacing and long-name ellipsis (the former container was still column layout). Compact captured-result bars now support native/MCP/structured/Inspector outputs, captured case hover/focus/selection and a portal reading dialog with raw-output handoff. Counts-only/partial/missing/ambiguous cases stay explicit. Bounded head/tail artifact reads recover clipped wrappers without joining disjoint slices. Actual pytest warnings are separate from test counts. A one-passage history centering off-by-one was found and repaired with regression coverage. Review113 records limits and verification; TASKS has the only active queue. Next: adaptive captured media and structured document/data reading, without claiming historical bytes from current paths.

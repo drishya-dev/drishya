@@ -1,0 +1,30 @@
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve,sep} from 'node:path';
+import {expect,test} from './legacy-test.ts';
+import {pointAtHistory} from './history-gestures.ts';
+import {App} from '../../apps/daemon/src/app.ts';
+import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+let dir:string,app:App,server:RunningServer;
+test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-data-'));app=new App(dir);server=await startServer({app,port:0,token:'synthetic-data'});});
+test.afterAll(async()=>{await server.close();await app.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('unsafe path');rmSync(dir,{recursive:true,force:true});});
+test('JSON reading reaches late rows and fields with bounded DOM and exact original access',async({page})=>{
+ const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+ const op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.title='Captured records';op.artifactIds=[];
+ const raw=JSON.stringify({items:Array.from({length:1200},(_,index)=>({id:index,name:`record ${index}`,nested:{text:'line one\nline two'},...(index===1199?{late:'last captured field'}:{})}))});
+ op.detail={kind:'mcp',server:'records',tool:'list',input:{},resultPreview:raw};
+ await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));
+ await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);await expect(card).toBeAttached();await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Inspect data'}).first().click();
+ const dialog=page.getByRole('dialog',{name:'Captured data'}),viewport=dialog.locator('.data-viewport');
+ await expect(dialog.getByRole('table')).toBeVisible();await expect(dialog.getByRole('columnheader',{name:'late',exact:true})).toHaveCount(1);
+ expect(await dialog.getByRole('row').count()).toBeLessThan(30);
+ await viewport.evaluate(element=>{element.scrollTop=element.scrollHeight;element.scrollLeft=element.scrollWidth;});
+ await dialog.getByRole('button',{name:'last captured field',exact:true}).click();await expect(dialog.getByRole('region',{name:'Selected data value'})).toContainText('/items/1199/late');
+ await dialog.getByRole('button',{name:'Tree',exact:true}).click();await dialog.getByRole('textbox',{name:'Find key or value'}).fill('record 1199');await dialog.locator('.data-value').click();await expect(dialog.locator('.data-selection')).toContainText('record 1199');
+ await dialog.getByRole('textbox',{name:'Find key or value'}).fill('');await dialog.getByRole('button',{name:'Expand items',exact:true}).click();await dialog.locator('[role=treeitem]').first().focus();await page.keyboard.press('End');await expect(dialog.locator('[role=treeitem][aria-selected=true]')).toBeFocused();
+ await dialog.getByRole('button',{name:'Original',exact:true}).click();await expect(dialog.locator('.data-original')).toHaveText(raw);
+ for(const width of [1440,390,320]){await page.setViewportSize({width,height:900});const box=(await dialog.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);expect(await dialog.evaluate(element=>element.scrollWidth-element.clientWidth)).toBeLessThanOrEqual(1);}
+ await page.screenshot({path:resolve('.local/structured-data-phone.png')});
+ await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toHaveCount(0);
+});

@@ -1,8 +1,9 @@
 import {CapturedOutcomes} from './CapturedOutcomes.tsx';
 import { toolOutputText } from '../lib/tool-output.ts';
 import { ToolOutput } from './ToolOutput.tsx';
+import {DataInspection} from './StructuredDataReader.tsx';
 /** Render only the captured preview. React escapes every value; no remote HTML or execution. */
-export function StructuredResult({text}:{text:string}){return <><CapturedOutcomes output={text}/><ResultBody text={text}/></>;}
+export function StructuredResult({text}:{text:string}){return <><CapturedOutcomes output={text}/><ResultBody text={text}/><DataInspection text={text}/></>;}
 function ResultBody({ text }: { text: string }) {
   if(toolOutputText(text).decoded) return <ToolOutput text={text}/>;
   let value: unknown;
