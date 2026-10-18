@@ -31,11 +31,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Simpler Workspace and continuous dock controls
+### Yash with Codex — Tabbed file peek and anchored reading windows
 
-- **When:**18 October2026, `codex/compact-surface-interactions`.
-- **Delivered:**Owner-scoped Workspace/file Actions menus retain frequent edit/compare/native-review controls, bounded phone layout and keyboard/light dismissal. Prompt/Toolbox toggles use actual measured current bounds and one transform with normal-sized compact labels; logical composer clearance avoids per-frame layout following. Fixed inherited phone dock stacking that intercepted Minimize. Duplicate basenames gain minimal parent context. Nested-control scope recorded in VISION/TASKS; graph untouched. [115](review/115-workspace-controls-and-motion.md).
-- **Validation:**Both TypeScript projects/build;522units/94files pass. Focused geometry/reversal/reduced-motion/keyboard/menu/short-phone and editor/draft/download/native-preparation checks pass. Four actual journeys pass: both control surfaces across three redacted Codex/Claude sessions at desktop/phone, then all three long-history scroll and multi-file Workspace workflows. No native turn, source writes, dependencies or hosted CI. Whole-product motion/native/physical acceptance remains open.
+- **When:**18 October2026, `codex/tabbed-file-peek`.
+- **Delivered:**Modeless current-file reader beside the agent, preview/kept tabs, keyboard/close/recovery and bounded per-visit reading metadata. One desktop geometry owner handles all four invisible resize edges and whole non-interactive title/tab-strip dragging. Measured right-control/composer allocation and phone Files choosing; compact title actions remove duplicate reader rows. Workspace below Git review/graph, full Workspace clear of Toolbox, independent left Files clearance. Pause Modern session capsule, reduce final-content/prompt gap while keeping measured clearance. [116](review/116-tabbed-file-peek.md).
+- **Validation:**Both TypeScript projects/build;527units/95files. Focused Files preview/pin/close/keyboard/phone/reload/fresh-consent/geometry/header/navigation/gap and existing Git/window/Markdown checks pass. Four actual journeys cover all three redacted Drishya/Skeletongraph Codex/Claude long histories, multi-file editor/draft workflows, plus adjacent peeks and phone bounds. Private frames stay under `.local`. No graph art, captured-event schema, native turn/project write, new dependency or hosted CI. TASKS retains broader finishing/native/physical acceptance.
 
 
 ### Yash with Codex — Bounded captured JSON reading

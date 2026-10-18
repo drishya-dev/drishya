@@ -410,3 +410,24 @@ test('actual Codex and Claude test outputs expose bounded result bars and compac
   const bar=inspector.locator('.case-bar').first();if(await bar.count()){await bar.click();await expect(page.getByRole('dialog',{name:'Captured test result',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close Captured test result'}).click();}
  }
 });
+
+
+test('actual sessions keep current-file tabs beside agent and retain compact prompt clearance',async({page})=>{
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ for(const [index,id] of ids.entries()){
+  await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  const graph=await app.graph(id),paths=graph.nodes.filter(node=>!node.path.startsWith('.')&&/\.(md|ts|tsx|py|json)$/.test(node.path)).map(node=>node.path).sort((a,b)=>(a==='README.md'?-1:b==='README.md'?1:a.length-b.length)).slice(0,2);expect(paths.length).toBeGreaterThanOrEqual(2);
+  const grant=page.getByRole('button',{name:/Enable workspace reading/});if(await grant.isVisible())await grant.click();
+  for(const path of paths)await page.evaluate(path=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path,pin:true}})),path);
+  const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();await expect(reader.getByRole('tab')).toHaveCount(2);await expect(reader.locator('.current-file-code')).not.toBeEmpty();
+  const history=(await page.locator('.history').boundingBox())!,box=(await reader.boundingBox())!;expect(history.x+history.width).toBeLessThanOrEqual(box.x+1);
+  await reader.getByRole('tab').first().click();await expect(reader.locator('.current-file-code')).not.toBeEmpty();
+  await page.screenshot({path:resolve(`.local/file-peek-actual-${index+1}.png`)});
+  await reader.locator('header .reading-window-actions button').last().click();
+  const latest=page.getByRole('button',{name:/Back to latest/});if(await latest.isVisible())await latest.click();
+  await page.locator('.history').evaluate(node=>node.scrollTop=node.scrollHeight);
+  await expect.poll(async()=>{const prompt=(await page.locator('.prompt-composer').boundingBox())!,last=(await page.locator('.history .passage-slot').last().boundingBox())!;return prompt.y-last.y-last.height;}).toBeGreaterThanOrEqual(4);
+  await page.setViewportSize({width:390,height:844});await page.evaluate(path=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path}})),paths[0]!);await expect(reader).toBeVisible();const phone=(await reader.boundingBox())!;expect(phone.x).toBeGreaterThanOrEqual(0);expect(phone.x+phone.width).toBeLessThanOrEqual(390);expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+ }
+});

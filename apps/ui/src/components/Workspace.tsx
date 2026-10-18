@@ -19,10 +19,10 @@ export function WorkspaceBar() {
     const viewer = element?.closest<HTMLElement>('.viewer');
     if (!element || !viewer) return;
     // Demo controls and focus controls can wrap; the explorer must start below them.
-    const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12}px`); };
+    const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12}px`); const leading=element.querySelector('.workspace-leading');if(leading)viewer.style.setProperty('--workspace-leading-bottom',`${leading.getBoundingClientRect().bottom-viewer.getBoundingClientRect().top+12}px`); };
     const observer = new ResizeObserver(measure);
     observer.observe(element); for(const group of element.querySelectorAll('.workspace-leading,.workspace-secondary'))observer.observe(group);observer.observe(viewer);const header=viewer.querySelector('.workspace-header');if(header)observer.observe(header);measure();
-    return () => { observer.disconnect(); viewer.style.removeProperty('--workspace-tools-bottom'); };
+    return () => { observer.disconnect(); viewer.style.removeProperty('--workspace-tools-bottom');viewer.style.removeProperty('--workspace-leading-bottom'); };
   }, [experience]);
   const developerWorkspace = useApp(s => s.developerWorkspace);
   const mode = useApp(s => s.mode);

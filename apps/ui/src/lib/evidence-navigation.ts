@@ -41,8 +41,9 @@ export class EvidenceTrail {
       this.current.location = { ...location };
       return this.current;
     }
+    const previousFile=location.currentFile?[...this.visits].reverse().find(visit=>identity(visit.location)===identity(location)):undefined;
     this.visits.splice(this.cursor + 1);
-    this.visits.push({ id: this.nextId++, location: { ...location }, memory: new Map() });
+    this.visits.push({ id: this.nextId++, location: { ...location }, memory: new Map(previousFile?.memory) });
     if (this.visits.length > this.limit) this.visits.shift();
     this.cursor = this.visits.length - 1;
     return this.current!;

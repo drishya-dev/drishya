@@ -1,3 +1,5 @@
+import {FilePeekTabs} from './FilePeekTabs.tsx';
+import {filePeekState,openFilePeek,closeFilePeek,type FilePeekState} from '../lib/file-peek.ts';
 import {useSurfaceReflow} from '../lib/use-surface-reflow.ts';
 import {Markdown} from '../lib/markdown.tsx';
 import { NativeQuestions } from './NativeQuestions.tsx';
@@ -262,8 +264,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
         if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }
         else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: row.path }));
+        else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
         else useApp.getState().set({...(workspace?.approved ? { currentFile: row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
-      }}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span>{row.name}</span></button>)}
+      }} onDoubleClick={()=>{if(!row.folder&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore)window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:row.path,pin:true}}));}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span>{row.name}</span></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : 'No relative paths captured yet'}</p>}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>
@@ -271,12 +274,23 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
 }
 
 export function CurrentFileReader() {
-  const path = useApp(s => s.currentFile);
-  const id = useApp(s => s.recordingId);
-  if (!path || !id) return null;
-  return <CurrentDocument key={`${id}/${path}`} id={id} path={path} />;
+  const path=useApp(s=>s.currentFile),id=useApp(s=>s.recordingId),explore=useApp(s=>s.explore);
+  const modern=document.documentElement.dataset.uiVersion==='modern';
+  const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]}),[error,setError]=useState('');
+  const tabs=useMemo(()=>filePeekState(saved),[saved]);
+  const select=(next:string)=>useApp.getState().set({currentFile:next,filePanel:undefined,selectedOp:undefined});
+  const open=(next:string,pin=false)=>{const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
+  useEffect(()=>{if(modern&&path&&!explore&&!tabs.files.includes(path)&&tabs.preview!==path)setSaved(openFilePeek(tabs,path).state);},[modern,path,explore,tabs]);
+  useEffect(()=>{
+    const receive=(event:Event)=>{const request=(event as CustomEvent<{path:string;pin?:boolean}>).detail;if(!modern||!id||!request||typeof request.path!=='string')return;open(request.path,request.pin);};
+    window.addEventListener('drishya-preview-file',receive);return()=>window.removeEventListener('drishya-preview-file',receive);
+  },[modern,id,tabs]);
+  if(!path||!id)return null;
+  const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setSaved(next);setError('');if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};
+  return <CurrentDocument key={id} id={id} path={path} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
 }
-function CurrentDocument({ id, path }: { id: string; path: string }) {
+function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:ReactNode }) {
+  const modern=document.documentElement.dataset.uiVersion==='modern';
   const explore = useApp(s => s.explore);
   const {workspace,approve}=useSessionWorkspace();
   const [granting,setGranting]=useState(false),[grantError,setGrantError]=useState('');
@@ -298,6 +312,7 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
   useEvidenceScroll(code, `disk/${formatted?'document':start}`, !!file);
   useEffect(() => { if (file && !readingVersion) setReadingVersion(file.modifiedAt); }, [file, readingVersion]);
   useEffect(() => { setCopied(''); }, [start,file]);
+  useEffect(()=>{setLineError(undefined);setCopied('');},[path]);
   const lines = file?.text.split('\n') ?? [];
   const matches = query ? lines.flatMap((line, index) => line.toLowerCase().includes(query.toLowerCase()) ? [index + 1] : []) : [];
   const moveMatch = (direction: 1 | -1) => {
@@ -315,20 +330,22 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
     try { await navigator.clipboard.writeText(file.text); setCopied('Copied file'); }
     catch { setCopied('Copy unavailable · select the text to copy.'); }
   };
-  return <ReadingDialog title={path} windowId={explore?undefined:'File reader'} resetWindow={()=>setWidth(1040)} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader" modeless={explore} style={explore ? undefined : { width: `min(${width}px, calc(100vw - 28px))` }}>
+  const peek=modern&&!explore;
+  const fileActions=<><button className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, currentFile: undefined, filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title="Open in Workspace">{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Recorded work on this file" title="Recorded work on this file" onClick={() => useApp.getState().set({ currentFile: undefined, filePanel: path })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button></>;
+  return <ReadingDialog title={path} windowId={explore?undefined:'File reader'} resetWindow={()=>setWidth(1040)} close={() => useApp.setState({ currentFile: undefined })} className={`current-file-reader${modern&&!explore?' file-peek-reader':''}`} modeless={explore||modern} floating={modern&&!explore} headerExtra={tabs} headerActions={peek?fileActions:undefined} style={explore ? undefined : { width: modern?undefined:`min(${width}px, calc(100vw - 28px))` }}>
     {file && readingVersion && file.modifiedAt !== readingVersion && <p className="small" role="status">This reading location was saved for another file version.</p>}
-    {!explore && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} reset={()=>setWidth(1040)} label="Resize current source reading space" fromRight />}
-    <div className="current-file-meta"><EvidenceNavigation compact hideEmpty/><span className="tag" title="Checked disk snapshot · not a historical artifact">{current.candidate?'Retained':file?'On disk':'Current file'}</span><button className="btn ghost" aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, currentFile: undefined, filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }}>Workspace</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Recorded work on this file" title="Recorded work on this file" onClick={() => useApp.getState().set({ currentFile: undefined, filePanel: path })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button></div>
+    {!explore && !modern && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} reset={()=>setWidth(1040)} label="Resize current source reading space" fromRight />}
+    {!peek&&<div className="current-file-meta"><EvidenceNavigation compact hideEmpty/><span className="tag" title="Checked disk snapshot · not a historical artifact">{current.candidate?'Retained':file?'On disk':'Current file'}</span>{fileActions}</div>}
     <SourceVersionNotice path={path} versions={current} accept={()=>{current.accept();setActiveLine(undefined);setReadingVersion(undefined);}}/>
     {markdown&&workspace?.approved&&<div className="current-document-views" role="group" aria-label="Markdown presentation"><button className="btn ghost" aria-pressed={formatted} onClick={()=>setDocumentMode(true)}>Document</button><button className="btn ghost" aria-pressed={!formatted} onClick={()=>setDocumentMode(false)}>Source</button></div>}
     {!formatted&&workspace?.approved&&<div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source file" scopeLabel="this file" idleLabel="" />
       <form className="source-go" onSubmit={e => { e.preventDefault(); go(); }}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e => { setLineInput(e.target.value); setLineError(undefined); }} /><button className="btn ghost small" aria-label="Go to line" disabled={!file}>Go</button><button type="button" className="btn ghost small" aria-label="Wrap lines" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap</button><span role="status">{lineError}</span></form>
 
     </div>}
-    {workspace?.approved&&<ImportContext path={path} current hideEmpty />}
+    {workspace?.approved&&!peek&&<ImportContext path={path} current hideEmpty />}
     {!workspace?<p className="current-reader-access" role="status">Checking workspace access…</p>:!workspace.approved&&<section className="current-reader-access" aria-label="Current file access"><h3>Read current files</h3><p>{workspace.root?`Approve reading in ${workspace.root}. Captured work stays separate.`:'This session has no captured workspace root on this machine.'}</p><button className="btn" disabled={granting||!workspace.root} onClick={()=>{setGranting(true);setGrantError('');void approve().catch(error=>setGrantError(error.message)).finally(()=>setGranting(false));}}>{granting?'Approving…':'Approve current-file reading'}</button>{grantError&&<p role="alert">{grantError}</p>}</section>}
     {error && <p className="bad" role="alert">{error} <button className="btn" onClick={() => void current.refresh()}>Retry current source</button></p>}
-    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <><div key={formatted?'document':'source'} ref={code} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?documentAllowed?<Markdown text={file.text} document/>:<p role="status">Rendered documents support up to 5,000 lines and 256 KiB. The complete file remains available in <button className="btn ghost" onClick={()=>setDocumentMode(false)}>Source</button>.</p>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
+    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <><div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?documentAllowed?<Markdown text={file.text} document/>:<p role="status">Rendered documents support up to 5,000 lines and 256 KiB. The complete file remains available in <button className="btn ghost" onClick={()=>setDocumentMode(false)}>Source</button>.</p>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?'On disk · ':''}{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 
