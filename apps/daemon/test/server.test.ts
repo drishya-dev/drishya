@@ -80,6 +80,12 @@ it('validates and authenticates captured command queries before worker reduction
   const result=await call(`/v1/recordings/${recId}/commands`,{headers:auth()});expect(result.status).toBe(200);expect(Array.isArray(result.body.items)).toBe(true);expect(result.body.items.length).toBeLessThanOrEqual(25);
 });
 
+it('authenticates and bounds review insight pages',async()=>{
+  expect((await call(`/v1/recordings/${recId}/review-insights`)).status).toBe(401);
+  for(const page of ['-1','one','0.5','1000001'])expect((await call(`/v1/recordings/${recId}/review-insights?page=${page}`,{headers:auth()})).status).toBe(400);
+  const response=await call(`/v1/recordings/${recId}/review-insights`,{headers:auth()});expect(response.status).toBe(200);expect(response.body.findings.length).toBeLessThanOrEqual(20);expect(response.body.prompts.length).toBeLessThanOrEqual(20);
+});
+
 it('waits for an in-flight handler before its caller closes SQLite', async () => {
   const isolated = mkdtempSync(join(tmpdir(), 'drishya-close-'));
   const app = new App(join(isolated, 'data'));

@@ -38,6 +38,7 @@ describe('worker-owned history pages', () => {
     expect(earlier.scene.step).toBe(latest.scene.step);
     expect(earlier.projection.prose.some(p => p.text === 'Captured response 0')).toBe(true);
     expect(earlier.loadedPassageIds).toHaveLength(2);
+    const overview=await app.history.reviewInsights(recordingId,3);expect(overview.promptCount).toBe(70);expect(overview.prompts).toHaveLength(10);expect(overview.prompts.at(-1)!.ordinal).toBe(1);
     expect(earlier.projection.prose.length).toBeLessThan(70);
   });
   it('counts the whole session since a reading mark while bounding digest previews', async () => {
@@ -57,6 +58,7 @@ describe('worker-owned history pages', () => {
     expect(digest.newSteps).toBe(page.scene.total);
     expect(digest.counts.tests).toBe(70);
     const commands=await app.history.commands(recordingId,{});
+    const insights=await app.history.reviewInsights(recordingId);expect(insights.findings.find(f=>f.kind==='repeated-command')!.count).toBe(70);expect(insights.facts.counts.tests).toBe(70);
     expect(commands.total).toBe(70);expect(commands.items).toHaveLength(25);
     expect(commands.items.every(row=>row.command==='npm test')).toBe(true);
     const older=await app.history.commands(recordingId,{cursor:commands.older});

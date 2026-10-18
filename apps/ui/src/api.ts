@@ -1,3 +1,4 @@
+import type {ReviewInsightsPage} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
 // Where the UI gets its data: the local daemon (live, importable) or a static replay bundle
 // (the hosted demo). Both expose the same surface, so every screen works in both.
@@ -68,6 +69,7 @@ export interface DataSource {
   importSource(path: string, adapterId: string, live: boolean): Promise<{ recordingId: string }>;
   projection(id: string): Promise<Projection>;
   history?(id: string, query?: HistoryQuery): Promise<HistoryPage>;
+  reviewInsights?(id:string,page?:number):Promise<ReviewInsightsPage>;
   commands?(id:string,query:CommandQuery):Promise<CommandPage>;
   summary?(id: string, from?: number): Promise<HistorySummary>;
   historyMarker?(id: string, step: number, types: Marker['type'][], direction: 1 | -1): Promise<number | undefined>;
@@ -195,6 +197,7 @@ export async function signIn(): Promise<'ok' | 'no-daemon' | 'signed-out'> {
 }
 
 export const daemon: DataSource = {
+  reviewInsights:(id,page=0)=>req(`/v1/recordings/${encodeURIComponent(id)}/review-insights?page=${page}`),
   commands:(id,query)=>req(`/v1/recordings/${encodeURIComponent(id)}/commands?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),
   storage: () => req('/v1/storage'),
   summary: (id, from = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/summary?from=${from}`),

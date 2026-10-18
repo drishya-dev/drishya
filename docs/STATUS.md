@@ -31,6 +31,22 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Factual Review workflow
+
+- **When:**18 October2026, `codex/review-workflow`; Commands101 merged as001d327.
+- **Delivered:**Grouped Review tools menu and Ctrl+K destinations for factual findings, complete paged prompt overview and explicit packet preview/copy/Markdown. Findings use exact command/artifact identity and captured unknown/missing/gap conditions with first/latest action references. Recognized pure polling wrappers are excluded after seeing real-session noise. Prompt windows count started calls without attributing outcomes causally. Packet includes complete counts and bounded evidence samples plus open local questions, with provenance/current-work exclusions and another redaction pass. Main visualization gains no resident panel.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Repeated/unknown material must be found manually | Quiet exact-evidence findings with precise references | Support investigation without a safety/stuck score |
+| Prompt rail has navigation but no factual overview | Whole-session20-row windows and exact prompt opening | Reach older work and understand recorded activity |
+| Captured outcomes and reviewer questions have separate handoffs | One inspectable redacted Markdown packet with scope/counts | Share useful review context without mixing today's files into history |
+| Optional review actions would create many buttons | One grouped tools disclosure and command navigation | Keep the core canvas calm |
+
+- **Validation:**Both TS/build and464units/83files pass; final polling refinement passes its focused pure tests. Three final focused browser journeys pass, including all45prompt windows, exact older-prompt navigation, command/Review entry, packet redaction/copy/download and1440/390px bounds. Additional actual Review-tools journey covers existing Drishya Codex and Skeletongraph Claude histories at desktop/phone; frames inspected. API authentication/range bounds and worker whole-session coverage checked. No hosted CI, native turn, private captures or user package/artwork changes committed.
+- **Next:**Useful changed/import map investigation, bookmarks/indicator audit, remaining all-pages/UI/theme/motion and real native/platform acceptance stay in TASKS.
+
+
 ### Yash with Codex — Whole-session captured commands
 
 - **When:**18 October2026, `codex/captured-commands`; interface100 merged as97bc6fa.
