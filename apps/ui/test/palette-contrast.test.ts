@@ -15,8 +15,10 @@ it('keeps readable Modern text and syntax on the base and elevated palette surfa
   for(const [,palette,body] of css.matchAll(/\[data-palette=(\w+)\]\s*\{([^}]+)\}/g)) {
     const tokens=Object.fromEntries([...body!.matchAll(/(--[\w-]+):\s*(#[\da-f]{3,6})\s*;/gi)].map(([,key,value])=>[key!,value!]));
     if(!tokens['--bg'])continue;palettes++;
-    for(const foreground of ['--t1','--t2','--t3','--t4','--syntax-keyword','--syntax-string','--syntax-function','--syntax-number']) {
+    for(const foreground of ['--t1','--t2','--t3','--t4','--syntax-keyword','--syntax-string','--syntax-function','--syntax-number','--source','--external','--edited','--pass','--fail','--focus']) {
       for(const background of ['--bg','--s1','--s2','--s3']) {
+        expect(tokens[foreground],`${palette}: missing ${foreground}`).toMatch(/^#[\da-f]{6}$/i);
+        expect(tokens[background],`${palette}: missing ${background}`).toMatch(/^#[\da-f]{6}$/i);
         const ratio=contrast(tokens[foreground]!,tokens[background]!);
         if(ratio<4.5)failures.push(`${palette}: ${foreground} on ${background} = ${ratio.toFixed(3)}`);
       }
