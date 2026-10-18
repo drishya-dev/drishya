@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October builder card adjustment:** Delivered in[104](104-tool-exchange-balance.md): approximately one more input line and one fewer result line at rest/hover, compact control gaps and no second divider. Full captured text remains scrollable. Twelve length/type combinations, local wheel/hover boundaries and actual captured command checked; full acceptance sweep failures remain separate.
+
 **18 October composer/navigation:** [102](102-composer-target-navigation.md) makes target/recording/state visible, clears phone Tools/Follow from Send, and adds Files/Workspace command destinations. Both harness forwarding/attachment/options and compact lifecycle checks pass locally. Next broad surface/browser audit; feature/native acceptance scope remains distinct.
 
 **18 October palette/readability:** [101](101-palette-reading-contrast.md) lifts deficient tertiary/syntax tokens, softens Paper and adds a static fading veil beneath unboxed prose. Seven-palette normal-text token guard passes after18 baseline failures; actual palette/history/Workspace checks pass. Core palette pass is delivered within101's stated scope; whole-product composited/accessibility acceptance and untouched components remain.
