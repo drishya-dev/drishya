@@ -1330,3 +1330,42 @@ test('completed native turns open chronological captured review without implying
   await expect(review.locator('.review-counts')).toBeVisible();expect(after).toBe('0');
   await expect(review).toContainText('order, not attribution or coverage');
 });
+
+
+test('Home keeps workspace scope on empty filters and navigates all virtual sessions with the keyboard',async({page})=>{
+  const base=app.store.getRecording(ids.codex!)!;
+  const recordings=Array.from({length:180},(_,i)=>({...base,id:`keyboard-${i}`,title:`Keyboard session ${String(i).padStart(3,'0')}`,workspaceRoot:i%2?'/work/beta':'/work/alpha',lastSourceTime:new Date(Date.now()-i*3600000).toISOString()}));
+  await page.route(/\/v1\/recordings$/,route=>route.fulfill({json:{recordings}}));
+  await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[],errors:[]}}));
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-session').first()).toBeVisible();
+  const list=page.locator('.mh-session-list');await list.focus();await page.keyboard.press('End');
+  await expect(page.locator('[data-session-index="179"] .mh-session-open')).toBeFocused();
+  expect(await page.locator('.mh-session').count()).toBeLessThan(35);
+  await page.keyboard.press('Home');await expect(page.locator('[data-session-index="0"] .mh-session-open')).toBeFocused();
+  await page.getByRole('button',{name:/alpha.*90/}).click();
+  const search=page.getByRole('textbox',{name:'Find sessions',exact:true});await search.fill('Keyboard session 001');
+  await expect(page.locator('.mh-empty h2')).toHaveText('No matching sessions');
+  await expect(page.locator('.mh-results>header h2')).toHaveText('alpha');await expect(page.locator('.mh-session')).toHaveCount(0);
+  await search.press('Escape');await expect(search).toHaveValue('');await expect(page.locator('.mh-session').first()).toContainText('Keyboard session 000');
+  await page.getByRole('button',{name:'Clear filters',exact:true}).click();await expect(page.locator('.mh-results>header h2')).toHaveText('All sessions');
+  await page.setViewportSize({width:390,height:844});await search.fill('Keyboard session 17');
+  await page.getByRole('button',{name:'Clear session search',exact:true}).click();await expect(search).toHaveValue('');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({path:resolve('.local/home-polish-phone.png')});
+});
+
+test('workspace utilities have grouped keyboard navigation without hiding expanded usage or trapping focus',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
+  const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('Session tools',{exact:true})).toBeVisible();
+  await page.keyboard.press('ArrowDown');await expect(menu.getByRole('button',{name:'Review work',exact:true})).toBeFocused();
+  await menu.locator('.usage-peek>summary').focus();await page.keyboard.press('Enter');await expect(menu.getByText('Input tokens',{exact:true})).toBeVisible();
+  await page.keyboard.press('End');await expect(menu.locator('.prompt-menu>summary')).toBeFocused();
+  await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
+  for(const width of [1440,390]) {
+    await page.setViewportSize({width,height:844});await trigger.click();await page.locator('.workspace-menu .usage-peek>summary').click();
+    const box=(await page.locator('.workspace-menu>div').boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);
+    await page.screenshot({path:resolve(`.local/utilities-polish-${width}.png`)});await page.mouse.click(10,400);await expect(menu).toHaveCount(0);
+  }
+});

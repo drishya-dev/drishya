@@ -449,6 +449,13 @@ test('a large repository groups spatial density and reveals files at the zoomed 
   await page.getByRole('button', { name: 'Fit', exact: true }).click();
   await expect.poll(() => page.locator('.map-group').count()).toBeGreaterThan(0);
   expect(await page.locator('.map-group').count()).toBeLessThan(48);
+  await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('client/src/file0.ts');
+  const match=page.locator('.map-matches').getByRole('button',{name:'client/src/file0.ts',exact:true});
+  const bounds=(await match.boundingBox())!;
+  await page.locator('.map-group').first().evaluate(node=>node.setAttribute('data-overlap-check',''));
+  await page.addStyleTag({content:`.map-group[data-overlap-check]{position:fixed!important;left:${bounds.x}px!important;top:${bounds.y}px!important;width:${bounds.width}px!important;height:${bounds.height}px!important;opacity:1!important;}`});
+  expect(await match.evaluate(node=>{const rect=node.getBoundingClientRect();return node.contains(document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2));}),'Search results must own clicks even when a spatial label crosses them').toBe(true);
+  await match.click();await expect(page.locator('.map-tip')).toContainText('client/src/file0.ts');
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') { await page.waitForTimeout(450); await page.screenshot({ path: resolve('.local/connected-grouped-map.png') }); }
 });
 

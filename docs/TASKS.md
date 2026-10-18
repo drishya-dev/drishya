@@ -32,6 +32,7 @@
 - [x] Measured adjustable Files and Git reading spaces; retained preferences and narrow Files navigation. Reviews96/98/99.
 - [x] Composer target/recording/state are visible; compact phone controls clear Send; attachments, native settings and minimized Stop use existing owners. Review102.
 - [x] Prose background no longer adds horizontal overflow. Follow accounts for late composer clearance. Reviews103/105.
+- [x] Home navigation polish: retain selected workspace when filters have no matches; clear-search/Escape and clear-filters actions, refresh feedback, Arrow/Page/Home/End access to all virtual rows, grouped utilities with visible-row keyboard navigation. Desktop/phone and actual-session surface checks; broader Home/visual acceptance remains below.
 - [ ] Review **Home**: intro, complete workspace/session inventory, filtering/dropdowns, long names, search, keyboard/empty/loading/failure states, responsive row density.
 - [ ] Review **header and edge panels**: title/minimize/menu alignment, hit targets, overflow, tool/MCP/agent disclosures, no duplicate controls or reserved middle blank space.
 - [ ] Review **composer**: compact draft/attachments, file/folder/image/paste previews, permissions/model/effort, send/stop/approval/error/reconnect states, professional focus/menus and edge translucency.
@@ -57,6 +58,7 @@
 - [x] Usage displays captured/reported values and honest missing states; no invented cost/token totals.
 - [x] Bounded recovery of tabs/panes/readers/history/map/Git/Home; re-fetch/reapprove after reload. Source/draft/prompt/attachment bodies and grants are not navigation metadata.
 - [x] Repository map has true3D orbit/pan/zoom, manual hold, semantic grouping, observed/all scope, exact file lookup and typed direct imports/importers. Automatic orbit has visibility/resource/reduced-motion guards.
+- [x] Keep repository file-search controls above spatial labels at all densities; real-session obstruction reproduced and deterministic overlapping-label click regression checked.
 - [ ] Make the Repository map useful for a concrete investigation: changed/observed/import neighborhoods, clear typed relationships and exact evidence/current-file destinations without graph overload. Existing import lookup is implemented; developer-task usability is unfinished.
 - [ ] Add optional **Commands** inside Review/command navigation: factual captured command ledger/filter/copy, no resident main panel or direct runner. T1 foundation before dependent findings.
 - [ ] Add quiet factual **Review findings**: exact evidence-backed tripwires and repetitions, without safety/stuck scores or inferred causality. T2/T4.
@@ -77,7 +79,7 @@
 ## Reliability and release
 
 - [x] Reproduced black-screen/render-loop and delayed upward-scroll anchor issues have bounded fixes/regressions; actual long histories from both harnesses exercised. Broad platform acceptance remains open.
-- [x] Latest functional typechecks/build and447 unit tests pass. Broad browser run:174 passed/6 skipped/4 failed; all four repaired cases pass together on targeted rerun. Review103 records this honestly; no second full-green-run claim.
+- [x] Functional baseline: typechecks/build and456 unit tests pass after PR99. Broad browser run:174 passed/6 skipped/4 failed; all four repaired cases pass together on targeted rerun. Review103 records this honestly; no second full-green-run claim.
 - [x] McAfee recurrence investigated: fresh trace attributes the matching script wrapper to the signed managed Codex updater, not Drishya/pnpm. Blocked payload is unavailable; no certified false-positive/safety claim or antivirus bypass. Review38.
 - [ ] Verify a supported idle-time managed-runtime update resolves the recurring AV conflict; do not interrupt active work or change antivirus protection.
 - [ ] Physical lower-resource/lower-core/Windows/macOS/Linux acceptance; memory/large-repo/long-session performance, actual phone/input devices and GPU fallback where supported.

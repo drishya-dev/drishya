@@ -11,3 +11,5 @@ import './theme-presets.css';
 import './hud.css';
 
 import './quiet-scrollbars.css';
+
+import './interaction-polish.css';

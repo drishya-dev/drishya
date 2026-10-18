@@ -85,7 +85,7 @@
 .map-file-label { background: color-mix(in srgb, var(--bg) 65%, transparent); padding: 0 3px; max-width: 190px; }
 .map-legend { font-size: 10px; gap: 3px; padding: 8px; border-radius: 6px; background: color-mix(in srgb, var(--bg) 85%, transparent); }
 .map-legend > .muted:nth-child(2) { display: none; }
-.connected-workspace .map-tools { gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--bg) 90%, transparent); max-width: min(380px, calc(100vw - 24px)); }
+.connected-workspace .map-tools { z-index: 5; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--bg) 90%, transparent); max-width: min(380px, calc(100vw - 24px)); }
 .map-tools .btn { font-size: 10px; padding: 5px 8px; }
 .map-tools input { width: 100%; font: 11px var(--sans); border: 1px solid var(--line); border-radius: 5px; background: var(--s1); padding: 7px 9px; }
 .map-legend { top: 12px; bottom: auto; left: auto; right: 12px; align-items: flex-end; }
