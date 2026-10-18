@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October Home density:** [97](97-home-reading-density.md) improves type and vertical allocation with synchronized80px desktop/104px narrow virtual rows, responsive reading-position preservation and scoped touch controls. Actual imported/discovered library and160-session reachability checked. This completes one Home audit slice; the broader component/palette/source-workflow queue remains open.
+
 **Responsive Files navigation:** [96](96-responsive-workspace-files.md) fixes the reproduced narrow Workspace chooser/header overlap, adds a local Files trigger and normal dismissal/focus recovery, and keeps responsive defaults distinct from explicit preferences. Desktop and touch-emulated checks pass; physical-phone acceptance and the wider component audit remain open.
 
 **Local draft comparison:** [95](95-workspace-draft-comparison.md) adds Compare draft within Workspace, with retained-base provenance, bounded Changes/Side by side and complete-text fallback, plus independent per-draft reading identity. This completes that local slice only; refreshed-source/version comparison and the joined evidence→native correction→recorded-check journey remain open.

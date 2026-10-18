@@ -68,6 +68,38 @@ test('Home surfaces changed imported journals and keeps filter menus keyboard ac
   await page.screenshot({path:resolve('.local/home-refined-filters.png')});
 });
 
+test('Home dense sessions remain reachable through virtualization and responsive resizing',async({page})=>{
+  const base=app.store.getRecording(ids.codex!)!;
+  const recordings=Array.from({length:160},(_,index)=>({...base,id:`density-${index}`,title:`Session ${String(index).padStart(3,'0')} · ${index%3===0?'Review a long workspace path and its complete captured verification — परीक्षण 🚀':'Read changes'}`,workspaceRoot:index%2===0?'/work/alpha':'/work/beta',lastSourceTime:new Date(Date.now()-index*3600000).toISOString()}));
+  await page.route(/\/v1\/recordings$/,route=>route.fulfill({json:{recordings}}));
+  await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[],errors:[]}}));
+  await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
+  const list=page.locator('.mh-session-list'),rows=page.locator('.mh-session');
+  await expect(rows.first()).toBeVisible();
+  expect(await rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(80);
+  expect(await rows.first().locator('.mh-session-open>span').evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(12);
+  await list.evaluate(node=>{node.scrollTop=1200;});
+  await expect.poll(()=>list.evaluate(node=>node.scrollTop)).toBe(1200);
+  await expect.poll(()=>list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');})).toMatch(/^Session /);
+  const key=await list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');});
+  await page.setViewportSize({width:390,height:844});
+  await expect.poll(()=>rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(104);
+  await expect.poll(()=>list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');})).toBe(key);
+  expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+  await list.evaluate(node=>{node.scrollTop=0;});
+  const seen=new Set<string>();
+  for(let index=0;index<160&&seen.size<160;index++) {
+    for(const title of await rows.locator('strong').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('title')!)))seen.add(title);
+    await list.evaluate(node=>{node.scrollTop+=Math.max(100,node.clientHeight*.8);});
+    await page.waitForTimeout(25);
+  }
+  expect(seen.size,'No session should be skipped when more virtual rows are loaded').toBe(160);
+  await expect(rows.filter({hasText:'Session 159'})).toBeVisible();
+  await page.setViewportSize({width:390,height:640});
+  expect(await list.evaluate(node=>node.clientHeight)).toBeGreaterThan(120);
+  await page.screenshot({path:resolve('.local/home-dense-phone-short.png')});
+});
+
 // The previous independent shell was retired by the builder. These tests protect
 // the new contract: Modern shares Legacy behavior and only changes its surroundings.
 for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: imported session, home, settings and reload`, async ({ page }) => {
@@ -772,6 +804,9 @@ test('touch file chooser keeps readable inputs and touch-sized dismissal without
   const page=await context.newPage();
   try {
     await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+    expect(await page.getByRole('textbox',{name:'Find sessions',exact:true}).evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);
+    const refresh=await page.getByRole('button',{name:'Refresh sessions',exact:true}).boundingBox();
+    expect(refresh!.width).toBeGreaterThanOrEqual(44);expect(refresh!.height).toBeGreaterThanOrEqual(44);
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
     await page.getByRole('button',{name:'Open developer workspace',exact:true}).tap();
     const explorer=page.getByRole('complementary',{name:'Repository files'});
