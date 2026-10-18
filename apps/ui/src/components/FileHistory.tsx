@@ -1,3 +1,4 @@
+import {CapturedSourceComparison} from './CapturedSourceComparison.tsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
 import { useApp } from '../state.ts';
@@ -154,7 +155,7 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
 function EvidenceColumn({ choices, value, choose, label, path, requestedLine }: { choices: FileEvidence[]; value?: FileEvidence; choose: (key: string) => void; label: string; path: string; requestedLine?: number }) {
   return <section className="file-evidence-column"><label><span className="muted small">{label}</span><select aria-label={label} value={value?.key ?? ''} onChange={(e) => choose(e.target.value)}>{choices.map((item) => <option key={item.key} value={item.key}>{item.operation.title} · {item.label}</option>)}</select></label>
     {value && <div key={value.key} className="file-evidence-material">
-      <p className="small">{value.label}</p>
+      <p className="small">{value.label}</p><CapturedSourceComparison evidence={value} path={path}/>
       {value.snippet !== undefined ? <>
         <p className="muted small">Exact captured search result · surrounding file was not captured by this result{value.startLine === undefined ? ' · line number not reported' : ''}</p>
         {value.startLine === undefined ? <Output text={value.snippet} /> : <CodeView text={value.snippet} path={path} startLine={value.startLine} activeLine={requestedLine} />}

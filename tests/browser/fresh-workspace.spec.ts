@@ -1641,3 +1641,20 @@ test('a restored current reader requests fresh consent and keeps inspector navig
   await reader.locator(':scope>header button[aria-label^="Close "]').click();const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
   await workspace.click();await expect(inspector).toHaveCount(0);const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk.getByRole('tablist')).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(inspector).toBeVisible();
 });
+
+test('captured excerpt comparison uses current reader consent, exact positions and phone-safe diff',async({page})=>{
+  const file=join(root,'comparison.ts'),journal=join(dir,'comparison.jsonl'),timestamp='2026-10-18T00:00:00Z';
+  writeFileSync(file,'export const untouched=1;\nexport const current=2;\n');
+  const rows=[{type:'user',uuid:'compare-user',sessionId:'compare',cwd:root,message:{role:'user',content:'Read comparison.ts'},timestamp},{type:'assistant',uuid:'compare-call',cwd:root,timestamp,message:{role:'assistant',content:[{type:'tool_use',id:'compare-read',name:'Read',input:{file_path:file,offset:2,limit:1}}]}},{type:'user',uuid:'compare-result',cwd:root,timestamp,toolUseResult:{file:{filePath:file,content:'export const captured=1;',startLine:2,numLines:1,totalLines:2}},message:{role:'user',content:[{type:'tool_result',tool_use_id:'compare-read',content:'2→export const captured=1;'}]}}];
+  writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('claude-code',journal)).recordingId;
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  await expect(page.locator('.history')).toBeVisible();
+  const grant=page.getByRole('button',{name:/^Enable workspace reading/});await expect(grant).toBeVisible();await grant.click();await expect(grant).toHaveCount(0);
+  await page.getByRole('treeitem',{name:'comparison.ts',exact:true}).click();
+  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();
+  const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare captured source with disk',exact:true}).click();
+  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('moved code is not mapped');
+  expect(await comparison.locator('.diff-scroll').textContent()).not.toContain('untouched');
+  await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({path:resolve('.local/captured-disk-comparison-phone.png')});
+});

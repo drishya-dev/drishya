@@ -21,3 +21,6 @@
 :root[data-experience=classic] .connected-workspace .history .op:is(.k-test,.k-mcp,.k-other) { flex-basis:min(var(--reading-width,380px),100%); min-width:min(320px,100%); }
 :root[data-experience=classic] .connected-workspace .history .op.k-shell.shape-wide { flex-basis:min(var(--reading-width,480px),100%); min-width:min(360px,100%); }
 :root[data-experience=classic] .captured-outcomes .verification-track { flex-wrap:wrap; gap:4px; height:auto; min-height:12px; max-height:96px; overflow:auto; }
+
+.map-import-directions {position:absolute;inset:0;pointer-events:none;color:var(--focus);overflow:hidden;}.map-import-directions>path {fill:none;stroke:currentColor;stroke-width:1.5;opacity:.85;}
+.captured-source-comparison {margin-block:6px;}.captured-source-comparison>p {font-size:12px;color:var(--fail);}

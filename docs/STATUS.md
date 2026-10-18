@@ -25,11 +25,25 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Yash with Codex | Selective PR110 integration, Git threads and truthful tool marks | Source comparison/map navigation, Git UI, outcome presentation/tests/docs |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Selective review integration and neutral result marks
+
+- **When:**18 October2026, `codex/branch-threads-integration`; selected source ideas/fixes from Harsh PR110 at d071ff3.
+- **Integrated:**Captured source vs separately approved current disk using current readers/version owners, exact line positions, complete bounded material, derived provenance labels and stale source/request guards. Missing positions/partial/oversized material fails explicitly. Narrow Files exits map, refit after whole-map consent, current-index importer→dependency arrows capped at40; newer map labels/occlusion/palettes retained. Did not adopt duplicate ReviewTools/history index/source-version class/follow-up state.
+- **Tool marks:**Unknown nested edit/creation is Change unverified with a neutral dash and explanation; other missing results remain neutral. Shared History now actually renders that mark rather than its hardcoded question mark. No inferred success or reducer/schema change.
+- **Validation:**Both TS/build and493units/89files. Five focused Git/source/map browser cases and actual three-session Git journey pass; comparison phone and graph frames inspected. Final shared unknown-mark and map/graph style checks recorded with the graph increment. No native turn/hosted CI; user package/logo files excluded.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Captured source and current disk require separate reading | Explicit bounded comparison in the existing reader | Keep historical evidence and current state distinct and accessible |
+| Files click can leave the map active | Explicit exit plus approved-map fit and regression | Restore the requested file tree |
+| Question mark on a proposed edit | Neutral mark, accessible unverified-change explanation | Make missing nested results understandable without fabricating success |
 
 ### Yash with Codex — Adaptive visual-content audit and PR110 review
 

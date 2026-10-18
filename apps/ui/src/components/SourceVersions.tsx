@@ -10,11 +10,11 @@ function Snapshot({file,label}:{file:CurrentFile;label:string}) {
   const viewport=useRef<HTMLDivElement>(null);
   return <section><h3>{label}<small title={file.modifiedAt}>{file.totalLines} lines{file.redacted?' · redacted':''}</small></h3><div ref={viewport} className="source-reading source-snapshot" tabIndex={0} aria-label={label}><WholeSource text={file.text} path={file.path} viewport={viewport} wrap/></div></section>;
 }
-export function SourceComparison({path,before,after,close,beforeLabel='Retained reading',afterLabel='Latest disk snapshot'}:{path:string;before:CurrentFile;after:CurrentFile;close:()=>void;beforeLabel?:string;afterLabel?:string}) {
+export function SourceComparison({path,before,after,close,beforeLabel='Retained reading',afterLabel='Latest disk snapshot',context='Local comparison of checked file snapshots · no changes applied'}:{path:string;before:CurrentFile;after:CurrentFile;close:()=>void;beforeLabel?:string;afterLabel?:string;context?:string}) {
   const comparison=useMemo(()=>compareDraft(before.text,after.text),[before.text,after.text]);
   return <ReadingDialog title={`Source versions · ${path}`} close={close} className="source-version-dialog">
-    <p className="source-version-context">{beforeLabel} → {afterLabel}<small>Local comparison of checked file snapshots · no changes applied</small></p>
-    {comparison.kind==='patch'?comparison.hunks.length?<DiffReader hunks={comparison.hunks} path={path} navigationKey={`source-versions/${path}/${before.modifiedAt}/${after.modifiedAt}`} scope="local-draft"/>:<p className="source-version-empty" role="status">The source text is identical.</p>:<div className="source-snapshot-pair"><Snapshot file={before} label={beforeLabel}/><Snapshot file={after} label={afterLabel}/></div>}
+    <p className="source-version-context">{beforeLabel} → {afterLabel}<small>{context}</small></p>
+    {comparison.kind==='patch'?comparison.hunks.length?<DiffReader hunks={comparison.hunks} path={path} navigationKey={`source-versions/${path}/${before.modifiedAt}/${after.modifiedAt}`} scope="source-comparison"/>:<p className="source-version-empty" role="status">The source text is identical.</p>:<div className="source-snapshot-pair"><Snapshot file={before} label={beforeLabel}/><Snapshot file={after} label={afterLabel}/></div>}
   </ReadingDialog>;
 }
 export function SourceVersionNotice({versions,accept,path}:{versions:SourceVersions;accept:()=>void;path:string}) {
