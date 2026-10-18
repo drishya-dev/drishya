@@ -25,9 +25,9 @@ it('changes projected depth and geometry when orbiting while preserving node and
 it('bounds texture cost independently of dense graph size and lowers it for low resources',()=>{
  const dense=gitThreadLayout(Array.from({length:300},(_,i)=>({hash:`c${i}`,parents:i<299?[`c${i+1}`]:[]})));
  const normal=gitRibbonGeometry(dense,.04),low=gitRibbonGeometry(dense,.04,.45,true);
- expect(normal.pieces.reduce((sum,piece)=>sum+piece.fibers.length,0)).toBeLessThanOrEqual(6000);
- expect(low.pieces.reduce((sum,piece)=>sum+piece.fibers.length,0)).toBeLessThanOrEqual(1200);
- expect(low.pieces.reduce((sum,piece)=>sum+piece.fibers.length,0)).toBeLessThan(normal.pieces.reduce((sum,piece)=>sum+piece.fibers.length,0));
+ expect(normal.pieces.reduce((sum,piece)=>sum+piece.bands.length,0)).toBeLessThanOrEqual(6000);
+ expect(low.pieces.reduce((sum,piece)=>sum+piece.bands.length,0)).toBeLessThanOrEqual(1200);
+ expect(low.pieces.reduce((sum,piece)=>sum+piece.bands.length,0)).toBeLessThan(normal.pieces.reduce((sum,piece)=>sum+piece.bands.length,0));
 });
 
 it('holds the primary bundle diameter across all orbit angles without flat ribbon pinches',()=>{

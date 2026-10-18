@@ -31,6 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Luminous reference material and compact prompt identity
+
+- **When:**18 October2026, `codex/luminous-git-ribbon`; spatial correctionPR113 previously merged as1ad074c.
+- **Delivered:**Replaced rejected stroked wires with contiguous filled spectral layers and a broad continuous sweep. Maintained near32px envelope,16px branch cap, actual parent/rim connections and explicit orbit. Hover no longer fades unrelated ribbon segments; commit dots are quieter. Subpixel overlap covers primary mesh antialias joints. Modern composer identity restores the original symbol and shows the workspace basename only, removing Codex/Claude from that row while keeping necessary native connection details.
+- **Validation:**Both TS/build and10focused geometry/window/topology cases pass. Graph root/merge/orbit/phone and continuous-history/composer assertions pass; actual three-session Codex/Claude desktop/phone journey checked. Final mesh-coverage/material frames inspected. See review112 latest correction and Before/After/Why table. No hosted CI, native turn, artwork dependency or capture/API change; physical/preference acceptance remains open.
+
 ### Yash with Codex — Spatial bundle and rim forks
 
 - **When:**18 October2026, `codex/spatial-git-ribbons`; precedingPR112 merged ascb2a674.

@@ -8,6 +8,8 @@
 
 ## Current priorities
 
+- [x] **Loki reference material / composer correction:** replace the rejected individual-thread treatment with one flowing luminous spectral ribbon, broader curves and softly layered material; retain actual forks, consistent thickness and depth. Prompt identity should show the original symbol plus workspace name only, no Codex/Claude label.
+
 - [x] **Spatial Git ribbon correction:** branches peel from the main ribbon’s outer rim at their actual fork/merge positions. Replace flat translated lines with sampled3D fiber geometry, depth ordering, nearly uniform32px volumetric bundle diameter (no zero-width/DNA pinches) and restrained spectral shading; preserve truthful topology and bounded work. Search further original visual references and document PR110 selective integration clearly.
 
 - [ ] **Compact test-case bars:** small semantic pass/fail/skip bars in tool cards, hover/focus detail and selection to assertion output. Individual names/indices/order only when captured; runner-summary totals remain explicitly grouped. Preserve complete output and accessible counts; verify actual Codex/Claude/wrapped/mixed-runner and missing/truncated cases, not only the demo.
