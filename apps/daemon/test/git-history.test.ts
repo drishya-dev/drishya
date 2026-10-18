@@ -35,6 +35,7 @@ afterAll(async()=>{if(server)await server.close();if(app)await app.close();if(di
 it('requires Git consent and pages real branches, tags and commit topology',async()=>{
   await expect(review.history(id)).rejects.toMatchObject({status:403});await access.approve(id);await review.approve(id);
   const firstPage=await review.history(id);
+  expect(firstPage.mainline).toMatchObject({name:'main',tip:git('rev-parse','refs/heads/main')});
   expect(firstPage.commits).toHaveLength(50);expect(firstPage.more).toBe(true);expect(firstPage.references).toHaveLength(100);expect(firstPage.referenceTotal).toBeGreaterThan(100);
   const next=await review.history(id,{start:50,referenceStart:100,generation:firstPage.generation});
   expect(next.commits.some(commit=>commit.hash===first)).toBe(true);expect(next.references.length).toBeGreaterThan(0);expect(next.more).toBe(false);

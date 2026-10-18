@@ -1,5 +1,7 @@
 # Drishya — Vision & Creative Direction
 
+**18 October Git timeline correction:**Git history is an on-demand graph with continuous scrolling, not a commit-range table/pager. The builder’s Sacred Timeline references call for a thicker primary band and thinner fork/merge threads, sharing a mixed-color treatment rather than one identity color per branch. Branch-segment width can grow with its observed commits but stays at most half the primary band. Hover/focus reveals commit context; selection opens real files/changes. Preserve true Git parents, scalable bounded loading and useful navigation; visual filaments are material treatment of existing edges, never invented branches or live activity. Distinct from the agent visualization and repository import map. See review112.
+
 **15 October header/material refinement:** [80](review/80-modern-breadcrumb-header.md) replaces 79’s centered two-line Modern header with a horizontal Home / repository / session breadcrumb and right-side utilities. Files and Toolbox share a single neutral gradient token. Legacy visualization and 79’s compact Git reader remain intact. Local typechecks/build and 14 Modern browser journeys pass (final responsive correction rerun); no hosted CI.
 
 **15 October compact Modern correction:** [79](review/79-compact-modern-review.md) supersedes 78’s header and review placement. Toolbox contains instruments/MCP/agents only; Git review has a separate branch-icon control matching Files / Repository. Review work/questions move to workspace utilities. The session header is slim and translucent without a rounded outer frame; the content-sized right Git reader is capped at 680 px with compact chrome. Legacy visualization and native/Git evidence owners remain shared. Local checks only.
@@ -302,3 +304,5 @@ Before any visual work ships, it passes three tests:
 3. **The ten-minute test** — after ten minutes of real reading, interrupting and scrubbing, does it still feel calm, or is it tiring? The opening animation is not the product; the tenth minute is.
 
 And one aspiration that sits above all three: **someone watching over your shoulder should stop and ask what that is.**
+
+**18 October attached Git timeline reference:** The main history ribbon is32px, four times the earlier8px experiment, with dense fine cyan/blue/white/violet/pink fibers and occasional pale warm strands. Branches share this material, weighted by loaded segment population and capped at16px. These are render strokes on actual parent edges, not additional commits or relationships; no looping particles or invented topology. See [112](review/112-git-threads-integration.md).

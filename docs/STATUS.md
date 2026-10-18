@@ -25,12 +25,24 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Selective PR110 integration, Git threads and truthful tool marks | Source comparison/map navigation, Git UI, outcome presentation/tests/docs |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Continuous spectral Git threads
+
+- **When:**18 October2026, `codex/branch-threads-integration`; selective PR110 work is commit7198cb0.
+- **Delivered:**[112](review/112-git-threads-integration.md): graph-first local Git timeline with actual fork/merge paths, continuous edge loading/anchor preservation, six retained metadata slices/300nodes, explicit bounds, hover/focus details, exact file/patch reading and direct right-side entry. The attached reference informs32px primary cyan/blue/white/violet/pink fiber material, four times the earlier8px band; branches use the same texture, weighted by loaded segment commits and capped at16px. Extra texture strokes are bounded separately and reduced in low-resource mode. Composer identity trimmed. No event-schema change, writes or network Git fetch.
+- **Validation:**Both TS checks/build and496units/89files pass. Focused continuous/root/merge/phone journeys pass; actual three-session Codex/Claude desktop/phone graph coverage and frame inspection. Seven prior focused comparison/map/status/graph journeys pass. No hosted CI or native turn; physical/human acceptance remains open. TASKS holds compact test bars/media/native/UI work separately unfinished.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Linear rail and commit-range pages | Continuously scrollable graph with real parent paths | Make fork/merge structure navigable |
+| Thin warm8px line |32px fine spectral fiber ribbon, branch cap16px | Match the supplied attached material and requested weight |
+| New metadata resets fit | Shared-anchor preservation | Keep investigation stable while loading history |
+| Long composer identity sentence | Harness/workspace/status, details on demand | Reclaim input space |
 
 ### Yash with Codex — Selective review integration and neutral result marks
 

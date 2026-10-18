@@ -11,7 +11,8 @@
 - [ ] **Compact test-case bars:** small semantic pass/fail/skip bars in tool cards, hover/focus detail and selection to assertion output. Individual names/indices/order only when captured; runner-summary totals remain explicitly grouped. Preserve complete output and accessible counts; verify actual Codex/Claude/wrapped/mixed-runner and missing/truncated cases, not only the demo.
 
 
-- [ ] **Git thread graph:** graph-first horizontal parent topology with actual fork/merge threads, hover/focus commit details, selection → changed files/patches, pan/zoom/fit and bounded responsive reading. Direct right-side Git graph entry; preserve exact local refs/paging/shallow truth, no decorative invented branches.
+- [x] **Git thread graph:** continuous scrollable history without commit-range pagination; one32px spectral fiber main strand with thinner shared-palette fork/merge strands (branch width proportional to observed commit counts, capped at half main), then graph-first horizontal parent topology with actual fork/merge threads, hover/focus commit details, selection → changed files/patches, pan/zoom/fit and bounded responsive reading. Direct right-side Git graph entry; preserve exact local refs/paging/shallow truth, no decorative invented branches.
+- [x] **Compact composer identity:** removed Continue with, decorative leading symbol and static recording suffix from the main row; harness/workspace/status remain and full identity stays under connection details.
 - [x] **Tool status marks:** shared unknown-result presentation uses a neutral dash and accessible explanation. Edit/creation requests decoded from exec wrappers say Change unverified; other missing results say Result not captured. Confirmed success/error/running remain distinct; projection status is unchanged. Units and shared DOM checks cover editing/creation; native-account acceptance remains separate.
 
 

@@ -92,3 +92,9 @@
 }
 
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace.exploring>.workspace-bar>:is(.workspace-leading,.workspace-secondary) { display:flex; }
+
+:root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control {display:flex;align-items:center;gap:3px;}
+@media(max-width:600px){
+ :root[data-ui-version=modern][data-experience=classic] .workspace-secondary>button,:root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control .git-open {font-size:0;width:42px;min-width:42px;min-height:44px;padding:9px;justify-content:center;gap:0;}
+ :root[data-ui-version=modern][data-experience=classic] .workspace-secondary {max-width:calc(50% - 10px);gap:2px;}
+}

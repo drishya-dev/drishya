@@ -498,10 +498,10 @@ test('local Git atlas connects real branches and commits with root/merge patches
   git(['update-ref','refs/heads/atlas-feature',feature]);git(['update-ref','refs/heads/atlas-merge',merge]);git(['tag','atlas-root',base]);
   await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedHash:string}).copiedHash=text;}}}));
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await page.getByRole('button',{name:'Git review',exact:true}).click();await page.getByRole('button',{name:'Branches & commits ↗',exact:true}).click();
+  await page.getByRole('button',{name:'Git graph',exact:true}).click();
   const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();
   if(await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).isVisible())await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).click();
-  const merged=atlas.locator(`[data-commit-hash="${merge}"]`);await expect(merged).toBeVisible();await expect(merged.locator('.atlas-rail')).toBeVisible();expect(await merged.locator('.atlas-rail path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.click();
+  const merged=atlas.locator(`[data-commit-hash="${merge}"]`);await expect(merged).toBeVisible();await expect(atlas.locator('.thread-links')).toBeVisible();expect(await atlas.locator('.thread-links path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await merged.click();
   const parents=atlas.getByRole('combobox',{name:'Commit comparison parent',exact:true});await expect(parents.locator('option')).toHaveCount(2);await parents.selectOption('1');await expect(parents).toHaveValue('1');
   await expect(atlas.locator('.atlas-message pre')).toContainText('Atlas merge fixture');await expect(atlas).toContainText('No changed paths against this parent.');
   await atlas.getByRole('textbox',{name:'Find Git branches and tags',exact:true}).fill('atlas-root');
@@ -512,7 +512,7 @@ test('local Git atlas connects real branches and commits with root/merge patches
   await atlas.getByRole('button',{name:'Copy commit hash',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedHash:string}).copiedHash)).toBe(base);
   await page.screenshot({path:resolve('.local/git-atlas-desktop.png')});
   for(const width of [390,320]){await page.setViewportSize({width,height:844});await expect(atlas.getByRole('region',{name:'Selected commit',exact:true})).toBeVisible();expect(await atlas.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/git-atlas-${width}.png`)});}
-  await atlas.getByRole('button',{name:'← Commits',exact:true}).click();await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await rootCommit.click();
+  await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await rootCommit.click();
   await atlas.getByRole('button',{name:'Current file',exact:true}).click();await expect(atlas).toHaveCount(0);await expect(page.locator('.current-file-reader')).toBeVisible();
 });
 
@@ -1657,4 +1657,17 @@ test('captured excerpt comparison uses current reader consent, exact positions a
   expect(await comparison.locator('.diff-scroll').textContent()).not.toContain('untouched');
   await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-disk-comparison-phone.png')});
+});
+
+test('Git timeline scrolls into older history without commit-range pages and keeps compact controls reachable',async({page})=>{
+  const git=(args:string[],input?:string)=>execFileSync('git',['-c','core.fsmonitor=false',...args],{cwd:root,encoding:'utf8',windowsHide:true,input}).trim();
+  const tree=git(['rev-parse','HEAD^{tree}']);let tip=git(['rev-parse','HEAD']);for(let index=0;index<82;index++)tip=git(['commit-tree',tree,'-p',tip],`Continuous fixture ${index}\n`);git(['update-ref','refs/heads/main',tip]);
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await expect(page.locator('.modern-composer-identity')).toContainText('Codex');await expect(page.locator('.modern-composer-intro')).toHaveCount(0);await expect(page.locator('.modern-composer-location code')).toHaveCount(0);await expect(page.locator('.modern-composer-identity>svg')).toHaveCount(0);
+  for(const width of [390,320,1440]){await page.setViewportSize({width,height:960});await expect.poll(async()=>{const boxes=await page.getByRole('navigation',{name:'Workspace views',exact:true}).locator('button:visible').evaluateAll(elements=>elements.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));return boxes.every((a,index)=>a.x>=0&&a.right<=width&&boxes.slice(index+1).every(b=>a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y));}).toBe(true);}
+  await page.getByRole('button',{name:'Git graph',exact:true}).click();const atlas=page.getByRole('dialog',{name:'Git history',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
+  await expect(atlas.locator('.atlas-commit')).toHaveCount(50);await expect(atlas.getByRole('navigation',{name:'Commit pages'})).toHaveCount(0);
+  const graph=atlas.getByLabel('Commits; drag background to pan',{exact:true});await graph.focus();await page.keyboard.press('PageUp');await expect.poll(()=>atlas.locator('.atlas-commit').count()).toBeGreaterThan(50);
+  await atlas.getByLabel('Choose Git commit',{exact:true}).selectOption(tip);await expect(atlas.locator('.atlas-message')).toContainText('Continuous fixture 81');await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();
+  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await page.screenshot({path:resolve('.local/git-thread-continuous.png')});
 });

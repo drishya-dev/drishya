@@ -58,7 +58,8 @@ export async function gitHistory(git:Git,options:GitHistoryQuery={}):Promise<Git
   }
   const matching=before.refs.filter(ref=>ref.name.toLowerCase().includes(query.toLowerCase()));
   if((await state(git)).generation!==before.generation)throw changed();
-  return {generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,selectedReference:selected?publicRef(selected):undefined};
+  const primary=before.refs.find(ref=>ref.raw==='refs/heads/main')??before.refs.find(ref=>ref.raw==='refs/heads/master');
+  return {mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,selectedReference:selected?publicRef(selected):undefined};
 }
 
 export async function gitCommit(git:Git,id:string,parentIndex=0,start=0,generation?:string):Promise<GitCommitDetail> {
