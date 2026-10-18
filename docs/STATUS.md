@@ -31,6 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex - Captured resource references and documents
+
+- **When:**18 October2026, `codex/resource-previews`.
+- **Delivered:**Explicit resource inspection from sealed native/MCP/result fields, retained reference/body provenance, clean HTTP(S) links opened only by click, captured Markdown/source and JSON/CSV handoffs. Limits256KiB/64references/1024visits/eight nested levels; no arbitrary code/prose scraping. Nested dialog cancel now closes only its owner and returns focus. [119](review/119-captured-resource-reading.md).
+- **Validation:**Both TS/build;540units/97files; seven structured/resource browser journeys plus final native/MCP rerun, desktop/390/320px, exact copying, no automatic remote load, link opening and nested Escape/close/focus. Three actual Drishya/Skeletongraph Codex/Claude long-history/multi-file Workspace regressions pass. No native/project writes, source-body persistence, schema/dependency/telemetry or hosted CI. Binary media/general selector and broader TASKS remain unfinished.
+
 ### Yash with Codex — Explorer preview safe layout
 
 - **When:**18 October2026, `codex/peek-safe-layout`.

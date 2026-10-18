@@ -1,3 +1,4 @@
+import {ResourceInspection} from './CapturedResources.tsx';
 import {useMemo} from 'react';
 import {DelimitedInspection} from './DelimitedDataReader.tsx';
 import {CapturedOutcomes} from './CapturedOutcomes.tsx';
@@ -5,7 +6,7 @@ import { toolOutputText } from '../lib/tool-output.ts';
 import { ToolOutput } from './ToolOutput.tsx';
 import {DataInspection} from './StructuredDataReader.tsx';
 /** Render only the captured preview. React escapes every value; no remote HTML or execution. */
-export function StructuredResult({text}:{text:string}){const decoded=useMemo(()=>toolOutputText(text).decoded,[text]);return <><CapturedOutcomes output={text}/><ResultBody text={text} decoded={decoded}/><DataInspection text={text}/>{!decoded&&<DelimitedInspection text={text}/>}</>;}
+export function StructuredResult({text}:{text:string}){const decoded=useMemo(()=>toolOutputText(text).decoded,[text]);return <><CapturedOutcomes output={text}/><ResultBody text={text} decoded={decoded}/><DataInspection text={text}/>{!decoded&&<><DelimitedInspection text={text}/><ResourceInspection text={text}/></>}</>;}
 function ResultBody({ text,decoded }: { text: string;decoded:boolean }) {
   if(decoded) return <ToolOutput text={text}/>;
   let value: unknown;

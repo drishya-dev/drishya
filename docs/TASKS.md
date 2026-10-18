@@ -8,7 +8,9 @@
 
 ## Current priorities
 
-- [x] **Explorer preview overlap correction (builder screenshot):** old saved modal geometry is clamped into the adjacent right reading lane, below navigation and above the logical composer bounds; the independent prompt rail moves to the free right edge. All four resize edges and movement obey the same bounds. Desktop/laptop/phone, reload, prompt collapse/expand, and actual long Blueprint/Codex/Claude previews checked. Full Workspace hides right navigation and starts alongside Files rather than below the Git stack. Review118. Resource-reference work remains saved for continuation; physical browser-zoom/device acceptance remains open.
+- [x] **Captured resource references:** on-demand structured MCP/native resource links and embedded text, explicit current HTTP(S) URL opening, Markdown/source and JSON/CSV handoff, bounded mixed content and nested-dialog Escape/focus ownership. No automatic remote loads or local-path resolution. Seven structured/resource browser journeys and actual three-session regression pass; image/PDF bytes and general selector remain separate. Review119.
+
+- [x] **Explorer preview overlap correction (builder screenshot):** old saved modal geometry is clamped into the adjacent right reading lane, below navigation and above the logical composer bounds; the independent prompt rail moves to the free right edge. All four resize edges and movement obey the same bounds. Desktop/laptop/phone, reload, prompt collapse/expand, and actual long Blueprint/Codex/Claude previews checked. Full Workspace hides right navigation and starts alongside Files rather than below the Git stack. Review118. Resource-reference continuation is recorded below; physical browser-zoom/device acceptance remains open.
 
 - [x] **Right navigation and compact file-peek presentation (builder correction):** Workspace below Git review/Git graph; measure the portal reader top from those controls, avoid Toolbox/full-Workspace conflicts, and remove oversized duplicate reader toolbar rows while keeping source truth and useful actions.
 
