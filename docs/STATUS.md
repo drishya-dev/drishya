@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | PR68–70 merged/pushed (45a09e7/574973a/f2af0c8). Explicit native-segment navigation and independent bottom prompt scrolling delivered. Review90 continues faithful reading; joined workflow, broad component and native/human/platform acceptance remain open. One coherent commit per PR. |
+| **Milestone** | PR79–81 merged/pushed: reproduced manual-scroll repair, local draft comparison and responsive Files navigation. Review97 continues Home readability;84 retains the whole component/palette and joined-workflow queue. Native/human/platform acceptance remains open. One coherent commit per PR; local checks only. |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -30,6 +30,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — Home scan density and complete session reachability
+
+- **When:**18 October2026, `codex/home-reading-density`, one coherent commit/PR after81 merged asf4301a5.
+- **Delivered:**[97](review/97-home-reading-density.md): compact Home chrome/resume, larger title/metadata text, synchronized80px desktop/104px narrow row allocation, responsive session-position preservation and touch input/utility sizing. Inventory/filter/native picker/recovery and shared visualization retained; no new panel/endpoint/dependency/native action.
+- **Validation:**Both typechecks/build and445 units/76 files pass. Seven selected Edge journeys pass together; final density/touch rerun passes.160 fixture sessions all reachable; actual library checked after discovery at three sizes,597 sessions/317 workspaces in that snapshot. Frames inspected privately. No hosted CI/native submission/private content; package/artwork edits excluded. Physical-phone/accessibility/platform acceptance remains open.
+- **Next:**Continue84's untouched component/Uiverse/palette pass, retained/refreshed/captured-source comparison and joined evidence→native correction→recorded-check workflow.92's quiet optional Review tools remain planned; this is a Home slice, not product-wide completion.
 
 ### Yash with Codex — Responsive Workspace Files navigation
 

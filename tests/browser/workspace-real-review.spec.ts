@@ -11,6 +11,20 @@ let app:App,server:RunningServer;
 test.skip(!store || !ids.length,'Opt in with a local redacted store and explicit recording IDs.');
 test.beforeAll(async()=>{if(!store || !ids.length)return;app=new App(store);server=await startServer({app,port:0});});
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();});
+test('actual library Home keeps sessions readable at desktop, phone and short-window sizes',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
+  await expect(page.locator('.mh-session').first()).toBeVisible();
+  await expect(page.locator('.mh-results>header')).not.toContainText('discovering local sessions',{timeout:30000});
+  for(const [name,width,height] of [['desktop',1440,960],['phone',390,844],['short',1440,640]] as const) {
+    await page.setViewportSize({width,height});
+    const list=page.locator('.mh-session-list');
+    await expect.poll(()=>list.evaluate(node=>node.clientHeight)).toBeGreaterThan(160);
+    expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+    const rows=page.locator('.mh-session');
+    expect(await rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(width<=650?104:80);
+    await page.screenshot({path:resolve(`.local/review-actual-home-density-${name}.png`)});
+  }
+});
 test('actual imported evidence is searchable across the local library without a native turn',async({page})=>{
   const result=await app.history.searchLibrary({q:'test',count:5});test.skip(!result.items.length,'This opted-in store has no indexed test text.');
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.getByRole('button',{name:'Search evidence',exact:true}).click();
