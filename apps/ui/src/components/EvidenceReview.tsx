@@ -1,3 +1,4 @@
+import {ReviewTools} from './ReviewInsights.tsx';
 import { useEffect, useState } from 'react';
 import type { Projection } from '@drishya/contracts';
 import { sinceSnapshot, type SinceSnapshot } from '../../../../packages/scene/src/since.ts';
@@ -42,7 +43,7 @@ function ReviewContent({ projection, close, after }: { projection: Projection; c
   }, [source, id, revision, projection.lastSequence, retry, page,after]);
   const groups = [['failures', 'Failures'], ['tests', 'Recorded checks'], ['unfinished', 'In progress'], ['gaps', 'Capture gaps']] as const;
   return <ReadingDialog title="Review work" close={close} className="evidence-review">
-    <div className="review-intro"><button className="btn ghost" onClick={()=>{close();requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-commands')));}}>Captured commands</button><p>Start with the change. Follow the evidence.</p><span>{after<0?'Whole recording · recorded order, not test coverage':'Captured after this turn began · order, not attribution or coverage'}</span></div>
+    <div className="review-intro"><ReviewTools close={close}/><p>Start with the change. Follow the evidence.</p><span>{after<0?'Whole recording · recorded order, not test coverage':'Captured after this turn began · order, not attribution or coverage'}</span></div>
     {pageCount > 1 && <nav className="reader-pages review-pagination" aria-label="Recorded review pages"><button className="btn" aria-label="Previous review page" disabled={!page} onClick={() => setPage(n => Math.max(0, n - 1))}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>Previous</button><span aria-live="polite">Page {page + 1} of {pageCount}</span><button className="btn" aria-label="Next review page" disabled={page + 1 >= pageCount} onClick={() => setPage(n => n + 1)}>Next<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button><small>Up to 20 outcomes per group · 50 files per page</small></nav>}
     {error ? <p role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry</button></p> : !facts ? <p role="status">Opening recorded evidence…</p> : <>
       <div className="review-counts"><span><strong>{facts.editedFileCount.toLocaleString()}</strong> {facts.editedFileCount === 1 ? 'file' : 'files'} with change inputs</span><span><strong>{facts.counts.failures.toLocaleString()}</strong> failed {facts.counts.failures === 1 ? 'operation' : 'operations'}</span><span><strong>{facts.counts.tests.toLocaleString()}</strong> test {facts.counts.tests === 1 ? 'run' : 'runs'}</span></div>

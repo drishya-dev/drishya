@@ -1,3 +1,4 @@
+import {reviewInsights} from '../../../packages/scene/src/review-insights.ts';
 import {commandPage} from '../../../packages/scene/src/commands.ts';
 import { parentPort, workerData } from 'node:worker_threads';
 import { sinceSnapshot } from '../../../packages/scene/src/since.ts';
@@ -200,6 +201,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     const a = message.args;
     let value: unknown;
     if (message.method === 'search-library') value = source.searchLibrary(a.query);
+    else if(message.method==='review-insights')value=reviewInsights(current(a.id).projection,a.page);
     else if (message.method === 'commands') value=commandPage(current(a.id).projection.operations,a.query);
     else if (message.method === 'page') value = page(a.id, a.query);
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
