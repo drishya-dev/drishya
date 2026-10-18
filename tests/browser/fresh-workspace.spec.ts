@@ -383,9 +383,30 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
   await expect(git.locator('.git-review-layout')).toContainText('src/cart/total.ts');
   await expect(git.locator('.git-patch-reader')).toContainText('42');
+  const resize=git.getByRole('separator',{name:'Resize Git reading space',exact:true});
+  await resize.focus();await page.keyboard.press('End');
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(1200);
+  await page.keyboard.press('ArrowRight');
+  await expect(resize).toHaveAttribute('aria-valuenow','1168');
+  const grip=(await resize.boundingBox())!,edge=(await git.boundingBox())!;
+  await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();
+  await page.mouse.move(edge.x+edge.width-1000,grip.y+grip.height/2,{steps:5});await page.mouse.up();
+  await expect.poll(()=>git.evaluate(node=>Math.abs(node.getBoundingClientRect().width-1000))).toBeLessThanOrEqual(1);
+  const draggedWidth=Math.round((await git.boundingBox())!.width);
+  const patchWidth=(await git.locator('.git-patch').boundingBox())!.width;
+  await git.getByRole('button',{name:/^Hide files/}).click();
+  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeHidden();
+  expect((await git.locator('.git-patch').boundingBox())!.width).toBeGreaterThan(patchWidth+100);
+  await expect(git.locator('.git-patch-reader')).toContainText('42');
   await page.screenshot({path:resolve('.local/modern-compact-git-test.png')});
   await git.getByRole('button',{name:'Close Git review'}).click();
   await expect(git).toHaveCount(0);
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(draggedWidth);
+  await expect(git.getByRole('button',{name:/^Show files/})).toHaveAttribute('aria-expanded','false');
+  await git.getByRole('button',{name:/^Show files/}).click();
+  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
+  await git.getByRole('button',{name:'Close Git review'}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
   const utilities=page.locator('.workspace-menu[open]');
   await expect(utilities.getByRole('button',{name:'Review work',exact:true})).toBeVisible();
@@ -403,6 +424,7 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   const mobileBounds=(await git.boundingBox())!;
   expect(mobileBounds.x).toBeGreaterThanOrEqual(0);
   expect(mobileBounds.x+mobileBounds.width).toBeLessThanOrEqual(390);
+  await expect(git.getByRole('separator',{name:'Resize Git reading space',exact:true})).toBeHidden();
   await git.getByRole('button',{name:'Close Git review'}).click();
 });
 
