@@ -39,6 +39,7 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const step = useApp((s) => s.step);
   const revisions = useApp((s) => s.renderedRevisions);
   const [trailWidth, setTrailWidth] = useEvidenceState('file/trailWidth', 230);
+  const [windowWidth,setWindowWidth]=useEvidenceState('file/width',1700);
   // The map's narrower modeless reader must show source on its first frame.
   const [trailHidden, setTrailHidden] = useEvidenceState('file/trailHidden', explore);
   const [query, setQuery] = useEvidenceState('file/query', '');
@@ -114,12 +115,12 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const second = rightKey?choices.find(item=>item.key===rightKey):choices.at(-1);
   useEffect(() => { if (!leftKey && first) setLeft(first); }, [leftKey, first]);
   const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
-  return <ReadingDialog title={`Work on ${path}`} close={close} className="file-workspace" modeless={explore || canvas}>
+  return <ReadingDialog title={`Work on ${path}`} windowId={explore||canvas?undefined:'Captured file'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||canvas||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${windowWidth}px,calc(100vw - 28px))`}} resizeControl={explore||canvas||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth} minimum={640} maximum={1800} change={setWindowWidth} reset={()=>setWindowWidth(1700)} label="Resize captured file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore || canvas}>
     <EvidenceNavigation />
     {recoveryError&&<p role="status" className="file-workspace-intro">{recoveryError}</p>}
     <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}{requestedLine !== undefined && ` · Referenced line ${requestedLine} · captured ranges only`}</span></div>
     <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
-      {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} label="Resize file action history" />}
+      {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} reset={()=>setTrailWidth(230)} label="Resize file action history" />}
       <nav ref={trail} className="file-trail" aria-label="File action history">
         <input className="file-filter" aria-label="Filter actions on this file" placeholder="Find a recorded action" value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); setLeft(undefined); setRight(undefined); }} />
         {error && <p role="alert" className="bad">{error} <button className="btn" onClick={() => { setFailure(undefined); setRetry((n) => n + 1); }}>Retry</button></p>}

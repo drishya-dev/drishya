@@ -37,7 +37,7 @@ test('actual product surfaces keep evidence, current source, review and map navi
     const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
     if(await desk.isVisible())await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
     const back=page.getByRole('button',{name:'Back to work',exact:true});if(await back.isVisible())await back.click();
-    const current=page.locator('.current-file-reader');if(await current.isVisible())await current.locator(':scope>header button').click();
+    const current=page.locator('.current-file-reader');if(await current.isVisible())await current.locator(':scope>header button[aria-label^="Close "]').click();
     await expect(page.locator('.history')).toBeVisible();
     await page.getByLabel('More workspace options',{exact:true}).click();
     await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
@@ -47,7 +47,7 @@ test('actual product surfaces keep evidence, current source, review and map navi
     if(await changes.count()) {
       await changes.first().click();const evidence=page.locator('dialog.file-workspace');await expect(evidence).toBeVisible();
       await expect(evidence.getByText('Loading captured actions…',{exact:true})).toHaveCount(0);
-      await frame(`captured-file-${width}`);await evidence.locator(':scope>header button').click();
+      await frame(`captured-file-${width}`);await evidence.locator(':scope>header button[aria-label^="Close "]').click();
     } else await review.getByRole('button',{name:'Close Review work',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
     await page.locator('.workspace-menu[open]').getByRole('button',{name:/^Review questions/}).click();
@@ -61,7 +61,7 @@ test('actual product surfaces keep evidence, current source, review and map navi
     await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
     await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(path!);
     await nav.getByRole('option').filter({has:page.getByText(path!,{exact:true})}).first().click();await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();
-    await frame(`current-file-${width}`);await current.locator(':scope>header button').click();
+    await frame(`current-file-${width}`);await current.locator(':scope>header button[aria-label^="Close "]').click();
     await page.getByRole('button',{name:'Explore repository map',exact:true}).click();
     await page.getByRole('textbox',{name:'Find a file on the map',exact:true}).fill(path!);
     await page.locator('.map-matches').getByRole('button',{name:path!,exact:true}).click();
@@ -296,7 +296,7 @@ test('actual captured changes open import neighborhoods and current source witho
     if(await missing.isVisible()){await missing.getByRole('button',{name:'Open captured work',exact:true}).click();await expect(page.locator('dialog.file-workspace')).toBeVisible();continue;}
     await expect(drawer.locator('.map-connection-root')).toHaveText(path);await expect(drawer).toContainText('static relationships');
     const read=drawer.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/});await expect(read).toBeVisible();await read.click();
-    const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button').click();
+    const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button[aria-label^="Close "]').click();
     for(const width of [1440,390]){await page.setViewportSize({width,height:960});const tools=(await page.locator('.map-tools').boundingBox())!,box=(await drawer.boundingBox())!,zoom=(await page.locator('.map-zoom').boundingBox())!;if(width===390){expect(box.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(box.y+box.height).toBeLessThanOrEqual(zoom.y);}expect(box.x+box.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-task-${id}-${width}.png`)});}
   }
 });
@@ -305,7 +305,7 @@ test('actual captured changes open import neighborhoods and current source witho
 test('actual saved-file recovery and wrapper receipts stay readable without false process success',async({page})=>{
   test.setTimeout(90000);
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
-  for(const id of ids){await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);const reader=page.locator('dialog.file-workspace');if(await reader.isVisible()){await expect(reader.getByRole('combobox',{name:'First evidence',exact:true}).locator('option').first()).toBeAttached();await reader.locator(':scope>header button').click();}}
+  for(const id of ids){await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);const reader=page.locator('dialog.file-workspace');if(await reader.isVisible()){await expect(reader.getByRole('combobox',{name:'First evidence',exact:true}).locator('option').first()).toBeAttached();await reader.locator(':scope>header button[aria-label^="Close "]').click();}}
   const id=ids[1]??ids[0]!;const p=app.projection(id),op=p.operations.find(op=>op.id.endsWith('call_11c1eb358f694f7f9615e6c41a01c28d'));
   if(op){expect(op.detail).toMatchObject({kind:'shell',exitCode:null});expect(op.status).toBe('ok');}
   const first=app.projection(ids[0]!).operations.find(op=>op.id.endsWith('call_f6888c848b4f4ae1b3c12cfa6c0ab590'));if(first)expect(first.kind).toBe('shell');
@@ -317,7 +317,7 @@ test('actual saved-file recovery and wrapper receipts stay readable without fals
 test('actual unknown-outcome membership reaches older actions without full-session mounting',async({page})=>{
   const id=ids[0]!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  const file=page.locator('dialog.file-workspace');if(await file.isVisible())await file.locator(':scope>header button').click();
+  const file=page.locator('dialog.file-workspace');if(await file.isVisible())await file.locator(':scope>header button[aria-label^="Close "]').click();
   await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Review findings');await nav.getByRole('option').filter({hasText:'Review findings'}).click();const dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await dialog.getByRole('combobox',{name:'Finding category',exact:true}).selectOption('unknown-outcome');await expect(dialog.locator('[data-finding-members="unknown"]')).toBeVisible();await dialog.locator('[data-finding-members="unknown"]').click();await expect(dialog.locator('.finding-member')).toHaveCount(25);await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.getByText(/Page 2 of/)).toBeVisible();await expect(dialog.locator('.finding-member')).toHaveCount(25);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/findings-members-actual-${width}.png`)});}
   await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
@@ -329,7 +329,7 @@ test('actual current Markdown is readable in Files and transfers to Workspace wi
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   for(const id of [ids[0]!,ids.at(-1)!]){
     await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-    const captured=page.locator('dialog.file-workspace');if(await captured.isVisible())await captured.locator(':scope>header button').click();const restoredCurrent=page.locator('.current-file-reader');if(await restoredCurrent.isVisible())await restoredCurrent.locator(':scope>header button').click();
+    const captured=page.locator('dialog.file-workspace');if(await captured.isVisible())await captured.locator(':scope>header button[aria-label^="Close "]').click();const restoredCurrent=page.locator('.current-file-reader');if(await restoredCurrent.isVisible())await restoredCurrent.locator(':scope>header button[aria-label^="Close "]').click();
     await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();const desk=page.getByRole('region',{name:'Developer workspace',exact:true}),grant=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();await expect(desk.getByRole('tablist')).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
     await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('README.md');await nav.getByRole('option').filter({has:page.getByText('README.md',{exact:true})}).first().click();const reader=page.locator('.current-file-reader');await expect(reader).toBeVisible();const readingGrant=reader.getByRole('button',{name:'Approve current-file reading',exact:true});await expect(readingGrant.or(reader.getByRole('group',{name:'Markdown presentation',exact:true}))).toBeVisible();if(await readingGrant.isVisible())await readingGrant.click();await reader.getByRole('group',{name:'Markdown presentation',exact:true}).getByRole('button',{name:'Document',exact:true}).click();await expect(reader.locator('.desk-markdown')).toBeVisible();await expect(reader.locator('.desk-markdown')).not.toBeEmpty();await expect(reader.getByRole('status').filter({hasText:'Rendered documents support'})).toHaveCount(0);
     for(const width of [1440,390]){await page.setViewportSize({width,height:960});expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/current-document-actual-${id}-${width}.png`)});}

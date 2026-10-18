@@ -1,5 +1,7 @@
 # Codebase — the system as built
 
+**18 October adjustable readers:**`useReadingWindow` retains only validated `surface/Git review`, `surface/File reader` and `surface/Captured file` numeric x/y/height preferences through the existing bounded working-location contract. Live geometry is clamped to the current viewport/header and ignored at820px or narrower; no source/draft bodies or capabilities. Existing width owners and evidence reading state remain separate. Workspace persists reordered path references through `desk/files`; pane/tab changes do not discard drafts. Layout reset is presentation-only; no schema-event, daemon dependency or project-write capability.
+
 **18 October current readers:**Current-file Markdown shares safe document rendering with Workspace, capped at256KiB/5000lines with explicit whole-source fallback. `disk/formatted` and separate scroll/query state are navigation metadata only. `useCurrentSource` waits for approved access in the reader; a recovered reader offers consent, and approval invalidates older status callbacks. Legacy location recovery selects one current/historical/Workspace owner. Inspector yields to Workspace without discarding selected evidence. No direct file/config writes.
 
 

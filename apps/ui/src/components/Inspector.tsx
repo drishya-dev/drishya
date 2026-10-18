@@ -32,7 +32,7 @@ export function Inspector({ projection }: { projection: Projection }) {
 
   return (
     <aside className="inspector" aria-label="Operation detail" style={{ '--agent': agentColor(agent, projection.agents), '--inspector-width': `${width}px` } as React.CSSProperties}>
-      <ReadingResize value={width} minimum={360} maximum={1400} change={setWidth} label="Resize operation detail" fromRight />
+      <ReadingResize value={width} minimum={360} maximum={1400} change={setWidth} reset={()=>setWidth(760)} label="Resize operation detail" fromRight />
       <header className="insp-head">
         <div className="insp-meta">
           {projection.agents.length > 1 && <><span className="agent-dot" /><span>{agentName(agent)}</span><span className="muted">·</span></>}

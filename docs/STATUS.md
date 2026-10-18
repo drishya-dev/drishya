@@ -31,6 +31,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Adjustable reading surfaces
+
+- **When:**18 October2026, `codex/adjustable-readers`; command presentation107 merged as3f66683.
+- **Delivered:**Modern Git/current/captured file readers gain bounded desktop movement and height sizing, retained numeric session geometry, keyboard movement/resizing, default docking and reset. Captured files also gain overall width control. Existing dock widths reset through double-click/Enter; no visible grip added. Workspace tabs reorder by drag or Alt+Shift+Arrow, split panes balance on double-click, and layout reset preserves files/drafts. Narrow screens ignore desktop window geometry. Non-adjustable dialogs do not consume layout-memory entries.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Readers have width-only adjustment | Bounded height/movement with reset and keyboard controls | Let developers allocate reading space |
+| Desktop size can outlive a viewport change | Clamp live geometry; use normal narrow layouts | Keep controls reachable after resizing |
+| Tabs remain in opening order | Retained reorder plus balanced/reset panes | Arrange a reading workflow without reopening files |
+
+- **Validation:**Both typechecks/build and477units/85files pass. Focused desktop/phone move/height/reload/reset, Git width/content, Markdown/6000-line fallback and editor journeys pass; Workspace tab/pane/reset/native-preparation journey passes. Two actual Codex/Claude surface/document-transfer journeys pass; desktop Git frame inspected. Initial failures were test selectors assuming one header button and DOM text including SVG extension labels, corrected to exact targets/references. No native turn, draft/source persistence, dependency change or hosted CI.
+- **Next:**Remaining navigation, session identity, Home/phone/UI/palette/motion and native/platform acceptance in TASKS.
+
 ### Yash with Codex — Complete command presentation and adjustable-window inventory
 
 - **When:**18 October2026, `codex/command-readability`; current reading106 merged as6c5662c.
