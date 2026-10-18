@@ -35,3 +35,5 @@
 @media(pointer:coarse){.data-find input,.data-find select{font-size:16px;min-height:44px}}
 
 .delimited-note{font:12px/1.6 var(--sans);color:var(--t2);margin:0}
+
+.data-inspection{display:inline-flex;vertical-align:middle;margin:6px 6px 6px 0}
