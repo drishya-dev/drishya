@@ -5,7 +5,7 @@ import {gitThreadLayout} from '../lib/git-thread-layout.ts';
 import './git-thread-graph.css';
 import {useApp} from '../state.ts';
 
-const fiberColors=['#efffff','#73edff','#348fff','#c5caff','#ff9de7','#9a73ff','#aaffec','#e8d69b','#51bfff','#f2ddff'];
+const ribbonColors=['#e6ffff','#69eaff','#427bff','#b5afff','#ffb7ee','#9068fa','#96f4ff','#e8dbb7','#4fb8ff','#e5dbff'];
 
 export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset}:{commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
   const graph=useMemo(()=>gitThreadLayout(commits,primary?.tip,seeds,offset),[commits,primary?.tip,offset]),viewport=useRef<HTMLDivElement>(null);
@@ -59,8 +59,8 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
         <svg className="thread-links" width={graph.width} height={graph.height} aria-hidden="true">
           <defs><linearGradient id={gradient} x1="0" y1="0" x2={graph.width} y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#9e81ff"/><stop offset=".24" stopColor="#65dfff"/><stop offset=".48" stopColor="#e0faff"/><stop offset=".7" stopColor="#ae8fff"/><stop offset=".86" stopColor="#ffade9"/><stop offset="1" stopColor="#6be5ff"/></linearGradient></defs>
           {ribbons.pieces.map(piece=>{const edge=piece.edge;return <g key={piece.key} data-depth={piece.depth.toFixed(2)} className={`thread-bundle${active&&!neighbors.has(edge.from)?' muted':''}${selected===edge.to||hovered===edge.to?' active':''}`}>
-            <path data-parent={edge.from} data-child={edge.to} style={{fill:`url(#${gradient})`,stroke:`url(#${gradient})`,strokeWidth:.3/scale}} className="thread-ribbon" d={piece.surface}/>
-            {piece.fibers.map((fiber,index)=><path key={index} d={fiber.path} className="thread-fiber" style={{stroke:fiberColors[fiber.color],strokeWidth:(index%5===0?1.1:.6)/scale,opacity:fiber.shade}}/>)}
+            <path data-parent={edge.from} data-child={edge.to} style={{fill:`url(#${gradient})`,stroke:`url(#${gradient})`,strokeWidth:0}} className="thread-ribbon" d={piece.surface}/>
+            {piece.bands.map((band,index)=><path key={index} d={band.path} className="ribbon-lamina" style={{fill:ribbonColors[band.color],opacity:band.shade}}/>)}
           </g>;})}
         </svg>
         {ribbons.nodes.map(node=>{const commit=commits.find(commit=>commit.hash===node.hash)!;return <button key={node.hash} className={`thread-commit atlas-commit${node.primary?' thread-primary':''}`} data-commit-hash={node.hash} style={{left:node.x,top:node.y,width:hit,height:hit,margin:`-${hit/2}px 0 0 -${hit/2}px`,transform:`scale(${1/scale})`}} aria-pressed={selected===node.hash} aria-label={`${commit.subject||'Untitled commit'} · ${node.hash.slice(0,8)}`} onPointerEnter={()=>setHovered(node.hash)} onPointerLeave={()=>setHovered(current=>current===node.hash?'':current)} onFocus={()=>setHovered(node.hash)} onBlur={()=>setHovered('')} onClick={()=>choose(node.hash)}><i aria-hidden="true" style={{width:Math.min(scale<.35?3:6,hit),height:Math.min(scale<.35?3:6,hit),border:0}}/>{!!commit.labels.length&&(scale>=.45||node.hash===hovered||node.hash===selected)&&<span className="thread-label" style={node.x>graph.width-160?{left:'auto',right:0,transform:'none'}:undefined}>{commit.labels[0]}{commit.omittedLabels+commit.labels.length>1&&<small> +{commit.omittedLabels+commit.labels.length-1}</small>}</span>}</button>;})}

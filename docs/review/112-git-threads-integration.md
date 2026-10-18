@@ -63,3 +63,22 @@ Diameter remains near32px at every viewing angle, instead of shrinking to zero. 
 | Pan/zoom only | Explicit orbit drag/keyboard mode; ordinary pan retained | Inspect depth without hijacking scroll |
 
 Validation: both TypeScript checks and production build;10focused geometry/window/topology cases pass, including all-angle diameter, rim exits, depth order, identity, determinism and texture budgets. Two synthetic graph/continuous-history browser journeys and the actual three-session Codex/Claude desktop/phone journey check navigation and orbit; frames inspected. No hosted CI/native turn or broad hardware/assistive-tech certification.
+
+## Luminous material and composer correction —18 October
+
+The builder confirmed the attached image and the original Loki concept reference, and rejected the individual-thread execution. This supersedes the wire/cylindrical-fiber material above. Replace separate stroked wires with contiguous filled spectral laminae on the same spatial geometry. A broader two-frequency sweep replaces the tight repeating wiggle; the envelope remains near32px and branches at most16px. Cyan/ice blue/violet/pink/white are integrated into one bright material. Hover keeps the rest of the ribbon visible; commit points are subdued until focus/selection. Branch exits, parent identities, continuous metadata navigation and exact file/patch readers remain intact.
+
+The geometry helper now returns filled `bands` rather than separate fiber strokes, at most24layers/main piece and12/branch, within the same6,000-layer/1,200low-resource budget. Layer boundaries have small deterministic warping in source coordinates so adjacent edge pieces meet. No raster reference, external asset, random loop, nebula animation or invented Git branch is added. The image is art direction, not a claim of pixel-identical reproduction.
+
+Modern prompt identity is the original four-point symbol plus the workspace basename. Codex/Claude labels, Continue with and the recording suffix stay out of that primary row; native identity remains available in connection details where it matters. Status and permissions controls are unchanged.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Individually outlined wires | Filled, contiguous spectral material layers | Read as a coherent luminous ribbon |
+| Tight periodic center-line movement | Broad continuous sweeping curve | Follow the reference silhouette more closely |
+| Hover dims most of the material | Stable brightness with subdued commit marks | Keep the composition visible while investigating |
+| Codex/Claude label in prompt identity | Original symbol and workspace name | Follow the requested compact identity |
+
+Validation: both TS checks/build,10focused geometry/topology/window cases, continuous/root/merge/orbit browser checks and actual Codex/Claude desktop/phone graph reading. Composer assertions explicitly require a symbol, a workspace name and no harness text in the primary identity. Physical/preference and exact reference matching remain human acceptance.
+
+Final mesh-coverage correction: primary piece ends overlap by0.4screen pixels to cover SVG antialias gaps; opaque base material prevents transparent dark seams. This changes paint coverage only, not commit positions, parent IDs or selectable source/patch scope. Final two-case browser rerun checks this material and confirms no `.thread-fiber` outlines remain.
