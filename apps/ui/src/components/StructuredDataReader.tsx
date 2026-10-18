@@ -5,12 +5,13 @@ import {dataLabel,pointerKey,structuredData,visibleDataNodes} from '../lib/struc
 import './structured-data.css';
 
 /** Parsing and indexing happen only after an explicit reading request. */
-export function DataInspection({text}:{text:string}){
- const [open,setOpen]=useState(false);
- if(text.length>262144||!/^\s*[\[{]/.test(text))return null;
+export function DataInspection({text,available}:{text:string;available?:boolean}){
+ const [opened,setOpened]=useState<string>();
+ const eligible=available??(text.length<=262144&&/^\s*[\[{]/.test(text));
+ if(!eligible&&opened===undefined)return null;
  return <div className="data-inspection" onClick={event=>event.stopPropagation()}>
-  <button type="button" onClick={()=>setOpen(true)}>Inspect data</button>
-  {open&&<DataReader text={text} close={()=>setOpen(false)}/>}
+  {eligible&&<button type="button" onClick={()=>setOpened(text)}>Inspect data</button>}
+  {opened!==undefined&&<DataReader text={opened} close={()=>setOpened(undefined)}/>}
  </div>;
 }
 function DataReader({text,close}:{text:string;close:()=>void}){

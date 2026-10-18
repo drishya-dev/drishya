@@ -37,3 +37,7 @@
 .delimited-note{font:12px/1.6 var(--sans);color:var(--t2);margin:0}
 
 .data-inspection{display:inline-flex;vertical-align:middle;margin:6px 6px 6px 0}
+
+.captured-result-views{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;min-width:0}.captured-result-views>.data-inspection{margin:6px 0}
+
+.captured-result-views:empty{display:none}
