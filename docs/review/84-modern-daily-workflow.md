@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October full sweep:**[103](103-interface-acceptance-sweep.md) records174passed/6skipped/4failed on the pre-repair browser suite, fixes the24px prose-background overflow and adds actual desktop/phone surface coverage. Two old closed-tree origin-test assumptions and the reproduced72px initial-follow gap remain to fix. Further observed polish: compact narrow Review pagination and current-source reader controls.
+
 **18 October builder card adjustment:** Delivered in[104](104-tool-exchange-balance.md): approximately one more input line and one fewer result line at rest/hover, compact control gaps and no second divider. Full captured text remains scrollable. Twelve length/type combinations, local wheel/hover boundaries and actual captured command checked; full acceptance sweep failures remain separate.
 
 **18 October composer/navigation:** [102](102-composer-target-navigation.md) makes target/recording/state visible, clears phone Tools/Follow from Send, and adds Files/Workspace command destinations. Both harness forwarding/attachment/options and compact lifecycle checks pass locally. Next broad surface/browser audit; feature/native acceptance scope remains distinct.

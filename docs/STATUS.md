@@ -32,6 +32,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Actual-surface acceptance and prose overflow
+
+- **When:**18 October2026, `codex/interface-acceptance-repairs`; PR88 merged/pushed as497b1b3.
+- **Delivered:**[103](review/103-interface-acceptance-sweep.md): bounded prose veil horizontal extent and repeatable opt-in actual-session review/evidence/questions/usage/current source/Workspace/map survey at1440/390px. Private frames inspected; loading/recovery races removed from the survey setup.
+- **Validation:**UI build and both focused browser journeys pass; preceding full type/unit check447units/77files passes. Broad pre-repair browser run174passed/6skipped/4failed, honestly retained in103. No hosted CI/native turn/private content.
+- **Next:**Repair two closed-tree motion journeys and reproduced72px initial-follow gap. Narrow Review pagination/current-source controls remain polish findings;84/92 keep feature/native/human scope.
+
 ### Yash with Codex — Request/result reading balance
 
 - **When:**18 October2026, `codex/tool-exchange-balance`; isolated builder feedback during the broader audit.
