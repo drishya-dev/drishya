@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { timeSection, workspaceGroups } from '../src/lib/home-groups.ts';
+import {workingLocations} from '../../../packages/contracts/src/working-locations.ts';
+
+it('retains only an explicit boolean introduction preference',()=>{
+  const clean=(value:unknown)=>workingLocations({version:1,sessions:[{id:'@home',entries:[['home/intro',value]]}]}).sessions[0]!.entries;
+  expect(clean(false)).toEqual([['home/intro',false]]);expect(clean(true)).toEqual([['home/intro',true]]);
+  expect(clean('private text')).toEqual([]);expect(clean({text:'source'})).toEqual([]);
+});
 
 describe('Home workspace and calendar groups', () => {
   const now = new Date(2026, 9, 13, 12);

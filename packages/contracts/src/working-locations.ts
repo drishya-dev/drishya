@@ -74,6 +74,7 @@ export function workingLocations(input:unknown):WorkingLocations {
       if(key==='folders/width')return typeof item==='number'&&item>=220&&item<=420;
       if(key==='git/filesHidden')return typeof item==='boolean';
       if(key==='home/groups/shown')return typeof item==='number'&&Number.isInteger(item)&&item>=50;
+      if(key==='home/intro')return typeof item==='boolean';
       if(key==='home/days')return item===0||item===1||item===7||item===30;
       if(key.startsWith('desk/document/'))return key.includes('/scroll/')?record(item)&&typeof item.top==='number'&&typeof item.left==='number':record(item)&&typeof item.start==='number'&&Number.isInteger(item.start)&&item.start>=0&&typeof item.query==='string'&&typeof item.line==='string'&&typeof item.wrap==='boolean';
       if(['desk/primary','desk/secondary','folders/query','map/query','map/file','git/selected','home/query','home/harness','home/workspace','canvas/panelFocus'].includes(key))return typeof item==='string';

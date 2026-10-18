@@ -142,6 +142,11 @@ test('actual library Home keeps sessions readable at desktop, phone and short-wi
     expect(await rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(width<=650?104:80);
     await page.screenshot({path:resolve(`.local/review-actual-home-density-${name}.png`)});
   }
+  await page.setViewportSize({width:390,height:844});
+  const picker=page.getByRole('button',{name:'Choose workspace',exact:true});await picker.click();
+  const groups=page.locator('.mh-workspace-list');await groups.evaluate(node=>{node.scrollTop=node.scrollHeight;node.dispatchEvent(new Event('scroll'));});
+  const last=groups.locator('.mh-workspace').last();await expect(last).toBeVisible();const name=await last.locator('strong').innerText();await last.click();
+  await expect(picker).toHaveAttribute('aria-expanded','false');await expect(picker).toContainText(name);await expect(page.locator('.mh-results>header h2')).toHaveText(name);
 });
 test('actual imported evidence is searchable across the local library without a native turn',async({page})=>{
   const result=await app.history.searchLibrary({q:'test',count:5});test.skip(!result.items.length,'This opted-in store has no indexed test text.');
