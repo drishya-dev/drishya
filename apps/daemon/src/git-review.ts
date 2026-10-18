@@ -2,20 +2,21 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { lstat, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { isDeniedPath, redactText } from '@drishya/privacy';
+import { redactText } from '@drishya/privacy';
+import {safeGitPath as safe,gitDiffFlags as diffFlags} from './git-paths.ts';
+import {gitHistory,gitCommit,type GitHistoryQuery} from './git-history.ts';
 import { HttpError } from './app.ts';
 import type { WorkspaceAccess } from './workspace.ts';
 
 import type { GitFile, GitSnapshot, GitOmission } from './git-types.ts';
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
-const safe = (path: string) => !!path && !path.startsWith('.local/') && !path.startsWith('/') && !path.includes('\\') && !path.split('/').some(p => p === '..' || p === '.git' || p.includes(':')) && !isDeniedPath(path);
 
 /** Fixed argv without a shell; snapshot also overrides configured content filters. */
 export function readGit(root: string, args: string[], signal?: AbortSignal): Promise<string> {
   const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', GIT_NO_LAZY_FETCH: '1' };
   // Ambient override variables must not redirect this reader to a different worktree/config.
-  for (const key of Object.keys(env)) if (/^GIT_(?:DIR|WORK_TREE|INDEX_FILE|CONFIG.*|EXTERNAL_DIFF|DIFF_OPTS)$/.test(key)) delete (env as Record<string, string | undefined>)[key];
-  return new Promise((yes, no) => execFile('git', ['--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, signal, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {
+  for (const key of Object.keys(env)) if (/^GIT_(?:DIR|WORK_TREE|COMMON_DIR|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|NAMESPACE|SHALLOW_FILE|REPLACE_REF_BASE|GRAFT_FILE|INDEX_FILE|CONFIG.*|EXTERNAL_DIFF|DIFF_OPTS)$/.test(key)) delete (env as Record<string, string | undefined>)[key];
+  return new Promise((yes, no) => execFile('git', ['--no-pager','--no-replace-objects','--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, signal, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {
     if (error && String(error.code) === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') no(new HttpError(413, 'Git output exceeds the inspection content limit.'));
     else if (error) no(new HttpError(422, 'Git inspection failed or exceeded its time/content limit. Check Git installation and repository state.'));
     else yes(stdout);
@@ -23,7 +24,6 @@ export function readGit(root: string, args: string[], signal?: AbortSignal): Pro
 }
 
 type GitReader = typeof readGit;
-const diffFlags = ['--no-ext-diff', '--no-textconv', '--no-color', '--no-renames', '--ignore-submodules=all'];
 const changed = () => new HttpError(409, 'Repository changed during inspection. Refresh before reviewing.');
 
 async function fileMarkers(root: string, paths: string[]): Promise<string> {
@@ -70,6 +70,21 @@ export class GitReview {
   revoke(id: string) { this.grants.delete(id); }
   status(id: string) { return { approved: this.grants.has(id), scope: 'current-git' as const }; }
   async approve(id: string) { await this.workspace.root(id); this.grants.add(id); return this.status(id); }
+  private async readHistory<T>(id:string,inspect:(git:(args:string[])=>Promise<string>)=>Promise<T>):Promise<T> {
+    if(!this.grants.has(id))throw new HttpError(403,'Approve read-only Git inspection separately.');
+    if(this.busy.has(id))throw new HttpError(409,'Git inspection is already running.');
+    this.busy.add(id);
+    const signal=AbortSignal.timeout(30_000);
+    try{
+      const root=await this.workspace.root(id),git=(args:string[])=>this.read(root,args,signal);
+      if(await realpath(resolve((await git(['rev-parse','--show-toplevel'])).trim()))!==root)throw new HttpError(403,'The selected workspace must be the repository root.');
+      const result=await inspect(git);
+      if(!this.grants.has(id)||await this.workspace.root(id)!==root)throw new HttpError(403,'Git reading access changed. Approve this workspace again.');
+      return result;
+    }finally{this.busy.delete(id);}
+  }
+  history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,git=>gitHistory(git,query));}
+  commit(id:string,hash:string,parent=0,start=0,generation?:string) {return this.readHistory(id,git=>gitCommit(git,hash,parent,start,generation));}
   async snapshot(id: string, start = 0): Promise<GitSnapshot> {
     if (!Number.isSafeInteger(start) || start < 0) throw new HttpError(400, 'Invalid Git page.');
     if (!this.grants.has(id)) throw new HttpError(403, 'Approve read-only Git inspection separately.');

@@ -31,19 +31,18 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Sessions-first Home and navigation handovers
+### Yash with Codex — Local Git branch atlas
 
-- **When:**18 October2026, `codex/home-reading-priority`; adjustable readers108 merged asa06ce1d.
-- **Delivered:**Modern Home prioritizes sessions when an inventory exists; About retains an explicit boolean introduction preference. Phone workspace selection is an on-demand bounded virtual chooser with outside/Escape/blur dismissal and focus return, freeing session space. Workspace→Repository/latest/Files destinations clear previous owners rather than appearing behind them; existing help distinguishes file reading, local drafts and import relationships.
+- **When:**18 October2026, `codex/local-git-atlas`.
+- **Delivered:**Read-only local branches/tags/ref search, paged real commit-parent rail, complete bounded commit messages and redacted safe patches with root/merge-parent choice. Existing Git consent and current/captured-file destinations; adjustable surface and phone list/detail reading.16 rail lanes report omissions rather than invent edges. Shallow boundary parents come from real objects; unavailable parent comparison fails explicitly. No network fetch, project/config/journal writes or daemon dependency.
+- **Verified:**Both TS/build;488 units/87 files, followed by7 backend cases after shallow correction and2 focused Git browser journeys. Actual Drishya/Skeletongraph Codex/Claude histories checked at desktop/phone; both frame types inspected. Process/response/paging limits are explicit; broad device/native release acceptance remains open. No hosted CI.
 
 | Before | After | Why |
 | --- | --- | --- |
-| Returning users repeatedly see the large intro | Compact sessions heading and optional retained introduction | Prioritize returning to work |
-| Phone workspace choices reserve96px permanently |54px chooser with the same virtual list on demand | Make session discovery easier without dropping workspaces |
-| Command destinations can remain behind Workspace | Explicit reading-owner handover | Open the view the user requested |
+| Only staged/working changes | On-demand branch atlas beside existing Git review | Investigate local history without a permanent panel |
+| Historical patches could share working-tree labels | Commit scope with explicit parent choice | Preserve historical vs current meaning |
+| Dense unbounded graph would overwhelm reading |50 commit DOM rows,16 parent lanes, continuation disclosure; phone list/detail | Bound work without inventing topology |
 
-- **Validation:**Both TS/build, focused Home metadata unit checks, six Home/navigation browser journeys and actual library desktop/phone/short-window checks pass. Actual inventory612sessions/323workspaces, including deep virtual chooser selection. Phone frame inspected. A new compact refresh-label specificity overflow was reproduced and repaired; no hiding source content or weakening checks. Design skill applied; Uiverse collections reviewed as reference (https://uiverse.io/), no copied components or dependencies. No native turn or hosted CI.
-- **Next:**Remaining whole-product Uiverse/palette/motion/readers, session identity/packet and native/platform acceptance stay in TASKS.
 
 ### Yash with Codex — Adjustable reading surfaces
 

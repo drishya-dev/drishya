@@ -1,3 +1,4 @@
+import {openGitHistory} from './GitHistory.tsx';
 import {openReviewTool} from './ReviewInsights.tsx';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useApp } from '../state.ts';
@@ -47,6 +48,7 @@ export function WorkspaceNavigation() {
       all.push({ key: 'review', name: 'Review recorded changes and checks', detail: 'Captured outcomes, not coverage', run: () => click('.review-open') });
       all.push({ key: 'questions', name: 'Review questions', detail: 'Your unresolved review decisions', run: () => click('button[data-review-questions]') });
       if (kind === 'daemon' && id && !id.includes('+')) {
+        all.push({key:'git-history',name:'Explore Git branches and commits',detail:'Local parent topology, refs and commit changes',run:()=>requestAnimationFrame(openGitHistory)});
         all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => click('.git-open') });
         all.push({ key: 'workspace', name: 'Open developer workspace', detail: 'Read current files and prepare local drafts with workspace consent', run: () => { if(!useApp.getState().developerWorkspace)click('[aria-label="Open developer workspace"]'); } });
       }

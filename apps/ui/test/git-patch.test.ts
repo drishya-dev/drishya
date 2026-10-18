@@ -12,3 +12,7 @@ it('retains metadata and malformed/partial hunks as raw rather than inventing co
   expect(result[0]!.hunks).toEqual([]); expect(result[0]!.raw).toContain('Binary files');
   expect(gitPatchSections('Untracked file. Open on disk.')).toEqual([]);
 });
+it('labels commit patches separately from staged and worktree changes',()=>{
+  const sections=gitPatchSections('Commit changes\ndiff --git a/a b/a\n@@ -1 +1 @@\n-before\n+after\n');
+  expect(sections).toHaveLength(1);expect(sections[0]!.name).toBe('Commit');expect(sections[0]!.hunks).toHaveLength(1);
+});
