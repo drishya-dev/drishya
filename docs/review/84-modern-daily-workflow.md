@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October palette/readability:** [101](101-palette-reading-contrast.md) lifts deficient tertiary/syntax tokens, softens Paper and adds a static fading veil beneath unboxed prose. Seven-palette normal-text token guard passes after18 baseline failures; actual palette/history/Workspace checks pass. Core palette pass is delivered within101's stated scope; whole-product composited/accessibility acceptance and untouched components remain.
+
 **18 October Settings/palette survey:** [100](100-settings-palette-survey.md) audits seven actual-session palettes and six narrow Settings sections; fixes section offsets/orientation, consistent glyphs, progressive native picker and touch controls. Next measured tertiary/syntax contrast and quiet unboxed prose/map separation, then remaining untouched components/workflow. No claim of whole-product visual/accessibility completion.
 
 **18 October Files sizing:** [99](99-files-reading-width.md) adds a bounded adjustable Files rail, viewport-aware preference recovery, current Workspace clearance and stable agent allocation while Files is minimized. Actual long histories and multi-file reading checked across both harnesses. Continue the remaining untouched UI/palette/workflow queue; this is a layout slice.

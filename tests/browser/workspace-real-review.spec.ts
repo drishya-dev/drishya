@@ -31,6 +31,7 @@ test('actual session palette and settings survey keeps readable controls at desk
       return {label,tokens:Object.fromEntries(['--bg','--s1','--s2','--s3','--t1','--t2','--t3','--t4','--focus','--pass','--fail','--syntax-keyword','--syntax-string','--syntax-function','--syntax-number'].map(key=>[key,root.getPropertyValue(key).trim()])),body:read(dialog),select:read(dialog.querySelector('select')!),secondary:read(dialog.querySelector('.setting-row small')!)};
     },label));
     await settings.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
+    expect(await page.locator('.history').evaluate(node=>node.scrollWidth-node.clientWidth),`${label} history should not gain horizontal overflow`).toBeLessThanOrEqual(1);
     await page.screenshot({path:resolve(`.local/palette-${label.replaceAll(' ','-')}-history.png`),animations:'disabled'});
   }
   writeFileSync(resolve('.local/palette-survey.json'),JSON.stringify(metrics,null,2));
