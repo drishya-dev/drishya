@@ -27,7 +27,7 @@
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-turn-details:has(>*) { padding:0 12px 10px; }
 /* The original compact Toolbox, not the Legacy review desk in a new skin. */
 :root[data-ui-version=modern][data-experience=classic] .modern-tool-station { padding:0; border:0; background:none; box-shadow:none; }
-:root[data-ui-version=modern][data-experience=classic] .modern-toolbox { position:static; inset:auto; width:100%; max-width:none; min-width:0; max-height:none; display:block; padding:7px; background:var(--modern-panel-material); border:1px solid var(--line-2); border-radius:13px; box-shadow:0 10px 30px #0002,inset 0 1px #ffffff04; overflow:visible; }
+:root[data-ui-version=modern][data-experience=classic] .modern-toolbox { position:static; inset:auto; z-index:auto; width:100%; max-width:none; min-width:0; max-height:none; display:block; padding:7px; background:var(--modern-panel-material); border:1px solid var(--line-2); border-radius:13px; box-shadow:0 10px 30px #0002,inset 0 1px #ffffff04; overflow:visible; }
 .modern-toolbox .md-dock-heading { display:flex; align-items:center; justify-content:space-between; padding:9px 8px 13px; font:500 12px/1.5 var(--sans); color:var(--t1); }
 .md-dock-led { width:4px; height:4px; border-radius:50%; background:var(--t3); }
 /* Repository review has its own home, paired with Files / Repository across the stage. */

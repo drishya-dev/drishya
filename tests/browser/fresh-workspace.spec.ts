@@ -13,6 +13,43 @@ async function pasteDraft(editor:Locator,text:string) {
   await editor.evaluate((node,text)=>{const data=new DataTransfer();data.setData('text/plain',text);node.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));},text);
 }
 
+test('prompt minimize and reversal share measured bounds without changing layout each animation frame',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
+ const composer=page.getByRole('region',{name:'Harness prompt'});await expect(composer).toBeVisible();
+ const before=(await composer.boundingBox())!;
+ expect(before.width).toBeGreaterThan(500);
+ await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
+ const pause=async(time:number)=>composer.evaluate((node,time)=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=time;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};},time);
+ const start=await pause(0);for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
+ await page.screenshot({path:resolve('.local/prompt-reflow-start.png')});
+ expect(Math.abs((await composer.boundingBox())!.width-before.width)).toBeLessThan(1.5);
+ const middle=await pause(90);expect(middle.width).toBeGreaterThan(180);expect(middle.width).toBeLessThan(before.width);
+ await page.screenshot({path:resolve('.local/prompt-reflow-middle.png')});
+ expect((await composer.locator('[data-surface-label]').boundingBox())!.height).toBeLessThan(30);
+ await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
+ for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
+ await composer.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-node.offsetHeight-24))).toBeLessThanOrEqual(1);
+ await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
+ await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});const box=(await composer.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);}
+});
+
+test('toolbox minimizes from actual bounds and keeps its compact icon and independent scroll',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern#/r/${ids['claude-code']}`);
+ const toolbox=page.locator('.modern-tool-station');await expect(toolbox).toBeVisible();const before=(await toolbox.boundingBox())!;
+ await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();
+ const start=await toolbox.evaluate(node=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=0;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};});
+ for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
+ expect((await toolbox.locator('[data-surface-label] svg').boundingBox())!.height).toBeLessThan(24);
+ await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await expect(page.getByRole('complementary',{name:'Tools and agents'})).toBeVisible();
+ await page.emulateMedia({reducedMotion:'reduce'});await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();expect(await toolbox.evaluate(node=>node.getAnimations().length)).toBe(0);
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
+});
+
 test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-fresh-')); root = join(dir, 'shop');
   cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
@@ -848,6 +885,19 @@ test('Modern qualifies cached native receipts instead of claiming a current agen
 });
 
 
+test('Workspace keeps frequent controls visible and secondary actions dismiss and fit each pane',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
+ await page.getByRole('button',{name:'Open developer workspace'}).click();const desk=page.getByRole('region',{name:'Developer workspace',exact:true});const grant=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();
+ await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/total.ts');await page.locator('[data-spine-path="src/cart/total.ts"]').click();
+ const file=desk.getByRole('region',{name:'Workspace file src/cart/total.ts',exact:true});await expect(file.getByRole('button',{name:'Edit file',exact:true})).toBeVisible();await expect(desk.getByRole('button',{name:'Back to agent',exact:true})).toBeVisible();await expect(desk.getByRole('button',{name:'Split view',exact:true})).toHaveCount(0);
+ const layout=desk.getByLabel('Workspace layout actions',{exact:true}),actions=file.getByLabel('File actions for src/cart/total.ts',{exact:true});
+ await layout.click();await expect(desk.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await file.locator('header>strong').click();await expect(layout.locator('..')).not.toHaveAttribute('open','');
+ await layout.focus();await page.keyboard.press('Enter');await page.keyboard.press('ArrowDown');await expect(desk.getByRole('button',{name:'Split view',exact:true})).toBeFocused();await page.keyboard.press('End');await expect(desk.getByRole('button',{name:'Reset layout',exact:true})).toBeFocused();await page.keyboard.press('Escape');await expect(layout).toBeFocused();
+ await file.getByRole('button',{name:'Edit file',exact:true}).click();await expect(file.getByRole('textbox',{name:'Local draft for src/cart/total.ts'})).toBeFocused();await expect(file.getByRole('button',{name:'Download draft',exact:true})).toHaveCount(0);await expect(file.getByRole('button',{name:'Compare draft',exact:true})).toBeVisible();
+ for(const width of [1440,820,390,320]){await page.setViewportSize({width,height:width===320?568:844});await actions.click();const menu=file.locator('.desk-options-body'),box=(await menu.boundingBox())!,owner=(await desk.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);expect(box.y+box.height).toBeLessThanOrEqual(owner.y+owner.height+1);await expect(file.getByRole('button',{name:'Download draft',exact:true})).toBeVisible();await page.screenshot({path:resolve(`.local/workspace-simple-${width}.png`)});await page.keyboard.press('Escape');}
+ expect(readFileSync(join(root,'src/cart/total.ts'),'utf8')).toBe('export const total = 42;\n');
+});
+
 test('developer Workspace reads two files, preserves drafts and only prepares native edit/run requests',async({page})=>{
   let submitted=0;
   await page.route('**/controller/prompt',route=>{submitted++;return route.fulfill({status:500,json:{error:'Must not submit during workspace preparation'}});});
@@ -883,15 +933,15 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await expect(total.getByRole('button',{name:'Wrap',exact:true})).toHaveAttribute('aria-pressed','true');
   await expect(total.getByRole('searchbox',{name:'Find in src/cart/total.ts'})).toHaveValue('total');
   await desk.getByRole('tab',{name:'discount.ts',exact:true}).click();
-  await desk.getByRole('button',{name:'Split view',exact:true}).click();
+  await desk.getByRole('button',{name:'Split view',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await desk.getByRole('button',{name:'Split view',exact:true}).click();
   await expect(desk.locator('.desk-document')).toHaveCount(2);
   await expect(total).toBeVisible();
   const divider=desk.getByRole('separator',{name:'Resize workspace panes',exact:true});
   await divider.focus();await page.keyboard.press('End');await expect(divider).toHaveAttribute('aria-valuenow','75');
   await divider.dblclick();await expect(divider).toHaveAttribute('aria-valuenow','50');
-  await desk.getByRole('button',{name:'Reset layout',exact:true}).click();
+  await desk.getByRole('button',{name:'Reset layout',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await desk.getByRole('button',{name:'Reset layout',exact:true}).click();
   await expect(desk.locator('.desk-document')).toHaveCount(1);await expect(desk.getByRole('tab')).toHaveCount(2);
-  await desk.getByRole('button',{name:'Split view',exact:true}).click();await expect(total).toBeVisible();
+  await desk.getByRole('button',{name:'Split view',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await desk.getByRole('button',{name:'Split view',exact:true}).click();await expect(total).toBeVisible();
   await page.screenshot({path:resolve('.local/developer-workspace-desktop.png')});
   await total.getByRole('button',{name:'Edit file',exact:true}).click();
   const editor=total.getByRole('textbox',{name:'Local draft for src/cart/total.ts',exact:true});
@@ -914,13 +964,13 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await other.getByRole('textbox',{name:'Local draft for src/cart/discount.ts',exact:true}).fill('export const alternate = 7;\n');
   await expect(comparison.getByRole('button',{name:'Side by side',exact:true})).toHaveAttribute('aria-pressed','true');
   await expect(comparison.getByRole('searchbox',{name:'Find in patch',exact:true})).toHaveValue('total');
-  await other.getByRole('button',{name:'Discard draft',exact:true}).click();
+  await other.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await other.getByRole('button',{name:'Discard draft',exact:true}).click();
   await page.screenshot({path:resolve('.local/workspace-draft-patch.png')});
   await total.getByRole('button',{name:'Edit draft',exact:true}).click();
   await expect(editor).toHaveText('export const total = 43;\n');
   await expect(editor).toBeFocused();
   const downloadPromise=page.waitForEvent('download');
-  await total.getByRole('button',{name:'Download draft',exact:true}).click();
+  await total.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await total.getByRole('button',{name:'Download draft',exact:true}).click();
   const download=await downloadPromise;
   expect(readFileSync((await download.path())!,'utf8')).toBe('export const total = 43;\n');
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
@@ -988,13 +1038,13 @@ test('Workspace large draft comparison retains complete text, editing state and 
   await expect(editor).toBeFocused();
   await expect.poll(()=>page.evaluate(()=>getSelection()?.toString())).toBe(selection);
   await expect.poll(()=>scroller.evaluate(node=>node.scrollTop)).toBe(250);
-  const downloaded=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  const downloaded=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await downloaded).path())!,'utf8')).toBe(draft);
   await editor.press('Control+z');
-  const undone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  const undone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await undone).path())!,'utf8')).toBe(readFileSync(join(root,'src/cart/comparison.ts'),'utf8'));
   await editor.press('Control+y');
-  const redone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  const redone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await redone).path())!,'utf8')).toBe(draft);
   expect(readFileSync(join(root,'src/cart/comparison.ts'),'utf8')).not.toContain('draftLine');
 });
@@ -1017,7 +1067,7 @@ test('Workspace editor indents, undoes and preserves exact line endings without 
     await expect(editor).toBeFocused();await expect(file.locator('.cm-lineNumbers')).toBeVisible();
     await expect(file.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
     await editor.press('Control+End');await page.keyboard.insertText('// added');await editor.press('Enter');await page.keyboard.insertText('next');
-    const download=async()=>{const pending=page.waitForEvent('download');await file.getByRole('button',{name:'Download draft',exact:true}).click();return readFileSync((await (await pending).path())!,'utf8');};
+    const download=async()=>{const pending=page.waitForEvent('download');await file.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Download draft',exact:true}).click();return readFileSync((await (await pending).path())!,'utf8');};
     expect(await download()).toBe(original+'// added'+eol+'next');
     await editor.press('Control+Home');await editor.press('Tab');
     expect(await download()).toBe((path.endsWith('endings.ts')?'    ':'  ')+original+'// added'+eol+'next');
@@ -1034,7 +1084,7 @@ test('Workspace editor indents, undoes and preserves exact line endings without 
     }
     await page.setViewportSize({width:1440,height:960});
     expect(readFileSync(join(root,path),'utf8')).toBe(original);
-    await file.getByRole('button',{name:'Discard draft',exact:true}).click();
+    await file.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Discard draft',exact:true}).click();
   }
 });
 
@@ -1280,7 +1330,7 @@ test('Workspace creates an unsent file draft and forwards large contents as a na
   await page.getByLabel('More workspace options').click();
   await page.getByRole('button',{name:'Back to reading',exact:true}).click();
   await expect(desk).toBeVisible();await expect(document.getByRole('textbox',{name:'Local draft for src/created.ts',exact:true})).toBeFocused();
-  const backDownload=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  const backDownload=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await backDownload).path())!,'utf8')).toBe(text);
   expect(payload.prompt.length).toBeLessThan(2000);
   expect(()=>readFileSync(join(root,'src/created.ts'))).toThrow();
@@ -1383,7 +1433,7 @@ test('source refresh retains reading, compares versions and blocks a stale nativ
     await expect(file.locator('.diff-scroll')).toContainText('version = 4');await expect(file.locator('.diff-scroll')).toContainText('version = 3');
     await file.getByRole('button',{name:'Edit draft',exact:true}).click();
     await page.screenshot({path:resolve('.local/source-conflict-retained.png')});
-    await file.getByRole('button',{name:'Discard draft',exact:true}).click();
+    await file.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Discard draft',exact:true}).click();
   } finally {writeFileSync(join(root,path),original);}
 });
 

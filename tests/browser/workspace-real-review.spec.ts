@@ -13,6 +13,28 @@ let app:App,server:RunningServer;
 test.skip(!store || !ids.length,'Opt in with a local redacted store and explicit recording IDs.');
 test.beforeAll(async()=>{if(!store || !ids.length)return;app=new App(store);server=await startServer({app,port:0});});
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();});
+
+test('actual Codex and Claude prompt and toolbox controls remain bounded through manual collapse',async({page})=>{
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ for(const id of ids){await page.goto(`${server.url}/?experience=modern#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  const composer=page.getByRole('region',{name:'Harness prompt'}),toolbox=page.locator('.modern-tool-station');await expect(composer).toBeVisible();
+  for(const width of [1440,390]){await page.setViewportSize({width,height:960});
+   for(const [surface,minimize,expand] of [[composer,'Minimize prompt','Expand prompt'],[toolbox,'Minimize toolbox','Expand toolbox']] as const){
+    if(surface===toolbox&&!await toolbox.isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();
+    await expect(surface).toBeVisible();
+    const restored=surface.getByRole('button',{name:expand,exact:true});if(await restored.isVisible()){await restored.click();await surface.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));}
+    await expect(surface.getByRole('button',{name:minimize,exact:true})).toBeVisible();
+    const before=(await surface.boundingBox())!;await surface.getByRole('button',{name:minimize,exact:true}).click();
+    const first=await surface.evaluate(node=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=0;}const rect=node.getBoundingClientRect();return{x:rect.x,y:rect.y,width:rect.width,height:rect.height};});
+    for(const key of ['x','y','width','height'] as const)expect(Math.abs(first[key]-before[key]),key).toBeLessThan(2);
+    await surface.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));await surface.getByRole('button',{name:expand,exact:true}).click();await surface.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+    const after=(await surface.boundingBox())!;expect(after.x).toBeGreaterThanOrEqual(0);expect(after.x+after.width).toBeLessThanOrEqual(width+1);
+   }
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+  }
+ }
+});
 test('actual product surfaces keep evidence, current source, review and map navigation bounded',async({page})=>{
   test.setTimeout(90000);
   // Audit surfaces from a known starting location; recovery is covered separately.
@@ -237,18 +259,18 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();
   if(await grant.isVisible())await grant.click();
   await expect(desk.getByRole('tablist')).toBeVisible();
-  const split=desk.getByRole('button',{name:'Split view',exact:true});if(await split.getAttribute('aria-pressed')==='true')await split.click();
+  const split=desk.getByRole('button',{name:'Split view',exact:true,includeHidden:true});if(await split.getAttribute('aria-pressed')==='true'){await split.locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await split.click();}
   const graph=await app.graph(id);
   const paths=graph.nodes.map(node=>node.path).filter(path=>!path.startsWith('.local/')&&/\.(ts|tsx|md|css)$/.test(path));
   const preferred=['apps/ui/src/components/Viewer.tsx','apps/ui/src/modern/recovered-surfaces.css'];
   const selected=[...preferred.filter(path=>paths.includes(path)),...paths].filter((path,n,all)=>all.indexOf(path)===n).slice(0,2);
   expect(selected.length).toBe(2);
   for(const path of selected){await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill(path);await page.locator('[data-spine-path]').filter({has:page.getByText(path,{exact:true})}).click();}
-  await desk.getByRole('button',{name:'Split view',exact:true}).click();
+  await desk.getByRole('button',{name:'Split view',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await desk.getByRole('button',{name:'Split view',exact:true}).click();
   await desk.locator('.desk-pane').nth(0).click({position:{x:8,y:8}});
-  await desk.getByRole('tab',{name:selected[0]!.split('/').at(-1),exact:true}).click();
+  await desk.locator('[data-workspace-tab]').filter({has:page.locator(`[title^="${selected[0]} · drag"]`)}).getByRole('tab').click();
   await desk.locator('.desk-pane').nth(1).click({position:{x:8,y:8}});
-  await desk.getByRole('tab',{name:selected[1]!.split('/').at(-1),exact:true}).click();
+  await desk.locator('[data-workspace-tab]').filter({has:page.locator(`[title^="${selected[1]} · drag"]`)}).getByRole('tab').click();
   await expect(desk.locator('.desk-code,.desk-markdown')).toHaveCount(2);
   await expect(desk.locator('.desk-markdown>p[role=status]')).toHaveCount(0);
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-workspace.png`)});
@@ -260,8 +282,8 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
     await reader.getByRole('button',{name:'Go',exact:true}).click();
     await expect(reader.locator('footer')).toContainText(`${total} lines`);
     await reader.locator('.desk-code').evaluate(node=>{node.scrollTop=120;node.dispatchEvent(new Event('scroll',{bubbles:true}));});
-    await desk.getByRole('tab',{name:selected[1]!.split('/').at(-1),exact:true}).click();
-    await desk.getByRole('tab',{name:selected[0]!.split('/').at(-1),exact:true}).click();
+    await desk.locator('[data-workspace-tab]').filter({has:page.locator(`[title^="${selected[1]} · drag"]`)}).getByRole('tab').click();
+    await desk.locator('[data-workspace-tab]').filter({has:page.locator(`[title^="${selected[0]} · drag"]`)}).getByRole('tab').click();
     await expect(reader.locator('footer')).toContainText(`${total} lines`);
     await expect.poll(()=>reader.locator('.desk-code').evaluate(node=>node.scrollTop)).toBe(120);
   }
@@ -270,7 +292,7 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await expect(editor).toBeFocused();
   await expect(reader.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-editor.png`)});
-  await reader.getByRole('button',{name:'Discard draft',exact:true}).click();
+  await reader.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await reader.getByRole('button',{name:'Discard draft',exact:true}).click();
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
   await expect(page.locator('.history')).toBeVisible();
 });

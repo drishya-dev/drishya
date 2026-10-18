@@ -15,14 +15,15 @@
 /* Native details retain their semantics. Supporting engines keep the real panel
    rendered for a finite exit; older engines simply open/close immediately. */
 @supports selector(details::details-content) and (transition-behavior: allow-discrete) {
-  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy)[data-pointer-menu]::details-content { transition: content-visibility 160ms allow-discrete; }
-  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy)[data-pointer-menu] > div { opacity: 0; transform: scale(.95); transform-origin: top right; transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu]::details-content { transition: content-visibility 160ms allow-discrete; }
+  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu] > div { opacity: 0; transform: scale(.95); transform-origin: top right; transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
   :root[data-ui-motion]:not([data-low-resource]) .permission-policy[data-pointer-menu] > div { transform-origin: bottom left; }
-  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy)[data-pointer-menu][open] > div { opacity: 1; transform: none; }
-  :is(.workspace-menu, .permission-policy):not([open]) > div { pointer-events: none; }
+  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu][open] > div { opacity: 1; transform: none; }
+  :is(.workspace-menu, .permission-policy, .desk-options):not([open]) > div { pointer-events: none; }
   @starting-style {
     :root[data-ui-motion]:not([data-low-resource]) .workspace-menu[data-pointer-menu][open] > div { opacity: 0; transform: scale(.95); }
     :root[data-ui-motion]:not([data-low-resource]) .permission-policy[data-pointer-menu][open] > div { opacity: 0; transform: scale(.95); }
+    :root[data-ui-motion]:not([data-low-resource]) .desk-options[data-pointer-menu][open] > div { opacity: 0; transform: scale(.95); }
   }
 }
 @supports (transition-behavior: allow-discrete) {
@@ -31,8 +32,8 @@
   @starting-style { :root[data-ui-motion]:not([data-low-resource]) .composer-add-menu[data-pointer-menu]:not([hidden]) { opacity: 0; transform: scale(.95); } }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root :is(.workspace-menu, .permission-policy)[data-pointer-menu] > div { transition: none !important; transform: none !important; }
-  :root :is(.workspace-menu, .permission-policy)[data-pointer-menu]::details-content { transition: none !important; }
+  :root :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu] > div { transition: none !important; transform: none !important; }
+  :root :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu]::details-content { transition: none !important; }
   :root[data-ui-press] :is(.btn, .icon-btn, .composer-add) { transition: none !important; transform: none !important; }
   :root .composer-add-menu[data-pointer-menu] { transition: none !important; transform: none !important; }
 }
