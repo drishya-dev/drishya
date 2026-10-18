@@ -350,11 +350,21 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (!follow && !readingAnchor.current) rememberReading();
   }, [layout]);
 
+  const resizeFollow = useRef(followLatest);
+  resizeFollow.current = followLatest;
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const observer = new ResizeObserver(() => setViewport((old) => old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight }));
+    const observer = new ResizeObserver(() => {
+      setViewport((old) => old.height === el.clientHeight ? old : { top: el.scrollTop, height: el.clientHeight });
+      // Header/composer measurements can change inner padding without changing
+      // a passage's height. Follow that real scroll extent too, using the latest
+      // navigation guard so resize never pulls a deliberate reader back down.
+      if (useApp.getState().follow) resizeFollow.current();
+    });
     observer.observe(el);
+    const inner = el.querySelector('.history-inner');
+    if (inner) observer.observe(inner, { box: 'border-box' });
     return () => observer.disconnect();
   }, []);
 

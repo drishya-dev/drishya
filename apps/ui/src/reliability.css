@@ -15,6 +15,8 @@
 .map-file-label strong { font: 500 11px/1.5 var(--mono); color: var(--t2); }
 .map-file-label small { font: 10px/1.5 var(--mono); color: var(--t3); }
 .map-file-label { max-width: 220px; text-align: left; }
+/* A masked background must not add an invisible horizontal scroll range. */
+:root[data-ui-version=modern][data-experience=classic] .history .prose::before { inset-inline: 0; }
 :root[data-experience=classic] .map-tools { top: var(--workspace-tools-bottom, calc(var(--workspace-header-h, 64px) + 80px)); max-width: calc(100vw - 32px); }
 .connection-recovery span { flex: 1 1 300px; line-height: 1.5; }
 .attachment-chip .attachment-preview { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

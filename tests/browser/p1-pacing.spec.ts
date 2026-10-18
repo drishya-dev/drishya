@@ -4,8 +4,18 @@ import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from './legacy-test.ts';
+import type { Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+
+async function revealCapturedFile(page: Page, path: string) {
+  const parts = path.split('/');
+  for (let index = 1; index < parts.length; index++) {
+    const directory = page.getByRole('treeitem').and(page.getByTitle(parts.slice(0, index).join('/'), { exact: true }));
+    if (await directory.getAttribute('aria-expanded') === 'false') await directory.click();
+  }
+  await page.locator(`.folder-tree [data-spine-path="${path}"]`).scrollIntoViewIfNeeded();
+}
 
 let dir: string;
 let journal: string;
@@ -71,7 +81,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await app.ingest.sync(recordingId);
   await expect(page.locator('.prose').last()).toContainText('Now reading the guard');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Surface');
-  await page.locator('.folder-tree [data-spine-path="src/checkout/guard.ts"]').scrollIntoViewIfNeeded();
+  await revealCapturedFile(page, 'src/checkout/guard.ts');
   append({ type: 'assistant', message: { id: 'p1-next-read', role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id: 'p1-next-read', name: 'Read', input: { file_path: '/home/dev/shop/src/checkout/guard.ts', offset: 1, limit: 3 } }] } });
   await app.ingest.sync(recordingId);
   await expect(page.locator('article.op-read').last()).toContainText('awaiting excerpt');
@@ -280,15 +290,25 @@ test('file relationships start at measured renderer nodes and fall back when the
   await page.mouse.move(0, 0);
   await edit.locator('.op-head').hover();
   const tether = page.locator('.origin-thread[data-origin-type="Repository node"]');
-  await expect(tether).toHaveCount(1);
-  const point = (await page.locator('.map [data-origin-file="test/checkout.test.ts"]').boundingBox())!;
-  const coordinates = (await tether.getAttribute('d'))!.match(/^M([\d.-]+),([\d.-]+)/)!;
-  const renderer = await tether.getAttribute('data-origin-renderer');
-  const measured = renderer === 'overview' ? (await page.locator('.repo-lens [data-origin-file="test/checkout.test.ts"]').boundingBox())! : point;
-  expect(Number(coordinates[1])).toBeCloseTo(measured.x + measured.width / 2, 0);
-  expect(Number(coordinates[2])).toBeCloseTo(measured.y + measured.height / 2, 0);
+  // Read the line and its true origin in one frame. A finite arrival may finish
+  // between separate protocol calls even though its measured path was correct.
+  let sample: {x:number;y:number;point:{x:number;y:number;width:number;height:number};measured:{x:number;y:number;width:number;height:number}} | null = null;
+  await expect.poll(async()=>{
+    sample=await page.evaluate(()=>{
+      const line=document.querySelector('.origin-thread[data-origin-type="Repository node"]');
+      const world=document.querySelector('.map [data-origin-file="test/checkout.test.ts"]');
+      const source=line?.getAttribute('data-origin-renderer')==='overview'?document.querySelector('.repo-lens [data-origin-file="test/checkout.test.ts"]'):world;
+      const coordinates=line?.getAttribute('d')?.match(/^M([\d.-]+),([\d.-]+)/);
+      if(!world||!source||!coordinates)return null;
+      const box=(node:Element)=>{const r=node.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};};
+      return {x:Number(coordinates[1]),y:Number(coordinates[2]),point:box(world),measured:box(source)};
+    });return !!sample;
+  }).toBe(true);
+  const {point,measured}=sample!;
+  expect(sample!.x).toBeCloseTo(measured.x + measured.width / 2, 0);
+  expect(sample!.y).toBeCloseTo(measured.y + measured.height / 2, 0);
   // Occlusion must switch to another real view of the node, not draw through the reader.
-  await page.locator('.folder-tree [data-spine-path="test/checkout.test.ts"]').scrollIntoViewIfNeeded();
+  await revealCapturedFile(page, 'test/checkout.test.ts');
   await page.evaluate((point) => {
     const cover = document.createElement('div'); cover.className = 'inspector'; cover.id = 'synthetic-origin-cover';
     Object.assign(cover.style, { position: 'fixed', animation: 'none', transform: 'none', zIndex: '1000', left: `${point.x - 4}px`, top: `${point.y - 4}px`, width: '16px', height: '16px' });
@@ -306,7 +326,7 @@ test('file relationships start at measured renderer nodes and fall back when the
   await page.getByRole('checkbox', { name: /^Repository map/ }).uncheck();
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   // Map-off may return to the captured-path tree; make the reference visible again.
-  await page.locator('.folder-tree [data-spine-path="test/checkout.test.ts"]').scrollIntoViewIfNeeded();
+  await revealCapturedFile(page, 'test/checkout.test.ts');
   await edit.locator('.op-head').hover();
   await expect(page.locator('.origin-thread[data-origin-type="Repository node"]')).toHaveCount(0);
   await expect(page.locator('.origin-thread[data-origin-type="File reference"]')).toHaveCount(1);

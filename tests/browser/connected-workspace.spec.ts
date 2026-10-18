@@ -147,7 +147,7 @@ test('source reading links qualified current imports to a bounded map neighborho
   await expect(page.locator('.map')).toHaveAttribute('data-map-scope', 'direct-neighborhood');
   await expect(page.locator('.map-connections')).toContainText('src/actual.ts');
   await expect(page.locator('.map-legend')).toContainText('2 neighborhood files · 1 shown imports');
-  await expect.poll(async () => (await page.locator('.map-file-label').filter({ hasText: 'src/actual.ts' }).first().boundingBox())?.y ?? 0).toBeGreaterThan(250);
+  await expect.poll(async () => (await page.locator('.map-file-label[aria-label="src/actual.ts"]').first().boundingBox())?.y ?? 0).toBeGreaterThan(250);
   await page.screenshot({ path: resolve('.local/feedback-neighborhood.png') });
   await page.getByRole('button', { name: 'Show full map', exact: true }).click();
   await expect(page.locator('.map')).toHaveAttribute('data-map-scope', 'all');

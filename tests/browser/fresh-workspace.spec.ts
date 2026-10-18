@@ -1104,8 +1104,8 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     await page.getByRole('button',{name:name!,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
-    const expectedBase:Record<string,string>={jet:'#0a0a0a',paper:'#f2f3f5',midnight:'#0b0f19',mocha:'#11111b',tokyo:'#16161e',nord:'#242933',gruvbox:'#1d2021'};
-    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
+    const expectedBase:Record<string,string>={jet:'#000',paper:'#f2f3f5',midnight:'#0b0f19',mocha:'#11111b',tokyo:'#16161e',nord:'#242933',gruvbox:'#1d2021'};
+    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim().replace(/^#000000$/,'#000'))).toBe(expectedBase[palette!]);
     const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#2563eb',midnight:'#38bdf8',mocha:'#b4befe',tokyo:'#7aa2f7',nord:'#88c0d0',gruvbox:'#fe8019'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
     await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();

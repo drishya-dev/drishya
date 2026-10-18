@@ -68,7 +68,7 @@ test('map file labels are keyboard reading targets beneath header clearance', as
   await page.getByRole('button', { name: 'Explore repository map' }).click();
   const file = page.locator('button.map-file-label').first();
   await expect(file).toBeVisible();
-  const path = await file.textContent();
+  const path = await file.getAttribute('aria-label');
   const header = (await page.locator('.workspace-header').boundingBox())!;
   expect((await file.boundingBox())!.y).toBeGreaterThanOrEqual(header.y + header.height);
   await file.press('Enter');

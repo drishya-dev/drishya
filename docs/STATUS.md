@@ -26,7 +26,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | Who | What | Files |
 |---|---|---|
 | Yash with Codex | Complete interface acceptance sweep | Actual-session surface survey, four full-suite findings and review103 |
-| Harsh with Codex | Remaining review tools and source-version workflow | Derived review worker/API, review tools, Workspace comparison and review105; exclude Yash's acceptance sweep |
+| Harsh with Codex | Remaining review tools, source-version workflow and reproduced CI repairs | Derived review worker/API, review tools, Workspace comparison, History inner-size follow, reliability CSS/test setup and review105; Yash retains the wider surface survey |
 
 
 ---
