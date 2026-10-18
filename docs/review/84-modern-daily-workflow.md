@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October Files sizing:** [99](99-files-reading-width.md) adds a bounded adjustable Files rail, viewport-aware preference recovery, current Workspace clearance and stable agent allocation while Files is minimized. Actual long histories and multi-file reading checked across both harnesses. Continue the remaining untouched UI/palette/workflow queue; this is a layout slice.
+
 **18 October UI/theme order:** Refine geometry and reading interactions first, judge palettes on real material alongside those changes, retain Jet Black. [98](98-git-reading-space.md) adds bounded resizable Git reading and a collapsible/disambiguated file rail; broader Files/reader/menu/theme work remains open.
 
 **18 October Home density:** [97](97-home-reading-density.md) improves type and vertical allocation with synchronized80px desktop/104px narrow virtual rows, responsive reading-position preservation and scoped touch controls. Actual imported/discovered library and160-session reachability checked. This completes one Home audit slice; the broader component/palette/source-workflow queue remains open.

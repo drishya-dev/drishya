@@ -1,6 +1,13 @@
 /* Dedicated current-file desk. Captured history stays mounted and keeps receiving work. */
 @media(max-width:820px) {.folder-explorer header .icon-btn {width:32px;min-width:32px;height:32px;min-height:32px;padding:8px;border-radius:7px;background:var(--s2);}.folder-explorer header .icon-btn svg {width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;}}
 .folder-explorer .folder-tree {overscroll-behavior:contain;}
+.folder-explorer>.reading-resize {left:auto;right:0;width:8px;}
+.folder-explorer>.reading-resize::after {left:3px;}
+@media(min-width:821px) {
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.inspecting) .history {left:var(--files-rail,var(--stage-rail));}
+  :root[data-ui-version=modern] .developer-workspace {left:var(--files-rail,calc(var(--stage-rail,220px) + 6px));}
+  :root[data-ui-version=modern] .folders-hidden .developer-workspace {left:18px;}
+}
 .folder-explorer .ux-search input:focus-visible {outline:0;box-shadow:none;}
 .folder-explorer .ux-search:focus-within {outline:1px solid var(--t3);outline-offset:1px;}
 .folder-explorer button,.desk-header [data-workspace-files-trigger] {touch-action:manipulation;}

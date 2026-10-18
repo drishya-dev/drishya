@@ -114,6 +114,12 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const files = useApp(s => s.projection?.files);
   const hidden = useApp(s => s.foldersHidden);
   const narrow = useNarrowWorkspace(), developerWorkspace = useApp(s => s.developerWorkspace);
+  const modern = document.documentElement.dataset.uiVersion === 'modern';
+  const [width, setWidth] = useWorkspaceState('folders/width', 260);
+  const [viewport, setViewport] = useState(() => innerWidth);
+  useEffect(() => { const resize = () => setViewport(innerWidth); window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize); }, []);
+  const maximumWidth = Math.max(220, Math.min(420, Math.floor(viewport * .32)));
+  const readingWidth = Math.max(220, Math.min(maximumWidth, width));
   const shown = !hidden && (!narrow || hidden === false);
   const explorer = useRef<HTMLElement>(null);
   const closeExplorer = (returnFocus = false) => {
@@ -130,6 +136,14 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const folderAnchor = useRef<{ path: string; offset: number } | undefined>(undefined);
   const [error, setError] = useState<string>();
   const [graphRetry, setGraphRetry] = useState(0);
+  useLayoutEffect(() => {
+    const viewer = document.querySelector<HTMLElement>('.viewer');
+    if (!viewer || !modern || narrow) return;
+    // Keep the agent's allocation stable when Files is minimized; an explicit
+    // resize changes its rail, while Workspace can reclaim hidden Files space.
+    viewer.style.setProperty('--files-rail', `${readingWidth + 34}px`);
+    return () => { viewer.style.removeProperty('--files-rail'); };
+  }, [modern, narrow, readingWidth]);
   useEffect(() => {
     if (graph || !source || !id) return;
     let active = true; setError(undefined);
@@ -208,7 +222,8 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   }, [tree]);
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
   if (!shown) return null;
-  return <aside ref={explorer} style={narrow && developerWorkspace ? {top:'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))'} : undefined} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Repository files' : 'Session folders'}>
+  return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
+    {modern && !narrow && <ReadingResize value={readingWidth} minimum={220} maximum={maximumWidth} change={setWidth} label="Resize Files reading space" />}
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
     <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Find repository files' : 'Find session files'} placeholder="Find files…" maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}

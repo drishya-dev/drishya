@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Adjustable Files reading width
+
+- **When:**18 October2026, `codex/files-reading-width`; separate coherent increment after83 merged asf3176e8.
+- **Delivered:**[99](review/99-files-reading-width.md):260px default/220–420px bounded Files rail,32%-viewport cap and retained preference; stable agent allocation on minimize; Workspace clearance and reclaimed hidden Files area; observe the actual history column for origin geometry. Existing tree/narrow navigation and Legacy retained. Navigation dimensions only; no content/grant/native/repository write.
+- **Validation:**Both typechecks/build and446units/76files pass. Four focused Edge journeys cover resize/clearance/minimize/responsive defaults and six-width controls. All three actual Drishya/Skeletongraph Codex/Claude histories and multi-file Workspace pass, including post-render upward-scroll sampling. Frame inspected privately. No hosted CI/native turn/private content; user package/artwork excluded.
+- **Next:**Continue84's untouched readers/menus/settings/composer and palette quality together, retaining Jet Black; source-version/joined workflow and92 optional quiet Review tools remain open. Native/physical/accessibility/platform/human release acceptance remains.
+
 ### Yash with Codex — Adjustable Git reading space
 
 - **When:**18 October2026, `codex/git-reading-space`; one focused increment after82 merged as43f119e. Builder now prefers UI/theme decisions mixed as useful; geometry/readability first, retain Jet Black baseline.

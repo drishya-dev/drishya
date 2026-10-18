@@ -7,12 +7,17 @@ import type { ReplayBundle } from '@drishya/contracts';
 import { EvidenceTrail } from '../src/lib/evidence-navigation.ts';
 
 describe('bounded workspace navigation memory', () => {
-  it('retains only bounded Git reading dimensions and boolean file-list visibility',()=>{
+  it('retains only bounded Files/Git reading dimensions and boolean file-list visibility',()=>{
     const memory=new WorkspaceMemory(), session=memory.session('r');
-    session.set('git/width',1040);session.set('git/filesHidden',true);
+    session.set('git/width',1040);session.set('git/filesHidden',true);session.set('folders/width',360);
     const restored=new WorkspaceMemory();restored.restore(memory.snapshot());
     expect(restored.session('r').get('git/width')).toBe(1040);
     expect(restored.session('r').get('git/filesHidden')).toBe(true);
+    expect(restored.session('r').get('folders/width')).toBe(360);
+    for(const width of [219,421,NaN,Infinity,'wide']) {
+      session.set('folders/width',width);
+      expect(memory.snapshot().sessions[0]!.entries.some(([key])=>key==='folders/width')).toBe(false);
+    }
     for(const width of [419,1201,NaN,Infinity,'wide']) {
       session.set('git/width',width);session.set('git/filesHidden','yes');
       expect(memory.snapshot().sessions[0]!.entries).not.toContainEqual(['git/width',width]);
