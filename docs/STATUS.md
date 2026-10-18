@@ -25,12 +25,26 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Current-file reader control density | SessionWorkspace current reader, scoped styles and focused checks |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Current-source reading allocation
+
+- **When:**18 October2026, `codex/current-reader-controls`; Review pager95 merged as b98186b.
+- **Delivered:**Shared compact reading-history arrows in the action row; short visible Workspace/Go/Wrap with stable accessible names, explicit refresh/evidence icons and unchanged current/captured destinations. Hide empty current import context, reduce margins/footer chrome and override the inherited 48vh source cap in Modern. Keep real import connections and full find/line/wrap/copy behavior. TASKS checkbox updated; no new task list.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Separate history/action strips | Compact arrows and actions together | Return vertical space to source |
+| Source capped at48vh inside a larger bounded reader | Source fills remaining flex space | Remove the unexplained unused lower area |
+| Import summary has stacked margins and padding even when empty | Omit empty context; compact meaningful connections | Keep useful information with less repeated chrome |
+| Repeated disk label and spacious footer | One On disk qualifier and compact line-count/copy footer | Keep provenance clear without repeating it |
+
+- **Validation:**Both typechecks/build and447units/77files pass. Three focused reader journeys cover retained Legacy, Modern and import destinations; Modern source allocation reaches at least62% at1440/390/320px with active Find and Wrap, no horizontal dialog overflow. The pre-cap-fix Modern layout failed this guard. Keyboard evidence navigation and actual desktop/phone surface journey pass; settled frames inspected. No hosted CI/native turn/private content; package/artwork excluded. Physical/touch acceptance remains open; coarse-pointer controls have44px targets/16px inputs.
+- **Next:**Use TASKS for editable-source ergonomics, retained-version comparison and joined native correction/check workflow. Whole UI/themes/native/human finishing remains open.
 
 ### Yash with Codex — Compact recorded review navigation
 

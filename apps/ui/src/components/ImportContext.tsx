@@ -5,7 +5,7 @@ import { FileIcon } from './FileIcon.tsx';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 
 /** Optional current-index context; never an explanation of a historical action. */
-export function ImportContext({ path, current = false, openCurrent }: { path: string; current?: boolean; openCurrent?: (path: string) => void }) {
+export function ImportContext({ path, current = false, openCurrent, hideEmpty = false }: { path: string; current?: boolean; openCurrent?: (path: string) => void; hideEmpty?: boolean }) {
   const graph = useApp(s => s.graph);
   const source = useApp(s => s.source);
   const { workspace, approve } = useSessionWorkspace();
@@ -15,7 +15,7 @@ export function ImportContext({ path, current = false, openCurrent }: { path: st
   const [error, setError] = useState<string>();
   const neighbors = useMemo(() => repositoryNeighbors(graph, path), [graph, path]);
   const entries = [...neighbors.imports.map(path => ({ path, direction: 'Imports' })), ...neighbors.importedBy.map(path => ({ path, direction: 'Imported by' }))];
-  if (!graph || graph.temporal !== 'current') return null;
+  if (!graph || graph.temporal !== 'current' || hideEmpty && !entries.length) return null;
   const canReadDisk = source?.kind === 'daemon' && !!workspace?.root && !!id && !id.includes('+');
   const readDisk = async (target: string) => {
     if (!canReadDisk || opening) return;
