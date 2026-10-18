@@ -32,6 +32,7 @@ export function WorkspaceNavigation() {
     ];
     if(kind==='daemon')all.push({key:'library-search',name:'Search all session evidence',detail:'Find captured text across imported sessions',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-search-library')))});
     if (mode === 'history') {
+      if(kind==='daemon'&&id&&!id.includes('+'))for(const [section,name]of [['commands','Review captured commands'],['findings','Review evidence-linked findings'],['repeats','Review repeated work'],['turns','Review prompt summaries']])all.push({key:`review-tools/${section}`,name:name!,detail:'Whole-recording factual index · no execution',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('drishya-review-tools',{detail:section})))});
       if (document.querySelector('details.session-segments')) all.push({key:'newer-work',name:'Newer session work',detail:'Open newer captured work stored separately by the harness',run:()=>requestAnimationFrame(()=>{
         // Let the command dialog restore its prior focus before opening a menu;
         // otherwise that restoration immediately dismisses the new destination.

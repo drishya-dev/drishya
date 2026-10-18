@@ -3,6 +3,7 @@ import type { Operation } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import { readQuestions, saveQuestion, type ReviewQuestion } from '../lib/review-questions.ts';
 import { ReadingDialog } from './ProductShell.tsx';
+import { prepareNativeRequest } from '../lib/prepare-native-request.ts';
 
 function useQuestions() {
   const id = useApp(s => s.recordingId), kind = useApp(s => s.source?.kind);
@@ -33,6 +34,8 @@ export function ReviewQuestionEditor({ op }: { op: Operation }) {
   const { items, update, error } = useQuestions();
   const existing = items.find(item => item.operationId === op.id && item.status === 'open');
   const [text, setText] = useState(existing?.question ?? ''), [owner, setOwner] = useState(existing?.owner ?? ''), [saved, setSaved] = useState(false);
+  const [prepareError,setPrepareError]=useState('');
+  const source=useApp(s=>s.source),id=useApp(s=>s.recordingId);
   if (mode === 'replay') return null;
   return <details className="review-question-editor"><summary>Leave a review question</summary>
     <p>Your note · anchored to this captured action, separate from agent output.</p>
@@ -41,7 +44,7 @@ export function ReviewQuestionEditor({ op }: { op: Operation }) {
     <button className="btn" disabled={!text.trim()} onClick={() => {
       const now = new Date().toISOString();
       update({ id: existing?.id ?? crypto.randomUUID(), operationId: op.id, title: op.title, sequence: op.startSequence, question: text, owner, status: 'open', createdAt: existing?.createdAt ?? now, updatedAt: now }); setSaved(true);
-    }}>Save question</button><span role="status">{error || (saved ? 'Saved locally · view in Review questions' : '')}</span>
+    }}>Save question</button>{source?.kind==='daemon'&&id&&!id.includes('+')&&<button className="btn ghost" disabled={!text.trim()} onClick={()=>{try{prepareNativeRequest(`Please investigate this review question using native permissions and approvals. This is a question, not permission to change policy.\nCaptured action: ${JSON.stringify(op.id)}\nCaptured observation references: ${JSON.stringify(op.observationIds)}\nPaths from that action: ${JSON.stringify(op.paths.map(p=>p.path))}\nReview question: ${JSON.stringify(text)}\nInspect the current source, explain any correction, and report actual checks. These Drishya evidence IDs may not exist in the harness journal; ask for missing context instead of guessing.`,source,id,undefined,{operationId:op.id,path:op.paths[0]?.path});setPrepareError('');}catch(e){setPrepareError((e as Error).message);}}}>Prepare native follow-up</button>}<span role="status">{prepareError||error || (saved ? 'Saved locally · view in Review questions' : '')}</span>
   </details>;
 }
 

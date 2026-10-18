@@ -5,6 +5,8 @@ import { useApp } from '../state.ts';
 import { ReadingDialog } from './ProductShell.tsx';
 import { FileIcon } from './FileIcon.tsx';
 import { useEvidenceState } from './EvidenceNavigation.tsx';
+import { ReviewTools } from './ReviewTools.tsx';
+import { followUp, type FollowUp } from '../lib/follow-up.ts';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
 export function EvidenceReview({ projection, label = 'Review work' }: { projection: Projection; label?: string }) {
@@ -12,12 +14,15 @@ export function EvidenceReview({ projection, label = 'Review work' }: { projecti
   const mode = useApp(s => s.mode);
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
+  const [subsequent,setSubsequent]=useState(false),[followup,setFollowup]=useState<FollowUp>();
+  useEffect(()=>{const read=()=>setFollowup(source&&id?followUp(source,id):undefined);read();setSubsequent(false);window.addEventListener('drishya-followup-prepared',read);return()=>window.removeEventListener('drishya-followup-prepared',read);},[source,id]);
   const unavailable = source?.kind === 'daemon' && id?.includes('+');
-  return <><button className="btn ghost review-open" disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>
-    {open && mode !== 'replay' && <ReviewContent projection={projection} close={() => setOpen(false)} />}</>;
+  return <><ReviewTools/><button className="btn ghost review-open" disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>
+    {followup&&source?.kind==='daemon'&&mode==='history'&&<button className="btn ghost" onClick={()=>{setSubsequent(true);setOpen(true);}}>Review follow-up evidence</button>}
+    {open && mode !== 'replay' && <ReviewContent projection={projection} after={subsequent?followup?.after:undefined} followup={subsequent?followup:undefined} close={() => {setOpen(false);setSubsequent(false);}} />}</>;
 }
 
-function ReviewContent({ projection, close }: { projection: Projection; close: () => void }) {
+function ReviewContent({ projection, close, after=-1, followup }: { projection: Projection; close: () => void; after?:number; followup?:FollowUp }) {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId)!;
   const revision = useApp(s => s.renderedRevisions[id]);
@@ -30,7 +35,7 @@ function ReviewContent({ projection, close }: { projection: Projection; close: (
   useEffect(() => {
     let active = true;
     setError(undefined);
-    const request = source?.kind === 'daemon' ? source.since?.(id, -1, page) : Promise.resolve(sinceSnapshot(projection, -1, page));
+    const request = source?.kind === 'daemon' ? source.since?.(id, after, page) : Promise.resolve(sinceSnapshot(projection, after, page));
     if (!request) { setError('Review is unavailable for this recording.'); return; }
     void request.then(data => {
       if (!active) return;
@@ -39,10 +44,12 @@ function ReviewContent({ projection, close }: { projection: Projection; close: (
       setResponse({ page, data });
     }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [source, id, revision, projection.lastSequence, retry, page]);
+  }, [source, id, revision, projection.lastSequence, retry, page, after]);
   const groups = [['failures', 'Failures'], ['tests', 'Recorded checks'], ['unfinished', 'In progress'], ['gaps', 'Capture gaps']] as const;
   return <ReadingDialog title="Review work" close={close} className="evidence-review">
-    <div className="review-intro"><p>Start with the change. Follow the evidence.</p><span>Whole recording · recorded order, not test coverage</span></div>
+    <div className="review-intro"><p>{followup?'Recorded work after your follow-up was prepared':'Start with the change. Follow the evidence.'}</p><span>{followup?'Preparation is not submission. Later evidence is not proof it resulted from that request.':'Whole recording · recorded order, not test coverage'}</span></div>
+    {followup&&<div className="review-tools-actions">{followup.operationId&&<button className="btn ghost" onClick={()=>{useApp.getState().select(followup.operationId);close();}}>Return to starting evidence</button>}{followup.path&&<button className="btn ghost" onClick={()=>{useApp.getState().set({developerWorkspace:true,follow:false,held:true});close();requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:followup.path})));}}>Read related current source</button>}</div>}
+    {source?.kind==='daemon'&&<button className="btn ghost" onClick={()=>{close();requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('drishya-review-tools',{detail:'findings'})));}}>Inspect evidence-linked findings</button>}
     {pageCount > 1 && <nav className="reader-pages" aria-label="Recorded review pages"><button className="btn" disabled={!page} onClick={() => setPage(n => Math.max(0, n - 1))}>Previous review page</button><span>Page {page + 1} of {pageCount} · up to 20 outcomes per group / 50 files</span><button className="btn" disabled={page + 1 >= pageCount} onClick={() => setPage(n => n + 1)}>Next review page</button></nav>}
     {error ? <p role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry</button></p> : !facts ? <p role="status">Opening recorded evidence…</p> : <>
       <div className="review-counts"><span><strong>{facts.editedFileCount.toLocaleString()}</strong> {facts.editedFileCount === 1 ? 'file' : 'files'} with change inputs</span><span><strong>{facts.counts.failures.toLocaleString()}</strong> failed {facts.counts.failures === 1 ? 'operation' : 'operations'}</span><span><strong>{facts.counts.tests.toLocaleString()}</strong> test {facts.counts.tests === 1 ? 'run' : 'runs'}</span></div>

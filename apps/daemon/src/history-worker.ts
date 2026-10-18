@@ -1,4 +1,6 @@
 import { parentPort, workerData } from 'node:worker_threads';
+import { createHash } from 'node:crypto';
+import { buildReviewIndex, pageReview, reviewRules, COMMAND_LIMIT, type CommandContext, type ReviewIndex, type ReviewQuery } from '../../../packages/scene/src/review-tools.ts';
 import { sinceSnapshot } from '../../../packages/scene/src/since.ts';
 import { verificationFor } from '../../../packages/scene/src/verification.ts';
 import { mkdirSync, readdirSync } from 'node:fs';
@@ -20,6 +22,55 @@ const dir = join(workerData.dir, 'history');
 mkdirSync(dir, { recursive: true, mode: 0o700 });
 const blobs = new BlobStore(join(dir, 'blobs'));
 const io = { get: (sha: string) => source.blobs.get(sha) ?? blobs.get(sha), put: (text: string) => blobs.put(text) };
+const fingerprint = (text:string) => createHash('sha256').update(text).digest('hex');
+let reviewCache: { key:string; index:ReviewIndex } | undefined;
+const commandArtifacts = new WeakMap<Projection,Map<string,Projection['artifacts'][number]>>();
+
+function commandContext(projection:Projection, op:Operation):CommandContext {
+  if(op.detail.kind!=='shell'&&op.detail.kind!=='test')throw new Error('Not a captured command');
+  const observations=op.observationIds.map(id=>{const row=source.db.prepare('SELECT body FROM observations WHERE id=?').get(id) as {body:string}|undefined;return row?JSON.parse(row.body) as Observation:undefined;}).filter((o):o is Observation=>!!o);
+  const call=observations.find(o=>o.kind==='tool.call'), result=observations.findLast(o=>o.kind==='tool.result');
+  const input=(call?.payload as {input?:unknown}|undefined)?.input;
+  const argv=input&&typeof input==='object'&&Array.isArray((input as Record<string,unknown>).command);
+  const workdir=input&&typeof input==='object'?(input as Record<string,unknown>).workdir:undefined;
+  const cwd=typeof workdir==='string'?workdir:call?.workspaceRoot??projection.workspaceRoot;
+  let artifacts=commandArtifacts.get(projection);if(!artifacts){artifacts=new Map(projection.artifacts.map(a=>[a.id,a]));commandArtifacts.set(projection,artifacts);}
+  const artifact=artifacts.get(`art_${op.id}_input`);
+  const text=artifact?.blob&&artifact.bytes<=COMMAND_LIMIT?io.get(artifact.blob):artifact?undefined:op.detail.command;
+  const complete=!!call&&!argv&&call.availability==='complete'&&!call.redactions.length&&(!artifact||artifact.availability==='complete')&&text!==undefined&&Buffer.byteLength(text)<=COMMAND_LIMIT;
+  const captured=(result?.payload as {durationMs?:unknown}|undefined)?.durationMs;
+  const capturedExit=(result?.payload as {exitCode?:unknown}|undefined)?.exitCode;
+  const interval=Date.parse(op.endTime??'')-Date.parse(op.startTime??'');
+  const durationMs=typeof captured==='number'&&Number.isFinite(captured)&&captured>=0?captured:Number.isFinite(interval)&&interval>=0?interval:undefined;
+  return {text:text??op.detail.command,complete,exitCode:typeof capturedExit==='number'&&Number.isFinite(capturedExit)?capturedExit:undefined,cwd,cwdScope:call?.workspaceRoot??projection.workspaceRoot,cwdBasis:typeof workdir==='string'?'captured':cwd?'session root':'unknown',durationMs,durationBasis:typeof captured==='number'&&Number.isFinite(captured)&&captured>=0?'captured':durationMs!==undefined?'derived interval':'unknown'};
+}
+
+function reviewIndex(id:string,rules:unknown=[]) {
+  const state=current(id),validated=reviewRules(rules),key=`${state.revision}/${JSON.stringify(validated)}`;
+  if(reviewCache?.key!==`${id}/${key}`){reviewCache=undefined;reviewCache={key:`${id}/${key}`,index:buildReviewIndex(state.projection,op=>commandContext(state.projection,op),fingerprint,validated)};}
+  return {...state,index:reviewCache.index};
+}
+function reviewPage(id:string,query:ReviewQuery){
+  if(query.repeatId){const state=reviewIndex(id,query.rules),repeat=state.index.repeats.find(row=>row.id===query.repeatId),operations=new Map(state.projection.operations.map(op=>[op.id,op]));if(!repeat)throw new Error('Repetition no longer exists at this revision.');return {...pageReview(state.index,{...query,start:0,count:1},state.revision),items:[],total:repeat.count,allCount:repeat.count,start:query.start??0,occurrences:repeat.operationIds.slice(query.start??0,(query.start??0)+(query.count??20)).map(operationId=>({operationId,title:operations.get(operationId)?.title??operationId}))};}
+  const state=reviewIndex(id,query.rules),operations=new Map(state.projection.operations.map(op=>[op.id,op])),index=query.q?{...state.index,commands:state.index.commands.filter(row=>{
+    const op=operations.get(row.id)!;const context=commandContext(state.projection,op);return `${context.text} ${context.cwd??''}`.toLowerCase().includes(query.q!.toLowerCase());
+  })}:state.index;
+  const page=pageReview(index,{...query,q:undefined},state.revision);page.allCount=state.index[query.section].length;return page;
+}
+function reviewCommand(id:string,operationId:string){const state=current(id),op=state.projection.operations.find(op=>op.id===operationId);if(!op||op.detail.kind!=='shell'&&op.detail.kind!=='test')return null;return {...commandContext(state.projection,op),operationId,outputArtifactId:op.detail.outputArtifactId,outputPreview:op.detail.outputPreview};}
+function reviewScript(id:string,operationIds:string[]){
+  const state=current(id),selected=new Set(operationIds),operations=state.projection.operations.filter(op=>selected.has(op.id));
+  if(operations.length!==selected.size)throw new Error('One or more selected commands are unavailable.');
+  const contexts=operations.map(op=>commandContext(state.projection,op));
+  if(contexts.some(row=>!row.complete))throw new Error('Copy requires complete, unredacted commands of at most256 KiB each.');
+  const text=contexts.map(row=>row.text).join('\n\n');if(Buffer.byteLength(text)>1024*1024)throw new Error('Selected commands exceed the1 MiB copy limit.');
+  const warnings:string[]=[];
+  if(contexts.some(row=>row.cwdBasis!=='captured'))warnings.push('Some command working directories are unknown; a session root is not a captured command directory.');
+  if(new Set(contexts.map(row=>JSON.stringify([row.cwdBasis,row.cwd,row.cwdScope]))).size>1)warnings.push('Selected commands have different working directories. No directory changes were inserted.');
+  if(contexts.some(row=>row.exitCode===undefined))warnings.push('Some outcomes are unknown.');
+  warnings.push('Captured commands may be destructive or use different shell dialects. Review before running; Drishya does not execute them.');
+  return {text,warnings};
+}
 const db = new DatabaseSync(join(dir, 'index.db'));
 db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-8192;
   CREATE TABLE IF NOT EXISTS views(id TEXT PRIMARY KEY, revision TEXT NOT NULL, header TEXT NOT NULL);
@@ -199,6 +250,9 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     const a = message.args;
     let value: unknown;
     if (message.method === 'search-library') value = source.searchLibrary(a.query);
+    else if (message.method === 'review-tools') value = reviewPage(a.id,a.query);
+    else if (message.method === 'review-command') value = reviewCommand(a.id,a.operationId);
+    else if (message.method === 'review-script') value = reviewScript(a.id,a.operationIds);
     else if (message.method === 'page') value = page(a.id, a.query);
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
@@ -220,6 +274,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
       const candidates = markers(p).filter((m) => a.types.includes(m.type) && (a.direction > 0 ? m.step > a.step : m.step < a.step));
       value = (a.direction > 0 ? candidates[0] : candidates.at(-1))?.step;
     } else if (message.method === 'forget') {
+      reviewCache = undefined;
       for (const row of db.prepare('SELECT id FROM views').all()) if (String(row.id).split('+').includes(a.id)) db.prepare('DELETE FROM views WHERE id=?').run(String(row.id));
       cached = undefined;
       incremental = undefined;

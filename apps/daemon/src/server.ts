@@ -30,6 +30,7 @@ import { GitReview } from './git-review.ts';
 import { HarnessController } from './controller.ts';
 import {sessionSegments} from './session-segments.ts';
 import { readWorkingLocations, saveWorkingLocations } from './working-locations.ts';
+import { reviewRules, type ReviewQuery } from '../../../packages/scene/src/review-tools.ts';
 
 export interface ServerOptions {
   port?: number;
@@ -305,6 +306,27 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (body.filter !== undefined && (!body.filter || typeof body.filter !== 'object' || Array.isArray(body.filter))) throw new HttpError(400, 'invalid filter');
         if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');
         return json(res, await app.history.page(id, body));
+      }
+      if(sub==='review-tools'&&m==='POST'){
+        if(id.includes('+'))throw new HttpError(400,'Choose one recording to review.');app.recording(id);
+        const body=await readJson(req);
+        if(!['commands','findings','repeats','turns'].includes(String(body.section)))throw new HttpError(400,'Invalid review section.');
+        if(body.start!==undefined&&(!Number.isSafeInteger(body.start)||Number(body.start)<0)||body.count!==undefined&&(!Number.isSafeInteger(body.count)||Number(body.count)<1||Number(body.count)>40))throw new HttpError(400,'Invalid review page.');
+        for(const [field,choices]of [['status',['passed','failed','unknown']],['kind',['shell','test']],['sort',['recorded','failures']]] as const)if(body[field]!==undefined&&!choices.includes(body[field] as never))throw new HttpError(400,`Invalid ${field}.`);
+        for(const field of ['agent','q','repeatId'])if(body[field]!==undefined&&(typeof body[field]!=='string'||String(body[field]).length>200))throw new HttpError(400,`Invalid ${field}.`);
+        let rules;try{rules=reviewRules(body.rules??[]);}catch(error){throw new HttpError(400,(error as Error).message);}
+        return json(res,await app.history.review(id,{section:body.section,start:body.start,count:body.count,status:body.status,kind:body.kind,agent:body.agent,q:body.q,sort:body.sort,rules,repeatId:body.repeatId} as ReviewQuery));
+      }
+      if(sub==='review-command'&&m==='GET'){
+        if(id.includes('+'))throw new HttpError(400,'Choose one recording.');app.recording(id);
+        const operationId=url.searchParams.get('operationId');if(!operationId||operationId.length>512)throw new HttpError(400,'Invalid command identity.');
+        const command=await app.history.reviewCommand(id,operationId);if(!command)throw new HttpError(404,'Command not found.');return json(res,command);
+      }
+      if(sub==='review-script'&&m==='POST'){
+        if(id.includes('+'))throw new HttpError(400,'Choose one recording.');app.recording(id);
+        const body=await readJson(req),ids=body.operationIds;
+        if(!Array.isArray(ids)||!ids.length||ids.length>32||ids.some(value=>typeof value!=='string'||!value||value.length>512)||new Set(ids).size!==ids.length)throw new HttpError(400,'Select between1 and32 distinct commands.');
+        return json(res,await app.history.reviewScript(id,ids));
       }
       if (sub === 'summary' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);

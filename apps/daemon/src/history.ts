@@ -7,6 +7,7 @@ import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
 import type { VerificationTrail } from '../../../packages/scene/src/verification.ts';
 import type { ModelConfig, Prepared } from '@drishya/explain';
 import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store/src/search-types.ts';
+import type {CommandContext,ReviewPage,ReviewQuery} from '../../../packages/scene/src/review-tools.ts';
 
 /** One worker owns the derived history index. Capture's SQLite writer remains the ingestor. */
 export class HistoryService {
@@ -49,6 +50,9 @@ export class HistoryService {
 
   page(id: string, query: HistoryQuery = {}) { return this.request<HistoryPage>('page', { id, query }); }
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
+  review(id:string,query:ReviewQuery){return this.request<ReviewPage>('review-tools',{id,query});}
+  reviewCommand(id:string,operationId:string){return this.request<(CommandContext&{operationId:string;outputArtifactId?:string;outputPreview?:string})|null>('review-command',{id,operationId});}
+  reviewScript(id:string,operationIds:string[]){return this.request<{text:string;warnings:string[]}>('review-script',{id,operationIds});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   since(id: string, after: number, page = 0) { return this.request<SinceSnapshot>('since', { id, after, page }); }
   verification(id: string, operationId: string) { return this.request<VerificationTrail | null>('verification', { id, operationId }); }
