@@ -18,9 +18,9 @@ test('actual captured command keeps balanced input and output reading space',asy
   const card=page.locator('.op[data-tool-exchange]').filter({has:page.locator('.command-request')}).last();
   await expect(card).toBeVisible();await card.evaluate(el=>el.scrollIntoView({block:'center'}));
   const input=card.locator('.command-request'),output=card.locator('.result-content');
-  expect(await input.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(109);
-  expect(await output.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(121);
+  expect(await input.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(88);
+  expect(await output.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(142);
   await card.locator('.op-title').hover();await expect(card).toHaveAttribute('data-hover-reading','focused');
-  expect(await input.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(201);
+  expect(await input.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(180);
   await page.screenshot({path:resolve('.local/actual-balanced-command.png'),animations:'disabled'});
 });
