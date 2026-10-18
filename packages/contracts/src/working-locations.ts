@@ -3,7 +3,7 @@ export interface WorkingLocations { version: 1; last?: string; sessions: { id: s
 const record=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
 const fields=new Set('developerWorkspace selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence filePanelLine explore compareAgents mapFocusPath filter follow held inspectorTab inspectorWidth readingPassageId start agentId kind server tool x y k zoom top left id offset query line wrap formatted activeLine scope pages index width layout match trailWidth trailHidden right leftKey rightKey version primary secondary split pane ratio cursor visits location memory open name root harness days workspace'.split(' '));
 const slot=/^(composer\/collapsed|toolbox\/collapsed|location|history\/(top|anchor|heights)|desk\/(files|primary|secondary|split|pane|ratio)|desk\/document\/.+|folders\/(query|open|top|width)|map\/(yaw|pitch|camera|query|observed|changed|connections|file|page|neighborhood)|git\/(selected|page|open|width|filesHidden)|canvas\/(view|panel|panelFocus|camera)|home\/.+|evidence\/trail)$/;
-const readerSlot=/^(disk\/(start|version|query|line|lineInput|wrap|width)|file\/(trailWidth|trailHidden|query|start|left|right)|(?:.*\/artifact|diff)\/.+\/(pages|index|query|wrap|line|lineInput|offset|layout|match)|scroll\/.+)$/;
+const readerSlot=/^(disk\/(start|version|query|line|lineInput|wrap|width|formatted)|file\/(trailWidth|trailHidden|query|start|left|right)|(?:.*\/artifact|diff)\/.+\/(pages|index|query|wrap|line|lineInput|offset|layout|match)|scroll\/.+)$/;
 const locationStrings='selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence mapFocusPath readingPassageId'.split(' ');
 function location(input:unknown):Record<string,unknown> {
   const out:Record<string,unknown>={explore:false,inspectorTab:'detail',inspectorWidth:760};
@@ -14,6 +14,11 @@ function location(input:unknown):Record<string,unknown> {
   if(typeof input.filePanelLine==='number'&&Number.isSafeInteger(input.filePanelLine)&&input.filePanelLine>=1&&input.filePanelLine<=999999999)out.filePanelLine=input.filePanelLine;
   if(input.inspectorTab==='detail'||input.inspectorTab==='evidence')out.inspectorTab=input.inspectorTab;
   if(record(input.filter)) { const filter:Record<string,string>={};for(const key of ['kind','agentId','server','tool'])if(typeof input.filter[key]==='string'&&input.filter[key].length<=2048)filter[key]=input.filter[key];out.filter=filter; }
+  // Older navigation snapshots could retain two reader owners. Restoring both
+  // native modal dialogs makes one invisible to interaction beneath the other.
+  if(out.developerWorkspace){delete out.currentFile;delete out.filePanel;out.explore=false;}
+  if(out.currentFile)delete out.filePanel;
+  if(!out.filePanel)for(const key of ['filePanelFocus','filePanelEvidence','filePanelLine'])delete out[key];
   return out;
 }
 
@@ -42,7 +47,7 @@ function readerValue(key:string,item:unknown) {
   if(key.startsWith('scroll/'))return record(item)&&typeof item.top==='number'&&typeof item.left==='number';
   const tail=key.split('/').at(-1);
   if(tail==='pages')return Array.isArray(item)&&item.every(x=>typeof x==='number');
-  if(['wrap','trailHidden'].includes(tail!))return typeof item==='boolean';
+  if(['wrap','trailHidden','formatted'].includes(tail!))return typeof item==='boolean';
   if(['query','lineInput','version'].includes(tail!))return typeof item==='string';
   if(tail==='layout')return item==='unified'||item==='split';
   if(tail==='left'||tail==='right')return typeof item==='string'||record(item);

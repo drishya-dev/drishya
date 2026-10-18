@@ -1,5 +1,8 @@
 # Codebase — the system as built
 
+**18 October current readers:**Current-file Markdown shares safe document rendering with Workspace, capped at256KiB/5000lines with explicit whole-source fallback. `disk/formatted` and separate scroll/query state are navigation metadata only. `useCurrentSource` waits for approved access in the reader; a recovered reader offers consent, and approval invalidates older status callbacks. Legacy location recovery selects one current/historical/Workspace owner. Inspector yields to Workspace without discarding selected evidence. No direct file/config writes.
+
+
 **18 October finding membership:**Authenticated `GET …/finding-members?key&page&q` returns up to25thin members and complete/filtered counts from the existing whole-history worker. Exact repeated-command/artifact identity is shared with summaries; preview queries do not scan full input/output blobs. Capture gaps are distinct records and can link to next captured activity. `review-insights?kind=` filters factual condition categories before pagination. No capture schema or runtime dependency change.
 
 
