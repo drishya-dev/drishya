@@ -110,7 +110,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
       return (
         <>
           <div className="cmd">$ {d.command}</div>
-          <CapturedOutcomes output={d.outputPreview} fallback={s ? (
+          <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} fallback={s ? (
             <p className="insp-note">
               {s.framework}: <span className="bad">{s.failed} failed</span>, <span className="good">{s.passed} passed</span>
               {s.skipped ? `, ${s.skipped} skipped` : ''}. <span className="muted">Counts read from the runner's output (derived).</span>
@@ -140,7 +140,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
           <pre className="cmd block">$ {d.command}</pre>
           {op.artifactIds.find((id) => id.endsWith('_input')) && <ArtifactReader id={op.artifactIds.find((id) => id.endsWith('_input'))} kind="code" />}
           <p className="insp-note">Exit code {d.exitCode ?? 'unknown'}</p>
-          <CapturedOutcomes output={d.outputPreview} />
+          <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} />
           <OutputBlock artifactId={d.outputArtifactId} preview={d.outputPreview} />
         </>
       );
@@ -153,6 +153,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
           <h4>Input</h4>
           <ToolInput value={d.input}/>
           <h4>Result</h4>
+          <CapturedOutcomes output={d.resultPreview}/>
           <ToolOutput text={d.resultPreview || '—'}/>
         </>
       );
@@ -160,6 +161,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
       return (
         <>
           <p className="insp-note">{d.url ? <>Fetched <code>{d.url}</code></> : <>Searched the web for <code>{d.query}</code></>}</p>
+          <CapturedOutcomes output={d.resultPreview}/>
           <ToolOutput text={d.resultPreview || '—'}/>
         </>
       );
@@ -176,6 +178,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
             </button>
           )}
           <h4>Report returned</h4>
+          <CapturedOutcomes output={d.resultPreview}/>
           <ToolOutput text={d.resultPreview || '—'}/>
         </>
       );
@@ -194,6 +197,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
           <h4>Input</h4>
           <ToolInput value={d.input}/>
           <h4>Result</h4>
+          <CapturedOutcomes output={d.resultPreview}/>
           <ToolOutput text={d.resultPreview || '—'}/>
         </>
       );

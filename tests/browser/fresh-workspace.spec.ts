@@ -1672,3 +1672,24 @@ test('Git timeline scrolls into older history without commit-range pages and kee
   await atlas.getByLabel('Choose Git commit',{exact:true}).selectOption(tip);await expect(atlas.locator('.atlas-message')).toContainText('Continuous fixture 81');await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();
   await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await page.screenshot({path:resolve('.local/git-thread-continuous.png')});
 });
+
+
+test('prompt symbol and workspace name stay on one compact line for both harnesses',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ for(const harness of ['codex','claude-code']){
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[harness]}`);
+  const target=page.locator('.modern-composer-target'),symbol=target.locator('svg'),name=target.locator('.modern-composer-location');
+  await expect(symbol).toBeVisible();await expect(name).toHaveText('shop');await expect(target).not.toContainText(/Codex|Claude/);
+  for(const width of [320,390,1440]){
+   await page.setViewportSize({width,height:900});
+   for(const text of ['shop','extremely-long-workspace-name-for-a-large-monorepo-'.repeat(4)]){
+    await name.locator('span').evaluate((node,text)=>node.textContent=text,text);
+    const icon=(await symbol.boundingBox())!,label=(await name.boundingBox())!,row=(await target.boundingBox())!;
+    expect(Math.abs(icon.y+icon.height/2-label.y-label.height/2)).toBeLessThan(1.5);
+    expect(label.x-icon.x-icon.width).toBeGreaterThanOrEqual(7);expect(label.x-icon.x-icon.width).toBeLessThanOrEqual(11);
+    expect(row.height).toBeLessThanOrEqual(24);expect(label.x+label.width).toBeLessThanOrEqual(width);
+   }
+   await page.screenshot({path:resolve(`.local/prompt-inline-${harness}-${width}.png`)});
+  }
+ }
+});

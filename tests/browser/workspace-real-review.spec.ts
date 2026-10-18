@@ -1,3 +1,4 @@
+import {outcomeMaterial} from '../../apps/ui/src/lib/outcome-material.ts';
 import { resolve } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { pointAtHistory, beginReadingSamples, finishReadingSamples } from './history-gestures.ts';
@@ -356,4 +357,34 @@ test('actual current Markdown is readable in Files and transfers to Workspace wi
     for(const width of [1440,390]){await page.setViewportSize({width,height:960});expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/current-document-actual-${id}-${width}.png`)});}
     await page.setViewportSize({width:1440,height:960});await reader.getByRole('group',{name:'Markdown presentation',exact:true}).getByRole('button',{name:'Source',exact:true}).click();await expect(reader.locator('.whole-source')).toBeVisible();await reader.getByRole('button',{name:'Open in Workspace',exact:true}).click();await expect(desk.getByRole('region',{name:'Workspace file README.md',exact:true})).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
   }
+});
+
+
+test('actual Codex and Claude test outputs expose bounded result bars and compact prompt identity',async({page})=>{
+ test.setTimeout(90000);
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ for(const id of ids){
+  let target:string|undefined,query='';
+  for(const term of ['vitest','pytest','test']){
+   const commands=await app.history.commands(id,{q:term});
+   for(const item of commands.items.slice(0,8)){
+    const data=await app.history.page(id,{selectedOperationId:item.id,count:1}),op=data.projection.operations.find(op=>op.id===item.id);if(!op||!['shell','test'].includes(op.detail.kind))continue;
+    const detail=op.detail as {outputPreview?:string;outputArtifactId?:string};
+    const slice=detail.outputArtifactId?await app.history.artifact(id,detail.outputArtifactId,0,200):undefined;
+    const report=outcomeMaterial(detail.outputPreview??'',slice?.available?{text:slice.text,partial:slice.hasMore||slice.truncated?'partial':undefined}:{});
+    if(report.runs.length){target=item.id;query=term;break;}
+   }
+   if(target)break;
+  }
+  expect(target,`Actual recording ${id} should have a recognized captured test output`).toBeTruthy();
+  await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  const icon=(await page.locator('.modern-composer-identity svg').boundingBox())!,name=(await page.locator('.modern-composer-location').boundingBox())!;expect(Math.abs(icon.y+icon.height/2-name.y-name.height/2)).toBeLessThan(2);
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();
+  const commands=page.getByRole('dialog',{name:'Captured commands',exact:true});await commands.getByRole('searchbox',{name:'Filter captured command previews',exact:true}).fill(query);
+  await commands.locator(`[data-command-id="${target}"]`).getByRole('button',{name:'Open captured activity',exact:false}).click();
+  const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector.locator('.captured-outcomes').first()).toBeVisible();expect(await inspector.locator('.verification-tile').count()).toBeGreaterThan(0);
+  for(const width of [1440,390]){await page.setViewportSize({width,height:960});expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/test-bars-actual-${id}-${width}.png`)});}
+  const bar=inspector.locator('.case-bar').first();if(await bar.count()){await bar.click();await expect(page.getByRole('dialog',{name:'Captured test result',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close Captured test result'}).click();}
+ }
 });

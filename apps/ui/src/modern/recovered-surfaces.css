@@ -1,8 +1,8 @@
 /* Recovered from the pre-reset Modern surfaces, with shared native/evidence owners. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer.open { width:min(590px,calc(100% - 44px)); padding:0; border-radius:16px; background:linear-gradient(150deg,var(--s2),var(--s1)); box-shadow:0 15px 40px #0004,inset 0 1px #ffffff08; border:1px solid var(--line-2); overflow:visible; }
 .modern-composer-top { display:flex; align-items:center; gap:9px; padding:12px 15px 0; min-width:0; }
-.modern-composer-target {display:flex;flex:1;min-width:0;flex-direction:column;gap:3px;}
-.modern-composer-location {display:flex;align-items:center;gap:8px;min-width:0;color:var(--t2);font:11px/1.5 var(--sans);}
+.modern-composer-target {display:flex;flex:1;min-width:0;flex-direction:row;align-items:center;gap:9px;white-space:nowrap;}
+.modern-composer-location {display:flex;flex:1;align-items:center;gap:8px;min-width:0;color:var(--t2);font:11px/1.5 var(--sans);}
 .modern-composer-location>span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .modern-composer-location>code {font:10px/1.5 var(--mono);color:var(--t3);flex:none;}
 .native-options-glyph {width:15px;height:15px;fill:var(--s1);stroke:currentColor;stroke-width:1.5;flex:none;}
