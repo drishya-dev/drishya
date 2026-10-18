@@ -1,5 +1,7 @@
 # 92 — Useful developer tools without a crowded canvas
 
+**Archived planning/review evidence.** The single current checkbox list is[docs/TASKS.md](../TASKS.md). Its checked state supersedes stale next-task wording below; retain this document for rationale and historical verification, not as another active queue.
+
 17 October2026. Builder authorizes selecting useful features from82/83, not implementing every suggestion indiscriminately. Main priority stays readable, live agent visualization. Installed Emil design-engineering skill applies; no new permanent dashboard panels for occasional tasks.
 
 ## Placement decisions
