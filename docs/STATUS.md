@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Palette contrast and quiet prose reading
+
+- **When:**18 October2026, `codex/palette-reading-contrast`; one focused increment after85 merged as601d3d7.
+- **Delivered:**[101](review/101-palette-reading-contrast.md): targeted tertiary/syntax contrast lifts, softer Paper hierarchy and static fading background below the same unboxed prose. No text duplication, layout/motion/native/capture/schema change. Retain Jet Black baseline and saved choices.
+- **Validation:**Both typechecks/build and447units/77files pass. New token guard fails18 pairs on baseline and passes revised seven palettes. Actual seven-palette/no-horizontal-overflow survey and all three Drishya/Skeletongraph Codex/Claude history/Workspace journeys pass; frames inspected privately. No hosted CI/native turn/private content; package/artwork excluded. Solid-token guard is not full accessibility certification.
+- **Next:**Finish84's untouched reader/menu/composer/map presentation and source-version/joined workflow;92 quiet optional Review tools remain planned. Core palette pass has bounded evidence, broad physical/native/assistive-tech/human acceptance remains.
+
 ### Yash with Codex — Settings interaction and actual palette survey
 
 - **When:**18 October2026, `codex/settings-palette-audit`; coherent increment after84 merged as9eb5188.
