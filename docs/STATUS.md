@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Settings interaction and actual palette survey
+
+- **When:**18 October2026, `codex/settings-palette-audit`; coherent increment after84 merged as9eb5188.
+- **Delivered:**[100](review/100-settings-palette-survey.md): reset section reading offsets, responsive tab orientation, shared SVG style, progressive native reasoning picker, touch sizes and corrected hover/shortcut help. No new motion/native/content persistence/dependency; Legacy retained.
+- **Validation:**Both typechecks/build and446units/76files pass. Three focused Edge journeys and updated actual-session seven-palette/six-phone-section survey pass; frames inspected privately. No hosted CI/native turn/private content; user package/artwork excluded. Physical/assistive-tech/human acceptance remains open.
+- **Next:**Measured tertiary/syntax palette refinement and quiet unboxed prose/map separation; continue84's untouched components and source-version/joined workflow,92 optional quiet Review tools. Do not conflate this survey with whole-product acceptance.
+
 ### Yash with Codex — Adjustable Files reading width
 
 - **When:**18 October2026, `codex/files-reading-width`; separate coherent increment after83 merged asf3176e8.
