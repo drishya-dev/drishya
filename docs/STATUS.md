@@ -14,7 +14,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | | |
 |---|---|
-| **Milestone** | PR79–81 merged/pushed: reproduced manual-scroll repair, local draft comparison and responsive Files navigation. Review97 continues Home readability;84 retains the whole component/palette and joined-workflow queue. Native/human/platform acceptance remains open. One coherent commit per PR; local checks only. |
+| **Milestone** | [TASKS.md](TASKS.md) is the single current checkbox list. Modern UI/themes and native workflow finishing remain open; local draft editing exists. Previous tool boxes restored by PR92. One coherent commit per PR; local checks only. |
 | **Repo** | [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya) — **private**, Apache-2.0, `main`; backend draft merged via PR #1 |
 | **Blocked on** | No B2/B3 implementation blocker. The full draft contract freeze still needs both builders' review |
 | **Next gate** | Use and refine the real integrated product; human comprehension/preference pilot and physical/platform B4 release acceptance. No further standalone HTML approval gate. See [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) |
@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — One current product checklist
+
+- **When:**18 October2026, `codex/single-product-checklist`; box restoration92 merged as8547fec.
+- **Delivered:**TASKS.md consolidates implementation, unfinished UI/theme/component work, Workspace editing/native write boundary, selected features, deferred ideas and release checks with checkboxes. AGENTS/README link it;84/85/92 are historical evidence, not competing queues. CONTINUITY is a compact handoff pointing to it.
+- **Validation:**Local Markdown link/checkbox inspection; no runtime changes or hosted CI. User package/artwork excluded.
+- **Next:**Follow TASKS; improve existing Workspace edit discoverability and editor focus without implying direct disk saves.
 
 ### Yash with Codex — Restore the previous tool boxes
 

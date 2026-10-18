@@ -12,6 +12,7 @@ Two builders, both working with coding agents (Claude Code and Codex). **This fi
 |---|---|---|
 | [`docs/VISION.md`](docs/VISION.md) | **Creative direction** — the builder's own words and how the product must look, move and feel | Before *any* UI, graphics, motion or layout work |
 | [`docs/README.md`](docs/README.md) | **Precedence map** — which document wins on which topic | Whenever two docs seem to disagree |
+| [`docs/TASKS.md`](docs/TASKS.md) | **Single current product checklist** — tick completed scope and add new feedback here; do not create competing active queues | At session start and whenever work lands |
 | [`docs/STATUS.md`](docs/STATUS.md) | Where we are, what is next, who did what, decisions log | At the start of every session |
 | [`docs/CONTINUITY.md`](docs/CONTINUITY.md) | Compact handoff: latest builder direction, baseline findings and next bounded task | After a model/chat switch or compaction |
 | [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) | Current product scope, live-history behavior, content-shaped presentation and validation hypotheses | Before product or experience decisions |

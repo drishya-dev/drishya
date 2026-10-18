@@ -1,5 +1,7 @@
 # 85 — Independent Modern component review
 
+**Archived planning/review evidence.** The single current checkbox list is[docs/TASKS.md](../TASKS.md). Its checked state supersedes stale next-task wording below; retain this document for rationale and historical verification, not as another active queue.
+
 **16 October follow-up:** [87](87-modern-reading-and-component-audit.md) supersedes the page-only current Find, small draft limit and hover-expanding header descriptions below. Whole-file virtual reading, native-attached edit/New file drafts, bounded journal catch-up and wrapped-flow fixes are implemented. Recorded artifacts remain separately paged/evidence-backed. Broader adoption, palette/component audit, native-segment continuity and release acceptance remain open.
 
 16 October 2026. Fresh professional developer/design reviewer, source and six rendered frames; no prior review83 supplied. Installed Emil skill and repository doctrine used. No interactive CUA, real native-account, assistive technology or ten-minute motion acceptance claimed.

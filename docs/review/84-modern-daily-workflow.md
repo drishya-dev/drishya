@@ -1,6 +1,8 @@
 # 84 — Modern daily-workflow follow-up
 
-## Read this first — complete queue, 17 October
+**Archived planning/review evidence.** The single current checkbox list is[docs/TASKS.md](../TASKS.md). Its checked state supersedes stale next-task wording below; retain this document for rationale and historical verification, not as another active queue.
+
+## Historical queue and delivery notes
 
 **18 October acceptance closure:**103 now records all four original failed browser cases passing together after89/90 and explicit settled-tree origin setup. Original broad run174passed/6skipped/4failed; no second full-run claim. Actual surface/long-history checks and latest447units/77files pass. Next bounded polish: narrow Review pagination and compact current-source controls, then the remaining source-version/joined workflow and92 selected tools; do not call the whole feature/release queue complete.
 
@@ -73,7 +75,7 @@ T1–T5 were not clearly incorporated into this queue before this correction. Th
 
 16 October 2026. Active continuation of PR68, after the builder's fresh feedback. Use installed design/motion skills; preserve the shared agent visualization and explicit evidence/native boundaries.
 
-## Work list
+## Original work list
 
 - Keep two independent edge panels: Files + Repository on the left, Workspace + Git review on the right. No full-width reserved toolbar row; visualization continues between/behind them. Readable labels/icons, measured reader clearance, no overlap.
 - Make Modern the default for a new browser; preserve explicit/saved Legacy or Canvas selection. Modern still uses the shared Classic internal composition.
@@ -111,7 +113,7 @@ T1–T5 were not clearly incorporated into this queue before this correction. Th
 - **HUD and seven palettes:** implemented in86 as separate purpose commits: floating title/utility groups, hover/focus title expansion, minimized prompt retaining drafts, compact Toolbox with measured motion origin, bounded glass and resource fallbacks, palette/semantic syntax tokens. Remaining whole-product review must check all these in real use.
 - **Final whole-product pass:** after the functional queue, audit untouched pages/components too. Menus, settings, readers, home, composer, map, tools, multi-agent, hover/click/focus/escape/outside dismissal, padding/type, dimensions, resource paths and all themes must be in the checklist, not only what the builder explicitly spotted.
 
-## Next tasks, in order
+## Original next-task order (historical)
 
 1. Finish local regression acceptance for all current increments; inspect actual Drishya and Skeletongraph Codex/Claude sessions, not only synthetic demo. Specifically stress repeated upward scrolling with motion, large source/text/MCP outcomes, page/line state and all edge-panel geometries. No hosted CI until publishing preparation is explicitly requested.
 2. Bounded whole-file find in current Workspace, exact line/page results and cancellation. Page-only find remains explicitly labeled today.
@@ -141,6 +143,6 @@ Local only. Current full type/unit gate passes415tests/68files; production build
 - [MDN beforeunload](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event): conditional warning limitations; periodic metadata checkpoints remain the recovery mechanism.
 
 
-### Latest review items, retained in the ordered queue
+### Original review items (historical)
 
 After palette/HUD correctness, address keyboard-operable Markdown path/line destinations and faithful ordered/unordered/nested lists. Then current whole-file find and source version comparison, primary evidence-to-current-source-to-correction/check investigation loop, resizable Files/Git readers, compact Home density and meaningful typed map neighborhoods. Verify collapsed lifecycle feedback (including reconnect/approval), copy feedback lifetime, small/narrow targets and every untouched component in the final audit. These are tracked work, not implicitly completed by palette implementation.
