@@ -1,3 +1,4 @@
+import {Markdown} from '../lib/markdown.tsx';
 import { NativeQuestions } from './NativeQuestions.tsx';
 import { useCurrentSource } from '../lib/use-current-source.ts';
 import { SourceVersionNotice } from './SourceVersions.tsx';
@@ -70,9 +71,11 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
   useEffect(() => { if (['connecting', 'running', 'approval'].includes(controller?.state ?? '')) wake.current?.(); }, [controller?.state]);
   const approve = async () => {
     if (!eligible) return;
+    ++revision.current;
     const w = await workspaceApi.approve(id!);
     const graph = await source!.graph(id!);
     if (useApp.getState().source !== source || useApp.getState().recordingId !== id) return;
+    ++revision.current;
     setWorkspace(w); useApp.setState({ graph });
   };
   const inspect = async () => {
@@ -274,8 +277,10 @@ export function CurrentFileReader() {
 }
 function CurrentDocument({ id, path }: { id: string; path: string }) {
   const explore = useApp(s => s.explore);
+  const {workspace,approve}=useSessionWorkspace();
+  const [granting,setGranting]=useState(false),[grantError,setGrantError]=useState('');
   const [start, setStart] = useEvidenceState('disk/start', 0);
-  const current=useCurrentSource(id,path),file=current.shown,error=current.error;
+  const current=useCurrentSource(id,path,workspace?.approved===true),file=current.shown,error=current.error;
   const [readingVersion, setReadingVersion] = useEvidenceState<string | undefined>('disk/version', undefined);
   const [query, setQuery] = useEvidenceState('disk/query', '');
   const [activeLine, setActiveLine] = useEvidenceState<number | undefined>('disk/line', undefined);
@@ -285,7 +290,11 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
   const [width, setWidth] = useEvidenceState('disk/width', 1040);
   const [copied, setCopied] = useState('');
   const code = useRef<HTMLDivElement>(null);
-  useEvidenceScroll(code, `disk/${start}`, !!file);
+  const markdown=/\.(md|markdown)$/i.test(path);
+  const [documentMode,setDocumentMode]=useEvidenceState('disk/formatted',true);
+  const formatted=markdown&&documentMode;
+  const documentAllowed=useMemo(()=>!file||file.totalLines<=5000&&new TextEncoder().encode(file.text).length<=256*1024,[file]);
+  useEvidenceScroll(code, `disk/${formatted?'document':start}`, !!file);
   useEffect(() => { if (file && !readingVersion) setReadingVersion(file.modifiedAt); }, [file, readingVersion]);
   useEffect(() => { setCopied(''); }, [start,file]);
   const lines = file?.text.split('\n') ?? [];
@@ -308,15 +317,17 @@ function CurrentDocument({ id, path }: { id: string; path: string }) {
   return <ReadingDialog title={path} close={() => useApp.setState({ currentFile: undefined })} className="current-file-reader" modeless={explore} style={explore ? undefined : { width: `min(${width}px, calc(100vw - 28px))` }}>
     {file && readingVersion && file.modifiedAt !== readingVersion && <p className="small" role="status">This reading location was saved for another file version.</p>}
     {!explore && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} label="Resize current source reading space" fromRight />}
-    <div className="current-file-meta"><EvidenceNavigation compact hideEmpty/><span className="tag" title="Checked disk snapshot · not a historical artifact">{current.candidate?'Retained':'On disk'}</span><button className="btn ghost" aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, currentFile: undefined, filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }}>Workspace</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Recorded work on this file" title="Recorded work on this file" onClick={() => useApp.getState().set({ currentFile: undefined, filePanel: path })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button></div>
+    <div className="current-file-meta"><EvidenceNavigation compact hideEmpty/><span className="tag" title="Checked disk snapshot · not a historical artifact">{current.candidate?'Retained':file?'On disk':'Current file'}</span><button className="btn ghost" aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, currentFile: undefined, filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }}>Workspace</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Recorded work on this file" title="Recorded work on this file" onClick={() => useApp.getState().set({ currentFile: undefined, filePanel: path })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button></div>
     <SourceVersionNotice path={path} versions={current} accept={()=>{current.accept();setActiveLine(undefined);setReadingVersion(undefined);}}/>
-    <div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source file" scopeLabel="this file" idleLabel="" />
+    {markdown&&workspace?.approved&&<div className="current-document-views" role="group" aria-label="Markdown presentation"><button className="btn ghost" aria-pressed={formatted} onClick={()=>setDocumentMode(true)}>Document</button><button className="btn ghost" aria-pressed={!formatted} onClick={()=>setDocumentMode(false)}>Source</button></div>}
+    {!formatted&&workspace?.approved&&<div className="current-source-tools"><SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in current source file" scopeLabel="this file" idleLabel="" />
       <form className="source-go" onSubmit={e => { e.preventDefault(); go(); }}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e => { setLineInput(e.target.value); setLineError(undefined); }} /><button className="btn ghost small" aria-label="Go to line" disabled={!file}>Go</button><button type="button" className="btn ghost small" aria-label="Wrap lines" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap</button><span role="status">{lineError}</span></form>
 
-    </div>
-    <ImportContext path={path} current hideEmpty />
+    </div>}
+    {workspace?.approved&&<ImportContext path={path} current hideEmpty />}
+    {!workspace?<p className="current-reader-access" role="status">Checking workspace access…</p>:!workspace.approved&&<section className="current-reader-access" aria-label="Current file access"><h3>Read current files</h3><p>{workspace.root?`Approve reading in ${workspace.root}. Captured work stays separate.`:'This session has no captured workspace root on this machine.'}</p><button className="btn" disabled={granting||!workspace.root} onClick={()=>{setGranting(true);setGrantError('');void approve().catch(error=>setGrantError(error.message)).finally(()=>setGranting(false));}}>{granting?'Approving…':'Approve current-file reading'}</button>{grantError&&<p role="alert">{grantError}</p>}</section>}
     {error && <p className="bad" role="alert">{error} <button className="btn" onClick={() => void current.refresh()}>Retry current source</button></p>}
-    {!file ? !error&&<p className="muted" role="status">Reading current file…</p> : <><div ref={code} className={`current-file-code source-reading${wrap ? ' wrap-source' : ''}`}><WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine}/></div><footer><span title={`Current file version: ${file.modifiedAt}`}>{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
+    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <><div key={formatted?'document':'source'} ref={code} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?documentAllowed?<Markdown text={file.text} document/>:<p role="status">Rendered documents support up to 5,000 lines and 256 KiB. The complete file remains available in <button className="btn ghost" onClick={()=>setDocumentMode(false)}>Source</button>.</p>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 

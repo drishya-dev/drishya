@@ -23,6 +23,7 @@ test.beforeAll(async () => {
   writeFileSync(join(root,'src/cart/mixed.ts'),'const first = 1;\r\nconst second = 2;\n');
   writeFileSync(join(root,'src/cart/versions.ts'),'export const version = 1;\n');
   writeFileSync(join(root,'README.md'),'# Workspace guide\n\nA **readable** document.\n\n| Feature | State |\n| --- | --- |\n| Reading | Ready |\n\n> Current source, safely rendered.\n\n```ts\nexport const ready = true;\n```\n');
+  writeFileSync(join(root,'large-document.md'),Array.from({length:6000},(_,n)=>`Markdown source line ${n+1}`).join('\n'));
   const git = (...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true });
   git('init'); git('config', 'user.name', 'Synthetic'); git('config', 'user.email', 'synthetic@example.invalid');
   git('add', '.'); git('commit', '-m', 'synthetic workspace');
@@ -885,8 +886,10 @@ test('Workspace editor indents, undoes and preserves exact line endings without 
     await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill(path);
     await page.locator(`[data-spine-path="${path}"]`).click();
     const file=desk.getByRole('region',{name:`Workspace file ${path}`,exact:true});
+    await expect(file.locator('.whole-source .ln-tx').first()).toBeVisible();const readingType=await file.locator('.whole-source .ln-tx').first().evaluate(node=>{const style=getComputedStyle(node);return [style.fontSize,style.lineHeight];});
     await file.getByRole('button',{name:'Edit file',exact:true}).click();
     const editor=file.getByRole('textbox',{name:`Local draft for ${path}`,exact:true});
+    await expect(editor).toBeVisible();expect(await editor.evaluate(node=>{const style=getComputedStyle(node);return [style.fontSize,style.lineHeight];})).toEqual(readingType);
     await expect(editor).toBeFocused();await expect(file.locator('.cm-lineNumbers')).toBeVisible();
     await expect(file.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
     await editor.press('Control+End');await page.keyboard.insertText('// added');await editor.press('Enter');await page.keyboard.insertText('next');
@@ -1489,4 +1492,28 @@ test('finding membership reaches every captured operation with filters, exact op
   const filter=dialog.getByRole('searchbox',{name:'Filter finding members',exact:true});await filter.fill('no such member');await expect(dialog.locator('.finding-member')).toHaveCount(0);await filter.fill('');await expect(dialog.locator('.finding-member')).toHaveCount(25);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/finding-members-${width}.png`)});}
   await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toContainText('stable-command');
+});
+
+
+test('Files Markdown has document source recovery and a complete large-file fallback',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();const desk=page.getByRole('region',{name:'Developer workspace',exact:true}),grant=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
+  const files=page.getByRole('textbox',{name:'Find repository files',exact:true});await files.fill('README.md');await page.locator('[data-spine-path="README.md"]').click();
+  const reader=page.locator('.current-file-reader');await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();await expect(reader.getByRole('cell',{name:'Ready',exact:true})).toBeVisible();await expect(reader.locator('.desk-markdown strong')).toHaveText('readable');for(const width of [1440,390]){await page.setViewportSize({width,height:900});await page.screenshot({path:resolve(`.local/current-document-${width}.png`)});}await page.setViewportSize({width:1440,height:900});
+  const modes=reader.getByRole('group',{name:'Markdown presentation',exact:true});await modes.getByRole('button',{name:'Source',exact:true}).click();await expect(reader.locator('.whole-source')).toContainText('# Workspace guide');await reader.getByRole('searchbox',{name:'Find in current source file',exact:true}).fill('readable');await expect(reader).toContainText('1 matching line');await modes.getByRole('button',{name:'Document',exact:true}).click();await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();await modes.getByRole('button',{name:'Source',exact:true}).click();await expect(reader.getByRole('searchbox',{name:'Find in current source file',exact:true})).toHaveValue('readable');
+  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('disk/formatted');await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('group',{name:'Markdown presentation',exact:true}).getByRole('button',{name:'Source',exact:true})).toHaveAttribute('aria-pressed','true');
+  await reader.locator(':scope>header button').click();await files.fill('large-document.md');await page.locator('[data-spine-path="large-document.md"]').click();await expect(reader.getByRole('status').filter({hasText:'Rendered documents support'})).toBeVisible();await reader.getByRole('group',{name:'Markdown presentation',exact:true}).getByRole('button',{name:'Source',exact:true}).click();await reader.getByRole('textbox',{name:'Go to current source line',exact:true}).fill('6000');await reader.getByRole('button',{name:'Go to line',exact:true}).click();await expect(reader.locator('[data-source-line="6000"]')).toContainText('Markdown source line 6000');
+  for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/current-markdown-${width}.png`)});}
+});
+
+
+test('a restored current reader requests fresh consent and keeps inspector navigation reachable',async({page})=>{
+  const path=join(dir,'reading-consent.jsonl');writeFileSync(path,[{type:'session_meta',payload:{id:'reading-consent',cwd:root}},{type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:'reader-origin',arguments:JSON.stringify({cmd:'echo recorded input'})}}].map(row=>JSON.stringify(row)).join('\n')+'\n');const {recordingId:id}=await app.ingest.importSource('codex',path),operation=app.projection(id).operations[0]!;
+  await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries:[['location',{currentFile:'README.md',filePanel:'src/cart/total.ts',selectedOp:operation.id}]]}]}}):route.continue());
+  let reads=0;page.on('request',request=>{if(request.url().includes(`/v1/recordings/${id}/workspace/document?`))reads++;});
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  const reader=page.locator('.current-file-reader');await expect(reader.getByRole('region',{name:'Current file access',exact:true})).toBeVisible();expect(reads).toBe(0);await expect(page.locator('dialog[open]')).toHaveCount(1);
+  await reader.getByRole('button',{name:'Approve current-file reading',exact:true}).click();await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();expect(reads).toBeGreaterThan(0);await expect(reader.getByRole('alert')).toHaveCount(0);
+  await reader.locator(':scope>header button').click();const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
+  await workspace.click();await expect(inspector).toHaveCount(0);const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk.getByRole('tablist')).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(inspector).toBeVisible();
 });

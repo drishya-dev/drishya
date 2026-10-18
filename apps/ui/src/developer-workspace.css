@@ -164,3 +164,16 @@
 .native-return-actions>div {display:flex;gap:5px;flex-wrap:wrap;}
 .native-return-actions .btn {padding:3px 7px;min-height:28px;font-size:10px;}
 @media(pointer:coarse) {.native-return-actions .btn {min-height:44px;}}
+
+.current-document-views {display:flex;gap:3px;padding:4px 12px;flex:none;}
+.connected-workspace .inspector {top:var(--workspace-tools-bottom,calc(var(--workspace-header-h,64px) + 68px));}
+.current-document-views .btn {min-height:30px;padding:5px 10px;font:12px var(--sans);border-radius:6px;}
+.current-document-views [aria-pressed=true] {background:var(--s2);color:var(--t1);}
+.current-file-reader .current-file-code.desk-markdown {overflow:auto;padding:20px 28px;max-height:none;}
+.current-file-reader .desk-markdown>:first-child {margin-top:0;}
+:root[data-ui-version=modern] .draft-editor-host .cm-editor {font:12px/22px var(--mono);}
+:root[data-ui-version=modern] .draft-editor-host .cm-scroller {line-height:22px;}
+@media(max-width:600px){.current-file-reader .current-file-code.desk-markdown {padding:16px;}}
+@media(pointer:coarse){.current-document-views .btn {min-height:44px;}:root[data-ui-version=modern] .draft-editor-host .cm-editor {font-size:16px;}:root[data-ui-version=modern] .draft-editor-host .cm-scroller {line-height:1.5;}}
+
+.current-reader-access {padding:20px 24px;color:var(--t2);font:13px/1.7 var(--sans);overflow-wrap:anywhere;}.current-reader-access h3 {color:var(--t1);font:550 15px/1.5 var(--sans);}.current-reader-access p {margin:10px 0 16px;}

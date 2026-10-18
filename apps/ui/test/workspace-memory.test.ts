@@ -7,6 +7,15 @@ import type { ReplayBundle } from '@drishya/contracts';
 import { EvidenceTrail } from '../src/lib/evidence-navigation.ts';
 
 describe('bounded workspace navigation memory', () => {
+  it('recovers one reading owner from legacy overlapping modal metadata',()=>{
+    const memory=new WorkspaceMemory(),session=memory.session('r');
+    session.set('location',{currentFile:'current.md',filePanel:'old.ts',filePanelEvidence:'old/reference'});
+    let entry=memory.snapshot().sessions.find(item=>item.id==='r')!.entries.find(([key])=>key==='location')![1];
+    expect(entry).toMatchObject({currentFile:'current.md'});expect(entry).not.toHaveProperty('filePanel');
+    session.set('location',{developerWorkspace:true,currentFile:'current.md',filePanel:'old.ts',explore:true});
+    entry=memory.snapshot().sessions.find(item=>item.id==='r')!.entries.find(([key])=>key==='location')![1];
+    expect(entry).toMatchObject({developerWorkspace:true,explore:false});expect(entry).not.toHaveProperty('currentFile');
+  });
   it('persists file selections only as exact references and drops legacy empty objects',()=>{
     const memory=new WorkspaceMemory(),trail=new EvidenceTrail();
     const visit=trail.visit({filePanel:'file.ts',explore:false,inspectorTab:'detail',inspectorWidth:760});

@@ -14,7 +14,9 @@
 - [ ] Command scanning: prioritize a safely decoded literal command while retaining full orchestration source/raw access; never imply all nested calls executed or infer nested outcomes.
 - [ ] Navigation clarity: make Files/current Workspace/Repository purposes and destinations clearer, with a joined investigation route rather than more resident buttons.
 - [ ] Phone density/occlusion: review Files overlay, map import drawer and composer ownership; compact returning-user Home so session discovery takes priority over introduction.
-- [ ] Reading consistency: current Markdown Document/Source parity, reader/editor type sizing and useful session repository/harness context. Preserve exact source lines.
+- [x] Reading consistency: Files Markdown shares readable Document/Source, separate mode scroll/query recovery, safe256KiB/5000-line document limit with complete Source fallback, and unchanged raw copy. CodeMirror line-height/type matches desktop source reading; coarse input stays16px. Local6000-line/reload/editor and actual Codex/Claude reader-to-Workspace checked.
+- [x] Reader recovery/navigation: restored current files wait for fresh consent and offer it directly; approval supersedes stale status polls. Normalize legacy overlapping reader owners. Inspector clears measured Workspace controls, hides while Workspace is active and retains the original action for return.
+- [ ] Session identity: useful compact repository/harness/activity context while preserving exact captured titles and maximizing visualization space.
 - [ ] Packet usefulness: deliberate evidence selection and useful portable references; no auto-sharing or private current-work inclusion.
 
 

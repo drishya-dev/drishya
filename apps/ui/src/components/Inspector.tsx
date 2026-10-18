@@ -19,12 +19,13 @@ export function Inspector({ projection }: { projection: Projection }) {
   const width = useApp(s => s.inspectorWidth);
   const setWidth = (inspectorWidth: number) => useApp.setState({ inspectorWidth });
   const selected = useApp((s) => s.selectedOp);
+  const developerWorkspace=useApp(s=>s.developerWorkspace);
   const selectedTab = useApp((s) => s.inspectorTab);
   const tab = selectedTab === 'explain' ? 'detail' : selectedTab;
   const set = useApp((s) => s.set);
   const select = useApp((s) => s.select);
   const op = projection.operations.find((o) => o.id === selected);
-  if (!op) return null;
+  if (!op||developerWorkspace) return null;
   const outcome=operationOutcome(op);
   const agent = projection.agents.find((a) => a.id === op.agentId);
   const links = projection.links.filter((l) => (l.from === op.id || l.to === op.id || op.observationIds.includes(l.from) || op.observationIds.includes(l.to)) && l.relation !== 'tool-result');

@@ -31,6 +31,21 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Current reading consistency
+
+- **When:**18 October2026, `codex/current-reading-polish`; findings105 merged asd9382e3.
+- **Delivered:**Files Markdown now offers the same safe Document/Source presentation as Workspace, with independent scroll/query/mode recovery, exact raw copy and complete-source fallback above256KiB/5000lines. Desktop CodeMirror matches source12px/22px; its inner scroller no longer silently shortens line height. Inspector starts below measured navigation and yields to Workspace while retaining origin. Current readers wait for approved reading, offer consent after restart, and approval supersedes older polls. Recovery normalizes legacy simultaneous modal owners.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Files Markdown is only raw source | Document/Source with exact source access | Make the same file equally readable in both owners |
+| Editor inner scroller uses shorter default leading | Explicit leading matches source reading | Avoid an unintended density/zoom jump |
+| Restored Inspector covers Workspace controls | Measured clearance and one active reading owner | Keep navigation reachable without losing origin |
+| Current reader fetch can race consent/restart | Wait for access; direct explicit reader approval | Recover without a generic permission error detour |
+
+- **Validation:**Both TS/build and473units/84files pass; final focused editor/Markdown/recovery-consent journeys pass.6000-line complete fallback, fresh consent/no pre-approval document request, one modal owner, navigation clearance and retained Inspector tested. Actual Codex/Claude Document→Source→Workspace at desktop/phone pass; frames inspected. Earlier real probes exposed Inspector overlap and consent timing, now repaired; an initial heading assumption was corrected for real Markdown without an h1. No native turn, direct write, dependency/schema change or hosted CI.
+- **Next:**Command scanning, session identity, remaining Home/phone/palette/motion/Uiverse and native/platform acceptance remain in TASKS.
+
 ### Yash with Codex — Complete finding membership
 
 - **When:**18 October2026, `codex/findings-navigation`; reliability104 merged asa4bc497.
