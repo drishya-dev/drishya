@@ -1,7 +1,7 @@
 // Spatial WebGL points/edges with a flat low-resource fallback. Every label is DOM.
 // Only opt-in orbit runs continuously, at a bounded rate and outside manual navigation.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
@@ -12,6 +12,7 @@ import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-
 import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
 import { fitProjectedMap, mapReadingArea, rebaseMapCamera, type MapFrame } from '../lib/map-fit.ts';
 import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
+import { mapFileLabel } from '../lib/map-label.ts';
 
 interface Cam {
   x: number;
@@ -60,6 +61,7 @@ function MapActions({ graph }: { graph: RepoGraph }) {
 }
 
 export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { graph?: RepoGraph; heat: HeatCell[]; passagePaths?: string[]; readingRect?: { left: number; width: number } }) {
+  const arrowId = useId().replace(/:/g, '');
   const canvas = useRef<HTMLCanvasElement>(null);
   const spatialCanvas = useRef<HTMLCanvasElement>(null);
   const renderer = useRef<ReturnType<typeof createSpatialRenderer>>(undefined);
@@ -235,6 +237,13 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     animateCam(fitProjectedMap(points, area), immediate);
     setTip(undefined); setQuery(''); set({ hoveredPath: undefined });
   };
+  const previousGraph = useRef(graph);
+  useLayoutEffect(() => {
+    const before = previousGraph.current; previousGraph.current = graph;
+    // A newly approved repository uses a different layout from captured-only
+    // files. Keep that new world inside the viewport instead of old offsets.
+    if (explore && before?.approvalNeeded && graph && !graph.approvalNeeded) fitWorld(true);
+  }, [graph, explore]);
 
   const draw = () => {
     const c = canvas.current;
@@ -374,10 +383,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     }).sort((a, b) =>
       Number(b.id === hoveredPath) - Number(a.id === hoveredPath) || Number(heatMap.has(b.id)) - Number(heatMap.has(a.id)) || (b.members?.length ?? 0) - (a.members?.length ?? 0));
     for (const node of sorted) {
-      const p = project(node), width = Math.min(190, node.path.length * 6 + 24);
+      const identity = mapFileLabel(node.path);
+      const p = project(node), width = node.members ? 190 : Math.min(220, Math.max(identity.name.length * 7, identity.parent.length * 6) + 24);
       if (p.x < 6 || p.y < 70 || p.x + width > size.w || p.y > size.h - 50) continue;
       if (chrome.some(r => p.x + width > r.left && p.x < r.right && p.y + 10 > r.top && p.y - 10 < r.bottom)) continue;
-      if (accepted.some(a => Math.abs(a.y - p.y) < 24 && p.x < a.x + a.width && p.x + width > a.x)) continue;
+      if (accepted.some(a => Math.abs(a.y - p.y) < 40 && p.x < a.x + a.width && p.x + width > a.x)) continue;
       accepted.push({ node, ...p, width });
       // Reserve at most nine labels for the explicit import-path working set.
       if (accepted.length >= (connections?.root ? 39 : 48)) break;
@@ -458,6 +468,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     >
       <canvas ref={canvas} style={{ width: size.w, height: size.h, display: spatialActive ? 'none' : 'block' }} />
       <canvas ref={spatialCanvas} data-spatial-renderer="webgl" style={{ width: size.w, height: size.h, display: spatialActive ? 'block' : 'none' }} />
+      {explore && connections?.root && graph?.temporal === 'current' && <svg className="map-import-directions" width={size.w} height={size.h} aria-label="Selected file import directions" role="img">
+        <title>Arrows point from the importing file to its dependency. Static imports, not execution order.</title>
+        <defs><marker id={arrowId} viewBox="0 0 8 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="currentColor"/></marker></defs>
+        {connections.neighbors.map(({node,direction})=>{const origin=project(connections.root!),neighbor=project(node),a=direction==='imports'?origin:neighbor,b=direction==='imports'?neighbor:origin;const length=Math.hypot(b.x-a.x,b.y-a.y);if(length<24)return null;return <path key={`${direction}/${node.id}`} data-import-from={direction==='imports'?connections.root!.path:node.path} data-import-to={direction==='imports'?node.path:connections.root!.path} d={`M${a.x+(b.x-a.x)*7/length},${a.y+(b.y-a.y)*7/length}L${b.x-(b.x-a.x)*9/length},${b.y-(b.y-a.y)*9/length}`} markerEnd={`url(#${arrowId})`}/>;})}
+      </svg>}
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
         <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find a file on the map" placeholder="Find a file…" maxLength={200} value={query} onChange={(e) => setQuery(e.target.value)} />{query && <button aria-label="Clear map search" onClick={() => setQuery('')}>×</button>}</label>
@@ -468,6 +483,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         }}>Import paths <span className={`mini-switch${connectionsOpen ? ' on' : ''}`} /></button>
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
+            if (connectionsOpen) { setNeighborhood(true); focusFile(node, true); setTip(undefined); return; }
             holdOrientation();
             const point = spatial(node);
             const x = fit.ox + point.x * fit.sx; const y = fit.oy + point.y * fit.sy;
@@ -509,11 +525,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       })}
       {labels.map(({ node, x, y }) => node.members
         ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} title={`${node.members.length} spatially grouped files · zoom to reveal`} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>
-        : <button className="map-file-label" key={node.id} title={node.path} onClick={() => set(workspace?.approved ? { currentFile: node.path, filePanel: undefined } : { filePanel: node.id, currentFile: undefined })} style={{ left: x + 8, top: y - 9, opacity: node.opacity ?? 1 }}>{node.path}</button>)}
+        : <button className="map-file-label" key={node.id} title={node.path} aria-label={node.path} onClick={() => set(workspace?.approved ? { currentFile: node.path, filePanel: undefined } : { filePanel: node.id, currentFile: undefined })} style={{ left: x + 8, top: y - 9, opacity: node.opacity ?? 1 }}><strong>{mapFileLabel(node.path).name}</strong><small>{mapFileLabel(node.path).parent}</small></button>)}
       {explore && connections?.root && [connections.root, ...connections.neighbors.slice(0, 8).map(item => item.node)].filter((node, i, nodes) => nodes.findIndex(n => n.id === node.id) === i && !labels.some(label => label.node.id === node.id)).map(node => {
         const p = project(node);
         if (p.x < 6 || p.y < 6 || p.x > size.w - 180 || p.y > size.h - 24) return null;
-        return <button className="map-file-label" onClick={() => set(workspace?.approved ? { currentFile: node.path, filePanel: undefined } : { filePanel: node.id, currentFile: undefined })} key={`connected/${node.id}`} style={{ left: p.x + 8, top: p.y - 9 }}>{node.path}</button>;
+        return <button className="map-file-label" aria-label={node.path} title={node.path} onClick={() => set(workspace?.approved ? { currentFile: node.path, filePanel: undefined } : { filePanel: node.id, currentFile: undefined })} key={`connected/${node.id}`} style={{ left: p.x + 8, top: p.y - 9 }}><strong>{mapFileLabel(node.path).name}</strong><small>{mapFileLabel(node.path).parent}</small></button>;
       })}
       {explore && tip && (
         <div className="map-tip" style={{ left: tip.x + 12, top: tip.y + 8 }}>
@@ -526,6 +542,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       )}
       {graph && explore && (
         <div className="map-legend">
+          {connections?.root && graph.temporal === 'current' && <span>Importer → dependency · static imports</span>}
           <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{connectionsOpen && neighborhood ? `${viewGraph?.nodes.length} neighborhood files · ${viewGraph?.edges.length} shown imports` : observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} observed files · ${viewGraph?.edges.length} shown imports` : `${graph.nodes.length} files · ${graph.edges.length} imports`}</span>
 
           <MapActions graph={graph} />

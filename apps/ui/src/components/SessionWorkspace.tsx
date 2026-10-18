@@ -178,7 +178,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   }, [tree]);
   // One continuous scrollbar; a bounded DOM window keeps large repositories cheap.
   const rowHeight = 32;
-  const firstRow = Math.max(0, Math.floor(treeScroll / rowHeight) - 10);
+  // A scan/search can replace a long listing with a shorter one before the scroll
+  // event arrives. Never render a spacer beyond the new list's last real row.
+  const firstRow = Math.min(Math.max(0, tree.length - 1), Math.max(0, Math.floor(treeScroll / rowHeight) - 10));
   const lastRow = Math.min(tree.length, firstRow + Math.ceil(treeHeight / rowHeight) + 24);
   useLayoutEffect(() => {
     const el = treeElement.current;
@@ -226,7 +228,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     {modern && !narrow && <ReadingResize value={readingWidth} minimum={220} maximum={maximumWidth} change={setWidth} label="Resize Files reading space" />}
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
     <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Find repository files' : 'Find session files'} placeholder="Find files…" maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
-    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}
+    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().then(()=>{setTreeScroll(0);treeElement.current?.scrollTo({top:0});explorer.current?.querySelector<HTMLInputElement>('input')?.focus({preventScroll:true});}).catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
       if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
