@@ -8,15 +8,21 @@
 
 ## Current priorities
 
+**Git graph presentation is deferred by the builder. Continue the non-graph product queue below; no graph source changes in this increment.**
+
+- [x] **Exact small history windows:** a one-passage selection must contain the requested operation instead of the preceding passage; preserve bounded paging and historical step. Found during real-session test-bar validation.
+
+- [x] **Prompt identity layout correction:** symbol and workspace name must share a single horizontal line with a small gap at320/390/desktop widths; truncate long names, never stack them. Git graph work is deferred at the builder’s request.
+
 - [x] **Loki reference material / composer correction:** replace the rejected individual-thread treatment with one flowing luminous spectral ribbon, broader curves and softly layered material; retain actual forks, consistent thickness and depth. Prompt identity should show the original symbol plus workspace name only, no Codex/Claude label.
 
 - [x] **Spatial Git ribbon correction:** branches peel from the main ribbon’s outer rim at their actual fork/merge positions. Replace flat translated lines with sampled3D fiber geometry, depth ordering, nearly uniform32px volumetric bundle diameter (no zero-width/DNA pinches) and restrained spectral shading; preserve truthful topology and bounded work. Search further original visual references and document PR110 selective integration clearly.
 
-- [ ] **Compact test-case bars:** small semantic pass/fail/skip bars in tool cards, hover/focus detail and selection to assertion output. Individual names/indices/order only when captured; runner-summary totals remain explicitly grouped. Preserve complete output and accessible counts; verify actual Codex/Claude/wrapped/mixed-runner and missing/truncated cases, not only the demo.
+- [x] **Compact test-case bars:** small semantic pass/fail/skip bars in tool cards, hover/focus detail and selection to assertion output. Individual names/indices/order only when captured; runner-summary totals remain explicitly grouped. Preserve complete output and accessible counts; verify actual Codex/Claude/wrapped/mixed-runner and missing/truncated cases, not only the demo.
 
 
 - [x] **Git thread graph:** continuous scrollable history without commit-range pagination; one32px spectral fiber main strand with thinner shared-palette fork/merge strands (branch width proportional to observed commit counts, capped at half main), then graph-first horizontal parent topology with actual fork/merge threads, hover/focus commit details, selection → changed files/patches, pan/zoom/fit and bounded responsive reading. Direct right-side Git graph entry; preserve exact local refs/paging/shallow truth, no decorative invented branches.
-- [x] **Compact composer identity:** removed Continue with, decorative leading symbol and static recording suffix from the main row; harness/workspace/status remain and full identity stays under connection details.
+- [x] **Compact composer identity:** original symbol and workspace basename share one horizontal line with9px spacing and long-name ellipsis, including320/390px. No harness name, Continue with or recording suffix in the primary row; native identity stays in connection details. Supersedes the earlier stacked identity implementation.
 - [x] **Tool status marks:** shared unknown-result presentation uses a neutral dash and accessible explanation. Edit/creation requests decoded from exec wrappers say Change unverified; other missing results say Result not captured. Confirmed success/error/running remain distinct; projection status is unchanged. Units and shared DOM checks cover editing/creation; native-account acceptance remains separate.
 
 

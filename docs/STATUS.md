@@ -31,6 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Compact test evidence and the actual horizontal prompt row
+
+- **When:**18 October2026, `codex/compact-outcome-reading`; graph presentation deferred by builder.
+- **Delivered:**[113](review/113-compact-test-reading.md): fixed the remaining column layout so symbol and basename share one horizontal line at320/390/desktop with ellipsis. Shared native/MCP/Inspector result bars expose captured cases by hover/focus/keyboard/selection, using a focused portal reader and original raw-output handoff. Grouped counts, partial rows and unsupported formats remain explicit. Bounded stored head/tail reading recovers clipped wrappers without joining disjoint slices. Real pytest warning summaries are recognized without counting warnings as tests. Fixed the discovered count1 history centering error; no graph/source/native-control/capture-schema change.
+- **Validation:**Both TS/build;511units/91files and focused parser/history checks. Native/MCP/mixed/long-artifact/keyboard/raw browser journeys and actual three-session Codex/Claude desktop/phone investigation, plus both-harness horizontal identity geometry. Portal-close regression now prevents the underlying action from opening Inspector. Review113 covers limits. No hosted CI or physical/native-account release certification.
+
 ### Yash with Codex — Luminous reference material and compact prompt identity
 
 - **When:**18 October2026, `codex/luminous-git-ribbon`; spatial correctionPR113 previously merged as1ad074c.

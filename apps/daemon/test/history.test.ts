@@ -11,6 +11,15 @@ let dir: string;
 afterEach(async () => { await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 describe('worker-owned history pages', () => {
+  it('keeps the requested operation inside a one-passage window',async()=>{
+    dir=mkdtempSync(join(tmpdir(),'drishya-one-passage-'));app=new App(join(dir,'data'));
+    const journal=join(dir,'rollout.jsonl');copyFileSync(resolve('fixtures/synthetic/codex/rollout-checkout-review.jsonl'),journal);
+    const {recordingId}=await app.ingest.importSource('codex',journal),full=app.projection(recordingId),scene=compose(full,{step:full.timeline.length});
+    const target=scene.passages.findIndex((passage,index)=>index>0&&passage.ops.length>0),id=scene.passages[target]!.ops[0]!.id;
+    const page=await app.history.page(recordingId,{selectedOperationId:id,count:1});
+    expect(page.projection.operations.some(op=>op.id===id)).toBe(true);expect(page.loadedPassageIds).toEqual([scene.passages[target]!.id]);expect(page.scene.step).toBe(full.timeline.length);
+  });
+
   it('locates an older captured prompt without rewinding or loading the whole recording', async () => {
     dir = mkdtempSync(join(tmpdir(), 'drishya-prompts-'));
     const journal = join(dir, 'rollout.jsonl');
