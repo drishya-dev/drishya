@@ -50,7 +50,15 @@
 .md-clear-filter { width:100%; padding:8px; font:10px/1.5 var(--sans); color:var(--focus); }
 :root[data-ui-version=modern] .modern-toolbox [aria-pressed=true] { background:color-mix(in srgb,var(--focus) 10%,var(--s1)); }
 /* A compact right reader; metadata must not take the patch's reading space. */
-:root[data-ui-version=modern][data-experience=classic] .modern-git-drawer { position:fixed; inset:calc(var(--workspace-header-h,56px) + 10px) 16px auto auto; margin:0; width:min(680px,calc(100vw - 32px)); max-width:calc(100vw - 32px); height:auto; max-height:calc(100dvh - var(--workspace-header-h,56px) - 26px); z-index:40; border:1px solid var(--line-2); border-radius:12px; background:var(--bg); box-shadow:-12px 10px 46px #0005; overflow:auto; }
+.modern-git-drawer>header>.reading-resize {left:0;width:10px;}
+.modern-git-drawer>header>.reading-resize::after {top:25%;bottom:25%;left:3px;}
+:root[data-ui-version=modern] .modern-git-drawer .git-review-layout.git-files-hidden {grid-template-columns:minmax(0,1fr);}
+.modern-git-drawer .git-review-layout>aside[hidden] {display:none;}
+.modern-git-drawer .git-file-name {display:flex;flex-direction:column;min-width:0;gap:3px;}
+.modern-git-drawer .git-file-name :is(strong,small) {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.modern-git-drawer .git-file-name strong {font-weight:500;font-size:11px;color:var(--t1);}
+.modern-git-drawer .git-file-name small {font-size:10px;color:var(--t3);}
+:root[data-ui-version=modern][data-experience=classic] .modern-git-drawer { position:fixed; inset:calc(var(--workspace-header-h,56px) + 10px) 16px auto auto; margin:0; width:min(var(--git-reader-width,680px),calc(100vw - 32px)); max-width:calc(100vw - 32px); height:auto; max-height:calc(100dvh - var(--workspace-header-h,56px) - 26px); z-index:40; border:1px solid var(--line-2); border-radius:12px; background:var(--bg); box-shadow:-12px 10px 46px #0005; overflow:auto; }
 :root[data-ui-version=modern] .modern-git-drawer>header { position:sticky; top:0; z-index:3; padding:8px 14px; min-height:44px; background:var(--s1); }
 :root[data-ui-version=modern] .modern-git-drawer>header h2 { display:flex; align-items:center; gap:9px; font:500 13px/1.5 var(--sans); letter-spacing:0; }
 :root[data-ui-version=modern] .modern-git-drawer>header .icon-btn { width:28px; height:28px; font-size:15px; }
@@ -62,7 +70,7 @@
 :root[data-ui-version=modern] .modern-git-drawer .git-review-toolbar>span { flex:1 1 170px; min-width:0; overflow-wrap:anywhere; margin-right:auto; font:10px/1.6 var(--mono); }
 .modern-git-scope { padding:9px 14px; color:var(--t3); font:10px/1.6 var(--sans); }
 .modern-git-scope summary { cursor:pointer; }.modern-git-scope p { margin:8px 0 0; }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout { grid-template-columns:146px minmax(0,1fr); align-items:start; gap:12px; padding:0 12px 14px; }
+:root[data-ui-version=modern] .modern-git-drawer .git-review-layout { grid-template-columns:clamp(146px,22%,220px) minmax(0,1fr); align-items:start; gap:12px; padding:0 12px 14px; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside { background:var(--s1); border:1px solid var(--line); border-radius:8px; padding:4px; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside button { min-height:32px; gap:6px; border:0; border-radius:5px; font-size:10px; padding:7px 5px; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside .file-icon { width:15px; height:15px; }
@@ -70,7 +78,7 @@
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout :is(section>header,footer) { padding:9px 0; gap:6px; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout section>header strong { font-size:11px; min-width:100%; }
 :root[data-ui-version=modern] .modern-git-drawer .git-patch { padding:3px 0 8px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-patch-reader .code { font-size:11px; line-height:1.75; }
+:root[data-ui-version=modern] .modern-git-drawer .git-patch-reader .code { font-size:12px; line-height:1.75; }
 :root[data-ui-version=modern] .modern-git-drawer .reader-tools { gap:4px; padding:5px 0; }
 :root[data-ui-version=modern] .modern-git-drawer .reader-tools :is(input,button,label) { font-size:10px; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout footer label { font-size:11px; }

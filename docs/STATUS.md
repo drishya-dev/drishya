@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Adjustable Git reading space
+
+- **When:**18 October2026, `codex/git-reading-space`; one focused increment after82 merged as43f119e. Builder now prefers UI/theme decisions mixed as useful; geometry/readability first, retain Jet Black baseline.
+- **Delivered:**[98](review/98-git-reading-space.md): compact-default bounded Git width with sticky-header pointer/keyboard separator, collapsible proportional file rail, basename/parent identity,12px patch text and validated source/session width/list recovery. Existing consent/content identity/patch/native boundaries unchanged; Legacy retains its layout.
+- **Validation:**Both typechecks/build and446units/76files pass; metadata bounds regression. Two focused Edge journeys cover resize/hide/reopen/phone and retained Find/layout; actual read-only Drishya Git review also passes, frame inspected privately. Final type refinement rerun separately. No hosted CI/native turn/repository write/private content; package/artwork edits excluded.
+- **Next:**Files sizing and broader84 component/palette pass, then source-version/joined workflow and92's quiet optional Review tools. Physical/native/human/platform acceptance remains open.
+
 ### Yash with Codex — Home scan density and complete session reachability
 
 - **When:**18 October2026, `codex/home-reading-density`, one coherent commit/PR after81 merged asf4301a5.

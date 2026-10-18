@@ -7,6 +7,18 @@ import type { ReplayBundle } from '@drishya/contracts';
 import { EvidenceTrail } from '../src/lib/evidence-navigation.ts';
 
 describe('bounded workspace navigation memory', () => {
+  it('retains only bounded Git reading dimensions and boolean file-list visibility',()=>{
+    const memory=new WorkspaceMemory(), session=memory.session('r');
+    session.set('git/width',1040);session.set('git/filesHidden',true);
+    const restored=new WorkspaceMemory();restored.restore(memory.snapshot());
+    expect(restored.session('r').get('git/width')).toBe(1040);
+    expect(restored.session('r').get('git/filesHidden')).toBe(true);
+    for(const width of [419,1201,NaN,Infinity,'wide']) {
+      session.set('git/width',width);session.set('git/filesHidden','yes');
+      expect(memory.snapshot().sessions[0]!.entries).not.toContainEqual(['git/width',width]);
+      expect(memory.snapshot().sessions[0]!.entries.some(([key])=>key==='git/filesHidden')).toBe(false);
+    }
+  });
   it('restores validated reader state and folder sets without source bodies or executable state',()=>{const memory=new WorkspaceMemory();const session=memory.session('r'),trail=new EvidenceTrail();trail.visit({currentFile:'file.ts',explore:false,inspectorTab:'detail',inspectorWidth:760}).memory.set('disk/start',200);session.set('evidence/trail',trail);session.set('folders/open',new Set(['src']));session.set('source/body','NEVER_PERSIST');session.set('location',{currentFile:'file.ts',playing:true,approved:true});const snapshot=memory.snapshot('r');expect(JSON.stringify(snapshot)).not.toContain('NEVER_PERSIST');expect(JSON.stringify(snapshot)).not.toContain('playing');expect(JSON.stringify(snapshot)).not.toContain('approved');const restored=new WorkspaceMemory();restored.restore(snapshot);expect(restored.session('r').get('folders/open')).toEqual(new Set(['src']));expect((restored.session('r').get('evidence/trail') as EvidenceTrail).current!.memory.get('disk/start')).toBe(200);expect(()=>restored.restore({version:1,sessions:[{id:'r',entries:[['evidence/trail',{cursor:0}]]}]})).not.toThrow();});
   it('isolates sources, evicts old sessions and caps location slots', () => {
     const memory = new WorkspaceMemory(), first = memory.session('first');

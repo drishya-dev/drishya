@@ -6,7 +6,7 @@ import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { SettingsSections } from './UIVersions.tsx';
 import { useExperience } from '../lib/experience.ts';
 
-export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode }) {
+export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon, resizeControl }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode; resizeControl?: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEvidenceScroll(ref, `dialog/${className}`);
   const titleId = useId();
@@ -21,7 +21,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     return () => { arrival?.cancel(); dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
   }, [modeless]);
   return createPortal(<dialog ref={ref} style={style} className={`product-dialog ${className}${modeless ? " map-reader" : ""}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
-    <header><h2 id={titleId}>{headerIcon}{title}</h2><button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></header>
+    <header>{resizeControl}<h2 id={titleId}>{headerIcon}{title}</h2><button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></header>
     {children}
   </dialog>, document.body);
 }

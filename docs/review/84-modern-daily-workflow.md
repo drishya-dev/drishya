@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October UI/theme order:** Refine geometry and reading interactions first, judge palettes on real material alongside those changes, retain Jet Black. [98](98-git-reading-space.md) adds bounded resizable Git reading and a collapsible/disambiguated file rail; broader Files/reader/menu/theme work remains open.
+
 **18 October Home density:** [97](97-home-reading-density.md) improves type and vertical allocation with synchronized80px desktop/104px narrow virtual rows, responsive reading-position preservation and scoped touch controls. Actual imported/discovered library and160-session reachability checked. This completes one Home audit slice; the broader component/palette/source-workflow queue remains open.
 
 **Responsive Files navigation:** [96](96-responsive-workspace-files.md) fixes the reproduced narrow Workspace chooser/header overlap, adds a local Files trigger and normal dismissal/focus recovery, and keeps responsive defaults distinct from explicit preferences. Desktop and touch-emulated checks pass; physical-phone acceptance and the wider component audit remain open.

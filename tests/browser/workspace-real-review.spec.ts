@@ -11,6 +11,27 @@ let app:App,server:RunningServer;
 test.skip(!store || !ids.length,'Opt in with a local redacted store and explicit recording IDs.');
 test.beforeAll(async()=>{if(!store || !ids.length)return;app=new App(store);server=await startServer({app,port:0});});
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();});
+test('actual current Git review supports expanded patch reading without repository writes',async({page})=>{
+  const id=ids[0]!;test.skip(!app.recording(id).workspaceRoot,'This recording has no current local workspace.');
+  await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${encodeURIComponent(id)}`);
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  const reader=page.getByRole('dialog',{name:'Git review',exact:true});
+  const workspace=reader.getByRole('button',{name:'Approve current workspace',exact:true});
+  await expect(workspace.or(reader.getByRole('button',{name:'Approve read-only Git',exact:true})).or(reader.getByRole('button',{name:'Refresh changes',exact:true}))).toBeVisible();
+  if(await workspace.isVisible())await workspace.click();
+  const consent=reader.getByRole('button',{name:'Approve read-only Git',exact:true});
+  await expect(consent.or(reader.getByRole('button',{name:'Refresh changes',exact:true}))).toBeVisible();
+  if(await consent.isVisible())await consent.click();
+  await expect(reader.getByRole('complementary',{name:'Git changed files',exact:true})).toBeVisible();
+  const resize=reader.getByRole('separator',{name:'Resize Git reading space',exact:true});await resize.focus();await page.keyboard.press('End');
+  await expect.poll(()=>reader.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(1200);
+  await reader.getByRole('button',{name:/^Hide files/}).click();
+  await expect(reader.getByRole('complementary',{name:'Git changed files',exact:true})).toBeHidden();
+  await page.screenshot({path:resolve('.local/review-actual-git-expanded.png')});
+  await reader.getByRole('button',{name:'Close Git review',exact:true}).click();await expect(page.locator('.history')).toBeVisible();
+});
 test('actual library Home keeps sessions readable at desktop, phone and short-window sizes',async({page})=>{
   await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
   await expect(page.locator('.mh-session').first()).toBeVisible();
