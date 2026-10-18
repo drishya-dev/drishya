@@ -25,12 +25,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Complete interface acceptance sweep | Actual-session surface survey, four full-suite findings and review103 |
+| Yash with Codex | Finish origin-motion acceptance setup | Two closed-tree p1 journeys, final103 acceptance results |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Follow measured composer clearance
+
+- **When:**18 October2026, `codex/follow-composer-resize`; PR89 merged/pushed as5b59d0e.
+- **Delivered:**[105](review/105-follow-composer-clearance.md): border-box history observation accounts for late composer padding and uses existing Follow while respecting detached reading/clicked destinations. No timing/wheel/native/capture change.
+- **Validation:**Both typechecks/build and447units/77files pass; two initial plus three final focused journeys and all three actual long-history/Workspace journeys pass, including95 upward-wheel samples each. No hosted CI/native turn/private content.
+- **Next:**Fix two old closed-tree origin-test assumptions and record103 final acceptance.84/92 retain broader feature/polish/release work.
 
 ### Yash with Codex — Actual-surface acceptance and prose overflow
 

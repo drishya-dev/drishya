@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October Follow clearance:**[105](105-follow-composer-clearance.md) fixes the reproduced72px initial-follow gap by observing padding-inclusive history allocation; reuse existing follow only while attached and outside a clicked navigation boundary. Prompt minimize/expand, delayed upward scrolling, wheel/hover/click behavior and all three actual histories/Workspace journeys pass locally. Two older origin-test tree setup fixes remain from103.
+
 **18 October full sweep:**[103](103-interface-acceptance-sweep.md) records174passed/6skipped/4failed on the pre-repair browser suite, fixes the24px prose-background overflow and adds actual desktop/phone surface coverage. Two old closed-tree origin-test assumptions and the reproduced72px initial-follow gap remain to fix. Further observed polish: compact narrow Review pagination and current-source reader controls.
 
 **18 October builder card adjustment:** Delivered in[104](104-tool-exchange-balance.md): approximately one more input line and one fewer result line at rest/hover, compact control gaps and no second divider. Full captured text remains scrollable. Twelve length/type combinations, local wheel/hover boundaries and actual captured command checked; full acceptance sweep failures remain separate.
