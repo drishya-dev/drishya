@@ -71,6 +71,10 @@ test('the tool request is visible before its result and remains beside it', asyn
   await app.ingest.sync(recordingId);
   await expect(page.locator('.prose').last()).toContainText('Now reading the guard');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Surface');
+  for(const path of ['src','src/checkout']) {
+    const folder=page.locator('.folder-tree').getByTitle(path,{exact:true});
+    if(await folder.getAttribute('aria-expanded')!=='true')await folder.click();
+  }
   await page.locator('.folder-tree [data-spine-path="src/checkout/guard.ts"]').scrollIntoViewIfNeeded();
   append({ type: 'assistant', message: { id: 'p1-next-read', role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id: 'p1-next-read', name: 'Read', input: { file_path: '/home/dev/shop/src/checkout/guard.ts', offset: 1, limit: 3 } }] } });
   await app.ingest.sync(recordingId);
@@ -265,29 +269,41 @@ test('file relationships start at measured renderer nodes and fall back when the
     const response = await route.fetch();
     const bundle = await response.json();
     const node = bundle.graph.nodes.find((node: { path: string }) => node.path === 'test/checkout.test.ts');
-    // Classic's wider right rail covers the previous .86 fixture position.
-    node.x = .76; node.y = .35;
+    // Keep this fixed planar fixture above the settled action row, outside prose.
+    // The previous .76/.35 position was covered by the card after its final reflow.
+    node.x = .8; node.y = .2;
     await route.fulfill({ response, json: bundle });
   });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
   const edit = page.locator('article.op-edit').last();
+  await page.evaluate(()=>document.fonts.ready);
   await expect.poll(async () => { const reads = await page.locator('article.op-read').count(); return reads > 0 && reads === await page.locator('article.op-read .read-preview').count(); }).toBe(true);
   await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect.poll(() => page.locator('.history').evaluate(el => [...el.querySelectorAll('article')].flatMap(card => card.getAnimations()).filter(a => a.id.startsWith('surface-') && a.playState === 'running').length)).toBe(0);
+  const follow=page.getByRole('switch',{name:'Automatically follow new work',exact:true});
+  if(await follow.getAttribute('aria-checked')==='true')await follow.click();
   await expect(page.locator('.map [data-origin-file="test/checkout.test.ts"]')).toHaveAttribute('data-origin-visible', 'true');
   await page.mouse.move(0, 0);
   await edit.locator('.op-head').hover();
   const tether = page.locator('.origin-thread[data-origin-type="Repository node"]');
   await expect(tether).toHaveCount(1);
+  // Renderer ownership can change during a redraw. Compare path and origin from
+  // the same frame rather than holding one coordinate across protocol calls.
+  await expect.poll(()=>page.evaluate(()=>{
+    const tether=document.querySelector('.origin-thread[data-origin-type="Repository node"]');
+    const renderer=tether?.getAttribute('data-origin-renderer');
+    const node=document.querySelector(`${renderer==='overview'?'.repo-lens':'.map'} [data-origin-file="test/checkout.test.ts"]`);
+    const coordinates=tether?.getAttribute('d')?.match(/^M([\d.-]+),([\d.-]+)/);
+    if(!node||!coordinates)return Infinity;
+    const bounds=node.getBoundingClientRect();
+    return Math.max(Math.abs(Number(coordinates[1])-bounds.x-bounds.width/2),Math.abs(Number(coordinates[2])-bounds.y-bounds.height/2));
+  })).toBeLessThan(1);
   const point = (await page.locator('.map [data-origin-file="test/checkout.test.ts"]').boundingBox())!;
-  const coordinates = (await tether.getAttribute('d'))!.match(/^M([\d.-]+),([\d.-]+)/)!;
-  const renderer = await tether.getAttribute('data-origin-renderer');
-  const measured = renderer === 'overview' ? (await page.locator('.repo-lens [data-origin-file="test/checkout.test.ts"]').boundingBox())! : point;
-  expect(Number(coordinates[1])).toBeCloseTo(measured.x + measured.width / 2, 0);
-  expect(Number(coordinates[2])).toBeCloseTo(measured.y + measured.height / 2, 0);
   // Occlusion must switch to another real view of the node, not draw through the reader.
+  const testFolder=page.locator('.folder-tree .folder-row[title="test"]');
+  if(await testFolder.getAttribute('aria-expanded')!=='true')await testFolder.click();
   await page.locator('.folder-tree [data-spine-path="test/checkout.test.ts"]').scrollIntoViewIfNeeded();
   await page.evaluate((point) => {
     const cover = document.createElement('div'); cover.className = 'inspector'; cover.id = 'synthetic-origin-cover';

@@ -25,12 +25,18 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Yash with Codex | Finish origin-motion acceptance setup | Two closed-tree p1 journeys, final103 acceptance results |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Complete original failed-case acceptance
+
+- **When:**18 October2026, `codex/origin-tree-acceptance`; PR90 merged/pushed asd35cabe.
+- **Delivered:**103 final result: explicitly open Files ancestors, settle font/camera geometry and place the synthetic planar point outside the final card. Compare node/path geometry in one frame; retain map occlusion and map-off reference assertions. No runtime change in this increment.
+- **Validation:**Both origin journeys pass, then all four original full-suite failures pass together. UI rebuild passes; latest functional type/unit check447units/77files passes. Original full run174passed/6skipped/4failed remains recorded; targeted closure does not invent a second clean full run. No hosted CI/native turn/private content.
+- **Next:**84 narrow Review pagination/current-source control density; source-version/joined workflow and92 selected secondary tools remain. Physical/native/assistive-tech/human release acceptance stays open. Preserve package/artwork.
 
 ### Yash with Codex — Follow measured composer clearance
 

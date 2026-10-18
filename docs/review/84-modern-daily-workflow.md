@@ -2,6 +2,8 @@
 
 ## Read this first — complete queue, 17 October
 
+**18 October acceptance closure:**103 now records all four original failed browser cases passing together after89/90 and explicit settled-tree origin setup. Original broad run174passed/6skipped/4failed; no second full-run claim. Actual surface/long-history checks and latest447units/77files pass. Next bounded polish: narrow Review pagination and compact current-source controls, then the remaining source-version/joined workflow and92 selected tools; do not call the whole feature/release queue complete.
+
 **18 October Follow clearance:**[105](105-follow-composer-clearance.md) fixes the reproduced72px initial-follow gap by observing padding-inclusive history allocation; reuse existing follow only while attached and outside a clicked navigation boundary. Prompt minimize/expand, delayed upward scrolling, wheel/hover/click behavior and all three actual histories/Workspace journeys pass locally. Two older origin-test tree setup fixes remain from103.
 
 **18 October full sweep:**[103](103-interface-acceptance-sweep.md) records174passed/6skipped/4failed on the pre-repair browser suite, fixes the24px prose-background overflow and adds actual desktop/phone surface coverage. Two old closed-tree origin-test assumptions and the reproduced72px initial-follow gap remain to fix. Further observed polish: compact narrow Review pagination and current-source reader controls.
