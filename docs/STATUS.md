@@ -31,6 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Spatial bundle and rim forks
+
+- **When:**18 October2026, `codex/spatial-git-ribbons`; precedingPR112 merged ascb2a674.
+- **Delivered:**Review112 spatial correction: sampled XYZ fiber bundles, depth-sorted branch pieces, actual forks peeling from the outer rim and explicit viewing-axis orbit (drag/keyboard), with ordinary pan retained. The latest builder correction rejects DNA/edge-on collapse: nearly uniform32px main diameter,2%variation, branch cap16px and nonzero neck. Primary reference research uses Bo Zonneveld’s Loki concept collection; no artwork download/dependency. PR110 is still open/conflicted; useful distinct parts were already integrated and credited throughPR112, duplicates not merged.
+- **Validation:**Both TypeScript checks/build;10focused geometry/window/topology cases (including all-angle diameter/rim/depth/budget guards), two synthetic graph/continuous-history journeys and actual three-session Codex/Claude desktop/phone journey pass. Desktop/phone/orbit frames inspected. No hosted CI, native turn or new capture/Git-write behavior. Review112 records bounds and the explicit limit: orthographic spatial rendering, not a full freely orbitable WebGL scene.
+
 ### Yash with Codex — Continuous spectral Git threads
 
 - **When:**18 October2026, `codex/branch-threads-integration`; selective PR110 work is commit7198cb0.
