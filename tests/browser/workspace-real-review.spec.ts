@@ -12,6 +12,65 @@ let app:App,server:RunningServer;
 test.skip(!store || !ids.length,'Opt in with a local redacted store and explicit recording IDs.');
 test.beforeAll(async()=>{if(!store || !ids.length)return;app=new App(store);server=await startServer({app,port:0});});
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();});
+test('actual product surfaces keep evidence, current source, review and map navigation bounded',async({page})=>{
+  test.setTimeout(90000);
+  // Audit surfaces from a known starting location; recovery is covered separately.
+  await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+  const id=ids[0]!, graph=await app.graph(id);
+  const path=graph.nodes.find(node=>node.path==='README.md')?.path??graph.nodes.find(node=>!node.path.startsWith('.local/')&&node.path.endsWith('.ts'))?.path;
+  test.skip(!path,'This opted-in recording has no suitable local reading path.');
+  const frame=async(name:string)=>{
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth),`${name}: document overflow`).toBeLessThanOrEqual(1);
+    for(const dialog of await page.locator('dialog[open]').all()) {
+      const box=(await dialog.boundingBox())!;
+      expect(box.x,`${name}: dialog left`).toBeGreaterThanOrEqual(0);
+      expect(box.x+box.width,`${name}: dialog right`).toBeLessThanOrEqual((await page.viewportSize())!.width+1);
+      expect(box.y,`${name}: dialog top`).toBeGreaterThanOrEqual(0);
+      expect(box.y+box.height,`${name}: dialog bottom`).toBeLessThanOrEqual((await page.viewportSize())!.height+1);
+    }
+    await page.screenshot({path:resolve(`.local/surface-${name}.png`),animations:'disabled'});
+  };
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  for(const width of [1440,390]) {
+    await page.setViewportSize({width,height:960});
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(id)}`);
+    const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
+    if(await desk.isVisible())await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
+    const back=page.getByRole('button',{name:'Back to work',exact:true});if(await back.isVisible())await back.click();
+    const current=page.locator('.current-file-reader');if(await current.isVisible())await current.locator(':scope>header button').click();
+    await expect(page.locator('.history')).toBeVisible();
+    await page.getByLabel('More workspace options',{exact:true}).click();
+    await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
+    const review=page.getByRole('dialog',{name:'Review work',exact:true});await expect(review.locator('.review-counts')).toBeVisible();
+    await frame(`review-${width}`);
+    const changes=review.getByRole('region',{name:'Files with captured changes',exact:true}).getByRole('button');
+    if(await changes.count()) {
+      await changes.first().click();const evidence=page.locator('dialog.file-workspace');await expect(evidence).toBeVisible();
+      await expect(evidence.getByText('Loading captured actions…',{exact:true})).toHaveCount(0);
+      await frame(`captured-file-${width}`);await evidence.locator(':scope>header button').click();
+    } else await review.getByRole('button',{name:'Close Review work',exact:true}).click();
+    await page.getByLabel('More workspace options',{exact:true}).click();
+    await page.locator('.workspace-menu[open]').getByRole('button',{name:/^Review questions/}).click();
+    const questions=page.getByRole('dialog',{name:'Review questions',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
+    await questions.getByRole('button',{name:'Close Review questions',exact:true}).click();
+    await page.getByLabel('More workspace options',{exact:true}).click();
+    await page.locator('.workspace-menu[open] .usage-peek>summary').click();await frame(`usage-${width}`);
+    await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+    await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
+    const grant=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();await expect(desk.getByRole('tablist')).toBeVisible();
+    await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
+    await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(path!);
+    await nav.getByRole('option').filter({has:page.getByText(path!,{exact:true})}).first().click();await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();
+    await frame(`current-file-${width}`);await current.locator(':scope>header button').click();
+    await page.getByRole('button',{name:'Explore repository map',exact:true}).click();
+    await page.getByRole('textbox',{name:'Find a file on the map',exact:true}).fill(path!);
+    await page.locator('.map-matches').getByRole('button',{name:path!,exact:true}).click();
+    const imports=page.getByRole('switch',{name:'Import paths',exact:true});if(await imports.getAttribute('aria-checked')!=='true')await imports.click();
+    await expect(page.getByRole('region',{name:'Direct import connections',exact:true})).toBeVisible();await frame(`map-imports-${width}`);
+    await page.getByRole('button',{name:'Back to work',exact:true}).click();
+    expect(await page.locator('.history').isVisible()).toBe(true);
+  }
+});
 test('actual session palette and settings survey keeps readable controls at desktop and phone sizes',async({page})=>{
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
