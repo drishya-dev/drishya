@@ -413,16 +413,16 @@ test('actual Codex and Claude test outputs expose bounded result bars and compac
 
 
 test('actual sessions keep current-file tabs beside agent and retain compact prompt clearance',async({page})=>{
- await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:ids.map(id=>({id,entries:[['surface/File reader',{x:400,y:64,width:850,height:1200}]]}))}}):route.continue());
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
  for(const [index,id] of ids.entries()){
   await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  const graph=await app.graph(id),paths=graph.nodes.filter(node=>!node.path.startsWith('.')&&/\.(md|ts|tsx|py|json)$/.test(node.path)).map(node=>node.path).sort((a,b)=>(a==='README.md'?-1:b==='README.md'?1:a.length-b.length)).slice(0,2);expect(paths.length).toBeGreaterThanOrEqual(2);
+  const graph=await app.graph(id),paths=graph.nodes.filter(node=>!node.path.startsWith('.')&&/\.(md|ts|tsx|py|json)$/.test(node.path)).map(node=>node.path).sort((a,b)=>(a==='docs/BLUEPRINT.md'?-1:b==='docs/BLUEPRINT.md'?1:a==='README.md'?-1:b==='README.md'?1:a.length-b.length)).slice(0,2);expect(paths.length).toBeGreaterThanOrEqual(2);
   const grant=page.getByRole('button',{name:/Enable workspace reading/});if(await grant.isVisible())await grant.click();
   for(const path of paths)await page.evaluate(path=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path,pin:true}})),path);
-  const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();await expect(reader.getByRole('tab')).toHaveCount(2);await expect(reader.locator('.current-file-code')).not.toBeEmpty();
-  const history=(await page.locator('.history').boundingBox())!,box=(await reader.boundingBox())!;expect(history.x+history.width).toBeLessThanOrEqual(box.x+1);
-  await reader.getByRole('tab').first().click();await expect(reader.locator('.current-file-code')).not.toBeEmpty();
+  const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();await expect(reader.getByRole('tab')).toHaveCount(2);await expect(reader.locator('.current-file-code,.desk-markdown')).not.toBeEmpty();
+  const history=(await page.locator('.history').boundingBox())!,box=(await reader.boundingBox())!;expect(history.x+history.width).toBeLessThanOrEqual(box.x+1);const prompt=(await page.locator('.prompt-composer').boundingBox())!;expect(box.y+box.height).toBeLessThanOrEqual(prompt.y-8);const rail=await page.locator('.complete-prompt-rail').boundingBox();if(rail)expect(box.x+box.width).toBeLessThanOrEqual(rail.x);
+  await reader.getByRole('tab').first().click();await expect(reader.locator('.current-file-code,.desk-markdown')).not.toBeEmpty();
   await page.screenshot({path:resolve(`.local/file-peek-actual-${index+1}.png`)});
   await reader.locator('header .reading-window-actions button').last().click();
   const latest=page.getByRole('button',{name:/Back to latest/});if(await latest.isVisible())await latest.click();

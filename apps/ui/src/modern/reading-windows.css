@@ -60,8 +60,11 @@
 
 @media(pointer:coarse) {:root[data-ui-version=modern] .file-peek-reader .reading-window-actions :is(.btn,.icon-btn) {width:40px;height:44px;min-height:44px;}}
 
-:root[data-ui-version=modern] .developer-workspace {top:var(--workspace-tools-bottom,186px);}
+:root[data-ui-version=modern] .developer-workspace {top:var(--workspace-leading-bottom,132px);}
 
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {top:var(--workspace-leading-bottom,var(--workspace-tools-bottom,132px));}
 
-:root[data-ui-version=modern][data-experience=classic] .connected-workspace.developer-workspace-open>.workspace-bar>.workspace-secondary {display:flex;}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace.developer-workspace-open>.workspace-bar>.workspace-secondary {display:none;}
+
+/* The independent prompt rail uses the free screen edge while a peek owns the right lane. */
+:root[data-ui-version=modern] .file-peek-open .complete-prompt-rail {right:8px;}
