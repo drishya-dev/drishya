@@ -31,6 +31,22 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Workspace draft code editor
+
+- **When:**18 October2026, `codex/workspace-code-editor`. Palettes97 merged as340dafe.
+- **Delivered:**Lazy browser-only CodeMirror editor with language syntax, line numbers, inferred indentation, undo/redo, brackets, wrap and cursor/line-ending status. Active-pane focus and hidden comparison state remain. CRLF/mixed text is retained; over256KiB changes fail intact. Escape then Tab leaves the editor without closing Workspace. Exact existing volatile draft/download/native-request owners unchanged; no direct disk writes, new backend dependency or captured-text copy.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Plain textarea without a source gutter | One virtualized code editor with semantic syntax and line numbers | Make corrections easier to read and locate |
+| Browser Tab leaves the draft | Indent/outdent with undo and explicit Escape/Tab exit | Support editing without a keyboard trap |
+| Comparison depends on textarea selection fields | Same editor stays mounted and resumes its selection/scroll | Preserve the user's working position |
+| Every viewer would otherwise load editor parsers | Editor/languages load only on explicit editing | Keep ordinary observation light |
+
+- **Validation:**Both TS checks/build and447units/77files pass. Four focused browser journeys pass: two files/retained draft,1500-line comparison/selection/scroll, indentation/undo/CRLF/mixed/oversized rejection/Tab exit/narrow bounds, and complete3000-line paste/native-request attachment with disk unchanged. Three actual redacted session history/two-file/edit-entry journeys pass; frames inspected. Initial textarea-specific test assumptions were updated to real editor selection and paste semantics; Escape conflict fixed before final pass. No hosted CI/native account turn/private capture committed. User package-manager prefix/artwork remain excluded; only the new browser editor dependency entries are staged.
+- **Next:**TASKS retains version refresh/compare, joined correction workflow, whole-product/palette and real native/hardware acceptance.
+
+
 ### Yash with Codex — Rebuilt Modern palette materials
 
 - **When:**18 October2026, `codex/theme-materials`. Current reader96 merged as d37cb43.
