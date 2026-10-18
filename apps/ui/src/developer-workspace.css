@@ -82,7 +82,7 @@
 .source-version-bar > span { flex: 1 1 240px; line-height: 1.5; }
 .source-version-comparison { min-height: 0; min-width: 0; flex: 1; overflow: auto; padding: 12px; }
 .source-version-comparison > p, .captured-source-comparison > p { font-size: 12px; line-height: 1.6; color: var(--t3); }
-.desk-editor[hidden] { display: none; }
+.desk-editor[hidden], .desk-draft-bar[hidden] { display: none; }
 .desk-document>.import-context { flex:none; max-height:30%; overflow:auto; padding:6px 12px; border-bottom:1px solid var(--line); margin:0; }
 @media(max-width:820px) { .desk-panes.split { display:flex; overflow:hidden; }.desk-panes.split .desk-pane { flex:1; min-height:0; }.desk-panes.split .desk-pane:not(.active) { display:none; }.developer-workspace .desk-pane-switch { display:inline-flex; } }
 
