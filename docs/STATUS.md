@@ -25,11 +25,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Yash with Codex | Restore boxes; consolidate checklist; Workspace editing clarity | stage.css, exchange checks, TASKS and Workspace controls |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — Restore the previous tool boxes
+
+- **When:**18 October2026, `codex/restore-exchange-layout`.
+- **Delivered:**Builder rejected104/PR88; restore the exact preceding request/result CSS and update retained length/hover expectations. Later independent prose/Follow repairs remain.
+- **Validation:**Local UI build and12 synthetic length/type combinations plus actual captured command pass. No hosted CI; preserve user package/artwork.
+- **Next:**One authoritative checked work list, then make existing Workspace editing easier to find; UI/themes remain partly complete.
 
 ### Yash with Codex — Complete original failed-case acceptance
 

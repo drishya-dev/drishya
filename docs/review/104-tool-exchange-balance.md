@@ -1,5 +1,7 @@
 # 104 — Balance request and result previews
 
+**Superseded,18 October:** The builder rejected this allocation/spacing change after viewing it. Restore the exact pre-PR88 exchange CSS (88px input/142px output, original hover caps, separator and control spacing). Keep later independent prose-overflow and Follow repairs. The retained regression expectations now verify the restored layout.
+
 18 October 2026. Builder feedback on an actual captured command: input is barely visible while the output occupies most of the enlarged card. Apply the installed Emil design skill to spacing and allocation, preserving the shared real material and its existing motion.
 
 | Before | After | Why |
