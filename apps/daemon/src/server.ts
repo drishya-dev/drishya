@@ -308,11 +308,19 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');
         return json(res, await app.history.page(id, body));
       }
+      if(sub==='finding-members'&&m==='GET') {
+        for(const part of id.split('+'))app.recording(part);
+        const key=url.searchParams.get('key')??'',raw=url.searchParams.get('page')??'0',page=Number(raw),q=url.searchParams.get('q')??'';
+        if(!/^(unknown|missing-change|gaps|repeat\/.+)$/.test(key)||key.length>600||q.length>200||!/^\d+$/.test(raw)||!Number.isSafeInteger(page)||page>1_000_000)throw new HttpError(400,'Invalid finding query');
+        return json(res,await app.history.findingMembers(id,key,page,q));
+      }
       if(sub==='review-insights'&&m==='GET') {
         for(const key of id.split('+'))app.recording(key);
         const raw=url.searchParams.get('page')??'0',page=Number(raw);
         if(!/^\d+$/.test(raw)||!Number.isSafeInteger(page)||page>1_000_000)throw new HttpError(400,'Invalid review page');
-        return json(res,await app.history.reviewInsights(id,page));
+        const kind=url.searchParams.get('kind')??undefined;
+        if(kind&&!['repeated-command','unknown-outcome','missing-change','capture-gap'].includes(kind))throw new HttpError(400,'Invalid finding category');
+        return json(res,await app.history.reviewInsights(id,page,kind as 'repeated-command'|'unknown-outcome'|'missing-change'|'capture-gap'|undefined));
       }
       if(sub==='commands'&&m==='GET') {
         for(const key of id.split('+'))app.recording(key);

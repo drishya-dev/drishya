@@ -31,6 +31,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Complete finding membership
+
+- **When:**18 October2026, `codex/findings-navigation`; reliability104 merged asa4bc497.
+- **Delivered:**On-demand finding membership uses the full worker projection and exact same command/artifact identity as summaries.25thin rows, complete/filtered counts, bounded title/path/command-preview query, exact action navigation, refresh/error/empty states. Gaps expose captured detail and label only next captured activity. Condition filtering avoids burying unknown/missing/gap aggregates behind recent repeated-command groups. Back returns focus to the originating finding; no new main-canvas panel.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Aggregates expose only first/latest examples | Every exact member is paged and searchable | Investigate the actual affected set |
+| Recent repetition groups can bury aggregate conditions | Explicit condition filter | Reach missing outcomes/material and gaps directly |
+| A gap has no captured action to open | Missing interval remains explicit; next activity is labelled | Do not fabricate evidence at the gap |
+
+- **Validation:**Both TS/build,472units/84files, focused member/API and existing Review/packet browser journeys pass. Actual271-unknown set reaches older actions at desktop/phone; frames inspected. Initial real probe selected a recording with zero unknown outcomes; corrected to the authorized271-member history. No native turn, direct writes, output-body transport, schema/dependency changes or hosted CI.
+- **Next:**Command scanning, current Markdown/reader consistency, UI/palette/phone/navigation and native/platform acceptance stay in TASKS.
+
 ### Yash with Codex — Independent critics and reliability repairs
 
 - **When:**18 October2026, `codex/review-reliability`; map103 merged as5938ef5.

@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import type {Projection,Operation,Artifact} from '@drishya/contracts';
-import {reviewInsights} from '../src/review-insights.ts';
+import {reviewInsights,findingMembers} from '../src/review-insights.ts';
 const projection=():Projection=>({reducerVersion:'test',recordingId:'synthetic',observationCount:0,lastSequence:999,harnesses:[],agents:[],operations:[],prose:[],artifacts:[],links:[],timeline:[],passages:[],files:[],gaps:[],capabilities:{}});
 const op=(n:number):Operation=>({id:`op-${n}`,agentId:'agent',kind:'shell',tool:'exec',title:'Captured command',titleProvenance:{kind:'captured',observationIds:[]},origin:{type:'native',tool:'exec'},status:'ok',startSequence:n,paths:[],detail:{kind:'shell',command:'echo same'},artifactIds:[],observationIds:[],classification:{kind:'derived',rule:'test',observationIds:[]}});
 it('groups only proven identical commands and links factual unknown/missing/gap conditions',()=>{
@@ -21,4 +21,22 @@ it('pages all prompts and counts operations by start window rather than late res
   expect(first.promptCount).toBe(45);expect(first.prompts[0]!.ordinal).toBe(45);expect(third.prompts).toHaveLength(5);
   const prompts=[...first.prompts,...second.prompts,...third.prompts];expect(new Set(prompts.map(p=>p.id)).size).toBe(45);expect(prompts.every(p=>p.operations===1)).toBe(true);
   expect(first.findingCount).toBe(1);expect(first.findings[0]!.count).toBe(45);
+});
+
+it('pages every exact finding member, filters previews and keeps gaps distinct from following activity',()=>{
+  const p=projection();p.operations=Array.from({length:70},(_,n)=>({...op(n),title:`Captured ${n}`,status:'unknown'}));
+  expect(reviewInsights(p,0,'unknown-outcome')).toMatchObject({findingCount:1,findings:[{key:'unknown'}]});
+  const rows=[0,1,2].flatMap(page=>findingMembers(p,'unknown',page).items);
+  expect(rows).toHaveLength(70);expect(new Set(rows.map(item=>item.id)).size).toBe(70);
+  expect(findingMembers(p,'unknown',0,'Captured 69')).toMatchObject({total:70,matching:1});
+  expect(findingMembers(p,'repeat/op-0',2).items).toHaveLength(20);
+  expect(findingMembers(p,'repeat/missing')).toMatchObject({available:false,items:[]});
+  p.gaps=[{sequence:25,reason:'compaction',detail:'Captured boundary'}];
+  expect(findingMembers(p,'gaps').items[0]).toMatchObject({sequence:25,operationId:'op-25',title:'compaction',detail:'Captured boundary'});
+});
+it('uses full input identity for member queries as well as finding summaries',()=>{
+  const p=projection();p.operations=Array.from({length:4},(_,n)=>({...op(n),artifactIds:[`op-${n}_input`]}));
+  p.artifacts=p.operations.map((op,n)=>({id:op.artifactIds[0],kind:'excerpt',blob:n===3?'different':'same',availability:'complete'} as Artifact));
+  expect(findingMembers(p,'repeat/op-0').items.map(item=>item.id)).toEqual(['op-0','op-1','op-2']);
+  expect(findingMembers(p,'repeat/op-3').available).toBe(false);
 });
