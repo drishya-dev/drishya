@@ -459,7 +459,7 @@ describe('verification freshness', () => {
 
 it('guards connected workspace and native prompt routes with local API authentication and Origin', async () => {
   for (const path of ['workspace', 'controller']) expect((await call(`/v1/recordings/${recId}/${path}`)).status).toBe(401);
-  for (const path of ['workspace/approve', 'controller/prompt', 'controller/approval', 'controller/stop']) {
+  for (const path of ['workspace/approve', 'controller/prompt', 'controller/approval', 'controller/answer', 'controller/stop']) {
     expect((await call(`/v1/recordings/${recId}/${path}`, { method: 'POST', body: {} })).status).toBe(401);
     expect((await call(`/v1/recordings/${recId}/${path}`, { method: 'POST', headers: { ...auth(), origin: 'https://external.invalid' }, body: {} })).status).toBe(403);
   }

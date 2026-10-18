@@ -31,6 +31,11 @@ createInterface({ input: process.stdin }).on('line', line => {
   if (v.type === 'control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{models:[{value:'native-model',displayName:'Native model',supportedEffortLevels:['low','high']}],commands:[{name:'compact'}]}}});
   else if (v.type === 'user') {
     prompt = v.message.content;
+    if (prompt === 'QUESTION' || prompt === 'QUESTION_CANCEL') {
+      send({type:'control_request',request_id:'question1',request:{subtype:'can_use_tool',tool_name:'AskUserQuestion',input:{questions:[{question:'Which approach?',header:'Approach',multiSelect:true,options:[{label:'Small patch',description:'Focused'},{label:'Refactor',description:'Broad'}]}]}}});
+      if(prompt==='QUESTION_CANCEL')setTimeout(()=>send({type:'control_cancel_request',request_id:'question1'}),500);
+      return;
+    }
     if (prompt === 'STREAM') {
       send({type:'stream_event',event:{type:'content_block_start',index:0,content_block:{type:'thinking',thinking:''}}});
       send({type:'stream_event',event:{type:'content_block_delta',index:0,delta:{type:'thinking_delta',thinking:'Inspect source sk-proj-abcdefghij'}}});
@@ -64,6 +69,11 @@ createInterface({ input: process.stdin }).on('line', line => {
   else if (v.method === 'turn/start') {
     prompt = v.params.input[0].text;
     send({id:v.id,result:{turn:{id:'turn1'}}});
+    if (prompt === 'QUESTION' || prompt === 'QUESTION_CANCEL') {
+      send({id:98,method:'item/tool/requestUserInput',params:{threadId:v.params.threadId,turnId:'turn1',itemId:'question-item',questions:[{id:'approach',question:'Which approach?',header:'Approach',isSecret:false,isOther:true,options:[{label:'Small patch',description:'Focused'},{label:'Refactor',description:'Broad'}]}]}});
+      if(prompt==='QUESTION_CANCEL')setTimeout(()=>send({method:'serverRequest/resolved',params:{threadId:v.params.threadId,requestId:98}}),500);
+      return;
+    }
     if (prompt === 'STREAM') {
       send({method:'item/reasoning/summaryTextDelta',params:{threadId:'wrong-thread',itemId:'wrong',delta:'Never show this'}});
       send({method:'item/reasoning/summaryTextDelta',params:{threadId:v.params.threadId,turnId:'turn1',itemId:'r1',delta:'Inspect source sk-proj-abcdefghij',summaryIndex:0}});
@@ -77,6 +87,9 @@ createInterface({ input: process.stdin }).on('line', line => {
   } else if (v.method === 'turn/interrupt') {
     send({id:v.id,result:{}});
     send({method:'turn/completed',params:{turn:{status:'interrupted'}}});
+  } else if(v.id===98) {
+    send({method:'item/completed',params:{item:{type:'agentMessage',text:JSON.stringify(v.result.answers)}}});
+    send({method:'turn/completed',params:{turn:{status:'completed'}}});
   } else if (v.id === 99) {
     send({method:'thread/tokenUsage/updated',params:{tokenUsage:{last:{inputTokens:210,outputTokens:35,cachedInputTokens:80}}}});
     send({method:'item/completed',params:{item:{type:'agentMessage',text:v.result.decision + ' ' + prompt}}});
@@ -230,4 +243,23 @@ it('rejects protected, binary, oversized and disguised image attachments before 
     { name: 'fake.png', type: 'image', mime: 'image/png', data: Buffer.from('not an image').toString('base64') }
   ]) await expect(controller.start(claudeId, 'Review', true, [attachment])).rejects.toMatchObject({ status: 400 });
   expect(launches.length).toBe(before);
+});
+
+for(const harness of ['codex','claude'] as const)it(`${harness} answers only an exact pending question and rejects stale replies`,async()=>{
+  const id=harness==='codex'?codexId:claudeId,started=await controller.start(id,'QUESTION',true),pending=await wait(id,'approval');
+  expect(pending.approvals).toEqual([]);const request=pending.inputRequests![0]!;expect(request.questions[0]!.question).toBe('Which approach?');
+  expect(()=>controller.answer(id,'old-run',request.id,{q0:{options:['o0']}})).toThrow('no longer current');
+  expect(()=>controller.decide(id,started.runId,request.id,true)).toThrow('already answered');
+  expect(()=>controller.answer(id,started.runId,request.id,{q0:{options:['invalid']}})).toThrow();
+  controller.answer(id,started.runId,request.id,{q0:{options:['o0']}});
+  const done=await wait(id,'completed');expect(done.inputRequests).toEqual([]);
+  if(harness==='codex')expect(frames.findLast(frame=>frame.id===98)?.result).toEqual({answers:{approach:{answers:['Small patch']}}});
+  else expect(frames.findLast(frame=>frame.type==='control_response'&&frame.response?.request_id==='question1')?.response.response.updatedInput.answers).toEqual({'Which approach?':'Small patch'});
+  expect(()=>controller.answer(id,started.runId,request.id,{q0:{options:['o0']}})).toThrow('answered or cancelled');
+});
+for(const harness of ['codex','claude'] as const)it(`${harness} clears a question resolved or cancelled by the native harness`,async()=>{
+  const id=harness==='codex'?codexId:claudeId,started=await controller.start(id,'QUESTION_CANCEL',true),pending=await wait(id,'approval'),request=pending.inputRequests![0]!;
+  await expect.poll(()=>controller.status(id).inputRequests).toEqual([]);
+  expect(()=>controller.answer(id,started.runId,request.id,{q0:{options:['o0']}})).toThrow('answered or cancelled');
+  await controller.stop(id,started.runId);
 });

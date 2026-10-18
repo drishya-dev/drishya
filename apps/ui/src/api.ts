@@ -112,6 +112,7 @@ export interface PromptAttachment { name: string; type: 'text' | 'image'; data: 
 export type { TurnOptions, NativeSettings } from '../../daemon/src/native-types.ts';
 import type { TurnOptions, NativeSettings, NativeUsage } from '../../daemon/src/native-types.ts';
 export interface ControllerStatus {
+  inputRequests?:import('../../daemon/src/native-input-types.ts').NativeInputRequest[];
   settings?: NativeSettings;
   attachments?: { name: string; type: 'text' | 'image' }[];
   submittedPrompt?: string;
@@ -138,6 +139,7 @@ export const workspaceApi = {
   controller: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller`),
   settings: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/settings`, { method: 'POST', json: {} }),
   prompt: (id: string, prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/prompt`, { method: 'POST', json: { prompt, exclusive, attachments, options } }),
+  answer:(id:string,runId:string,requestId:string,answers:Record<string,{options:string[];text?:string}>)=>req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/answer`,{method:'POST',json:{runId,requestId,answers}}),
   decide: (id: string, runId: string, approvalId: string, allow: boolean) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/approval`, { method: 'POST', json: { runId, approvalId, allow } }),
   stop: (id: string, runId: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller/stop`, { method: 'POST', json: { runId } }),
 };

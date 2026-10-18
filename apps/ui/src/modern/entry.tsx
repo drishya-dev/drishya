@@ -9,3 +9,5 @@ import './recovered-surfaces.css';
 
 import './theme-presets.css';
 import './hud.css';
+
+import './quiet-scrollbars.css';

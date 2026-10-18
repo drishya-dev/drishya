@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test, type Locator } from '@playwright/test';
@@ -21,6 +21,7 @@ test.beforeAll(async () => {
   writeFileSync(join(root,'src/cart/comparison.ts'),Array.from({length:1500},(_,i)=>`export const baseLine${i+1} = ${i+1};`).join('\n'));
   writeFileSync(join(root,'src/cart/endings.ts'),'function run() {\r\n    return 42;\r\n}\r\n');
   writeFileSync(join(root,'src/cart/mixed.ts'),'const first = 1;\r\nconst second = 2;\n');
+  writeFileSync(join(root,'src/cart/versions.ts'),'export const version = 1;\n');
   writeFileSync(join(root,'README.md'),'# Workspace guide\n\nA **readable** document.\n\n| Feature | State |\n| --- | --- |\n| Reading | Ready |\n\n> Current source, safely rendered.\n\n```ts\nexport const ready = true;\n```\n');
   const git = (...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true });
   git('init'); git('config', 'user.name', 'Synthetic'); git('config', 'user.email', 'synthetic@example.invalid');
@@ -49,7 +50,7 @@ test.afterAll(async () => {
   if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('opening stored history catches up its native journal without enabling a live watch',async({page})=>{
+test('opening stored history catches up its native journal and enables live observation',async({page})=>{
   const path=join(dir,'catch-up.jsonl'), timestamp='2026-10-16T12:00:00Z';
   const meta=JSON.stringify({timestamp,type:'session_meta',payload:{id:'catch-up',cwd:root}})+'\n';
   writeFileSync(path,meta);
@@ -58,7 +59,7 @@ test('opening stored history catches up its native journal without enabling a li
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
   await expect(page.locator('.history')).toContainText('JOURNAL_CATCHUP_CONFIRMED');
-  expect(app.ingest.isLive(recordingId)).toBe(false);
+  expect(app.ingest.isLive(recordingId)).toBe(true);
 });
 
 test('Modern settings resets section reading, follows responsive tab orientation and retains native select semantics',async({page})=>{
@@ -1149,6 +1150,11 @@ test('Workspace creates an unsent file draft and forwards large contents as a na
   await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();
   await expect.poll(()=>payload).toBeDefined();
   expect(payload.attachments).toEqual([{name:'created.ts.drishya-draft.txt',type:'text',data:text}]);
+  await page.getByLabel('More workspace options').click();
+  await page.getByRole('button',{name:'Back to reading',exact:true}).click();
+  await expect(desk).toBeVisible();await expect(document.getByRole('textbox',{name:'Local draft for src/created.ts',exact:true})).toBeFocused();
+  const backDownload=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  expect(readFileSync((await (await backDownload).path())!,'utf8')).toBe(text);
   expect(payload.prompt.length).toBeLessThan(2000);
   expect(()=>readFileSync(join(root,'src/created.ts'))).toThrow();
 });
@@ -1211,4 +1217,116 @@ test('minimized Modern composer keeps Stop and failure feedback available',async
   await expect(composer.getByRole('button',{name:'Expand prompt',exact:true})).toHaveText('Needs attention');
   await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();
   await expect(composer.getByRole('alert')).toContainText('Synthetic failed turn');
+});
+test('source refresh retains reading, compares versions and blocks a stale native edit handoff',async({page})=>{
+  const path='src/cart/versions.ts',original=readFileSync(join(root,path),'utf8');
+  let prompts=0;await page.route('**/controller/prompt',route=>{prompts++;return route.abort();});
+  try {
+    await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+    const grant=page.getByRole('button',{name:/^Enable workspace reading/});
+    await expect(grant.or(page.locator('.folder-explorer[data-reading-access=current]'))).toBeVisible();if(await grant.isVisible())await grant.click();
+    await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill(path);
+    await page.locator(`[data-spine-path="${path}"]`).click();
+    const reader=page.getByRole('dialog',{name:path,exact:true});await expect(reader.locator('.current-file-code')).toContainText('version = 1');
+    writeFileSync(join(root,path),'export const version = 2;\n');
+    await reader.getByRole('button',{name:'Refresh',exact:true}).click();
+    await expect(reader.getByRole('region',{name:'Source version status'})).toContainText('Source changed on disk');
+    await expect(reader.locator('.current-file-code')).toContainText('version = 1');
+    await reader.getByRole('button',{name:'Keep reading',exact:true}).click();
+    await reader.getByRole('button',{name:'Compare versions',exact:true}).click();
+    const comparison=page.getByRole('dialog',{name:`Source versions · ${path}`,exact:true});
+    await expect(comparison.locator('.diff-scroll')).toContainText('version = 1');await expect(comparison.locator('.diff-scroll')).toContainText('version = 2');
+    await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
+    await comparison.getByRole('button',{name:`Close Source versions · ${path}`,exact:true}).click();
+    await reader.getByRole('button',{name:'Use latest',exact:true}).click();await expect(reader.locator('.current-file-code')).toContainText('version = 2');
+    await expect(reader).toContainText('Previous reading retained');
+    await page.setViewportSize({width:1440,height:960});
+    await reader.getByRole('button',{name:'Open in Workspace',exact:true}).click();
+    const file=page.getByRole('region',{name:`Workspace file ${path}`,exact:true});
+    await file.getByRole('button',{name:'Edit file',exact:true}).click();
+    const editor=file.getByRole('textbox',{name:`Local draft for ${path}`,exact:true});await editor.fill('export const version = 3;\n');
+    writeFileSync(join(root,path),'export const version = 4;\n');
+    await file.getByRole('button',{name:'Review edit with harness',exact:true}).click();
+    await expect(file.getByRole('region',{name:'Draft source conflict'})).toContainText('Disk differs');
+    await expect(file.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
+    await expect(editor).toHaveText('export const version = 3;');expect(prompts).toBe(0);
+    await file.getByRole('button',{name:'Compare draft to disk',exact:true}).click();
+    await expect(file.getByRole('region',{name:`Draft comparison for ${path}`})).toContainText('Latest checked disk snapshot');
+    await expect(file.locator('.diff-scroll')).toContainText('version = 4');await expect(file.locator('.diff-scroll')).toContainText('version = 3');
+    await file.getByRole('button',{name:'Edit draft',exact:true}).click();
+    await page.screenshot({path:resolve('.local/source-conflict-retained.png')});
+    await file.getByRole('button',{name:'Discard draft',exact:true}).click();
+  } finally {writeFileSync(join(root,path),original);}
+});
+
+test('Modern scroll thumbs hide after activity and resize edges retain cursor and keyboard behavior',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const follow=page.getByRole('switch',{name:'Automatically follow new work'});if(await follow.getAttribute('aria-checked')==='true')await follow.click();
+  const history=page.locator('.history'),width=await history.evaluate(n=>n.clientWidth);
+  await history.evaluate(n=>n.scrollTop=n.scrollTop>10?n.scrollTop-10:10);
+  await expect(history).toHaveAttribute('data-scroll-active','');await page.mouse.move(500,25);
+  await expect(history).not.toHaveAttribute('data-scroll-active','');expect(await history.evaluate(n=>n.clientWidth)).toBe(width);
+  const resize=page.getByRole('separator',{name:'Resize Files reading space'});
+  expect(await resize.evaluate(n=>getComputedStyle(n,'::after').content)).toBe('none');
+  expect(await resize.evaluate(n=>getComputedStyle(n).cursor)).toContain('resize');
+  await resize.focus();await page.keyboard.press('End');await expect(resize).toHaveAttribute('aria-valuenow',await resize.getAttribute('aria-valuemax')??'');
+  await page.emulateMedia({forcedColors:'active'});expect(await history.evaluate(n=>getComputedStyle(n).scrollbarColor)).toBe('auto');
+});
+
+test('both local harness sessions start observing by default and update with Follow off',async({page})=>{
+  for(const harness of ['codex','claude-code']) {
+    const journal=join(dir,`default-live-${harness}.jsonl`),timestamp='2026-10-18T00:00:00Z',session=`default-live-${harness}`;
+    const seed=harness==='codex'?{timestamp,type:'session_meta',payload:{id:session,cwd:root}}:{timestamp,type:'user',uuid:`${session}-user`,sessionId:session,cwd:root,message:{role:'user',content:`Default live ${harness}`}};
+    writeFileSync(journal,JSON.stringify(seed)+'\n');const {recordingId}=await app.ingest.importSource(harness,journal);
+    await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
+    await expect.poll(()=>app.recording(recordingId).live).toBe(true);
+    const follow=page.getByRole('switch',{name:'Automatically follow new work'});await expect(follow).toHaveAttribute('aria-checked','true');await follow.click();
+    const top=await page.locator('.history').evaluate(n=>n.scrollTop),command=`echo default-live-${harness}`;
+    const rows=harness==='codex'?[{timestamp,type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:'default-live-call',arguments:JSON.stringify({cmd:command})}},{timestamp,type:'response_item',payload:{type:'function_call_output',call_id:'default-live-call',output:'live result'}}]:[{timestamp,type:'assistant',uuid:'default-live-tool',sessionId:session,cwd:root,message:{role:'assistant',content:[{type:'tool_use',id:'default-live-call',name:'Bash',input:{command}}]}},{timestamp,type:'user',uuid:'default-live-result',sessionId:session,cwd:root,message:{role:'user',content:[{type:'tool_result',tool_use_id:'default-live-call',content:'live result'}]}}];
+    appendFileSync(journal,rows.map(r=>JSON.stringify(r)).join('\n')+'\n');
+    // No explicit sync call: the watcher started by opening the session owns ingestion.
+    await expect(page.locator('.history .op')).toContainText(command);
+    await expect(page.locator('.history .op')).toContainText('live result');
+    expect(await page.locator('.history').evaluate(n=>n.scrollTop)).toBe(top);expect(app.recording(recordingId).live).toBe(true);
+    await expect(follow).toHaveAttribute('aria-checked','false');
+  }
+});
+test('a real pending-input shape expands the composer and replies to that request without sending a prompt',async({page})=>{
+  let state:any={available:true,harness:'codex',state:'running',runId:'input-run',output:'',tools:[],inventory:'runtime',approvals:[],inputRequests:[]};
+  const question={id:'q0',header:'Approach',question:'Which approach?',multiple:false,allowText:true,options:[{id:'o0',label:'Small patch',description:'Focused change'},{id:'o1',label:'Refactor',description:'Wider change'}]};
+  let answer:any,prompts=0;
+  await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
+  await page.route('**/controller',route=>route.fulfill({json:state}));
+  await page.route('**/controller/prompt',route=>{prompts++;return route.abort();});
+  await page.route('**/controller/answer',route=>{answer=route.request().postDataJSON();state={...state,state:'completed',inputRequests:[]};return route.fulfill({json:state});});
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  const composer=page.getByRole('region',{name:'Harness prompt',exact:true});
+  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
+  state={...state,state:'approval',inputRequests:[{id:'input-request',questions:[question]}]};
+  const form=page.getByRole('form',{name:'Agent needs your input'});await expect(form).toBeVisible();
+  await expect(composer.locator('.modern-composer-state')).toHaveText('Answer requested');
+  await expect(form.getByRole('button',{name:'Send answer',exact:true})).toBeDisabled();
+  await form.getByRole('radio',{name:/Small patch/}).check();
+  await form.getByRole('textbox',{name:'Answer: Which approach?',exact:true}).fill('Keep scope tiny');
+  await expect(form.getByRole('radio',{name:/Small patch/})).not.toBeChecked();
+  for(const width of [1440,390]) {await page.setViewportSize({width,height:900});expect(await composer.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/native-input-${width}.png`)});}
+  await form.getByRole('button',{name:'Send answer',exact:true}).click();
+  await expect.poll(()=>answer).toEqual({runId:'input-run',requestId:'input-request',answers:{q0:{options:[],text:'Keep scope tiny'}}});
+  expect(prompts).toBe(0);await expect(form).toHaveCount(0);
+});
+
+test('completed native turns open chronological captured review without implying attribution',async({page})=>{
+  const status={available:true,state:'completed',runId:'finished-input',afterSequence:0,harness:'codex',output:'',tools:[],inventory:'runtime',approvals:[]};
+  let after:string|null=null;
+  await page.route('**/controller',route=>route.fulfill({json:status}));
+  await page.route('**/since?*',route=>{after=new URL(route.request().url()).searchParams.get('after');return route.continue();});
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByLabel('More workspace options').click();
+  await page.getByRole('button',{name:'Review new captured activity',exact:true}).click();
+  const review=page.getByRole('dialog',{name:'Review work',exact:true});await expect(review).toContainText('Captured after this turn began');
+  await expect(review.locator('.review-counts')).toBeVisible();expect(after).toBe('0');
+  await expect(review).toContainText('order, not attribution or coverage');
 });

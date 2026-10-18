@@ -8,20 +8,26 @@
 
 ## Current priorities
 
+- [x] Auto-hide native scrollbars after inactivity, restoring them on scroll/nearby pointer use without changing layout or the independent prompt timeline. Keep resizing functional with a cursor-only edge rather than a visible Explorer/reader resize bar; retain keyboard resizing and forced-colors focus visibility.
+
+- [x] Repair live session freshness: live observation/history is the default, independent of Follow. Incoming content must update while reading older work, with Follow controlling only the viewport; replay is explicitly selected. Both journal formats update with Follow off; visibility/reconnection rechecks revisions. Real-account/platform acceptance remains below.
+- [x] Implement connected native requests for user input: visible pending question/options, supported reply delivery, cancellation/reconnect and exact request identity. Never replace an answer with a guessed prompt or silently bypass native approvals; unsupported reply protocols have an explicit error. Local protocol/controller/HTTP and phone fixtures checked; signed-in native-account acceptance remains below.
+
 - [x] Restore the previous tool boxes after rejecting PR88: original input/output allocation, hover limits, separator and spacing. Keep independent Follow/prose fixes. PR92.
 - [x] Consolidate the scattered active queues into this checklist; link it from the repo instructions and docs entry points.
 - [x] Make existing Workspace editing easier to find: leading Edit file action with mode icon/context, active-pane editor focus on entry/return from comparison, neutral editor focus. Existing-file/New file, two-pane/narrow and three actual-session checks pass. Native disk application remains a separate unchecked acceptance task below.
 - [x] Compact **Review work** pagination: short labeled arrows, separate page count and limits note; no tall wrapped buttons. All70 recorded checks remain reachable;320/390/1440px and actual desktop/phone survey pass. Outcome groups stay top-aligned instead of stretching across the file list.
 - [x] Compact the current-file reader: history/actions share a row, labeled Workspace/refresh/evidence access, shorter Find/Go/Wrap controls, optional empty import context and compact footer. Remove the old 48vh source cap so content fills its reader. Legacy/Modern reading and actual desktop/phone navigation checked; whole-file controls remain available.
 - [x] Replace the draft textarea with a lazy-loaded CodeMirror editor: line numbers, theme syntax (JS/TS/JSX/TSX/Python/JSON/Markdown; plain text fallback), inferred indentation, undo/redo, bracket matching, wrap and cursor/line-ending status. Retain selection/undo while comparing, preserve CRLF/mixed text and reject over-limit changes without losing work. Four focused journeys and three actual-session edit-entry journeys pass. Still a local draft editor, not a language-server IDE or direct disk writer.
-- [ ] Retain an older current-source version when disk changes; provide explicit keep/refresh/compare against the newly read version and disclose stale bases before native edit handoff.
+- [x] Retain an older current-source version when disk changes; provide explicit keep/refresh/compare against the newly read version and disclose stale bases before native edit handoff.
+- [x] Preserve a bounded metadata-only return to the originating reader/Workspace after preparing a native request; utilities offer chronological captured activity after a completed turn. No inferred attribution or persisted source/draft bodies.
 - [ ] Finish the joined investigation: recorded failure/change → exact captured source → current file/draft → anchored question/correction → explicit native submission → actual resulting diff/check → return to original evidence.
 - [ ] Finish the whole-product UI pass below, including components that were never called out in screenshots.
 
 ## UI, themes and motion — still in progress
 
 - [x] Modern is the new-browser default; saved/explicit Legacy and Canvas choices remain usable. Agent visualization shares the Legacy foundation.
-- [x] Seven selectable palettes and semantic syntax tokens: Jet Black, Midnight, Paper, Catppuccin Mocha, Tokyo Night, Nord and Gruvbox Dark. Local solid text-token contrast guard; softer Paper. Reviews86/101.
+- [x] Seven selectable palette slots and semantic syntax tokens; the six Modern alternatives were subsequently replaced below. Legacy keeps its separate palette names. Local solid text-token contrast guard; softer Paper. Reviews86/101.
 - [x] Settings categories, native-picker fallback, responsive keyboard orientation, section offset reset and touch input sizing. Review100.
 - [x] Measured adjustable Files and Git reading spaces; retained preferences and narrow Files navigation. Reviews96/98/99.
 - [x] Composer target/recording/state are visible; compact phone controls clear Send; attachments, native settings and minimized Stop use existing owners. Review102.
@@ -31,6 +37,7 @@
 - [ ] Review **composer**: compact draft/attachments, file/folder/image/paste previews, permissions/model/effort, send/stop/approval/error/reconnect states, professional focus/menus and edge translucency.
 - [ ] Review **all readers and Workspace**: type/line height, syntax, paths, Markdown, tab design, pane sizing, toolbars, copy/find/wrap/go-to-line, resize/scrollbars, long and empty material.
 - [ ] Review **all action types** on actual Codex and Claude sessions: read/write/edit/search/shell/test/web/MCP/delegation/unknown; input/output size combinations, decoding/raw access, errors, all lines reachable, accurate test rectangles/counts.
+- [ ] **Uiverse and installed design-skills pass across every page:** assess existing controls, fields, menus, disclosures, switches, dialogs and empty/error states for more attractive, coherent alternatives. Implement selected improvements, preserving useful boxes and core visualization; use meaningful, interruptible animation rather than decorations.
 - [ ] Review **every interaction**: hover/click/active/focus, Escape/outside dismissal, keyboard navigation, selection/copy feedback, reversible interruption and reduced-motion/resource fallbacks. Apply installed Emil/design/motion skills; use Uiverse selectively for composition, not mismatched decorations.
 - [x] Rebuild the six Modern alternatives: Deep Ocean, Porcelain, Orchid, Blueprint, Evergreen and Copper. Preserve Jet Black and stored IDs; complete semantic/status/graph/syntax tokens, selections and accurate swatches. Local text/status contrast guard, Home/session journey and actual desktop/phone Settings/material survey pass. Legacy palettes stay separate.
 - [ ] Check **each palette across every surface**, including actual code/diffs/tests/menus/editor, translucent compositing, light-theme balance and semantic status contrast. A palette selector/token test is not the completed theme pass.

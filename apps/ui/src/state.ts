@@ -189,6 +189,18 @@ export const useApp = create<State>((set, get) => ({
       const step = mode === 'history' || opts.at === 'end' ? total : Math.max(0, Math.min(opts.at ?? 0, total));
       const { start: _start, ...location } = saved ?? {};
       set({ ...location, error: undefined, projection, historyPage: page, recording, recordings, renderedRevisions: page?.revisions ?? revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < total });
+      // Watching is a history default, never a side effect of the camera's Follow switch.
+      if(mode==='history'&&src.kind==='daemon') {
+        const paused=id.split('+').filter(part=>recordings.some(r=>r.id===part&&!r.live));
+        if(paused.length) {
+          try {
+            await Promise.all(paused.map(part=>src.setLive(part,true)));
+            if(get().source===src&&get().recordingId===id)await get().reloadProjection();
+          } catch(error) {
+            if(get().source===src&&get().recordingId===id)set({error:`Live observation could not start: ${(error as Error).message}`});
+          }
+        }
+      }
     } catch (error) {
       if (current() && get().recordingId === id) set({ error: (error as Error).message, playing: false });
     }

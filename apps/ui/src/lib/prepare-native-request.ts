@@ -1,3 +1,4 @@
+import { rememberNativeReading } from './native-return.ts';
 import { useApp } from '../state.ts';
 import { promptDrafts } from './prompt-drafts.ts';
 import { PROMPT_BYTES, utf8Bytes } from './prompt-files.ts';
@@ -9,6 +10,7 @@ export function prepareNativeRequest(request: string, source: object, id: string
   const drafts = promptDrafts(state.source), previous = drafts.get(state.recordingId);
   const text = [previous, request].filter(Boolean).join('\n\n');
   if (utf8Bytes(text) > PROMPT_BYTES) throw new Error('The combined request exceeds 64 KiB. Shorten the composer draft before preparing this request.');
+  rememberNativeReading(source,id);
   drafts.set(state.recordingId,text);
   useApp.getState().set({ developerWorkspace:false, explore:false, currentFile:undefined, filePanel:undefined });
   window.dispatchEvent(new Event('drishya-composer-draft'));

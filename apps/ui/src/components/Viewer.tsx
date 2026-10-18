@@ -1,3 +1,4 @@
+import { NativeReturn } from './NativeReturn.tsx';
 import {SessionSegments} from "./SessionSegments.tsx";
 import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
@@ -206,7 +207,7 @@ function WorkspaceHeader({ scene, projection }: { scene: Scene; projection: Proj
     viewer.addEventListener('scroll', scroll, true);
     return () => { observer.disconnect(); viewer.removeEventListener('scroll', scroll, true); viewer.style.removeProperty('--workspace-header-h'); };
   }, []);
-  return <div ref={header} className="workspace-header">{experience === 'studio' ? <WorkbenchHeader projection={projection} scene={scene}><span className="workbench-mobile-review"><EvidenceReview projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd>/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><UsagePeek /><WorkbenchExport /><LocalPreviewEntry /><SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><ActivityTimeline scene={scene} projection={projection} /></div></details></div></details></WorkbenchHeader> : experience === 'classic' ? <StudioHeader scene={scene} projection={projection} /> : <Crown scene={scene} projection={projection} />}</div>;
+  return <div ref={header} className="workspace-header">{experience === 'studio' ? <WorkbenchHeader projection={projection} scene={scene}><span className="workbench-mobile-review"><EvidenceReview projection={projection} /></span><button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd>/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div><NativeReturnEntry/><UsagePeek /><WorkbenchExport /><LocalPreviewEntry /><SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><ActivityTimeline scene={scene} projection={projection} /></div></details></div></details></WorkbenchHeader> : experience === 'classic' ? <StudioHeader scene={scene} projection={projection} /> : <Crown scene={scene} projection={projection} />}</div>;
 }
 
 function WorkbenchExport() {
@@ -229,7 +230,7 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
   return <header className={`studio-header crown${modern ? ' modern-session-header' : ''}`}>
     <button className="brand" aria-label={modern ? 'Drishya' : undefined} title={modern ? 'All sessions' : 'All recordings'} onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>
     <div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title || recording?.title}>{projection.title || recording?.title || 'Untitled session'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
-    <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div><SessionSegments/>{modern && <div className="modern-evidence-actions"><EvidenceReview key={id} projection={projection} /><ReviewQuestionsEntry key={`questions/${id}`} /></div>}<UsagePeek /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
+    <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div><NativeReturnEntry/><SessionSegments/>{modern && <div className="modern-evidence-actions"><EvidenceReview key={id} projection={projection} /><ReviewQuestionsEntry key={`questions/${id}`} /></div>}<UsagePeek /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
     {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Recorded agent shortcuts">{scene.agents.map(state => {
       const agent = projection.agents.find(a => a.id === state.id);
       const parent = projection.agents.find(a => a.id === state.parentId);
@@ -303,6 +304,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true })}>Settings</button>
         <button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
+          <NativeReturnEntry/>
           {exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}
           <SinceMarkPill projection={projection} />
           <details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details>
@@ -313,21 +315,15 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
 }
 
 function LiveWatch() {
-  const recording = useApp(s => s.recording);
-  const id = useApp(s => s.recordingId);
-  const source = useApp(s => s.source);
   const follow = useApp(s => s.follow);
   const mode = useApp(s => s.mode);
-  const enabled = follow && (mode === 'replay' || source?.kind !== 'daemon' || !!recording?.live);
-  return <button className={`btn ghost live workspace-follow${enabled ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={enabled} onClick={async () => {
-    const on = !enabled;
-    useApp.setState({ follow: on });
-    if (on && mode === 'history' && source?.kind === 'daemon' && id && !id.includes('+') && !recording?.live) {
-      const current = () => { const s = useApp.getState(); return s.source === source && s.recordingId === id && s.mode === mode; };
-      try { await source.setLive(id, true); if (current()) await useApp.getState().reloadProjection(); }
-      catch (error) { if (current()) useApp.setState({ follow: false, error: (error as Error).message }); }
-    }
-  }} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${enabled ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow live'}</button>;
+  const enabled = follow;
+  return <button className={`btn ghost live workspace-follow${enabled ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={enabled} onClick={() => useApp.setState({follow:!enabled})} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${enabled ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow live'}</button>;
+}
+
+function NativeReturnEntry() {
+  const {controller}=useSessionWorkspace();
+  return <NativeReturn controller={controller}/>;
 }
 
 function UsagePeek() {
