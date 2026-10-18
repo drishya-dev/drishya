@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Simpler Workspace and continuous dock controls
+
+- **When:**18 October2026, `codex/compact-surface-interactions`.
+- **Delivered:**Owner-scoped Workspace/file Actions menus retain frequent edit/compare/native-review controls, bounded phone layout and keyboard/light dismissal. Prompt/Toolbox toggles use actual measured current bounds and one transform with normal-sized compact labels; logical composer clearance avoids per-frame layout following. Fixed inherited phone dock stacking that intercepted Minimize. Duplicate basenames gain minimal parent context. Nested-control scope recorded in VISION/TASKS; graph untouched. [115](review/115-workspace-controls-and-motion.md).
+- **Validation:**Both TypeScript projects/build;522units/94files pass. Focused geometry/reversal/reduced-motion/keyboard/menu/short-phone and editor/draft/download/native-preparation checks pass. Four actual journeys pass: both control surfaces across three redacted Codex/Claude sessions at desktop/phone, then all three long-history scroll and multi-file Workspace workflows. No native turn, source writes, dependencies or hosted CI. Whole-product motion/native/physical acceptance remains open.
+
+
 ### Yash with Codex — Bounded captured JSON reading
 
 - **When:**18 October2026, `codex/structured-result-reader`.

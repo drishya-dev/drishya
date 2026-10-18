@@ -1,8 +1,10 @@
 # Continue here — current handoff
 
+**18 October Workspace/control continuation:** Frequent controls stay visible; secondary layout/reset and file navigation/export/discard are owner-scoped Actions menus. Keyboard/Escape/light dismissal and short-phone bounds checked. Prompt/Toolbox toggles move/scale the same real surface from measured current bounds, with continuous reversal and logical border-box composer clearance. Fixed the inherited phone dock z-index blocking Minimize. Duplicate basenames add minimal parent context. Both TS/build,522units/94files, focused editor/control tests and four actual Codex/Claude journeys pass, including all three scroll/multi-file journeys. Review115 records evidence; TASKS retains the broad nested-control/adaptive-media/native acceptance queue. Graph stays deferred.
+
 **18 October structured JSON:** on-demand shared History/Inspector Tree/Table/Original reading is implemented for complete supplied preview JSON, with bounded model/DOM/search, exact original/value copy and phone/keyboard containment. Both TS/build,517units/92files, dense-data/existing-result journeys and actual three-session Codex/Claude regression pass. Full-artifact recovery/CSV/media remain open; shared reading-window exits and rotating Files disclosure are now implemented and verified, while the broader interaction pass remains unchecked. Review114 records scope.
 
-**Latest additional direction:** TASKS includes a whole-product interaction-motion pass: every button/folder/view/popup and prompt open/close should transition purposefully toward its result, with continuous/interruption/reduced-motion safeguards. Continue structured reading first; graph art direction stays deferred.
+**Latest additional direction:** TASKS includes a whole-product interaction-motion pass: every button/folder/view/popup and prompt open/close should transition purposefully toward its result, with continuous/interruption/reduced-motion safeguards. Structured JSON reading is complete for supplied preview text; continue remaining nested-control/adaptive-content work. Graph art direction stays deferred.
 
 **One work list:**[TASKS.md](TASKS.md). Update its checkboxes in each coherent increment. Do not maintain another active queue in numbered reviews or this handoff.
 

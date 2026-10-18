@@ -1,3 +1,4 @@
+import {useSurfaceReflow} from '../lib/use-surface-reflow.ts';
 import {Markdown} from '../lib/markdown.tsx';
 import { NativeQuestions } from './NativeQuestions.tsx';
 import { useCurrentSource } from '../lib/use-current-source.ts';
@@ -348,6 +349,7 @@ export function PromptComposer() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const element = useRef<HTMLElement>(null);
+  const prepareCollapse=useSurfaceReflow(element,collapsed,id);
   const input = useRef<HTMLTextAreaElement>(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
@@ -442,7 +444,7 @@ export function PromptComposer() {
     const viewer = node?.closest<HTMLElement>('.viewer');
     if (!node || !viewer) return;
     // The ordinary composer owns space; it must not cover the last captured result.
-    const observer = new ResizeObserver(() => viewer.style.setProperty('--composer-gap', `${node.getBoundingClientRect().height + 24}px`));
+    const observer = new ResizeObserver(([entry]) => viewer.style.setProperty('--composer-gap', `${(entry?.borderBoxSize?.[0]?.blockSize ?? node.offsetHeight) + 24}px`));
     observer.observe(node);
     return () => { observer.disconnect(); viewer.style.removeProperty('--composer-gap'); };
   }, [source, id]);
@@ -471,7 +473,7 @@ export function PromptComposer() {
       </div></details></>;
   if (workspace && !workspace.root) return <section ref={element} className="prompt-composer open composer-readonly" aria-label="Harness prompt"><div><strong>{recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} recording</strong><span>Read-only here · no workspace path was captured.</span></div><button className="btn ghost" onClick={() => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); }}>Choose session</button></section>;
   return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}${modern && collapsed?' composer-minimized':''}`} aria-label="Harness prompt">
-    {modern && <button type="button" className="composer-minimize" title={statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{setCollapsed(!collapsed);if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}>{collapsed?controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':'Ask your agent…':'⌄'}</button>}
+    {modern && <button type="button" className="composer-minimize" title={statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{prepareCollapse();setCollapsed(!collapsed);if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}><span data-surface-label={collapsed?'':undefined}>{collapsed?controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':'Ask your agent…':'⌄'}</span></button>}
     {modern && collapsed && running && <button type="button" className="composer-mini-stop" aria-label="Stop turn" title="Stop this turn" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button>}
     {modern ? <div className="modern-composer-top"><div className="modern-composer-target"><span className="modern-composer-identity" title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg></span><span className="modern-composer-location" title={workspace?.root}><span>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Checking workspace…'}</span></span></div><span role="status" className="modern-composer-state" title={statusLabel}>{workspace?.approved ? statusLabel : 'Needs access'}</span>{nativeOptions}</div> : <>
     <div className="composer-target"><span title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><strong>{recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness ?? 'Native harness'}</strong><span className="composer-workspace">{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'}</span><code>{id.slice(-8)}</code></span><small role="status">{statusLabel}</small></div></>}
