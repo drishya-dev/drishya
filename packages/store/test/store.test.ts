@@ -70,6 +70,15 @@ function seed() {
 // B1b (audit A07): a monotonic revision, committed with the data it describes, lets a viewer that
 // missed notifications tell exactly which recordings changed.
 describe('recording revisions', () => {
+  it('recovers a main workspace after title-only metadata without taking a companion root', () => {
+    seed();
+    store.appendObservations('rec_a', 'src_a', cursor, [
+      {...obs('title'),kind:'session.meta',payload:{title:'Named first',titleRank:2}},
+      {...obs('child'),kind:'session.meta',agentId:'agent:child',workspaceRoot:'/unrelated',payload:{cwd:'/unrelated'}},
+      {...obs('root'),kind:'session.meta',workspaceRoot:'/repo',payload:{cwd:'/repo'}},
+    ]);
+    expect(store.captureMetadata('rec_a')).toEqual({title:'Named first',workspaceRoot:'/repo'});
+  });
   it('keeps late captured titles without reducing the whole recording', () => {
     seed();
     store.appendObservations('rec_a', 'src_a', cursor, [obs('prompt'),

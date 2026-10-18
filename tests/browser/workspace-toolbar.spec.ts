@@ -108,11 +108,10 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
     const historyBox = (await history.boundingBox())!;
     // The left content gutter avoids the native scrollbar and nested material scrollers.
     await page.mouse.move(historyBox.x + 4, Math.min(height! - 90, 500));
-    await expect.poll(async () => {
-      // Virtualized passages acquire their real heights while scrolling toward the start.
-      await page.mouse.wheel(0, -100_000);
-      return history.evaluate(el => el.scrollTop);
-    }).toBeLessThan(2);
+    // Do not enqueue another wheel burst on every assertion poll: a delayed
+    // upward event could otherwise consume the subsequent downward check.
+    await page.mouse.wheel(0, -100_000);
+    await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeLessThan(2);
     await page.mouse.wheel(0, 600);
     await expect.poll(() => history.evaluate(el => el.scrollTop)).toBeGreaterThan(20);
     const after = (await nav.boundingBox())!;
