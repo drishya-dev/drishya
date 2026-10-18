@@ -31,6 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex - Compact right-docked Explorer preview
+
+- **When:**18 October2026, `codex/compact-file-preview`.
+- **Delivered:**Narrower/taller28vw preview default bounded360–720px, preserving navigation/composer/time-rail clearances and custom geometry. Desktop fine-pointer passage content is90% while preview is open, normal size on close/phone. Material motion translates screen/local pixels consistently under compact scale. Removed File reader move icon; title/tab bar keeps direct drag and keyboard arrows/Home; all four edge controls/reset remain. [121](review/121-compact-file-preview.md).
+- **Validation:**Both TS/build;543units/99files; five focused browser journeys including defaults, title keyboard/drag, all edges, restored bounds and phone, plus actual Drishya/Skeletongraph Codex/Claude Blueprint/current-file/scroll stability journey. Private frames inspected. No capture/native/project write or hosted CI; preference/platform acceptance and broader TASKS remain open.
+
 ### Yash with Codex - Shared captured-result view selection
 
 - **When:**18 October2026, `codex/captured-result-views`.

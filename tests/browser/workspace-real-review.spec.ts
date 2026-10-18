@@ -423,6 +423,11 @@ test('actual sessions keep current-file tabs beside agent and retain compact pro
   const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();await expect(reader.getByRole('tab')).toHaveCount(2);await expect(reader.locator('.current-file-code,.desk-markdown')).not.toBeEmpty();
   const history=(await page.locator('.history').boundingBox())!,box=(await reader.boundingBox())!;expect(history.x+history.width).toBeLessThanOrEqual(box.x+1);const prompt=(await page.locator('.prompt-composer').boundingBox())!;expect(box.y+box.height).toBeLessThanOrEqual(prompt.y-8);const rail=await page.locator('.complete-prompt-rail').boundingBox();if(rail)expect(box.x+box.width).toBeLessThanOrEqual(rail.x);
   await reader.getByRole('tab').first().click();await expect(reader.locator('.current-file-code,.desk-markdown')).not.toBeEmpty();
+  await reader.getByRole('button',{name:'Reset File reader window layout',exact:true}).click();
+  await expect.poll(async()=>Math.abs((await reader.boundingBox())!.width-1440*.28)).toBeLessThan(2);
+  const historyNode=page.locator('.history');const hb=(await historyNode.boundingBox())!;await page.mouse.move(hb.x+hb.width/2,hb.y+hb.height/2);await page.mouse.wheel(0,-480);
+  const anchor=async()=>historyNode.evaluate(node=>{const top=node.getBoundingClientRect().top;const slot=[...node.querySelectorAll<HTMLElement>('.passage-slot')].find(item=>item.getBoundingClientRect().bottom>top+100);return slot?{id:slot.dataset.passageId,offset:slot.getBoundingClientRect().top-top}:undefined;});
+  await page.waitForTimeout(180);const stable=await anchor();await page.waitForTimeout(220);const after=await anchor();expect(stable).toBeDefined();expect(after?.id).toBe(stable?.id);if(after&&stable)expect(Math.abs(after.offset-stable.offset)).toBeLessThan(4);
   await page.screenshot({path:resolve(`.local/file-peek-actual-${index+1}.png`)});
   await reader.locator('header .reading-window-actions button').last().click();
   const latest=page.getByRole('button',{name:/Back to latest/});if(await latest.isVisible())await latest.click();

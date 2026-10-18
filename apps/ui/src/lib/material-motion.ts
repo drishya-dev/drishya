@@ -1,10 +1,12 @@
+import {materialTransform} from './material-transform.ts';
 import { useApp } from '../state.ts';
 /** Finite, interruptible motion of one real DOM surface. Layout keeps its final geometry. */
 const active = new WeakMap<HTMLElement, Animation>();
 export function materialRect(element: HTMLElement): DOMRect {
   const rect = element.getBoundingClientRect();
-  const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform);
-  return new DOMRect(rect.left - matrix.m41, rect.top - matrix.m42,
+  const computed=getComputedStyle(element),zoom=parseFloat(computed.getPropertyValue('--material-scale'))||1;
+  const matrix = new DOMMatrixReadOnly(computed.transform);
+  return new DOMRect(rect.left - matrix.m41*zoom, rect.top - matrix.m42*zoom,
     rect.width / Math.max(.001, matrix.m11), rect.height / Math.max(.001, matrix.m22));
 }
 
@@ -12,7 +14,7 @@ export function moveMaterial(element: HTMLElement, from: DOMRect, duration: numb
   active.get(element)?.cancel();
   let destination = materialRect(element);
   const frames = (source: DOMRect, target: DOMRect): Keyframe[] => [
-    { transform: `translate(${source.left - target.left}px,${source.top - target.top}px) scale(${source.width / Math.max(1, target.width)},${source.height / Math.max(1, target.height)})`, clipPath: 'none' },
+    { transform: materialTransform(source,target,parseFloat(getComputedStyle(element).getPropertyValue('--material-scale'))||1), clipPath: 'none' },
     { transform: 'translate(0px,0px) scale(1,1)', clipPath: 'none' },
   ];
   const animation = element.animate(frames(from, destination), { duration, easing: 'cubic-bezier(.22,.65,.18,1)', fill: 'both' });
@@ -63,9 +65,10 @@ export function restingRect(element: Element): DOMRect {
 export function settleArrival(element: HTMLElement, start: DOMRect, flight: Animation): void {
   const properties = ['width', 'height', 'flex-basis'];
   const saved = properties.map(name => [name, element.style.getPropertyValue(name), element.style.getPropertyPriority(name)]);
-  element.style.setProperty('width', `${start.width}px`);
-  element.style.setProperty('height', `${start.height}px`);
-  element.style.setProperty('flex-basis', `${start.width}px`);
+  const zoom=parseFloat(getComputedStyle(element).getPropertyValue('--material-scale'))||1;
+  element.style.setProperty('width', `${start.width/zoom}px`);
+  element.style.setProperty('height', `${start.height/zoom}px`);
+  element.style.setProperty('flex-basis', `${start.width/zoom}px`);
   element.dataset.materialSettling = 'true';
   let timer: ReturnType<typeof setTimeout> | undefined;
   let growth: Animation | undefined;
