@@ -31,6 +31,22 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Whole-session captured commands
+
+- **When:**18 October2026, `codex/captured-commands`; interface100 merged as97bc6fa.
+- **Delivered:**On-demand Captured commands from Review work and Ctrl+K, with complete-session worker coverage, preview/tool search, captured outcome/exit/time, stable Newer/Older/Newest cursors and25-row pages. Exact ordinary command copy uses existing decoded/raw display. Long command previews never masquerade as full copy: explicit Full captured input opens the paged artifact reader; activity navigation loads the exact operation. No resident panel, runner or direct project writes. UI remains within desktop/phone bounds and existing evidence owners.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Commands are scattered across loaded tool boxes | Whole-session filtered command reader | Find older commands without loading every passage |
+| New live rows shift offset-based pages | Sequence/ID keyset paging in both directions | Keep browsing stable, including tied sequences |
+| Small-session full projections cannot resolve worker-derived long-input IDs | Valid operation-linked input IDs route to worker artifacts | Keep complete long captured inputs readable |
+| Initial debounce can reset a newly selected page | Empty initial filter is treated as unchanged | Preserve deliberate pagination |
+
+- **Validation:**Both typechecks/build and459units/81files pass. Three focused browser journeys pass: recorded Review paging, completed-turn review, and71-command whole flow with all pages/filter/copy/full7000-character input/exact activity/Review entry/390px bounds. Additional real-session command reader journey covers three existing Drishya/Skeletongraph Codex/Claude histories at1440/390px, whole-session counts and next-page access; frames inspected. Fixture output corrected to the supported Codex JSON exit-code format rather than inventing failure metadata. No hosted CI, new schema/dependency, private captures or user package/artwork changes committed.
+- **Limits/next:**Preview search is explicitly labelled and does not scan unseen full-input blobs. Captured outcomes are evidence, not a safety judgement or coverage claim. TASKS retains quiet findings, prompt overview, factual packet, remaining UI/theme and real native/hardware acceptance.
+
+
 ### Yash with Codex — Modern navigation and utility polish
 
 - **When:**18 October2026, `codex/interface-polish`; prior connected-workflow batch99 merged as e4c3a02.

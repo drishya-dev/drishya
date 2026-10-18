@@ -1369,3 +1369,39 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
     await page.screenshot({path:resolve(`.local/utilities-polish-${width}.png`)});await page.mouse.click(10,400);await expect(menu).toHaveCount(0);
   }
 });
+
+
+test('captured commands page the whole session, filter outcomes and preserve complete large input',async({page})=>{
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedCommand:string}).copiedCommand=text;}}}));
+  const journal=join(dir,'commands-review.jsonl'),timestamp='2026-10-18T00:00:00Z';
+  const rows=[JSON.stringify({timestamp,type:'session_meta',payload:{id:'commands-review',cwd:root}})];
+  for(let n=0;n<71;n++){
+    const command=n===70?'echo '+('complete-input '.repeat(500))+'END_OF_CAPTURED_COMMAND':`echo ledger-command-${n}`;
+    rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`ledger-${n}`,arguments:JSON.stringify({cmd:command})}}));
+    rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call_output',call_id:`ledger-${n}`,output:JSON.stringify({output:`ledger output ${n}`,metadata:{exit_code:n%2}})}}));
+  }
+  writeFileSync(journal,rows.join('\n')+'\n');const {recordingId}=await app.ingest.importSource('codex',journal);
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
+  await expect(page.locator('.history')).toBeVisible();
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');
+  await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();
+  const dialog=page.getByRole('dialog',{name:'Captured commands',exact:true});await expect(dialog).toContainText('71 matching commands');
+  const cards=dialog.locator('.captured-command');await expect(cards).toHaveCount(25);
+  const first=cards.first();await expect(first.locator('.commands-limit')).toContainText('Preview');
+  await expect(first.getByRole('button',{name:'Copy command',exact:true})).toHaveCount(0);
+  await first.locator('.command-full-input>summary').click();await expect(first).toContainText('END_OF_CAPTURED_COMMAND');
+  await dialog.getByRole('button',{name:'Older',exact:true}).click();await expect(cards.first()).toContainText('ledger-command-45');
+  await cards.first().getByRole('button',{name:'Copy command',exact:true}).click();expect(await page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe('echo ledger-command-45');
+  await dialog.getByRole('button',{name:'Older',exact:true}).click();await expect(cards).toHaveCount(21);await expect(cards.last()).toContainText('ledger-command-0');
+  const newerResponse=page.waitForResponse(response=>response.url().includes('/commands?')&&response.url().includes('direction=newer'));
+  await dialog.getByRole('button',{name:'Newer',exact:true}).click();expect((await (await newerResponse).json()).items[0].command).toBe('echo ledger-command-45');await expect(cards.first()).toContainText('ledger-command-45');
+  await dialog.getByRole('searchbox',{name:'Filter captured command previews',exact:true}).fill('ledger-command-1');await expect(dialog).toContainText('11 matching commands');
+  await dialog.getByRole('combobox',{name:'Command outcome',exact:true}).selectOption('error');await expect(dialog.locator('.command-outcome').first()).toHaveText('Failed');
+  await page.setViewportSize({width:390,height:844});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
+  await cards.first().getByRole('button',{name:'Open captured activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.inspector')).toBeVisible();
+  await page.keyboard.press('Escape');await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
+  const review=page.getByRole('dialog',{name:'Review work',exact:true});await review.getByRole('button',{name:'Captured commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
+
+});

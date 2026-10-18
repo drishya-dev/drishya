@@ -252,3 +252,17 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
   await expect(page.locator('.history')).toBeVisible();
 });
+
+
+test('actual command review uses whole-session worker pages with bounded desktop and phone reading',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  for(const id of ids) {
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(id)}`);await expect(page.locator('.history')).toBeVisible();
+    await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();
+    const dialog=page.getByRole('dialog',{name:'Captured commands',exact:true});await expect(dialog.locator('.commands-caption')).toContainText('matching commands');
+    expect(await dialog.locator('.captured-command').count()).toBeLessThanOrEqual(25);await expect(dialog.getByRole('alert')).toHaveCount(0);
+    for(const width of [1440,390]) {await page.setViewportSize({width,height:900});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/commands-actual-${id}-${width}.png`)});}
+    if(await dialog.getByRole('button',{name:'Older',exact:true}).isEnabled()){await dialog.getByRole('button',{name:'Older',exact:true}).click();await expect(dialog.getByRole('button',{name:'Newer',exact:true})).toBeEnabled();}
+    await dialog.getByRole('button',{name:'Close Captured commands',exact:true}).click();
+  }
+});

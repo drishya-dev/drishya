@@ -60,7 +60,7 @@
 - [x] Repository map has true3D orbit/pan/zoom, manual hold, semantic grouping, observed/all scope, exact file lookup and typed direct imports/importers. Automatic orbit has visibility/resource/reduced-motion guards.
 - [x] Keep repository file-search controls above spatial labels at all densities; real-session obstruction reproduced and deterministic overlapping-label click regression checked.
 - [ ] Make the Repository map useful for a concrete investigation: changed/observed/import neighborhoods, clear typed relationships and exact evidence/current-file destinations without graph overload. Existing import lookup is implemented; developer-task usability is unfinished.
-- [ ] Add optional **Commands** inside Review/command navigation: factual captured command ledger/filter/copy, no resident main panel or direct runner. T1 foundation before dependent findings.
+- [x] Optional **Captured commands** inside Review/Ctrl+K: whole-session worker query, 25-row stable cursor pages, preview/tool/outcome filtering, exact bounded command copy, complete long-input artifact reading and exact captured-activity return. No resident panel or runner. Local worker/API/cursor/browser checks and three actual Codex/Claude histories at desktop/phone pass. Preview search is labelled; it does not scan unseen full-input blobs.
 - [ ] Add quiet factual **Review findings**: exact evidence-backed tripwires and repetitions, without safety/stuck scores or inferred causality. T2/T4.
 - [ ] Add an on-demand factual **prompt overview** to existing prompt navigation/Review; no scored report cards or another dashboard. T5.
 - [ ] Finish a useful factual **review packet/export**, preserving changes/check gaps/questions and current-versus-captured provenance.

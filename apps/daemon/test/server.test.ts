@@ -74,6 +74,12 @@ it('bounds and validates paged history requests before reduction', async () => {
   expect(usage.body.automaticDeletion).toBe(false);
 });
 
+it('validates and authenticates captured command queries before worker reduction',async()=>{
+  expect((await call(`/v1/recordings/${recId}/commands`)).status).toBe(401);
+  for(const query of ['status=unsafe','direction=sideways','cursor=invalid',`q=${'x'.repeat(201)}`])expect((await call(`/v1/recordings/${recId}/commands?${query}`,{headers:auth()})).status).toBe(400);
+  const result=await call(`/v1/recordings/${recId}/commands`,{headers:auth()});expect(result.status).toBe(200);expect(Array.isArray(result.body.items)).toBe(true);expect(result.body.items.length).toBeLessThanOrEqual(25);
+});
+
 it('waits for an in-flight handler before its caller closes SQLite', async () => {
   const isolated = mkdtempSync(join(tmpdir(), 'drishya-close-'));
   const app = new App(join(isolated, 'data'));

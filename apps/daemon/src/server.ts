@@ -1,3 +1,4 @@
+import {commandCursor} from '../../../packages/scene/src/commands.ts';
 // Local HTTP API. Loopback only; per-launch token exchanged for an HttpOnly session cookie;
 // strict Host and Origin checks; no generic filesystem access; passive capture plus explicitly opted-in native harness clients.
 // Zero runtime dependencies on purpose: `node:http` + Server-Sent Events for change notices.
@@ -307,6 +308,13 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');
         return json(res, await app.history.page(id, body));
       }
+      if(sub==='commands'&&m==='GET') {
+        for(const key of id.split('+'))app.recording(key);
+        const q=url.searchParams.get('q')??'',status=url.searchParams.get('status')??undefined,cursor=url.searchParams.get('cursor')??undefined,direction=url.searchParams.get('direction')??'older';
+        if(q.length>200||status&&!['ok','error','running','unknown'].includes(status)||!['older','newer'].includes(direction))throw new HttpError(400,'Invalid command filter');
+        if(cursor)try{commandCursor(cursor);}catch{throw new HttpError(400,'Invalid command cursor');}
+        return json(res,await app.history.commands(id,{q,status:status as 'ok'|'error'|'running'|'unknown'|undefined,cursor,direction:direction as 'older'|'newer'}));
+      }
       if (sub === 'summary' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, await app.history.summary(id, intParam(url, 'from', 0, 0, Number.MAX_SAFE_INTEGER)));
@@ -339,7 +347,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         const start = intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER);
         const count = intParam(url, 'count', 20_000, 0, 20_000);
         if (app.paged(id)) return json(res, await app.history.artifact(id, subId, start, count));
-        return json(res, app.artifactSlice(app.projection(id), subId, start, count));
+        const projection=app.projection(id);
+        // Bounded worker views retain long inputs as derived artifacts even when
+        // this small session's ordinary projection keeps that input inline.
+        if(subId.endsWith('_input')&&projection.operations.some(op=>subId===`art_${op.id}_input`))return json(res,await app.history.artifact(id,subId,start,count));
+        return json(res, app.artifactSlice(projection, subId, start, count));
       }
       if (sub === 'graph' && !subId && m === 'GET') return json(res, await app.graph(id, url.searchParams.get('refresh') === '1'));
       // Scanning a folder for the map is an explicit approval of the captured root only (B2).
