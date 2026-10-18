@@ -25,3 +25,13 @@
  :root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.data-reader-toolbar button,.data-selection button,.data-inspection>button){transition:background-color 130ms var(--ease-out),transform 130ms var(--ease-out)}
  :root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.data-reader-toolbar button,.data-selection button,.data-inspection>button):active{transform:scale(.98)}
 }
+
+.delimited-options{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font:12px/1.5 var(--sans)}
+.delimited-options>label:first-child{display:flex;gap:7px;align-items:center}.delimited-options .data-find{flex:1}
+.delimited-field{font:11px/1.5 var(--mono);overflow-wrap:anywhere;color:var(--t2)}
+.delimited-viewport button:focus-visible{outline:1px solid var(--t2);outline-offset:-2px}
+.delimited-data-dialog .data-table-row button{min-height:30px}.delimited-data-dialog .data-find select{max-width:100%;min-width:0;color:var(--t1);background:var(--s1);border:1px solid var(--line);border-radius:7px;padding:7px;font:12px var(--mono)}
+
+@media(pointer:coarse){.data-find input,.data-find select{font-size:16px;min-height:44px}}
+
+.delimited-note{font:12px/1.6 var(--sans);color:var(--t2);margin:0}

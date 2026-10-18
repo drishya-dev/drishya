@@ -31,11 +31,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Tabbed file peek and anchored reading windows
+### Yash with Codex — Explicit captured CSV/TSV reading
 
-- **When:**18 October2026, `codex/tabbed-file-peek`.
-- **Delivered:**Modeless current-file reader beside the agent, preview/kept tabs, keyboard/close/recovery and bounded per-visit reading metadata. One desktop geometry owner handles all four invisible resize edges and whole non-interactive title/tab-strip dragging. Measured right-control/composer allocation and phone Files choosing; compact title actions remove duplicate reader rows. Workspace below Git review/graph, full Workspace clear of Toolbox, independent left Files clearance. Pause Modern session capsule, reduce final-content/prompt gap while keeping measured clearance. [116](review/116-tabbed-file-peek.md).
-- **Validation:**Both TypeScript projects/build;527units/95files. Focused Files preview/pin/close/keyboard/phone/reload/fresh-consent/geometry/header/navigation/gap and existing Git/window/Markdown checks pass. Four actual journeys cover all three redacted Drishya/Skeletongraph Codex/Claude long histories, multi-file editor/draft workflows, plus adjacent peeks and phone bounds. Private frames stay under `.local`. No graph art, captured-event schema, native turn/project write, new dependency or hosted CI. TASKS retains broader finishing/native/physical acceptance.
+- **When:**18 October2026, `codex/delimited-result-reader`.
+- **Delivered:**Shared native/plain/MCP literal-text field candidates and selected JSON-string handoff; explicit CSV/TSV and first-record names, virtual/searchable grid, keyboard cells and exact original/cell copy. Preserves multiline quoting, duplicate names, missing/empty cells and literal formulas. Whole-grid rejection on malformed/oversized input; captured text completeness stays explicit. Open strings are ephemeral snapshots only. [117](review/117-delimited-result-reading.md).
+- **Validation:**Both TypeScript projects/build;534units/96files. Five structured-reader browser checks cover native/MCP1200records, malformed fallback, keyboard/copy, mixed siblings/no remote loads,320/390px and existing JSON/motion behavior. Three actual Drishya/Skeletongraph Codex/Claude long-history/editor regressions pass. No schema/API/native write/dependency/telemetry/body persistence/hosted CI. CSV subtask checked in TASKS; general selector/documents/media and broader UI/native/platform acceptance remain open.
 
 
 ### Yash with Codex — Bounded captured JSON reading

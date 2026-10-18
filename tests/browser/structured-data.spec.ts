@@ -54,3 +54,37 @@ test('reading windows reverse from their actual entrance and dismiss immediately
  const folder=page.getByRole('treeitem',{name:'src',exact:true});await folder.click();await expect(folder).toHaveAttribute('aria-expanded','true');expect(await folder.locator('.folder-disclosure').evaluate(element=>getComputedStyle(element).transitionDuration)).toBe('0.14s');
  await folder.focus();await page.keyboard.press('ArrowLeft');await expect(folder).toHaveAttribute('aria-expanded','false');expect(await folder.locator('.folder-disclosure').evaluate(element=>getComputedStyle(element).transitionDuration)).toBe('0s');
 });
+
+
+for(const kind of ['mcp','shell'] as const)test(`${kind} captured delimited text is explicit, bounded and preserves literal cells`,async({page})=>{
+ await page.addInitScript(()=>{(window as any).copied='';Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as any).copied=text;}}});});
+ const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+ const op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.kind=kind;if(kind==='shell')op.origin={type:'native',tool:'shell_command'};op.artifactIds=[];
+ const csv='name,name,note\r\n'+Array.from({length:1200},(_,index)=>`record ${index},${index},"${index===1199?'last, captured\nvalue':index===0?'=SUM(A1:A2)':'literal'}"`).join('\r\n')+'\r\nshort';
+ const raw=kind==='mcp'?JSON.stringify({content:[{type:'text',text:csv},{type:'text',text:'a\tb\nleft\tright'},{type:'resource_link',uri:'https://example.invalid/never-load'}]}):JSON.stringify({output:csv,exit_code:0,wall_time_seconds:1});
+ op.detail=kind==='mcp'?{kind:'mcp',server:'records',tool:'arbitrary_result',input:{},resultPreview:raw}:{kind:'shell',command:'produce report',outputPreview:raw,exitCode:0};
+ let remote=0;await page.route('https://example.invalid/**',route=>{remote++;return route.abort();});
+ await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);
+ await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await expect(card).toBeAttached();await card.scrollIntoViewIfNeeded();
+ const trigger=card.getByRole('button',{name:'Inspect delimited text',exact:true});await expect(trigger).toHaveCount(1);await trigger.click();
+ const dialog=page.getByRole('dialog',{name:'Captured delimited text'});await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog.locator('.data-original')).toHaveText(csv);
+ await dialog.getByRole('button',{name:'CSV',exact:true}).click();const table=dialog.getByRole('table',{name:'Captured delimited records'});await expect(table).toBeVisible();await expect(table).toHaveAttribute('aria-rowcount','1203');expect(await dialog.getByRole('row').count()).toBeLessThan(31);
+ await dialog.getByRole('checkbox',{name:'First record contains column names'}).check();await expect(dialog.getByRole('columnheader',{name:'name',exact:true})).toHaveCount(2);
+ const find=dialog.getByRole('searchbox',{name:'Find delimited cells'});await find.fill('last, captured');await dialog.getByRole('button',{name:'Inspect record 1201, column 3'}).click();await expect(dialog.getByRole('region',{name:'Selected delimited cell'})).toContainText('last, captured\nvalue');await dialog.getByRole('button',{name:'Copy cell',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe('last, captured\nvalue');
+ await find.fill('');const viewport=dialog.locator('.data-viewport');await viewport.focus();await page.keyboard.press('Control+End');await expect(dialog.getByRole('button',{name:'Inspect record 1202, column 3'})).toBeFocused();await expect(dialog.getByRole('region',{name:'Selected delimited cell'})).toContainText('Cell not present');await expect(dialog.getByRole('button',{name:'Copy cell',exact:true})).toBeDisabled();
+ await find.fill('=SUM');await dialog.getByRole('button',{name:'Inspect record 2, column 3'}).click();await dialog.getByRole('button',{name:'Copy cell',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe('=SUM(A1:A2)');
+ if(kind==='mcp'){await dialog.getByRole('combobox',{name:'Captured text block'}).selectOption('1');await dialog.getByRole('button',{name:'TSV',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect record 2, column 2'})).toHaveText('right');await dialog.getByRole('combobox',{name:'Captured text block'}).selectOption('0');}
+ await dialog.getByRole('button',{name:'Original',exact:true}).click();await dialog.getByRole('button',{name:'Copy original',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe(csv);
+ await dialog.getByRole('button',{name:'CSV',exact:true}).click();await find.fill('last, captured');await dialog.getByRole('button',{name:'Inspect record 1201, column 3'}).click();await page.screenshot({path:resolve(`.local/delimited-${kind}-desktop.png`)});
+ for(const width of [1440,390,320]){await page.setViewportSize({width,height:900});const bounds=(await dialog.boundingBox())!;expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(width+1);expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);}
+ expect(remote).toBe(0);await page.screenshot({path:resolve(`.local/delimited-${kind}-phone.png`)});await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();await expect(page.getByRole('complementary',{name:'Operation detail'})).toHaveCount(0);
+});
+
+
+test('malformed delimited text keeps the exact source and never shows a partial grid',async({page})=>{
+ const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8')),op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.artifactIds=[];
+ const raw='a,b\n1,2\n"unfinished';op.detail={kind:'mcp',server:'records',tool:'unknown',input:{},resultPreview:raw};
+ await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Inspect delimited text'}).click();const dialog=page.getByRole('dialog',{name:'Captured delimited text'});await dialog.getByRole('button',{name:'CSV',exact:true}).click();await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog).toContainText('Unclosed quoted cell');await expect(dialog.locator('.data-original')).toHaveText(raw);await page.screenshot({path:resolve('.local/delimited-malformed.png')});
+});
