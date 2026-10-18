@@ -27,6 +27,9 @@ createInterface({input:process.stdin}).on('line',line=>{
   const v=JSON.parse(line);
   if(v.type==='control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{models:[{value:'synthetic-model',displayName:'Synthetic model',supportedEffortLevels:['low','high']}],commands:[{name:'compact'}]}}});
   if(v.type==='user') {
+    if(v.message.content==='QUESTION') {
+      send({type:'control_request',request_id:'ask-native',request:{subtype:'can_use_tool',tool_name:'AskUserQuestion',input:{questions:[{question:'Which checks?',header:'Checks',multiSelect:true,options:[{label:'Unit tests',description:'Fast focused checks'},{label:'Typecheck',description:'Validate types'}]}]}}});return;
+    }
     if(v.message.content === 'THINK') {
       send({type:'stream_event',event:{type:'content_block_start',index:0,content_block:{type:'thinking',thinking:''}}});
       send({type:'stream_event',event:{type:'content_block_delta',index:0,delta:{type:'thinking_delta',thinking:'Native exposed reasoning for the synthetic workspace.'}}});
@@ -34,7 +37,7 @@ createInterface({input:process.stdin}).on('line',line=>{
       return;
     }
     send({type:'system',subtype:'init',tools:['Read','Edit','mcp__docs__lookup',...Array.from({length:90},(_,n)=>'mcp__synthetic__tool'+n)]});send({type:'control_request',request_id:'one',request:{subtype:'can_use_tool',tool_name:'Edit',input:{file_path:'src/actual.ts',new_string:'export const value = 43;'}}});}
-  if(v.type==='control_response')send({type:'result',is_error:false,result:'Synthetic native transport completed the submitted prompt.'});
+  if(v.type==='control_response')send({type:'result',is_error:false,result:v.response.request_id==='ask-native'?JSON.stringify(v.response.response.updatedInput.answers):'Synthetic native transport completed the submitted prompt.'});
 });`);
   app = new App(join(dir,'store')); await app.ingest.importSource('claude-code',journal);
   const largeRoot = join(dir, 'large-repository'); mkdirSync(largeRoot);
@@ -130,6 +133,7 @@ test('source reading links qualified current imports to a bounded map neighborho
   await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   const folders = page.getByRole('complementary', { name: 'Session folders' });
   const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   if (await enable.count()) await enable.click();
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   const approve = page.getByRole('button', { name: 'Map the whole repository', exact: true });
@@ -167,8 +171,9 @@ test('native model settings and attachment menus dismiss outside without detachi
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
-  await expect(composer.locator('.composer-target')).not.toContainText('Checking…');
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   if (await enable.count()) await enable.click();
   const follow = page.getByRole('switch', { name: 'Automatically follow new work' });
   const originalFollow = await follow.getAttribute('aria-checked');
@@ -214,7 +219,7 @@ test('selected workspace folders read current files separately from the exact hi
   await expect(folder.getByRole('button',{name:/Enable workspace reading/})).toHaveCount(0);
   await folder.getByRole('treeitem',{name:'src',exact:true}).click();await folder.getByRole('treeitem',{name:'actual.ts',exact:true}).click();
   const reader=page.getByRole('dialog',{name:'src/actual.ts',exact:true});
-  await expect(reader.getByTitle('Current disk · not a historical snapshot')).toHaveText('On disk');
+  await expect(reader.getByTitle('Checked disk snapshot · not a historical artifact')).toHaveText('On disk');
   await expect(reader).toContainText('fromSelectedWorkspace');
   await expect(reader).not.toContainText('recorded historical bytes');
   await reader.getByRole('textbox',{name:'Go to current source line'}).fill('205');await reader.getByRole('button',{name:'Go to line',exact:true}).click();
@@ -240,6 +245,7 @@ test('composer attaches code and pasted screenshots, removes chips and sends the
   await page.goto(server.launchUrl); await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   if (await enable.count()) await enable.click();
   // The real picker is unavailable while workspace consent is being refreshed.
   await expect(composer.getByRole('button', { name: 'Add files or folders' })).toBeEnabled();
@@ -284,6 +290,7 @@ test('the composer submits through the real API transport, handles one approval 
   await expect(composer.getByRole('button', { name: 'Add files or folders' })).toBeEnabled();
 
   const enable=composer.getByRole('button',{name:'Enable this workspace',exact:true});
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   if (await enable.count()) await enable.click();
   const promptInput = composer.getByRole('textbox',{name:'Prompt for selected harness session'});
   await promptInput.fill('Please explain the selected workspace\n' + 'More context\n'.repeat(12));
@@ -566,6 +573,7 @@ test('submission is visible before native output, exposed reasoning hands off to
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   if (await enable.count()) await enable.click();
   await page.route('**/controller/prompt', async route => { await new Promise(resolve => setTimeout(resolve, 400)); await route.continue(); });
   await composer.getByRole('textbox').fill('THINK');
@@ -590,4 +598,22 @@ test('submission is visible before native output, exposed reasoning hands off to
   await app.ingest.sync(id);
   await expect(progress).toHaveCount(0);
   await expect(page.locator('.prose-reasoning').filter({ hasText: 'Native exposed reasoning for the synthetic workspace.' })).toHaveCount(1);
+});
+
+test('Claude questions use the real local answer endpoint and preserve ordinary permission controls',async({page})=>{
+  await page.goto(server.launchUrl);await page.getByRole('button',{name:/Connected workspace synthetic session/}).click();
+  const composer=page.getByRole('region',{name:'Harness prompt'});
+  await expect(page.locator('.composer-target')).not.toContainText('Checking…');
+  const grant=composer.getByRole('button',{name:'Enable this workspace',exact:true});if(await grant.count())await grant.click();
+  await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('QUESTION');
+  await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
+  await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();
+  const form=page.getByRole('form',{name:'Agent needs your input'});await expect(form).toBeVisible();
+  await expect(composer.getByRole('button',{name:'Allow once',exact:true})).toHaveCount(0);
+  await form.getByRole('checkbox',{name:/Unit tests/}).check();await form.getByRole('checkbox',{name:/Typecheck/}).check();
+  await form.getByRole('button',{name:'Send answer',exact:true}).click();await expect(form).toHaveCount(0);
+  const id=decodeURIComponent(new URL(page.url()).hash.slice(4));
+  const status=await (await page.request.get(`${server.url}/v1/recordings/${id}/controller`)).json();
+  expect(status.state).toBe('completed');expect(status.output).toContain('Unit tests, Typecheck');
+  expect((await page.request.post(`${server.url}/v1/recordings/${id}/controller/answer`,{data:{runId:status.runId,requestId:'already-gone',answers:{}}})).status()).toBe(409);
 });

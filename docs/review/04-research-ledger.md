@@ -1,5 +1,10 @@
 # Research ledger and evidence limits
 
+## 18 October native question protocol check
+
+Claude's [user-input documentation](https://code.claude.com/docs/en/agent-sdk/user-input) documents `AskUserQuestion` interception via `canUseTool` and returned `updatedInput.answers`. Codex request/answer/cancellation shapes were checked against the locally generated app-server protocol types (`ToolRequestUserInput*`, `ServerRequestResolvedNotification`), kept privately under `.local`. Implementation accepts only the owned controller turn and exact pending wire request. Local fake-native protocol fixtures cover both harnesses and a browser/HTTP Claude round trip; real signed-in accounts/version/platform acceptance remains open. Passive historical questions do not grant authority to answer another client's turn.
+
+
 Checked 21 September 2026. Primary documentation and selected public source only. Source pages can change. “Documented” means the source describes the capability; it does not mean Drishya has tested it. Proposed mechanisms elsewhere in this review are engineering recommendations, not claims of working implementations.
 
 ## Integration findings

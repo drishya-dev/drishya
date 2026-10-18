@@ -31,6 +31,23 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — Connected reading and quiet controls
+
+- **When:**18 October2026, `codex/workflow-finishing`; grouped related work per the latest builder direction. Code editor98 merged as9a354c3.
+- **Delivered:**Modern native scrollbar thumbs disappear after1200ms idle without changing gutters. Explorer/reader resize grips are invisible while cursor, drag, keyboard and forced-colors focus remain. Imported daemon histories start passive watching by default; Follow only controls camera movement, with focus/visibility freshness recovery. Both supported controller protocols surface exact pending native questions/options/free text, reply through an authenticated route and expire cancelled/stale requests. Retained source versions have explicit keep/compare/accept; native edit preparation blocks stale bases. Utilities retain original reading context and offer chronological captured review after a turn without claiming causality. No direct disk writes, new dependency or event-schema change.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Persistent scroll thumbs and decorative resize grip | Idle transparent thumbs, stable gutters and cursor-only resize edge | Reduce visual noise while preserving access |
+| Camera Follow also starts journal watching | History starts observation; Follow moves only the viewport | Keep new content current during reading |
+| Interactive native question fails as unsupported | Exact owned-turn question form and validated reply | Unblock genuine input without guessing a new prompt |
+| Refresh replaces reading; draft base may be stale | Retained snapshot comparison and disk preflight | Preserve context and disclose conflicts before submission |
+| New return actions expand the compact composer | Return/review actions inside existing workspace utilities | Keep the prompt compact and native options unobstructed |
+
+- **Validation:**Both TypeScript checks/build,456unit tests/80files and69browser journeys pass. These include default watching for both journal formats with Follow off, local Claude native-protocol/HTTP question round trip, Codex/Claude exact question/cancellation guards, pending input at1440/390px, source-version conflict flow, scrollbar idle/stable geometry/invisible keyboard resize and compact Legacy/Modern composer regression checks. Four actual redacted session surface/history/workspace journeys also pass; phone/source frames inspected. Signed-in native accounts, physical/platform checks and whole-product/UI/palette acceptance remain open. No hosted CI, native account turn, private captures or user package/artwork changes committed.
+- **Next:**TASKS is the single queue: complete actual native investigation acceptance, selected developer utilities and all-pages Uiverse/design/palette/motion review. Do not interpret bounded implementation checkmarks as full product completion.
+
+
 ### Yash with Codex — Workspace draft code editor
 
 - **When:**18 October2026, `codex/workspace-code-editor`. Palettes97 merged as340dafe.

@@ -228,6 +228,16 @@ function useLiveUpdates() {
       refreshingId = useApp.getState().recordingId;
       if (current()) await useApp.getState().reloadProjection();
     }, error => { if (current() && useApp.getState().recordingId === refreshingId) useApp.setState({ error: (error as Error).message, playing: false }); });
+    const checkFreshness=async()=>{
+      if(!current()||source.kind!=='daemon'||document.visibilityState==='hidden')return;
+      try {
+        const recordings=await source.recordings();if(!current())return;
+        const now=useApp.getState(),revisions=Object.fromEntries(recordings.map(r=>[r.id,r.revision??0]));
+        useApp.setState({recordings,recording:recordings.find(r=>r.id===now.recordingId)??now.recording});
+        if(now.recordingId&&now.projection&&needsReload(now.recordingId,now.renderedRevisions,revisions))refresh.schedule();
+      } catch { /* The existing connection surface owns connectivity errors. */ }
+    };
+    window.addEventListener('focus',checkFreshness);document.addEventListener('visibilitychange',checkFreshness);
     const unsubscribe = source.subscribe((e) => {
       const s = useApp.getState();
       if (!current()) return;
@@ -262,6 +272,7 @@ function useLiveUpdates() {
       active = false;
       window.removeEventListener('offline', offline); window.removeEventListener('online', online);
       refresh.close();
+      window.removeEventListener('focus',checkFreshness);document.removeEventListener('visibilitychange',checkFreshness);
       unsubscribe();
     };
   }, [source, attempt]);

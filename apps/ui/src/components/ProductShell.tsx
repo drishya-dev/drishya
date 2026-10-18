@@ -1,3 +1,4 @@
+import { installScrollbarActivity } from '../lib/scrollbar-activity.ts';
 import { useEffect, useId, useRef, type ReactNode, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
@@ -29,6 +30,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
 export function ProductShell({ children }: { children: ReactNode }) {
   const experience = useExperience();
   useDismissMenus();
+  useEffect(()=>document.documentElement.dataset.uiVersion==='modern'?installScrollbarActivity():undefined,[]);
   const motion = useApp(s => s.motion);
   useEffect(() => { document.documentElement.toggleAttribute('data-ui-motion', motion); }, [motion]);
   const theme = useApp((s) => s.theme);

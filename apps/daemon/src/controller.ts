@@ -1,3 +1,4 @@
+import { inputSpec, inputAnswers, type InputSpec, type NativeInputRequest } from './native-input.ts';
 // Opt-in supported harness clients. Passive capture never calls this module.
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { open } from 'node:fs/promises';
@@ -12,6 +13,7 @@ export { executable } from './native-executable.ts';
 
 type RecordValue = Record<string, any>;
 export interface ControllerState {
+  inputRequests?:NativeInputRequest[];
   settings?: NativeSettings;
   submittedPrompt?: string;
   afterSequence?: number;
@@ -34,6 +36,7 @@ interface Run {
   state: ControllerState;
   child: ChildProcessWithoutNullStreams;
   pending: Map<string, { wireId: string | number; method: string; input?: unknown }>;
+  inputRequests:Map<string,{wireId:string|number;method:'codex'|'claude';spec:InputSpec}>;
   requests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void; timer: NodeJS.Timeout }>;
   timer: NodeJS.Timeout;
   shutdown?: NodeJS.Timeout;
@@ -105,7 +108,7 @@ export class HarnessController {
     if (['completed', 'failed', 'stopped'].includes(run.state.state)) return;
     run.state.state = state;
     run.state.error = error ? redactText(error).text.slice(0, 4000) : undefined;
-    run.state.approvals = [];
+    run.state.approvals = [];run.state.inputRequests=[];run.inputRequests.clear();
     run.blocks.clear();
     delete run.attachments; delete run.prompt;
     run.pending.clear();
@@ -130,6 +133,30 @@ export class HarnessController {
     run.pending.set(id, { wireId, method, input: safe });
     run.state.approvals.push({ id, name: redactText(name).text, detail: JSON.stringify(safe, null, 2).slice(0, 16_000) });
     run.state.state = 'approval';
+  }
+
+  private inputRequest(run:Run,wireId:string|number,method:'codex'|'claude',raw:unknown) {
+    if(run.inputRequests.size>=4)throw new Error('Too many pending input requests.');
+    const spec=inputSpec(method,raw),id=randomUUID();
+    run.inputRequests.set(id,{wireId,method,spec});
+    run.state.inputRequests??=[];run.state.inputRequests.push({id,questions:spec.questions});
+    run.state.state='approval';run.state.phase='waiting';
+  }
+  private resolveInput(run:Run,wireId:unknown) {
+    for(const [id,request] of run.inputRequests)if(request.wireId===wireId)run.inputRequests.delete(id);
+    run.state.inputRequests=run.state.inputRequests?.filter(request=>run.inputRequests.has(request.id));
+    if(run.state.state==='approval')run.state.state=run.pending.size||run.inputRequests.size?'approval':'running';
+  }
+  answer(id:string,runId:unknown,requestId:unknown,raw:unknown) {
+    const run=this.runs.get(id);
+    if(!run||run.state.runId!==runId||typeof requestId!=='string')throw new HttpError(409,'Input request is no longer current.');
+    const pending=run.inputRequests.get(requestId);
+    if(!pending)throw new HttpError(409,'Input request was answered or cancelled.');
+    const answers=inputAnswers(pending.spec,raw);
+    if(pending.method==='codex')this.write(run,{id:pending.wireId,result:{answers:Object.fromEntries(Object.entries(answers).map(([key,values])=>[key,{answers:values}]))}});
+    else this.write(run,{type:'control_response',response:{subtype:'success',request_id:pending.wireId,response:{behavior:'allow',updatedInput:{...pending.spec.input,answers:Object.fromEntries(Object.entries(answers).map(([key,values])=>[key,values.join(', ')]))}}}});
+    run.inputRequests.delete(requestId);run.state.inputRequests=run.state.inputRequests?.filter(request=>request.id!==requestId);
+    run.state.state=run.pending.size||run.inputRequests.size?'approval':'running';return run.state;
   }
 
   async start(id: string, prompt: unknown, exclusive: unknown, attachments?: unknown, options?: unknown): Promise<ControllerState> {
@@ -176,7 +203,7 @@ export class HarnessController {
     state.attachments = prepared.attachments.map(a => ({ name: a.name, type: a.type }));
     state.settings = this.settings.get(id);
     state.promptRedacted ||= prepared.redacted;
-    const run: Run = { state, child, pending: new Map(), requests: new Map(), blocks: new Map(), claudeTasks: new Set(), claudeResult: false, threadId: sessionId, sequence: 0, timer: setTimeout(() => this.finish(run, 'failed', 'harness turn exceeded the connection time limit'), this.options.timeoutMs ?? 30 * 60_000) };
+    const run: Run = { state, child, pending: new Map(), inputRequests:new Map(), requests: new Map(), blocks: new Map(), claudeTasks: new Set(), claudeResult: false, threadId: sessionId, sequence: 0, timer: setTimeout(() => this.finish(run, 'failed', 'harness turn exceeded the connection time limit'), this.options.timeoutMs ?? 30 * 60_000) };
     // Retain a bounded set of recent connection receipts, no raw journals or auth material.
     for (const [key, old] of this.runs) if (this.runs.size >= 16 && !['connecting', 'running', 'approval'].includes(old.state.state)) this.runs.delete(key);
     this.runs.set(id, run);
@@ -251,8 +278,10 @@ export class HarnessController {
         delete run.prompt;
         delete run.attachments;
         run.state.state = 'running';
-      } else if (v.type === 'control_request') {
-        if (v.request?.subtype === 'can_use_tool') this.approval(run, v.request_id, 'claude-permission', String(v.request.tool_name), v.request.input);
+      } else if(v.type==='control_cancel_request')this.resolveInput(run,v.request_id);
+      else if (v.type === 'control_request') {
+        if(v.request?.subtype==='can_use_tool'&&v.request.tool_name==='AskUserQuestion')this.inputRequest(run,v.request_id,'claude',v.request.input);
+        else if (v.request?.subtype === 'can_use_tool') this.approval(run, v.request_id, 'claude-permission', String(v.request.tool_name), v.request.input);
         else this.write(run, { type: 'control_response', response: { subtype: 'error', request_id: v.request_id, error: 'unsupported controller request' } });
       } else if (v.type === 'system' && v.subtype === 'init') {
         run.state.settings = sanitize({ models: run.state.settings?.models ?? [], commands: Array.isArray(v.slash_commands) ? v.slash_commands.filter((c: unknown) => typeof c === 'string').slice(0, 100) : [], scope: 'connected-session', model: v.model, permission: v.permissionMode }).value as NativeSettings;
@@ -307,12 +336,15 @@ export class HarnessController {
       return;
     }
     if (v.id !== undefined) {
-      if (['item/commandExecution/requestApproval', 'item/fileChange/requestApproval'].includes(v.method)) this.approval(run, v.id, v.method, v.method.includes('fileChange') ? 'File change' : 'Command execution', v.params);
+      if(v.params?.threadId&&v.params.threadId!==run.threadId||run.turnId&&v.params?.turnId&&v.params.turnId!==run.turnId) {this.write(run,{id:v.id,error:{code:-32602,message:'Request does not belong to this connected turn'}});return;}
+      if(v.method==='item/tool/requestUserInput')this.inputRequest(run,v.id,'codex',v.params);
+      else if (['item/commandExecution/requestApproval', 'item/fileChange/requestApproval'].includes(v.method)) this.approval(run, v.id, v.method, v.method.includes('fileChange') ? 'File change' : 'Command execution', v.params);
       else this.write(run, { id: v.id, error: { code: -32601, message: 'Drishya does not support this interactive request; respond in the native harness' } });
       return;
     }
     if (v.params?.threadId && v.params.threadId !== run.threadId) return;
     if (run.turnId && v.params?.turnId && v.params.turnId !== run.turnId) return;
+    if(v.method==='serverRequest/resolved') {this.resolveInput(run,v.params?.requestId);return;}
     const item = v.params?.item;
     if (v.method === 'turn/started') run.state.phase = 'waiting';
     if (v.method === 'item/started') run.state.phase = item?.type === 'reasoning' ? 'thinking' : item?.type === 'agentMessage' ? 'responding' : item?.type === 'userMessage' ? 'waiting' : 'tool';
@@ -369,7 +401,7 @@ export class HarnessController {
     else this.write(run, { id: request.wireId, result: { decision: allow ? 'accept' : 'decline' } });
     run.pending.delete(approvalId);
     run.state.approvals = run.state.approvals.filter(p => p.id !== approvalId);
-    run.state.state = run.pending.size ? 'approval' : 'running';
+    run.state.state = run.pending.size||run.inputRequests.size ? 'approval' : 'running';
     return run.state;
   }
   async stop(id: string, runId: unknown) {

@@ -284,6 +284,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         const body = await readJson(req, 9 * 1024 * 1024);
         return json(res, await controller.start(id, body.prompt, body.exclusive, body.attachments, body.options));
       }
+      if(sub==='controller'&&subId==='answer'&&m==='POST') {const body=await readJson(req,32000);return json(res,controller.answer(id,body.runId,body.requestId,body.answers));}
       if (sub === 'controller' && subId === 'approval' && m === 'POST') {
         const body = await readJson(req);
         return json(res, controller.decide(id, body.runId, body.approvalId, body.allow));

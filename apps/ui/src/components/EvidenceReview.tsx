@@ -7,21 +7,21 @@ import { FileIcon } from './FileIcon.tsx';
 import { useEvidenceState } from './EvidenceNavigation.tsx';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
-export function EvidenceReview({ projection, label = 'Review work' }: { projection: Projection; label?: string }) {
+export function EvidenceReview({ projection, label = 'Review work', after=-1 }: { projection: Projection; label?: string;after?:number }) {
   const [open, setOpen] = useState(false);
   const mode = useApp(s => s.mode);
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
   const unavailable = source?.kind === 'daemon' && id?.includes('+');
-  return <><button className="btn ghost review-open" disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>
-    {open && mode !== 'replay' && <ReviewContent projection={projection} close={() => setOpen(false)} />}</>;
+  return <><button className={`btn ghost ${after<0?'review-open':'review-turn-open'}`} disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>
+    {open && mode !== 'replay' && <ReviewContent key={after} projection={projection} after={after} close={() => setOpen(false)} />}</>;
 }
 
-function ReviewContent({ projection, close }: { projection: Projection; close: () => void }) {
+function ReviewContent({ projection, close, after }: { projection: Projection; close: () => void;after:number }) {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId)!;
   const revision = useApp(s => s.renderedRevisions[id]);
-  const [page, setPage] = useEvidenceState('review/page', 0);
+  const [page, setPage] = useEvidenceState(`review/${after}/page`, 0);
   const [response, setResponse] = useState<{ page: number; data: SinceSnapshot }>();
   const facts = response?.page === page ? response.data : undefined;
   const pageCount = Math.max(1, Math.ceil((response?.data.editedFileCount ?? 0) / 50), ...Object.entries(response?.data.counts ?? {}).filter(([key]) => key !== 'edits').map(([, count]) => Math.ceil(count / 20)));
@@ -30,7 +30,7 @@ function ReviewContent({ projection, close }: { projection: Projection; close: (
   useEffect(() => {
     let active = true;
     setError(undefined);
-    const request = source?.kind === 'daemon' ? source.since?.(id, -1, page) : Promise.resolve(sinceSnapshot(projection, -1, page));
+    const request = source?.kind === 'daemon' ? source.since?.(id, after, page) : Promise.resolve(sinceSnapshot(projection, after, page));
     if (!request) { setError('Review is unavailable for this recording.'); return; }
     void request.then(data => {
       if (!active) return;
@@ -39,10 +39,10 @@ function ReviewContent({ projection, close }: { projection: Projection; close: (
       setResponse({ page, data });
     }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [source, id, revision, projection.lastSequence, retry, page]);
+  }, [source, id, revision, projection.lastSequence, retry, page,after]);
   const groups = [['failures', 'Failures'], ['tests', 'Recorded checks'], ['unfinished', 'In progress'], ['gaps', 'Capture gaps']] as const;
   return <ReadingDialog title="Review work" close={close} className="evidence-review">
-    <div className="review-intro"><p>Start with the change. Follow the evidence.</p><span>Whole recording · recorded order, not test coverage</span></div>
+    <div className="review-intro"><p>Start with the change. Follow the evidence.</p><span>{after<0?'Whole recording · recorded order, not test coverage':'Captured after this turn began · order, not attribution or coverage'}</span></div>
     {pageCount > 1 && <nav className="reader-pages review-pagination" aria-label="Recorded review pages"><button className="btn" aria-label="Previous review page" disabled={!page} onClick={() => setPage(n => Math.max(0, n - 1))}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>Previous</button><span aria-live="polite">Page {page + 1} of {pageCount}</span><button className="btn" aria-label="Next review page" disabled={page + 1 >= pageCount} onClick={() => setPage(n => n + 1)}>Next<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button><small>Up to 20 outcomes per group · 50 files per page</small></nav>}
     {error ? <p role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry</button></p> : !facts ? <p role="status">Opening recorded evidence…</p> : <>
       <div className="review-counts"><span><strong>{facts.editedFileCount.toLocaleString()}</strong> {facts.editedFileCount === 1 ? 'file' : 'files'} with change inputs</span><span><strong>{facts.counts.failures.toLocaleString()}</strong> failed {facts.counts.failures === 1 ? 'operation' : 'operations'}</span><span><strong>{facts.counts.tests.toLocaleString()}</strong> test {facts.counts.tests === 1 ? 'run' : 'runs'}</span></div>
