@@ -461,6 +461,46 @@ test('recovered Modern toolbox preserves actual instrument origins, filters and 
   await expect(page.locator('.modern-session-header .studio-session')).toContainText(/checkout|orders/);
 });
 
+test('Modern reading windows resize, move, recover and reset without leaving the viewport',async({page})=>{
+  await page.setViewportSize({width:1440,height:900});
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  const git=page.getByRole('dialog',{name:'Git review',exact:true});
+  const height=git.getByRole('separator',{name:'Resize Git review window height'});
+  await height.focus();await page.keyboard.press('Home');
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().height))).toBe(220);
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().height))).toBe(252);
+  const grip=(await height.boundingBox())!,box=(await git.boundingBox())!;
+  expect(grip.y).toBeGreaterThanOrEqual(box.y);expect(grip.y+grip.height).toBeLessThanOrEqual(box.y+box.height+1);
+  await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2+64,{steps:5});await page.mouse.up();
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().height))).toBe(316);
+  const move=git.getByRole('button',{name:'Move Git review window'});
+  await move.focus();await page.keyboard.press('ArrowLeft');await page.keyboard.press('ArrowDown');
+  const moved=(await git.boundingBox())!;
+  expect(moved.x).toBeLessThan(box.x);expect(moved.y).toBeGreaterThan(box.y);
+  const button=(await move.boundingBox())!;
+  await page.mouse.move(button.x+button.width/2,button.y+button.height/2);await page.mouse.down();
+  await page.mouse.move(20,400,{steps:8});await page.mouse.up();
+  const dragged=(await git.boundingBox())!;expect(dragged.x).toBeGreaterThanOrEqual(12);
+  await git.getByRole('button',{name:'Close Git review'}).click();
+  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().y))).toBe(Math.round(dragged.y));
+  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('surface/Git review');
+  await page.reload();await expect(git).toBeVisible();
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().y))).toBe(Math.round(dragged.y));
+  await page.setViewportSize({width:900,height:600});
+  await expect.poll(()=>git.evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;})).toBe(true);
+  await page.setViewportSize({width:390,height:844});
+  await expect(move).toHaveCount(0);await expect(height).toHaveCount(0);
+  await expect.poll(()=>git.evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})).toBe(true);
+  await page.setViewportSize({width:1440,height:900});
+  await git.getByRole('button',{name:'Reset Git review window layout'}).click();
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(680);
+  expect((await git.boundingBox())!.x).toBeGreaterThan(700);
+});
+
 test('Modern Git review opens on the right and reads actual staged/worktree patches', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
@@ -778,6 +818,11 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/discount.ts');
   await page.locator('[data-spine-path="src/cart/discount.ts"]').click();
   await expect(desk.getByRole('tab')).toHaveCount(2);
+  const orderedTabs=()=>desk.getByRole('tab').evaluateAll(nodes=>nodes.map(node=>(node.closest<HTMLElement>('[data-workspace-tab]')?.dataset.workspaceTab??'').split('/').at(-1)));
+  await desk.getByRole('tab',{name:'discount.ts',exact:true}).focus();await page.keyboard.press('Alt+Shift+ArrowLeft');
+  expect(await orderedTabs()).toEqual(['discount.ts','total.ts']);
+  await desk.locator('[data-workspace-tab="src/cart/discount.ts"]').dragTo(desk.locator('[data-workspace-tab="src/cart/total.ts"]'));
+  expect(await orderedTabs()).toEqual(['total.ts','discount.ts']);
   await desk.getByRole('tab',{name:'total.ts',exact:true}).click();
   await expect(total.getByRole('button',{name:'Wrap',exact:true})).toHaveAttribute('aria-pressed','true');
   await expect(total.getByRole('searchbox',{name:'Find in src/cart/total.ts'})).toHaveValue('total');
@@ -785,6 +830,12 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await desk.getByRole('button',{name:'Split view',exact:true}).click();
   await expect(desk.locator('.desk-document')).toHaveCount(2);
   await expect(total).toBeVisible();
+  const divider=desk.getByRole('separator',{name:'Resize workspace panes',exact:true});
+  await divider.focus();await page.keyboard.press('End');await expect(divider).toHaveAttribute('aria-valuenow','75');
+  await divider.dblclick();await expect(divider).toHaveAttribute('aria-valuenow','50');
+  await desk.getByRole('button',{name:'Reset layout',exact:true}).click();
+  await expect(desk.locator('.desk-document')).toHaveCount(1);await expect(desk.getByRole('tab')).toHaveCount(2);
+  await desk.getByRole('button',{name:'Split view',exact:true}).click();await expect(total).toBeVisible();
   await page.screenshot({path:resolve('.local/developer-workspace-desktop.png')});
   await total.getByRole('button',{name:'Edit file',exact:true}).click();
   const editor=total.getByRole('textbox',{name:'Local draft for src/cart/total.ts',exact:true});
@@ -1292,6 +1343,7 @@ test('Modern scroll thumbs hide after activity and resize edges retain cursor an
   expect(await resize.evaluate(n=>getComputedStyle(n,'::after').content)).toBe('none');
   expect(await resize.evaluate(n=>getComputedStyle(n).cursor)).toContain('resize');
   await resize.focus();await page.keyboard.press('End');await expect(resize).toHaveAttribute('aria-valuenow',await resize.getAttribute('aria-valuemax')??'');
+  await page.keyboard.press('Enter');await expect(resize).toHaveAttribute('aria-valuenow','260');
   await page.emulateMedia({forcedColors:'active'});expect(await history.evaluate(n=>getComputedStyle(n).scrollbarColor)).toBe('auto');
 });
 
@@ -1460,7 +1512,7 @@ test('captured changes lead to typed map connections, current reading and a pers
   const approve=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await approve.isVisible())await approve.click();
   const connections=page.getByRole('region',{name:'Direct import connections',exact:true});await expect(connections.locator('.map-connection-root')).toHaveText(path);
   await expect(connections).toContainText('static relationships');await connections.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/}).click();
-  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button').click();
+  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button[aria-label^="Close "]').click();
   await connections.getByRole('button',{name:'Show full map',exact:true}).click();const changes=page.getByRole('button',{name:/^Changes /});await changes.click();await expect(changes).toHaveAttribute('aria-pressed','true');await expect(page.locator('.map-scope-note')).toContainText('Captured change locations');
   const toggle=page.getByRole('switch',{name:'Import paths',exact:true});if(await toggle.getAttribute('aria-checked')==='true')await toggle.click();
   await page.getByRole('button',{name:'Back to work',exact:true}).click();await page.getByRole('button',{name:'Explore repository map',exact:true}).click();await expect(changes).toHaveAttribute('aria-pressed','true');
@@ -1519,7 +1571,7 @@ test('Files Markdown has document source recovery and a complete large-file fall
   const reader=page.locator('.current-file-reader');await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();await expect(reader.getByRole('cell',{name:'Ready',exact:true})).toBeVisible();await expect(reader.locator('.desk-markdown strong')).toHaveText('readable');for(const width of [1440,390]){await page.setViewportSize({width,height:900});await page.screenshot({path:resolve(`.local/current-document-${width}.png`)});}await page.setViewportSize({width:1440,height:900});
   const modes=reader.getByRole('group',{name:'Markdown presentation',exact:true});await modes.getByRole('button',{name:'Source',exact:true}).click();await expect(reader.locator('.whole-source')).toContainText('# Workspace guide');await reader.getByRole('searchbox',{name:'Find in current source file',exact:true}).fill('readable');await expect(reader).toContainText('1 matching line');await modes.getByRole('button',{name:'Document',exact:true}).click();await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();await modes.getByRole('button',{name:'Source',exact:true}).click();await expect(reader.getByRole('searchbox',{name:'Find in current source file',exact:true})).toHaveValue('readable');
   await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('disk/formatted');await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('group',{name:'Markdown presentation',exact:true}).getByRole('button',{name:'Source',exact:true})).toHaveAttribute('aria-pressed','true');
-  await reader.locator(':scope>header button').click();await files.fill('large-document.md');await page.locator('[data-spine-path="large-document.md"]').click();await expect(reader.getByRole('status').filter({hasText:'Rendered documents support'})).toBeVisible();await reader.getByRole('group',{name:'Markdown presentation',exact:true}).getByRole('button',{name:'Source',exact:true}).click();await reader.getByRole('textbox',{name:'Go to current source line',exact:true}).fill('6000');await reader.getByRole('button',{name:'Go to line',exact:true}).click();await expect(reader.locator('[data-source-line="6000"]')).toContainText('Markdown source line 6000');
+  await reader.locator(':scope>header button[aria-label^="Close "]').click();await files.fill('large-document.md');await page.locator('[data-spine-path="large-document.md"]').click();await expect(reader.getByRole('status').filter({hasText:'Rendered documents support'})).toBeVisible();await reader.getByRole('group',{name:'Markdown presentation',exact:true}).getByRole('button',{name:'Source',exact:true}).click();await reader.getByRole('textbox',{name:'Go to current source line',exact:true}).fill('6000');await reader.getByRole('button',{name:'Go to line',exact:true}).click();await expect(reader.locator('[data-source-line="6000"]')).toContainText('Markdown source line 6000');
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/current-markdown-${width}.png`)});}
 });
 
@@ -1531,6 +1583,6 @@ test('a restored current reader requests fresh consent and keeps inspector navig
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   const reader=page.locator('.current-file-reader');await expect(reader.getByRole('region',{name:'Current file access',exact:true})).toBeVisible();expect(reads).toBe(0);await expect(page.locator('dialog[open]')).toHaveCount(1);
   await reader.getByRole('button',{name:'Approve current-file reading',exact:true}).click();await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();expect(reads).toBeGreaterThan(0);await expect(reader.getByRole('alert')).toHaveCount(0);
-  await reader.locator(':scope>header button').click();const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
+  await reader.locator(':scope>header button[aria-label^="Close "]').click();const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
   await workspace.click();await expect(inspector).toHaveCount(0);const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk.getByRole('tablist')).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(inspector).toBeVisible();
 });

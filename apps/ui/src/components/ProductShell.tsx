@@ -6,9 +6,11 @@ import { useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { SettingsSections } from './UIVersions.tsx';
 import { useExperience } from '../lib/experience.ts';
+import {useReadingWindow} from './ReadingWindow.tsx';
 
-export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon, resizeControl }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode; resizeControl?: ReactNode }) {
+export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon, resizeControl, windowId, resetWindow }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode; resizeControl?: ReactNode; windowId?:string; resetWindow?:()=>void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const window=useReadingWindow(ref,windowId);
   useEvidenceScroll(ref, `dialog/${className}`);
   const titleId = useId();
   useEffect(() => {
@@ -21,9 +23,10 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     const arrival = animate ? dialog.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }) : undefined;
     return () => { arrival?.cancel(); dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
   }, [modeless]);
-  return createPortal(<dialog ref={ref} style={style} className={`product-dialog ${className}${modeless ? " map-reader" : ""}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
-    <header>{resizeControl}<h2 id={titleId}>{headerIcon}{title}</h2><button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></header>
+  return createPortal(<dialog ref={ref} style={{...style,...window.style}} className={`product-dialog ${className}${modeless ? " map-reader" : ""}${window.enabled?' adjustable-reading-window':''}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
+    <header>{resizeControl}<h2 id={titleId}>{headerIcon}{title}</h2><div className="reading-window-actions">{window.controls}{window.enabled&&<button className="icon-btn" aria-label={`Reset ${windowId} window layout`} title="Reset window layout" onClick={()=>{window.reset();resetWindow?.();}}>↺</button>}<button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></div></header>
     {children}
+    {window.heightControl}
   </dialog>, document.body);
 }
 

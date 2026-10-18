@@ -9,13 +9,13 @@ export function useWorkspaceMemory(scope?:string) {
   return useMemo(() => source && (scope || id) && (scope || mode === 'history') ? workspaceMemory(source).session(scope ?? id!) : new Map<string, unknown>(), [source, id, mode,scope]);
 }
 
-export function useWorkspaceState<T>(key: string, initial: T | (() => T),scope?:string): [T, Dispatch<SetStateAction<T>>] {
+export function useWorkspaceState<T>(key: string | undefined, initial: T | (() => T),scope?:string): [T, Dispatch<SetStateAction<T>>] {
   const memory = useWorkspaceMemory(scope);
-  const read = () => memory.has(key) ? memory.get(key) as T : typeof initial === 'function' ? (initial as () => T)() : initial;
-  const [state, setState] = useState(() => ({ memory, value: read() }));
-  const value = state.memory === memory ? state.value : read();
-  if (state.memory !== memory) setState({ memory, value });
-  const setValue: Dispatch<SetStateAction<T>> = update => setState(previous => ({ memory, value: typeof update === 'function' ? (update as (value: T) => T)(previous.memory === memory ? previous.value : read()) : update }));
-  useLayoutEffect(() => { memory.set(key, value); }, [memory, key, value]);
+  const read = () => key && memory.has(key) ? memory.get(key) as T : typeof initial === 'function' ? (initial as () => T)() : initial;
+  const [state, setState] = useState(() => ({ memory, key, value: read() }));
+  const value = state.memory === memory && state.key === key ? state.value : read();
+  if (state.memory !== memory || state.key !== key) setState({ memory, key, value });
+  const setValue: Dispatch<SetStateAction<T>> = update => setState(previous => ({ memory, key, value: typeof update === 'function' ? (update as (value: T) => T)(previous.memory === memory && previous.key === key ? previous.value : read()) : update }));
+  useLayoutEffect(() => { if(key)memory.set(key, value); }, [memory, key, value]);
   return [value, setValue];
 }

@@ -1,0 +1,10 @@
+/* Direct manipulation has no transition; the user's pointer is the clock. */
+.reading-window-actions {display:flex;align-items:center;gap:3px;flex:none;}
+.reading-window-actions .icon-btn {display:inline-grid;place-items:center;}
+.reading-window-move {cursor:move;touch-action:none;}
+.reading-window-move svg {width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.4;}
+.adjustable-reading-window>header h2 {flex:1;min-width:0;}
+.adjustable-reading-window>.reading-window-height {position:sticky;display:block;bottom:0;height:9px;min-height:9px;margin:0;flex:none;cursor:ns-resize;touch-action:none;z-index:5;background:transparent;}
+.reading-window-height:focus-visible {outline:1px solid var(--focus);outline-offset:-2px;}
+:root[data-ui-version=modern] .modern-git-drawer>header .reading-window-actions .icon-btn {width:28px;height:28px;}
+@media(max-width:820px) {.reading-window-move,.reading-window-height {display:none;}}
