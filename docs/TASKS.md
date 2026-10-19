@@ -10,6 +10,8 @@
 
 Evidence for this restructure: [122 developer review](review/122-developer-product-review.md) (with builder corrections), [123 harness data audit](review/123-harness-data-audit.md), [124 Sacred Timeline spec](review/124-sacred-timeline-git-graph.md), [HACKATHON](HACKATHON.md).
 
+**19 October investigation candidate:** [107](review/107-investigation-finishing.md) records the bounded workflow/recovery/control increment reconciled with main54f93af. New P0-P3 direction is retained. Signed-in native checks remain builder-owned; broad UI/motion/platform items are not certified by a synthetic matrix.
+
 ---
 
 ## 0. Rules for every item
@@ -425,14 +427,18 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 - [ ] **FILES-2 · Paths open in peek** · P1 · `files` `read` — any path in prose, card headers, search hits and test output opens in the tabbed peek (captured version by default, with an explicit current-file toggle under consent).
 
 - [ ] **FILES-3 · Navigation clarity** · P2 · `files` `ui` — make the purposes of Files (current tree), peek (read beside the agent), Workspace (full view and drafts) and Repository (map) obvious through one-line hints and destinations, with a joined investigation route, not more resident buttons.
+  - **19 October progress (107):** Correction entry/retained origin and explicit Files exit from map mode implemented. New peek/Workspace roles preserved. Broader navigation acceptance remains open.
 
 - [ ] **FILES-4 · Reader and Workspace review** · P2 · `files` — type and line height, syntax, paths, Markdown, tab design, pane sizing, toolbars, copy/find/wrap/go-to-line, resize/scrollbars, long and empty material.
+  - **19 October progress (107):** Existing whole-file/current-draft readers retained alongside new compact peek, data/resource readers and Actions menus. Investigation/recovery and desktop/phone regressions added; broad material combinations remain open.
 
 - [ ] **FILES-5 · Opt-in draft recovery** · P2 · `files` — design explicit opt-in persistence before storing edited text; keep download and the unsaved warning until then; never imply volatile drafts survive crashes.
+  - **19 October progress (107):** Explicit user-owned encrypted snapshot download, unlock preview and deliberate matching-workspace restore implemented. No autosave or stored key/passphrase; ordinary drafts remain volatile. Protected/secret-pattern text refuses recovery; stale bases and live-draft conflicts retained. Synthetic reload/privacy/limit regressions pass; native writes remain excluded.
 
 ### UI — visual system, chrome and minimalism
 
 - [ ] **UI-1 · Chrome consolidation and session identity** · P1 · `ui`
+  - **19 October progress (107):** Session details in existing utilities shows exact title/harness/recording/root and journal-watch qualification. Modern central capsule remains absent under latest builder correction; proposed unified bar is not adopted here.
   - **Problem:** nine floating clusters (logo, Files|Repository, search/settings/menu, Git review|Git graph, Workspace, Toolbox, rail, Follow, composer), each with its own border. The session's title, repo, branch, harness and live state are invisible.
   - **Do:**
     - One slim top bar: identity (title · repo@branch · harness/model · live dot · LIVE-1 status), then navigation (Files · Git · Map · Workspace · Search · ⋯).
@@ -443,6 +449,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 - [ ] **UI-2 · Typography floor** · P1 · `ui` — 280 CSS declarations are ≤ 10 px (14 at 7 px, 53 at 8 px, 84 at 9 px). Set a floor of 11 px for meta and 12–13 px for controls and labels; raise secondary-text contrast to ≥ 4.5:1 on every palette. Check with the existing contrast guard.
 
 - [ ] **UI-3 · Uiverse / component-library pass** · P1 · `ui` `motion`
+  - **19 October progress (107):** Switch/minimal-input/hover references assessed; original token-based controls/focus/fields with motion/resource/forced-color fallbacks implemented. No copied library/runtime dependency. New shimmer/prototype-choice scope remains separate.
   - **First:** the builder's reference [Star on GitHub shimmer button](https://uiverse.io/elijahgummer/bright-chicken-11) (MIT): black pill, a diagonal light sweep on hover (1 s ease-out), ring-offset on hover, and a star icon that tints on hover.
     - Port it to our tokens (no Tailwind dependency); respect reduced motion.
     - Show **no live star count**: a GitHub API call would be an automatic external request.
@@ -460,14 +467,18 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 - [ ] **UI-4 · CSS consolidation** · P2 · `ui` `perf` — 39 CSS files (~600 KB source) and 241 `!important`, layered from successive redesigns. Freeze Legacy, retire Canvas (with builder agreement), move Modern onto one token sheet, delete dead overrides. Visual regression screenshots before and after.
 
 - [ ] **UI-6 · Phone density and occlusion** · P2 · `ui` — Files overlay, map import drawer and composer ownership on phones; compact returning-user Home.
+  - **19 October progress (107):** Files/composer clearance, wrapped Workspace navigation and bounded menus checked at320/390/900/1440px. Compact main Home/peek retained; real devices and other header/map-drawer cases remain open.
 
 - [ ] **UI-7 · Every palette across every surface** · P2 · `ui` — actual code/diffs/tests/menus/editor, translucent compositing, light-theme balance and semantic status contrast. A palette selector or token test is not the completed theme pass.
+  - **19 October progress (107):** Ten synthetic material kinds across seven palettes, draft comparisons/Git/Home/review readers and existing redacted Codex/Claude material checked. Current Codex source succeeds; old Claude current index unavailable and explicitly qualified. Every real artifact/state is not certified.
 
 - [ ] **UI-8 · Whole-product UI pass** · P2 · `ui` — header and edge panels (alignment, hit targets, overflow, disclosures, no duplicate controls); composer (draft, attachments, file/folder/image/paste previews, permissions/model/effort, send/stop/approval/error/reconnect, focus/menus); all action types on actual Codex and Claude sessions (read/write/edit/search/shell/test/web/MCP/delegation/unknown; size combinations; decoding/raw access; errors; all lines reachable; accurate test bars). Includes components never called out in screenshots.
+  - **19 October progress (107):** Shared focus/native-select/dialog ownership, quiet keyboard switches, true Jet Black and bounded edge surfaces implemented. Broad suite and recorded-material audit in107 do not close all real native/material combinations.
 
 ### MOTION — interaction motion
 
 - [ ] **MOTION-1 · Every control has purposeful motion** · P1 · `motion`
+  - **19 October progress (107):** Short state changes and keyboard/reduced-motion/resource/forced-color checks added; keyboard map focus holds orbit. Modal Escape dismisses immediately with native select behavior. Main prompt/Toolbox/reader motion retained. Full per-control design pass remains open.
   - **Scope:** every clickable control and nested state on every page:
     - prompt minimize/expand, Explorer open/close, Toolbox minimize, folder expand/collapse;
     - Files ⇄ Repository ⇄ Workspace entry and return; menus, popovers, tooltips, settings sections;
@@ -504,11 +515,14 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 
 - [ ] **REVIEW-2 · Search result context** · P1 · `review` — each hit shows session · turn · tool · file · time; the jump keeps the hit highlighted; results are grouped by turn.
 
-- [ ] **REVIEW-3 · Bookmarks and indicators audit** · P2 · `review` — audit existing bookmarks/saved moments and commit/PR/capture-gap indicators; surface only evidence-backed, useful actions; no empty panels for feature count.
+- [x] **REVIEW-3 · Bookmarks and indicators audit** · P2 · `review` — audit existing bookmarks/saved moments and commit/PR/capture-gap indicators; surface only evidence-backed, useful actions; no empty panels for feature count.
+  - **19 October progress (107):** Explicit50-reference Saved moments and redacted local notes; old daemon notes use25-row pages with qualified legacy timeline positions. Both isolated redacted histories exercised saving. Gaps stay distinct from current Git/PR; no resident panel or fabricated attribution.
 
 - [ ] **REVIEW-4 · Joined investigation** · P2 · `review` `native` — recorded failure/change → exact captured source → current file/draft → anchored question/correction → explicit native submission → actual resulting diff/check → return to the original evidence.
+  - **19 October progress (107):** Retain exact origin through source/draft/question preparation and explicit controller receipt, then chronological captured follow-up and return. Fixed observation/timeline coordinates; newly appended synthetic check reachable. Genuine edit/diff/conflict acceptance remains NATIVE-4 and builder-owned.
 
-- [ ] **REVIEW-5 · Packet usefulness** · P2 · `review` — deliberate evidence selection and useful portable references; no auto-sharing; no private current-work inclusion.
+- [x] **REVIEW-5 · Packet usefulness** · P2 · `review` — deliberate evidence selection and useful portable references; no auto-sharing; no private current-work inclusion.
+  - **19 October progress (107):** Choose samples, open questions and up to20 saved actions; re-read evidence with four requests maximum in flight, qualify unavailable references and export portable recording/operation/observation IDs. Both isolated Codex/Claude histories exercised packets. No current Git/disk/drafts or automatic sharing.
 
 ### MAP — repository map
 
@@ -531,7 +545,9 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 - [ ] **PERF-1 · Very large journals** · P1 · `perf` — import and tail the local 564 MB, 232 MB and 166 MB Codex rollouts. Measure time, peak RSS and UI responsiveness; reading is already chunked (`capture-core/jsonl.ts`). Record the results in IMPLEMENTATION_ROADMAP §7.
 - [ ] **REL-1 · Managed-runtime update vs antivirus** · P2 — verify that a supported idle-time update resolves the recurring AV conflict; never interrupt active work or change antivirus protection (review 38).
 - [ ] **REL-2 · Physical platform acceptance** · P2 — lower-resource and lower-core machines; Windows, macOS and Linux; memory, large-repo and long-session performance; real phones and input devices; GPU fallback.
+  - **19 October progress (107):** Windows reference-machine synthetic/resource/package checks in107. Emulated low-resource/4x CPU does not certify physical low-RAM/lower-core or other platforms.
 - [ ] **REL-3 · Human acceptance** · P2 — keyboard, browser zoom, assistive technology; human freeze/truth/ten-minute reading; preference and adoption.
+  - **19 October progress (107):** Local keyboard/focus/forced-color/reduced-motion and synthetic ten-minute reading checks added. Human comprehension, screen reader, touch and zoom remain open.
 - [ ] **REL-4 · Publishing preparation (on request only)** · P2 — final full local checks, selected manual GitHub CI, packaging/install/setup guidance and release checks. No automatic hosted CI for ordinary commits or PRs.
 
 - [ ] **TEST-1 · Browser specs failing or flaky on `main`** · P1 · `rel` — found 19 Oct while verifying LIVE-2 and LIVE-1; each reproduces on the code from before PR #124, so none is from recent work. `DRISHYA_BROWSER_CHANNEL=msedge npx playwright test <file>:<line>`:
@@ -542,6 +558,9 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - `live-sync.spec.ts:8` ("Follow starts stopped capture and keeps refreshing while notices arrive continuously") — fails every time (about 11 s) on main and on the code from before PR #124.
   - `prompt-timeline.spec.ts:22` ("bottom-anchored prompt timeline scrolls independently…") — fails every time (`toHaveAttribute`) on main and before PR #124.
   - `product-workspace.spec.ts:772` ("paged prompt rail spans the full session…") — rare flake under load (failed twice in about 16 runs while the whole suite ran; 20 of 20 passes when run alone): `.turn` first does not contain `Rail prompt 0`.
+  - Also failing on clean main (19 Oct, Harsh with Claude, while verifying `codex/investigation-finishing`): `fresh-workspace.spec.ts` composer target (:129, `.modern-composer-location`), chrome fit (:287, `.modern-session-header h1`), Git review (:593, resize handle), edge actions (:1190, since PR124 the rightmost navigation action no longer reaches the right edge); `session-segments.spec.ts:31`.
+  - Fail on main `b66f160` since PR125 (idle composer collapses by default), passing before it: `fresh-workspace.spec.ts` :16, :313, :331, :397, :657 (both harnesses), :792, :1135, :1344, :1723, :1791, :1809, :1828. Most expect the composer expanded or a prompt control visible.
+  - Flaky: `workspace-toolbar.spec.ts:88` (exposed-gutter scroll) passes and fails across runs of `codex/investigation-finishing`.
   - **Do:** decide per spec whether the product or the test is wrong, fix, and re-run each 10× for flakiness. **Accept:** all four pass 10 of 10 on a clean build.
 
 ### HACK — Nebius × NVIDIA Global AI Hackathon

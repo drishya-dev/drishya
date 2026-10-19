@@ -56,7 +56,8 @@ describe('sinceBoundary', () => {
 
   it('after the failing test, shows the edit and the passing rerun but not the old failure', () => {
     const failed = tests()[0]!;
-    const d = sinceBoundary(p, failed.endSequence!);
+    const boundary=p.timeline[failed.endSequence!]!.sequence;
+    const d = sinceBoundary(p, boundary);
     expect(d.failures.map((f) => f.operationId)).not.toContain(failed.id);
     expect(d.tests.map((t) => t.operationId)).toEqual([tests()[1]!.id]);
     expect(d.tests[0]!.detail).toMatch(/passed/);
@@ -64,12 +65,12 @@ describe('sinceBoundary', () => {
     expect(d.newSteps).toBeLessThan(p.timeline.length);
     // Every item links to a real operation and sits after the boundary, in order.
     const items = [...d.edits, ...d.tests];
-    expect(items.every((i) => i.sequence > failed.endSequence! && p.operations.some((o) => o.id === i.operationId))).toBe(true);
+    expect(items.every((i) => i.sequence > boundary && p.operations.some((o) => o.id === i.operationId))).toBe(true);
   });
 
   it('counts an operation that resolved after the boundary even if it started before', () => {
     const rerun = tests()[1]!;
-    const d = sinceBoundary(p, rerun.startSequence);
+    const d = sinceBoundary(p, p.timeline[rerun.startSequence]!.sequence);
     expect(d.tests.map((t) => t.operationId)).toContain(rerun.id);
   });
 
@@ -78,9 +79,18 @@ describe('sinceBoundary', () => {
     const op = q.operations.at(-1)!;
     op.status = 'running';
     op.endSequence = undefined;
-    q.gaps.push({ sequence: q.lastSequence, reason: 'malformed-record' });
+    q.lastSequence++;
+    q.gaps.push({ sequence: q.timeline.length, reason: 'malformed-record' });
+    q.timeline.push({type:'gap',id:'synthetic-gap',sequence:q.lastSequence,agentId:op.agentId,reason:'malformed-record'});
     const d = sinceBoundary(q, q.lastSequence - 1);
     expect(d.unfinished.map((u) => u.operationId)).toContain(op.id);
     expect(d.gaps).toEqual([expect.objectContaining({ sequence: q.lastSequence, title: expect.stringMatching(/malformed/) })]);
+  });
+  it('uses captured observation sequences across metadata and late results, not timeline offsets',()=>{
+    const op={...tests()[0]!,startSequence:0,endSequence:1};
+    const q={...p,operations:[op],gaps:[],lastSequence:42,timeline:[{type:'op-start' as const,id:'s',operationId:op.id,sequence:40,agentId:op.agentId},{type:'op-end' as const,id:'e',operationId:op.id,sequence:42,agentId:op.agentId}]};
+    expect(sinceBoundary(q,41).tests).toEqual([expect.objectContaining({operationId:op.id,sequence:42,sequenceBasis:'captured-observation'})]);
+    expect(sinceBoundary(q,42).tests).toHaveLength(0);
+    const missing={...q,timeline:[]};expect(sinceBoundary(missing,10).unplacedCount).toBe(1);expect(sinceBoundary(missing,10).tests).toHaveLength(0);expect(sinceBoundary(missing,-1).tests[0]!.sequenceBasis).toBe('timeline-position');
   });
 });

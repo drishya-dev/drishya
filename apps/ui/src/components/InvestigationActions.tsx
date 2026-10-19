@@ -1,0 +1,19 @@
+import {useState} from 'react';
+import type {Operation} from '@drishya/contracts';
+import {useApp} from '../state.ts';
+import {beginInvestigation} from '../lib/native-return.ts';
+import {prepareNativeRequest} from '../lib/prepare-native-request.ts';
+
+export function prepareCorrection(op:Operation,text:string) {
+  const state=useApp.getState();
+  if(!state.source||!state.recordingId)throw new Error('Choose a local recording first.');
+  beginInvestigation(state.source,state.recordingId,op);
+  prepareNativeRequest(`Investigate this captured action before proposing a correction.\nAction: ${JSON.stringify(op.title)}\nPaths: ${op.paths.map(path=>JSON.stringify(path.path)).join(', ')||'No captured file location'}\nReviewer question (local note, not captured agent output):\n${text}\nUse native permissions. Inspect current files before edits, report conflicts, show the resulting diff and actual checks. State anything unavailable.`,state.source,state.recordingId);
+}
+/** The captured action remains the return point while current files have their own consent. */
+export function InvestigationActions({op}:{op:Operation}) {
+  const source=useApp(s=>s.source),id=useApp(s=>s.recordingId),mode=useApp(s=>s.mode);
+  const paths=[...new Set(op.paths.map(item=>item.path))], [path,setPath]=useState(paths[0]??'');
+  if(source?.kind!=='daemon'||!id||id.includes('+')||mode!=='history')return null;
+  return <section className="investigation-entry" aria-label="Investigate this action"><h3>Investigate this action</h3><p>Read the captured material above. Open today’s file separately to prepare a correction; the harness applies it only after you submit.</p>{paths.length>1&&<label>Current file<select aria-label="Investigation file" value={path} onChange={e=>setPath(e.target.value)}>{paths.map(path=><option key={path}>{path}</option>)}</select></label>}{path?<button className="btn" onClick={()=>{beginInvestigation(source,id,op);useApp.getState().set({developerWorkspace:true,explore:false,selectedOp:undefined,expandedOp:undefined,currentFile:undefined,filePanel:undefined});window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:path}));}}>Open current file for correction</button>:<small>No file location was captured. Leave an anchored question below.</small>}</section>;
+}

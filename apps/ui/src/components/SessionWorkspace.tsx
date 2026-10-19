@@ -2,6 +2,7 @@ import {FilePeekTabs} from './FilePeekTabs.tsx';
 import {filePeekState,openFilePeek,closeFilePeek,type FilePeekState} from '../lib/file-peek.ts';
 import {useSurfaceReflow} from '../lib/use-surface-reflow.ts';
 import {Markdown} from '../lib/markdown.tsx';
+import { acceptInvestigation } from '../lib/native-return.ts';
 import { NativeQuestions } from './NativeQuestions.tsx';
 import { useCurrentSource } from '../lib/use-current-source.ts';
 import { SourceVersionNotice } from './SourceVersions.tsx';
@@ -91,7 +92,7 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     if (!eligible) return;
     setSubmitting(true);
     ++revision.current;
-    try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments, options); if (useApp.getState().source === source && useApp.getState().recordingId === id) { ++revision.current; setController(state); } }
+    try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments, options); if (useApp.getState().source === source && useApp.getState().recordingId === id) { acceptInvestigation(source!,id!,state,prompt); ++revision.current; setController(state); } }
     finally { if (useApp.getState().source === source && useApp.getState().recordingId === id) setSubmitting(false); }
   };
   return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect }}>{children}</SessionContext.Provider>;

@@ -38,6 +38,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex, then Claude (Opus 5.5) — Investigation, saved evidence and draft recovery finishing
+
+- **When:** 18–19 October 2026, `codex/investigation-finishing` (not yet pushed).
+- **Delivered:** items 2–6 of the remaining-work request ([107](review/107-investigation-finishing.md)): joined investigation with exact origin and return, Saved moments (50 references) and paged legacy notes, selected-evidence packets, explicit encrypted draft recovery in Workspace Actions, shared focus/Escape/switch polish; default journal poll 750→500 ms. Reconciled with main up to `b66f160` (PR111–125, claims). Claude concluded the merges, fixed three branch regressions (Workspace layout keyboard order; draft-bar reload-loss wording; Codex’s 25 ms browser refresh coalescing, reverted to 150 ms because it superseded `openRecording` and lost the reader restored after a session switch) and ran the final checks.
+- **Validation:** both TS; 562 units/103 files. Full browser on the pre-PR125 merge: 224 pass / 18 opt-in skip / 9 fail, all failing identically on clean main or flaky. After PR125, every `fresh-workspace` failure except the session-switch regression (now fixed, 3/3) also fails on clean `b66f160`; all are listed under TEST-1. Ten-minute soak 604 s / 88 rounds / 772 peak nodes; overhead observer −0.4%, observer+browser +2.4%, 0 lost (500 ms poll). Signed-in native checks remain builder-owned; no hosted CI.
+- **Next:** Yash reviews the PR; TEST-1 (now including the PR124/PR125 journeys); decide PR110 (conflicting, partly integrated per [111](review/111-adaptive-content-and-pr110.md)); latent race: a live refresh during `openRecording` discards the restored location, which a longer coalescing delay only hides.
+
 ### Yash with Claude (Opus 5.5) — Developer review, harness data audit, restructured TASKS
 
 - **When:** 19 October 2026, on `main` (docs only).

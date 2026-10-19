@@ -2,7 +2,7 @@ import { appendFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Store } from '@drishya/store';
 import { reduce } from '@drishya/projection';
 import { defaultAdapters, Ingestor } from '../src/index.ts';
@@ -402,6 +402,18 @@ describe('capture health', () => {
 // B1 (audit A06): live ticks coalesce — at most one read in flight plus one pending wake-up per
 // recording — and each live turn does bounded work, so a slow store cannot build a backlog.
 describe('live pacing', () => {
+  it('uses a bounded half-second poll by default without changing explicit intervals', async () => {
+    const file=join(dir,'poll-default.jsonl');
+    writeFileSync(file,claudeLine({type:'user',uuid:'poll0',message:{role:'user',content:'synthetic poll check'}}));
+    const {recordingId}=await ingest.importSource('claude-code',file);
+    const timer=vi.spyOn(globalThis,'setInterval');
+    try {
+      ingest.startLive(recordingId);expect(timer).toHaveBeenLastCalledWith(expect.any(Function),500);
+      await ingest.stopLive(recordingId);
+      ingest.startLive(recordingId,1200);expect(timer).toHaveBeenLastCalledWith(expect.any(Function),1200);
+      await ingest.stopLive(recordingId);
+    } finally {timer.mockRestore();}
+  });
   it('never runs two syncs of one recording at once, and coalesces ticks while one is slow', async () => {
     const file = join(dir, 'slow.jsonl');
     writeFileSync(file, claudeLine({ type: 'user', uuid: 's0', message: { role: 'user', content: 'go' } }));

@@ -23,6 +23,20 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await page.addInitScript(() => { localStorage.setItem('drishya.lowResource', '1'); });
     const requests: string[] = [];
     page.on('request', (request) => requests.push(request.url()));
+    let latestPage: unknown, superseded = false;
+    await page.route('**/history', async route => {
+      const query = route.request().postDataJSON() as { start?: number };
+      // Model a background refresh winning the first older-page request. The
+      // unchanged step/start must not permanently suppress the missing page.
+      if (query.start === 0 && latestPage && !superseded) {
+        superseded = true;
+        await route.fulfill({ json: latestPage });
+        return;
+      }
+      const response = await route.fetch();
+      if (query.start === undefined) latestPage = await response.json();
+      await route.fulfill({ response });
+    });
     await page.goto(server.launchUrl);
     await page.locator('.home .row-main.link').first().click();
     await expect(page.locator('.reading-status')).toContainText('12000 recorded steps');
@@ -34,6 +48,7 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
     await history.evaluate((el) => { el.scrollTop = 0; });
     await expect(page.locator(`[data-op-id="${recordingId}.call-0"]`)).toBeVisible();
+    expect(superseded).toBe(true);
     const anchor = await history.evaluate((el) => {
       const rect = el.getBoundingClientRect();
       const node = [...el.querySelectorAll<HTMLElement>('[data-passage-id]')].find((item) => item.getBoundingClientRect().bottom > rect.top);
@@ -58,6 +73,8 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await page.getByRole('button', { name: '← History', exact: true }).click();
     await expect(page.locator('.reading-status')).toContainText('12002 recorded steps');
   } finally {
+    await page.unrouteAll({ behavior: 'wait' });
+    await page.close();
     await server?.close(); await app.close();
     if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('temp path escaped');
     rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });

@@ -4,7 +4,7 @@ import { useApp } from '../state.ts';
 /** Light dismissal for utility disclosures; content readers remain deliberate. */
 export function useDismissMenus() {
   useEffect(() => {
-    const menus = '.workspace-menu, .usage-peek, .prompt-menu, .permission-policy, .session-segments, .review-tools, .desk-options';
+    const menus = '.workspace-menu, .usage-peek, .prompt-menu, .permission-policy, .session-segments, .review-tools, .desk-options, .session-identity';
     const selectors = menus.split(', ').map(selector => `${selector}[open]`).join(', ');
     const motion = (menu: HTMLDetailsElement, pointer: boolean) => {
       menu.toggleAttribute('data-pointer-menu', pointer && useApp.getState().motion && !useApp.getState().lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches);
