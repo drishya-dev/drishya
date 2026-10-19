@@ -13,6 +13,7 @@ import { createReducer, orderObservations, reduce, REDUCER_VERSION } from '@dris
 import { compose, dwellFor, markers, stepOfObservation, type Marker } from '@drishya/scene';
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
 import { historySummary } from '../../../packages/scene/src/history.ts';
+import { nowFacts } from '../../../packages/scene/src/now.ts';
 import { BlobStore, Store } from '@drishya/store';
 import { sanitize } from '@drishya/privacy';
 import { prepareBriefing, prepareExplain, prepareLabels } from '@drishya/explain';
@@ -209,6 +210,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
+    else if (message.method === 'now') value = nowFacts(current(a.id).projection);
     else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after, a.page);
     else if (message.method === 'verification') value = verificationFor(current(a.id).projection, a.operationId) ?? null;
     else if (message.method === 'prepare') {

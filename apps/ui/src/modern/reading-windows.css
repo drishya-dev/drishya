@@ -100,3 +100,13 @@
 .op-evidence p { margin: 0; }
 .op-evidence p + p { margin-top: 6px; }
 @media (prefers-reduced-motion: reduce) { .op-info { transition: none; } }
+
+/* The composer pill carries the live "what is it doing" line while the agent is active. A constant width keeps it
+   still while the text changes each second; the full basis is its tooltip. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer.composer-minimized:has(.composer-minimize[data-now]) { width: min(340px, calc(100vw - 32px)); }
+:root[data-ui-version=modern] .composer-minimize[data-now] > span { position: relative; display: block; max-width: 100%; padding-left: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+:root[data-ui-version=modern] .composer-minimize[data-now] > span::before { content: ''; position: absolute; left: 1px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--t3); }
+:root[data-ui-version=modern] .composer-minimize[data-now=running] > span::before { background: var(--pass); }
+:root[data-ui-version=modern] .composer-minimize[data-now=asking] > span::before { background: var(--edited); }
+:root[data-ui-version=modern] .composer-minimize[data-now=working] > span::before { background: var(--focus); }
+:root[data-ui-version=modern] .modern-composer-state[data-now] { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }

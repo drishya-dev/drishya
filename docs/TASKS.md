@@ -76,7 +76,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 7 | DATA-10 | Propose one batched event-schema addition to both builders | `data` |
 | 8 | DATA-1 | Codex: consume typed `item_completed` items (commands, file changes, MCP, images, web, sub-agents) | `data` `content` |
 | 9 | DATA-2 | Usage: Codex `token_count` and Claude `message.usage`/`cost-state` | `data` `live` |
-| 10 | LIVE-1 | "Now" line plus tab title/favicon state | `live` |
+| 10 | LIVE-1 | "Now" line plus tab title/favicon state (done) | `live` |
 | 11 | TURN-1 | Turn chapters with a resolved turn ledger; collapsible finished turns | `turn` `motion` |
 | 12 | EXPLAIN-1 | Narrator: generated intent labels for bursts of work, cited to evidence | `explain` `hack` `live` |
 | 13 | EXPLAIN-2 | Turn summary and "while you were away" briefing | `explain` `hack` `turn` |
@@ -213,15 +213,9 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 ### LIVE — the live loop and "now"
 
-- [ ] **LIVE-1 · "Now" line plus tab title/favicon** · P0 · `live`
-  - **Why:** glancing at Drishya must answer "what is it doing right now" faster than the terminal does. Today the screen shows only the last card and Follow.
-  - **Do:** one quiet line, top centre (or inside the collapsed composer pill), updated in place with a cross-fade and no pulsing:
-    - `agent · verb · target · elapsed`, for example `Codex · running pnpm test · 42 s`, `Claude · editing src/store/index.ts`, `waiting for your approval`, `idle · 3 min`.
-    - The state comes only from captured events: open tool call without a result = running; pending native request = waiting; turn end = idle.
-    - Show the step count within the turn.
-    - When the harness records no state, say "last activity 12 s ago", never a guess.
-    - Mirror the state in `document.title` (`● Running · drishya`, `? Approval · drishya`) and with a small favicon dot.
-  - **Accept:** correct on live Codex and Claude sessions during reads, long commands, approvals and idle; no layout shift; reduced motion uses no cross-fade.
+- [x] **LIVE-1 · "Now" line plus tab title/favicon** · P0 · `live` — **shipped 19 Oct.** While a recording is being watched, the composer pill (and the expanded composer's status) shows one quiet line from captured evidence only: `Claude · running pnpm test · 42 s +1`, `Codex · reading index.ts · 3 s`, `Claude · waiting for your answer · 12 s`, `Codex · working`, `Claude · replied 2 m 05 s ago`, `… · no activity for 40 s`. A status dot colours it (green running, amber asking, indigo working). The tooltip gives the exact basis ("A call is open: the harness recorded it … and no result yet", "This turn so far: 7 operations."). The tab title becomes `● Running · <repo>`, `? Needs you · <repo>` or `◐ Working · <repo>` and the favicon gets a matching dot only while the agent is active; both restore on reply, quiet or leaving the session. No line at all for a session whose newest event is over two hours old. New `GET /v1/recordings/:id/now` (via the history worker, no schema change) returns facts from the **tail** of the recording, so the line stays right while the person is reading older history. Pure logic with an injected clock: `packages/scene/src/now.ts` and `apps/ui/src/lib/now-state.ts` (21 tests). Verified on this very conversation's live Claude session (running → working → running as my own calls opened and closed), on an old session (no line), Home (title and favicon restored), and the expanded composer.
+  - **Placement decision:** the pill and composer header rather than a new top-centre element, to avoid another resident control (the TASKS note allowed either). The pill widens to a constant 340 px only while active, so changing text does not jitter.
+  - **Not done:** browser notifications (LIVE-3); a "waiting for approval" state for permission prompts the harness never writes to its journal; Codex-specific states beyond what the journal records.
 
 - [x] **LIVE-2 · Composer collapses when idle** · P0 · `live` `ui` `motion` — **shipped 19 Oct (idle pill).** The composer now defaults to its slim "Ask your agent…" pill (180×38 px) and gives the reading height back. It opens by itself for a draft, attachment, run, approval, question, failure or error, and the person's own open/minimize choice (`composer/choice`: auto / open / closed, saved with the session) always wins. Verified on Claude sessions at 1440 px and 390 px: collapsed by default, click expands and focuses the text box, open and closed both survive a reload, no horizontal overflow. Remaining pieces are split out as LIVE-2b.
   - **Problem it solved:** the floating composer covered the newest card; most sessions are driven from the native terminal.
@@ -534,11 +528,13 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 - [ ] **REL-3 · Human acceptance** · P2 — keyboard, browser zoom, assistive technology; human freeze/truth/ten-minute reading; preference and adoption.
 - [ ] **REL-4 · Publishing preparation (on request only)** · P2 — final full local checks, selected manual GitHub CI, packaging/install/setup guidance and release checks. No automatic hosted CI for ordinary commits or PRs.
 
-- [ ] **TEST-1 · Browser specs failing or flaky on `main`** · P1 · `rel` — found 19 Oct while verifying LIVE-2; all four reproduce on the code from before PR #124, so they are not from recent work. `DRISHYA_BROWSER_CHANNEL=msedge npx playwright test <file>:<line>`:
+- [ ] **TEST-1 · Browser specs failing or flaky on `main`** · P1 · `rel` — found 19 Oct while verifying LIVE-2 and LIVE-1; each reproduces on the code from before PR #124, so none is from recent work. `DRISHYA_BROWSER_CHANNEL=msedge npx playwright test <file>:<line>`:
   - `connected-workspace.spec.ts:79` **modern** variant ("current source reading finds, navigates and wraps…") — times out waiting on a Read-current-file button in the dialog; classic variant passes.
   - `connected-workspace.spec.ts:129` ("source reading links qualified current imports…") — times out waiting for `Read current file src/actual.ts` inside the `src/other.ts` dialog.
   - `product-workspace.spec.ts:158` ("first-visit evidence review…") — Playwright strict-mode violation: the Review dialog's `src/checkout/guard.ts` button matches two elements.
   - `product-workspace.spec.ts:65` ("map file labels are keyboard reading targets…") — flaky, about 50%: the "Work on …" dialog sometimes isn't visible after Enter on a map label.
+  - `live-sync.spec.ts:8` ("Follow starts stopped capture and keeps refreshing while notices arrive continuously") — fails every time (about 11 s) on main and on the code from before PR #124.
+  - `prompt-timeline.spec.ts:22` ("bottom-anchored prompt timeline scrolls independently…") — fails every time (`toHaveAttribute`) on main and before PR #124.
   - `product-workspace.spec.ts:772` ("paged prompt rail spans the full session…") — rare flake under load (failed twice in about 16 runs while the whole suite ran; 20 of 20 passes when run alone): `.turn` first does not contain `Rail prompt 0`.
   - **Do:** decide per spec whether the product or the test is wrong, fix, and re-run each 10× for flakiness. **Accept:** all four pass 10 of 10 on a clean build.
 
