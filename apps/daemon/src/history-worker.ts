@@ -14,6 +14,7 @@ import { compose, dwellFor, markers, stepOfObservation, type Marker } from '@dri
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
 import { historySummary } from '../../../packages/scene/src/history.ts';
 import { nowFacts } from '../../../packages/scene/src/now.ts';
+import { turnLedgers } from '../../../packages/scene/src/turns.ts';
 import { BlobStore, Store } from '@drishya/store';
 import { sanitize } from '@drishya/privacy';
 import { prepareBriefing, prepareExplain, prepareLabels } from '@drishya/explain';
@@ -211,6 +212,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
     else if (message.method === 'now') value = nowFacts(current(a.id).projection);
+    else if (message.method === 'turns') value = turnLedgers(current(a.id).projection).slice(-2000);
     else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after, a.page);
     else if (message.method === 'verification') value = verificationFor(current(a.id).projection, a.operationId) ?? null;
     else if (message.method === 'prepare') {

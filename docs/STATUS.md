@@ -26,7 +26,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 1. `git pull`, then run `node scripts/claims.ts` (add `P0`, `P1`… for one priority, `--free` for unclaimed only). It lists open items in priority order and marks claimed ones.
 2. Pick a **free** item that does not share files with a claimed row. Overlapping files → pick another, or talk to the claimer first.
 3. Add one row below and **push it to `main` immediately** (`docs: claim <ID>`; a docs-only commit is allowed on `main`). If the push is rejected, someone claimed at the same time: pull and re-check.
-4. When the work merges, **delete your row in the same PR** (or right after). Add a "Last session" block as usual.
+4. When the work merges, **delete your row in the same PR** (or right after), tick the item in [TASKS](TASKS.md) and run `node scripts/sync-tasks.ts`. Add a "Last session" block as usual.
 5. A claim with no branch or commit for 3 days is stale; anyone may take it after asking.
 
 | TASKS ID | Who | Branch | Since | Files |

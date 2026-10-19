@@ -3,7 +3,7 @@ import {commandDisplay} from '../lib/command-display.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
 import { ToolInput } from './ToolInput.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
-import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
@@ -15,6 +15,9 @@ import { CodeView, DiffView, Output, CapturedTime, useArtifact } from './common.
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf, readingWidth } from '../lib/presentation.ts';
 import { diffStat, evidenceNotes, isProse } from '../lib/card-evidence.ts';
+import { ledgerParts, LEDGER_BASIS } from '../lib/turn-ledger.ts';
+import { useTurns } from '../lib/turns-store.ts';
+import { useNow } from '../lib/now-store.ts';
 import { Origins } from './Origins.tsx';
 import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
@@ -546,12 +549,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
     <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {ps.turnPrompt && (
-        <div className="turn">
-          <span className="turn-who">You</span>
-          <div className="turn-text">{ps.turnPrompt}</div>
-        </div>
-      )}
+      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} />}
       {ps.ops.length > 0 && (
         <>
           <div className="passage-head">
@@ -853,6 +851,39 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : undefined}</ResultArea>
       </>;
   }
+}
+
+/**
+ * A prompt as a chapter: the person's words (three lines, the rest one click away) and, once the turn is over,
+ * a single line of what it did. The newest turn waits until the agent is quiet, and replay shows no ledger,
+ * so nothing here tells the future.
+ */
+function TurnBlock({ prompt, step }: { prompt: string; step?: number }) {
+  const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
+  const newest = useTurns((s) => s.lastStep === step);
+  const active = useNow((s) => !!s.view?.mark);
+  const mode = useApp((s) => s.mode);
+  const text = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  useLayoutEffect(() => {
+    const el = text.current;
+    if (!el) return;
+    const measure = () => { if (!expanded) setOverflows(el.scrollHeight > el.clientHeight + 1); };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [prompt, expanded]);
+  const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
+  return (
+    <div className="turn">
+      <span className="turn-who">You</span>
+      <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>
+      {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
+      {parts.length > 0 && <div className="turn-ledger" title={LEDGER_BASIS}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
+    </div>
+  );
 }
 
 /** Added and removed lines, counted from the captured patch. */

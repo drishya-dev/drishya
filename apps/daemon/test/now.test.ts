@@ -37,3 +37,14 @@ it('needs the launch credential and refuses an unknown recording', async () => {
   expect((await get(`/v1/recordings/${id}/now`, false)).status).toBe(401);
   expect((await get('/v1/recordings/rec_missing/now')).status).toBe(404);
 });
+
+it('returns one ledger per prompt for the whole recording, authenticated', async () => {
+  const response = await get(`/v1/recordings/${id}/turns`);
+  expect(response.status).toBe(200);
+  const { turns } = await response.json() as { turns: { step: number; operations: number; edits: { files: number } }[] };
+  expect(turns.length).toBeGreaterThan(0);
+  expect(turns.map((turn) => turn.step)).toEqual([...turns.map((turn) => turn.step)].sort((a, b) => a - b));
+  expect(turns.some((turn) => turn.edits.files > 0)).toBe(true);
+  expect((await get(`/v1/recordings/${id}/turns`, false)).status).toBe(401);
+  expect((await get('/v1/recordings/rec_missing/turns')).status).toBe(404);
+});

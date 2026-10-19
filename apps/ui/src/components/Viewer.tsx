@@ -29,6 +29,7 @@ import { EvidenceNavigationProvider } from './EvidenceNavigation.tsx';
 import { sampleActivity } from '../lib/activity.ts';
 import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComposer, useSessionWorkspace } from './SessionWorkspace.tsx';
 import { NowWatcher } from './NowWatcher.tsx';
+import { TurnsWatcher } from './TurnsWatcher.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
 import { ReviewQuestionsEntry } from './ReviewQuestions.tsx';
@@ -184,6 +185,7 @@ function WorkspaceViewer() {
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
       <NowWatcher key={recordingId} />
+      <TurnsWatcher key={`turns/${recordingId}`} />
       <PromptComposer key={recordingId} />
       <DeveloperWorkspace />
       <Inspector projection={historical} />
