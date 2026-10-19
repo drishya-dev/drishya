@@ -78,12 +78,12 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 7 | DATA-10 | Propose one batched event-schema addition to both builders | `data` |
 | 8 | DATA-1 | Codex: consume typed `item_completed` items (commands, file changes, MCP, images, web, sub-agents) | `data` `content` |
 | 9 | DATA-2 | Usage: Codex `token_count` and Claude `message.usage`/`cost-state` | `data` `live` |
-| 10 | LIVE-1 | "Now" line plus tab title/favicon state | `live` |
+| 10 | LIVE-1 | "Now" line plus tab title/favicon state (done) | `live` |
 | 11 | TURN-1 | Turn chapters with a resolved turn ledger; collapsible finished turns | `turn` `motion` |
 | 12 | EXPLAIN-1 | Narrator: generated intent labels for bursts of work, cited to evidence | `explain` `hack` `live` |
 | 13 | EXPLAIN-2 | Turn summary and "while you were away" briefing | `explain` `hack` `turn` |
-| 14 | READ-1 | Edit/write cards: wide, no-wrap, `+N −M`, real line numbers | `read` |
-| 15 | READ-2 | Quiet provenance: one ⓘ per card, inline badge only when meaning changes | `read` `ui` |
+| 14 | READ-1 | Edit/write cards: wide, no-wrap, `+N −M` (done; Codex line numbers wait on DATA-1) | `read` |
+| 15 | READ-2 | Quiet provenance: one ⓘ per card (done for history cards) | `read` `ui` |
 | 16 | LIVE-2 | Composer collapses to a pill when idle (done; leftovers in LIVE-2b) | `live` `ui` `motion` |
 | 17 | HACK-2 | Hosted demo build with a recorded, labelled Nemotron layer | `hack` |
 | 18 | HACK-3 | Demo video < 3 min, README setup, submission text, Token Factory feedback | `hack` |
@@ -215,15 +215,9 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 ### LIVE — the live loop and "now"
 
-- [ ] **LIVE-1 · "Now" line plus tab title/favicon** · P0 · `live`
-  - **Why:** glancing at Drishya must answer "what is it doing right now" faster than the terminal does. Today the screen shows only the last card and Follow.
-  - **Do:** one quiet line, top centre (or inside the collapsed composer pill), updated in place with a cross-fade and no pulsing:
-    - `agent · verb · target · elapsed`, for example `Codex · running pnpm test · 42 s`, `Claude · editing src/store/index.ts`, `waiting for your approval`, `idle · 3 min`.
-    - The state comes only from captured events: open tool call without a result = running; pending native request = waiting; turn end = idle.
-    - Show the step count within the turn.
-    - When the harness records no state, say "last activity 12 s ago", never a guess.
-    - Mirror the state in `document.title` (`● Running · drishya`, `? Approval · drishya`) and with a small favicon dot.
-  - **Accept:** correct on live Codex and Claude sessions during reads, long commands, approvals and idle; no layout shift; reduced motion uses no cross-fade.
+- [x] **LIVE-1 · "Now" line plus tab title/favicon** · P0 · `live` — **shipped 19 Oct.** While a recording is being watched, the composer pill (and the expanded composer's status) shows one quiet line from captured evidence only: `Claude · running pnpm test · 42 s +1`, `Codex · reading index.ts · 3 s`, `Claude · waiting for your answer · 12 s`, `Codex · working`, `Claude · replied 2 m 05 s ago`, `… · no activity for 40 s`. A status dot colours it (green running, amber asking, indigo working). The tooltip gives the exact basis ("A call is open: the harness recorded it … and no result yet", "This turn so far: 7 operations."). The tab title becomes `● Running · <repo>`, `? Needs you · <repo>` or `◐ Working · <repo>` and the favicon gets a matching dot only while the agent is active; both restore on reply, quiet or leaving the session. No line at all for a session whose newest event is over two hours old. New `GET /v1/recordings/:id/now` (via the history worker, no schema change) returns facts from the **tail** of the recording, so the line stays right while the person is reading older history. Pure logic with an injected clock: `packages/scene/src/now.ts` and `apps/ui/src/lib/now-state.ts` (21 tests). Verified on this very conversation's live Claude session (running → working → running as my own calls opened and closed), on an old session (no line), Home (title and favicon restored), and the expanded composer.
+  - **Placement decision:** the pill and composer header rather than a new top-centre element, to avoid another resident control (the TASKS note allowed either). The pill widens to a constant 340 px only while active, so changing text does not jitter.
+  - **Not done:** browser notifications (LIVE-3); a "waiting for approval" state for permission prompts the harness never writes to its journal; Codex-specific states beyond what the journal records.
 
 - [x] **LIVE-2 · Composer collapses when idle** · P0 · `live` `ui` `motion` — **shipped 19 Oct (idle pill).** The composer now defaults to its slim "Ask your agent…" pill (180×38 px) and gives the reading height back. It opens by itself for a draft, attachment, run, approval, question, failure or error, and the person's own open/minimize choice (`composer/choice`: auto / open / closed, saved with the session) always wins. Verified on Claude sessions at 1440 px and 390 px: collapsed by default, click expands and focuses the text box, open and closed both survive a reload, no horizontal overflow. Remaining pieces are split out as LIVE-2b.
   - **Problem it solved:** the floating composer covered the newest card; most sessions are driven from the native terminal.
@@ -268,20 +262,11 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 ### READ — reading code, diffs and output
 
-- [ ] **READ-1 · Wide, scannable edit cards** · P0 · `read`
-  - **Problem:** at 1440 px, edit cards are about 440 px wide with code soft-wrapped 3–4 times.
-  - **Do:**
-    - In the wrapping passage layout, edit/write/create cards with a diff may take a **full row** (up to the reading width, about 760–900 px).
-    - No-wrap by default with horizontal scroll inside the card; a Wrap toggle.
-    - Header shows `path · +12 −3 · ✓ applied`.
-    - Real file line numbers where captured (Claude `structuredPatch`/`originalFile`; Codex `FileChange`, after DATA-1).
-    - Unchanged runs over 6 lines collapse to "⋯ 14 unchanged lines".
-  - **Accept:** a 120-character line is readable without wrapping; counts match the patch; small edits stay compact; the arrows between boxes still point correctly.
+- [x] **READ-1 · Wide, scannable edit cards** · P0 · `read` — **shipped 19 Oct (core).** A diff card with a long line or more than 24 lines now takes the width its longest line needs, up to the passage (860 px at 1440 px; 738 px at 1280 px; the full row on phones), instead of a fixed 440 px. Code diffs do not wrap and scroll sideways inside the card, with the added/removed backgrounds spanning the longest line; Markdown/text files stay wrapped. The header shows `+N −M` counted from the captured patch. Small edits keep their compact card. Verified on the Codex session at 1440/1280/1024/390 px (no page overflow, card inside its row). Helpers and tests: `lib/card-evidence.ts`, `apps/ui/test/card-evidence.test.ts`.
+  - **Not done, on purpose or blocked:** a per-card Wrap toggle (it would add a button to every card; Expand → Wrap lines already exists); folding unchanged runs over 6 lines (rare in real patches); real file line numbers for Codex edits (they need DATA-1, Claude patches already carry them); a `✓ applied` word (the existing state mark stays).
 
-- [ ] **READ-2 · Quiet provenance** · P0 · `read` `ui`
-  - **Problem:** each card carries several provenance strings in primary position: "derived from exec", "Captured arguments · bounded preview", "Captured changes · scroll to read", "Historical source · recorded result", "Captured use counts".
-  - **Do:** remove those default strings from the card body. Add one ⓘ in the card footer whose popover gives the exact provenance and limits. Show an inline badge only when it changes meaning: `truncated`, `derived`, `not captured`, `redacted`, `stale`. Rename the meta "Other · exec" to the decoded tool or "Tool".
-  - **Accept:** every provenance fact is still reachable by pointer and keyboard; no captured/derived confusion (constraint 4); the screen-reader name includes the badge.
+- [x] **READ-2 · Quiet provenance** · P0 · `read` `ui` — **shipped 19 Oct (history cards).** Removed the always-on strings "Captured changes · scroll to read", "Captured arguments · bounded preview", "Historical source · recorded result", the "Captured patch · reconstructed from captured base" line, the "derived from exec" footer, the Toolbox footer "Captured use counts" (now a tooltip) and "Captured" in the arguments label. Each card has one ⓘ (hover, focus or touch; a native popover, Escape closes it) that gives the exact wording: the patch is captured, not the current file; whether the after-state is verified; whether the harness exposed the outcome; whether the type is captured, derived (with its rule) or generated. Inline text remains only where it changes the meaning: `Outcome not exposed`, `After-state not verified`, `Patch request · awaiting recorded outcome`, `Captured input preview · expand for full text` and `Command argument · decoded`. Verified popover position, keyboard and Escape on real sessions.
+  - **Not done:** other surfaces still carry their own provenance text (Inspector, Canvas "derived label", file evidence readers, Legacy); renaming the "Other · exec" meta needs the typed tool names from DATA-1.
 
 - [ ] **READ-3 · Settle into ledger rows** · P2 · `read` `motion`
   - **Idea:** once an operation is N steps old, its card compresses into one row (`✎ src/store/index.ts +12 −3 ✓`), still inside the wrap layout; hover or `e` re-expands it in place.
@@ -335,7 +320,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
   - **Accept:** historical, pending and answered states for both harnesses; never answer for the user; unsupported → explicit message.
 
 - [ ] **CONTENT-4 · Plans and todos as a living checklist** · P1 · `content` `turn`
-  - **Sources:** Claude `TodoWrite` (mapped), `TaskCreate`/`TaskUpdate` (not mapped), `ExitPlanMode` plan text (not mapped); Codex plan updates (DATA-7).
+  - **Sources:** Claude `TodoWrite` (already mapped); `TaskCreate`/`TaskUpdate`/`ExitPlanMode` are **unverified: the journals on this machine contain no real uses** (the earlier counts came from tool definitions), so specify them only after a real plan-mode session is captured (review 125 §8, D10); Codex plan updates (DATA-7).
   - **Do:**
     - One checklist per turn, pinned under the turn header, updated in place as items change state; a done item gets a quiet strike.
     - The plan text from plan mode renders as Markdown "Plan" material.
@@ -356,10 +341,9 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 ### DATA — harness capture ([123](review/123-harness-data-audit.md))
 
-- [ ] **DATA-10 · One batched schema proposal** · P0 · `data`
-  - **Do:** draft the additions (usage/context, checkpoint reference, image-view, question/answer, plan/todo revision, sub-agent identity fields, command `exit_code`/`duration`/`parsed_cmd`) in `docs/reference/03-event-schema.md` as a proposal. Both builders agree before code (AGENTS rule). Existing kinds should be reused where they fit.
+- [x] **DATA-10 · One batched schema proposal** · P0 · `data` — **drafted 19 Oct:** [review 125](review/125-event-schema-proposal.md): five slices (turns+usage, typed Codex items, reasoning state, questions/images/web, Claude extras), all additive (`CONTRACT_VERSION` 0.2.0-draft, `REDUCER_VERSION` r5), with measured evidence, privacy rules, fixtures and an order of work. **Agreement is still needed:** both builders tick D1–D10 in §9 of that doc before any slice starts.
 
-- [ ] **DATA-1 · Codex typed items** · P0 · `data` `content`
+- [ ] **DATA-1 · Codex typed items** · P0 · `data` `content` — **blocked on D1, D2, D8 in [review 125](review/125-event-schema-proposal.md).** Measured there: typed items cannot be matched to the wrapper call by id; 85% sit inside the `exec` call's window, so correlation is by enclosing call and says so.
   - **Do:**
     - In `packages/adapter-codex/src/index.ts`, stop ignoring `event_msg:item_completed`. Map `CommandExecution` (command, parsed_cmd, cwd, status, exit_code, duration, outputs), `FileChange`, `McpToolCall` (server, tool, status, duration, error, readOnlyHint), `ImageView`, `Extension`, `SubAgentActivity`, `Reasoning.summary_text` and `AgentMessage.phase/questions`.
     - De-duplicate against `response_item` calls by call/item id. Prefer the typed item for outcome; keep the wrapper as raw source.
@@ -367,7 +351,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
     - Add redacted fixtures for each item type.
   - **Accept:** card titles show real commands/tools instead of "exec"/"Other"; tests are recognized from real commands and exit codes (closes BUG-5); no duplicate cards; older rollouts without these items still import identically (golden tests).
 
-- [ ] **DATA-2 · Usage from what is recorded** · P0 · `data` `live`
+- [ ] **DATA-2 · Usage from what is recorded** · P0 · `data` `live` — **blocked on D4–D6 in [review 125](review/125-event-schema-proposal.md)** (usage observation, cost label, rate-limit fields; credits balance is excluded).
   - **Do:**
     - Codex: `token_count.info` (total/last usage, `model_context_window`) and `rate_limits`.
     - Claude: `message.usage` per assistant message and `cost-state` (`totalCostUSD`, `totalLinesAdded/Removed`, durations, `modelUsage`).
@@ -560,11 +544,14 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - **19 October progress (107):** Local keyboard/focus/forced-color/reduced-motion and synthetic ten-minute reading checks added. Human comprehension, screen reader, touch and zoom remain open.
 - [ ] **REL-4 · Publishing preparation (on request only)** · P2 — final full local checks, selected manual GitHub CI, packaging/install/setup guidance and release checks. No automatic hosted CI for ordinary commits or PRs.
 
-- [ ] **TEST-1 · Browser specs failing or flaky on `main`** · P1 · `rel` — found 19 Oct while verifying LIVE-2; all four reproduce on the code from before PR #124, so they are not from recent work. `DRISHYA_BROWSER_CHANNEL=msedge npx playwright test <file>:<line>`:
+- [ ] **TEST-1 · Browser specs failing or flaky on `main`** · P1 · `rel` — found 19 Oct while verifying LIVE-2 and LIVE-1; each reproduces on the code from before PR #124, so none is from recent work. `DRISHYA_BROWSER_CHANNEL=msedge npx playwright test <file>:<line>`:
   - `connected-workspace.spec.ts:79` **modern** variant ("current source reading finds, navigates and wraps…") — times out waiting on a Read-current-file button in the dialog; classic variant passes.
   - `connected-workspace.spec.ts:129` ("source reading links qualified current imports…") — times out waiting for `Read current file src/actual.ts` inside the `src/other.ts` dialog.
   - `product-workspace.spec.ts:158` ("first-visit evidence review…") — Playwright strict-mode violation: the Review dialog's `src/checkout/guard.ts` button matches two elements.
   - `product-workspace.spec.ts:65` ("map file labels are keyboard reading targets…") — flaky, about 50%: the "Work on …" dialog sometimes isn't visible after Enter on a map label.
+  - `live-sync.spec.ts:8` ("Follow starts stopped capture and keeps refreshing while notices arrive continuously") — fails every time (about 11 s) on main and on the code from before PR #124.
+  - `prompt-timeline.spec.ts:22` ("bottom-anchored prompt timeline scrolls independently…") — fails every time (`toHaveAttribute`) on main and before PR #124.
+  - `product-workspace.spec.ts:772` ("paged prompt rail spans the full session…") — rare flake under load (failed twice in about 16 runs while the whole suite ran; 20 of 20 passes when run alone): `.turn` first does not contain `Rail prompt 0`.
   - Also failing on clean main (19 Oct, Harsh with Claude, while verifying `codex/investigation-finishing`): `fresh-workspace.spec.ts` composer target (:129, `.modern-composer-location`), chrome fit (:287, `.modern-session-header h1`), Git review (:593, resize handle), edge actions (:1190, since PR124 the rightmost navigation action no longer reaches the right edge); `session-segments.spec.ts:31`.
   - Fail on main `b66f160` since PR125 (idle composer collapses by default), passing before it: `fresh-workspace.spec.ts` :16, :313, :331, :397, :657 (both harnesses), :792, :1135, :1344, :1723, :1791, :1809, :1828. Most expect the composer expanded or a prompt control visible.
   - Flaky: `workspace-toolbar.spec.ts:88` (exposed-gutter scroll) passes and fails across runs of `codex/investigation-finishing`.

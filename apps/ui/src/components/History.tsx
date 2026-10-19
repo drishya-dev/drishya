@@ -3,7 +3,7 @@ import {commandDisplay} from '../lib/command-display.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
 import { ToolInput } from './ToolInput.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
@@ -14,6 +14,7 @@ import { useApp } from '../state.ts';
 import { CodeView, DiffView, Output, CapturedTime, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf, readingWidth } from '../lib/presentation.ts';
+import { diffStat, evidenceNotes, isProse } from '../lib/card-evidence.ts';
 import { Origins } from './Origins.tsx';
 import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
@@ -631,6 +632,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       data-material={presentation.material}
       data-origin={so.origin.type}
       data-tool-exchange={['shell','test','mcp','web','other'].includes(op.detail.kind) || undefined}
+      data-diff={op.detail.kind === 'edit' && op.detail.hunks.length > 0 && presentation.shape === 'wide' ? (isProse(op.detail.path) ? 'prose' : 'code') : undefined}
       className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
       style={{ zIndex: selected ? 50 : 10 + index, ...(readingAllocation ? { '--reading-width': `${readingAllocation}px` } : {}) } as React.CSSProperties}
       tabIndex={0}
@@ -648,6 +650,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       <header className="op-head">
         <MaterialGlyph material={presentation.material} />
         {experience !== 'legacy' ? <span className="studio-action-identity"><span className="op-title" title={displayTitle}>{displayTitle}</span><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
+        {op.detail.kind === 'edit' && op.detail.hunks.length > 0 && <DiffStat hunks={op.detail.hunks} />}
         <StateMark state={so.state} op={op} />
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {
@@ -661,7 +664,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </div>}
       {expanded && <ExpandedOperation op={op} />}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
-      {op.classification.kind === 'derived' && <div className="op-foot" title={`Classified by rule ${op.classification.rule} from the command text`}>derived from {op.tool}</div>}
+      <EvidenceNote op={op} />
     </article>
   );
 });
@@ -753,14 +756,14 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
   switch (d.kind) {
     case 'read':
       return <>
-        <div className="request-line excerpt-range">{op.status === 'running' ? <>Requested from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · awaiting excerpt</> : 'Historical source · recorded result'}</div>
+        {op.status === 'running' && <div className="request-line excerpt-range">Requested from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · awaiting excerpt</div>}
         <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
       </>;
     case 'edit':
       return <>
-        <div className="request-line">{op.status === 'running' ? 'Patch request · awaiting recorded outcome' : op.status === 'unknown' && op.classification.kind === 'derived' ? 'Captured patch input · nested outcome not exposed' : `Captured patch${d.reconstruction === 'complete' ? ' · reconstructed from captured base' : ' · after-state not verified'}`}</div>
+        {(op.status === 'running' || op.status === 'unknown' || d.reconstruction !== 'complete') && <div className="request-line">{op.status === 'running' ? 'Patch request · awaiting recorded outcome' : op.status === 'unknown' && op.classification.kind === 'derived' ? 'Outcome not exposed' : 'After-state not verified'}</div>}
         {op.status === 'running' && <PatchRequest op={op} path={d.path} />}
-        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <><div className="material-context">Captured changes · scroll to read</div><ChangePreview hunks={d.hunks} path={d.path} /></> : op.artifactIds.some(id => id.endsWith('_after')) ? <ReadPreview opId={op.id} artifactId={op.artifactIds.find(id => id.endsWith('_after'))} start={1} path={d.path} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No source bytes or patch captured.'}</div>}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{d.hunks.length ? <ChangePreview hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ReadPreview opId={op.id} artifactId={op.artifactIds.find(id => id.endsWith('_after'))} start={1} path={d.path} /> : op.status === 'running' ? <PendingResult /> : <div className="muted">{d.reconstructionNote ?? 'No source bytes or patch captured.'}</div>}</ResultArea>
       </>;
     case 'search':
       return (
@@ -816,7 +819,6 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       return (
         <div className="mcp">
           <div className="mcp-tool">{d.tool}</div>
-          <div className="material-context">Captured arguments · bounded preview</div>
           <ToolInput value={d.input}/>
           <ResultArea state={op.status} resolving={resolving}>
             {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview} /></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
@@ -853,6 +855,26 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : undefined}</ResultArea>
       </>;
   }
+}
+
+/** Added and removed lines, counted from the captured patch. */
+function DiffStat({ hunks }: { hunks: Hunk[] }) {
+  const { added, removed } = diffStat(hunks);
+  return <span className="op-stat" aria-label={`${added} lines added, ${removed} removed`}><b className="add">+{added}</b><b className="del">−{removed}</b></span>;
+}
+
+/** One quiet note per card: what the evidence is and where it stops. Hidden at rest, reachable by hover, focus and touch. */
+function EvidenceNote({ op }: { op: Operation }) {
+  const id = useId();
+  const popover = useRef<HTMLDivElement>(null);
+  return <>
+    <button type="button" className="op-info" popoverTarget={id} aria-label="About this evidence" onClick={(e) => {
+      e.stopPropagation();
+      const box = e.currentTarget.getBoundingClientRect(), note = popover.current;
+      if (note) { note.style.left = `${Math.max(8, Math.min(innerWidth - 328, box.right - 320))}px`; note.style.top = `${Math.min(innerHeight - 190, box.bottom + 6)}px`; }
+    }}>ⓘ</button>
+    <div ref={popover} id={id} popover="auto" role="note" className="op-evidence">{evidenceNotes(op).map((line, i) => <p key={i}>{line}</p>)}</div>
+  </>;
 }
 
 /** All captured changes are reachable; large patches page explicitly rather than disappearing. */

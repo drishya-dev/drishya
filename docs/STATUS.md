@@ -31,7 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| READ-1, READ-2 | @yash + Claude Sonnet 5.5 | `yash/read-cards` | 2026-10-19 | `components/Inspector.tsx`, `components/Viewer.tsx`, `components/History.tsx`, result/diff card components, `ink.css`, `modern/reading.css` |
+| TURN-1 | @yash + Claude Sonnet 5.5 | `yash/turn-1-chapters` | 2026-10-19 | `components/History.tsx` (turn header), `lib/turn-ledger.ts` (new), `modern/reading-windows.css` |
 
 ---
 
@@ -58,6 +58,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Validation:** product exercised at 1440×900 (headless Edge) and in the app pane on a 1,100-operation Codex session, a Claude Code session, this live session and the demo. No code changed.
 - **Then (same day, Claude Sonnet 5.5, branch `yash/p0-bugs`):** BUG-1 (wheel chains from cards to history), BUG-2 (Git drawer clears the navigation; Escape closes the newest reader), BUG-3 (links inside bold/italic Markdown), BUG-4 (no top-control overlap from 601–1100 px). One commit each. 546 unit tests, both typechecks and 9 browser specs (Git review, manual scroll, Markdown references, interface craft) pass. Bottom-corner pills at narrow widths remain (UI-1).
 - **LIVE-2 (branch `yash/live-2-composer`):** the idle composer defaults to its pill; auto/open/closed choice persisted (new `composer/choice` key in `working-locations.ts`, both allowlists). Four browser specs were found failing or flaky on main before this work (TEST-1).
+- **READ-1 + READ-2 (branch `yash/read-cards`, Sonnet 5.5):** wide no-wrap code diff cards with `+N −M`, and quiet provenance with one ⓘ popover per card. Pure helpers in `lib/card-evidence.ts` (4 tests). Browser: 72 of 74 card/history specs pass; the failures are the known `product-workspace:158` and a rare prompt-rail flake (TEST-1).
+- **DATA-10 (Sonnet 5.5, docs only):** [review 125](review/125-event-schema-proposal.md), the batched additive schema proposal (five slices, evidence, privacy, order). Measured: typed Codex items cannot be matched to calls by id, 85% sit inside the `exec` window. **Needs both builders to tick D1–D10 before DATA-1/DATA-2 start.** Also corrected 123: no real TaskCreate/ExitPlanMode uses exist locally.
+- **LIVE-1 (branch `yash/live-1-now`, Sonnet 5.5):** the Now line in the composer pill and header, the tab title and favicon state, backed by `GET /v1/recordings/:id/now` (facts from the tail; no schema change). 21 new tests; verified on this live session. Two more browser specs found failing since before PR #124 (`live-sync:8`, `prompt-timeline:22`), added to TEST-1.
 - **Next:** HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
 
 ### Yash with Codex - Compact right-docked Explorer preview
@@ -825,6 +828,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 3 | When do we flip the repo public? Proposed: at the M1 hosted demo. Going public also unlocks free branch protection | Launch timing, enforced review | §18.5 |
 | 4 | Enter the Nebius × NVIDIA hackathon? Deadline **30 Oct 10:00 PT**. Refreshed 19 Oct; it needs a public repo, a live-validated Nemotron layer and a hosted demo (TASKS HACK-1…3) | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
 | 6 | **Freeze contracts `0.1.0-draft`?** Implemented in `packages/contracts` following engineering plan §3. Needs @harsh's review | Third-party adapters, the frontend | [`CODEBASE.md`](CODEBASE.md) |
+| 8 | **Agree the schema additions** in [review 125](review/125-event-schema-proposal.md) §9 (D1–D10: typed-item correlation, usage, images, cost, re-import) | DATA-1, DATA-2, CONTENT-1/2/3 | [`125`](review/125-event-schema-proposal.md) |
 | 7 | Accept `node:sqlite` and `node:http`+SSE over the proposed `better-sqlite3` and Fastify+`ws`? (Decisions log, 25 Sep) | Packaging | [`CODEBASE.md`](CODEBASE.md) |
 
 ---

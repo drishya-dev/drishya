@@ -57,8 +57,8 @@ The adapter ignores `item_completed`, `token_count` and several others on purpos
 | Bash `toolUseResult` | `stdout`, `stderr`, `interrupted`, **`isImage`**, `persistedOutputPath`, `returnCodeInterpretation` | Image output; spilled full output; interruption | partial |
 | WebFetch / WebSearch | `url`, `code`, `bytes`, `durationMs`, `result`; `query`, `results`, `searchCount` | Browser/web cards with status, size and results | partial |
 | `AskUserQuestion` | `questions`, `answers`, `annotations` | Question cards with the chosen answer | ✗ (falls to "other") |
-| `TaskCreate` / `TaskUpdate` (newer todo tools), `TodoWrite` | task text and status | A living checklist for the turn | TodoWrite only |
-| `ExitPlanMode` / `EnterPlanMode` | the plan text | The agent's plan as a first-class "Plan" surface | ✗ |
+| `TodoWrite` (and the newer `TaskCreate`/`TaskUpdate`) | task text and status | A living checklist for the turn | TodoWrite only. **Correction 19 Oct:** no real uses of any of these exist in the local journals (the first counts came from tool definitions), so treat their shapes as unverified |
+| `ExitPlanMode` / `EnterPlanMode` | the plan text | The agent's plan as a first-class "Plan" surface | ✗ (unverified: no real uses locally, see correction above) |
 | `Agent` / `Task` | `subagent_type`, `description`, `prompt` | Sub-agent identity | ✓ |
 | `ai-title`, `custom-title`, `agent-name`, `mode` | titles, agent name, permission mode | Better Home titles; mode changes | titles ✓, rest ✗ |
 | `system:stop_hook_summary`, `compact_boundary` | hook and compaction metadata | Capture-gap and hook display | compaction ✓ |
