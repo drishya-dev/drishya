@@ -355,21 +355,25 @@ export function PromptComposer() {
   const recording = useApp(s => s.recording);
   const connection = useApp(s => s.connection);
   const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect } = useSessionWorkspace();
-  const [collapsed,setCollapsed]=useWorkspaceState('composer/collapsed',false);
-  useEffect(()=>{if(controller?.inputRequests?.length)setCollapsed(false);},[controller?.inputRequests?.[0]?.id]);
+  // 'auto' collapses an idle composer to its pill so it never covers the newest work; the person's own open/close choice always wins.
+  const [choice,setChoice]=useWorkspaceState<'auto'|'open'|'closed'>('composer/choice','auto');
+  useEffect(()=>{if(controller?.inputRequests?.length)setChoice('open');},[controller?.inputRequests?.[0]?.id]);
   const [options, setOptions] = useState<TurnOptions>({});
   useEffect(() => { setOptions({}); }, [id]);
   const [prompt, updatePrompt] = useState(() => source && id ? promptDrafts(source).get(id) : '');
   const setPrompt = (text: string) => { if (source && id) promptDrafts(source).set(id, text); updatePrompt(text); };
-  useEffect(() => { const changed = () => { if (source && id) { setCollapsed(false); updatePrompt(promptDrafts(source).get(id)); requestAnimationFrame(() => input.current?.focus({ preventScroll: true })); } }; window.addEventListener('drishya-composer-draft', changed); return () => window.removeEventListener('drishya-composer-draft', changed); }, [source, id]);
+  useEffect(() => { const changed = () => { if (source && id) { setChoice('open'); updatePrompt(promptDrafts(source).get(id)); requestAnimationFrame(() => input.current?.focus({ preventScroll: true })); } }; window.addEventListener('drishya-composer-draft', changed); return () => window.removeEventListener('drishya-composer-draft', changed); }, [source, id]);
   const [exclusive, setExclusive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const element = useRef<HTMLElement>(null);
-  const prepareCollapse=useSurfaceReflow(element,collapsed,id);
   const input = useRef<HTMLTextAreaElement>(null);
   const [confirmSend, setConfirmSend] = useState(false);
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
+  // Idle means nothing to send and nothing asking for the person; any request, run, failure or draft opens it.
+  const needsAttention = !!controller?.inputRequests?.length || ['connecting', 'running', 'approval', 'failed'].includes(controller?.state ?? '') || !!error || !!controller?.error;
+  const collapsed = choice === 'closed' || (choice === 'auto' && !prompt.trim() && !attachments.length && !needsAttention);
+  const prepareCollapse = useSurfaceReflow(element, collapsed, id);
   const attachmentRef = useRef(attachments); attachmentRef.current = attachments;
   useEffect(()=>{if(!attachments.length)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[attachments.length]);
   const [preview, setPreview] = useState<PromptAttachment>();
@@ -490,7 +494,7 @@ export function PromptComposer() {
       </div></details></>;
   if (workspace && !workspace.root) return <section ref={element} className="prompt-composer open composer-readonly" aria-label="Harness prompt"><div><strong>{recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} recording</strong><span>Read-only here · no workspace path was captured.</span></div><button className="btn ghost" onClick={() => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); }}>Choose session</button></section>;
   return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}${modern && collapsed?' composer-minimized':''}`} aria-label="Harness prompt">
-    {modern && <button type="button" className="composer-minimize" title={statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{prepareCollapse();setCollapsed(!collapsed);if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}><span data-surface-label={collapsed?'':undefined}>{collapsed?controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':'Ask your agent…':'⌄'}</span></button>}
+    {modern && <button type="button" className="composer-minimize" title={statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{prepareCollapse();setChoice(collapsed?'open':'closed');if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}><span data-surface-label={collapsed?'':undefined}>{collapsed?controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':'Ask your agent…':'⌄'}</span></button>}
     {modern && collapsed && running && <button type="button" className="composer-mini-stop" aria-label="Stop turn" title="Stop this turn" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button>}
     {modern ? <div className="modern-composer-top"><div className="modern-composer-target"><span className="modern-composer-identity" title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg></span><span className="modern-composer-location" title={workspace?.root}><span>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Checking workspace…'}</span></span></div><span role="status" className="modern-composer-state" title={statusLabel}>{workspace?.approved ? statusLabel : 'Needs access'}</span>{nativeOptions}</div> : <>
     <div className="composer-target"><span title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><strong>{recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness ?? 'Native harness'}</strong><span className="composer-workspace">{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'}</span><code>{id.slice(-8)}</code></span><small role="status">{statusLabel}</small></div></>}

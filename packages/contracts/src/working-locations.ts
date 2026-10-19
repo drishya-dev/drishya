@@ -2,7 +2,7 @@
 export interface WorkingLocations { version: 1; last?: string; sessions: { id: string; revision?:number; entries: [string,unknown][] }[] }
 const record=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
 const fields=new Set('files preview developerWorkspace selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence filePanelLine explore compareAgents mapFocusPath filter follow held inspectorTab inspectorWidth readingPassageId start agentId kind server tool x y height k zoom top left id offset query line wrap formatted activeLine scope pages index width layout match trailWidth trailHidden right leftKey rightKey version primary secondary split pane ratio cursor visits location memory open name root harness days workspace'.split(' '));
-const slot=/^(peek\/tabs|surface\/(Git review|Git history|File reader|Captured file)|composer\/collapsed|toolbox\/collapsed|location|history\/(top|anchor|heights)|desk\/(files|primary|secondary|split|pane|ratio)|desk\/document\/.+|folders\/(query|open|top|width)|map\/(yaw|pitch|camera|query|observed|changed|connections|file|page|neighborhood)|git\/(selected|page|open|width|historyWidth|filesHidden)|canvas\/(view|panel|panelFocus|camera)|home\/.+|evidence\/trail)$/;
+const slot=/^(peek\/tabs|surface\/(Git review|Git history|File reader|Captured file)|composer\/(collapsed|choice)|toolbox\/collapsed|location|history\/(top|anchor|heights)|desk\/(files|primary|secondary|split|pane|ratio)|desk\/document\/.+|folders\/(query|open|top|width)|map\/(yaw|pitch|camera|query|observed|changed|connections|file|page|neighborhood)|git\/(selected|page|open|width|historyWidth|filesHidden)|canvas\/(view|panel|panelFocus|camera)|home\/.+|evidence\/trail)$/;
 const readerSlot=/^(disk\/(start|version|query|line|lineInput|wrap|width|formatted)|file\/(width|trailWidth|trailHidden|query|start|left|right)|(?:.*\/artifact|diff)\/.+\/(pages|index|query|wrap|line|lineInput|offset|layout|match)|scroll\/.+)$/;
 const locationStrings='selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence mapFocusPath readingPassageId'.split(' ');
 function location(input:unknown):Record<string,unknown> {
@@ -62,6 +62,7 @@ export function workingLocations(input:unknown):WorkingLocations {
       if(key==='peek/tabs')return record(item)&&Array.isArray(item.files)&&item.files.length<=8&&item.files.every(path=>typeof path==='string'&&path.length>0&&path.length<=2048)&&(item.preview===undefined||typeof item.preview==='string'&&item.preview.length>0&&item.preview.length<=2048)&&Object.keys(item).every(field=>['files','preview'].includes(field));
       if(key.startsWith('surface/'))return record(item)&&Object.keys(item).every(field=>['x','y','width','height'].includes(field))&&Object.values(item).every(n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100000);
       if(key==='composer/collapsed'||key==='toolbox/collapsed')return typeof item==='boolean';
+      if(key==='composer/choice')return item==='auto'||item==='open'||item==='closed';
       if(key==='location')return record(item);
       if(key==='evidence/trail')return record(item)&&Array.isArray(item.visits);
       if(key==='desk/files'||key==='folders/open')return Array.isArray(item)&&item.every(x=>typeof x==='string')&&(key!=='desk/files'||item.length<=8);
