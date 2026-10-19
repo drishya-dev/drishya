@@ -105,7 +105,7 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 - Label issues and PRs by area: `area: capture`, `area: canvas`, `area: map`, `area: privacy`. Anything touching the event schema gets `schema`; anything awaiting a recorded decision gets `decision`.
 
 **Claiming and state**
-- **Claim before starting** — one row in the *Claimed* table in [`docs/STATUS.md`](docs/STATUS.md). Its only job is that two people never edit the same file at once.
+- **Claim before starting** — one row in the *Claimed* table in [`docs/STATUS.md`](docs/STATUS.md), keyed by the [`docs/TASKS.md`](docs/TASKS.md) ID. Run `node scripts/claims.ts` to see open items and who holds them; push your claim to `main` before writing code; delete the row in the PR that finishes it. Its job is that two people, or two agents, never do the same thing or edit the same files.
 - **Update `docs/STATUS.md` when you finish**, not when you start. Overwrite your "Last session" block.
 - **Settled decisions go in the decisions log, with the reason.** This is what stops four agents re-litigating the same argument next week.
 

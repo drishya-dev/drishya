@@ -2,6 +2,8 @@
 
 **The single current work list. Restructured 19 October 2026.** Builders and agents update this file in the same increment as the work: tick an item only when its stated scope is implemented and checked on actual sessions; add new feedback here before starting it. STATUS is the session log, CONTINUITY is the handoff, numbered reviews are evidence. They are not competing task lists.
 
+**Claiming.** Before starting an item, claim its ID in the [STATUS](STATUS.md#claimed) table and push that to `main`; `node scripts/claims.ts` shows what is open and what is taken.
+
 **How to read it.** §1 is the **priority order**: one line per item with its ID and tags. §3 holds the **detail** for every ID, grouped by category: problem, what to do, acceptance, where in the code. §4 archives every item completed before this restructure, verbatim.
 
 `[x]` = implemented and locally checked within the stated limits. `[ ]` = unfinished. A checked item does not certify native accounts, every device, visual preference or release readiness.
