@@ -60,6 +60,8 @@ export interface ScenePassage {
   turnPrompt?: string;
   /** Captured timestamp of the turn that opens this passage, when supplied. */
   turnTime?: string;
+  /** Timeline step of that turn's prompt, to find its ledger (see turns.ts). */
+  turnStep?: number;
 }
 
 export interface SceneAgent {
@@ -211,6 +213,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
+      ...(opensTurn&&turn?{turnStep:turn.step}:{}),
     };
   });
 

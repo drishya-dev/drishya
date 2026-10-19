@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const docs = (name: string) => readFileSync(fileURLToPath(new URL(`../docs/${name}`, import.meta.url)), 'utf8').replaceAll('\r', '');
 const tasks = docs('TASKS.md'), status = docs('STATUS.md');
 
-const done = new Set([...tasks.matchAll(/^- \[x\] \*\*([A-Z]+-\d+) /gm)].map(m => m[1]!));
+const done = new Set([...tasks.matchAll(/^- \[x\] \*\*([A-Z]+-\d+[a-z]?) /gm)].map(m => m[1]!));
 
 // "### P0 — now" style headings give each priority table its label; rows are "| # | ID | Item | Tags |".
 const items: { priority: string; id: string; title: string; tags: string }[] = [];
@@ -18,7 +18,8 @@ for (const line of tasks.split('\n')) {
   const heading = /^### (P\d)\b/.exec(line);
   if (heading) { priority = heading[1]!; continue; }
   if (/^## /.test(line) && !/^## 1\./.test(line)) priority = '';
-  const row = /^\| \w+ \| ([A-Z]+-\d+) \| (.+?) \| (.*?) \|$/.exec(line) ?? /^\| ([A-Z]+-\d+) \| (.+?) \| (.*?) \|$/.exec(line);
+  // Rows are "| ☑ | 3 | ID | item | tags |" (P0-P2) or "| ☐ | ID | item | tags |" (P3); the mark is optional.
+  const row = /^\| (?:[☑☐] \| )?\w+ \| ([A-Z]+-\d+[a-z]?) \| (.+?) \| (.*?) \|$/.exec(line) ?? /^\| (?:[☑☐] \| )?([A-Z]+-\d+[a-z]?) \| (.+?) \| (.*?) \|$/.exec(line);
   if (priority && row) items.push({ priority, id: row[1]!, title: row[2]!, tags: row[3]!.replace(/`/g, '') });
 }
 
@@ -27,7 +28,7 @@ const claims = new Map<string, string>();
 const section = /### Claimed([\s\S]*?)\n---/.exec(status)?.[1] ?? '';
 for (const line of section.split('\n')) {
   const cells = line.split('|').map(c => c.trim());
-  const ids = (cells[1] ?? '').match(/[A-Z]+-\d+/g);
+  const ids = (cells[1] ?? '').match(/[A-Z]+-\d+[a-z]?/g);
   if (ids && cells[2]) for (const id of ids) claims.set(id, `${cells[2]}${cells[4] ? `, since ${cells[4]}` : ''}`);
 }
 

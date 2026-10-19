@@ -331,6 +331,10 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if(cursor)try{commandCursor(cursor);}catch{throw new HttpError(400,'Invalid command cursor');}
         return json(res,await app.history.commands(id,{q,status:status as 'ok'|'error'|'running'|'unknown'|undefined,cursor,direction:direction as 'older'|'newer'}));
       }
+      if (sub === 'turns' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key);
+        return json(res, { turns: await app.history.turns(id) });
+      }
       if (sub === 'now' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, await app.history.now(id));

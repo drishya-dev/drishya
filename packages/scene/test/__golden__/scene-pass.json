@@ -115,7 +115,8 @@
       "settled": true,
       "matchesFilter": true,
       "turnPrompt": "Free orders don't reach checkout — a cart with the LAUNCH100 code (100% off) is rejected with missing-total, and the free-order test in test/checkout.test.ts fails. Find out why and fix it.",
-      "turnTime": "2026-09-21T10:00:00.000Z"
+      "turnTime": "2026-09-21T10:00:00.000Z",
+      "turnStep": 0
     },
     {
       "id": "psg_s_rec#1.toolu_synthetic0001",

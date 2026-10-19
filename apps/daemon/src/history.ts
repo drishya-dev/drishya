@@ -5,6 +5,7 @@ import type { ArtifactSlice, Operation } from '@drishya/contracts';
 import type { BlobSearchResult } from '@drishya/store';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { NowFacts } from '../../../packages/scene/src/now.ts';
+import type { TurnLedger } from '../../../packages/scene/src/turns.ts';
 import type { Marker } from '@drishya/scene';
 import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
 import type { VerificationTrail } from '../../../packages/scene/src/verification.ts';
@@ -57,6 +58,7 @@ export class HistoryService {
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   now(id: string) { return this.request<NowFacts>('now', { id }); }
+  turns(id: string) { return this.request<TurnLedger[]>('turns', { id }); }
   since(id: string, after: number, page = 0) { return this.request<SinceSnapshot>('since', { id, after, page }); }
   verification(id: string, operationId: string) { return this.request<VerificationTrail | null>('verification', { id, operationId }); }
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }

@@ -1,5 +1,7 @@
 # Nebius × NVIDIA Global AI Hackathon — fit assessment
 
+> **19 October 2026: not being pursued.** The builder removed the hackathon from the active work list (TASKS, STATUS decisions log). This document is kept only as a reference for the fit analysis and the rules as checked on 19 Oct; nothing here is scheduled.
+
 ## 19 October 2026 refresh — read this first
 
 Rechecked against the live [Devpost page](https://nebiusglobalaihackathon.devpost.com/). **Deadline 30 Oct 2026, 10:00 PT (22:30 IST): 11 days.** The requirements are unchanged:
