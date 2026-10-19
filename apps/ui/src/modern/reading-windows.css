@@ -80,3 +80,23 @@
  :root[data-ui-version=modern][data-experience=classic] .workspace-secondary {flex-direction:row;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:7px;}
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history {top:var(--workspace-tools-bottom,134px);}
 }
+
+/* Wide diff cards: the width their longest line needs, read without wrapping and scrolled sideways inside the card. */
+:root[data-ui-version=modern] .connected-workspace .history .op[data-diff] { flex: 0 1 min(var(--reading-width,440px),100%); max-width: 100%; }
+:root[data-ui-version=modern] .history .op[data-diff=code] .op-body .diff { width: max-content; min-width: 100%; }
+:root[data-ui-version=modern] .history .op[data-diff=code] .op-body .diff .ln-tx { white-space: pre; overflow-wrap: normal; flex: 1 0 auto; }
+/* Added/removed counts sit beside the title, in the mono face used by the code. */
+.op-stat { flex: none; display: inline-flex; gap: 7px; margin: 0 4px 0 auto; font: 500 11px/1 var(--mono); letter-spacing: 0; }
+.op-stat .add { color: var(--pass); font-weight: 500; }
+.op-stat .del { color: var(--fail); font-weight: 500; }
+/* Provenance stays out of the way at rest: one note per card, revealed by hover, focus or touch. */
+.history .op { position: relative; }
+.op-info { position: absolute; right: 8px; bottom: 6px; z-index: 2; width: 20px; height: 20px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--t3); font: 12px/1 var(--sans); opacity: 0; cursor: pointer; transition: opacity 140ms ease, color 140ms ease, background-color 140ms ease; }
+.history .op:hover .op-info, .history .op:focus-within .op-info, .op-info:focus-visible, .op-info[aria-expanded=true] { opacity: 1; }
+.op-info:hover { color: var(--t1); background: var(--s3); }
+.op-info:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
+@media (hover: none) { .op-info { opacity: .55; } }
+.op-evidence { position: fixed; inset: auto; margin: 0; width: 320px; max-width: calc(100vw - 16px); padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--s2); color: var(--t2); font: 12px/1.55 var(--sans); box-shadow: 0 10px 30px #0006; }
+.op-evidence p { margin: 0; }
+.op-evidence p + p { margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .op-info { transition: none; } }
