@@ -80,8 +80,8 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 11 | TURN-1 | Turn chapters with a resolved turn ledger; collapsible finished turns | `turn` `motion` |
 | 12 | EXPLAIN-1 | Narrator: generated intent labels for bursts of work, cited to evidence | `explain` `hack` `live` |
 | 13 | EXPLAIN-2 | Turn summary and "while you were away" briefing | `explain` `hack` `turn` |
-| 14 | READ-1 | Edit/write cards: wide, no-wrap, `+N −M`, real line numbers | `read` |
-| 15 | READ-2 | Quiet provenance: one ⓘ per card, inline badge only when meaning changes | `read` `ui` |
+| 14 | READ-1 | Edit/write cards: wide, no-wrap, `+N −M` (done; Codex line numbers wait on DATA-1) | `read` |
+| 15 | READ-2 | Quiet provenance: one ⓘ per card (done for history cards) | `read` `ui` |
 | 16 | LIVE-2 | Composer collapses to a pill when idle (done; leftovers in LIVE-2b) | `live` `ui` `motion` |
 | 17 | HACK-2 | Hosted demo build with a recorded, labelled Nemotron layer | `hack` |
 | 18 | HACK-3 | Demo video < 3 min, README setup, submission text, Token Factory feedback | `hack` |
@@ -266,20 +266,11 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 ### READ — reading code, diffs and output
 
-- [ ] **READ-1 · Wide, scannable edit cards** · P0 · `read`
-  - **Problem:** at 1440 px, edit cards are about 440 px wide with code soft-wrapped 3–4 times.
-  - **Do:**
-    - In the wrapping passage layout, edit/write/create cards with a diff may take a **full row** (up to the reading width, about 760–900 px).
-    - No-wrap by default with horizontal scroll inside the card; a Wrap toggle.
-    - Header shows `path · +12 −3 · ✓ applied`.
-    - Real file line numbers where captured (Claude `structuredPatch`/`originalFile`; Codex `FileChange`, after DATA-1).
-    - Unchanged runs over 6 lines collapse to "⋯ 14 unchanged lines".
-  - **Accept:** a 120-character line is readable without wrapping; counts match the patch; small edits stay compact; the arrows between boxes still point correctly.
+- [x] **READ-1 · Wide, scannable edit cards** · P0 · `read` — **shipped 19 Oct (core).** A diff card with a long line or more than 24 lines now takes the width its longest line needs, up to the passage (860 px at 1440 px; 738 px at 1280 px; the full row on phones), instead of a fixed 440 px. Code diffs do not wrap and scroll sideways inside the card, with the added/removed backgrounds spanning the longest line; Markdown/text files stay wrapped. The header shows `+N −M` counted from the captured patch. Small edits keep their compact card. Verified on the Codex session at 1440/1280/1024/390 px (no page overflow, card inside its row). Helpers and tests: `lib/card-evidence.ts`, `apps/ui/test/card-evidence.test.ts`.
+  - **Not done, on purpose or blocked:** a per-card Wrap toggle (it would add a button to every card; Expand → Wrap lines already exists); folding unchanged runs over 6 lines (rare in real patches); real file line numbers for Codex edits (they need DATA-1, Claude patches already carry them); a `✓ applied` word (the existing state mark stays).
 
-- [ ] **READ-2 · Quiet provenance** · P0 · `read` `ui`
-  - **Problem:** each card carries several provenance strings in primary position: "derived from exec", "Captured arguments · bounded preview", "Captured changes · scroll to read", "Historical source · recorded result", "Captured use counts".
-  - **Do:** remove those default strings from the card body. Add one ⓘ in the card footer whose popover gives the exact provenance and limits. Show an inline badge only when it changes meaning: `truncated`, `derived`, `not captured`, `redacted`, `stale`. Rename the meta "Other · exec" to the decoded tool or "Tool".
-  - **Accept:** every provenance fact is still reachable by pointer and keyboard; no captured/derived confusion (constraint 4); the screen-reader name includes the badge.
+- [x] **READ-2 · Quiet provenance** · P0 · `read` `ui` — **shipped 19 Oct (history cards).** Removed the always-on strings "Captured changes · scroll to read", "Captured arguments · bounded preview", "Historical source · recorded result", the "Captured patch · reconstructed from captured base" line, the "derived from exec" footer, the Toolbox footer "Captured use counts" (now a tooltip) and "Captured" in the arguments label. Each card has one ⓘ (hover, focus or touch; a native popover, Escape closes it) that gives the exact wording: the patch is captured, not the current file; whether the after-state is verified; whether the harness exposed the outcome; whether the type is captured, derived (with its rule) or generated. Inline text remains only where it changes the meaning: `Outcome not exposed`, `After-state not verified`, `Patch request · awaiting recorded outcome`, `Captured input preview · expand for full text` and `Command argument · decoded`. Verified popover position, keyboard and Escape on real sessions.
+  - **Not done:** other surfaces still carry their own provenance text (Inspector, Canvas "derived label", file evidence readers, Legacy); renaming the "Other · exec" meta needs the typed tool names from DATA-1.
 
 - [ ] **READ-3 · Settle into ledger rows** · P2 · `read` `motion`
   - **Idea:** once an operation is N steps old, its card compresses into one row (`✎ src/store/index.ts +12 −3 ✓`), still inside the wrap layout; hover or `e` re-expands it in place.
@@ -549,6 +540,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - `connected-workspace.spec.ts:129` ("source reading links qualified current imports…") — times out waiting for `Read current file src/actual.ts` inside the `src/other.ts` dialog.
   - `product-workspace.spec.ts:158` ("first-visit evidence review…") — Playwright strict-mode violation: the Review dialog's `src/checkout/guard.ts` button matches two elements.
   - `product-workspace.spec.ts:65` ("map file labels are keyboard reading targets…") — flaky, about 50%: the "Work on …" dialog sometimes isn't visible after Enter on a map label.
+  - `product-workspace.spec.ts:772` ("paged prompt rail spans the full session…") — rare flake under load (failed twice in about 16 runs while the whole suite ran; 20 of 20 passes when run alone): `.turn` first does not contain `Rail prompt 0`.
   - **Do:** decide per spec whether the product or the test is wrong, fix, and re-run each 10× for flakiness. **Accept:** all four pass 10 of 10 on a clean build.
 
 ### HACK — Nebius × NVIDIA Global AI Hackathon

@@ -6,7 +6,7 @@ export function ToolInput({ value }: { value: unknown }) {
   const original=typeof value==='string' ? value : JSON.stringify(value,null,2) ?? String(value);
   let input=value;
   if(typeof value==='string') { try { const parsed=JSON.parse(value); if(parsed && typeof parsed==='object') input=parsed; } catch { /* Literal text remains literal. */ } }
-  return <div className="tool-input"><div className="structured-output-controls"><span>Captured arguments</span><button aria-pressed={raw} onClick={e=>{e.stopPropagation();setRaw(!raw);}}>{raw?'Show fields':'Show raw'}</button></div>{raw?<pre className="json">{original}</pre>:<InputValue value={input}/>}</div>;
+  return <div className="tool-input"><div className="structured-output-controls"><span>Arguments</span><button aria-pressed={raw} onClick={e=>{e.stopPropagation();setRaw(!raw);}}>{raw?'Show fields':'Show raw'}</button></div>{raw?<pre className="json">{original}</pre>:<InputValue value={input}/>}</div>;
 }
 
 function InputValue({value,depth=0}:{value:unknown;depth?:number}) {

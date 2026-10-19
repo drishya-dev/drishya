@@ -1,4 +1,5 @@
 import type { Operation } from '@drishya/contracts';
+import { diffCardWidth } from './card-evidence.ts';
 
 export type MaterialShape = 'source' | 'reading' | 'wide' | 'medium' | 'compact';
 
@@ -9,7 +10,9 @@ export function presentationOf(op: Operation): { shape: MaterialShape; material:
     case 'read': return { shape: 'source', material: 'source' };
     case 'edit': {
       const lines = d.hunks.flatMap((h) => h.lines);
-      return { shape: lines.some((line) => line.length > 110) || lines.length > 24 ? 'wide' : 'source', material: 'change' };
+      const wide = lines.some((line) => line.length > 110) || lines.length > 24;
+      // A wide diff takes the width its longest line needs, up to the passage; short edits keep their compact card.
+      return { shape: wide ? 'wide' : 'source', material: 'change', ...(wide ? { width: diffCardWidth(d.hunks) } : {}) };
     }
     case 'shell': return { shape: d.command.length > 110 || d.command.includes('\n') ? 'wide' : (d.outputPreview?.length ?? 0) > 160 ? 'medium' : 'compact', material: 'terminal', width: readingWidth(d.command, d.outputPreview) };
     case 'test': return { shape: d.command.length>110||d.command.includes('\n')?'wide':'medium', material: 'verification',width:Math.max(350,readingWidth(d.command,d.outputPreview)) };
