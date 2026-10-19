@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | BUG-7 | @harsh + Claude Opus 5.5 | `harsh/bug-7-open-refresh-race` | 2026-10-19 | `state.ts` (openRecording/reloadProjection), `App.tsx` (useLiveUpdates), new unit test |
-| TURN-1 | @yash + Claude Sonnet 5.5 | `yash/turn-1-chapters` | 2026-10-19 | `components/History.tsx` (turn header), `lib/turn-ledger.ts` (new), `modern/reading-windows.css` |
 
 ---
 
@@ -60,9 +59,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Then (same day, Claude Sonnet 5.5, branch `yash/p0-bugs`):** BUG-1 (wheel chains from cards to history), BUG-2 (Git drawer clears the navigation; Escape closes the newest reader), BUG-3 (links inside bold/italic Markdown), BUG-4 (no top-control overlap from 601–1100 px). One commit each. 546 unit tests, both typechecks and 9 browser specs (Git review, manual scroll, Markdown references, interface craft) pass. Bottom-corner pills at narrow widths remain (UI-1).
 - **LIVE-2 (branch `yash/live-2-composer`):** the idle composer defaults to its pill; auto/open/closed choice persisted (new `composer/choice` key in `working-locations.ts`, both allowlists). Four browser specs were found failing or flaky on main before this work (TEST-1).
 - **READ-1 + READ-2 (branch `yash/read-cards`, Sonnet 5.5):** wide no-wrap code diff cards with `+N −M`, and quiet provenance with one ⓘ popover per card. Pure helpers in `lib/card-evidence.ts` (4 tests). Browser: 72 of 74 card/history specs pass; the failures are the known `product-workspace:158` and a rare prompt-rail flake (TEST-1).
+- **TURN-1 (branch `yash/turn-1-chapters`, Sonnet 5.5):** each prompt is a chapter with a three-line clamp and, once the turn is over, a ledger line (read / searched / edited files +/− / commands / tests / failed / duration), from a new `GET /v1/recordings/:id/turns` over the whole recording (paged sessions included) and the pure `scene/turns.ts`; Modern only, so the retained UIs are unchanged. Collapse is split out as TURN-1b (virtual-list work, Opus-sized). Also: the priority tables now carry a Done column kept in sync by `node scripts/sync-tasks.ts`; the hackathon was removed from TASKS/CONTINUITY (decision logged); Harsh's PR #128 was reviewed and merged. Found while verifying: my LIVE-2 left several specs assuming an expanded composer; on this branch the same three spec files give the same results as main (37 pass, the 2 known TEST-1 failures).
 - **DATA-10 (Sonnet 5.5, docs only):** [review 125](review/125-event-schema-proposal.md), the batched additive schema proposal (five slices, evidence, privacy, order). Measured: typed Codex items cannot be matched to calls by id, 85% sit inside the `exec` window. **Needs both builders to tick D1–D10 before DATA-1/DATA-2 start.** Also corrected 123: no real TaskCreate/ExitPlanMode uses exist locally.
 - **LIVE-1 (branch `yash/live-1-now`, Sonnet 5.5):** the Now line in the composer pill and header, the tab title and favicon state, backed by `GET /v1/recordings/:id/now` (facts from the tail; no schema change). 21 new tests; verified on this live session. Two more browser specs found failing since before PR #124 (`live-sync:8`, `prompt-timeline:22`), added to TEST-1.
-- **Next:** HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
+- **Next:** see `node scripts/claims.ts` (the hackathon items were dropped from the list on 19 Oct)., EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
 
 ### Yash with Codex - Compact right-docked Explorer preview
 

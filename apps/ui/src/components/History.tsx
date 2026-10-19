@@ -877,6 +877,8 @@ function TurnBlock({ prompt, step }: { prompt: string; step?: number }) {
     observer.observe(el);
     return () => observer.disconnect();
   }, [prompt, expanded]);
+  // The chapter treatment belongs to Modern; the retained UIs keep their original prompt block.
+  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn"><span className="turn-who">You</span><div className="turn-text">{prompt}</div></div>;
   const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
   return (
     <div className="turn">
