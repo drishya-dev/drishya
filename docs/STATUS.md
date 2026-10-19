@@ -25,12 +25,18 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
-| Harsh with Codex | Complete requested investigation, review handoff, recovery and local UI/release checks (items 2–6); real-account checks remain builder-owned | UI investigation/native-return, packet/saved moments, optional draft recovery, responsive polish and regressions; TASKS/acceptance notes |
 
 
 ---
 
 ## Last session
+
+### Harsh with Codex, then Claude (Opus 5.5) — Investigation, saved evidence and draft recovery finishing
+
+- **When:** 18–19 October 2026, `codex/investigation-finishing` (not yet pushed).
+- **Delivered:** items 2–6 of the remaining-work request ([107](review/107-investigation-finishing.md)): joined investigation with exact origin and return, Saved moments (50 references) and paged legacy notes, selected-evidence packets, explicit encrypted draft recovery in Workspace Actions, shared focus/Escape/switch polish; live refresh coalescing 150→25 ms and default poll 750→500 ms. Reconciled with main `54f93af` (PR111–123 and the TASKS restructure). Claude concluded the merge, fixed two branch regressions (Workspace layout keyboard order; draft bar reload-loss wording) and ran the final checks.
+- **Validation:** both TS; 557 units/101 files; full browser 223 pass / 18 opt-in skip / 10 fail, of which 6 fail identically on clean main (BUG-5), 2 were flaky and pass alone, 2 were fixed and pass; ten-minute soak 604 s / 88 rounds / 772 peak nodes; overhead observer −0.4%, observer+browser +2.4%, 0 lost. Signed-in native checks remain builder-owned; no hosted CI.
+- **Next:** push and open a PR for Yash; BUG-5; decide PR110 (conflicting, partly integrated by Yash per [111](review/111-adaptive-content-and-pr110.md)); then P0 in TASKS.
 
 ### Yash with Claude (Opus 5.5) — Developer review, harness data audit, restructured TASKS
 
