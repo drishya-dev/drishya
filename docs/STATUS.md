@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LIVE-2 | @yash + Claude Sonnet 5.5 | `yash/live-2-composer` | 2026-10-19 | `components/SessionWorkspace.tsx`, `modern/*composer*`, `ink.css` |
 
 ---
 
@@ -50,6 +49,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
   - Emil Kowalski's web skills installed for Claude Code (`~/.claude/skills`) and `animation-performance` added for Codex.
 - **Validation:** product exercised at 1440×900 (headless Edge) and in the app pane on a 1,100-operation Codex session, a Claude Code session, this live session and the demo. No code changed.
 - **Then (same day, Claude Sonnet 5.5, branch `yash/p0-bugs`):** BUG-1 (wheel chains from cards to history), BUG-2 (Git drawer clears the navigation; Escape closes the newest reader), BUG-3 (links inside bold/italic Markdown), BUG-4 (no top-control overlap from 601–1100 px). One commit each. 546 unit tests, both typechecks and 9 browser specs (Git review, manual scroll, Markdown references, interface craft) pass. Bottom-corner pills at narrow widths remain (UI-1).
+- **LIVE-2 (branch `yash/live-2-composer`):** the idle composer defaults to its pill; auto/open/closed choice persisted (new `composer/choice` key in `working-locations.ts`, both allowlists). Four browser specs were found failing or flaky on main before this work (TEST-1).
 - **Next:** HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
 
 ### Yash with Codex - Compact right-docked Explorer preview
