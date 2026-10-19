@@ -171,6 +171,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | IDEA-2 | Symbol timeline after reliable extraction | `read` |
 | IDEA-3 | Multi-repo mission control beyond the Home "running now" strip | `home` |
 | IDEA-4 | Additional UI versions or themes after Modern is finished | `ui` |
+| IDEA-5 | From closed PR110: explicit keyword findings and copying selected captured commands, built on the existing Commands/ReviewInsights owners, not a second review panel | `review` |
 
 ---
 
