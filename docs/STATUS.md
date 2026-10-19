@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| LIVE-1 | @yash + Claude Sonnet 5.5 | `yash/live-1-now` | 2026-10-19 | `lib/now-state.ts` (new), `components/SessionWorkspace.tsx` (composer pill), tab title/favicon hook, `modern/hud.css` |
 
 ---
 
