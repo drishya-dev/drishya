@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| TURN-1 | @yash + Claude Sonnet 5.5 | `yash/turn-1-chapters` | 2026-10-19 | `components/History.tsx` (turn header), `lib/turn-ledger.ts` (new), `modern/reading-windows.css` |
 
 ---
 
