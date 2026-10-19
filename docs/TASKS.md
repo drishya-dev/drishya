@@ -183,22 +183,22 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 ### BUG — defects
 
-- [ ] **BUG-1 · Wheel scroll trapped over history cards** · P0 · `bug` `read`
+- [x] **BUG-1 · Wheel scroll trapped over history cards** · P0 · `bug` `read` — **fixed 19 Oct.** Cause: `overscroll-behavior: contain` on `.op-body`/`.result-area` (`ink.css`) blocked native chaining to `.history` at a card's edge. Vertical is now `auto` (horizontal stays contained). Verified on Codex and Claude sessions: at a card's top edge the wheel scrolls the history 300 px per step; mid-card scrolling stays local with the history unchanged.
   - **Problem:** with the pointer over a centred card, the wheel does not scroll the history, even when the card's own content cannot scroll further. Measured on the AgentGuard Claude session: `.history.scrollTop` stayed at 71627 for two wheel events over a Read card. Cards cover most of the centre, so this happens constantly.
   - **Do:** keep local result scrolling (constraint 7). At the inner scroll boundary, chain the remaining delta to `.history`; if the card has no overflow, never capture the wheel. Check the hover-reading and zoom handlers in `lib/hover-reading.ts` and `modern/local-scroll.ts` for `preventDefault` on wheel.
   - **Accept:** wheel over any card at its top or bottom boundary scrolls history; mid-content still scrolls locally; Follow detaches only on main-history scroll. Check Codex and Claude sessions with a trackpad and a mouse wheel.
 
-- [ ] **BUG-2 · Git review drawer covers the Git graph button; Escape inconsistent** · P0 · `bug` `git` `ui`
+- [x] **BUG-2 · Git review drawer covers the Git graph button; Escape inconsistent** · P0 · `bug` `git` `ui` — **fixed 19 Oct.** The right-docked Git drawer now starts below the measured navigation (`--drawer-top`, `ReadingWindow.tsx`), so Review ⇄ Graph is one click. Escape closes the newest open modeless reader from anywhere (menus close first; typing fields and modal dialogs are left alone). Verified on the Codex session at 1440 px: drawer top 187 px vs nav bottom 175 px; Review → Graph one click; Esc closes graph; menu then drawer in two presses.
   - **Problem:** with Git review open, its drawer overlays the Git graph button, so you cannot switch Review → Graph without closing first. Escape closes Settings and Ctrl+K but not Git review or the ⋯ session menu.
   - **Do:** make Review ⇄ Graph a tab switch inside the same Git surface, or keep the right navigation above the drawer. Escape closes the top-most transient surface (menu → drawer → reader) and returns focus to its opener.
   - **Accept:** from either Git surface, one click reaches the other; Escape order verified for menu, Git review, Git graph, peek and Settings; focus returns to the trigger.
 
-- [ ] **BUG-3 · Markdown link with bold label and Windows path renders raw** · P0 · `bug` `read`
+- [x] **BUG-3 · Markdown link with bold label and Windows path renders raw** · P0 · `bug` `read` — **fixed 19 Oct.** The bold/italic rule emitted its contents as text, so an inner link was never parsed; bold and italic now render through the same inline parser, and a link target may hold one level of parentheses. Links stay display-only (`md-link`); opening local paths in peek remains FILES-2. Three unit tests (`apps/ui/test/markdown-links.test.ts`) and the real Codex message verified.
   - **Problem:** `**[92-feature….md](/C:/Users/…/92-feature….md)**` in agent prose renders as literal brackets and the URL (final message of the Codex "well now continue…" session).
   - **Do:** fix the link parser in `lib/markdown.tsx` for emphasis-wrapped links and `/C:/…` or `C:\…` targets. Local paths open in peek (FILES-2) rather than navigating the browser.
   - **Accept:** unit cases for bold/italic-wrapped links, Windows drive paths, spaces and parentheses in paths; the real message renders as a link.
 
-- [ ] **BUG-4 · Header islands overlap content at ≤ 900 px** · P0 · `bug` `ui`
+- [x] **BUG-4 · Header islands overlap content at ≤ 900 px** · P0 · `bug` `ui` — **fixed for the top controls, 19 Oct.** From 601 to 1100 px the right controls share one row and the history starts below the measured controls (`reading-windows.css`, using the existing `--workspace-tools-bottom`), so cards and prose no longer scroll under Files|Repository or Git/Workspace. Measured 0 overlaps at 640/768/820/853/900/1024/1100 px (853 and 1024 stand in for 150% and 125% zoom of a 1280 window); unchanged at 1280+ and ≤ 600 px. **Residual (moved to UI-1):** the small bottom-corner pills (collapsed Tools, Follow live) still float over the edge of prose at narrow widths, and the phone layout was not re-audited. Cost: about 134 px of reading height at these widths.
   - **Problem:** at about 800 px, the Workspace button sits over prose and Files|Repository sits over a card.
   - **Do:** below a measured width, reserve header space (content top padding equals the measured header height) or collapse the islands into a single compact bar (feeds UI-1).
   - **Accept:** no overlap at 768/800/900/1024 px, nor at 125% and 150% browser zoom.
@@ -447,7 +447,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
     - One slim top bar: identity (title · repo@branch · harness/model · live dot · LIVE-1 status), then navigation (Files · Git · Map · Workspace · Search · ⋯).
     - Toolbox and Files stay docked panels.
     - Retain the builder's header-capsule comparison decision by showing it to them before merging.
-  - **Accept:** fewer outlines on screen; identity visible at all widths; nothing overlaps (BUG-4).
+  - **Accept:** fewer outlines on screen; identity visible at all widths; nothing overlaps, including the bottom-corner Tools/Follow pills at narrow widths (residual from BUG-4).
 
 - [ ] **UI-2 · Typography floor** · P1 · `ui` — 280 CSS declarations are ≤ 10 px (14 at 7 px, 53 at 8 px, 84 at 9 px). Set a floor of 11 px for meta and 12–13 px for controls and labels; raise secondary-text contrast to ≥ 4.5:1 on every palette. Check with the existing contrast guard.
 
