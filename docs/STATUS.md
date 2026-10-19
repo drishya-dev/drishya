@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| DATA-10 | @yash + Claude Sonnet 5.5 | `main` (docs only) | 2026-10-19 | `docs/review/125-event-schema-proposal.md`, `docs/reference/03-event-schema.md` |
 
 ---
 
