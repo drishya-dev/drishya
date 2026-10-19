@@ -63,7 +63,7 @@
 .modern-git-drawer .git-file-name :is(strong,small) {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .modern-git-drawer .git-file-name strong {font-weight:500;font-size:11px;color:var(--t1);}
 .modern-git-drawer .git-file-name small {font-size:10px;color:var(--t3);}
-:root[data-ui-version=modern][data-experience=classic] .modern-git-drawer { position:fixed; inset:calc(var(--workspace-header-h,56px) + 10px) 16px auto auto; margin:0; width:min(var(--git-reader-width,680px),calc(100vw - 32px)); max-width:calc(100vw - 32px); height:auto; max-height:calc(100dvh - var(--workspace-header-h,56px) - 26px); z-index:40; border:1px solid var(--line-2); border-radius:12px; background:var(--bg); box-shadow:-12px 10px 46px #0005; overflow:auto; }
+:root[data-ui-version=modern][data-experience=classic] .modern-git-drawer { position:fixed; inset:var(--drawer-top,calc(var(--workspace-header-h,56px) + 10px)) 16px auto auto; margin:0; width:min(var(--git-reader-width,680px),calc(100vw - 32px)); max-width:calc(100vw - 32px); height:auto; max-height:calc(100dvh - var(--drawer-top,calc(var(--workspace-header-h,56px) + 10px)) - 16px); z-index:40; border:1px solid var(--line-2); border-radius:12px; background:var(--bg); box-shadow:-12px 10px 46px #0005; overflow:auto; }
 :root[data-ui-version=modern] .modern-git-drawer>header { position:sticky; top:0; z-index:3; padding:8px 14px; min-height:44px; background:var(--s1); }
 :root[data-ui-version=modern] .modern-git-drawer>header h2 { display:flex; align-items:center; gap:9px; font:500 13px/1.5 var(--sans); letter-spacing:0; }
 :root[data-ui-version=modern] .modern-git-drawer>header .icon-btn { width:28px; height:28px; font-size:15px; }

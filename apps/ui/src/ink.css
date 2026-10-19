@@ -317,7 +317,8 @@
 
 /* Whole real surfaces grow into their measured resting geometry; no proxy text. */
 .op { transform-origin: 0 0; min-width: 0; }
-.op-body, .op-expanded, .terminal-preview, .result-area { min-width: 0; max-width: 100%; box-sizing: border-box; overscroll-behavior: contain; }
+/* Vertical overscroll chains to the history at a result's edge, so cards never trap the wheel; horizontal stays contained against back-swipe. */
+.op-body, .op-expanded, .terminal-preview, .result-area { min-width: 0; max-width: 100%; box-sizing: border-box; overscroll-behavior-x: contain; overscroll-behavior-y: auto; }
 .op .cmd, .op .output, .terminal-preview pre { min-width: 0; max-width: 100%; box-sizing: border-box; white-space: pre-wrap; overflow-wrap: anywhere; }
 :root[data-palette='jet'] .history .op { border-color: color-mix(in srgb, var(--material) 55%, #383b42); box-shadow: inset 0 1px 0 #ffffff09; }
 :root[data-palette='jet'] .history .op-head { background: color-mix(in srgb, var(--material) 14%, #17191d); border-bottom-color: color-mix(in srgb, var(--material) 35%, #35373d); }

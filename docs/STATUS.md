@@ -21,11 +21,17 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Claimed
 
-*Add a line before you start. Delete it when you are done or when you stop.*
+**Claim before you start, so two people (or two agents) never work on the same thing.** The table is keyed by [TASKS](TASKS.md) IDs.
 
-| Who | What | Files |
-|---|---|---|
+1. `git pull`, then run `node scripts/claims.ts` (add `P0`, `P1`… for one priority, `--free` for unclaimed only). It lists open items in priority order and marks claimed ones.
+2. Pick a **free** item that does not share files with a claimed row. Overlapping files → pick another, or talk to the claimer first.
+3. Add one row below and **push it to `main` immediately** (`docs: claim <ID>`; a docs-only commit is allowed on `main`). If the push is rejected, someone claimed at the same time: pull and re-check.
+4. When the work merges, **delete your row in the same PR** (or right after). Add a "Last session" block as usual.
+5. A claim with no branch or commit for 3 days is stale; anyone may take it after asking.
 
+| TASKS ID | Who | Branch | Since | Files |
+|---|---|---|---|---|
+| LIVE-2 | @yash + Claude Sonnet 5.5 | `yash/live-2-composer` | 2026-10-19 | `components/SessionWorkspace.tsx`, `modern/*composer*`, `ink.css` |
 
 ---
 
@@ -35,8 +41,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **When:** 18–19 October 2026, `codex/investigation-finishing` (not yet pushed).
 - **Delivered:** items 2–6 of the remaining-work request ([107](review/107-investigation-finishing.md)): joined investigation with exact origin and return, Saved moments (50 references) and paged legacy notes, selected-evidence packets, explicit encrypted draft recovery in Workspace Actions, shared focus/Escape/switch polish; live refresh coalescing 150→25 ms and default poll 750→500 ms. Reconciled with main `54f93af` (PR111–123 and the TASKS restructure). Claude concluded the merge, fixed two branch regressions (Workspace layout keyboard order; draft bar reload-loss wording) and ran the final checks.
-- **Validation:** both TS; 557 units/101 files; full browser 223 pass / 18 opt-in skip / 10 fail, of which 6 fail identically on clean main (BUG-5), 2 were flaky and pass alone, 2 were fixed and pass; ten-minute soak 604 s / 88 rounds / 772 peak nodes; overhead observer −0.4%, observer+browser +2.4%, 0 lost. Signed-in native checks remain builder-owned; no hosted CI.
-- **Next:** push and open a PR for Yash; BUG-5; decide PR110 (conflicting, partly integrated by Yash per [111](review/111-adaptive-content-and-pr110.md)); then P0 in TASKS.
+- **Validation:** both TS; 557 units/101 files; full browser 223 pass / 18 opt-in skip / 10 fail, of which 6 fail identically on clean main (BUG-7), 2 were flaky and pass alone, 2 were fixed and pass; ten-minute soak 604 s / 88 rounds / 772 peak nodes; overhead observer −0.4%, observer+browser +2.4%, 0 lost. Signed-in native checks remain builder-owned; no hosted CI.
+- **Next:** push and open a PR for Yash; BUG-7; decide PR110 (conflicting, partly integrated by Yash per [111](review/111-adaptive-content-and-pr110.md)); then P0 in TASKS.
 
 ### Yash with Claude (Opus 5.5) — Developer review, harness data audit, restructured TASKS
 
@@ -50,7 +56,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
   - the north star and minimalism rule added to AGENTS;
   - Emil Kowalski's web skills installed for Claude Code (`~/.claude/skills`) and `animation-performance` added for Codex.
 - **Validation:** product exercised at 1440×900 (headless Edge) and in the app pane on a 1,100-operation Codex session, a Claude Code session, this live session and the demo. No code changed.
-- **Next:** P0 in TASKS: BUG-1…4, then HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
+- **Then (same day, Claude Sonnet 5.5, branch `yash/p0-bugs`):** BUG-1 (wheel chains from cards to history), BUG-2 (Git drawer clears the navigation; Escape closes the newest reader), BUG-3 (links inside bold/italic Markdown), BUG-4 (no top-control overlap from 601–1100 px). One commit each. 546 unit tests, both typechecks and 9 browser specs (Git review, manual scroll, Markdown references, interface craft) pass. Bottom-corner pills at narrow widths remain (UI-1).
+- **Next:** HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
 
 ### Yash with Codex - Compact right-docked Explorer preview
 

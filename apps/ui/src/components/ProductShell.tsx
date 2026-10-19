@@ -8,6 +8,10 @@ import { SettingsSections } from './UIVersions.tsx';
 import { useExperience } from '../lib/experience.ts';
 import {useReadingWindow} from './ReadingWindow.tsx';
 
+/** Open modeless readers, oldest first; Escape closes only the newest, wherever focus is. */
+const modelessReaders: HTMLDialogElement[] = [];
+const typing = (target: EventTarget | null) => target instanceof Element && !!target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], .cm-editor');
+
 export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon, resizeControl, windowId, resetWindow, floating=false, headerExtra, headerActions }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode; resizeControl?: ReactNode; windowId?:string; resetWindow?:()=>void;floating?:boolean;headerExtra?:ReactNode;headerActions?:ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   const transition=useRef<Animation|undefined>(undefined),exiting=useRef(false),latestClose=useRef(close);
@@ -38,7 +42,17 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     const animate = !modeless && !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
     const arrival = animate ? dialog.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }) : undefined;
     transition.current=arrival;
-    return () => { transition.current?.cancel();dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
+    // Menus preventDefault their own Escape first, so the order is menu, then newest reader.
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing || modelessReaders.at(-1) !== dialog) return;
+      if (typing(event.target) || document.querySelector('dialog:modal')) return;
+      event.preventDefault(); latestClose.current();
+    };
+    if (modeless) { modelessReaders.push(dialog); document.addEventListener('keydown', escape); }
+    return () => {
+      if (modeless) { document.removeEventListener('keydown', escape); const at = modelessReaders.indexOf(dialog); if (at >= 0) modelessReaders.splice(at, 1); }
+      transition.current?.cancel();dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true });
+    };
   }, [modeless]);
   return createPortal(<dialog ref={ref} style={{...style,...window.style}} className={`product-dialog ${className}${modeless&&!floating ? " map-reader" : ""}${window.enabled?' adjustable-reading-window':''}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); e.stopPropagation(); if(e.target===e.currentTarget)requestClose(); }} onKeyDown={e => { if (e.key === "Escape" && !e.defaultPrevented && (e.target as Element).closest("dialog")===e.currentTarget) { document.documentElement.removeAttribute('data-ui-press'); e.stopPropagation(); if(modeless){e.preventDefault();requestClose();} } }}>
     <header {...window.headerDrag}>{resizeControl}<h2 id={titleId}>{headerIcon}{title}</h2><div className="reading-window-actions">{headerActions}{window.controls}{window.enabled&&<button className="icon-btn" aria-label={`Reset ${windowId} window layout`} title="Reset window layout" onClick={()=>{window.reset();resetWindow?.();}}>↺</button>}<button className="icon-btn" aria-label={`Close ${title}`} onClick={requestClose}>✕</button></div></header>
