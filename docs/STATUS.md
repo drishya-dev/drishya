@@ -755,6 +755,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-10-19 | **The Nebius × NVIDIA hackathon is dropped from the active list** | Builder: product first, as fast as possible; the hackathon items (HACK-1…3, the `hack` tag, the 30 Oct deadline) are removed from TASKS. The Nemotron explain work stays as ordinary product items (EXPLAIN-1…5, P1/P2). [`HACKATHON.md`](HACKATHON.md) is kept only as a reference. | `TASKS.md` |
 | 2026-10-19 | **Restructured TASKS (tagged P0–P3 + detail); north star and minimalism rule; harness data before more visuals; keep the wrap-plus-arrows passage layout, hover-only toolbox connectors, peek and Workspace as two modes, and the 3D map as aesthetic; Git graph = Sacred Timeline** | Builder corrections to review 122; audit 123 shows reasoning is mostly unrecorded, so the *why* comes only from labelled, cited model output | `TASKS.md`, `review/122`–`124`, `AGENTS.md` |
 | 2026-10-14 | **Keep Legacy; build independent Modern and retire Workbench selection** | Builder wants a new coherent developer workspace, not another palette pass; use real dense sessions and meaningful evidence motion. Saved fresh links migrate without losing the selected session. | `review/72-modern-spatial-workspace.md` |
 | 2026-10-14 | **Current Git handoffs revalidate the inspected page on both preview and save** | Cached review content can drift before export; retain reading on failures, invalidate the packet and preserve exact previewed text. Shared subprocess deadline/filter overrides keep inspection bounded without an atomic claim. | `review/70-revalidated-git-handoff.md` |
@@ -827,7 +828,6 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2 | Trademark clearance for "Drishya", class 9/42 | Commercial use only | §App. A |
 | 5 | **Require 2FA for the org.** Currently off (verified). Enabling it removes any member without 2FA, so Harsh confirms his first — then an Owner turns it on in org Settings → Authentication security | Security of a repo that will publish an npm package | — |
 | 3 | When do we flip the repo public? Proposed: at the M1 hosted demo. Going public also unlocks free branch protection | Launch timing, enforced review | §18.5 |
-| 4 | Enter the Nebius × NVIDIA hackathon? Deadline **30 Oct 10:00 PT**. Refreshed 19 Oct; it needs a public repo, a live-validated Nemotron layer and a hosted demo (TASKS HACK-1…3) | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
 | 6 | **Freeze contracts `0.1.0-draft`?** Implemented in `packages/contracts` following engineering plan §3. Needs @harsh's review | Third-party adapters, the frontend | [`CODEBASE.md`](CODEBASE.md) |
 | 8 | **Agree the schema additions** in [review 125](review/125-event-schema-proposal.md) §9 (D1–D10: typed-item correlation, usage, images, cost, re-import) | DATA-1, DATA-2, CONTENT-1/2/3 | [`125`](review/125-event-schema-proposal.md) |
 | 7 | Accept `node:sqlite` and `node:http`+SSE over the proposed `better-sqlite3` and Fastify+`ws`? (Decisions log, 25 Sep) | Packaging | [`CODEBASE.md`](CODEBASE.md) |
