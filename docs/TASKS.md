@@ -85,7 +85,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 13 | EXPLAIN-2 | Turn summary and "while you were away" briefing | `explain` `hack` `turn` |
 | 14 | READ-1 | Edit/write cards: wide, no-wrap, `+N −M`, real line numbers | `read` |
 | 15 | READ-2 | Quiet provenance: one ⓘ per card, inline badge only when meaning changes | `read` `ui` |
-| 16 | LIVE-2 | Composer collapses when idle or unconnected and never covers content | `live` `ui` `motion` |
+| 16 | LIVE-2 | Composer collapses to a pill when idle (done; leftovers in LIVE-2b) | `live` `ui` `motion` |
 | 17 | HACK-2 | Hosted demo build with a recorded, labelled Nemotron layer | `hack` |
 | 18 | HACK-3 | Demo video < 3 min, README setup, submission text, Token Factory feedback | `hack` |
 
@@ -121,6 +121,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 44 | REVIEW-1 | Review work as a first-class Changes view; group repeated gaps | `review` |
 | 45 | REVIEW-2 | Search results with session/turn/tool/time context | `review` |
 | 46 | PERF-1 | Import/tail benchmark on 160–564 MB Codex journals | `perf` |
+| 46a | TEST-1 | Four browser specs fail or flake on main (found 19 Oct) | `rel` |
 
 ### P2 — later
 
@@ -148,6 +149,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 65 | DATA-8 | Reasoning-persistence settings: verify and document | `data` |
 | 66 | DATA-9 | Optional hook/OTel enrichment research | `data` |
 | 67 | LIVE-4 | Context-window and plan-limit gauges | `live` `data` |
+| 67a | LIVE-2b | Composer: expand by key; real end-padding when expanded | `live` `ui` |
 | 68 | FILES-3 | Navigation clarity: Files / Repository / Workspace purposes | `files` `ui` |
 | 69 | FILES-4 | Reader and Workspace review (type, tabs, toolbars, long/empty material) | `files` |
 | 70 | FILES-5 | Opt-in draft recovery | `files` |
@@ -229,13 +231,10 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
     - Mirror the state in `document.title` (`● Running · drishya`, `? Approval · drishya`) and with a small favicon dot.
   - **Accept:** correct on live Codex and Claude sessions during reads, long commands, approvals and idle; no layout shift; reduced motion uses no cross-fade.
 
-- [ ] **LIVE-2 · Composer collapses when idle or unconnected** · P0 · `live` `ui` `motion`
-  - **Problem:** the floating composer covers the newest card and **expanded** diffs; most sessions are driven from the native terminal.
-  - **Do:**
-    - When the session isn't connected for sending, or the composer is empty and unfocused, collapse it to a slim pill ("Continue in Drishya…" plus state) that expands on click, focus or `/`.
-    - Its measured height is real end-padding, never an overlay; expanded Inspector content never sits under it.
-    - Expand and collapse are a single 200 ms transform from the pill's real bounds (reuse the existing prompt-toggle motion).
-  - **Accept:** expanding the last card shows all its lines above the composer; drafts and attachments survive collapsing; desktop, phone and keyboard verified.
+- [x] **LIVE-2 · Composer collapses when idle** · P0 · `live` `ui` `motion` — **shipped 19 Oct (idle pill).** The composer now defaults to its slim "Ask your agent…" pill (180×38 px) and gives the reading height back. It opens by itself for a draft, attachment, run, approval, question, failure or error, and the person's own open/minimize choice (`composer/choice`: auto / open / closed, saved with the session) always wins. Verified on Claude sessions at 1440 px and 390 px: collapsed by default, click expands and focuses the text box, open and closed both survive a reload, no horizontal overflow. Remaining pieces are split out as LIVE-2b.
+  - **Problem it solved:** the floating composer covered the newest card; most sessions are driven from the native terminal.
+
+- [ ] **LIVE-2b · Composer leftovers** · P2 · `live` `ui` — expand with a key (`/` is taken by Search, so pick another or use focus), and give the *expanded* composer real end-padding so an expanded Inspector card is never scrolled under it. Not done in LIVE-2.
 
 - [ ] **LIVE-3 · Opt-in notifications** · P1 · `live`
   - **Do:** in Settings, a browser Notification permission request on explicit opt-in only. Notify for "turn finished" and "approval/question waiting", only while the tab is hidden. The body is the session title and state, never captured content.
@@ -566,6 +565,13 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 - [ ] **REL-3 · Human acceptance** · P2 — keyboard, browser zoom, assistive technology; human freeze/truth/ten-minute reading; preference and adoption.
   - **19 October progress (107):** Local keyboard/focus/forced-color/reduced-motion and synthetic ten-minute reading checks added. Human comprehension, screen reader, touch and zoom remain open.
 - [ ] **REL-4 · Publishing preparation (on request only)** · P2 — final full local checks, selected manual GitHub CI, packaging/install/setup guidance and release checks. No automatic hosted CI for ordinary commits or PRs.
+
+- [ ] **TEST-1 · Browser specs failing or flaky on `main`** · P1 · `rel` — found 19 Oct while verifying LIVE-2; all four reproduce on the code from before PR #124, so they are not from recent work. `DRISHYA_BROWSER_CHANNEL=msedge npx playwright test <file>:<line>`:
+  - `connected-workspace.spec.ts:79` **modern** variant ("current source reading finds, navigates and wraps…") — times out waiting on a Read-current-file button in the dialog; classic variant passes.
+  - `connected-workspace.spec.ts:129` ("source reading links qualified current imports…") — times out waiting for `Read current file src/actual.ts` inside the `src/other.ts` dialog.
+  - `product-workspace.spec.ts:158` ("first-visit evidence review…") — Playwright strict-mode violation: the Review dialog's `src/checkout/guard.ts` button matches two elements.
+  - `product-workspace.spec.ts:65` ("map file labels are keyboard reading targets…") — flaky, about 50%: the "Work on …" dialog sometimes isn't visible after Enter on a map label.
+  - **Do:** decide per spec whether the product or the test is wrong, fix, and re-run each 10× for flakiness. **Accept:** all four pass 10 of 10 on a clean build.
 
 ### HACK — Nebius × NVIDIA Global AI Hackathon
 
