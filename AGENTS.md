@@ -6,6 +6,26 @@ Two builders, both working with coding agents (Claude Code and Codex). **This fi
 
 ---
 
+## North star — read first, every session
+
+**Why Drishya exists.** With agents, the developer prompts and looks away, and only the agent "knows" the change. Drishya makes the developer understand the work **while it happens**: what the agent read, ran, saw fail and edited, shown as the real material, at the moment it happens, beside their repository. The result is that the developer understands the codebase too, instead of blindly vibe-coding.
+
+**What it is.** The best *visualization* of agent work, plus the *developer tools needed to act on that understanding* (file peek, Workspace, Git review, search, review). It is not a generic IDE or Git client: a feature earns its place only if it uses captured agent evidence in a way an IDE cannot.
+
+**How it must feel.** Minimal and calm. Visualization first; no labelled boxes; every interaction has purposeful motion; no resident clutter. A surface whose buttons take more space than its content is a bug.
+
+**What the data allows.** Show everything the harness records, faithfully. Harnesses mostly no longer record reasoning ([123](docs/review/123-harness-data-audit.md)), so the *why* may only come from opt-in, clearly labelled, evidence-cited model output. That output is never presented as the agent's thoughts.
+
+**Before changing UI, verify the current behaviour in the running app.** Several "odd" things are deliberate builder decisions:
+- toolbox connectors appear on hover;
+- passages wrap with arrows;
+- peek and Workspace are two modes;
+- the 3D map is aesthetic.
+
+The work list is [`docs/TASKS.md`](docs/TASKS.md): a tagged priority list, then details. Work from it; don't invent a parallel queue.
+
+---
+
 ## Read before doing work
 
 | File | What it is | When |

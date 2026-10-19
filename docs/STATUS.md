@@ -31,6 +31,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude (Opus 5.5) — Developer review, harness data audit, restructured TASKS
+
+- **When:** 19 October 2026, on `main` (docs only).
+- **Delivered:**
+  - an independent developer review of the running product ([122](review/122-developer-product-review.md), with builder corrections at the top);
+  - an aggregate-only audit of what Claude Code and Codex journals record versus what the adapters use ([123](review/123-harness-data-audit.md)): reasoning is mostly *not* recorded (Claude 223/225 thinking blocks empty; Codex reasoning encrypted, about 3% summaries), while much typed data is ignored;
+  - the Sacred Timeline Git graph spec ([124](review/124-sacred-timeline-git-graph.md));
+  - [TASKS](TASKS.md) restructured into a tagged priority list (P0–P3) plus per-category detail with acceptance lines, the old completed items archived verbatim;
+  - the hackathon fit refreshed ([HACKATHON](HACKATHON.md));
+  - the north star and minimalism rule added to AGENTS;
+  - Emil Kowalski's web skills installed for Claude Code (`~/.claude/skills`) and `animation-performance` added for Codex.
+- **Validation:** product exercised at 1440×900 (headless Edge) and in the app pane on a 1,100-operation Codex session, a Claude Code session, this live session and the demo. No code changed.
+- **Next:** P0 in TASKS: BUG-1…4, then HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
+
 ### Yash with Codex - Compact right-docked Explorer preview
 
 - **When:**18 October2026, `codex/compact-file-preview`.
@@ -722,6 +736,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-10-19 | **Restructured TASKS (tagged P0–P3 + detail); north star and minimalism rule; harness data before more visuals; keep the wrap-plus-arrows passage layout, hover-only toolbox connectors, peek and Workspace as two modes, and the 3D map as aesthetic; Git graph = Sacred Timeline** | Builder corrections to review 122; audit 123 shows reasoning is mostly unrecorded, so the *why* comes only from labelled, cited model output | `TASKS.md`, `review/122`–`124`, `AGENTS.md` |
 | 2026-10-14 | **Keep Legacy; build independent Modern and retire Workbench selection** | Builder wants a new coherent developer workspace, not another palette pass; use real dense sessions and meaningful evidence motion. Saved fresh links migrate without losing the selected session. | `review/72-modern-spatial-workspace.md` |
 | 2026-10-14 | **Current Git handoffs revalidate the inspected page on both preview and save** | Cached review content can drift before export; retain reading on failures, invalidate the packet and preserve exact previewed text. Shared subprocess deadline/filter overrides keep inspection bounded without an atomic claim. | `review/70-revalidated-git-handoff.md` |
 | 2026-10-13 | Recheck raw Git patches, scoped index identities and worktree change markers; four-reader batches per inspection | Status/HEAD miss same-status edits. Bound extra subprocess/memory work, preserve ordering, return 409 rather than mixed evidence; still an optimistic current sample, not a filesystem lock | `review/60-git-consistent-inspection.md` |
@@ -793,7 +808,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2 | Trademark clearance for "Drishya", class 9/42 | Commercial use only | §App. A |
 | 5 | **Require 2FA for the org.** Currently off (verified). Enabling it removes any member without 2FA, so Harsh confirms his first — then an Owner turns it on in org Settings → Authentication security | Security of a repo that will publish an npm package | — |
 | 3 | When do we flip the repo public? Proposed: at the M1 hosted demo. Going public also unlocks free branch protection | Launch timing, enforced review | §18.5 |
-| 4 | Enter the Nebius × NVIDIA hackathon (Best Apps and Agents)? Fit assessed; the Nemotron layer is now built and awaits a key to validate | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
+| 4 | Enter the Nebius × NVIDIA hackathon? Deadline **30 Oct 10:00 PT**. Refreshed 19 Oct; it needs a public repo, a live-validated Nemotron layer and a hosted demo (TASKS HACK-1…3) | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
 | 6 | **Freeze contracts `0.1.0-draft`?** Implemented in `packages/contracts` following engineering plan §3. Needs @harsh's review | Third-party adapters, the frontend | [`CODEBASE.md`](CODEBASE.md) |
 | 7 | Accept `node:sqlite` and `node:http`+SSE over the proposed `better-sqlite3` and Fastify+`ws`? (Decisions log, 25 Sep) | Packaging | [`CODEBASE.md`](CODEBASE.md) |
 

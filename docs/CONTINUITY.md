@@ -1,5 +1,12 @@
 # Continue here — current handoff
 
+**19 October direction reset (read first):**
+- **North star:** [AGENTS](../AGENTS.md#north-star--read-first-every-session).
+- **Work list:** [TASKS](TASKS.md), restructured as a tagged P0–P3 priority list with per-ID detail and acceptance. Start at P0: BUG-1…4 → HACK-1 / EXPLAIN-4 → DATA-10 → DATA-1/2 → LIVE-1 → TURN-1 → EXPLAIN-1/2 → READ-1/2 → LIVE-2 → HACK-2/3.
+- **Evidence:** review [122](review/122-developer-product-review.md) (builder corrections at the top override its body), harness audit [123](review/123-harness-data-audit.md) (reasoning is mostly unrecorded; much typed data is unused), Sacred Timeline spec [124](review/124-sacred-timeline-git-graph.md).
+- **Keep:** passage wrap with arrows; hover-only toolbox connectors; peek and Workspace as two modes; the 3D map as aesthetic; the minimal UI.
+- **Hackathon:** deadline 30 Oct 10:00 PT; see [HACKATHON](HACKATHON.md).
+
 **18 October compact preview:** Builder screenshot now guides28vw default width (360–720px), taller right-docked geometry with existing safe clearances. Existing saved custom geometry stays; Reset applies new default. Desktop fine-pointer passage content is90% only during preview; screen-space virtual slots and scroll coordinates remain unscaled, phone normal. Material translation/settlement converts zoomed local pixels correctly. Move icon removed from File reader; title/tab-bar drag, title focus/arrow/Home and four-edge resize/reset preserved. Both TS/build,543units/99files, five focused browser journeys and actual three-session Blueprint/current-file/scroll-stability/phone check pass; frames inspected. Review121. TASKS remains the only queue; graph art deferred.
 
 **18 October shared result views:** `capturedContent` and `CapturedResultViews` now give native/MCP/structured/Inspector material the same JSON/CSV/resource choices within256KiB. Shell JSON no longer lacks Inspect data; folded terminal/error bodies share one selector on the whole supplied preview. Open JSON is a snapshot, as existing CSV/resources are; stable owners remain outside changing output-body branches. Both TS/build,542units/98files, ten focused browser journeys and three actual long-history/editor regressions pass; final owner extraction rechecked with UI TS/build and ten focused journeys. Review120. Broader artifact/media transport and UI/native acceptance remain in TASKS; graph stays deferred.
