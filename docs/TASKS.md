@@ -198,7 +198,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
   - **Do:** fix the link parser in `lib/markdown.tsx` for emphasis-wrapped links and `/C:/…` or `C:\…` targets. Local paths open in peek (FILES-2) rather than navigating the browser.
   - **Accept:** unit cases for bold/italic-wrapped links, Windows drive paths, spaces and parentheses in paths; the real message renders as a link.
 
-- [ ] **BUG-4 · Header islands overlap content at ≤ 900 px** · P0 · `bug` `ui`
+- [x] **BUG-4 · Header islands overlap content at ≤ 900 px** · P0 · `bug` `ui` — **fixed for the top controls, 19 Oct.** From 601 to 1100 px the right controls share one row and the history starts below the measured controls (`reading-windows.css`, using the existing `--workspace-tools-bottom`), so cards and prose no longer scroll under Files|Repository or Git/Workspace. Measured 0 overlaps at 640/768/820/853/900/1024/1100 px (853 and 1024 stand in for 150% and 125% zoom of a 1280 window); unchanged at 1280+ and ≤ 600 px. **Residual (moved to UI-1):** the small bottom-corner pills (collapsed Tools, Follow live) still float over the edge of prose at narrow widths, and the phone layout was not re-audited. Cost: about 134 px of reading height at these widths.
   - **Problem:** at about 800 px, the Workspace button sits over prose and Files|Repository sits over a card.
   - **Do:** below a measured width, reserve header space (content top padding equals the measured header height) or collapse the islands into a single compact bar (feeds UI-1).
   - **Accept:** no overlap at 768/800/900/1024 px, nor at 125% and 150% browser zoom.
@@ -447,7 +447,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
     - One slim top bar: identity (title · repo@branch · harness/model · live dot · LIVE-1 status), then navigation (Files · Git · Map · Workspace · Search · ⋯).
     - Toolbox and Files stay docked panels.
     - Retain the builder's header-capsule comparison decision by showing it to them before merging.
-  - **Accept:** fewer outlines on screen; identity visible at all widths; nothing overlaps (BUG-4).
+  - **Accept:** fewer outlines on screen; identity visible at all widths; nothing overlaps, including the bottom-corner Tools/Follow pills at narrow widths (residual from BUG-4).
 
 - [ ] **UI-2 · Typography floor** · P1 · `ui` — 280 CSS declarations are ≤ 10 px (14 at 7 px, 53 at 8 px, 84 at 9 px). Set a floor of 11 px for meta and 12–13 px for controls and labels; raise secondary-text contrast to ≥ 4.5:1 on every palette. Check with the existing contrast guard.
 
