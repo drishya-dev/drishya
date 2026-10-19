@@ -183,7 +183,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 ### BUG — defects
 
-- [ ] **BUG-1 · Wheel scroll trapped over history cards** · P0 · `bug` `read`
+- [x] **BUG-1 · Wheel scroll trapped over history cards** · P0 · `bug` `read` — **fixed 19 Oct.** Cause: `overscroll-behavior: contain` on `.op-body`/`.result-area` (`ink.css`) blocked native chaining to `.history` at a card's edge. Vertical is now `auto` (horizontal stays contained). Verified on Codex and Claude sessions: at a card's top edge the wheel scrolls the history 300 px per step; mid-card scrolling stays local with the history unchanged.
   - **Problem:** with the pointer over a centred card, the wheel does not scroll the history, even when the card's own content cannot scroll further. Measured on the AgentGuard Claude session: `.history.scrollTop` stayed at 71627 for two wheel events over a Read card. Cards cover most of the centre, so this happens constantly.
   - **Do:** keep local result scrolling (constraint 7). At the inner scroll boundary, chain the remaining delta to `.history`; if the card has no overflow, never capture the wheel. Check the hover-reading and zoom handlers in `lib/hover-reading.ts` and `modern/local-scroll.ts` for `preventDefault` on wheel.
   - **Accept:** wheel over any card at its top or bottom boundary scrolls history; mid-content still scrolls locally; Follow detaches only on main-history scroll. Check Codex and Claude sessions with a trackpad and a mouse wheel.
