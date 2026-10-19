@@ -68,7 +68,7 @@ try {
   const openAt = performance.now();
   await page.locator('.home .row-main.link, .mh-session-open').first().click();
   await page.locator('.reading-status').waitFor({ state: 'attached', timeout: 30_000 });
-  if (map) await page.locator('.map canvas').waitFor({ timeout: 30_000 });
+  if (map) await page.locator('.map canvas:visible').first().waitFor({ timeout: 30_000 });
   const openMs = performance.now() - openAt;
   const timings: number[] = [];
   for (let i = 0; i < repetitions; i++) {

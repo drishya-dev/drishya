@@ -422,7 +422,7 @@ export class Ingestor extends EventEmitter {
    * meanwhile collapse into a single pending wake-up. Each turn reads a bounded number of bytes;
    * a backlog continues on the next pass instead of in one long read.
    */
-  startLive(recordingId: string, intervalMs = 750) {
+  startLive(recordingId: string, intervalMs = 500) {
     if (this.live.has(recordingId)) return;
     this.store.updateRecordingMeta(recordingId, { live: true });
     this.projectionCache.delete(recordingId);

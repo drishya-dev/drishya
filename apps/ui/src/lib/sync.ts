@@ -29,7 +29,7 @@ export function latestOnly(): (key: string) => () => boolean {
 
 /** Refresh during sustained capture, with one request in flight and one trailing refresh.
  * A trailing debounce can starve forever when notices arrive faster than its delay. */
-export function liveRefresh(refresh: () => Promise<void>, failed: (error: unknown) => void, delay = 150) {
+export function liveRefresh(refresh: () => Promise<void>, failed: (error: unknown) => void, delay = 25) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let running = false, dirty = false, closed = false;
   const run = async () => {
