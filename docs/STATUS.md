@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| READ-1, READ-2 | @yash + Claude Sonnet 5.5 | `yash/read-cards` | 2026-10-19 | `components/Inspector.tsx`, `components/Viewer.tsx`, `components/History.tsx`, result/diff card components, `ink.css`, `modern/reading.css` |
 
 ---
 
