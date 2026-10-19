@@ -193,7 +193,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
   - **Do:** make Review ⇄ Graph a tab switch inside the same Git surface, or keep the right navigation above the drawer. Escape closes the top-most transient surface (menu → drawer → reader) and returns focus to its opener.
   - **Accept:** from either Git surface, one click reaches the other; Escape order verified for menu, Git review, Git graph, peek and Settings; focus returns to the trigger.
 
-- [ ] **BUG-3 · Markdown link with bold label and Windows path renders raw** · P0 · `bug` `read`
+- [x] **BUG-3 · Markdown link with bold label and Windows path renders raw** · P0 · `bug` `read` — **fixed 19 Oct.** The bold/italic rule emitted its contents as text, so an inner link was never parsed; bold and italic now render through the same inline parser, and a link target may hold one level of parentheses. Links stay display-only (`md-link`); opening local paths in peek remains FILES-2. Three unit tests (`apps/ui/test/markdown-links.test.ts`) and the real Codex message verified.
   - **Problem:** `**[92-feature….md](/C:/Users/…/92-feature….md)**` in agent prose renders as literal brackets and the URL (final message of the Codex "well now continue…" session).
   - **Do:** fix the link parser in `lib/markdown.tsx` for emphasis-wrapped links and `/C:/…` or `C:\…` targets. Local paths open in peek (FILES-2) rather than navigating the browser.
   - **Accept:** unit cases for bold/italic-wrapped links, Windows drive paths, spaces and parentheses in paths; the real message renders as a link.

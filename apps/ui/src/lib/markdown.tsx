@@ -95,7 +95,8 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
 
 function inline(s: string, onPath?: PathAction): ReactNode[] {
   const out: ReactNode[] = [];
-  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(([^)]+)\))|(\*[^*\n]+\*|(?<![\w_])_[^_\n]+_(?![\w_]))/g;
+  // A link target may hold one level of parentheses, e.g. /docs/report (copy).md.
+  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(((?:[^()]|\([^()]*\))+)\))|(\*[^*\n]+\*|(?<![\w_])_[^_\n]+_(?![\w_]))/g;
   let last = 0;
   let k = 0;
   for (const m of s.matchAll(re)) {
@@ -111,8 +112,8 @@ function inline(s: string, onPath?: PathAction): ReactNode[] {
           <code key={k++}>{code}</code>
         ),
       );
-    } else if (m[2]) out.push(<strong key={k++}>{m[2].slice(2, -2)}</strong>);
-    else if (m[6]) out.push(<em key={k++}>{m[6].slice(1,-1)}</em>);
+    } else if (m[2]) out.push(<strong key={k++}>{inline(m[2].slice(2, -2), onPath)}</strong>);
+    else if (m[6]) out.push(<em key={k++}>{inline(m[6].slice(1,-1), onPath)}</em>);
     else if (m[3]) out.push(<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>);
     last = i + m[0].length;
   }
