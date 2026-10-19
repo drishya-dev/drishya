@@ -10,8 +10,6 @@
 .native-return-actions>small {display:block;color:var(--t3);font:11px/1.6 var(--sans);margin:6px 0;}
 .developer-workspace>.native-return-actions {border-bottom:1px solid var(--line);padding:8px 16px;flex:none;}
 .developer-workspace>.native-return-actions>div {display:flex;gap:6px;flex-wrap:wrap;}
-.desk-recovery-tools {padding:0 12px;align-self:flex-end;flex:none;}
-.desk-recovery-tools>.btn {font-size:11px;min-height:28px;}
 .saved-moments-dialog,.draft-recovery-dialog {width:min(700px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;}
 .saved-moments-dialog>p,.draft-recovery-dialog>p {color:var(--t2);font:13px/1.7 var(--sans);overflow-wrap:anywhere;}
 .saved-moment-list>article {display:grid;gap:8px;border-top:1px solid var(--line);padding-block:16px;}

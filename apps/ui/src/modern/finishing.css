@@ -9,10 +9,6 @@
 :root[data-ui-version=modern] :is(.saved-moments-dialog,.draft-recovery-dialog,.insights-content,.folder-explorer,.map-focus-panel) {overscroll-behavior:contain;}
 :root[data-ui-version=modern] :is(input,textarea)::placeholder {color:var(--t3);opacity:1;}
 :root[data-ui-version=modern] .ux-search:focus-within input:focus-visible {outline:none;}
-:root[data-ui-version=modern] .modern-session-header .studio-session {display:flex;flex-direction:row;align-items:center;gap:10px;border-radius:10px;background:color-mix(in srgb,var(--s1) 68%,transparent);backdrop-filter:blur(12px);}
-:root[data-ui-version=modern] .modern-session-header .studio-session-label {display:block;flex:0 1 auto;min-width:0;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t3);font:11px/1.5 var(--sans);}
-:root[data-ui-version=modern] .modern-session-header .studio-session h1 {flex:1;min-width:0;}
-:root[data-ui-version=modern] .session-harness {color:var(--t2);}
 /* Only edge veils blur. Large readers and tool lists stay flat and cheap to repaint. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace :is(.folder-explorer,.modern-toolbox) {backdrop-filter:none;background:var(--s1);}
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {max-height:calc(100dvh - var(--workspace-tools-bottom,132px) - var(--composer-gap,150px) - 16px);}
@@ -25,9 +21,6 @@
 }
 @media(max-width:600px) {
   :root[data-ui-version=modern][data-experience=classic] .workspace-secondary {flex-wrap:wrap;justify-content:flex-end;min-width:0;}
-  :root[data-ui-version=modern] .modern-session-header .studio-session {gap:6px;padding:8px;}
-  :root[data-ui-version=modern] .modern-session-header .studio-session-label {max-width:36%;font-size:10px;}
-  :root[data-ui-version=modern] .session-harness {display:none;}
   :root[data-ui-version=modern] .developer-workspace>.native-return-actions {padding:6px 10px;}
   :root[data-ui-version=modern] .inspector {max-width:calc(100vw - 16px);}
 }
