@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LIVE-1 | @yash + Claude Sonnet 5.5 | `yash/live-1-now` | 2026-10-19 | `lib/now-state.ts` (new), `components/SessionWorkspace.tsx` (composer pill), tab title/favicon hook, `modern/hud.css` |
 
 ---
 
@@ -53,6 +52,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **LIVE-2 (branch `yash/live-2-composer`):** the idle composer defaults to its pill; auto/open/closed choice persisted (new `composer/choice` key in `working-locations.ts`, both allowlists). Four browser specs were found failing or flaky on main before this work (TEST-1).
 - **READ-1 + READ-2 (branch `yash/read-cards`, Sonnet 5.5):** wide no-wrap code diff cards with `+N −M`, and quiet provenance with one ⓘ popover per card. Pure helpers in `lib/card-evidence.ts` (4 tests). Browser: 72 of 74 card/history specs pass; the failures are the known `product-workspace:158` and a rare prompt-rail flake (TEST-1).
 - **DATA-10 (Sonnet 5.5, docs only):** [review 125](review/125-event-schema-proposal.md), the batched additive schema proposal (five slices, evidence, privacy, order). Measured: typed Codex items cannot be matched to calls by id, 85% sit inside the `exec` window. **Needs both builders to tick D1–D10 before DATA-1/DATA-2 start.** Also corrected 123: no real TaskCreate/ExitPlanMode uses exist locally.
+- **LIVE-1 (branch `yash/live-1-now`, Sonnet 5.5):** the Now line in the composer pill and header, the tab title and favicon state, backed by `GET /v1/recordings/:id/now` (facts from the tail; no schema change). 21 new tests; verified on this live session. Two more browser specs found failing since before PR #124 (`live-sync:8`, `prompt-timeline:22`), added to TEST-1.
 - **Next:** HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
 
 ### Yash with Codex - Compact right-docked Explorer preview
