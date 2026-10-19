@@ -73,7 +73,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 2 | BUG-2 | Git review drawer covers the Git graph button; Escape inconsistent | `bug` `git` `ui` |
 | 3 | BUG-3 | Markdown link with bold label and Windows path renders raw | `bug` `read` |
 | 4 | BUG-4 | Header islands overlap content at ≤ 900 px width | `bug` `ui` |
-| 4a | BUG-7 | Six browser journeys fail on main `54f93af` | `bug` |
+| 4a | BUG-7 | Seven browser journeys fail on main | `bug` |
 | 5 | HACK-1 | Decide entry; make repo public; confirm track | `hack` |
 | 6 | EXPLAIN-4 | Validate Nemotron on Token Factory with a real key and real model ids | `explain` `hack` |
 | 7 | DATA-10 | Propose one batched event-schema addition to both builders | `data` |
@@ -208,8 +208,8 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
   - **Do:** below a measured width, reserve header space (content top padding equals the measured header height) or collapse the islands into a single compact bar (feeds UI-1).
   - **Accept:** no overlap at 768/800/900/1024 px, nor at 125% and 150% browser zoom.
 
-- [ ] **BUG-7 · Six browser journeys fail on main** · P0 · `bug`
-  - **Problem:** on a clean `54f93af` checkout these fail (19 October, Harsh with Claude): `connected-workspace.spec.ts` current source reading (:79) and import neighborhood (:129); `fresh-workspace.spec.ts` composer target (:129, `.modern-composer-location`), chrome fit (:287, `.modern-session-header h1`), Git review (:593, resize handle); `session-segments.spec.ts` (:31). Most look for chrome removed by PR109–123 (central session capsule, composer location, reader resize controls).
+- [ ] **BUG-7 · Seven browser journeys fail on main** · P0 · `bug`
+  - **Problem:** on a clean `54f93af` checkout these fail (19 October, Harsh with Claude): `connected-workspace.spec.ts` current source reading (:79) and import neighborhood (:129); `fresh-workspace.spec.ts` composer target (:129, `.modern-composer-location`), chrome fit (:287, `.modern-session-header h1`), Git review (:593, resize handle); `session-segments.spec.ts` (:31). Most look for chrome removed by PR109–123 (central session capsule, composer location, reader resize controls). On `0c52619`, `fresh-workspace.spec.ts` edge actions (:1190) also fails: after PR124 the rightmost navigation action no longer reaches within 30 px of the right edge.
   - **Do:** for each, decide whether the product regressed or the test still expects removed chrome; fix the product or update the journey to the current owner. Do not delete coverage.
   - **Accept:** the full browser suite passes on main except opt-in skips.
 
