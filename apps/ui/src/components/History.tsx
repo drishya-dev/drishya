@@ -83,7 +83,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const seenThrough = useRef(scene.total);
   const followFrame = useRef<number | undefined>(undefined);
   const followingStarted = useRef(false);
-  const requestedWindow = useRef('');
+  const requestedWindow = useRef<{ key: string; projection: Projection } | undefined>(undefined);
   const motion = useApp(s => s.motion);
   const materialPositions = useRef(new Map<string, DOMRect>());
   const isProgrammaticScroll = useCallback(() => programmatic.current && Math.abs((ref.current?.scrollTop ?? 0) - lastScrollTop.current) < .5, []);
@@ -182,13 +182,15 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const visible = passageWindow(ids, measurements.current, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
     const missing = visible.runs.flatMap((run) => Array.from({ length: run.end - run.start }, (_, i) => run.start + i))
       .find((i) => scene.passages[i]?.unloaded);
-    if (missing === undefined) { requestedWindow.current = ''; return; }
+    if (missing === undefined) { requestedWindow.current = undefined; return; }
     const start = Math.max(0, missing - 8);
     const key = `${scene.step}:${start}`;
-    if (requestedWindow.current === key) return;
-    requestedWindow.current = key;
+    // A background refresh can supersede this request without moving the reader.
+    // Deduplicate within one projection, never suppress its replacement's missing page.
+    if (requestedWindow.current?.key === key && requestedWindow.current.projection === projection) return;
+    requestedWindow.current = { key, projection };
     void onWindow({ start, count: 32, pinnedPassageIds: [...pinned].slice(0, 3) }).catch((error) => {
-      requestedWindow.current = '';
+      requestedWindow.current = undefined;
       set({ error: error.message });
     });
   }, [scene.passages, scene.step, viewport, measurementVersion, onWindow]);

@@ -152,7 +152,7 @@ These are **targets to measure**, not current achievements. Use a named referenc
 
 Do not interpret “10 turns in RAM” literally: turns vary enormously in size. Budget bytes, mounted readers, graph nodes and queued work. Keep compact metadata and a disk-backed history index, materialize only visible/nearby content. In the map, begin with at most ~300 visible nodes and explicit expand/cluster controls; measure before raising it. Huge-repo fallbacks show the observed working set while indexing proceeds.
 
-Passive capture overhead retest after the worker change: five rotated reference-machine runs measured observer −0.1%, observer+browser +2.7% median slowdown, with no lost/duplicate events. Lower-core hardware remains unverified. The <5% target is measured workload slowdown, never “zero overhead.” Keep unsupported scale claims out of release messaging and new UI work on the paged source/API boundary. Complete physical/platform validation before declaring the release gate closed.
+Passive capture overhead retest after the worker change: five rotated reference-machine runs measured observer −0.1%, observer+browser +2.7% median slowdown, with no lost/duplicate events. After the default poll moved from 750 ms to 500 ms (19 October, [107](review/107-investigation-finishing.md)) five rotated runs measured observer −0.4%, observer+browser +2.4%, 0 lost/duplicate. Lower-core hardware remains unverified. The <5% target is measured workload slowdown, never “zero overhead.” Keep unsupported scale claims out of release messaging and new UI work on the paged source/API boundary. Complete physical/platform validation before declaring the release gate closed.
 
 ## 8. Installation and user-side operation
 

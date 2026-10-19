@@ -36,6 +36,15 @@ describe('latestOnly', () => {
 });
 
 describe('liveRefresh', () => {
+  it('coalesces a burst into one refresh after the shipped delay', async () => {
+    vi.useFakeTimers();
+    const refresh=vi.fn(async()=>{}),queue=liveRefresh(refresh,()=>{});
+    try {
+      queue.schedule();queue.schedule();queue.schedule();
+      await vi.advanceTimersByTimeAsync(149);expect(refresh).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);expect(refresh).toHaveBeenCalledTimes(1);
+    } finally {queue.close();vi.useRealTimers();}
+  });
   it('refreshes during a continuous stream instead of waiting for silence', async () => {
     vi.useFakeTimers();
     const refresh=vi.fn(async()=>{}), queue=liveRefresh(refresh,()=>{});

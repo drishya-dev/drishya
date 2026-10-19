@@ -22,7 +22,7 @@ Two builders, both working with coding agents (Claude Code and Codex). **This fi
 - peek and Workspace are two modes;
 - the 3D map is aesthetic.
 
-The work list is [`docs/TASKS.md`](docs/TASKS.md): a tagged priority list, then details. Work from it; don't invent a parallel queue.
+The work list is [`docs/TASKS.md`](docs/TASKS.md): a tagged priority list, then details. Work from it; don't invent a parallel queue. **Claim an item first** (a docs-only commit on `main`, see *Claiming and state* below) and only then do the work; an agent's first action in a session is `node scripts/claims.ts`, then its claim.
 
 ---
 
@@ -105,7 +105,9 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 - Label issues and PRs by area: `area: capture`, `area: canvas`, `area: map`, `area: privacy`. Anything touching the event schema gets `schema`; anything awaiting a recorded decision gets `decision`.
 
 **Claiming and state**
-- **Claim before starting** — one row in the *Claimed* table in [`docs/STATUS.md`](docs/STATUS.md), keyed by the [`docs/TASKS.md`](docs/TASKS.md) ID. Run `node scripts/claims.ts` to see open items and who holds them; push your claim to `main` before writing code; delete the row in the PR that finishes it. Its job is that two people, or two agents, never do the same thing or edit the same files.
+- **Claim first, then work. No exceptions.** The very first action on any item is a docs-only commit on `main` that adds your row to the *Claimed* table in [`docs/STATUS.md`](docs/STATUS.md), keyed by the [`docs/TASKS.md`](docs/TASKS.md) ID, and pushes it. Run `node scripts/claims.ts` before choosing: never start an item it shows as `CLAIMED`, and never touch files another row lists. If the work has no TASKS ID yet, add the item to TASKS first, then claim it. Agents (Claude, Codex or any other): this applies to you at the start of every session; state the ID you claimed in your first message to the builder.
+- **No silent batches.** Work nobody was told about is not ready to review. Open a **draft PR after your first commit** so the other builder can see it, and keep it to **one TASKS ID, about 5 commits and 15 files at most**; if the claim needs more, say so in the claim's *Files* column and agree it before you go on. A pull request for unclaimed work, or a long series of commits pushed without any claim, is sent back to be claimed and split, whatever its quality.
+- **Delete your row in the PR that finishes the work,** tick the item in [`docs/TASKS.md`](docs/TASKS.md) and run `node scripts/sync-tasks.ts`. A claim with no commit for 3 days is stale; anyone may take it after asking.
 - **Update `docs/STATUS.md` when you finish**, not when you start. Overwrite your "Last session" block.
 - **Settled decisions go in the decisions log, with the reason.** This is what stops four agents re-litigating the same argument next week.
 

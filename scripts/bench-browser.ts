@@ -64,11 +64,11 @@ try {
     page.waitForResponse((response) => response.url().endsWith('/v1/session') && response.status() === 200),
     page.goto(server.launchUrl),
   ]);
-  await page.locator('.home .row-main.link').first().waitFor({ timeout: 30_000 });
+  await page.locator('.home .row-main.link, .mh-session-open').first().waitFor({ timeout: 30_000 });
   const openAt = performance.now();
-  await page.locator('.home .row-main.link').first().click();
+  await page.locator('.home .row-main.link, .mh-session-open').first().click();
   await page.locator('.reading-status').waitFor({ state: 'attached', timeout: 30_000 });
-  if (map) await page.locator('.map canvas').waitFor({ timeout: 30_000 });
+  if (map) await page.locator('.map canvas:visible').first().waitFor({ timeout: 30_000 });
   const openMs = performance.now() - openAt;
   const timings: number[] = [];
   for (let i = 0; i < repetitions; i++) {
@@ -93,9 +93,10 @@ try {
   if (fileCount >= 5000) {
     assert.ok(await page.locator('.spine-file').count() < 100, 'file spine must remain bounded');
     await page.locator('.spine-file').first().click();
-    await page.locator('.file-panel .file-op').first().waitFor();
-    assert.ok(await page.locator('.file-panel .file-op').count() <= 100, 'file actions must remain paged');
-    await page.locator('.file-panel').getByRole('button', { name: 'Close', exact: true }).click();
+    const reader=page.locator('dialog.file-workspace');
+    await reader.locator('.file-op').first().waitFor();
+    assert.ok(await reader.locator('.file-op').count() <= 100, 'file actions must remain paged');
+    await reader.locator(':scope > header button[aria-label^="Close "]').click();
   }
   await page.locator('.history').hover();
   await page.mouse.wheel(0, -300);

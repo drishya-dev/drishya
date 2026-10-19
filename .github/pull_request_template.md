@@ -10,6 +10,10 @@
 
 <!-- What the reviewer should run, open or look at. For UI work: which frame, interaction or state. -->
 
+## Claim
+
+- [ ] **Claimed first.** TASKS ID(s): `____`. The claim row was pushed to `main` before the first commit, and this PR is one ID (about 5 commits / 15 files at most; otherwise agreed in the claim). See [`AGENTS.md`](../AGENTS.md#how-we-work--two-builders-one-repo).
+
 ## Checklist
 
 The non-negotiables from [`AGENTS.md`](../AGENTS.md#non-negotiable-constraints). Tick what applies; say why for anything that does not.

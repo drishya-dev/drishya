@@ -2,6 +2,8 @@
 
 **Current product work:**[TASKS.md](TASKS.md) is the single maintained checkbox list for UI, themes, Workspace editing, features, native integration and release acceptance. It supersedes active next-task wording in older numbered reviews. STATUS records sessions; CONTINUITY hands them off; architecture/security/vision authority remains unchanged.
 
+**19 October finishing candidate:** [107](review/107-investigation-finishing.md) records joined investigation, exact observation references, saved evidence/selected packets, explicit encrypted draft snapshots and the bounded local interface pass. Signed-in native, physical/platform and human acceptance remain in TASKS; this adds no capture schema or direct file-write capability.
+
 **Latest — 17 October:** [89 — Bottom prompt timeline](review/89-bottom-prompt-timeline.md) supersedes87 top anchoring: independent bottom-anchored prompt/time navigation, measured top-marker clearance and far-right Modern page scrolling. [88](review/88-native-session-segments.md) governs explicit native-segment navigation (merged PR69,574973a).
 
 **17 October:** [88 — Native segments](review/88-native-session-segments.md) adds evidence-backed navigation to newer Codex journal segments and records the corrected bottom-anchored prompt-timeline direction. PR68 is merged as45a09e7; follow-ups use one coherent commit per PR.

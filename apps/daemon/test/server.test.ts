@@ -249,6 +249,15 @@ describe('model consent', () => {
 
 // Audit A02: user notes and error text are sinks too.
 describe('other sinks', () => {
+  it('pages earlier reading notes and rejects malformed positions without losing old notes', async () => {
+    const before=s.app.store.bookmarkPage(recId,0,1).total;
+    for(let n=0;n<70;n++)s.app.store.addBookmark(recId,n,`legacy row ${n}`);
+    const page=await call(`/v1/recordings/${recId}/bookmarks?start=25&count=25`,{headers:auth()});
+    expect(page.status).toBe(200);expect(page.body.bookmarks).toHaveLength(25);expect(page.body.total).toBe(before+70);expect(page.body.start).toBe(25);
+    expect(JSON.stringify(page.body).length).toBeLessThan(16000);
+    for(const step of [-1,1.5,'NaN'])expect((await post(`/v1/recordings/${recId}/bookmarks`,{step,note:'invalid'})).status).toBe(400);
+    expect((await call(`/v1/recordings/${recId}/bookmarks?start=bad`,{headers:auth()})).status).toBe(400);
+  });
   it('redacts bookmark notes before storing them', async () => {
     await post(`/v1/recordings/${recId}/bookmarks`, { step: 1, note: `remember ${GH}` });
     const marks = (await call(`/v1/recordings/${recId}/bookmarks`, { headers: auth() })).body.bookmarks;
