@@ -73,7 +73,6 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 2 | BUG-2 | Git review drawer covers the Git graph button; Escape inconsistent | `bug` `git` `ui` |
 | 3 | BUG-3 | Markdown link with bold label and Windows path renders raw | `bug` `read` |
 | 4 | BUG-4 | Header islands overlap content at ≤ 900 px width | `bug` `ui` |
-| 4a | BUG-7 | Seven browser journeys fail on main | `bug` |
 | 5 | HACK-1 | Decide entry; make repo public; confirm track | `hack` |
 | 6 | EXPLAIN-4 | Validate Nemotron on Token Factory with a real key and real model ids | `explain` `hack` |
 | 7 | DATA-10 | Propose one batched event-schema addition to both builders | `data` |
@@ -209,11 +208,6 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
   - **Problem:** at about 800 px, the Workspace button sits over prose and Files|Repository sits over a card.
   - **Do:** below a measured width, reserve header space (content top padding equals the measured header height) or collapse the islands into a single compact bar (feeds UI-1).
   - **Accept:** no overlap at 768/800/900/1024 px, nor at 125% and 150% browser zoom.
-
-- [ ] **BUG-7 · Seven browser journeys fail on main** · P0 · `bug`
-  - **Problem:** on a clean `54f93af` checkout these fail (19 October, Harsh with Claude): `connected-workspace.spec.ts` current source reading (:79) and import neighborhood (:129); `fresh-workspace.spec.ts` composer target (:129, `.modern-composer-location`), chrome fit (:287, `.modern-session-header h1`), Git review (:593, resize handle); `session-segments.spec.ts` (:31). Most look for chrome removed by PR109–123 (central session capsule, composer location, reader resize controls). On `0c52619`, `fresh-workspace.spec.ts` edge actions (:1190) also fails: after PR124 the rightmost navigation action no longer reaches within 30 px of the right edge.
-  - **Do:** for each, decide whether the product regressed or the test still expects removed chrome; fix the product or update the journey to the current owner. Do not delete coverage.
-  - **Accept:** the full browser suite passes on main except opt-in skips.
 
 - [ ] **BUG-5 · Review work reports 0 tests for Codex sessions that ran tests** · `bug` `review` — fixed by DATA-1 (typed `CommandExecution` with `parsed_cmd` and `exit_code`). Close when DATA-1 lands and the "441 tests pass" session shows its runs.
 
@@ -571,6 +565,9 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - `connected-workspace.spec.ts:129` ("source reading links qualified current imports…") — times out waiting for `Read current file src/actual.ts` inside the `src/other.ts` dialog.
   - `product-workspace.spec.ts:158` ("first-visit evidence review…") — Playwright strict-mode violation: the Review dialog's `src/checkout/guard.ts` button matches two elements.
   - `product-workspace.spec.ts:65` ("map file labels are keyboard reading targets…") — flaky, about 50%: the "Work on …" dialog sometimes isn't visible after Enter on a map label.
+  - Also failing on clean main (19 Oct, Harsh with Claude, while verifying `codex/investigation-finishing`): `fresh-workspace.spec.ts` composer target (:129, `.modern-composer-location`), chrome fit (:287, `.modern-session-header h1`), Git review (:593, resize handle), edge actions (:1190, since PR124 the rightmost navigation action no longer reaches the right edge); `session-segments.spec.ts:31`.
+  - Fail on main `b66f160` since PR125 (idle composer collapses by default), passing before it: `fresh-workspace.spec.ts` :16, :313, :331, :397, :657 (both harnesses), :792, :1135, :1344, :1723, :1791, :1809, :1828. Most expect the composer expanded or a prompt control visible.
+  - Flaky: `workspace-toolbar.spec.ts:88` (exposed-gutter scroll) passes and fails across runs of `codex/investigation-finishing`.
   - **Do:** decide per spec whether the product or the test is wrong, fix, and re-run each 10× for flakiness. **Accept:** all four pass 10 of 10 on a clean build.
 
 ### HACK — Nebius × NVIDIA Global AI Hackathon
