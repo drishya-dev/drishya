@@ -31,12 +31,18 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| BUG-7 | @harsh + Claude Opus 5.5 | `harsh/bug-7-open-refresh-race` | 2026-10-19 | `state.ts` (openRecording/reloadProjection), `App.tsx` (useLiveUpdates), new unit test |
 | TURN-1 | @yash + Claude Sonnet 5.5 | `yash/turn-1-chapters` | 2026-10-19 | `components/History.tsx` (turn header), `lib/turn-ledger.ts` (new), `modern/reading-windows.css` |
 
 ---
 
 ## Last session
+
+### Harsh with Claude (Opus 5.5) — BUG-7 open/refresh race; PR110 closed
+
+- **When:** 19 October 2026, `harsh/bug-7-open-refresh-race`.
+- **Delivered:** a live refresh starting while `openRecording` was still fetching took the newest projection token and discarded the open, so a returning session lost its restored reader. `reloadProjection` now waits for an in-flight open of the same recording (no schema or API change). PR110 closed with a disposition comment; its two remaining ideas are IDEA-5.
+- **Validation:** both TS; 575 units/106 files including the new race test (fails without the fix); "session detours" browser journey 10/10 at 150 ms and 10/10 with coalescing forced to 25 ms; `p1-pacing` and `connected-workspace` pass except the two TEST-1 journeys that also fail on main.
+- **Next:** review alongside PR128, which restores 150 ms coalescing and notes this race in STATUS; whichever lands second should drop that note.
 
 ### Yash with Claude (Opus 5.5) — Developer review, harness data audit, restructured TASKS
 

@@ -213,7 +213,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 - [ ] **BUG-6 · Usage shows "Not reported" for Codex although `token_count` is recorded** · `bug` `data` — fixed by DATA-2.
 
-- [ ] **BUG-7 · Live refresh during session open drops the restored reader** · P1 · `bug` `live`
+- [x] **BUG-7 · Live refresh during session open drops the restored reader** · P1 · `bug` `live` — **fixed 19 Oct.** `reloadProjection` now waits for an in-flight open of the same recording before taking its token; the open settles once its location is applied, so its own live-start reload cannot wait on itself. New `open-refresh-race.test.ts` failed before and passes; "session detours" passes 10/10 at 150 ms and 10/10 with coalescing forced to 25 ms.
   - **Problem:** `openRecording` (`apps/ui/src/state.ts`) clears the reading location, awaits recordings and projection, then applies the saved location. A live refresh that starts meanwhile (`useLiveUpdates` → `reloadProjection`) takes the newest projection token, so `openRecording` discards its result and the saved reader is never restored. Reproduced every time with 25 ms coalescing; PR128 restored 150 ms, which only makes it unlikely.
   - **Accept:** a unit test reproduces it; `fresh-workspace.spec.ts` "session detours" passes 10/10 alone, also with coalescing temporarily at 25 ms.
 

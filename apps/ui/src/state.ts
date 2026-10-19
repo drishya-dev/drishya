@@ -12,6 +12,9 @@ import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/hist
 
 /** One guard for every projection load, so the newest open or reload is the only one that lands. */
 const newest = latestOnly();
+/** The session open in flight. A reload of the same recording waits for it to apply its saved
+ * location; otherwise the reload takes the newest token and the open, with that location, is discarded. */
+let opening: { id: string; done: Promise<void> } | undefined;
 
 /** Revisions of each recording as they were when the shown projection was loaded. */
 function revisionsOf(recordings: RecordingSummary[]): Record<string, number> {
@@ -175,6 +178,10 @@ export const useApp = create<State>((set, get) => ({
     const saved = memory.session(id).get('location') as (Partial<State> & { start?: number }) | undefined;
     set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
+    let opened = () => {};
+    const mine = { id, done: new Promise<void>(resolve => { opened = resolve; }) };
+    opening = mine;
+    const settle = () => { if (opening === mine) opening = undefined; opened(); };
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     try {
       const recordings = await src.recordings();
@@ -189,6 +196,8 @@ export const useApp = create<State>((set, get) => ({
       const step = mode === 'history' || opts.at === 'end' ? total : Math.max(0, Math.min(opts.at ?? 0, total));
       const { start: _start, ...location } = saved ?? {};
       set({ ...location, error: undefined, projection, historyPage: page, recording, recordings, renderedRevisions: page?.revisions ?? revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < total });
+      // Settle before the live-start reload below, which would otherwise wait on this open.
+      settle();
       // Watching is a history default, never a side effect of the camera's Follow switch.
       if(mode==='history'&&src.kind==='daemon') {
         const paused=id.split('+').filter(part=>recordings.some(r=>r.id===part&&!r.live));
@@ -203,12 +212,18 @@ export const useApp = create<State>((set, get) => ({
       }
     } catch (error) {
       if (current() && get().recordingId === id) set({ error: (error as Error).message, playing: false });
+    } finally {
+      settle();
     }
   },
 
   async reloadProjection() {
     const { source, recordingId } = get();
     if (!source || !recordingId) return;
+    if (opening?.id === recordingId) {
+      await opening.done;
+      if (get().source !== source || get().recordingId !== recordingId) return;
+    }
     const current = newest('projection');
     const recordings = await source.recordings();
     if (!current() || get().recordingId !== recordingId) return;
