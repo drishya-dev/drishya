@@ -118,6 +118,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 | 44 | REVIEW-1 | Review work as a first-class Changes view; group repeated gaps | `review` |
 | 45 | REVIEW-2 | Search results with session/turn/tool/time context | `review` |
 | 46 | PERF-1 | Import/tail benchmark on 160–564 MB Codex journals | `perf` |
+| 46a | BUG-7 | Live refresh during session open drops the restored reader | `bug` `live` |
 | 46a | TEST-1 | Four browser specs fail or flake on main (found 19 Oct) | `rel` |
 
 ### P2 — later
@@ -211,6 +212,10 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 - [ ] **BUG-5 · Review work reports 0 tests for Codex sessions that ran tests** · `bug` `review` — fixed by DATA-1 (typed `CommandExecution` with `parsed_cmd` and `exit_code`). Close when DATA-1 lands and the "441 tests pass" session shows its runs.
 
 - [ ] **BUG-6 · Usage shows "Not reported" for Codex although `token_count` is recorded** · `bug` `data` — fixed by DATA-2.
+
+- [ ] **BUG-7 · Live refresh during session open drops the restored reader** · P1 · `bug` `live`
+  - **Problem:** `openRecording` (`apps/ui/src/state.ts`) clears the reading location, awaits recordings and projection, then applies the saved location. A live refresh that starts meanwhile (`useLiveUpdates` → `reloadProjection`) takes the newest projection token, so `openRecording` discards its result and the saved reader is never restored. Reproduced every time with 25 ms coalescing; PR128 restored 150 ms, which only makes it unlikely.
+  - **Accept:** a unit test reproduces it; `fresh-workspace.spec.ts` "session detours" passes 10/10 alone, also with coalescing temporarily at 25 ms.
 
 ### LIVE — the live loop and "now"
 
