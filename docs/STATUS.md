@@ -32,19 +32,115 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — Sessions-first Home and navigation handovers
+### Yash with Claude (Opus 5.5) — Developer review, harness data audit, restructured TASKS
 
-- **When:**18 October2026, `codex/home-reading-priority`; adjustable readers108 merged asa06ce1d.
-- **Delivered:**Modern Home prioritizes sessions when an inventory exists; About retains an explicit boolean introduction preference. Phone workspace selection is an on-demand bounded virtual chooser with outside/Escape/blur dismissal and focus return, freeing session space. Workspace→Repository/latest/Files destinations clear previous owners rather than appearing behind them; existing help distinguishes file reading, local drafts and import relationships.
+- **When:** 19 October 2026, on `main` (docs only).
+- **Delivered:**
+  - an independent developer review of the running product ([122](review/122-developer-product-review.md), with builder corrections at the top);
+  - an aggregate-only audit of what Claude Code and Codex journals record versus what the adapters use ([123](review/123-harness-data-audit.md)): reasoning is mostly *not* recorded (Claude 223/225 thinking blocks empty; Codex reasoning encrypted, about 3% summaries), while much typed data is ignored;
+  - the Sacred Timeline Git graph spec ([124](review/124-sacred-timeline-git-graph.md));
+  - [TASKS](TASKS.md) restructured into a tagged priority list (P0–P3) plus per-category detail with acceptance lines, the old completed items archived verbatim;
+  - the hackathon fit refreshed ([HACKATHON](HACKATHON.md));
+  - the north star and minimalism rule added to AGENTS;
+  - Emil Kowalski's web skills installed for Claude Code (`~/.claude/skills`) and `animation-performance` added for Codex.
+- **Validation:** product exercised at 1440×900 (headless Edge) and in the app pane on a 1,100-operation Codex session, a Claude Code session, this live session and the demo. No code changed.
+- **Next:** P0 in TASKS: BUG-1…4, then HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
+
+### Yash with Codex - Compact right-docked Explorer preview
+
+- **When:**18 October2026, `codex/compact-file-preview`.
+- **Delivered:**Narrower/taller28vw preview default bounded360–720px, preserving navigation/composer/time-rail clearances and custom geometry. Desktop fine-pointer passage content is90% while preview is open, normal size on close/phone. Material motion translates screen/local pixels consistently under compact scale. Removed File reader move icon; title/tab bar keeps direct drag and keyboard arrows/Home; all four edge controls/reset remain. [121](review/121-compact-file-preview.md).
+- **Validation:**Both TS/build;543units/99files; five focused browser journeys including defaults, title keyboard/drag, all edges, restored bounds and phone, plus actual Drishya/Skeletongraph Codex/Claude Blueprint/current-file/scroll stability journey. Private frames inspected. No capture/native/project write or hosted CI; preference/platform acceptance and broader TASKS remain open.
+
+### Yash with Codex - Shared captured-result view selection
+
+- **When:**18 October2026, `codex/captured-result-views`.
+- **Delivered:**One bounded supplied-text selector and result-control owner for JSON, delimited and resource modes. Native shell JSON gains data inspection; folded terminal/error excerpts inspect the whole supplied preview, with no duplicate candidates or excerpt-derived false grids. Open readers snapshot selected text/fields; stable owners survive raw/decoded and folded/unfolded body changes. [120](review/120-shared-result-views.md).
+- **Validation:**Both TS/build;542units/98files; ten structured/resource browser journeys including plain shell/wrapped shell/MCP exact-original inspection and focus; actual three-session long-history/multi-file regressions pass. Final body-owner extraction rechecked with UI TS/build and all ten focused journeys. No capture/schema/API/dependency/body persistence/native write/hosted CI. Media/artifact transport, full selector acceptance and broad UI tasks remain open.
+
+### Yash with Codex - Captured resource references and documents
+
+- **When:**18 October2026, `codex/resource-previews`.
+- **Delivered:**Explicit resource inspection from sealed native/MCP/result fields, retained reference/body provenance, clean HTTP(S) links opened only by click, captured Markdown/source and JSON/CSV handoffs. Limits256KiB/64references/1024visits/eight nested levels; no arbitrary code/prose scraping. Nested dialog cancel now closes only its owner and returns focus. [119](review/119-captured-resource-reading.md).
+- **Validation:**Both TS/build;540units/97files; seven structured/resource browser journeys plus final native/MCP rerun, desktop/390/320px, exact copying, no automatic remote load, link opening and nested Escape/close/focus. Three actual Drishya/Skeletongraph Codex/Claude long-history/multi-file Workspace regressions pass. No native/project writes, source-body persistence, schema/dependency/telemetry or hosted CI. Binary media/general selector and broader TASKS remain unfinished.
+
+### Yash with Codex — Explorer preview safe layout
+
+- **When:**18 October2026, `codex/peek-safe-layout`.
+- **Delivered:**Restored tall centred preview geometry is bounded by its adjacent reading lane, navigation, composer and independent time-rail clearance. Shared move/four-edge resize constraints handle viewport/composer changes. Workspace hides the right navigation and rises to the Files row instead of reserving the Git stack. [118](review/118-explorer-preview-bounds.md).
+- **Validation:**Both TS/build;535units/96files. Four focused browser journeys, actual Markdown/Workspace transfer and actual three-session Drishya/Skeletongraph Codex/Claude tabs/phone reading, including old oversized geometry and long Blueprint. No project/native writes or hosted CI. Resource-reader WIP is preserved in the named stash; broad TASKS remain open.
+
+
+### Yash with Codex — Bounded captured JSON reading
+
+- **When:**18 October2026, `codex/structured-result-reader`.
+- **Delivered:**Shared History/Inspector on-demand Tree/Table/Original reading, virtual rows and full supported field access, search, exact pointers/value/original copy, keyboard and phone bounds. Complete supplied preview only; no new artifact fetch, current-file/media inference or native write. Graph remains deferred. [114](review/114-structured-result-reading.md).
+- **Validation:**Both TS/build;517units/92files.1200-row/late-field/tree/search/original/320px journey, existing external preview journey and actual three-session Codex/Claude test-reading regression pass. Follow-up shared reader exit/actual-frame reversal, keyboard/reduced-motion/focus/settings and folder-state browser checks pass. Broader motion remains unchecked in TASKS; native/physical/assistive-tech acceptance remains open.
+
+
+### Yash with Codex — Compact test evidence and the actual horizontal prompt row
+
+- **When:**18 October2026, `codex/compact-outcome-reading`; graph presentation deferred by builder.
+- **Delivered:**[113](review/113-compact-test-reading.md): fixed the remaining column layout so symbol and basename share one horizontal line at320/390/desktop with ellipsis. Shared native/MCP/Inspector result bars expose captured cases by hover/focus/keyboard/selection, using a focused portal reader and original raw-output handoff. Grouped counts, partial rows and unsupported formats remain explicit. Bounded stored head/tail reading recovers clipped wrappers without joining disjoint slices. Real pytest warning summaries are recognized without counting warnings as tests. Fixed the discovered count1 history centering error; no graph/source/native-control/capture-schema change.
+- **Validation:**Both TS/build;511units/91files and focused parser/history checks. Native/MCP/mixed/long-artifact/keyboard/raw browser journeys and actual three-session Codex/Claude desktop/phone investigation, plus both-harness horizontal identity geometry. Portal-close regression now prevents the underlying action from opening Inspector. Review113 covers limits. No hosted CI or physical/native-account release certification.
+
+### Yash with Codex — Luminous reference material and compact prompt identity
+
+- **When:**18 October2026, `codex/luminous-git-ribbon`; spatial correctionPR113 previously merged as1ad074c.
+- **Delivered:**Replaced rejected stroked wires with contiguous filled spectral layers and a broad continuous sweep. Maintained near32px envelope,16px branch cap, actual parent/rim connections and explicit orbit. Hover no longer fades unrelated ribbon segments; commit dots are quieter. Subpixel overlap covers primary mesh antialias joints. Modern composer identity restores the original symbol and shows the workspace basename only, removing Codex/Claude from that row while keeping necessary native connection details.
+- **Validation:**Both TS/build and10focused geometry/window/topology cases pass. Graph root/merge/orbit/phone and continuous-history/composer assertions pass; actual three-session Codex/Claude desktop/phone journey checked. Final mesh-coverage/material frames inspected. See review112 latest correction and Before/After/Why table. No hosted CI, native turn, artwork dependency or capture/API change; physical/preference acceptance remains open.
+
+### Yash with Codex — Spatial bundle and rim forks
+
+- **When:**18 October2026, `codex/spatial-git-ribbons`; precedingPR112 merged ascb2a674.
+- **Delivered:**Review112 spatial correction: sampled XYZ fiber bundles, depth-sorted branch pieces, actual forks peeling from the outer rim and explicit viewing-axis orbit (drag/keyboard), with ordinary pan retained. The latest builder correction rejects DNA/edge-on collapse: nearly uniform32px main diameter,2%variation, branch cap16px and nonzero neck. Primary reference research uses Bo Zonneveld’s Loki concept collection; no artwork download/dependency. PR110 is still open/conflicted; useful distinct parts were already integrated and credited throughPR112, duplicates not merged.
+- **Validation:**Both TypeScript checks/build;10focused geometry/window/topology cases (including all-angle diameter/rim/depth/budget guards), two synthetic graph/continuous-history journeys and actual three-session Codex/Claude desktop/phone journey pass. Desktop/phone/orbit frames inspected. No hosted CI, native turn or new capture/Git-write behavior. Review112 records bounds and the explicit limit: orthographic spatial rendering, not a full freely orbitable WebGL scene.
+
+### Yash with Codex — Continuous spectral Git threads
+
+- **When:**18 October2026, `codex/branch-threads-integration`; selective PR110 work is commit7198cb0.
+- **Delivered:**[112](review/112-git-threads-integration.md): graph-first local Git timeline with actual fork/merge paths, continuous edge loading/anchor preservation, six retained metadata slices/300nodes, explicit bounds, hover/focus details, exact file/patch reading and direct right-side entry. The attached reference informs32px primary cyan/blue/white/violet/pink fiber material, four times the earlier8px band; branches use the same texture, weighted by loaded segment commits and capped at16px. Extra texture strokes are bounded separately and reduced in low-resource mode. Composer identity trimmed. No event-schema change, writes or network Git fetch.
+- **Validation:**Both TS checks/build and496units/89files pass. Focused continuous/root/merge/phone journeys pass; actual three-session Codex/Claude desktop/phone graph coverage and frame inspection. Seven prior focused comparison/map/status/graph journeys pass. No hosted CI or native turn; physical/human acceptance remains open. TASKS holds compact test bars/media/native/UI work separately unfinished.
 
 | Before | After | Why |
 | --- | --- | --- |
-| Returning users repeatedly see the large intro | Compact sessions heading and optional retained introduction | Prioritize returning to work |
-| Phone workspace choices reserve96px permanently |54px chooser with the same virtual list on demand | Make session discovery easier without dropping workspaces |
-| Command destinations can remain behind Workspace | Explicit reading-owner handover | Open the view the user requested |
+| Linear rail and commit-range pages | Continuously scrollable graph with real parent paths | Make fork/merge structure navigable |
+| Thin warm8px line |32px fine spectral fiber ribbon, branch cap16px | Match the supplied attached material and requested weight |
+| New metadata resets fit | Shared-anchor preservation | Keep investigation stable while loading history |
+| Long composer identity sentence | Harness/workspace/status, details on demand | Reclaim input space |
 
-- **Validation:**Both TS/build, focused Home metadata unit checks, six Home/navigation browser journeys and actual library desktop/phone/short-window checks pass. Actual inventory612sessions/323workspaces, including deep virtual chooser selection. Phone frame inspected. A new compact refresh-label specificity overflow was reproduced and repaired; no hiding source content or weakening checks. Design skill applied; Uiverse collections reviewed as reference (https://uiverse.io/), no copied components or dependencies. No native turn or hosted CI.
-- **Next:**Remaining whole-product Uiverse/palette/motion/readers, session identity/packet and native/platform acceptance stay in TASKS.
+### Yash with Codex — Selective review integration and neutral result marks
+
+- **When:**18 October2026, `codex/branch-threads-integration`; selected source ideas/fixes from Harsh PR110 at d071ff3.
+- **Integrated:**Captured source vs separately approved current disk using current readers/version owners, exact line positions, complete bounded material, derived provenance labels and stale source/request guards. Missing positions/partial/oversized material fails explicitly. Narrow Files exits map, refit after whole-map consent, current-index importer→dependency arrows capped at40; newer map labels/occlusion/palettes retained. Did not adopt duplicate ReviewTools/history index/source-version class/follow-up state.
+- **Tool marks:**Unknown nested edit/creation is Change unverified with a neutral dash and explanation; other missing results remain neutral. Shared History now actually renders that mark rather than its hardcoded question mark. No inferred success or reducer/schema change.
+- **Validation:**Both TS/build and493units/89files. Five focused Git/source/map browser cases and actual three-session Git journey pass; comparison phone and graph frames inspected. Final shared unknown-mark and map/graph style checks recorded with the graph increment. No native turn/hosted CI; user package/logo files excluded.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Captured source and current disk require separate reading | Explicit bounded comparison in the existing reader | Keep historical evidence and current state distinct and accessible |
+| Files click can leave the map active | Explicit exit plus approved-map fit and regression | Restore the requested file tree |
+| Question mark on a proposed edit | Neutral mark, accessible unverified-change explanation | Make missing nested results understandable without fabricating success |
+
+### Yash with Codex — Adaptive visual-content audit and PR110 review
+
+- **When:**18 October2026, after Git atlas PR111 merged as ea05492.
+- **Investigated:**Actual redacted Codex/Claude histories and capture/privacy/artifact/readers. Content-first matrix in [audit111](review/111-adaptive-content-and-pr110.md) covers images/browser/data/documents/web/source/test/native/delegation/process/media, including MCP and wrapped calls. Native image bytes are currently omitted; no new image persistence, reader or schema claimed. TASKS records investigation complete and implementations/acceptance separately unchecked.
+- **PR110:**Reviewed d071ff3 against current owners. Left open/unmerged: Commands/findings/prompts/source comparisons/follow-up overlap existing implementations; conflicting source-version exports would break callers if merged blindly. Captured-to-current range comparison and bounded import directions/map-return regression remain useful selective candidates in TASKS. No message/comment sent to Harsh.
+- **Validation:**Read-only SQLite metadata/signature audit and code/diff review; no private content committed. Documentation links/unique checklist checked. Git implementation checks remain in the next block. Hosted CI not run.
+
+### Yash with Codex — Local Git branch atlas
+
+- **When:**18 October2026, `codex/local-git-atlas`.
+- **Delivered:**Read-only local branches/tags/ref search, paged real commit-parent rail, complete bounded commit messages and redacted safe patches with root/merge-parent choice. Existing Git consent and current/captured-file destinations; adjustable surface and phone list/detail reading.16 rail lanes report omissions rather than invent edges. Shallow boundary parents come from real objects; unavailable parent comparison fails explicitly. No network fetch, project/config/journal writes or daemon dependency.
+- **Verified:**Both TS/build;488 units/87 files, followed by7 backend cases after shallow correction and2 focused Git browser journeys. Actual Drishya/Skeletongraph Codex/Claude histories checked at desktop/phone; both frame types inspected. Process/response/paging limits are explicit; broad device/native release acceptance remains open. No hosted CI.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Only staged/working changes | On-demand branch atlas beside existing Git review | Investigate local history without a permanent panel |
+| Historical patches could share working-tree labels | Commit scope with explicit parent choice | Preserve historical vs current meaning |
+| Dense unbounded graph would overwhelm reading |50 commit DOM rows,16 parent lanes, continuation disclosure; phone list/detail | Bound work without inventing topology |
+
 
 ### Yash with Codex — Adjustable reading surfaces
 
@@ -641,6 +737,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-10-19 | **Restructured TASKS (tagged P0–P3 + detail); north star and minimalism rule; harness data before more visuals; keep the wrap-plus-arrows passage layout, hover-only toolbox connectors, peek and Workspace as two modes, and the 3D map as aesthetic; Git graph = Sacred Timeline** | Builder corrections to review 122; audit 123 shows reasoning is mostly unrecorded, so the *why* comes only from labelled, cited model output | `TASKS.md`, `review/122`–`124`, `AGENTS.md` |
 | 2026-10-14 | **Keep Legacy; build independent Modern and retire Workbench selection** | Builder wants a new coherent developer workspace, not another palette pass; use real dense sessions and meaningful evidence motion. Saved fresh links migrate without losing the selected session. | `review/72-modern-spatial-workspace.md` |
 | 2026-10-14 | **Current Git handoffs revalidate the inspected page on both preview and save** | Cached review content can drift before export; retain reading on failures, invalidate the packet and preserve exact previewed text. Shared subprocess deadline/filter overrides keep inspection bounded without an atomic claim. | `review/70-revalidated-git-handoff.md` |
 | 2026-10-13 | Recheck raw Git patches, scoped index identities and worktree change markers; four-reader batches per inspection | Status/HEAD miss same-status edits. Bound extra subprocess/memory work, preserve ordering, return 409 rather than mixed evidence; still an optimistic current sample, not a filesystem lock | `review/60-git-consistent-inspection.md` |
@@ -712,7 +809,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2 | Trademark clearance for "Drishya", class 9/42 | Commercial use only | §App. A |
 | 5 | **Require 2FA for the org.** Currently off (verified). Enabling it removes any member without 2FA, so Harsh confirms his first — then an Owner turns it on in org Settings → Authentication security | Security of a repo that will publish an npm package | — |
 | 3 | When do we flip the repo public? Proposed: at the M1 hosted demo. Going public also unlocks free branch protection | Launch timing, enforced review | §18.5 |
-| 4 | Enter the Nebius × NVIDIA hackathon (Best Apps and Agents)? Fit assessed; the Nemotron layer is now built and awaits a key to validate | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
+| 4 | Enter the Nebius × NVIDIA hackathon? Deadline **30 Oct 10:00 PT**. Refreshed 19 Oct; it needs a public repo, a live-validated Nemotron layer and a hosted demo (TASKS HACK-1…3) | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
 | 6 | **Freeze contracts `0.1.0-draft`?** Implemented in `packages/contracts` following engineering plan §3. Needs @harsh's review | Third-party adapters, the frontend | [`CODEBASE.md`](CODEBASE.md) |
 | 7 | Accept `node:sqlite` and `node:http`+SSE over the proposed `better-sqlite3` and Fastify+`ws`? (Decisions log, 25 Sep) | Packaging | [`CODEBASE.md`](CODEBASE.md) |
 

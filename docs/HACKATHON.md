@@ -1,5 +1,47 @@
 # Nebius × NVIDIA Global AI Hackathon — fit assessment
 
+## 19 October 2026 refresh — read this first
+
+Rechecked against the live [Devpost page](https://nebiusglobalaihackathon.devpost.com/). **Deadline 30 Oct 2026, 10:00 PT (22:30 IST): 11 days.** The requirements are unchanged:
+- Token Factory or AI Cloud, plus at least one NVIDIA open model;
+- a working demo URL (hosted app or test build);
+- a public YouTube video under 3 minutes;
+- a public repo with an OSI licence visible at the top;
+- a README with setup;
+- an explanation of what was significantly updated during the window;
+- Token Factory feedback.
+
+Prizes: $20k / $10k / $6k overall, a Jetson Orin Nano per track, $3k Best Use of Tavily, $500 city awards and $100 feedback awards. The four judging criteria are equally weighted. The judges are NVIDIA, Nebius and Tavily engineers and product people.
+
+**What changed since September.** The [harness data audit](review/123-harness-data-audit.md) measured that current harnesses mostly do **not** record reasoning: Claude Code thinking blocks are empty (223/225), and Codex reasoning is encrypted with summaries on about 3%. That gives the model layer a real, non-obvious job:
+
+> Nemotron explains what *another* coding agent is doing and why, in real time, **because the agent's own reasoning is no longer visible**. It is always labelled as generated and cited to the captured commands, reads and diffs.
+
+That is load-bearing (the *why* is otherwise missing), and it fits Drishya's truth doctrine instead of fighting it.
+
+**Track.** The Coding and Agentic Engineering brief opens with "build coding agents and **developer tools**". Drishya is a developer tool for exactly that audience. The track continues with "agents that write, run, and test code in Token Factory", which Drishya does not do, so judges may read it narrowly. Best Apps and Agents ("any app or agent someone would actually use", Nano/Super/Ultra tiers) fits without ambiguity and matches the tiered design below.
+
+**Recommendation: Best Apps and Agents.** Cash is awarded overall regardless of track, and the four criteria matter more than the category. The builders decide (HACK-1).
+
+**Honest odds.** I cannot know the field size, so I won't give a number.
+- **Strengths:** *Design* (a complete, polished product, which most hackathon entries are not); *Impact* (a real, specific problem with a working demo on real sessions); *Idea* (the measured "reasoning is hidden" gap makes the model use non-obvious).
+- **Main risk:** *Technological implementation*. The Nemotron layer has never run against the live API, and judges must see it doing real work in the video and the hosted demo.
+- **Assessment:** with EXPLAIN-1/2/4 and HACK-1…3 done well, Drishya is a credible contender for a track win and has a plausible but uncertain shot at the top three overall. Without the live model layer it should not be submitted.
+
+**Plan (TASKS P0):**
+
+| By | Work |
+|---|---|
+| 21 Oct | BUG-1…4 fixed; Token Factory key; EXPLAIN-4 model ids, latency and cost measured |
+| 24 Oct | HACK-1: decide, scan history for secrets, make the repo public. EXPLAIN-1 narrator labels live on real sessions |
+| 27 Oct | EXPLAIN-2 turn summary and briefing; TURN-1 ledger; LIVE-1 Now line; DATA-1/2 if they fit (they strengthen the demo, but schema agreement comes first) |
+| 29 Oct | HACK-2 hosted demo with precomputed, labelled outputs; HACK-3 video, README and submission text |
+| 30 Oct, before 10:00 PT | Submit; don't leave it to the final hour |
+
+Not a fit for **Best Use of Tavily**: Drishya has no natural web-search job, and adding one for a prize would be feature creep.
+
+---
+
 Assessed 21 September 2026 against the [official rules](https://nebiusglobalaihackathon.devpost.com/rules). **This records whether Drishya fits the track. Entering is an [open decision](STATUS.md#open-decisions).**
 
 ## The event

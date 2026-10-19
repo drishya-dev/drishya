@@ -1,0 +1,26 @@
+import {it,expect} from 'vitest';
+import {capturedResources,resourceHref} from '../src/lib/captured-resources.ts';
+it('preserves ordered MCP links, captured text, mixed siblings and exact field provenance',()=>{
+ const value={content:[{type:'text',text:'not JSON'},{type:'resource_link',uri:'https://example.org/a',name:'Reference',mimeType:'application/pdf'},{type:'image',data:'omitted'},{type:'resource',resource:{uri:'resource://notes',mimeType:'text/markdown',text:'# Captured\n\nExact **text**'}}]};
+ expect(capturedResources(JSON.stringify(value))?.items).toEqual([{field:'/content/1',uri:'https://example.org/a',title:'Reference',mime:'application/pdf'},{field:'/content/3/resource',uri:'resource://notes',title:'resource://notes',mime:'text/markdown',text:'# Captured\n\nExact **text**'}]);
+ expect(value.content).toHaveLength(4);
+});
+it('recognizes explicit result URL metadata without scraping arbitrary prose or unknown objects',()=>{
+ expect(capturedResources(JSON.stringify({results:[{url:'https://example.org',title:'Title',snippet:'Captured snippet'}]}))?.items[0]).toMatchObject({field:'/results/0',uri:'https://example.org',title:'Title',description:'Captured snippet'});
+ for(const text of ['https://example.org','<a href="https://example.org">x</a>','{"uri":"https://example.org"}','{"unknown":{"type":"resource_link","uri":"https://example.org"}}','{"content":'])expect(capturedResources(text)).toBeUndefined();
+});
+it('opens only explicit clean absolute HTTP(S) destinations',()=>{
+ expect(resourceHref('https://example.org/a?q=1#part')).toBe('https://example.org/a?q=1#part');expect(resourceHref('HTTP://EXAMPLE.ORG')).toBe('http://example.org/');
+ for(const uri of ['javascript:alert(1)','data:text/html,x','file:///C:/notes','resource://notes','//example.org/a','/local','https://user:secret@example.org','https://example.org\n.evil','https:\\example.org','https://exa mple.org',' https://example.org'])expect(resourceHref(uri)).toBeUndefined();
+});
+it('finds sealed nested native/MCP JSON while retaining references as references',()=>{
+ const inner={content:[{type:'resource_link',uri:'file:///private/old.png',title:'Old screenshot'}]};
+ const raw=JSON.stringify([{status:'fulfilled',value:{output:JSON.stringify(inner),exit_code:0}}]);
+ const item=capturedResources(raw)?.items[0]!;expect(item.uri).toBe('file:///private/old.png');expect(item.text).toBeUndefined();expect(item.field).toBe('/0/value/output (JSON)/content/0');
+});
+it('bounds bytes, references and traversal; malformed entries do not manufacture resources',()=>{
+ expect(capturedResources('界'.repeat(90000))).toBeUndefined();
+ const refs=Array.from({length:80},(_,index)=>({type:'resource_link',uri:`https://example.org/${index}`}));const result=capturedResources(JSON.stringify(refs))!;expect(result.items).toHaveLength(64);expect(result.limited).toBe(true);
+ expect(capturedResources(JSON.stringify([{type:'resource_link'},{type:'resource',resource:{text:'orphan body'}},{type:'resource_link',uri:5}]))).toBeUndefined();
+ let nested:unknown={type:'resource_link',uri:'https://example.org'};for(let n=0;n<12;n++)nested={status:'fulfilled',value:nested};expect(capturedResources(JSON.stringify(nested))).toBeUndefined();
+});

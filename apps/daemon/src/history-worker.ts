@@ -138,7 +138,7 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   const target = scene.passages.findIndex((ps) => ps.id === promptTarget || ps.ops.some((op) => op.id === query.selectedOperationId ||
     (query.observationId && opMap.get(op.id)?.observationIds.includes(query.observationId))) ||
     ps.prose.some((pr) => query.observationId && proseMap.get(pr.id)?.observationIds.includes(query.observationId)));
-  const start = Math.max(0, Math.min(Math.max(0, scene.passages.length - count), Math.floor(query.start ?? (target >= 0 ? target - count / 2 : scene.passages.length - count))));
+  const start = Math.max(0, Math.min(Math.max(0, scene.passages.length - count), Math.floor(query.start ?? (target >= 0 ? target - Math.floor(count / 2) : scene.passages.length - count))));
   const selected = new Set(scene.passages.slice(start, start + count).map((ps) => ps.id));
   for (const pin of query.pinnedPassageIds?.slice(0, 3) ?? []) selected.add(pin);
   const passages = scene.passages.filter((ps) => selected.has(ps.id));

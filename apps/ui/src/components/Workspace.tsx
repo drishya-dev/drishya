@@ -1,3 +1,4 @@
+import {openGitHistory} from './GitHistory.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
 import type { Projection } from '@drishya/contracts';
@@ -18,10 +19,10 @@ export function WorkspaceBar() {
     const viewer = element?.closest<HTMLElement>('.viewer');
     if (!element || !viewer) return;
     // Demo controls and focus controls can wrap; the explorer must start below them.
-    const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12}px`); };
+    const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12}px`); const leading=element.querySelector('.workspace-leading');if(leading)viewer.style.setProperty('--workspace-leading-bottom',`${leading.getBoundingClientRect().bottom-viewer.getBoundingClientRect().top+12}px`); };
     const observer = new ResizeObserver(measure);
     observer.observe(element); for(const group of element.querySelectorAll('.workspace-leading,.workspace-secondary'))observer.observe(group);observer.observe(viewer);const header=viewer.querySelector('.workspace-header');if(header)observer.observe(header);measure();
-    return () => { observer.disconnect(); viewer.style.removeProperty('--workspace-tools-bottom'); };
+    return () => { observer.disconnect(); viewer.style.removeProperty('--workspace-tools-bottom');viewer.style.removeProperty('--workspace-leading-bottom'); };
   }, [experience]);
   const developerWorkspace = useApp(s => s.developerWorkspace);
   const mode = useApp(s => s.mode);
@@ -41,7 +42,7 @@ export function WorkspaceBar() {
     {(source?.sample === 'recorded' || source?.sample === 'growing' && !recording?.live) && <button className="btn ghost sample-watch" onClick={() => { const next = new URL(location.href); next.searchParams.set('demo', 'live'); next.searchParams.delete('at'); next.hash = ''; location.assign(next.href); }}>{source.sample === 'growing' ? 'Watch demo again' : 'Watch live demo'}</button>}
     {filter && <button className="btn ghost clear-workspace-filter" onClick={() => useApp.getState().setFilter(undefined)}>Clear focus</button>}
     </div>
-    <div className="workspace-secondary">{experience === 'classic' && <button aria-label="Open developer workspace" aria-pressed={developerWorkspace} disabled={source?.kind !== 'daemon' || mode !== 'history' || !!recording?.id.includes('+')} title="Read files side by side and prepare native edit or run requests" onClick={() => useApp.getState().set({ developerWorkspace: !developerWorkspace, explore: false, currentFile: undefined, filePanel: undefined, follow: false, held: true, foldersHidden: false })}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>Workspace</button>}{modern && <div className="modern-review-control"><GitReviewEntry icon /></div>}</div>
+    <div className="workspace-secondary">{experience === 'classic' && <button aria-label="Open developer workspace" aria-pressed={developerWorkspace} disabled={source?.kind !== 'daemon' || mode !== 'history' || !!recording?.id.includes('+')} title="Read files side by side and prepare native edit or run requests" onClick={() => useApp.getState().set({ developerWorkspace: !developerWorkspace, explore: false, currentFile: undefined, filePanel: undefined, follow: false, held: true, foldersHidden: false })}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>Workspace</button>}{modern && <div className="modern-review-control"><GitReviewEntry icon /><button className="btn ghost git-open git-graph-open" aria-label="Git graph" title="Explore local branches, commits and changes" disabled={source?.kind!=='daemon'||mode!=='history'||!!recording?.id.includes('+')} onClick={openGitHistory}><svg className="git-branch-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h5l4-10h9M8 17l4-5h9"/><circle cx="8" cy="17" r="2"/><circle cx="12" cy="7" r="2"/><circle cx="19" cy="12" r="2"/></svg>Git graph</button></div>}</div>
   </nav>;
 }
 

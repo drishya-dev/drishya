@@ -52,3 +52,7 @@
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.inspecting) .history {right:0;padding-right:var(--stage-rail);}
 :root[data-ui-version=modern] .developer-workspace-open .complete-prompt-rail {display:none;}
 .prompt-rail-preview>time {display:block;color:var(--t2);font:10px/1.6 var(--mono);margin:3px 0 6px;}
+
+/* Full-height scrolling passes beneath the prompt; reserve its measured height once at the end. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner {padding-bottom:calc(var(--composer-gap,0px) + 8px);}
+:root[data-ui-version=modern][data-experience=classic] .history .passage-slot:last-of-type .passage {margin-bottom:12px;}

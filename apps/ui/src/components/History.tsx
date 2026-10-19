@@ -692,7 +692,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
         <CommandText text={d.command}/>
         {input && <ArtifactReader id={input} kind="code" />}
-        <CapturedOutcomes output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
+        <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
         {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
       </div>;
@@ -700,7 +700,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
         <CommandText text={d.command}/>
         {input && <ArtifactReader id={input} kind="code" />}
-        <CapturedOutcomes output={d.outputPreview} />
+        <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} />
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
         <div className="muted small">Exit {d.exitCode ?? 'not captured'}</div>
       </div>;
@@ -715,6 +715,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
       return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
         <div className="material-context">Captured result preview</div>
+        <CapturedOutcomes output={d.resultPreview}/>
         <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
       </div>;
     case 'other':
@@ -722,6 +723,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
         <div className="material-context">Captured input</div>
         <ToolInput value={d.input}/>
         <div className="material-context">Captured result preview</div>
+        <CapturedOutcomes output={d.resultPreview}/>
         <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
       </div>;
     default:
@@ -735,7 +737,7 @@ function StateMark({ state,op }: { state: SceneOp['state'];op:Operation }) {
   if (state === 'running') return <span className="state state-running" aria-label="running" />;
   if (state === 'error') return <span className="state state-error" aria-label="failed">✕</span>;
   if (state === 'ok') return <span className="state state-ok" aria-label="done">✓</span>;
-  return <span className="state state-unknown" aria-label="outcome not captured">?</span>;
+  return <span className="state state-unknown" aria-label={outcome.label} title={outcome.explanation}>{outcome.mark}</span>;
 }
 
 function ResultArea({ state, resolving, children }: { state: Operation['status']; resolving: boolean; children?: React.ReactNode }) {
@@ -783,7 +785,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       return (
         <div className="test">
           <CommandText text={d.command}/>
-          <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} fallback={s ? (
+          <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} fallback={s ? (
             <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
             <div className="muted">exit {d.exitCode ?? '?'}</div>
@@ -804,7 +806,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="shell">
           <CommandText text={d.command}/>
           <ResultArea state={op.status} resolving={resolving}>
-            <CapturedOutcomes output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
+            <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
             {d.outputPreview ? <TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={op.status === 'error'} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
             {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
           </ResultArea>

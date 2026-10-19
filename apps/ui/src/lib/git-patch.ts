@@ -1,6 +1,6 @@
 import type { Hunk } from '@drishya/contracts';
 
-export interface GitPatchSection { name: 'Staged' | 'Working tree'; raw: string; hunks: Hunk[]; partial: boolean }
+export interface GitPatchSection { name: 'Staged' | 'Working tree' | 'Commit'; raw: string; hunks: Hunk[]; partial: boolean }
 /** Only complete ordinary unified hunks receive line coordinates. Metadata,
  * binary and unsupported/partial patches remain readable in the raw view. */
 export function gitPatchSections(patch: string): GitPatchSection[] {
@@ -16,8 +16,8 @@ export function gitPatchSections(patch: string): GitPatchSection[] {
     hunk = undefined; invalid = false;
   };
   for (const line of patch.split('\n')) {
-    if (line === 'Staged changes' || line === 'Working tree changes') {
-      flush(); section = { name: line === 'Staged changes' ? 'Staged' : 'Working tree', raw: '', hunks: [], partial: false }; sections.push(section); continue;
+    if (line === 'Staged changes' || line === 'Working tree changes' || line === 'Commit changes') {
+      flush(); section = { name: line === 'Staged changes' ? 'Staged' : line === 'Commit changes' ? 'Commit' : 'Working tree', raw: '', hunks: [], partial: false }; sections.push(section); continue;
     }
     if (!section) continue;
     section.raw += line + '\n';

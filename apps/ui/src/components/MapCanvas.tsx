@@ -1,7 +1,7 @@
 // Spatial WebGL points/edges with a flat low-resource fallback. Every label is DOM.
 // Only opt-in orbit runs continuously, at a bounded rate and outside manual navigation.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
@@ -60,6 +60,7 @@ function MapActions({ graph }: { graph: RepoGraph }) {
 }
 
 export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { graph?: RepoGraph; heat: HeatCell[]; passagePaths?: string[]; readingRect?: { left: number; width: number } }) {
+  const arrowId=useId().replace(/:/g,'');
   const canvas = useRef<HTMLCanvasElement>(null);
   const spatialCanvas = useRef<HTMLCanvasElement>(null);
   const renderer = useRef<ReturnType<typeof createSpatialRenderer>>(undefined);
@@ -247,6 +248,9 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     animateCam(fitProjectedMap(points, area), immediate);
     setTip(undefined); setQuery(''); set({ hoveredPath: undefined });
   };
+
+  const previousGraph=useRef(graph);
+  useLayoutEffect(()=>{const before=previousGraph.current;previousGraph.current=graph;if(explore&&before?.approvalNeeded&&graph&&!graph.approvalNeeded)fitWorld(true);},[graph,explore]);
 
   const draw = () => {
     const c = canvas.current;
@@ -472,6 +476,11 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     >
       <canvas ref={canvas} style={{ width: size.w, height: size.h, display: spatialActive ? 'none' : 'block' }} />
       <canvas ref={spatialCanvas} data-spatial-renderer="webgl" style={{ width: size.w, height: size.h, display: spatialActive ? 'block' : 'none' }} />
+      {explore&&connections?.root&&graph?.temporal==='current'&&<svg className="map-import-directions" width={size.w} height={size.h} aria-label="Selected file import directions" role="img">
+        <title>Importer to dependency. Static imports, not execution order.</title>
+        <defs><marker id={arrowId} viewBox="0 0 8 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="currentColor"/></marker></defs>
+        {connections.neighbors.slice(0,40).map(({node,direction})=>{const origin=project(connections.root!),neighbor=project(node),a=direction==='imports'?origin:neighbor,b=direction==='imports'?neighbor:origin,length=Math.hypot(b.x-a.x,b.y-a.y);return length<24?null:<path key={`${direction}/${node.id}`} data-import-from={direction==='imports'?connections.root!.path:node.path} data-import-to={direction==='imports'?node.path:connections.root!.path} d={`M${a.x+(b.x-a.x)*7/length},${a.y+(b.y-a.y)*7/length}L${b.x-(b.x-a.x)*9/length},${b.y-(b.y-a.y)*9/length}`} markerEnd={`url(#${arrowId})`}/>;})}
+      </svg>}
       {explore && <div className="map-tools">
         <button className="btn" onClick={() => set({ explore: false })}>Back to work</button>
         <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label="Find a file on the map" placeholder="Find a file…" maxLength={200} value={query} onChange={(e) => setQuery(e.target.value)} />{query && <button aria-label="Clear map search" onClick={() => setQuery('')}>×</button>}</label>
@@ -482,6 +491,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         }}>Import paths <span className={`mini-switch${connectionsOpen ? ' on' : ''}`} /></button>
         {query && <div className="map-matches" aria-label="Map file matches">
           {matches.slice(0, 30).map((node) => <button key={node.id} onFocus={() => set({ hoveredPath: node.id })} onMouseEnter={() => set({ hoveredPath: node.id })} onClick={() => {
+            if(connectionsOpen){setNeighborhood(true);focusFile(node,true);setTip(undefined);return;}
             holdOrientation();
             const point = spatial(node);
             const x = fit.ox + point.x * fit.sx; const y = fit.oy + point.y * fit.sy;
@@ -543,7 +553,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         </div>
       )}
       {graph && explore && (
-        <div className="map-legend">
+        <div className="map-legend">{connections?.root&&graph.temporal==='current'&&<span>Importer → dependency · up to40 static imports</span>}
           <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{connectionsOpen && neighborhood ? `${viewGraph?.nodes.length} neighborhood files · ${viewGraph?.edges.length} shown imports` : observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} observed files · ${viewGraph?.edges.length} shown imports` : `${graph.nodes.length} files · ${graph.edges.length} imports`}</span>
 
           <MapActions graph={graph} />

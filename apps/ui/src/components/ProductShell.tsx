@@ -8,8 +8,24 @@ import { SettingsSections } from './UIVersions.tsx';
 import { useExperience } from '../lib/experience.ts';
 import {useReadingWindow} from './ReadingWindow.tsx';
 
-export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon, resizeControl, windowId, resetWindow }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode; resizeControl?: ReactNode; windowId?:string; resetWindow?:()=>void }) {
+export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon, resizeControl, windowId, resetWindow, floating=false, headerExtra, headerActions }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode; resizeControl?: ReactNode; windowId?:string; resetWindow?:()=>void;floating?:boolean;headerExtra?:ReactNode;headerActions?:ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const transition=useRef<Animation|undefined>(undefined),exiting=useRef(false),latestClose=useRef(close);
+  latestClose.current=close;
+  const requestClose=()=>{
+    const dialog=ref.current,state=useApp.getState();
+    const animate=dialog&&!modeless&&!className.includes('workspace-navigation')&&document.documentElement.dataset.uiVersion==='modern'&&document.documentElement.hasAttribute('data-ui-press')&&state.motion&&!state.lowResource&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!animate){transition.current?.cancel();latestClose.current();return;}
+    if(exiting.current)return;
+    exiting.current=true;dialog.dataset.readerExiting='';
+    // Snapshot the in-flight entrance before cancelling it; never jump back to a preset start.
+    const computed=getComputedStyle(dialog),opacity=computed.opacity,transform=computed.transform;
+    transition.current?.cancel();
+    const easing=getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim()||'cubic-bezier(.23,1,.32,1)';
+    const animation=dialog.animate([{opacity,transform},{opacity:0,transform:'translateY(4px) scale(.98)'}],{duration:140,easing,fill:'forwards'});
+    transition.current=animation;
+    void animation.finished.then(()=>{if(dialog.isConnected)latestClose.current();},()=>{});
+  };
   const window=useReadingWindow(ref,windowId);
   useEvidenceScroll(ref, `dialog/${className}`);
   const titleId = useId();
@@ -21,10 +37,12 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     // Pointer-only feedback for an occasional modal. Keyboard reading/navigation is immediate.
     const animate = !modeless && !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
     const arrival = animate ? dialog.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }) : undefined;
-    return () => { arrival?.cancel(); dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
+    transition.current=arrival;
+    return () => { transition.current?.cancel();dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
   }, [modeless]);
-  return createPortal(<dialog ref={ref} style={{...style,...window.style}} className={`product-dialog ${className}${modeless ? " map-reader" : ""}${window.enabled?' adjustable-reading-window':''}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (e.key === "Escape" && !e.defaultPrevented) { e.stopPropagation(); if(modeless){e.preventDefault();close();} } }}>
-    <header>{resizeControl}<h2 id={titleId}>{headerIcon}{title}</h2><div className="reading-window-actions">{window.controls}{window.enabled&&<button className="icon-btn" aria-label={`Reset ${windowId} window layout`} title="Reset window layout" onClick={()=>{window.reset();resetWindow?.();}}>↺</button>}<button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></div></header>
+  return createPortal(<dialog ref={ref} style={{...style,...window.style}} className={`product-dialog ${className}${modeless&&!floating ? " map-reader" : ""}${window.enabled?' adjustable-reading-window':''}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); e.stopPropagation(); if(e.target===e.currentTarget)requestClose(); }} onKeyDown={e => { if (e.key === "Escape" && !e.defaultPrevented && (e.target as Element).closest("dialog")===e.currentTarget) { e.stopPropagation(); if(modeless){e.preventDefault();requestClose();} } }}>
+    <header {...window.headerDrag}>{resizeControl}<h2 id={titleId}>{headerIcon}{title}</h2><div className="reading-window-actions">{headerActions}{window.controls}{window.enabled&&<button className="icon-btn" aria-label={`Reset ${windowId} window layout`} title="Reset window layout" onClick={()=>{window.reset();resetWindow?.();}}>↺</button>}<button className="icon-btn" aria-label={`Close ${title}`} onClick={requestClose}>✕</button></div></header>
+    {headerExtra&&<div className="reading-window-tabs" {...window.headerDrag}>{headerExtra}</div>}
     {children}
     {window.heightControl}
   </dialog>, document.body);

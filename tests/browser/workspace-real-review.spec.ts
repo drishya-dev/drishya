@@ -1,3 +1,4 @@
+import {outcomeMaterial} from '../../apps/ui/src/lib/outcome-material.ts';
 import { resolve } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { pointAtHistory, beginReadingSamples, finishReadingSamples } from './history-gestures.ts';
@@ -12,6 +13,28 @@ let app:App,server:RunningServer;
 test.skip(!store || !ids.length,'Opt in with a local redacted store and explicit recording IDs.');
 test.beforeAll(async()=>{if(!store || !ids.length)return;app=new App(store);server=await startServer({app,port:0});});
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();});
+
+test('actual Codex and Claude prompt and toolbox controls remain bounded through manual collapse',async({page})=>{
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ for(const id of ids){await page.goto(`${server.url}/?experience=modern#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  const composer=page.getByRole('region',{name:'Harness prompt'}),toolbox=page.locator('.modern-tool-station');await expect(composer).toBeVisible();
+  for(const width of [1440,390]){await page.setViewportSize({width,height:960});
+   for(const [surface,minimize,expand] of [[composer,'Minimize prompt','Expand prompt'],[toolbox,'Minimize toolbox','Expand toolbox']] as const){
+    if(surface===toolbox&&!await toolbox.isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();
+    await expect(surface).toBeVisible();
+    const restored=surface.getByRole('button',{name:expand,exact:true});if(await restored.isVisible()){await restored.click();await surface.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));}
+    await expect(surface.getByRole('button',{name:minimize,exact:true})).toBeVisible();
+    const before=(await surface.boundingBox())!;await surface.getByRole('button',{name:minimize,exact:true}).click();
+    const first=await surface.evaluate(node=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=0;}const rect=node.getBoundingClientRect();return{x:rect.x,y:rect.y,width:rect.width,height:rect.height};});
+    for(const key of ['x','y','width','height'] as const)expect(Math.abs(first[key]-before[key]),key).toBeLessThan(2);
+    await surface.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));await surface.getByRole('button',{name:expand,exact:true}).click();await surface.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+    const after=(await surface.boundingBox())!;expect(after.x).toBeGreaterThanOrEqual(0);expect(after.x+after.width).toBeLessThanOrEqual(width+1);
+   }
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+  }
+ }
+});
 test('actual product surfaces keep evidence, current source, review and map navigation bounded',async({page})=>{
   test.setTimeout(90000);
   // Audit surfaces from a known starting location; recovery is covered separately.
@@ -148,6 +171,22 @@ test('actual library Home keeps sessions readable at desktop, phone and short-wi
   const last=groups.locator('.mh-workspace').last();await expect(last).toBeVisible();const name=await last.locator('strong').innerText();await last.click();
   await expect(picker).toHaveAttribute('aria-expanded','false');await expect(picker).toContainText(name);await expect(page.locator('.mh-results>header h2')).toHaveText(name);
 });
+
+test('actual local Git histories expose connected commits and bounded desktop/phone changes',async({page})=>{
+  test.setTimeout(120000);
+  await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
+  for(const id of ids){
+    await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+    await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Explore Git branches and commits');await nav.getByRole('option').filter({hasText:'Explore Git branches and commits'}).click();
+    const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();const grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
+    await expect(atlas.locator('.atlas-commit').first()).toBeVisible();await expect(atlas.getByRole('alert')).toHaveCount(0);expect(await atlas.locator('.atlas-commit').count()).toBeLessThanOrEqual(50);
+    await atlas.locator('.atlas-commit').first().hover();await expect(atlas.locator('.thread-peek')).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-desktop.png`)});
+    await page.setViewportSize({width:390,height:844});await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-phone-graph.png`)});
+    await atlas.locator('.atlas-commit').first().click();await expect(atlas.getByRole('region',{name:'Selected commit',exact:true})).toBeVisible();expect(await atlas.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(atlas.locator('.atlas-message pre')).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-phone-detail.png`)});await atlas.getByRole('button',{name:'Close Git history',exact:true}).click();
+  }
+});
 test('actual imported evidence is searchable across the local library without a native turn',async({page})=>{
   const result=await app.history.searchLibrary({q:'test',count:5});test.skip(!result.items.length,'This opted-in store has no indexed test text.');
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.getByRole('button',{name:'Search evidence',exact:true}).click();
@@ -220,18 +259,18 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();
   if(await grant.isVisible())await grant.click();
   await expect(desk.getByRole('tablist')).toBeVisible();
-  const split=desk.getByRole('button',{name:'Split view',exact:true});if(await split.getAttribute('aria-pressed')==='true')await split.click();
+  const split=desk.getByRole('button',{name:'Split view',exact:true,includeHidden:true});if(await split.getAttribute('aria-pressed')==='true'){await split.locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await split.click();}
   const graph=await app.graph(id);
   const paths=graph.nodes.map(node=>node.path).filter(path=>!path.startsWith('.local/')&&/\.(ts|tsx|md|css)$/.test(path));
   const preferred=['apps/ui/src/components/Viewer.tsx','apps/ui/src/modern/recovered-surfaces.css'];
   const selected=[...preferred.filter(path=>paths.includes(path)),...paths].filter((path,n,all)=>all.indexOf(path)===n).slice(0,2);
   expect(selected.length).toBe(2);
   for(const path of selected){await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill(path);await page.locator('[data-spine-path]').filter({has:page.getByText(path,{exact:true})}).click();}
-  await desk.getByRole('button',{name:'Split view',exact:true}).click();
+  await desk.getByRole('button',{name:'Split view',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await desk.getByRole('button',{name:'Split view',exact:true}).click();
   await desk.locator('.desk-pane').nth(0).click({position:{x:8,y:8}});
-  await desk.getByRole('tab',{name:selected[0]!.split('/').at(-1),exact:true}).click();
+  await desk.locator('[data-workspace-tab]').filter({has:page.locator(`[title^="${selected[0]} · drag"]`)}).getByRole('tab').click();
   await desk.locator('.desk-pane').nth(1).click({position:{x:8,y:8}});
-  await desk.getByRole('tab',{name:selected[1]!.split('/').at(-1),exact:true}).click();
+  await desk.locator('[data-workspace-tab]').filter({has:page.locator(`[title^="${selected[1]} · drag"]`)}).getByRole('tab').click();
   await expect(desk.locator('.desk-code,.desk-markdown')).toHaveCount(2);
   await expect(desk.locator('.desk-markdown>p[role=status]')).toHaveCount(0);
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-workspace.png`)});
@@ -243,8 +282,8 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
     await reader.getByRole('button',{name:'Go',exact:true}).click();
     await expect(reader.locator('footer')).toContainText(`${total} lines`);
     await reader.locator('.desk-code').evaluate(node=>{node.scrollTop=120;node.dispatchEvent(new Event('scroll',{bubbles:true}));});
-    await desk.getByRole('tab',{name:selected[1]!.split('/').at(-1),exact:true}).click();
-    await desk.getByRole('tab',{name:selected[0]!.split('/').at(-1),exact:true}).click();
+    await desk.locator('[data-workspace-tab]').filter({has:page.locator(`[title^="${selected[1]} · drag"]`)}).getByRole('tab').click();
+    await desk.locator('[data-workspace-tab]').filter({has:page.locator(`[title^="${selected[0]} · drag"]`)}).getByRole('tab').click();
     await expect(reader.locator('footer')).toContainText(`${total} lines`);
     await expect.poll(()=>reader.locator('.desk-code').evaluate(node=>node.scrollTop)).toBe(120);
   }
@@ -253,7 +292,7 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await expect(editor).toBeFocused();
   await expect(reader.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
   await page.screenshot({path:resolve(`.local/review-actual-${index+1}-editor.png`)});
-  await reader.getByRole('button',{name:'Discard draft',exact:true}).click();
+  await reader.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await reader.getByRole('button',{name:'Discard draft',exact:true}).click();
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
   await expect(page.locator('.history')).toBeVisible();
 });
@@ -340,4 +379,60 @@ test('actual current Markdown is readable in Files and transfers to Workspace wi
     for(const width of [1440,390]){await page.setViewportSize({width,height:960});expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/current-document-actual-${id}-${width}.png`)});}
     await page.setViewportSize({width:1440,height:960});await reader.getByRole('group',{name:'Markdown presentation',exact:true}).getByRole('button',{name:'Source',exact:true}).click();await expect(reader.locator('.whole-source')).toBeVisible();await reader.getByRole('button',{name:'Open in Workspace',exact:true}).click();await expect(desk.getByRole('region',{name:'Workspace file README.md',exact:true})).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
   }
+});
+
+
+test('actual Codex and Claude test outputs expose bounded result bars and compact prompt identity',async({page})=>{
+ test.setTimeout(90000);
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ for(const id of ids){
+  let target:string|undefined,query='';
+  for(const term of ['vitest','pytest','test']){
+   const commands=await app.history.commands(id,{q:term});
+   for(const item of commands.items.slice(0,8)){
+    const data=await app.history.page(id,{selectedOperationId:item.id,count:1}),op=data.projection.operations.find(op=>op.id===item.id);if(!op||!['shell','test'].includes(op.detail.kind))continue;
+    const detail=op.detail as {outputPreview?:string;outputArtifactId?:string};
+    const slice=detail.outputArtifactId?await app.history.artifact(id,detail.outputArtifactId,0,200):undefined;
+    const report=outcomeMaterial(detail.outputPreview??'',slice?.available?{text:slice.text,partial:slice.hasMore||slice.truncated?'partial':undefined}:{});
+    if(report.runs.length){target=item.id;query=term;break;}
+   }
+   if(target)break;
+  }
+  expect(target,`Actual recording ${id} should have a recognized captured test output`).toBeTruthy();
+  await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  const icon=(await page.locator('.modern-composer-identity svg').boundingBox())!,name=(await page.locator('.modern-composer-location').boundingBox())!;expect(Math.abs(icon.y+icon.height/2-name.y-name.height/2)).toBeLessThan(2);
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();
+  const commands=page.getByRole('dialog',{name:'Captured commands',exact:true});await commands.getByRole('searchbox',{name:'Filter captured command previews',exact:true}).fill(query);
+  await commands.locator(`[data-command-id="${target}"]`).getByRole('button',{name:'Open captured activity',exact:false}).click();
+  const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector.locator('.captured-outcomes').first()).toBeVisible();expect(await inspector.locator('.verification-tile').count()).toBeGreaterThan(0);
+  for(const width of [1440,390]){await page.setViewportSize({width,height:960});expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/test-bars-actual-${id}-${width}.png`)});}
+  const bar=inspector.locator('.case-bar').first();if(await bar.count()){await bar.click();await expect(page.getByRole('dialog',{name:'Captured test result',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close Captured test result'}).click();}
+ }
+});
+
+
+test('actual sessions keep current-file tabs beside agent and retain compact prompt clearance',async({page})=>{
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:ids.map(id=>({id,entries:[['surface/File reader',{x:400,y:64,width:850,height:1200}]]}))}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ for(const [index,id] of ids.entries()){
+  await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
+  const graph=await app.graph(id),paths=graph.nodes.filter(node=>!node.path.startsWith('.')&&/\.(md|ts|tsx|py|json)$/.test(node.path)).map(node=>node.path).sort((a,b)=>(a==='docs/BLUEPRINT.md'?-1:b==='docs/BLUEPRINT.md'?1:a==='README.md'?-1:b==='README.md'?1:a.length-b.length)).slice(0,2);expect(paths.length).toBeGreaterThanOrEqual(2);
+  const grant=page.getByRole('button',{name:/Enable workspace reading/});if(await grant.isVisible())await grant.click();
+  for(const path of paths)await page.evaluate(path=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path,pin:true}})),path);
+  const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();await expect(reader.getByRole('tab')).toHaveCount(2);await expect(reader.locator('.current-file-code,.desk-markdown')).not.toBeEmpty();
+  const history=(await page.locator('.history').boundingBox())!,box=(await reader.boundingBox())!;expect(history.x+history.width).toBeLessThanOrEqual(box.x+1);const prompt=(await page.locator('.prompt-composer').boundingBox())!;expect(box.y+box.height).toBeLessThanOrEqual(prompt.y-8);const rail=await page.locator('.complete-prompt-rail').boundingBox();if(rail)expect(box.x+box.width).toBeLessThanOrEqual(rail.x);
+  await reader.getByRole('tab').first().click();await expect(reader.locator('.current-file-code,.desk-markdown')).not.toBeEmpty();
+  await reader.getByRole('button',{name:'Reset File reader window layout',exact:true}).click();
+  await expect.poll(async()=>Math.abs((await reader.boundingBox())!.width-1440*.28)).toBeLessThan(2);
+  const historyNode=page.locator('.history');const hb=(await historyNode.boundingBox())!;await page.mouse.move(hb.x+hb.width/2,hb.y+hb.height/2);await page.mouse.wheel(0,-480);
+  const anchor=async()=>historyNode.evaluate(node=>{const top=node.getBoundingClientRect().top;const slot=[...node.querySelectorAll<HTMLElement>('.passage-slot')].find(item=>item.getBoundingClientRect().bottom>top+100);return slot?{id:slot.dataset.passageId,offset:slot.getBoundingClientRect().top-top}:undefined;});
+  await page.waitForTimeout(180);const stable=await anchor();await page.waitForTimeout(220);const after=await anchor();expect(stable).toBeDefined();expect(after?.id).toBe(stable?.id);if(after&&stable)expect(Math.abs(after.offset-stable.offset)).toBeLessThan(4);
+  await page.screenshot({path:resolve(`.local/file-peek-actual-${index+1}.png`)});
+  await reader.locator('header .reading-window-actions button').last().click();
+  const latest=page.getByRole('button',{name:/Back to latest/});if(await latest.isVisible())await latest.click();
+  await page.locator('.history').evaluate(node=>node.scrollTop=node.scrollHeight);
+  await expect.poll(async()=>{const prompt=(await page.locator('.prompt-composer').boundingBox())!,last=(await page.locator('.history .passage-slot').last().boundingBox())!;return prompt.y-last.y-last.height;}).toBeGreaterThanOrEqual(4);
+  await page.setViewportSize({width:390,height:844});await page.evaluate(path=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path}})),paths[0]!);await expect(reader).toBeVisible();const phone=(await reader.boundingBox())!;expect(phone.x).toBeGreaterThanOrEqual(0);expect(phone.x+phone.width).toBeLessThanOrEqual(390);expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+ }
 });

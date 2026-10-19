@@ -13,6 +13,43 @@ async function pasteDraft(editor:Locator,text:string) {
   await editor.evaluate((node,text)=>{const data=new DataTransfer();data.setData('text/plain',text);node.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));},text);
 }
 
+test('prompt minimize and reversal share measured bounds without changing layout each animation frame',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
+ const composer=page.getByRole('region',{name:'Harness prompt'});await expect(composer).toBeVisible();
+ const before=(await composer.boundingBox())!;
+ expect(before.width).toBeGreaterThan(500);
+ await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
+ const pause=async(time:number)=>composer.evaluate((node,time)=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=time;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};},time);
+ const start=await pause(0);for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
+ await page.screenshot({path:resolve('.local/prompt-reflow-start.png')});
+ expect(Math.abs((await composer.boundingBox())!.width-before.width)).toBeLessThan(1.5);
+ const middle=await pause(90);expect(middle.width).toBeGreaterThan(180);expect(middle.width).toBeLessThan(before.width);
+ await page.screenshot({path:resolve('.local/prompt-reflow-middle.png')});
+ expect((await composer.locator('[data-surface-label]').boundingBox())!.height).toBeLessThan(30);
+ await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
+ for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
+ await composer.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-node.offsetHeight-24))).toBeLessThanOrEqual(1);
+ await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
+ await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});const box=(await composer.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);}
+});
+
+test('toolbox minimizes from actual bounds and keeps its compact icon and independent scroll',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern#/r/${ids['claude-code']}`);
+ const toolbox=page.locator('.modern-tool-station');await expect(toolbox).toBeVisible();const before=(await toolbox.boundingBox())!;
+ await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();
+ const start=await toolbox.evaluate(node=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=0;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};});
+ for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
+ expect((await toolbox.locator('[data-surface-label] svg').boundingBox())!.height).toBeLessThan(24);
+ await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await expect(page.getByRole('complementary',{name:'Tools and agents'})).toBeVisible();
+ await page.emulateMedia({reducedMotion:'reduce'});await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();expect(await toolbox.evaluate(node=>node.getAnimations().length)).toBe(0);
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
+});
+
 test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-fresh-')); root = join(dir, 'shop');
   cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
@@ -273,14 +310,10 @@ test('Modern chrome fits wide, laptop and phone viewports; panels and settings r
   }
 });
 
-test('Modern header retains its title on hover and click, utilities center, and fresh folders start closed',async({page})=>{
+test('Modern omits the session capsule while utilities center and fresh folders start closed',async({page})=>{
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  const title=page.locator('.modern-session-header h1');
-  const original=await title.textContent(), before=await title.boundingBox();
-  await title.hover();await title.click();
-  await expect(title).toBeVisible();await expect(title).toHaveText(original!);
-  expect(await title.boundingBox()).toEqual(before);
+  await expect(page.locator('.modern-session-header .studio-session')).toHaveCount(0);
   expect(await page.locator('.modern-session-header').evaluate(el=>getComputedStyle(el,'::after').content)).toBe('none');
   for(const selector of ['.settings-open','.workspace-menu>summary','.search-open']) {
     const button=page.locator(`.modern-session-header ${selector}`),glyph=button.locator('svg');
@@ -305,7 +338,7 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   await expect(composer.getByRole('button',{name:'Attach folder',exact:true})).toBeVisible();
   await composer.locator('.native-options>summary').click();
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
-  await page.getByRole('heading',{level:1}).click();
+  await page.locator('.history').click({position:{x:8,y:160}});
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
   await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
   await composer.getByLabel('Choose prompt files').setInputFiles({name:'note.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic attachment for local testing')});
@@ -371,7 +404,7 @@ test('Modern compact composer keeps connection consent accessible and has no nee
   expect(await input.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);
   await composer.locator('.native-options>summary').click();
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
-  await page.getByRole('heading',{level:1}).click();
+  await page.locator('.history').click({position:{x:8,y:160}});
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
 });
 
@@ -488,7 +521,33 @@ test('recovered Modern toolbox preserves actual instrument origins, filters and 
   await expect(page.getByRole('button',{name:'Show files',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Explore repository map',exact:true})).toHaveText('Repository');
   await expect(page.locator('.modern-session-header')).toBeVisible();
-  await expect(page.locator('.modern-session-header .studio-session')).toContainText(/checkout|orders/);
+  await expect(page.locator('.modern-session-header .studio-session')).toHaveCount(0);
+});
+
+test('local Git atlas connects real branches and commits with root/merge patches and phone reading',async({page})=>{
+  const git=(args:string[],input?:string)=>execFileSync('git',['-c','core.fsmonitor=false',...args],{cwd:root,encoding:'utf8',windowsHide:true,input}).trim();
+  const base=git(['rev-parse','HEAD']),tree=git(['rev-parse','HEAD^{tree}']);
+  const feature=git(['commit-tree',tree,'-p',base],'Atlas feature fixture\n'),merge=git(['commit-tree',tree,'-p',base,'-p',feature],'Atlas merge fixture\n');
+  git(['update-ref','refs/heads/atlas-feature',feature]);git(['update-ref','refs/heads/atlas-merge',merge]);git(['tag','atlas-root',base]);
+  await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedHash:string}).copiedHash=text;}}}));
+  await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Git graph',exact:true}).click();
+  const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();
+  if(await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).isVisible())await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).click();
+  const merged=atlas.locator(`[data-commit-hash="${merge}"]`);await expect(merged).toBeVisible();await expect(atlas.locator('.thread-links')).toBeVisible();await expect(atlas.locator('.thread-fiber')).toHaveCount(0);expect(await atlas.locator('.ribbon-lamina').count()).toBeGreaterThan(0);expect(await atlas.locator('.thread-links path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
+  const surface=atlas.locator('.thread-ribbon').first(),beforeOrbit=await surface.getAttribute('d'),orbit=atlas.getByRole('button',{name:'Orbit 3D Git ribbon',exact:true});await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','true');const view=(await atlas.locator('.thread-viewport').boundingBox())!;await page.mouse.move(view.x+40,view.y+40);await page.mouse.down();await page.mouse.move(view.x+40,view.y+110,{steps:5});await page.mouse.up();await expect(surface).not.toHaveAttribute('d',beforeOrbit!);await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','false');await page.screenshot({path:resolve('.local/git-spatial-orbit.png')});await merged.click();
+  const parents=atlas.getByRole('combobox',{name:'Commit comparison parent',exact:true});await expect(parents.locator('option')).toHaveCount(2);await parents.selectOption('1');await expect(parents).toHaveValue('1');
+  await expect(atlas.locator('.atlas-message pre')).toContainText('Atlas merge fixture');await expect(atlas).toContainText('No changed paths against this parent.');
+  await atlas.getByRole('textbox',{name:'Find Git branches and tags',exact:true}).fill('atlas-root');
+  await atlas.locator('.atlas-ref').filter({hasText:'atlas-root'}).click();
+  const rootCommit=atlas.locator(`[data-commit-hash="${base}"]`);await expect(rootCommit).toBeVisible();await expect(atlas.locator('.atlas-commit')).toHaveCount(1);await rootCommit.click();
+  await expect(atlas.locator('.atlas-message')).toBeVisible();await expect(parents).toContainText('Empty tree');
+  await atlas.locator('.atlas-files button[title="README.md"]').click();await expect(atlas.locator('.git-patch-reader')).toContainText('Workspace guide');await expect(atlas.locator('.git-patch-reader').getByRole('button',{name:'Commit',exact:true})).toBeVisible();
+  await atlas.getByRole('button',{name:'Copy commit hash',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedHash:string}).copiedHash)).toBe(base);
+  await page.screenshot({path:resolve('.local/git-atlas-desktop.png')});
+  for(const width of [390,320]){await page.setViewportSize({width,height:844});await expect(atlas.getByRole('region',{name:'Selected commit',exact:true})).toBeVisible();expect(await atlas.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/git-atlas-${width}.png`)});}
+  await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await rootCommit.click();
+  await atlas.getByRole('button',{name:'Current file',exact:true}).click();await expect(atlas).toHaveCount(0);await expect(page.locator('.current-file-reader')).toBeVisible();
 });
 
 test('Modern reading windows resize, move, recover and reset without leaving the viewport',async({page})=>{
@@ -822,6 +881,19 @@ test('Modern qualifies cached native receipts instead of claiming a current agen
 });
 
 
+test('Workspace keeps frequent controls visible and secondary actions dismiss and fit each pane',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern#/r/${ids.codex}`);
+ await page.getByRole('button',{name:'Open developer workspace'}).click();const desk=page.getByRole('region',{name:'Developer workspace',exact:true});const grant=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();
+ await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/total.ts');await page.locator('[data-spine-path="src/cart/total.ts"]').click();
+ const file=desk.getByRole('region',{name:'Workspace file src/cart/total.ts',exact:true});await expect(file.getByRole('button',{name:'Edit file',exact:true})).toBeVisible();await expect(desk.getByRole('button',{name:'Back to agent',exact:true})).toBeVisible();await expect(desk.getByRole('button',{name:'Split view',exact:true})).toHaveCount(0);
+ const layout=desk.getByLabel('Workspace layout actions',{exact:true}),actions=file.getByLabel('File actions for src/cart/total.ts',{exact:true});
+ await layout.click();await expect(desk.getByRole('button',{name:'Split view',exact:true})).toBeVisible();await file.locator('header>strong').click();await expect(layout.locator('..')).not.toHaveAttribute('open','');
+ await layout.focus();await page.keyboard.press('Enter');await page.keyboard.press('ArrowDown');await expect(desk.getByRole('button',{name:'Split view',exact:true})).toBeFocused();await page.keyboard.press('End');await expect(desk.getByRole('button',{name:'Reset layout',exact:true})).toBeFocused();await page.keyboard.press('Escape');await expect(layout).toBeFocused();
+ await file.getByRole('button',{name:'Edit file',exact:true}).click();await expect(file.getByRole('textbox',{name:'Local draft for src/cart/total.ts'})).toBeFocused();await expect(file.getByRole('button',{name:'Download draft',exact:true})).toHaveCount(0);await expect(file.getByRole('button',{name:'Compare draft',exact:true})).toBeVisible();
+ for(const width of [1440,820,390,320]){await page.setViewportSize({width,height:width===320?568:844});await actions.click();const menu=file.locator('.desk-options-body'),box=(await menu.boundingBox())!,owner=(await desk.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);expect(box.y+box.height).toBeLessThanOrEqual(owner.y+owner.height+1);await expect(file.getByRole('button',{name:'Download draft',exact:true})).toBeVisible();await page.screenshot({path:resolve(`.local/workspace-simple-${width}.png`)});await page.keyboard.press('Escape');}
+ expect(readFileSync(join(root,'src/cart/total.ts'),'utf8')).toBe('export const total = 42;\n');
+});
+
 test('developer Workspace reads two files, preserves drafts and only prepares native edit/run requests',async({page})=>{
   let submitted=0;
   await page.route('**/controller/prompt',route=>{submitted++;return route.fulfill({status:500,json:{error:'Must not submit during workspace preparation'}});});
@@ -857,15 +929,15 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await expect(total.getByRole('button',{name:'Wrap',exact:true})).toHaveAttribute('aria-pressed','true');
   await expect(total.getByRole('searchbox',{name:'Find in src/cart/total.ts'})).toHaveValue('total');
   await desk.getByRole('tab',{name:'discount.ts',exact:true}).click();
-  await desk.getByRole('button',{name:'Split view',exact:true}).click();
+  await desk.getByRole('button',{name:'Split view',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await desk.getByRole('button',{name:'Split view',exact:true}).click();
   await expect(desk.locator('.desk-document')).toHaveCount(2);
   await expect(total).toBeVisible();
   const divider=desk.getByRole('separator',{name:'Resize workspace panes',exact:true});
   await divider.focus();await page.keyboard.press('End');await expect(divider).toHaveAttribute('aria-valuenow','75');
   await divider.dblclick();await expect(divider).toHaveAttribute('aria-valuenow','50');
-  await desk.getByRole('button',{name:'Reset layout',exact:true}).click();
+  await desk.getByRole('button',{name:'Reset layout',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await desk.getByRole('button',{name:'Reset layout',exact:true}).click();
   await expect(desk.locator('.desk-document')).toHaveCount(1);await expect(desk.getByRole('tab')).toHaveCount(2);
-  await desk.getByRole('button',{name:'Split view',exact:true}).click();await expect(total).toBeVisible();
+  await desk.getByRole('button',{name:'Split view',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await desk.getByRole('button',{name:'Split view',exact:true}).click();await expect(total).toBeVisible();
   await page.screenshot({path:resolve('.local/developer-workspace-desktop.png')});
   await total.getByRole('button',{name:'Edit file',exact:true}).click();
   const editor=total.getByRole('textbox',{name:'Local draft for src/cart/total.ts',exact:true});
@@ -888,13 +960,13 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await other.getByRole('textbox',{name:'Local draft for src/cart/discount.ts',exact:true}).fill('export const alternate = 7;\n');
   await expect(comparison.getByRole('button',{name:'Side by side',exact:true})).toHaveAttribute('aria-pressed','true');
   await expect(comparison.getByRole('searchbox',{name:'Find in patch',exact:true})).toHaveValue('total');
-  await other.getByRole('button',{name:'Discard draft',exact:true}).click();
+  await other.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await other.getByRole('button',{name:'Discard draft',exact:true}).click();
   await page.screenshot({path:resolve('.local/workspace-draft-patch.png')});
   await total.getByRole('button',{name:'Edit draft',exact:true}).click();
   await expect(editor).toHaveText('export const total = 43;\n');
   await expect(editor).toBeFocused();
   const downloadPromise=page.waitForEvent('download');
-  await total.getByRole('button',{name:'Download draft',exact:true}).click();
+  await total.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await total.getByRole('button',{name:'Download draft',exact:true}).click();
   const download=await downloadPromise;
   expect(readFileSync((await download.path())!,'utf8')).toBe('export const total = 43;\n');
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
@@ -962,13 +1034,13 @@ test('Workspace large draft comparison retains complete text, editing state and 
   await expect(editor).toBeFocused();
   await expect.poll(()=>page.evaluate(()=>getSelection()?.toString())).toBe(selection);
   await expect.poll(()=>scroller.evaluate(node=>node.scrollTop)).toBe(250);
-  const downloaded=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  const downloaded=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await downloaded).path())!,'utf8')).toBe(draft);
   await editor.press('Control+z');
-  const undone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  const undone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await undone).path())!,'utf8')).toBe(readFileSync(join(root,'src/cart/comparison.ts'),'utf8'));
   await editor.press('Control+y');
-  const redone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  const redone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await redone).path())!,'utf8')).toBe(draft);
   expect(readFileSync(join(root,'src/cart/comparison.ts'),'utf8')).not.toContain('draftLine');
 });
@@ -991,7 +1063,7 @@ test('Workspace editor indents, undoes and preserves exact line endings without 
     await expect(editor).toBeFocused();await expect(file.locator('.cm-lineNumbers')).toBeVisible();
     await expect(file.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
     await editor.press('Control+End');await page.keyboard.insertText('// added');await editor.press('Enter');await page.keyboard.insertText('next');
-    const download=async()=>{const pending=page.waitForEvent('download');await file.getByRole('button',{name:'Download draft',exact:true}).click();return readFileSync((await (await pending).path())!,'utf8');};
+    const download=async()=>{const pending=page.waitForEvent('download');await file.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Download draft',exact:true}).click();return readFileSync((await (await pending).path())!,'utf8');};
     expect(await download()).toBe(original+'// added'+eol+'next');
     await editor.press('Control+Home');await editor.press('Tab');
     expect(await download()).toBe((path.endsWith('endings.ts')?'    ':'  ')+original+'// added'+eol+'next');
@@ -1008,7 +1080,7 @@ test('Workspace editor indents, undoes and preserves exact line endings without 
     }
     await page.setViewportSize({width:1440,height:960});
     expect(readFileSync(join(root,path),'utf8')).toBe(original);
-    await file.getByRole('button',{name:'Discard draft',exact:true}).click();
+    await file.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Discard draft',exact:true}).click();
   }
 });
 
@@ -1115,15 +1187,15 @@ test('Files width is adjustable without covering Workspace or moving history on 
   await page.screenshot({path:resolve('.local/files-adjustable-width.png')});
 });
 
-test('Modern navigation keeps two actions at each edge, readable and outside the history viewport',async({page})=>{
+test('Modern navigation keeps independent edge actions readable and outside the history viewport',async({page})=>{
   await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   for(const width of [1600,1280,1024,768,600,390]) {
     await page.setViewportSize({width,height:900});
-    const buttons=['Show files','Explore repository map','Open developer workspace','Git review'];
+    const buttons=['Show files','Explore repository map','Open developer workspace','Git review','Git graph'];
     const boxes=[];
     for(const name of buttons) {const node=page.getByRole('button',{name,exact:true});await expect(node).toBeVisible();const box=(await node.boundingBox())!;expect(box.height).toBeGreaterThanOrEqual(38);expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);boxes.push(box);}
-    expect(boxes[0]!.x).toBeLessThan(30);expect(boxes[3]!.x+boxes[3]!.width).toBeGreaterThan(width-30);
+    expect(boxes[0]!.x).toBeLessThan(30);expect(boxes[4]!.x+boxes[4]!.width).toBeGreaterThan(width-30);
     if(width===1280)await page.screenshot({path:resolve('.local/modern-navigation-edges.png')});
     for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i]!,b=boxes[j]!;expect(Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y))).toBeLessThan(1);}
     const history=(await page.locator('.history').boundingBox())!;
@@ -1254,7 +1326,7 @@ test('Workspace creates an unsent file draft and forwards large contents as a na
   await page.getByLabel('More workspace options').click();
   await page.getByRole('button',{name:'Back to reading',exact:true}).click();
   await expect(desk).toBeVisible();await expect(document.getByRole('textbox',{name:'Local draft for src/created.ts',exact:true})).toBeFocused();
-  const backDownload=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true}).click();
+  const backDownload=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await backDownload).path())!,'utf8')).toBe(text);
   expect(payload.prompt.length).toBeLessThan(2000);
   expect(()=>readFileSync(join(root,'src/created.ts'))).toThrow();
@@ -1357,7 +1429,7 @@ test('source refresh retains reading, compares versions and blocks a stale nativ
     await expect(file.locator('.diff-scroll')).toContainText('version = 4');await expect(file.locator('.diff-scroll')).toContainText('version = 3');
     await file.getByRole('button',{name:'Edit draft',exact:true}).click();
     await page.screenshot({path:resolve('.local/source-conflict-retained.png')});
-    await file.getByRole('button',{name:'Discard draft',exact:true}).click();
+    await file.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Discard draft',exact:true}).click();
   } finally {writeFileSync(join(root,path),original);}
 });
 
@@ -1615,4 +1687,180 @@ test('a restored current reader requests fresh consent and keeps inspector navig
   await reader.getByRole('button',{name:'Approve current-file reading',exact:true}).click();await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();expect(reads).toBeGreaterThan(0);await expect(reader.getByRole('alert')).toHaveCount(0);
   await reader.locator(':scope>header button[aria-label^="Close "]').click();const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
   await workspace.click();await expect(inspector).toHaveCount(0);const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk.getByRole('tablist')).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(inspector).toBeVisible();
+});
+
+test('captured excerpt comparison uses current reader consent, exact positions and phone-safe diff',async({page})=>{
+  const file=join(root,'comparison.ts'),journal=join(dir,'comparison.jsonl'),timestamp='2026-10-18T00:00:00Z';
+  writeFileSync(file,'export const untouched=1;\nexport const current=2;\n');
+  const rows=[{type:'user',uuid:'compare-user',sessionId:'compare',cwd:root,message:{role:'user',content:'Read comparison.ts'},timestamp},{type:'assistant',uuid:'compare-call',cwd:root,timestamp,message:{role:'assistant',content:[{type:'tool_use',id:'compare-read',name:'Read',input:{file_path:file,offset:2,limit:1}}]}},{type:'user',uuid:'compare-result',cwd:root,timestamp,toolUseResult:{file:{filePath:file,content:'export const captured=1;',startLine:2,numLines:1,totalLines:2}},message:{role:'user',content:[{type:'tool_result',tool_use_id:'compare-read',content:'2→export const captured=1;'}]}}];
+  writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('claude-code',journal)).recordingId;
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  await expect(page.locator('.history')).toBeVisible();
+  const grant=page.getByRole('button',{name:/^Enable workspace reading/});await expect(grant).toBeVisible();await grant.click();await expect(grant).toHaveCount(0);
+  await page.getByRole('treeitem',{name:'comparison.ts',exact:true}).click();
+  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();
+  const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare captured source with disk',exact:true}).click();
+  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('moved code is not mapped');
+  expect(await comparison.locator('.diff-scroll').textContent()).not.toContain('untouched');
+  await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({path:resolve('.local/captured-disk-comparison-phone.png')});
+});
+
+test('Git timeline scrolls into older history without commit-range pages and keeps compact controls reachable',async({page})=>{
+  const git=(args:string[],input?:string)=>execFileSync('git',['-c','core.fsmonitor=false',...args],{cwd:root,encoding:'utf8',windowsHide:true,input}).trim();
+  const tree=git(['rev-parse','HEAD^{tree}']);let tip=git(['rev-parse','HEAD']);for(let index=0;index<82;index++)tip=git(['commit-tree',tree,'-p',tip],`Continuous fixture ${index}\n`);git(['update-ref','refs/heads/main',tip]);
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await expect(page.locator('.modern-composer-identity')).toHaveText('');await expect(page.locator('.modern-composer-intro')).toHaveCount(0);await expect(page.locator('.modern-composer-location code')).toHaveCount(0);await expect(page.locator('.modern-composer-identity>svg')).toHaveCount(1);await expect(page.locator('.modern-composer-location')).not.toBeEmpty();
+  for(const width of [390,320,1440]){await page.setViewportSize({width,height:960});await expect.poll(async()=>{const boxes=await page.getByRole('navigation',{name:'Workspace views',exact:true}).locator('button:visible').evaluateAll(elements=>elements.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));return boxes.every((a,index)=>a.x>=0&&a.right<=width&&boxes.slice(index+1).every(b=>a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y));}).toBe(true);}
+  await page.getByRole('button',{name:'Git graph',exact:true}).click();const atlas=page.getByRole('dialog',{name:'Git history',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
+  await expect(atlas.locator('.atlas-commit')).toHaveCount(50);await expect(atlas.getByRole('navigation',{name:'Commit pages'})).toHaveCount(0);
+  const graph=atlas.getByLabel('Commits; drag background to pan',{exact:true});await graph.focus();await page.keyboard.press('PageUp');await expect.poll(()=>atlas.locator('.atlas-commit').count()).toBeGreaterThan(50);
+  await atlas.getByLabel('Choose Git commit',{exact:true}).selectOption(tip);await expect(atlas.locator('.atlas-message')).toContainText('Continuous fixture 81');await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();
+  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await page.screenshot({path:resolve('.local/git-thread-continuous.png')});
+});
+
+
+test('prompt symbol and workspace name stay on one compact line for both harnesses',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ for(const harness of ['codex','claude-code']){
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[harness]}`);
+  const target=page.locator('.modern-composer-target'),symbol=target.locator('svg'),name=target.locator('.modern-composer-location');
+  await expect(symbol).toBeVisible();await expect(name).toHaveText('shop');await expect(target).not.toContainText(/Codex|Claude/);
+  for(const width of [320,390,1440]){
+   await page.setViewportSize({width,height:900});
+   for(const text of ['shop','extremely-long-workspace-name-for-a-large-monorepo-'.repeat(4)]){
+    await name.locator('span').evaluate((node,text)=>node.textContent=text,text);
+    const icon=(await symbol.boundingBox())!,label=(await name.boundingBox())!,row=(await target.boundingBox())!;
+    expect(Math.abs(icon.y+icon.height/2-label.y-label.height/2)).toBeLessThan(1.5);
+    expect(label.x-icon.x-icon.width).toBeGreaterThanOrEqual(7);expect(label.x-icon.x-icon.width).toBeLessThanOrEqual(11);
+    expect(row.height).toBeLessThanOrEqual(24);expect(label.x+label.width).toBeLessThanOrEqual(width);
+   }
+   await page.screenshot({path:resolve(`.local/prompt-inline-${harness}-${width}.png`)});
+  }
+ }
+});
+
+
+test('file peek keeps tabs beside agent, replaces preview and anchors all four resize edges',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+ await expect(page.locator('.modern-session-header .studio-session')).toHaveCount(0);
+ const grant=page.getByRole('button',{name:/Enable workspace reading/});await expect(grant.or(page.locator('[data-spine-path="README.md"]'))).toBeVisible();if(await grant.isVisible())await grant.click();
+ const open=async(path:string,pin=false)=>page.evaluate(({path,pin})=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path,pin}})),{path,pin});
+ await open('src/cart/total.ts');const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();
+ await expect(reader.locator('.current-file-code')).toContainText('total = 42');
+ await expect(reader.getByRole('tab')).toHaveCount(1);
+ await reader.getByRole('tab').dblclick();
+ await open('src/cart/reading.ts');await expect(reader.getByRole('tab')).toHaveCount(2);
+ await reader.getByRole('searchbox',{name:'Find in current source file'}).fill('reviewLine449');
+ await open('README.md');await expect(reader.getByRole('tab')).toHaveCount(2);await expect(reader.getByRole('tab',{name:/reading.ts/})).toHaveCount(0);
+ await reader.getByRole('tab',{name:/README.md/}).dblclick();await open('src/cart/reading.ts');await expect(reader.getByRole('searchbox',{name:'Find in current source file'})).toHaveValue('reviewLine449');
+ await expect(reader.getByRole('tab')).toHaveCount(3);
+ await reader.getByRole('tab',{name:/reading.ts/}).focus();await page.keyboard.press('Home');await expect(reader.getByRole('tab',{name:/total.ts/})).toBeFocused();
+ const initial=(await reader.boundingBox())!,history=(await page.locator('.history').boundingBox())!;
+ expect(history.x+history.width).toBeLessThanOrEqual(initial.x+1);
+ const composer=(await page.locator('.prompt-composer').boundingBox())!;expect(initial.y+initial.height).toBeLessThanOrEqual(composer.y-8);
+
+ for(const [edge,dx,dy] of [['left',-35,0],['right',-25,0],['top',0,-10],['bottom',0,-20]] as const){
+  const before=(await reader.boundingBox())!,handle=reader.locator(`.edge-${edge}`),box=(await handle.boundingBox())!;
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+dx,box.y+box.height/2+dy,{steps:5});await page.mouse.up();
+  const after=(await reader.boundingBox())!;
+  if(edge==='left'){expect(Math.abs(after.x-before.x-dx)).toBeLessThan(2);expect(Math.abs(after.x+after.width-before.x-before.width)).toBeLessThan(2);}
+  if(edge==='right'){expect(Math.abs(after.x-before.x)).toBeLessThan(2);expect(Math.abs(after.width-before.width-dx)).toBeLessThan(2);}
+  if(edge==='top'){expect(Math.abs(after.y-before.y-dy)).toBeLessThan(2);expect(Math.abs(after.y+after.height-before.y-before.height)).toBeLessThan(2);}
+  if(edge==='bottom'){expect(Math.abs(after.y-before.y)).toBeLessThan(2);expect(Math.abs(after.height-before.height-dy)).toBeLessThan(2);}
+ }
+ const before=(await reader.boundingBox())!,title=reader.locator('header h2'),titleBox=(await title.boundingBox())!;
+ await page.mouse.move(titleBox.x+titleBox.width/2,titleBox.y+titleBox.height/2);await page.mouse.down();await page.mouse.move(titleBox.x+titleBox.width/2-45,titleBox.y+titleBox.height/2+20,{steps:5});await page.mouse.up();
+ const moved=(await reader.boundingBox())!;expect(Math.abs(moved.x-Math.max(page.viewportSize()!.width*.48,before.x-45))).toBeLessThan(2);expect(Math.abs(moved.y-before.y-20)).toBeLessThan(2);
+ await page.screenshot({path:resolve('.local/tabbed-file-peek.png')});
+ await reader.getByRole('button',{name:'Close preview tab src/cart/total.ts'}).click();await expect(reader.getByRole('tab')).toHaveCount(2);
+ await reader.getByRole('button',{name:'Reset File reader window layout'}).click();
+ await page.setViewportSize({width:390,height:844});const phone=(await reader.boundingBox())!;expect(phone.x).toBeGreaterThanOrEqual(0);expect(phone.x+phone.width).toBeLessThanOrEqual(390);expect(phone.height).toBeGreaterThan(150);
+ expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+ await page.screenshot({path:resolve('.local/tabbed-file-peek-phone.png')});
+ await page.setViewportSize({width:1440,height:900});
+ await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('peek/tabs');
+ await page.route('**/workspace',route=>route.fulfill({json:{approved:false,root,scope:'current-workspace'}}));
+ let reads=0;await page.route('**/workspace/document?**',route=>{reads++;return route.continue();});
+ await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('tab')).toHaveCount(2);
+ await expect(reader.getByRole('region',{name:'Current file access'})).toBeVisible();expect(reads).toBe(0);
+});
+
+
+test('last captured material clears the prompt without an oversized gap',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+ for(const width of [1440,390]){
+  await page.setViewportSize({width,height:960});
+  for(const collapsed of [false,true]){
+   const composer=page.locator('.prompt-composer');
+   if(collapsed)await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
+   const history=page.locator('.history');await history.evaluate(node=>node.scrollTop=node.scrollHeight);
+   await expect.poll(async()=>history.evaluate(node=>Math.abs(node.scrollHeight-node.clientHeight-node.scrollTop))).toBeLessThan(2);
+   await expect.poll(async()=>{const prompt=(await composer.boundingBox())!;const last=await history.locator('.passage-slot').last().boundingBox();return last?prompt.y-last.y-last.height:-999;}).toBeGreaterThanOrEqual(6);
+   const prompt=(await composer.boundingBox())!,last=(await history.locator('.passage-slot').last().boundingBox())!;expect(prompt.y-last.y-last.height).toBeLessThan(100);
+   await page.screenshot({path:resolve(`.local/prompt-gap-${width}-${collapsed}.png`)});
+  }
+  await page.locator('.prompt-composer').getByRole('button',{name:'Expand prompt',exact:true}).click();
+ }
+});
+
+
+test('Files single click replaces preview and double click keeps a file without entering Workspace',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+ const grant=page.getByRole('button',{name:/Enable workspace reading/});if(await grant.isVisible())await grant.click();
+ const files=page.getByRole('complementary',{name:'Repository files'});
+ await files.locator('[data-spine-path="README.md"]').click();const reader=page.locator('.file-peek-reader');await expect(reader.getByRole('tab')).toHaveCount(1);await expect(reader.locator('.file-peek-tab.preview')).toHaveCount(1);
+ await files.locator('[data-spine-path="package.json"]').click();await expect(reader.getByRole('tab')).toHaveCount(1);await expect(reader.getByRole('tab')).toContainText('package.json');
+ await files.locator('[data-spine-path="package.json"]').dblclick();await expect(reader.locator('.file-peek-tab.preview')).toHaveCount(0);
+ await files.locator('[data-spine-path="README.md"]').click();await expect(reader.getByRole('tab')).toHaveCount(2);await expect(page.locator('.developer-workspace')).toHaveCount(0);
+ await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);await expect(page.locator('.history')).toBeVisible();
+ await files.locator('[data-spine-path="package.json"]').click();await expect(reader.getByRole('tab')).toHaveCount(2);
+ await page.setViewportSize({width:390,height:844});const show=page.getByRole('button',{name:'Show files',exact:true});if(await show.getAttribute('aria-pressed')==='false')await show.click();await files.locator('[data-spine-path="README.md"]').click();await expect(reader.locator('header h2')).toHaveText('README.md');await expect(files).toHaveCount(0);
+ await page.setViewportSize({width:1440,height:900});await reader.getByRole('button',{name:'Open in Workspace',exact:true}).click();
+ const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk).toBeVisible();
+ await expect(page.locator('.workspace-secondary')).toBeHidden();
+ const leading=(await page.locator('.workspace-leading').boundingBox())!,deskBox=(await desk.boundingBox())!;expect(deskBox.y).toBeLessThanOrEqual(leading.y+leading.height+16);await expect(page.locator('.modern-tool-station')).toBeHidden();
+ await page.screenshot({path:resolve('.local/workspace-right-stack.png')});
+
+});
+
+test('restored Explorer preview stays beside history and above prompt across window changes',async({page})=>{
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id:ids.codex,entries:[['location',{currentFile:'README.md'}],['surface/File reader',{x:400,y:64,width:850,height:1000}]]}]}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+ const grant=page.getByRole('button',{name:/Enable workspace reading/});if(await grant.isVisible())await grant.click();
+ const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();
+ for(const width of [1920,1440,1000]){
+  await page.setViewportSize({width,height:900});
+  for(const collapsed of [false,true]){
+   if(collapsed)await page.locator('.prompt-composer').getByRole('button',{name:'Minimize prompt',exact:true}).click();
+   await expect.poll(async()=>{const r=(await reader.boundingBox())!,p=(await page.locator('.prompt-composer').boundingBox())!;return r.y+r.height-p.y;}).toBeLessThanOrEqual(-8);
+   const r=(await reader.boundingBox())!,controls=(await page.locator('.workspace-secondary').boundingBox())!,h=(await page.locator('.history').boundingBox())!;
+   expect(r.x).toBeGreaterThanOrEqual(width*.48-1);expect(r.x+r.width).toBeLessThanOrEqual(width-47);expect(r.y).toBeGreaterThanOrEqual(controls.y+controls.height+8);expect(h.x+h.width).toBeLessThanOrEqual(r.x+1);
+   if(collapsed)await page.locator('.prompt-composer').getByRole('button',{name:'Expand prompt',exact:true}).click();
+  }
+ }
+ await page.screenshot({path:resolve('.local/explorer-preview-safe.png')});
+ await page.setViewportSize({width:390,height:844});expect((await reader.boundingBox())!.width).toBeLessThanOrEqual(390);
+ await page.setViewportSize({width:1440,height:900});await page.reload();await expect(reader).toBeVisible();
+ await expect.poll(async()=>{const r=(await reader.boundingBox())!,p=(await page.locator('.prompt-composer').boundingBox())!;return r.y+r.height-p.y;}).toBeLessThanOrEqual(-8);
+});
+
+test('Explorer preview defaults to a compact right reader with title-bar keyboard movement',async({page})=>{
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+ const grant=page.getByRole('button',{name:/Enable workspace reading/});await expect(grant.or(page.locator('[data-spine-path="README.md"]'))).toBeVisible();if(await grant.isVisible())await grant.click();await page.evaluate(()=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:'README.md'}})));
+ const reader=page.locator('.file-peek-reader');await expect(reader).toBeVisible();await expect(reader.getByRole('button',{name:'Move File reader window',exact:true})).toHaveCount(0);
+ for(const width of [1920,1440]){
+  await page.setViewportSize({width,height:960});await reader.getByRole('button',{name:'Reset File reader window layout',exact:true}).click();
+  await expect.poll(async()=>Math.abs((await reader.boundingBox())!.width-width*.28)).toBeLessThan(2);
+  const box=(await reader.boundingBox())!,prompt=(await page.locator('.prompt-composer').boundingBox())!,controls=(await page.locator('.workspace-secondary').boundingBox())!;
+  expect(box.x+box.width).toBeCloseTo(width-48,0);expect(box.height).toBeGreaterThan(450);expect(box.y).toBeGreaterThan(controls.y+controls.height);expect(box.y+box.height).toBeLessThan(prompt.y-8);
+  expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('0.9');
+ }
+ const title=reader.locator(':scope>header'),before=(await reader.boundingBox())!;await title.focus();await page.keyboard.press('ArrowLeft');await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x+16)).toBeLessThan(2);await page.keyboard.press('Home');
+ await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x)).toBeLessThan(2);
+ const strip=(await reader.locator('.file-peek-tabs').boundingBox())!;await page.mouse.move(strip.x+strip.width-24,strip.y+strip.height/2);await page.mouse.down();await page.mouse.move(strip.x+strip.width-44,strip.y+strip.height/2,{steps:4});await page.mouse.up();expect(Math.abs((await reader.boundingBox())!.x-before.x+20)).toBeLessThan(2);
+ await page.screenshot({path:resolve('.local/compact-preview-desktop.png')});
+ await page.setViewportSize({width:390,height:844});expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');const phone=(await reader.boundingBox())!;expect(phone.x).toBeGreaterThanOrEqual(0);expect(phone.x+phone.width).toBeLessThanOrEqual(390);
+ await page.setViewportSize({width:1440,height:960});await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');
 });

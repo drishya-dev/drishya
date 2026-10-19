@@ -4,17 +4,22 @@ import { useApp } from '../state.ts';
 /** Light dismissal for utility disclosures; content readers remain deliberate. */
 export function useDismissMenus() {
   useEffect(() => {
-    const menus = '.workspace-menu, .usage-peek, .prompt-menu, .permission-policy, .session-segments, .review-tools, .session-identity';
+    const menus = '.workspace-menu, .usage-peek, .prompt-menu, .permission-policy, .session-segments, .review-tools, .desk-options, .session-identity';
     const selectors = menus.split(', ').map(selector => `${selector}[open]`).join(', ');
     const motion = (menu: HTMLDetailsElement, pointer: boolean) => {
       menu.toggleAttribute('data-pointer-menu', pointer && useApp.getState().motion && !useApp.getState().lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches);
     };
     const fit = (menu: HTMLDetailsElement) => {
-      if (!menu.matches('.workspace-menu, .permission-policy')) return;
+      if (!menu.matches('.workspace-menu, .permission-policy, .desk-options')) return;
       const summary = menu.querySelector(':scope > summary')?.getBoundingClientRect();
       if (!summary) return;
       const above = menu.matches('.permission-policy');
-      menu.style.setProperty('--menu-max-height', `${Math.max(32, (above ? summary.top : innerHeight - summary.bottom) - 16)}px`);
+      const boundary=menu.closest('.developer-workspace')?.getBoundingClientRect().bottom??innerHeight;
+      menu.style.setProperty('--menu-max-height', `${Math.max(32, (above ? summary.top : Math.min(innerHeight,boundary) - summary.bottom) - 16)}px`);
+      if(menu.matches('.desk-options')){
+        const left=menu.closest('.desk-document, .developer-workspace')?.getBoundingClientRect().left??0;
+        menu.style.setProperty('--menu-inline-space',`${Math.max(48,summary.right-Math.max(0,left)-8)}px`);
+      }
     };
     const dismiss = (event: Event) => {
       for (const menu of document.querySelectorAll<HTMLDetailsElement>(selectors)) {
@@ -35,7 +40,7 @@ export function useDismissMenus() {
       const active = event.target instanceof Element ? event.target.closest<HTMLDetailsElement>(selectors) : null;
       if (active) { motion(active, false); fit(active); }
       // Visible utility rows form one keyboard path, including opened disclosures.
-      const utility=event.target instanceof Element?event.target.closest<HTMLDetailsElement>('.workspace-menu[open]'):null;
+      const utility=event.target instanceof Element?event.target.closest<HTMLDetailsElement>('.workspace-menu[open], .desk-options[open]'):null;
       if(utility&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&['ArrowDown','ArrowUp','Home','End'].includes(event.key)&&event.target instanceof Element&&event.target.matches('button,a,summary')) {
         const rows=[...utility.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],summary')].filter(row=>row!==utility.querySelector(':scope>summary')&&row.getClientRects().length>0&&!(row.tagName==='SUMMARY'?row.parentElement?.parentElement:row.parentElement)?.closest('details:not([open])'));
         const index=rows.indexOf(event.target as HTMLElement);
