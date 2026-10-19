@@ -324,7 +324,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
   - **Accept:** historical, pending and answered states for both harnesses; never answer for the user; unsupported → explicit message.
 
 - [ ] **CONTENT-4 · Plans and todos as a living checklist** · P1 · `content` `turn`
-  - **Sources:** Claude `TodoWrite` (mapped), `TaskCreate`/`TaskUpdate` (not mapped), `ExitPlanMode` plan text (not mapped); Codex plan updates (DATA-7).
+  - **Sources:** Claude `TodoWrite` (already mapped); `TaskCreate`/`TaskUpdate`/`ExitPlanMode` are **unverified: the journals on this machine contain no real uses** (the earlier counts came from tool definitions), so specify them only after a real plan-mode session is captured (review 125 §8, D10); Codex plan updates (DATA-7).
   - **Do:**
     - One checklist per turn, pinned under the turn header, updated in place as items change state; a done item gets a quiet strike.
     - The plan text from plan mode renders as Markdown "Plan" material.
@@ -345,10 +345,9 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
 
 ### DATA — harness capture ([123](review/123-harness-data-audit.md))
 
-- [ ] **DATA-10 · One batched schema proposal** · P0 · `data`
-  - **Do:** draft the additions (usage/context, checkpoint reference, image-view, question/answer, plan/todo revision, sub-agent identity fields, command `exit_code`/`duration`/`parsed_cmd`) in `docs/reference/03-event-schema.md` as a proposal. Both builders agree before code (AGENTS rule). Existing kinds should be reused where they fit.
+- [x] **DATA-10 · One batched schema proposal** · P0 · `data` — **drafted 19 Oct:** [review 125](review/125-event-schema-proposal.md): five slices (turns+usage, typed Codex items, reasoning state, questions/images/web, Claude extras), all additive (`CONTRACT_VERSION` 0.2.0-draft, `REDUCER_VERSION` r5), with measured evidence, privacy rules, fixtures and an order of work. **Agreement is still needed:** both builders tick D1–D10 in §9 of that doc before any slice starts.
 
-- [ ] **DATA-1 · Codex typed items** · P0 · `data` `content`
+- [ ] **DATA-1 · Codex typed items** · P0 · `data` `content` — **blocked on D1, D2, D8 in [review 125](review/125-event-schema-proposal.md).** Measured there: typed items cannot be matched to the wrapper call by id; 85% sit inside the `exec` call's window, so correlation is by enclosing call and says so.
   - **Do:**
     - In `packages/adapter-codex/src/index.ts`, stop ignoring `event_msg:item_completed`. Map `CommandExecution` (command, parsed_cmd, cwd, status, exit_code, duration, outputs), `FileChange`, `McpToolCall` (server, tool, status, duration, error, readOnlyHint), `ImageView`, `Extension`, `SubAgentActivity`, `Reasoning.summary_text` and `AgentMessage.phase/questions`.
     - De-duplicate against `response_item` calls by call/item id. Prefer the typed item for outcome; keep the wrapper as raw source.
@@ -356,7 +355,7 @@ If the hackathon is not entered (HACK-1), drop the `hack`-only items and move EX
     - Add redacted fixtures for each item type.
   - **Accept:** card titles show real commands/tools instead of "exec"/"Other"; tests are recognized from real commands and exit codes (closes BUG-5); no duplicate cards; older rollouts without these items still import identically (golden tests).
 
-- [ ] **DATA-2 · Usage from what is recorded** · P0 · `data` `live`
+- [ ] **DATA-2 · Usage from what is recorded** · P0 · `data` `live` — **blocked on D4–D6 in [review 125](review/125-event-schema-proposal.md)** (usage observation, cost label, rate-limit fields; credits balance is excluded).
   - **Do:**
     - Codex: `token_count.info` (total/last usage, `model_context_window`) and `rate_limits`.
     - Claude: `message.usage` per assistant message and `cost-state` (`totalCostUSD`, `totalLinesAdded/Removed`, durations, `modelUsage`).
