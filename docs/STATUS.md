@@ -31,9 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-
----|---|---|
-
+| LIVE-2 | @yash + Claude Sonnet 5.5 | `yash/live-2-composer` | 2026-10-19 | `components/SessionWorkspace.tsx`, `modern/*composer*`, `ink.css` |
 
 ---
 
