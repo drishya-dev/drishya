@@ -46,6 +46,7 @@ export function WorkspaceNavigation() {
       all.push({key:'commands',name:'Find captured commands',detail:'Search, copy and inspect recorded shell/test activity',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-commands')))});
       all.push({ key: 'review', name: 'Review recorded changes and checks', detail: 'Captured outcomes, not coverage', run: () => click('.review-open') });
       all.push({ key: 'questions', name: 'Review questions', detail: 'Your unresolved review decisions', run: () => click('button[data-review-questions]') });
+      all.push({key:'moments',name:'Saved moments',detail:'Your explicit captured-action references and local notes',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-saved-moments')))});
       if (kind === 'daemon' && id && !id.includes('+')) {
         all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => click('.git-open') });
         all.push({ key: 'workspace', name: 'Open developer workspace', detail: 'Read current files and prepare local drafts with workspace consent', run: () => { if(!useApp.getState().developerWorkspace)click('[aria-label="Open developer workspace"]'); } });

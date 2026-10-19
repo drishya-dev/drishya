@@ -417,13 +417,16 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         app.store.setBoundary(firstId, sequence, rec.revision ?? 0);
         return json(res, { boundary: app.store.getBoundary(firstId) });
       }
-      if (sub === 'bookmarks' && m === 'GET') return json(res, { bookmarks: app.store.bookmarks(firstId) });
+      if (sub === 'bookmarks' && m === 'GET') {app.recording(firstId);return json(res,app.store.bookmarkPage(firstId,intParam(url,'start',0,0,Number.MAX_SAFE_INTEGER),intParam(url,'count',25,1,50)));}
       if (sub === 'bookmarks' && m === 'POST') {
         const body = await readJson(req);
         app.recording(firstId);
+        const step=body.step??0;
+        if(typeof step!=='number'||!Number.isSafeInteger(step)||step<0)throw new HttpError(400,'Bookmark step must be a nonnegative integer');
+        if(app.store.bookmarkPage(firstId,0,1).total>=1000)throw new HttpError(409,'Reading-note limit reached for this recording. Existing notes remain available.');
         // A note is user-typed text, so a pasted token gets the same policy as captured text.
         const note = redactText(String(body.note ?? '')).text.slice(0, 2000);
-        return json(res, { id: app.store.addBookmark(firstId, Number(body.step ?? 0), note) });
+        return json(res, { id: app.store.addBookmark(firstId, step, note) });
       }
       if (sub === 'generated' && m === 'GET') return json(res, { generated: app.store.listGenerated(firstId) });
 

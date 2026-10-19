@@ -23,7 +23,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     const arrival = animate ? dialog.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }) : undefined;
     return () => { arrival?.cancel(); dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true }); };
   }, [modeless]);
-  return createPortal(<dialog ref={ref} style={{...style,...window.style}} className={`product-dialog ${className}${modeless ? " map-reader" : ""}${window.enabled?' adjustable-reading-window':''}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (modeless && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } }}>
+  return createPortal(<dialog ref={ref} style={{...style,...window.style}} className={`product-dialog ${className}${modeless ? " map-reader" : ""}${window.enabled?' adjustable-reading-window':''}`} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); close(); }} onKeyDown={e => { if (e.key === "Escape" && !e.defaultPrevented) { e.stopPropagation(); if(modeless){e.preventDefault();close();} } }}>
     <header>{resizeControl}<h2 id={titleId}>{headerIcon}{title}</h2><div className="reading-window-actions">{window.controls}{window.enabled&&<button className="icon-btn" aria-label={`Reset ${windowId} window layout`} title="Reset window layout" onClick={()=>{window.reset();resetWindow?.();}}>↺</button>}<button className="icon-btn" aria-label={`Close ${title}`} onClick={close}>✕</button></div></header>
     {children}
     {window.heightControl}

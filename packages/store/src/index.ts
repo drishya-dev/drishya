@@ -695,6 +695,12 @@ export class Store {
     return this.q('SELECT id, step, note, created_at AS createdAt FROM bookmarks WHERE recording_id = ? ORDER BY step').all(recordingId);
   }
 
+  bookmarkPage(recordingId:string,start=0,count=25) {
+    const total=(this.q('SELECT COUNT(*) AS n FROM bookmarks WHERE recording_id = ?').get(recordingId) as {n:number}).n;
+    const bookmarks=this.q('SELECT id, step, note, created_at AS createdAt FROM bookmarks WHERE recording_id = ? ORDER BY step, id LIMIT ? OFFSET ?').all(recordingId,count,start);
+    return {bookmarks,total,start,count};
+  }
+
   close() {
     this.db.close();
   }

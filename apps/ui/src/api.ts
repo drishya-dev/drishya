@@ -58,6 +58,7 @@ export interface Config {
 }
 
 export interface DataSource {
+  readingNotes?(id:string,start?:number):Promise<{bookmarks:{id:string;step:number;note:string;createdAt:string}[];total:number;start:number;count:number}>;
   kind: 'daemon' | 'bundle';
   /** Built-in synthetic fixture only; never used to classify a user's replay bundle. */
   sample?: 'recorded' | 'growing';
@@ -198,6 +199,7 @@ export async function signIn(): Promise<'ok' | 'no-daemon' | 'signed-out'> {
 }
 
 export const daemon: DataSource = {
+  readingNotes:(id,start=0)=>req(`/v1/recordings/${encodeURIComponent(id)}/bookmarks?start=${start}&count=25`),
   findingMembers:(id,key,page=0,q='')=>req(`/v1/recordings/${encodeURIComponent(id)}/finding-members?${new URLSearchParams({key,page:String(page),q})}`),
   reviewInsights:(id,page=0,kind)=>req(`/v1/recordings/${encodeURIComponent(id)}/review-insights?${new URLSearchParams({page:String(page),...(kind?{kind}:{})})}`),
   commands:(id,query)=>req(`/v1/recordings/${encodeURIComponent(id)}/commands?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),

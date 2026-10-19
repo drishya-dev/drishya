@@ -25,6 +25,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | Who | What | Files |
 |---|---|---|
+| Harsh with Codex | Complete requested investigation, review handoff, recovery and local UI/release checks (items 2–6); real-account checks remain builder-owned | UI investigation/native-return, packet/saved moments, optional draft recovery, responsive polish and regressions; TASKS/acceptance notes |
 
 
 ---

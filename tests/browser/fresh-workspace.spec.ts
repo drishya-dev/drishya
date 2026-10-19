@@ -1278,7 +1278,7 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     await page.getByRole('button',{name:name!,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
-    const expectedBase:Record<string,string>={jet:'#0a0a0a',paper:'#f4f2ee',midnight:'#0b1216',mocha:'#141116',tokyo:'#0c1019',nord:'#14191b',gruvbox:'#181310'};
+    const expectedBase:Record<string,string>={jet:'#000',paper:'#f4f2ee',midnight:'#0b1216',mocha:'#141116',tokyo:'#0c1019',nord:'#14191b',gruvbox:'#181310'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
     const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#315e73',midnight:'#74d9cf',mocha:'#e4b1c2',tokyo:'#95b9ff',nord:'#b7d3bc',gruvbox:'#ecb58a'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);

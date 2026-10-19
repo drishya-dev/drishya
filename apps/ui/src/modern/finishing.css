@@ -1,0 +1,40 @@
+/* Native controls keep their semantics; short state transitions never move evidence. */
+:root[data-ui-version=modern] .setting-row input[type=checkbox] {appearance:none;position:relative;flex:none;inline-size:36px;block-size:22px;margin:0;border:1px solid var(--line-3);border-radius:12px;background:var(--s3);cursor:pointer;}
+:root[data-ui-version=modern] .setting-row input[type=checkbox]::before {content:'';position:absolute;inset:3px auto auto 3px;width:14px;height:14px;border-radius:50%;background:var(--t2);}
+:root[data-ui-version=modern] .setting-row input[type=checkbox]:checked {background:var(--focus);border-color:var(--focus);}
+:root[data-ui-version=modern] .setting-row input[type=checkbox]:checked::before {transform:translateX(14px);background:var(--bg);}
+:root[data-ui-version=modern] .setting-row input[type=checkbox]:disabled {opacity:.45;cursor:default;}
+:root[data-ui-version=modern] :is(button,summary,a,input,textarea,select,[tabindex]:not([tabindex="-1"])):focus-visible {outline:2px solid var(--focus);outline-offset:3px;}
+:root[data-ui-version=modern] :is(button,summary,a,input,textarea,select) {touch-action:manipulation;}
+:root[data-ui-version=modern] :is(.saved-moments-dialog,.draft-recovery-dialog,.insights-content,.folder-explorer,.map-focus-panel) {overscroll-behavior:contain;}
+:root[data-ui-version=modern] :is(input,textarea)::placeholder {color:var(--t3);opacity:1;}
+:root[data-ui-version=modern] .ux-search:focus-within input:focus-visible {outline:none;}
+:root[data-ui-version=modern] .modern-session-header .studio-session {display:flex;flex-direction:row;align-items:center;gap:10px;border-radius:10px;background:color-mix(in srgb,var(--s1) 68%,transparent);backdrop-filter:blur(12px);}
+:root[data-ui-version=modern] .modern-session-header .studio-session-label {display:block;flex:0 1 auto;min-width:0;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t3);font:11px/1.5 var(--sans);}
+:root[data-ui-version=modern] .modern-session-header .studio-session h1 {flex:1;min-width:0;}
+:root[data-ui-version=modern] .session-harness {color:var(--t2);}
+/* Only edge veils blur. Large readers and tool lists stay flat and cheap to repaint. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace :is(.folder-explorer,.modern-toolbox) {backdrop-filter:none;background:var(--s1);}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {max-height:calc(100dvh - var(--workspace-tools-bottom,132px) - var(--composer-gap,150px) - 16px);}
+:root[data-ui-version=modern] .workspace-menu>.workspace-utilities {max-height:calc(100dvh - var(--workspace-header-h,70px) - 24px);overflow-y:auto;overscroll-behavior:contain;}
+:root[data-ui-version=modern] .native-options-menu :is(small,button,label) {overflow-wrap:anywhere;}
+@media(hover:hover) and (pointer:fine) {
+  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) :is(.btn,.icon-btn,.theme-option,.setting-row input) {transition:background-color 120ms ease,border-color 120ms ease,color 120ms ease;}
+  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .setting-row input::before {transition:transform 120ms cubic-bezier(.2,.8,.2,1);}
+  :root[data-ui-version=modern] :is(.saved-moment-list button,.investigation-entry button,.review-packet button):hover:not(:disabled) {background:var(--s2);border-color:var(--line-3);}
+}
+@media(max-width:600px) {
+  :root[data-ui-version=modern][data-experience=classic] .workspace-secondary {flex-wrap:wrap;justify-content:flex-end;min-width:0;}
+  :root[data-ui-version=modern] .modern-session-header .studio-session {gap:6px;padding:8px;}
+  :root[data-ui-version=modern] .modern-session-header .studio-session-label {max-width:36%;font-size:10px;}
+  :root[data-ui-version=modern] .session-harness {display:none;}
+  :root[data-ui-version=modern] .developer-workspace>.native-return-actions {padding:6px 10px;}
+  :root[data-ui-version=modern] .inspector {max-width:calc(100vw - 16px);}
+}
+@media(prefers-reduced-motion:reduce) {
+  :root[data-ui-version=modern] :is(.btn,.icon-btn,.theme-option,.setting-row input,.setting-row input::before) {transition:none!important;}
+}
+@media(forced-colors:active) {
+  :root[data-ui-version=modern] .setting-row input[type=checkbox] {appearance:auto;inline-size:22px;block-size:22px;}
+  :root[data-ui-version=modern] .setting-row input[type=checkbox]::before {display:none;}
+}

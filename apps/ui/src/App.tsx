@@ -174,7 +174,7 @@ function useKeyboard() {
       if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
       // Native dialogs own their keyboard/escape behavior. Closing one must not
       // also clear the captured reader or map underneath it.
-      if (t.closest('dialog[open]')) return;
+      if (t.closest('dialog[open]') || document.querySelector('dialog[open]:not(.map-reader)')) return;
       const k = e.key;
       if (k === 'Escape') {
         if (s.settingsOpen) s.set({ settingsOpen: false });
