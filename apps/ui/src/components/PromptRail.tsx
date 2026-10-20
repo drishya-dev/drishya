@@ -1,11 +1,16 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import {useTurns} from '../lib/turns-store.ts';
+import {ledgerParts,LEDGER_BASIS} from '../lib/turn-ledger.ts';
+import {promptRailMark} from '../lib/prompt-rail-mark.ts';
+import './prompt-rail-evidence.css';
 
-export interface PromptChapter { id: string; label: string; index: number; time?:string }
+export interface PromptChapter { id: string; label: string; index: number; time?:string; turnStep?:number }
 const ROW = 16;
 
 /** All chapters are addressable; only the visible rail rows enter the DOM. */
 export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapter[]; activeId?: string; open: (chapter: PromptChapter) => void }) {
+  const ledgers=useTurns(s=>s.byStep);
   const rail = useRef<HTMLElement>(null);
   const hovering = useRef(false);
   const [viewport, setViewport] = useState({ top: 0, height: 400 });
@@ -47,10 +52,12 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
   const nearest = preview?.ordinal ?? active;
   const show = (ordinal: number, node: HTMLElement) => {
     const r = node.getBoundingClientRect();
-    setPreview({ ordinal, top: Math.max(80, Math.min(innerHeight - 150, r.top)), left: Math.max(8, r.left - 274) });
+    setPreview({ ordinal, top: Math.max(12, Math.min(innerHeight - 320, r.top)), left: Math.max(8, r.left - Math.min(300,innerWidth - 24) - 14) });
   };
+  const previewChapter=preview&&chapters[preview.ordinal];
+  const previewLedger=previewChapter?.turnStep===undefined?undefined:ledgers.get(previewChapter.turnStep);
   return <>
-    <nav ref={rail} tabIndex={0} className="history-prompt-marks complete-prompt-rail" aria-label="Prompt positions in history" style={{ height: chapters.length * ROW }} onKeyDown={e => {
+    <nav ref={rail} tabIndex={0} className="history-prompt-marks complete-prompt-rail turn-evidence-rail" aria-label="Prompt positions in history" style={{ height: chapters.length * ROW }} onKeyDown={e => {
       if (!['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) return;
       e.preventDefault();
       const current = Number((e.target as HTMLElement).closest<HTMLElement>('[data-prompt-ordinal]')?.dataset.promptOrdinal ?? active + 1) - 1;
@@ -63,10 +70,12 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
       <div style={{ height: chapters.length * ROW, position: 'relative' }}>
         {chapters.slice(first, end).map((chapter, offset) => {
           const ordinal = first + offset;
-          return <button key={chapter.id} style={{ position: 'absolute', top: ordinal * ROW }} data-prompt-ordinal={ordinal + 1} data-proximity={ordinal === nearest ? 'current' : Math.abs(ordinal - nearest) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${chapter.label}`} aria-current={chapter.id === activeId ? 'location' : undefined} onMouseEnter={e => show(ordinal, e.currentTarget)} onFocus={e => show(ordinal, e.currentTarget)} onBlur={() => setPreview(undefined)} onClick={() => open(chapter)}><span className="prompt-rail-tick" aria-hidden="true" /></button>;
+          const ledger=chapter.turnStep===undefined?undefined:ledgers.get(chapter.turnStep),mark=promptRailMark(ledger);
+          const description=ledger?`${ledger.operations} captured operations${ledger.open?`, ${ledger.open} awaiting results`:''}. ${ledgerParts(ledger).map(p=>p.text).join(', ')}`:undefined;
+          return <button key={chapter.id} style={{ position: 'absolute', top: ordinal * ROW,'--turn-size':mark.ratio } as CSSProperties} data-turn-step={chapter.turnStep} data-operation-count={ledger?.operations} aria-description={description} data-prompt-ordinal={ordinal + 1} data-proximity={ordinal === nearest ? 'current' : Math.abs(ordinal - nearest) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${chapter.label}`} aria-current={chapter.id === activeId ? 'location' : undefined} onMouseEnter={e => show(ordinal, e.currentTarget)} onFocus={e => show(ordinal, e.currentTarget)} onBlur={() => setPreview(undefined)} onClick={() => open(chapter)}><span className="prompt-rail-tick" aria-hidden="true" />{mark.failed&&<span className="prompt-turn-failed" aria-hidden="true"/>}{mark.edited&&<span className="prompt-turn-edited" aria-hidden="true"/>}</button>;
         })}
       </div>
     </nav>
-    {preview && chapters[preview.ordinal] && createPortal(<div className="prompt-rail-preview" style={{ position: 'fixed', top: preview.top, left: preview.left, right: 'auto', opacity: 1, visibility: 'visible', transform: 'none', zIndex: 80 }}><small>Prompt {preview.ordinal + 1} of {chapters.length}</small>{chapters[preview.ordinal]!.time&&<time dateTime={chapters[preview.ordinal]!.time}>{new Date(chapters[preview.ordinal]!.time!).toLocaleString()}</time>}<span>{chapters[preview.ordinal]!.label}</span></div>, document.body)}
+    {preview && chapters[preview.ordinal] && createPortal(<div className="prompt-rail-preview prompt-evidence-preview" style={{ position: 'fixed', top: preview.top, left: preview.left, right: 'auto', opacity: 1, visibility: 'visible', transform: 'none', zIndex: 80 }}><small>Prompt {preview.ordinal + 1} of {chapters.length}</small>{chapters[preview.ordinal]!.time&&<time dateTime={chapters[preview.ordinal]!.time}>{new Date(chapters[preview.ordinal]!.time!).toLocaleString()}</time>}<span>{chapters[preview.ordinal]!.label}</span>{previewLedger&&<div className="prompt-rail-ledger" title={LEDGER_BASIS}><small>{previewLedger.operations} captured operations{previewLedger.open?` · ${previewLedger.open} awaiting results`:null}</small>{ledgerParts(previewLedger).map((part,index)=><span key={index} className={part.tone}>{part.text}</span>)}</div>}</div>, document.body)}
   </>;
 }

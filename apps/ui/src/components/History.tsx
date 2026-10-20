@@ -164,7 +164,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const targetIndex = scene.passages.findIndex((ps) =>
     readingOp ? ps.ops.some((op) => op.id === readingOp) : focusObservationId ?
       ps.ops.some((op) => ops.get(op.id)?.observationIds.includes(focusObservationId)) ||
-      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : promptStep !== undefined ? ps.id === projection.passages.find(p => p.firstStep >= promptStep - 1)?.id : false,
+      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : promptStep !== undefined ? ps.id === scene.passages.find(p => p.turnStep !== undefined && p.turnStep >= promptStep - 1)?.id : false,
   );
   const targetId = scene.passages[targetIndex]?.id;
   const intent = readingOp ? `${keyboardOp===readingOp?'key':'op'}:${readingOp}` : focusObservationId ? `observation:${focusObservationId}` : promptStep !== undefined ? `prompt:${promptStep}` : undefined;
@@ -616,7 +616,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         setExtentFloor(floor=>Math.max(floor,extentTotal.current));
         setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
       }}/>
-      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index,time:ps.turnTime }))} activeId={activePrompt} open={({ id, index }) => {
+      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.
           if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));
