@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | FILES-2 | @yash + Codex | `codex/files-2-prose-links` | 2026-10-20 | Prose-path slice: Markdown parser + new pure path resolver, History prose callback only, focused unit/browser checks and TASKS/STATUS/review (at most 9 files). No native/source IO, adapters/store/contracts/projection, Viewer/Search or UI-2 files; external links stay inert. |
-| HOME-1 | @yash + Claude Sonnet 5.5 | `yash/home-1-quiet-rows` | 2026-10-20 | UI-only slice of HOME-1: `modern/SessionHome.tsx` rows (drop "Available locally"), a title-cleaning helper in `lib/`, a Running-now strip, scoped CSS, tests, TASKS/STATUS (at most 8 files). Harness stats stay open (DATA-2). No daemon/contracts/projection, no Settings/Git/Composer. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -40,6 +39,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — HOME-1 quiet rows (UI slice)
+
+- **When:** 20 October 2026. Home drops the per-row "Available locally", cleans titles for display, and shows an "Active now" line for followed journals. New `session-title.test.ts`, `home-active.spec.ts`; all 18 Home specs pass. HOME-1 stays open for harness-reported stats (DATA-2).
 
 ### Yash with Claude (Sonnet 5.5) — LIVE-3 opt-in notifications
 
