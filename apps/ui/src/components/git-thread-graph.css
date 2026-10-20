@@ -26,6 +26,14 @@
 .thread-stage.lit .thread-viewport {position:relative;background:none;}
 .thread-stage.lit .thread-commit i {opacity:0;}
 .thread-stage.lit .thread-commit:focus-visible {outline:1px solid #8fd8ff;}
-.thread-stage.lit .thread-label {background:color-mix(in srgb,#03050b 62%,transparent);border-color:rgba(170,190,240,.16);color:#dfe8ff;}
+.thread-stage.lit .thread-label {background:color-mix(in srgb,#020203 62%,transparent);border-color:rgba(210,220,240,.16);color:#eef2fb;}
+.thread-stage.lit {background:#010102;}
+.thread-stage.lit .thread-viewport.on-branch {cursor:pointer;}
+.thread-branch-peek ol {margin:2px 0 0;padding:0;list-style:none;display:grid;gap:3px;}
+.thread-branch-peek li {display:flex;gap:8px;min-width:0;color:var(--t2);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.thread-branch-peek li code {flex:none;color:var(--t3);}
+.thread-branch-peek li.more {color:var(--t3);}
 
 .thread-graph .thread-commit i {opacity:.5;}.thread-graph .thread-commit:hover i,.thread-graph .thread-commit:focus-visible i,.thread-graph .thread-commit[aria-pressed=true] i {opacity:1;}
+/* A branch below the river carries its name below, so the label never covers the river. */
+.thread-stage.lit .thread-label.below {bottom:auto;top:28px;}
