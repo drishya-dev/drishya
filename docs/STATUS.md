@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| UI-9 | @yash + Claude Sonnet 5.5 | `yash/ui-9-hover-fit` | 2026-10-20 | `apps/ui/src/modern/*.css`, `apps/ui/src/components/History.tsx` hover-reading size, `tests/browser` (one new spec); no schema |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **Waiting on Yash's D4–D6 in [125](review/125-event-schema-proposal.md#9-decisions-to-agree); fixtures/prep only until then.** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **Waiting on Yash's D1, D2, D8 in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
