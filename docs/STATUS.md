@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| PERF-2 | @yash + Claude | `yash/perf-2-latency` | 2026-10-20 | Follow-up only: re-measure with DATA-1/2 merged, profile import/API/UI latency during append and first-history indexing on the 564 MB journal, fix the main stall (daemon ingest/sync scheduling, history worker paging); `apps/daemon` ingest/sync/server scheduling, `packages/ingest`, `packages/capture-core` only where the profile points, `scripts/bench-real-journals.ts`, perf docs (at most 12 files). No record limits lowered, no fidelity dropped. |
 
 ---
 
