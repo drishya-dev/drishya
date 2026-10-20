@@ -24,7 +24,7 @@ test('bottom-anchored prompt timeline scrolls independently and the page scrollb
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   const rail=page.getByRole('navigation',{name:'Prompt positions in history'}),history=page.locator('.history');
   await expect(rail).toBeVisible();await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
-  for(const name of ['Minimize prompt','Expand prompt']) {
+  for(const name of ['Expand prompt','Minimize prompt','Expand prompt']) {
     await page.getByRole('button',{name,exact:true}).click();
     await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
   }
