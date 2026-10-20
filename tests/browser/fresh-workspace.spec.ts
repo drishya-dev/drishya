@@ -503,10 +503,10 @@ test('tool cards retain visible results for short and long input/output combinat
       await expect(card).toHaveAttribute('data-hover-reading','focused');
       const allocation=await card.evaluate(el=>{
         const request=el.querySelector('.command-request')!,result=el.querySelector('.result-content')!,area=el.querySelector('.result-area')!;
-        return {input:parseFloat(getComputedStyle(request).maxHeight),output:parseFloat(getComputedStyle(result).maxHeight),height:parseFloat((el as HTMLElement).style.getPropertyValue('--hover-height')),rule:getComputedStyle(area).borderTopWidth,padding:getComputedStyle(area).paddingTop};
+        return {input:parseFloat(getComputedStyle(request).maxHeight),output:parseFloat(getComputedStyle(result).maxHeight),room:parseFloat((el as HTMLElement).style.getPropertyValue('--hover-room')),height:parseFloat((el as HTMLElement).style.getPropertyValue('--hover-height')),rule:getComputedStyle(area).borderTopWidth,padding:getComputedStyle(area).paddingTop};
       });
       expect(allocation.input).toBeCloseTo(Math.min((await page.viewportSize())!.height*.24,180),0);
-      expect(allocation.output).toBeCloseTo(Math.max(142,allocation.height-280),0);
+      expect(allocation.output).toBeCloseTo(Math.max(142,allocation.room-280),0);   // the result may use all the room; the card itself shrinks to fit (UI-9)
       expect(allocation.rule).toBe('1px');expect(allocation.padding).toBe('6px');
       await page.keyboard.press('Escape');
     }

@@ -31,13 +31,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-9 | @yash + Claude Sonnet 5.5 | `yash/ui-9-hover-fit` | 2026-10-20 | `apps/ui/src/modern/*.css`, `apps/ui/src/components/History.tsx` hover-reading size, `tests/browser` (one new spec); no schema |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **Waiting on Yash's D4–D6 in [125](review/125-event-schema-proposal.md#9-decisions-to-agree); fixtures/prep only until then.** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **Waiting on Yash's D1, D2, D8 in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — UI-9 hover cards fit their content
+
+- **When:** 20 October 2026, `yash/ui-9-hover-fit`.
+- **Delivered:** hovered cards are allocated their natural height (up to the viewport cap), not padded: `lib/hover-reading.ts` laid the card out, then added the hidden depth of the clamped command box and floored the height at 112% of the resting card. The result clamp now follows `--hover-room` (stage.css) instead of the card height. New `tests/browser/hover-fit.spec.ts` measures the empty band under the last visible text of every hovered card (86 and 167 px before, at most 42 px after); `fresh-workspace.spec.ts:477` asserts the new relation.
+- **Validation:** hover-fit 6/6 (3 repeats), material-motion, p1-pacing, product-workspace, tool-exchange-real-review 59 passed, typecheck clean.
+- **Next:** UI-10 (count-dependent surfaces need a small and a large state), from Yash's second note.
 
 ### Yash with Claude (Sonnet 5.5) — TEST-1 browser specs
 
