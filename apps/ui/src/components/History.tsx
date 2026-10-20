@@ -675,6 +675,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
 function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agent?: Agent }) {
   const set = useApp((s) => s.set);
   const detail = useApp(s => s.reasoningDetail);
+  const workspaceRoot = useApp(s => s.recording?.workspaceRoot);
   const [open, setOpen] = useState(true);
   useEffect(() => setOpen(detail === 'expanded'), [detail]);
   const [full, setFull] = useState(false);
@@ -697,7 +698,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
           {open ? ' · collapse' : ' · show'}
         </button>
       )}
-      {open && <Markdown text={pr.text} onPath={(path, line) => set({ hoveredPath: path, filePanel: path, filePanelLine: line, filePanelEvidence: undefined, filePanelFocus: undefined, currentFile: undefined, selectedOp: undefined, follow: false, held: true })} />}
+      {open && <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={(path, line) => set({ hoveredPath: path, filePanel: path, filePanelLine: line, filePanelEvidence: undefined, filePanelFocus: undefined, currentFile: undefined, selectedOp: undefined, follow: false, held: true })} />}
       {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); }}>{full ? 'Close full captured text' : 'Preview · read full captured text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
     </div>
   );
