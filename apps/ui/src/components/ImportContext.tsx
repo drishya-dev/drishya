@@ -1,3 +1,4 @@
+import {collectionPage} from '../lib/collection-bounds.ts';
 import { useMemo, useState } from 'react';
 import { useApp } from '../state.ts';
 import { repositoryNeighbors } from '../lib/repository-context.ts';
@@ -15,6 +16,7 @@ export function ImportContext({ path, current = false, openCurrent, hideEmpty = 
   const [error, setError] = useState<string>();
   const neighbors = useMemo(() => repositoryNeighbors(graph, path), [graph, path]);
   const entries = [...neighbors.imports.map(path => ({ path, direction: 'Imports' })), ...neighbors.importedBy.map(path => ({ path, direction: 'Imported by' }))];
+  const pageWindow=collectionPage(entries.length,page);
   if (!graph || graph.temporal !== 'current' || hideEmpty && !entries.length) return null;
   const canReadDisk = source?.kind === 'daemon' && !!workspace?.root && !!id && !id.includes('+');
   const readDisk = async (target: string) => {
@@ -28,9 +30,9 @@ export function ImportContext({ path, current = false, openCurrent, hideEmpty = 
     } catch (error) { setError((error as Error).message); }
     finally { setOpening(undefined); }
   };
-  return <details className="import-context" onToggle={e => { if (!e.currentTarget.open) setPage(0); }}><summary>Import connections <span>{entries.length}</span></summary>
+  return <details className="import-context" data-size={pageWindow.state} onToggle={e => { if (!e.currentTarget.open) setPage(0); }}><summary>Import connections <span>{entries.length}</span></summary>
     <p className="muted small">Current index{graph.stale ? ' · out of date' : ''}{graph.truncated ? ' · partial' : ''} · not historical execution</p>
-    {entries.slice(page * 8, page * 8 + 8).map(item => <div className="import-destination" key={`${item.direction}/${item.path}`}>
+    {entries.slice(pageWindow.start,pageWindow.end).map(item => <div className="import-destination" key={`${item.direction}/${item.path}`}>
       <div><FileIcon path={item.path} /><span title={item.path}>{item.path}</span><small>{item.direction}</small></div>
       <div className="import-destination-actions">
         <button className="btn ghost small" aria-label={`Captured work on ${item.path}`} onClick={() => useApp.getState().set({ developerWorkspace: false, filePanel: item.path, filePanelFocus: undefined, filePanelEvidence: undefined, currentFile: undefined })}>Captured work</button>
@@ -39,7 +41,7 @@ export function ImportContext({ path, current = false, openCurrent, hideEmpty = 
     </div>)}
     {error && <p className="bad small" role="alert">{error}</p>}
     {!entries.length && <p className="muted small">No resolved static imports in this index.</p>}
-    {entries.length > 8 && <nav aria-label="Import connection pages"><button disabled={!page} onClick={() => setPage(p => p - 1)}>Previous</button><span>{page + 1} / {Math.ceil(entries.length / 8)}</span><button disabled={(page + 1) * 8 >= entries.length} onClick={() => setPage(p => p + 1)}>Next</button></nav>}
+    {pageWindow.state === 'page' && <nav aria-label="Import connection pages"><button disabled={!pageWindow.page} onClick={() => setPage(pageWindow.page - 1)}>Previous</button><span>{pageWindow.page + 1} / {pageWindow.pages}</span><button disabled={pageWindow.page + 1 >= pageWindow.pages} onClick={() => setPage(pageWindow.page + 1)}>Next</button></nav>}
     <button className="btn ghost small" onClick={() => useApp.getState().set({ developerWorkspace: false, mapFocusPath: path, mapVisible: true, explore: true, filePanel: undefined, currentFile: undefined })}>Focus on map ↗</button>
   </details>;
 }

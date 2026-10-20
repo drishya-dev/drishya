@@ -1,0 +1,7 @@
+/* Short lists retain their natural height; only long collections reserve a scroll budget. */
+:root[data-ui-version=modern] .git-review-layout>#git-changed-files[data-size=scroll] {
+ max-height:min(var(--collection-cap),40dvh);
+ min-height:0;
+ overflow:auto;
+ overscroll-behavior:contain;
+}

@@ -1,3 +1,5 @@
+import {collectionBounds} from '../lib/collection-bounds.ts';
+import './collection-surfaces.css';
 import {openGitHistory} from './GitHistory.tsx';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { redactText } from '../../../../packages/privacy/src/index.ts';
@@ -64,6 +66,7 @@ function GitReader({ close }: { close: () => void }) {
   useEffect(() => {
     if (document.documentElement.dataset.uiVersion === 'modern' && workspace?.approved && consent && !snapshot && !busy) void refresh();
   }, [workspace?.approved, consent]);
+  const fileBounds=collectionBounds((snapshot?.files.length??0)+(snapshot?.omissions?.length??0),6,44);
   const file = snapshot?.files.find(f => f.path === selected);
   const mark = file ? marks[file.path] : undefined;
   const exact = !!file && mark?.fingerprint === file.fingerprint;
@@ -130,7 +133,7 @@ function GitReader({ close }: { close: () => void }) {
           <button className="btn" disabled={busy || checking || (snapshot.pageStart ?? 0) + snapshot.limit >= snapshot.totalAllowed} onClick={() => void refresh((snapshot.pageStart ?? 0) + snapshot.limit)}>Next files</button>
         </nav>}
         <div className={`git-review-layout${modern && filesHidden ? ' git-files-hidden' : ''}`}>
-          <aside id="git-changed-files" hidden={modern && filesHidden} aria-label="Git changed files">
+          <aside id="git-changed-files" data-size={modern?fileBounds.state:undefined} style={modern&&fileBounds.maxBlockSize?{'--collection-cap':`${fileBounds.maxBlockSize}px`} as CSSProperties:undefined} hidden={modern && filesHidden} aria-label="Git changed files">
             {snapshot.files.map(f => <button key={f.path} title={f.path} disabled={busy || checking} aria-pressed={f.path === selected} onClick={() => { setSelected(f.path); setPacket(undefined); }}><FileIcon path={f.path} /><span className="git-file-name">{modern ? <><strong>{f.path.split('/').at(-1)}</strong>{f.path.includes('/') && <small>{f.path.slice(0, f.path.lastIndexOf('/'))}</small>}</> : f.path}</span><small>{marks[f.path]?.fingerprint === f.fingerprint && marks[f.path]?.reviewed ? 'Reviewed' : marks[f.path] ? 'Changed' : f.status}</small></button>)}
             {!snapshot.files.length && <p>No visible changes.</p>}
             {!!snapshot.protectedCount && <p>{snapshot.protectedCount} protected paths excluded.</p>}
