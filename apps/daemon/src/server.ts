@@ -273,6 +273,15 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if(!recording.sourcePath) return json(res,{added:0,more:false});
         return json(res,await app.ingest.sync(id,{turnBytes:16*1024*1024,acceptUnterminated:false}));
       }
+      if (sub === 'rescan' && (m === 'GET' || m === 'POST')) {
+        if (id.includes('+')) throw new HttpError(400, 'Rescan one local recording at a time.');
+        const recording = app.recording(id);
+        let available = false;
+        try { available = !!recording.sourcePath && statSync(recording.sourcePath).isFile(); } catch { /* Retained evidence can outlive its journal. */ }
+        if (m === 'GET') return json(res, { available });
+        if (!available) throw new HttpError(404, 'The original journal is unavailable. Captured history remains readable.');
+        return json(res, await app.ingest.rescan(id));
+      }
       if (sub === 'workspace' && !subId && m === 'GET') return json(res, workspace.status(id));
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));

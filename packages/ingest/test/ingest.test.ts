@@ -35,6 +35,27 @@ function allStoredBytes(root: string): string {
   return s;
 }
 
+it('explicit rescan enriches an old recording with stable observation IDs and identical action chronology', async () => {
+  const journal = join(dir, 'usage.jsonl');
+  writeFileSync(journal, readFileSync(join(fixtures, 'usage/codex-rollout-usage.jsonl')));
+  await ingest.close();
+  const legacy = defaultAdapters().map(adapter => ({ ...adapter, createParser(context: Parameters<typeof adapter.createParser>[0]) {
+    const parser = adapter.createParser(context);
+    return { prime: (observations: Parameters<typeof parser.prime>[0]) => parser.prime(observations), parse: (record: unknown) => parser.parse(record).filter(o => o.kind !== 'usage') };
+  } }));
+  ingest = new Ingestor(store, legacy);
+  const first = await ingest.importSource('codex', journal);
+  const original = store.observations(first.recordingId);
+  const timeline = ingest.projection(first.recordingId).timeline;
+  await ingest.close(); ingest = new Ingestor(store);
+  expect((await ingest.importSource('codex', journal)).added).toBe(0);
+  expect((await ingest.rescan(first.recordingId)).added).toBe(7);
+  expect(store.observations(first.recordingId).filter(o => o.kind !== 'usage')).toEqual(original);
+  expect(ingest.projection(first.recordingId).timeline).toEqual(timeline);
+  expect((await ingest.rescan(first.recordingId)).added).toBe(0);
+  expect(allStoredBytes(join(dir, 'data'))).not.toContain('synthetic-limit-id');
+});
+
 function claudeLine(rec: Record<string, unknown>) {
   return JSON.stringify({ sessionId: 's', cwd: '/w', version: '2.1.0', timestamp: '2026-09-21T10:00:00Z', ...rec }) + '\n';
 }

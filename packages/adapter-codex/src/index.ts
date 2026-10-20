@@ -4,7 +4,7 @@
 
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
+import type { AdapterDescriptor, DiscoveredSource, Observation, UsagePayload } from '@drishya/contracts';
 import {
   fileInfo,
   headRecords,
@@ -13,6 +13,8 @@ import {
   textOf,
   touchesProtectedFile,
   literalPatch,
+  usageTokens,
+  primaryUsageLimits,
   type Adapter,
   type ParseContext,
   type RawObservation,
@@ -51,7 +53,7 @@ const IGNORED_TOP = new Set(['token_usage_record', 'world_state', 'compacted_his
 /** Codex addresses agents by path: "/root" is the main agent, "/root/<task>" a spawned one. */
 const agentFromAddress = (a: unknown) => (typeof a === 'string' && a !== '/root' && a.startsWith('/root/') ? `agent:${a.split('/').pop()}` : MAIN);
 const IGNORED_EVENTS = new Set([
-  'token_count', 'item_completed', 'item_started', 'thread_settings_applied', 'user_message', 'agent_message',
+  'item_completed', 'item_started', 'thread_settings_applied', 'user_message', 'agent_message',
   'agent_reasoning', 'agent_reasoning_raw_content', 'exec_command_begin', 'exec_command_end', 'exec_command_output_delta',
   'patch_apply_begin', 'patch_apply_end', 'mcp_tool_call_begin', 'mcp_tool_call_end', 'web_search_begin', 'web_search_end',
   'session_configured', 'background_event', 'turn_diff', 'plan_update', 'entered_review_mode', 'exited_review_mode',
@@ -150,10 +152,16 @@ export function createParser(_ctx: ParseContext): RecordParser {
   let version: string | undefined;
   let branch: string | undefined;
   let model: string | undefined;
+  let turnId: string | undefined;
 
   return {
     prime(observations: Observation[]) {
       for (const o of observations) {
+        if (o.kind === 'turn.start') {
+          const payload = o.payload as { turnId?: string };
+          turnId = payload.turnId;
+        }
+        if (o.kind === 'turn.end') turnId = undefined;
         if (o.kind === 'session.meta') {
           const p = o.payload as { cwd?: string; harnessVersion?: string; branch?: string; model?: string };
           cwd = p.cwd ?? cwd;
@@ -194,9 +202,21 @@ export function createParser(_ctx: ParseContext): RecordParser {
       }
       if (type === 'event_msg') {
         const t = String(p.type ?? '');
-        if (t === 'task_started') return [{ ...base, kind: 'turn.start', payload: { turnId: p.turn_id } }];
-        if (t === 'task_complete') return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }];
-        if (t === 'turn_aborted') return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }];
+        if (t === 'task_started') { turnId = typeof p.turn_id === 'string' ? p.turn_id : undefined; return [{ ...base, kind: 'turn.start', payload: { turnId: p.turn_id } }]; }
+        if (t === 'token_count') {
+          const keys = { input_tokens: 'input', cached_input_tokens: 'cachedInput', cache_write_input_tokens: 'cacheWrite', output_tokens: 'output', reasoning_output_tokens: 'reasoningOutput', total_tokens: 'total' } as const;
+          const tokens = usageTokens(p.info?.total_token_usage, keys), request = usageTokens(p.info?.last_token_usage, keys);
+          const limits = primaryUsageLimits(p.rate_limits);
+          const contextWindow = Number.isSafeInteger(p.info?.model_context_window) && p.info.model_context_window > 0 ? p.info.model_context_window : undefined;
+          const shared = { source: 'codex-token-count' as const, ...(model ? { model } : {}), ...(turnId ? { turnId } : {}), ...(limits ? { limits } : {}), ...(contextWindow ? { contextWindow } : {}) };
+          const out: RawObservation[] = [];
+          const emit = (part: number, payload: UsagePayload) => out.push({ ...base, part, kind: 'usage', payload: { ...payload } });
+          if (tokens || limits || contextWindow) emit(0, { ...shared, cumulative: true, ...(tokens ? { tokens } : {}) });
+          if (request) emit(1, { ...shared, cumulative: false, tokens: request });
+          return out;
+        }
+        if (t === 'task_complete') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }]; }
+        if (t === 'turn_aborted') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }]; }
         if (t === 'context_compacted') return [{ ...base, kind: 'compaction', payload: {} }];
         if (IGNORED_EVENTS.has(t)) return [];
         return [{ ...base, kind: 'unknown', payload: { recordType: `event_msg:${t}` }, availability: 'metadata-only' }];

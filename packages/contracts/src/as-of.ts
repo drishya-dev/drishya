@@ -14,6 +14,8 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
   const visibleEvidence = new Set([...operations.flatMap((op) => op.observationIds), ...projection.prose.filter((p) => proseIds.has(p.id)).flatMap((p) => p.observationIds)]);
   return {
     ...projection,
+    // Accounting points do not own timeline steps. Whole-session totals are not historical evidence.
+    usage: undefined,
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
     artifacts: projection.artifacts.filter((a) => visibleArtifacts.has(a.id)),

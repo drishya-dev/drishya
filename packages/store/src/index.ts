@@ -464,6 +464,12 @@ export class Store {
             ON CONFLICT(id) DO NOTHING`).run(s.id, s.recordingId, s.path, s.agentId ?? null, s.role, JSON.stringify(s.cursor));
   }
 
+  /** Re-read the same generation: rescan is enrichment, not a new source or rewritten observation. */
+  rewindSource(source: SourceRow) {
+    const cursor = { ...source.cursor, offset: 0, inOversized: false };
+    this.q('UPDATE sources SET cursor = ? WHERE id = ? AND recording_id = ?').run(JSON.stringify(cursor), source.id, source.recordingId);
+  }
+
   getSources(recordingId: string): SourceRow[] {
     return (this.q('SELECT * FROM sources WHERE recording_id = ? ORDER BY role DESC, path').all(recordingId) as any[]).map((r) => ({
       id: r.id,

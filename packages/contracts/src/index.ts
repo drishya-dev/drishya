@@ -2,7 +2,7 @@
 // Shapes follow docs/review/03-engineering-plan.md §3–4: immutable observations, a versioned
 // projection built from them, typed evidence links, historical artifacts with explicit gaps.
 
-export const CONTRACT_VERSION = '0.1.0-draft';
+export const CONTRACT_VERSION = '0.2.0-draft';
 
 // ─── Observations: what a source actually said, sanitized, never rewritten ─────────────
 
@@ -37,6 +37,7 @@ export type ObservationKind =
   | 'agent.stop'
   | 'compaction'
   | 'capture.gap'
+  | 'usage'
   | 'unknown';
 
 export interface Observation {
@@ -69,6 +70,7 @@ export type ObservationPayload =
   | AgentSpawnPayload
   | AgentStopPayload
   | GapPayload
+  | UsagePayload
   | UnknownPayload
   | Record<string, unknown>;
 
@@ -86,6 +88,19 @@ export interface MessagePayload {
   model?: string;
   /** Codex exposes reasoning only as summaries; Claude as thinking text. */
   exposure?: 'full' | 'summary';
+}
+
+/** Accounting reported by a harness, never a price or missing token count inferred by Drishya. */
+export interface UsagePayload {
+  source: 'codex-token-count' | 'claude-message-usage' | 'claude-cost-state';
+  model?: string;
+  turnId?: string;
+  tokens?: { input?: number; cachedInput?: number; cacheWrite?: number; output?: number; reasoningOutput?: number; total?: number };
+  cumulative: boolean;
+  contextWindow?: number;
+  cost?: { usd: number; basis: 'harness-estimate'; modelCostUnknown?: boolean };
+  work?: { linesAdded?: number; linesRemoved?: number; durationMs?: number; apiDurationMs?: number; toolDurationMs?: number };
+  limits?: { usedPercent: number; windowMinutes: number; resetsAt: number; plan?: string };
 }
 
 export interface ToolCallPayload {
@@ -367,6 +382,7 @@ export interface Passage {
 }
 
 export interface Projection {
+  usage?: { latest?: UsagePayload; byTurn: Record<string, UsagePayload> };
   reducerVersion: string;
   recordingId: string;
   observationCount: number;
