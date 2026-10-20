@@ -72,6 +72,21 @@ describe('Sacred Timeline light (GIT-1)', () => {
     expect(branchAt(layout, v, mid[0], mid[1] + 400)).toBeUndefined();
   });
 
+  it('draws a squash merge into the primary commit that wrote the branch, flowing right', () => {
+    const plain = lightLayout(graph, .6), squashed = lightLayout(graph, .6, new Map([['s3', 'm3']]));
+    const branch = squashed.branchOf.get('s3')!;
+    expect(plain.branchOf.get('s3')!.merge).toBeUndefined();
+    expect([branch.merge, branch.squash]).toEqual(['m3', true]);
+    expect(squashed.byHash.get('m3')!.x).toBeGreaterThan(squashed.byHash.get('s3')!.x);
+    expect(gitLight(graph, squashed, view(.6, squashed)).segments).toBeGreaterThan(gitLight(graph, plain, view(.6, plain)).segments);
+    // A squash target must be on the primary line; anything else is ignored.
+    expect(lightLayout(graph, .6, new Map([['s3', 'f2']])).branchOf.get('s3')!.merge).toBeUndefined();
+  });
+
+  it('zoom magnifies: the river widens with scale instead of only spreading commits apart', () => {
+    expect(riverWidth(1.2)).toBeGreaterThan(riverWidth(.6) * 1.8);
+  });
+
   it('draws only what is in view', () => {
     const layout = lightLayout(graph, .6);
     expect(gitLight(graph, layout, { ...view(.6, layout), ox: -100000 }).segments).toBe(0);

@@ -13,6 +13,9 @@ export interface GitHistoryPage {mainline?:{name:string;tip:string};
   commits:GitCommit[]; start:number; more:boolean; limit:number;
   references:GitReference[]; referenceStart:number; referenceCount:number; referenceTotal:number;
   selectedReference?:GitReference;
+  /** Squash-merge evidence (see git-history.ts): content signatures of each non-merge commit's own change, and of each
+   * branch head's whole change since it left the primary line. Equal values mean identical written file contents. */
+  changeSignatures?:Record<string,string>; branchSignatures?:Record<string,string>;
 }
 export interface GitCommitDetail {
   hash:string; parents:string[]; parent?:string; message:string;
