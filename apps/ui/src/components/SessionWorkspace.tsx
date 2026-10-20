@@ -1,3 +1,5 @@
+import { FileEvidenceMarks, fileEvidenceDescription, useFileEvidence } from './FileEvidenceMarks.tsx';
+import { touchedFiles } from '../../../../packages/scene/src/file-evidence.ts';
 import {FilePeekTabs} from './FilePeekTabs.tsx';
 import {filePeekState,openFilePeek,closeFilePeek,type FilePeekState} from '../lib/file-peek.ts';
 import {useSurfaceReflow} from '../lib/use-surface-reflow.ts';
@@ -129,6 +131,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const id = useApp(s => s.recordingId);
   const graph = useApp(s => s.graph);
   const files = useApp(s => s.projection?.files);
+  const [touchedOnly, setTouchedOnly] = useState(false);
+  useEffect(() => setTouchedOnly(false), [id]);
+  const touched = useMemo(() => touchedFiles(files ?? []), [files]);
   const hidden = useApp(s => s.foldersHidden);
   const narrow = useNarrowWorkspace(), developerWorkspace = useApp(s => s.developerWorkspace);
   const modern = document.documentElement.dataset.uiVersion === 'modern';
@@ -167,7 +172,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     void source.graph(id).then(g => { if (active && useApp.getState().recordingId === id) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
   }, [source, id, graph, graphRetry]);
-  const paths = useMemo(() => [...new Set((graph?.nodes.map(n => n.path) ?? files?.map(f => f.path) ?? []).filter(p => !(graph?.temporal === 'current' && p.startsWith('.local/')) && !p.startsWith('/') && !/^[A-Za-z]:/.test(p)))].sort(), [graph, files]);
+  const paths = useMemo(() => [...new Set([...(graph?.nodes.map(n => n.path) ?? []), ...(files?.map(f => f.path) ?? [])].filter(p => !(graph?.temporal === 'current' && p.startsWith('.local/')) && !p.startsWith('/') && !/^[A-Za-z]:/.test(p) && (!touchedOnly || touched.paths.has(p))))].sort(), [graph, files, touchedOnly, touched]);
   const tree = useMemo(() => {
     if (query.trim()) return paths.filter(p => p.toLowerCase().includes(query.toLowerCase())).map(path => ({ path, folder: false, depth: 0, name: path }));
     const rows: { path: string; folder: boolean; depth: number; name: string }[] = [];
@@ -197,6 +202,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const rowHeight = 32;
   const firstRow = Math.max(0, Math.floor(treeScroll / rowHeight) - 10);
   const lastRow = Math.min(tree.length, firstRow + Math.ceil(treeHeight / rowHeight) + 24);
+  const evidence = useFileEvidence(tree.slice(firstRow, lastRow).filter(row => !row.folder).map(row => row.path), projection, shown);
   useLayoutEffect(() => {
     const el = treeElement.current;
     if (!el || !shown) return;
@@ -216,7 +222,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       closeExplorer();
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]')) return;
+      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]') || event.target instanceof Element && event.target.closest('.tree-evidence-filter[open]')) return;
       if (!element.contains(event.target as Node) && !(event.target instanceof Element && event.target.closest('[data-workspace-files-trigger]'))) return;
       event.preventDefault(); event.stopPropagation(); closeExplorer(true);
     };
@@ -228,7 +234,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     document.addEventListener('keydown', escape, true);
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('focusin', outside); document.removeEventListener('keydown', escape, true); };
   }, [narrow, shown, developerWorkspace, workspace?.approved]);
-  useLayoutEffect(() => { treeElement.current?.scrollTo({ top: 0 }); setTreeScroll(0); }, [query]);
+  useLayoutEffect(() => { treeElement.current?.scrollTo({ top: 0 }); setTreeScroll(0); }, [query, touchedOnly]);
   useLayoutEffect(() => {
     const el = treeElement.current; if (!el) return;
     const anchor = folderAnchor.current; folderAnchor.current = undefined;
@@ -242,7 +248,12 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
     {modern && !narrow && <ReadingResize value={readingWidth} minimum={220} maximum={maximumWidth} change={setWidth} reset={()=>setWidth(260)} label="Resize Files reading space" />}
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
-    <label className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Find repository files' : 'Find session files'} placeholder="Find files…" maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}</label>
+    <div className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={modern ? 'Find repository files' : 'Find session files'} placeholder={touchedOnly?'Find touched files…':'Find files…'} maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}
+      <details className="desk-options tree-evidence-filter" data-touched={touchedOnly} onKeyDown={event=>{if(event.key==='Escape'&&event.currentTarget.open){event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus();}}}>
+        <summary aria-label="File filters" title={touchedOnly?'File filters · Touched':'File filters'}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M5 10h10M8 16h4" strokeWidth="1.5"/></svg></summary>
+        <div className="tree-evidence-filter-menu">{[{value:false,label:'All files'},{value:true,label:'Touched'}].map(option=><button key={option.label} type="button" aria-pressed={touchedOnly===option.value} onClick={event=>{setTouchedOnly(option.value);const menu=event.currentTarget.closest('details')!;menu.open=false;menu.querySelector('summary')?.focus();}}>{option.label}</button>)}<small>Captured activity in this session. Badges describe tool calls, not current Git status.</small></div>
+      </details>
+    </div>
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
@@ -263,13 +274,13 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       requestAnimationFrame(() => el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true }));
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
-      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
+      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-label={row.name} aria-description={fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined)} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.path} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
         if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }
         else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: row.path }));
         else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
         else useApp.getState().set({...(workspace?.approved ? { currentFile: row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
-      }} onDoubleClick={()=>{if(!row.folder&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore)window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:row.path,pin:true}}));}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span>{row.name}</span></button>)}
-      {!tree.length && <p className="muted small">{query ? 'No matching files' : 'No relative paths captured yet'}</p>}
+      }} onDoubleClick={()=>{if(!row.folder&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore)window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:row.path,pin:true}}));}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span className="file-row-name">{row.name}</span><FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)} count={row.folder?touched.folders.get(row.path):undefined}/></button>)}
+      {!tree.length && <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No captured file activity' : 'No relative paths captured yet'}</p>}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>
   </aside>;

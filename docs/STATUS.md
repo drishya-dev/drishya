@@ -32,13 +32,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | TURN-2 | @yash + Codex | `codex/turn-2-keyboard-reading` | 2026-10-20 | `App.tsx` keyboard dispatch, `components/History.tsx` keyboard focus/fold entry only, `ProductShell.tsx` Keyboard section; new reading-key helper/help component/scoped CSS and focused tests; bounded worker navigation via history/history-worker/server/api, no schema/adapters/projection/Git/Usage or FILES-1 FolderExplorer edits. Up to 15 files; separate worktree, draft then READY handoff for Claude to merge. |
-| FILES-1 | @yash + Codex | `codex/files-1-evidence-tree` | 2026-10-20 | FolderExplorer portion of `components/SessionWorkspace.tsx` only (not READ-9 CurrentDocument), new evidence-tree helper/decorations/CSS and focused specs; read-only file-evidence aggregation in new scene helper plus daemon history-worker/history/server and UI api (whole-session counts rather than paged guesses); new scoped CSS/helper/specs, no adapters/contracts/projection/History/Viewer/Git/Usage. At most 15 files. TASKS/STATUS completion. Separate worktree; leave PR ready for Claude, preferably merge READ-9 first; folder hunks are separate. |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
 ---
 
 ## Last session
+
+
+### Yash with Codex — FILES-1 supported file evidence ready
+
+- **When:** 20 October 2026, `codex/files-1-evidence-tree`, PR #139. **READY FOR CLAUDE REVIEW / MERGE** — final local verification passed. Integrated main through `cefb2ca` (READ-9/UI-1/GIT-1 merged cleanly); this branch's `SessionWorkspace.tsx` changes are FolderExplorer only. No capture/schema/projection, History/Viewer/header, Git or Usage edits.
+- **Delivered:** quiet read-call counts, adapter-recorded creation/edit marks, live open-call hints and distinct touched-file counts on folders. Touched lives inside Find's menu; captured paths remain visible even when absent from the current index. Read-only history-worker aggregation is independent of resident history pages and current Git; only up to 100 requested visible rows cross the API, with replay step support. Existing menu dismissal/motion reused, tree accessible names preserved.
+- **Validation:** both typechecks/build, 615 full-suite unit tests plus final 45/45 focused reducer/API tests including the Review-work membership assertion; 20 browser journeys including connected workspace and actual Drishya Codex / Skeletongraph Codex / Skeletongraph Claude captures. Actual Claude README shows 10 captured reads plus E. One older Codex capture has no supported read/change path evidence; tested honest unmarked/empty state. Phone320/390, desktop1440, local live append/result updates; emulation, not physical device acceptance. Final results in [review](review/files-1-evidence-tree.md).
+- **Remaining:** FILES-1 is deliberately not fully ticked: D needs explicit deletion evidence from DATA-1 integration. Do not infer it from an empty patch. Missing original Skeletongraph journal still produces the pre-existing session-segments ENOENT warning; imported evidence remains readable. See TASKS for the exact pending dependency. No hosted CI; Claude owns merge.
 
 ### Yash with Claude (Opus 5.5) — GIT-1 Sacred Timeline integrated; UI-1 drafted; READ-9 reviewed
 
