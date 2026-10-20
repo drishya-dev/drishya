@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | FILES-2 | @yash + Codex | `codex/files-2-output-paths` | 2026-10-20 | Finish remaining test/output and non-History search-result path navigation using captured-first evidence routes: shared output/test/search presentation components, bounded pure path helper, focused unit/browser tests and TASKS/STATUS/review (at most 12 files). Preserve exact raw output, selection/copy, unresolved paths, replay boundaries and explicit current-file consent. No adapters/contracts/projection/Usage/backend changes; do not touch UI-5 reader chrome reserved by PR165. |
 | UI-10 | @yash + Codex | `codex/ui-10-collections` | 2026-10-20 | Finish remaining count-dependent surfaces: collectionBounds helper, import/search/Git changed-file/rail/tree/ledger presentation only as needed, focused 3/300 unit/browser fixtures, TASKS/STATUS/review (at most 15 files). Keep existing virtualization/paging and full entry access; no History.tsx (CONTENT-3), adapters/contracts/Usage/backend or FILES-2 output/search navigation edits. Existing hover/tool/Agents owners retained and reverified. |
-| CONTENT-3 | @yash + Claude Sonnet 5.5 | `yash/content-3-question-cards` | 2026-10-20 | UI slice for Claude `AskUserQuestion` only: new `lib/ask-question.ts` parser, `QuestionCard.tsx` + CSS, a one-line hook where `History.tsx` renders `other` operations, tests, TASKS/STATUS (at most 8 files). No adapters/contracts/projection (DATA-1/2/4), no Codex questions, no inline answering. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -41,6 +40,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — CONTENT-3 Claude question card (partial)
+
+- **When:** 20 October 2026. `lib/ask-question.ts` parses a captured AskUserQuestion (input plus "The user answered: …" result); `QuestionCard` shows each question, chosen options when known, and typed answers; hooked into the generic preview and the expanded view only for `AskUserQuestion`. Found on a real session that the projection bounds nested input so option lists arrive as placeholders (DATA-4 needed). Unit and browser specs pass; also merged Codex #165 (UI-5 reader density) after fixing one stale phone spec.
 
 ### Yash with Claude (Sonnet 5.5) — GIT-2 session ↔ commit links (partial)
 
