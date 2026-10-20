@@ -17,12 +17,14 @@ test.beforeEach(async({page})=>{
  let first=true;await page.route('**/v1/working-locations',async route=>{if(first&&route.request().method()==='GET'){first=false;await page.request.delete(route.request().url(),{headers:{'content-type':'application/json'}});}await route.continue();});
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/#/r/${id}`);
 });
-test('rail ticks encode whole-turn size, captured failures and edits, with ledger on hover',async({page})=>{
+test('rail ticks are uniform and plain at rest; the captured ledger appears on hover',async({page})=>{
  const rail=page.getByRole('navigation',{name:'Prompt positions in history'});await expect(rail).toBeVisible();await rail.focus();await page.keyboard.press('Home');
  const first=rail.getByRole('button',{name:'Go to prompt: Rail turn 0',exact:true});await expect(first).toHaveAttribute('data-operation-count','2');
  const failure=rail.getByRole('button',{name:'Go to prompt: Rail turn 1',exact:true}),edited=rail.getByRole('button',{name:'Go to prompt: Rail turn 2',exact:true});
- await expect(failure).toHaveAttribute('data-operation-count','12');await expect(failure.locator('.prompt-turn-failed')).toBeVisible();await expect(edited).toHaveAttribute('data-operation-count','80');await expect(edited.locator('.prompt-turn-edited')).toBeVisible();
- const small=await first.evaluate(e=>Number(e.style.getPropertyValue('--turn-size'))),large=await edited.evaluate(e=>Number(e.style.getPropertyValue('--turn-size')));expect(large).toBeGreaterThan(small);
+ await expect(failure).toHaveAttribute('data-operation-count','12');await expect(edited).toHaveAttribute('data-operation-count','80');
+ await expect(rail.locator('.prompt-turn-failed, .prompt-turn-edited')).toHaveCount(0);
+ await page.mouse.move(2,2);
+ const widths=await rail.locator('.prompt-rail-tick').evaluateAll(ticks=>ticks.map(tick=>Math.round(tick.getBoundingClientRect().width)));expect(new Set(widths).size).toBe(1);
  await failure.hover();await expect(page.locator('.prompt-rail-ledger')).toContainText('12 captured operations');await expect(page.locator('.prompt-rail-ledger')).toContainText('1 failed');
  await edited.hover();await expect(page.locator('.prompt-rail-ledger')).toContainText('80 captured operations');await expect(page.locator('.prompt-rail-ledger')).toContainText('edited 1 file');
  await expect(edited).toHaveAttribute('aria-description',/80 captured operations/);

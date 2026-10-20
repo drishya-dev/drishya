@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | REVIEW-2 | @yash + Claude Sonnet 5.5 | `yash/review-2-search-context` | 2026-10-20 | In-session search context: `packages/store/src/index.ts` `search()` only (extra read-only columns), `apps/ui/src/api.ts` hit type, `Viewer.tsx` Search component + scoped CSS, store/browser tests, TASKS/STATUS (at most 9 files). No contracts/adapters/projection (DATA-1/2), no library search. |
-| TURN-3 | @yash + Claude Sonnet 5.5 | `yash/rail-quiet` | 2026-10-20 | Follow-up to the merged TURN-3, builder feedback: prompt rail ticks are one length at rest, no edit dot and no failure mark; the captured ledger appears only on hover/focus. `PromptRail.tsx`, `prompt-rail-mark.ts`, `prompt-rail-evidence.css`, their unit/browser specs, TASKS/STATUS (at most 7 files). No ledger, scene, daemon or History changes. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -40,6 +39,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — prompt rail made quiet (TURN-3 follow-up)
+
+- **When:** 20 October 2026, builder feedback on the merged TURN-3. Rail ticks are now one length at rest, with no edit dot and no failure mark; the captured turn ledger (operations, failures, edits) appears only in the hover/focus card. The size encoding, `prompt-rail-mark.ts` and its unit test are removed. Verified with the rail spec (uniform tick widths, no mark nodes, ledger on hover) and a screenshot.
+- **Decision:** the rail does not encode outcomes; a Tests view (every run, every failing case) was drafted and deferred to P3 as TESTS-1 until it is clear anyone would open it.
 
 ### Yash with Claude (Sonnet 5.5) — GIT-3 commit rows and ref filter
 
