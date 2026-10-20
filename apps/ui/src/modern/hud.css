@@ -23,7 +23,20 @@
 :root[data-ui-version=modern] .modern-tool-station.toolbox-minimized>.toolbox-collapse { inset:0;width:42px;height:42px; }
 
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .workspace-header { pointer-events:none; }
-:root[data-ui-version=modern] .modern-session-header :is(.brand,.studio-session,.studio-actions) { pointer-events:auto; }
+:root[data-ui-version=modern] .modern-session-header :is(.brand,.studio-session,.studio-actions,.modern-identity) { pointer-events:auto; }
+
+/* UI-1: the session's identity shares the brand's outline instead of adding a capsule. */
+:root[data-ui-version=modern] .modern-session-header .modern-identity { display:flex;align-items:center;gap:2px;min-width:0;max-width:min(440px,calc(100vw - 200px));justify-self:start;padding:3px 14px 3px 3px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--s1) 80%,transparent);backdrop-filter:blur(16px); }
+:root[data-ui-version=modern] .modern-session-header .modern-identity .brand { padding:4px 7px;border:0;background:none;backdrop-filter:none;border-radius:10px;flex:none; }
+:root[data-ui-version=modern] .modern-session-header .modern-identity .brand>span:not(.brand-mark) { display:none; }
+.session-line { display:grid;min-width:0;padding-left:8px;border-left:1px solid var(--line);line-height:1.3; }
+.session-line-title { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1);font-size:12.5px;font-weight:500; }
+.session-line-meta { display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--t3);font:11px/1.4 var(--mono); }
+.session-line-state { flex:none;width:6px;height:6px;border-radius:50%;background:var(--t3); }
+.session-line-state[data-state=working] { background:var(--pass); }
+@media(max-width:700px) { :root[data-ui-version=modern] .modern-session-header .modern-identity { max-width:calc(100vw - 150px);padding-right:10px; } .session-line-meta { display:none; } }
+@supports not (backdrop-filter:blur(1px)) { :root[data-ui-version=modern] .modern-session-header .modern-identity { background:var(--s1); } }
+:root[data-ui-version=modern][data-low-resource] .modern-session-header .modern-identity { backdrop-filter:none;background:var(--s1); }
 
 :root[data-ui-version=modern][data-experience=classic] .workspace-header .modern-session-header { grid-template-rows:48px;padding-block:7px; }
 :root[data-ui-version=modern] .modern-session-header .studio-session h1 { margin:2px 0 0;font-size:13px; }
