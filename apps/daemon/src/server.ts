@@ -335,6 +335,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         for (const key of id.split('+')) app.recording(key);
         return json(res, { turns: await app.history.turns(id) });
       }
+      if (sub === 'file-evidence' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key);
+        const paths = url.searchParams.getAll('path');
+        if (!paths.length || paths.length > 100 || paths.some(path => !path || path.length > 1024)) throw new HttpError(400, 'Choose 1 to 100 file paths');
+        return json(res, await app.history.fileEvidence(id, paths, url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined));
+      }
       if (sub === 'now' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, await app.history.now(id));

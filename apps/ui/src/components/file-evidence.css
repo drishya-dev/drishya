@@ -1,0 +1,22 @@
+.folder-explorer .folder-tree .file-row-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-explorer .file-evidence { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; margin-left: auto; padding-left: 5px; font: 11px/1.2 var(--sans); color: var(--t2); font-variant-numeric: tabular-nums; }
+.folder-explorer .file-evidence > span { display: inline-flex; align-items: center; gap: 3px; }
+.folder-explorer .file-reads svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.3; }
+.folder-explorer .file-change { font-weight: 600; }
+.folder-explorer .change-E { color: var(--amber, #d9b47a); }
+.folder-explorer .change-A { color: var(--green, #8dcca8); }
+.folder-explorer .file-now { color: var(--t1); }
+.folder-explorer .folder-evidence i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.folder-explorer .ux-search { position: relative; }
+.folder-explorer .file-filter { flex: 0 0 auto; margin: 0; }
+.folder-explorer .file-filter > summary { display: grid; place-items: center; width: 28px; height: 28px; padding: 5px; cursor: pointer; list-style: none; border-radius: 5px; color: var(--t2); }
+.folder-explorer .file-filter > summary::-webkit-details-marker { display: none; }
+.folder-explorer .file-filter > summary svg { width: 16px; height: 16px; fill: none; stroke: currentColor; }
+.folder-explorer .file-filter[data-touched=true] > summary { color: var(--t1); background: color-mix(in srgb, currentColor 9%, transparent); }
+.folder-explorer .file-filter-menu { position: absolute; z-index: 5; inset: calc(100% + 5px) 0 auto auto; width: min(240px, 100%); padding: 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--s1); box-shadow: 0 8px 24px #0004; }
+.folder-explorer .file-filter-menu button { width: 100%; text-align: left; padding: 10px; border: 0; background: transparent; color: inherit; border-radius: 5px; }
+.folder-explorer .file-filter-menu button[aria-pressed=true] { background: color-mix(in srgb, currentColor 9%, transparent); }
+.folder-explorer .file-filter-menu small { display: block; padding: 8px 10px; color: var(--t2); line-height: 1.4; white-space: normal; }
+.folder-explorer .file-filter-menu button:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+.folder-explorer .file-filter summary:focus-visible, .folder-explorer .file-filter-menu button:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+@media (pointer: coarse) { .folder-explorer .file-filter > summary { width: 40px; height: 40px; } .folder-explorer .file-filter-menu button { min-height: 44px; } }

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -486,4 +486,25 @@ it('guards connected workspace and native prompt routes with local API authentic
   }
   expect((await call(`/v1/recordings/${recId}/workspace/file?path=a.ts&count=invalid`, { headers: auth() })).status).toBe(400);
   expect((await call(`/v1/recordings/${recId}/controller/prompt`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body: { prompt: 'hello' } })).status).toBe(400);
+});
+
+
+it('serves bounded whole-history file evidence and refreshes it after newly captured reads', async () => {
+  const journal = join(dir, 'file-evidence.jsonl');
+  const base = { sessionId: 'evidence-tree', cwd: dir, timestamp: '2026-10-20T09:00:00Z' };
+  const read = (n: number) => [
+    {...base,type:'assistant',uuid:`a${n}`,message:{role:'assistant',content:[{type:'tool_use',id:`read${n}`,name:'Read',input:{file_path:join(dir,'old.ts')}}]}},
+    {...base,type:'user',uuid:`r${n}`,message:{role:'user',content:[{type:'tool_result',tool_use_id:`read${n}`,content:'1\tconst value = 1;'}]}},
+  ].map(row=>JSON.stringify(row)).join('\n')+'\n';
+  writeFileSync(journal, Array.from({length:70},(_,n)=>read(n)).join(''));
+  const {recordingId}=await s.app.ingest.importSource('claude-code',journal);
+  const page=await s.app.history.page(recordingId,{count:1});
+  expect(page.projection.operations.length).toBeLessThan(70);
+  const url=`/v1/recordings/${recordingId}/file-evidence`;
+  expect((await call(`${url}?path=old.ts`)).status).toBe(401);
+  for(const query of ['', '?'+new URLSearchParams(Array.from({length:101},()=>['path','old.ts'] as [string,string])), '?path='+ 'a'.repeat(1025), '?path=old.ts&step=invalid']) expect((await call(url+query,{headers:auth()})).status).toBe(400);
+  expect((await call(`${url}?path=old.ts&path=absent.ts`,{headers:auth()})).body).toEqual([{path:'old.ts',readCalls:70,now:false}]);
+  expect((await call(`${url}?path=old.ts&step=0`,{headers:auth()})).body).toEqual([]);
+  appendFileSync(journal,read(70));await s.app.ingest.importSource('claude-code',journal);
+  expect((await call(`${url}?path=old.ts`,{headers:auth()})).body).toEqual([{path:'old.ts',readCalls:71,now:false}]);
 });
