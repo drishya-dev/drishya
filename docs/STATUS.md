@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | UI-2 | @yash + Codex | codex/ui-2-settings-type | 2026-10-20 | Settings typography/contrast slice only: pps/ui/src/modern/settings.css, optional scoped UI-version CSS, browser tests, TASKS/STATUS and review notes (at most 7 files). No ProductShell/Viewer/Search, Usage or SessionWorkspace edits; no palette or motion rewrite. |
 | LIVE-2b | @yash + Codex | `codex/live-2b-composer-access` | 2026-10-20 | Prompt keyboard expansion/focus and measured end clearance: SessionWorkspace.tsx composer only, new scoped helper/CSS if needed, ProductShell.tsx keyboard help only, focused browser checks and TASKS/STATUS/review note (at most 8 files). No Viewer/Search (REVIEW-2), capture/store/daemon/contracts/adapters/projection (DATA-1/2), native submit policy, workspace edit or animation rewrite. Verify real-session layout, keyboard/IME/dialog boundaries and expanded-card bottom clearance. Draft after first increment, READY for Claude merge. |
-| LIVE-3 | @yash + Claude Sonnet 5.5 | `yash/live-3-notifications` | 2026-10-20 | Opt-in browser notifications: new `lib/notifications.ts` + a Settings toggle row, a small watcher mounted in the app shell, unit + browser tests, TASKS/STATUS (at most 8 files). No capture/daemon/contracts, no composer (LIVE-2b), no Usage/Home. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -41,6 +40,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — LIVE-3 opt-in notifications
+
+- **When:** 20 October 2026. `lib/notifications.ts` (pure transition rule, stored opt-in, permission asked only from the Settings switch), `NotifyWatcher` (fires only when the tab is hidden, from the existing now-state) and a Settings row. 3 unit tests, 2 permission journeys, settings/live specs pass (20).
+- **Not done:** notifying for sessions that are not open, and a human check on a real desktop notification.
 
 ### Yash with Claude (Sonnet 5.5) — REVIEW-2 search result context
 
