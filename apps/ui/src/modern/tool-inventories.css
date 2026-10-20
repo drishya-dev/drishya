@@ -1,0 +1,13 @@
+/* Long inventories scroll locally; their disclosure remains outside the scrolling list. */
+:root[data-ui-version=modern] .modern-toolbox .md-server>.md-inventory-list {
+  max-block-size:min(var(--inventory-cap,360px),36dvh); overflow:auto; min-width:0;
+  scrollbar-width:thin; scroll-padding-block:5px;
+}
+.modern-toolbox .md-inventory-list[data-size=scroll] { scrollbar-gutter:stable; }
+.modern-toolbox .md-inventory-list:focus-visible { outline:1px solid var(--focus); outline-offset:2px; border-radius:4px; }
+:root[data-ui-version=modern] .modern-toolbox .md-inventory-list>.md-runtime-tool,
+:root[data-ui-version=modern] .modern-toolbox .md-inventory-list>button {
+  min-height:36px; height:auto; box-sizing:border-box; padding-block:8px; font-size:12px; line-height:18px;
+  overflow-wrap:anywhere;
+}
+.modern-toolbox .md-inventory-list>button>small { flex:none; }
