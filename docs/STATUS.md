@@ -31,14 +31,28 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| PERF-2 | @yash + Codex | `codex/perf-2-jsonl-batches` | 2026-10-20 | `packages/capture-core/src/jsonl.ts`, `packages/capture-core/test/jsonl.test.ts`, isolated benchmark script/test only if needed and performance docs (≤8 files). Batching/yield points only; no capture-core index/usage exports, adapters, contracts, projection, ingest, store or daemon edits owned by DATA-1/2. Full acceptance stays open until budgets pass and post-DATA retest is available. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
-| READ-6 | @yash + Claude | `yash/read-6-read-before-write` | 2026-10-20 | `packages/scene/src/read-before-write.ts` (+ test), worker/history/server route, api.ts, one line in the expanded edit card (History.tsx) and Inspector, one browser spec (at most 12 files). Claude edits only; Codex waits for DATA-1 typed reads. No adapter, contracts or projection edits. **CONTENT-9 was not claimed:** it needs review-125 S3 in adapter-claude/adapter-codex/contracts/projection, which the DATA-1/DATA-2 rows hold. |
+| TEST-2 | @yash + Claude | `yash/test-2-flaky-specs` | 2026-10-20 | `tests/browser/*.spec.ts` (hover-fit, settings-typography, turn-fold, prompt-timeline, product-workspace, fresh-workspace) and, only if a spec exposes a real defect, the one app file involved; docs. No capture, contracts, adapters or daemon work (at most 12 files). |
 
 ---
 
 ## Last session
 
+### Yash with Codex — PERF-1 measured; PERF-2 gate open, ready for Claude review
+
+- **When:** 20 October2026. PR **#171**, `codex/perf-1-large-journals`. Claimed the first independent dependency-ready item after DATA-3…6 overlapped Harsh's DATA-1/2 files. Adds opt-in isolated real-journal benchmark and a regression for partial writes/source preservation. Native journals stay read-only; normal/error completion removes snapshots and redacted stores. [Report](review/perf-1-large-journals.md).
+- **Result:** five complete-import and five append/browser runs per166/347/564MB actual source. Zero capture gaps; every append result matches full-import observation IDs/order; repeated sync adds nothing. The biggest journal exceeds the512MiB reference screening budget and shows API stalls. PERF-1 measurement is complete; **PERF-2 remains open and new feature work is gated pending restoration or an explicitly agreed narrower support range**. No green scale/release claim.
+- **Validation and limits:** 679 integrated unit tests plus36 focused JSONL/ingest/probe checks; both project types and direct script typecheck. Installed Edge on the reference Windows machine; uncontrolled background development load, warm OS cache, headless frame/API proxies, physical/human acceptance unmeasured. Rerun after DATA-1/2 retention changes. No runtime/schema/dependency changes, native turn or hosted CI.
+- **Merge signal:** **#171 READY FOR CLAUDE REVIEW / SQUASH** after final numeric matrix and local checks. Own claim removed only in this finishing PR. Main #172 TodoWrite and subsequent EXPLAIN priority change integrated; other claims and dependency order preserved.
+
+
+
+### Yash with Claude (Sonnet 5.5) — READ-6 read-before-write (Claude edits)
+
+- **When:** 20 October 2026. `readBeforeWriteFor` (scene) lists the same agent's earlier successful reads of the edited file and relates them to the lines the edit replaces; one line in the expanded edit card; worker route `read-before`; bundles compute locally. New `read-before-write.spec.ts`. **CONTENT-9 was not started:** it needs review-125 S3 (an observation for empty/encrypted reasoning) in adapter-claude, adapter-codex, contracts and projection, which Harsh's DATA-1/DATA-2 rows hold. Take CONTENT-9, DATA-3…6 and the data-dependent CONTENT items after those merge; they are the critical path.
+- **Limits:** Claude only; a read taken before an earlier edit is not compared by line number; the count of reads is of this capture, not of everything the agent knew.
 
 ### Yash with Claude (Sonnet 5.5) — CONTENT-4 plan checklist (TodoWrite slice, partial)
 
@@ -87,12 +101,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **GIT-3:** `CommitRows` beneath the Git graph (graph-header toggle, remembered as `git/rows`): hash · message · refs · author · age, newest first, hover and selection mirror both ways, a row pick reveals an off-screen commit. The reference list starts as refs named by loaded commits (plus checked-out/picked) with "In view / All N"; search and All restore the paged server list. Fixed the reference column clipping its bottom controls.
 - **Verified:** typecheck/build, unit tests, the Git specs, and the real repo (50 rows; 18 of 86 refs in view). **Not done:** keyboard arrows between rows beyond Tab; row virtualization beyond `content-visibility` (6 pages × 50 rows).
 
-### Yash with Codex — PERF-1 measured; PERF-2 gate open, ready for Claude review
+### Yash with Codex — UI-10 complete, ready for Claude review
 
-- **When:** 20 October2026. PR **#171**, `codex/perf-1-large-journals`. Claimed the first independent dependency-ready item after DATA-3…6 overlapped Harsh's DATA-1/2 files. Adds opt-in isolated real-journal benchmark and a regression for partial writes/source preservation. Native journals stay read-only; normal/error completion removes snapshots and redacted stores. [Report](review/perf-1-large-journals.md).
-- **Result:** five complete-import and five append/browser runs per166/347/564MB actual source. Zero capture gaps; every append result matches full-import observation IDs/order; repeated sync adds nothing. The biggest journal exceeds the512MiB reference screening budget and shows API stalls. PERF-1 measurement is complete; **PERF-2 remains open and new feature work is gated pending restoration or an explicitly agreed narrower support range**. No green scale/release claim.
-- **Validation and limits:** 679 integrated unit tests plus36 focused JSONL/ingest/probe checks; both project types and direct script typecheck. Installed Edge on the reference Windows machine; uncontrolled background development load, warm OS cache, headless frame/API proxies, physical/human acceptance unmeasured. Rerun after DATA-1/2 retention changes. No runtime/schema/dependency changes, native turn or hosted CI.
-- **Merge signal:** **#171 READY FOR CLAUDE REVIEW / SQUASH** after final numeric matrix and local checks. Own claim removed only in this finishing PR. Main #172 TodoWrite and subsequent EXPLAIN priority change integrated; other claims and dependency order preserved.
+- **When:** 20 October 2026. PR **#169**, `codex/ui-10-collections`. Finishes the remaining count-dependent surfaces after #146/#160. Imports share clamped collection paging; long Git file lists gain264px desktop/144px phone budgets with viewport caps, short lists stay natural. Prompt-rail keyboard focus waits for the React commit instead of a guessed frame. Specialized tree/rail/hover/ledger owners retained; 3/300 matrix covers their complete supported navigation. [Evidence and policy](review/ui-10-collection-completion.md).
+- **Verified:** 672 local units and14 browser journeys after integration; both types/build. Copied real Drishya/Skeletongraph Codex and Skeletongraph Claude rails cover41/48/287 prompts; real import/current-Git reading checked at desktop/phone widths. Missing old journal metadata logged an ENOENT separately; NATIVE-1 now records that recheck. No native request, source writes or hosted CI.
+- **Merge signal:** PR #169 ready for Claude review/squash; whole UI-10 ticked, claim removed only here. Main #167/#168 integrated without source conflicts; other claims preserved. Prior completed FILES-2 handoff is retained in its merged review.
 
 ### Yash with Codex — UI-5 complete, ready for Claude review
 

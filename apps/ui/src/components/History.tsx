@@ -27,7 +27,7 @@ import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
-import { FixChainPanel } from './Verification.tsx';
+import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
 import { PlanChecklist } from './PlanChecklist.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
@@ -795,6 +795,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'edit':
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.path} · captured patch{d.reconstruction !== 'complete' ? ' · after-state not verified' : ''}</div>
+        <ReadBeforePanel op={op} />
         {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ArtifactReader id={op.artifactIds.find(id => id.endsWith('_after'))} kind="code" path={d.path} provenance /> : <p className="muted">No source bytes or patch captured.</p>}
         <button className="material-more" onClick={() => select(op.id)}>Open provenance and file states</button>
       </div>;

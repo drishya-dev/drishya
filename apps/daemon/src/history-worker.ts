@@ -6,6 +6,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { sinceSnapshot } from '../../../packages/scene/src/since.ts';
 import { verificationFor } from '../../../packages/scene/src/verification.ts';
 import { fixChainFor } from '../../../packages/scene/src/fix-chains.ts';
+import { readBeforeWriteFor } from '../../../packages/scene/src/read-before-write.ts';
 import { mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -219,6 +220,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'now') value = nowFacts(current(a.id).projection);
     else if (message.method === 'turns') value = turnLedgers(current(a.id).projection).slice(-2000);
     else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after, a.page);
+    else if (message.method === 'read-before') value = readBeforeWriteFor(current(a.id).projection, a.operationId) ?? null;
     else if (message.method === 'fix-chain') value = fixChainFor(current(a.id).projection, a.operationId) ?? null;
     else if (message.method === 'verification') value = verificationFor(current(a.id).projection, a.operationId) ?? null;
     else if (message.method === 'prepare') {

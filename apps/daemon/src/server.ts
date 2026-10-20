@@ -423,6 +423,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (!trail) throw new HttpError(404, 'not a captured change in this recording');
         return json(res, trail);
       }
+      // READ-6: which lines of a file the agent had read, as recorded, before one edit.
+      if (sub === 'read-before' && subId && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'read-before-write is computed per recording, not for a combined view');
+        app.recording(firstId);
+        const found = await app.history.readBefore(id, subId);
+        if (!found) throw new HttpError(404, 'no read-before-write facts for this operation');
+        return json(res, found);
+      }
       // READ-7: a failed command, the next run of the same command and the edits between them.
       if (sub === 'fix-chain' && subId && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'fix chains are computed per recording, not for a combined view');

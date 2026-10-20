@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Operation } from '@drishya/contracts';
-import type { FixChain, VerificationTrail } from '@drishya/scene';
+import type { FixChain, ReadBeforeWrite, VerificationTrail } from '@drishya/scene';
 import { CapturedTime } from './common.tsx';
 import { useApp } from '../state.ts';
 
@@ -128,6 +128,53 @@ export function FixChainPanel({ op }: { op: Operation }) {
         </p>
       ))}
       <small className="muted">Same command, later run · recorded order</small>
+    </section>
+  );
+}
+
+// READ-6: which lines of this file the agent had read, as recorded, before this edit. Facts about
+// recorded reads only: shell output and search results are not counted, and it is never a risk score.
+export function ReadBeforePanel({ op }: { op: Operation }) {
+  const source = useApp((s) => s.source);
+  const recordingId = useApp((s) => s.recordingId);
+  const mode = useApp((s) => s.mode);
+  const revision = useApp((s) => s.renderedRevisions[recordingId ?? '']);
+  const select = useApp((s) => s.select);
+  const [found, setFound] = useState<ReadBeforeWrite | null>();
+  const supported = !!source?.readBefore && !!recordingId && (source.kind === 'bundle' || !recordingId.includes('+'));
+
+  useEffect(() => {
+    setFound(undefined);
+    if (!supported || mode === 'replay') return;
+    let live = true;
+    source!.readBefore!(recordingId!, op.id).then((r) => live && setFound(r)).catch(() => live && setFound(null));
+    return () => {
+      live = false;
+    };
+  }, [supported, source, recordingId, op.id, mode, revision]);
+
+  if (!found || found.created) return null;
+  const span = (r: ReadBeforeWrite['reads'][number]) => (r.end === undefined ? (r.start === 1 ? 'the whole file' : `line ${r.start} to the end`) : `lines ${r.start}–${r.end}`);
+  const edited = found.edited.map((range) => (range.start === range.end ? `line ${range.start}` : `lines ${range.start}–${range.end}`)).join(', ');
+  const REL: Record<ReadBeforeWrite['coverage'], string> = {
+    none: '', unknown: 'The file was edited after that read, so its line numbers may differ.',
+    inside: 'Those lines are inside what was read.', partly: 'Those lines are partly inside what was read.', outside: 'Those lines are outside what was read.',
+  };
+  return (
+    <section className={`read-before read-before-${found.coverage}`} aria-label="Reads of this file before this edit" title="Only the agent's own read tool is counted. File text that arrived through a shell command or a search result is not seen here.">
+      {found.totalReads === 0 ? (
+        <p className="small muted">No read of this file was recorded before this edit.</p>
+      ) : (
+        <p className="small">
+          <span className="muted">Read before this edit: </span>
+          {found.reads.slice(0, 2).map((r, i) => (
+            <span key={r.operationId}>{i > 0 && <span className="muted">, </span>}<button className="link verify-open" onClick={() => select(r.operationId)}>{span(r)}</button></span>
+          ))}
+          {found.totalReads > 2 && <span className="muted"> and {found.totalReads - 2} more</span>}
+          {edited && <span className="muted"> · this edit replaces {edited}. {REL[found.coverage]}</span>}
+          {!edited && found.coverage === 'unknown' && <span className="muted"> · the lines this edit replaces were not captured.</span>}
+        </p>
+      )}
     </section>
   );
 }
