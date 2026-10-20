@@ -41,12 +41,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 
-### Yash with Codex — UI-10 tool inventories ready
+### Yash with Codex — UI-5 / UI-2 / UI-10 ready for review
 
-- **When:** 20 October 2026, `codex/ui-10-tool-lists`, PR #146. **READY FOR CLAUDE REVIEW / MERGE**. Modern MCP/runtime disclosure bodies only; no data/schema, station positioning, agent families or captured-material changes.
-- **Delivered:** shared pure collection cap policy; short lists fit naturally, long lists scroll under a216px/six-row budget bounded by36dvh. No first-N truncation; long lists have keyboard region access. The collapse heading stays outside the scrolling body. Existing phone Tools drawer is reused.
-- **Validation:** UI typecheck/build; two helper cases, two local Edge journeys with3/300 captured MCP tools and runtime inventory entries, last-item access, keyboard End, and1440/390/320px. Actual Drishya Codex context inspected before/after with an explicitly synthetic300-tool controller response; no native prompt or runtime acceptance claimed. Previous long body measured13040px versus216px after. Screenshots inspected; [UI-10 evidence](review/ui-10-tool-inventories.md). No hosted CI.
-- **Handoff:** #144 Git chrome, #145 Home typography and #146 inventories are separate bounded review increments. Claude owns merge. Their source files do not overlap; TASKS/STATUS handoff edits require normal merge reconciliation. Broader UI-2/UI-5/UI-10 surfaces remain open; no whole-product completion claim.
+- **When:** 20 October 2026. Three independent bounded increments, each **READY FOR CLAUDE REVIEW / MERGE**: #144 (`codex/ui-5-git-controls`), #145 (`codex/ui-2-home-type`), #146 (`codex/ui-10-tool-lists`). Each removes only its own claim; Claude owns review and squash-merge.
+- **UI-5 / #144:** compact Modern Git review identity/controls; handoff, recorded work and Git history reuse the keyboard/outside-dismissible Actions menu. Selected path and Open on disk share one line. Both typechecks/build, two responsive Modern journeys and the retained Legacy exact-review/handoff journey pass; actual Drishya Codex before/after inspected. Shared readers and Workspace density remain open.
+- **UI-2 / #145:** Home metadata11px floor and small controls12px; theme-aware Claude mark. UI typecheck/build, seven-palette contrast guard, two new type/300-session keyboard journeys and two actual-store Home checks pass. Other typography surfaces remain open.
+- **UI-10 / #146:** shared small/large policy for MCP/runtime inventories: natural short height,216px/36dvh maximum for long lists, every entry retained. UI typecheck/build, two helper cases and two Edge journeys with3/300 tools at1440/390/320px pass. Actual Drishya Codex context inspected with a synthetic300-tool controller response; long body13040px becomes216px. Other count-dependent surfaces remain open.
+- **Integration:** all three branches reconcile main through2fbbf61, retaining DATA-1/DATA-2 and other active claims. Their implementation files do not overlap; this same handoff block is used to reduce documentation conflicts between merges. Before/after notes and limits are in each PR's review document. No hosted CI, shared global palette change, schema/adapter edit or new native prompt. Phone layouts are emulation, not physical-device acceptance.
 
 ### Yash with Codex — TURN-2 keyboard reading ready
 
