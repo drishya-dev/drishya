@@ -8,6 +8,7 @@ import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { SettingsSections } from './UIVersions.tsx';
 import { useExperience } from '../lib/experience.ts';
 import {useReadingWindow} from './ReadingWindow.tsx';
+import { useNotify, setNotifications } from '../lib/notifications.ts';
 
 /** Open modeless readers, oldest first; Escape closes only the newest, wherever focus is. */
 const modelessReaders: HTMLDialogElement[] = [];
@@ -128,6 +129,7 @@ function Settings() {
   const reasoningDetail = useApp(s => s.reasoningDetail);
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
+  const notify = useNotify();
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
     <SettingsSections categories={['Appearance', 'Reading', 'Playback', 'Privacy', 'Keyboard']}>
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
@@ -141,6 +143,7 @@ function Settings() {
       <label className="setting-row"><span>Exposed reasoning<small>Display only; never unlocks private reasoning or changes model effort.</small></span><span className="settings-select"><select aria-label="Exposed reasoning detail" value={reasoningDetail} onChange={e => setPresentationPreferences({ reasoningDetail: e.target.value as 'expanded' | 'collapsed' | 'hidden' })}><option value="expanded">Full available detail</option><option value="collapsed">Collapsed</option><option value="hidden">Hide</option></select></span></label>
       <label className="setting-row"><span>Relationship motion<small>Finite origin and outcome cues; captured text is always immediately readable.</small></span><input type="checkbox" checked={motion} onChange={(e) => setMotion(e.target.checked)} /></label>
       <label className="setting-row"><span>Hover reading focus<small>After a short dwell, enlarge the real preview within the viewport without moving history. Escape restores it. Desktop pointer only.</small></span><input type="checkbox" checked={hoverReading} onChange={e => setHoverReading(e.target.checked)} /></label>
+      <label className="setting-row"><span>Notify when the agent needs me or finishes<small>{notify.permission === 'unsupported' ? 'This browser does not support notifications.' : notify.permission === 'denied' ? 'Blocked in your browser’s site settings; allow notifications there to turn this on.' : 'Only while this tab is hidden. Shows the session title and state, never captured content. The browser asks for permission when you turn this on.'}</small></span><input type="checkbox" checked={notify.enabled} disabled={notify.permission === 'unsupported' || notify.permission === 'denied'} onChange={e => void setNotifications(e.target.checked)} /></label>
       <p className="muted small">Low resource mode sets economical defaults; you can explicitly re-enable map or motion. Your browser's reduced-motion preference always suppresses animated cues.</p>
     </section>
     <section className="settings-secondary"><details><summary>Sequence diagnostics</summary><p className="muted small">Optional playback for inspecting captured event order. Ordinary reading uses scroll and prompt navigation.</p><button className="btn" onClick={() => { const app = useApp.getState(); app.set({ replayDiagnostics: true, settingsOpen: false }); app.togglePlay(); }}>Replay sequence</button></details></section>
