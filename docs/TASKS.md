@@ -80,9 +80,9 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 1. **Capture first.** DATA-1…DATA-9 change what the harnesses record; every view below stands on them.
 2. **Views that consume that data.** CONTENT-*, FILES-1, REVIEW-1, HOME-1, READ-6/8, GIT-2/4, LIVE-4.
-3. **Derived explanation** (EXPLAIN-*) only after the evidence views it cites exist.
-4. **Structure** (UI-1, READ-4, FILES-3…5, REVIEW-4) and native acceptance (NATIVE-*).
-5. **Final passes, once, at the end:** UI-6, UI-4, UI-2, UI-7, MOTION-1, MOTION-3, UI-3, UI-8, then REL-*. Do not start these while feature items above are open; polishing a surface that is still changing is done twice. Small defects found earlier are fixed in place, but the passes themselves wait.
+3. **Structure** (UI-1, READ-4, FILES-3…5, REVIEW-4) and native acceptance (NATIVE-*).
+4. **Final passes, once, at the end:** UI-6, UI-4, UI-2, UI-7, MOTION-1, MOTION-3, UI-3, UI-8, then REL-*. Do not start these while feature items above are open; polishing a surface that is still changing is done twice. Small defects found earlier are fixed in place, but the passes themselves wait.
+5. **Then the P3 ideas,** including EXPLAIN-* (external model service).
 
 ---
 
@@ -111,7 +111,7 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 ### P1 — next
 
-**14 of 33 done**
+**14 of 30 done**
 
 | Done | # | ID | Item | Tags |
 |---|---|---|---|---|
@@ -143,63 +143,58 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 | ☐ | 38 | FILES-1 | Evidence-decorated file tree (edited/created/read/now) | `files` `live` |
 | ☐ | 39 | REVIEW-1 | Review work as a first-class Changes view; group repeated gaps | `review` |
 | ☐ | 40 | HOME-1 | Home rows with harness-reported stats; "running now"; quieter rows | `home` `data` |
-| ☐ | 41 | EXPLAIN-4 | Validate Nemotron on Token Factory with a real key and real model ids | `explain` |
-| ☐ | 42 | EXPLAIN-1 | Narrator: generated intent labels for bursts of work, cited to evidence | `explain` `live` |
-| ☐ | 43 | EXPLAIN-2 | Turn summary and "while you were away" briefing | `explain` `turn` |
-| ☐ | 44 | UI-1 | Chrome consolidation: session identity, fewer floating islands, clear navigation | `ui` |
-| ☐ | 45 | READ-4 | Passage layout refinement (keep wrap plus arrows) | `read` `motion` |
+| ☐ | 41 | UI-1 | Chrome consolidation: session identity, fewer floating islands, clear navigation | `ui` |
+| ☐ | 42 | READ-4 | Passage layout refinement (keep wrap plus arrows) | `read` `motion` |
 
 ### P2 — later
 
-**5 of 41 done**
+**5 of 39 done**
 
 | Done | # | ID | Item | Tags |
 |---|---|---|---|---|
-| ☑ | 46 | READ-7 | Failure → fix chains (same command identity) | `read` `turn` |
-| ☑ | 47 | READ-9 | Source reader on phones: find controls take over 40% of the window | `read` `ui` |
-| ☑ | 48 | LIVE-2b | Composer: expand by key; real end-padding when expanded | `live` `ui` |
-| ☑ | 49 | REVIEW-3 | Bookmarks/saved moments/commit-PR indicators audit | `review` |
-| ☑ | 50 | REVIEW-5 | Packet usefulness | `review` |
-| ☐ | 51 | READ-6 | Read-before-write signal | `read` |
-| ☐ | 52 | READ-8 | Promote the per-file timeline | `read` `files` |
-| ☐ | 53 | READ-5 | Session diff with blame-by-turn (evidence-backed line attribution) | `read` `git` |
-| ☐ | 54 | GIT-4 | Hunk-level "Recorded work" from Git review | `git` `read` |
-| ☐ | 55 | GIT-2 | Session ↔ commit links | `git` `turn` |
-| ☐ | 56 | LIVE-4 | Context-window and plan-limit gauges | `live` `data` |
-| ☐ | 57 | DATA-7 | Codex `plan_update` / `turn_diff` verification | `data` |
-| ☐ | 58 | DATA-8 | Reasoning-persistence settings: verify and document | `data` |
-| ☐ | 59 | DATA-9 | Optional hook/OTel enrichment research | `data` |
-| ☐ | 60 | CONTENT-6 | Shared adaptive content selector | `content` |
-| ☐ | 61 | CONTENT-7 | Structured data and document views (finish) | `content` |
-| ☐ | 62 | CONTENT-8 | Cross-tool visual parity on actual sessions | `content` |
-| ☐ | 63 | EXPLAIN-3 | "Explain this hunk", validated live with citations | `explain` |
-| ☐ | 64 | READ-3 | Settle older cards into compact ledger rows (prototype first) | `read` `motion` |
-| ☐ | 65 | MOTION-2 | Lift arrivals from the file-tree row | `motion` `files` |
-| ☐ | 66 | FILES-3 | Navigation clarity: Files / Repository / Workspace purposes | `files` `ui` |
-| ☐ | 67 | FILES-4 | Reader and Workspace review (type, tabs, toolbars, long/empty material) | `files` |
-| ☐ | 68 | FILES-5 | Opt-in draft recovery | `files` |
-| ☐ | 69 | REVIEW-4 | Joined investigation route, end to end | `review` `native` |
-| ☐ | 70 | NATIVE-1 | Real signed-in Codex journey | `native` |
-| ☐ | 71 | NATIVE-2 | Real signed-in Claude Code journey | `native` |
-| ☐ | 72 | NATIVE-3 | Genuine multi-agent sessions | `native` |
-| ☐ | 73 | NATIVE-4 | Joined native edit/create conflict path | `native` |
-| ☐ | 74 | EXPLAIN-5 | Visual language for derived content | `explain` `ui` |
-| ☐ | 75 | UI-6 | Phone density and occlusion | `ui` |
-| ☐ | 76 | UI-4 | CSS consolidation: one token sheet; freeze Legacy; retire Canvas | `ui` `perf` |
-| ☐ | 77 | UI-2 | Typography floor (11 px meta, 12–13 px controls) and secondary-text contrast | `ui` |
-| ☐ | 78 | UI-7 | Every palette across every surface | `ui` |
-| ☐ | 79 | MOTION-1 | Interaction-motion pass over every control and nested state | `motion` |
-| ☐ | 80 | MOTION-3 | Live/replay motion evaluation (ten-minute calm) | `motion` |
-| ☐ | 81 | UI-3 | Uiverse / component-library pass, starting with the Star on GitHub shimmer button | `ui` `motion` |
-| ☐ | 82 | UI-8 | Whole-product UI pass (header, composer, all action types) | `ui` |
-| ☐ | 83 | REL-1 | Managed-runtime update versus the antivirus conflict | `rel` |
-| ☐ | 84 | REL-2 | Physical lower-resource and platform acceptance | `rel` `perf` |
-| ☐ | 85 | REL-3 | Keyboard, zoom, assistive technology and human freeze/truth/ten-minute acceptance | `rel` |
-| ☐ | 86 | REL-4 | Publishing preparation (on request only) | `rel` |
+| ☑ | 43 | READ-7 | Failure → fix chains (same command identity) | `read` `turn` |
+| ☑ | 44 | READ-9 | Source reader on phones: find controls take over 40% of the window | `read` `ui` |
+| ☑ | 45 | LIVE-2b | Composer: expand by key; real end-padding when expanded | `live` `ui` |
+| ☑ | 46 | REVIEW-3 | Bookmarks/saved moments/commit-PR indicators audit | `review` |
+| ☑ | 47 | REVIEW-5 | Packet usefulness | `review` |
+| ☐ | 48 | READ-6 | Read-before-write signal | `read` |
+| ☐ | 49 | READ-8 | Promote the per-file timeline | `read` `files` |
+| ☐ | 50 | READ-5 | Session diff with blame-by-turn (evidence-backed line attribution) | `read` `git` |
+| ☐ | 51 | GIT-4 | Hunk-level "Recorded work" from Git review | `git` `read` |
+| ☐ | 52 | GIT-2 | Session ↔ commit links | `git` `turn` |
+| ☐ | 53 | LIVE-4 | Context-window and plan-limit gauges | `live` `data` |
+| ☐ | 54 | DATA-7 | Codex `plan_update` / `turn_diff` verification | `data` |
+| ☐ | 55 | DATA-8 | Reasoning-persistence settings: verify and document | `data` |
+| ☐ | 56 | DATA-9 | Optional hook/OTel enrichment research | `data` |
+| ☐ | 57 | CONTENT-6 | Shared adaptive content selector | `content` |
+| ☐ | 58 | CONTENT-7 | Structured data and document views (finish) | `content` |
+| ☐ | 59 | CONTENT-8 | Cross-tool visual parity on actual sessions | `content` |
+| ☐ | 60 | READ-3 | Settle older cards into compact ledger rows (prototype first) | `read` `motion` |
+| ☐ | 61 | MOTION-2 | Lift arrivals from the file-tree row | `motion` `files` |
+| ☐ | 62 | FILES-3 | Navigation clarity: Files / Repository / Workspace purposes | `files` `ui` |
+| ☐ | 63 | FILES-4 | Reader and Workspace review (type, tabs, toolbars, long/empty material) | `files` |
+| ☐ | 64 | FILES-5 | Opt-in draft recovery | `files` |
+| ☐ | 65 | REVIEW-4 | Joined investigation route, end to end | `review` `native` |
+| ☐ | 66 | NATIVE-1 | Real signed-in Codex journey | `native` |
+| ☐ | 67 | NATIVE-2 | Real signed-in Claude Code journey | `native` |
+| ☐ | 68 | NATIVE-3 | Genuine multi-agent sessions | `native` |
+| ☐ | 69 | NATIVE-4 | Joined native edit/create conflict path | `native` |
+| ☐ | 70 | UI-6 | Phone density and occlusion | `ui` |
+| ☐ | 71 | UI-4 | CSS consolidation: one token sheet; freeze Legacy; retire Canvas | `ui` `perf` |
+| ☐ | 72 | UI-2 | Typography floor (11 px meta, 12–13 px controls) and secondary-text contrast | `ui` |
+| ☐ | 73 | UI-7 | Every palette across every surface | `ui` |
+| ☐ | 74 | MOTION-1 | Interaction-motion pass over every control and nested state | `motion` |
+| ☐ | 75 | MOTION-3 | Live/replay motion evaluation (ten-minute calm) | `motion` |
+| ☐ | 76 | UI-3 | Uiverse / component-library pass, starting with the Star on GitHub shimmer button | `ui` `motion` |
+| ☐ | 77 | UI-8 | Whole-product UI pass (header, composer, all action types) | `ui` |
+| ☐ | 78 | REL-1 | Managed-runtime update versus the antivirus conflict | `rel` |
+| ☐ | 79 | REL-2 | Physical lower-resource and platform acceptance | `rel` `perf` |
+| ☐ | 80 | REL-3 | Keyboard, zoom, assistive technology and human freeze/truth/ten-minute acceptance | `rel` |
+| ☐ | 81 | REL-4 | Publishing preparation (on request only) | `rel` |
 
 ### P3 — deferred ideas
 
-**0 of 7 done**
+**0 of 12 done**
 
 | Done | ID | Item | Tags |
 |---|---|---|---|
@@ -210,6 +205,11 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 | ☐ | IDEA-4 | Additional UI versions or themes after Modern is finished | `ui` |
 | ☐ | IDEA-5 | From closed PR110: explicit keyword findings and copying selected captured commands, built on the existing Commands/ReviewInsights owners, not a second review panel | `review` |
 | ☐ | TESTS-1 | Tests view: every run, every failing case, tracked across runs (deferred) | `review` `read` |
+| ☐ | EXPLAIN-4 | Validate Nemotron on Token Factory with a real key and real model ids | `explain` |
+| ☐ | EXPLAIN-1 | Narrator: generated intent labels for bursts of work, cited to evidence | `explain` `live` |
+| ☐ | EXPLAIN-2 | Turn summary and "while you were away" briefing | `explain` `turn` |
+| ☐ | EXPLAIN-3 | "Explain this hunk", validated live with citations | `explain` |
+| ☐ | EXPLAIN-5 | Visual language for derived content | `explain` `ui` |
 
 ---
 
@@ -419,13 +419,15 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 - [ ] **DATA-9 · Hook/OTel enrichment research** · P2 · `data` — evaluate Claude Code/Codex hooks and telemetry exporters as optional, non-blocking enrichment (research ledger H1–H3). Measure overhead; observer hooks never return control or context.
 
-### EXPLAIN — model-derived explanation (Nemotron, opt-in)
+### EXPLAIN — model-derived explanation (Nemotron, opt-in) — **deferred to P3 on 20 Oct**
+
+**Deferred by the builder:** this depends on an external service (Token Factory key, model ids, cost and latency we do not control). The product is built and finished without it; these items come back only after every item above is done. The code that exists (`packages/explain`, the opt-in briefing and explain routes) stays as it is, off unless `NEBIUS_API_KEY` is set, and nothing new is built on it.
 
 Rules: opt-in per call or per session; preview the exact payload; content redacted at ingest and again before sending; output labelled "Generated by <model>" in a distinct derived style; every claim cites captured evidence IDs (`E1…En`); uncited claims are dropped and counted. This fills the *why* that harnesses no longer record ([123](review/123-harness-data-audit.md) §1). It never replaces captured text and is never presented as the agent's thinking.
 
-- [ ] **EXPLAIN-4 · Live validation** · P1 · `explain` — get a Token Factory key; list models (`GET /v1/models`); set real Nano/Super/Ultra ids (defaults in `packages/explain/src/index.ts` are unverified); run explain, briefing and labels on a real session; record latency and cost per call in a short note under docs/review.
+- [ ] **EXPLAIN-4 · Live validation** · P3 · `explain` — get a Token Factory key; list models (`GET /v1/models`); set real Nano/Super/Ultra ids (defaults in `packages/explain/src/index.ts` are unverified); run explain, briefing and labels on a real session; record latency and cost per call in a short note under docs/review.
 
-- [ ] **EXPLAIN-1 · Narrator labels** · P1 · `explain` `live`
+- [ ] **EXPLAIN-1 · Narrator labels** · P3 · `explain` `live`
   - **Do:**
     - With the narrator on for a session, each burst of consecutive operations (or each passage) gets a one-line generated intent above it, e.g. "Investigating why checkout rejects free orders [E3,E5]", from Nano.
     - Batched, debounced (≥ 10 s or end of passage), cached by evidence hash, cancellable.
@@ -433,12 +435,12 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
     - The narrator off means zero network calls.
   - **Accept:** works live on a Codex and a Claude session; no call before opt-in; labels cite real operations; cost and latency within the targets recorded in EXPLAIN-4.
 
-- [ ] **EXPLAIN-2 · Turn summary and return briefing** · P1 · `explain` `turn`
+- [ ] **EXPLAIN-2 · Turn summary and return briefing** · P3 · `explain` `turn`
   - **Do:** on request (button in the turn ledger, or "While you were away" after the tab was hidden for more than 2 min), Super writes 3–5 cited bullets: what changed, what was checked, what failed, and what is still open. Each bullet links to its evidence.
 
-- [ ] **EXPLAIN-3 · Explain this hunk (validate)** · P2 · `explain` — the existing Ultra/Super path; validate on real diffs; citations jump to the step.
+- [ ] **EXPLAIN-3 · Explain this hunk (validate)** · P3 · `explain` — the existing Ultra/Super path; validate on real diffs; citations jump to the step.
 
-- [ ] **EXPLAIN-5 · Derived visual language** · P2 · `explain` `ui` — one consistent treatment for generated text (for example an italic secondary tint, a small model glyph and a dotted underline on citations) that can never be mistaken for agent prose or captured output, including in exports.
+- [ ] **EXPLAIN-5 · Derived visual language** · P3 · `explain` `ui` — one consistent treatment for generated text (for example an italic secondary tint, a small model glyph and a dotted underline on citations) that can never be mistaken for agent prose or captured output, including in exports.
 
 ### GIT — Git review, graph and Sacred Timeline
 
