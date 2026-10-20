@@ -22,6 +22,17 @@ test('Modern source keeps reading controls compact and Copy reachable by keyboar
   for(const input of await toolbar.locator('input,button').all()){const r=(await input.boundingBox())!;expect(r.x).toBeGreaterThanOrEqual(box.x);expect(r.x+r.width).toBeLessThanOrEqual(box.x+box.width+1);expect(await input.evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(12);}
   await page.mouse.move(0,0);await page.screenshot({path:`.local/ui5-source-controls-${width}.png`});
  }
+ // Narrow headers keep Files, Actions and Back; creation remains in the same keyboard menu.
+ const layout=desk.getByLabel('Workspace layout actions',{exact:true});await layout.focus();await layout.press('Enter');
+ await desk.getByRole('button',{name:'＋ New file',exact:true}).click();
+ await expect(desk.getByRole('textbox',{name:'New workspace file path'})).toBeVisible();await desk.getByRole('button',{name:'Cancel',exact:true}).click();
+ await layout.focus();await layout.press('Enter');await desk.getByRole('button',{name:'Split view',exact:true}).click();
+ await expect(desk.locator('.desk-panes')).toHaveClass(/split/);
+ await layout.focus();await layout.press('Enter');await desk.getByRole('button',{name:'Reset layout',exact:true}).click();await expect(desk.locator('.desk-panes')).not.toHaveClass(/split/);
+ await reader.getByRole('button',{name:'Edit file',exact:true}).click();await expect(reader.getByRole('button',{name:'Compare draft',exact:true})).toBeVisible();
+ await reader.getByRole('button',{name:'Compare draft',exact:true}).click();await expect(reader.getByRole('button',{name:'Edit draft',exact:true})).toBeVisible();
+ await reader.getByRole('button',{name:'Read source',exact:true}).click();await expect(reader.locator('.desk-code')).toBeVisible();await reader.getByRole('textbox',{name:'Go to line in reading.ts'}).fill('300');await reader.getByRole('textbox',{name:'Go to line in reading.ts'}).press('Enter');await expect(reader.locator('.desk-code')).toContainText('captured300');
+ await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(desk).toHaveCount(0);
 });
 
 test('Legacy retains its visible Copy and descriptive search counter',async({page})=>{

@@ -25,6 +25,31 @@ test.beforeAll(async()=>{
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 
+test('Modern captured reader keeps comparison and action history reachable without stacking secondary controls',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+ await page.locator('.prose button.md-path').first().click();
+ const reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true}),options=reader.getByLabel('Captured file actions',{exact:true});
+ await expect(reader.locator('.file-workspace-layout')).toHaveClass(/trail-hidden/);
+ await expect(reader).toContainText('retainedEvidence');
+ await options.focus();await options.press('Enter');
+ const show=reader.getByRole('button',{name:'Show actions',exact:true});await show.focus();await show.press('Enter');
+ await expect(reader.getByRole('navigation',{name:'File action history'})).toBeVisible();
+ await expect(reader.getByRole('button',{name:'Compare evidence',exact:true})).toBeEnabled();
+ await reader.getByRole('button',{name:'Compare evidence',exact:true}).click();
+ await expect(reader.getByRole('combobox',{name:'Second evidence',exact:true})).toBeVisible();
+ await reader.getByRole('combobox',{name:'Second evidence',exact:true}).selectOption({index:1});
+ await reader.getByRole('button',{name:'Single evidence',exact:true}).click();
+ await expect(reader.getByRole('combobox',{name:'Second evidence',exact:true})).toHaveCount(0);
+ await options.focus();await options.press('Enter');await page.keyboard.press('Escape');await expect(options).toBeFocused();await expect(reader).toBeVisible();
+ for(const width of [1440,900,390,320]){
+  await page.setViewportSize({width,height:844});
+  await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({path:`.local/ui5-file-controls-${width}.png`});
+ }
+});
+
 test('local prose links open exact captured source without current-file IO or browser navigation',async({page})=>{
  const diskRequests:string[]=[];page.on('request',request=>{if(/\/workspace\/(?:file|document|approve)/.test(request.url()))diskRequests.push(request.url());});
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
