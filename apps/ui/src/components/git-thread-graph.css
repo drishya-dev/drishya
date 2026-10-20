@@ -19,4 +19,13 @@
 
 .git-atlas .atlas-back {display:inline-flex;}
 
+/* GIT-1: the light canvas sits under the scrolling commits; stars replace the dot grid; commits are DOM over the light. */
+.thread-stage {position:relative;display:flex;flex-direction:column;flex:1;min-height:0;}
+.thread-light {position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;}
+.thread-stage:not(.lit) .thread-light {display:none;}
+.thread-stage.lit .thread-viewport {position:relative;background:none;}
+.thread-stage.lit .thread-commit i {opacity:0;}
+.thread-stage.lit .thread-commit:focus-visible {outline:1px solid #8fd8ff;}
+.thread-stage.lit .thread-label {background:color-mix(in srgb,#03050b 62%,transparent);border-color:rgba(170,190,240,.16);color:#dfe8ff;}
+
 .thread-graph .thread-commit i {opacity:.5;}.thread-graph .thread-commit:hover i,.thread-graph .thread-commit:focus-visible i,.thread-graph .thread-commit[aria-pressed=true] i {opacity:1;}
