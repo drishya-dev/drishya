@@ -190,6 +190,23 @@ export class Ingestor extends EventEmitter {
     return this.locked(recordingId, () => this.syncUnlocked(recordingId, opts));
   }
 
+  /** Explicit enrichment, serialized with passive capture; every source is still opened read-only. */
+  rescan(recordingId: string): Promise<{ added: number; gaps: number; more: boolean }> {
+    return this.locked(recordingId, async () => {
+      const recording = this.store.getRecording(recordingId);
+      if (!recording?.sourcePath || !(await stat(recording.sourcePath)).isFile()) throw new Error('The original journal is unavailable. Captured history remains readable.');
+      const row = this.store.db.prepare('SELECT adapter_id AS adapter FROM recordings WHERE id = ?').get(recordingId) as { adapter: string };
+      const adapter = this.adapter(row.adapter);
+      for (const source of this.store.getSources(recordingId)) {
+        if (!(await stat(source.path).catch(() => undefined))?.isFile()) continue;
+        this.store.rewindSource(source);
+        // Parse from the beginning rather than prime with future calls/settings from the old cursor.
+        this.parsers.set(source.id, adapter.createParser({ recordingId, sourceId: source.id, sourcePath: source.path, agentId: source.agentId }));
+      }
+      return this.syncUnlocked(recordingId, { acceptUnterminated: false });
+    });
+  }
+
   private async syncUnlocked(recordingId: string, opts: SyncOptions): Promise<{ added: number; gaps: number; more: boolean }> {
     const rec = this.store.getRecording(recordingId);
     if (!rec) throw new Error(`no recording ${recordingId}`);
@@ -259,7 +276,7 @@ export class Ingestor extends EventEmitter {
     if (!parser) {
       parser = adapter.createParser({ recordingId: src.recordingId, sourceId: src.id, sourcePath: src.path, agentId: src.agentId });
       // After a restart, rebuild call correlation from what is already stored.
-      parser.prime(this.store.observationsOfKinds(src.recordingId, ['tool.call', 'session.meta']).filter((o) => o.source.sourceId === src.id));
+      parser.prime(this.store.observationsOfKinds(src.recordingId, ['tool.call', 'session.meta', 'turn.start']).filter((o) => o.source.sourceId === src.id));
       this.parsers.set(src.id, parser);
     }
     // A record must fit in one read, or a bounded turn could never get past it.

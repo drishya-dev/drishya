@@ -31,8 +31,9 @@ import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch } 
 import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
+import { UsageAccumulator } from './usage.ts';
 
-export const REDUCER_VERSION = 'r4';
+export const REDUCER_VERSION = 'r5';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -76,6 +77,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const obs = opts.ordered ? input : orderObservations([...input]);
   let observationCount = 0;
   let lastSequence = -1;
+  const usage = new UsageAccumulator();
 
   const agents = new Map<string, Agent>();
   const ops = new Map<string, OpState>();
@@ -235,6 +237,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     for (const o of batch) {
       observationCount++;
       lastSequence = Math.max(lastSequence, o.receivedSequence);
+      usage.add(o);
       currentRecording = o.recordingId;
       if (o.source?.adapterId) {
         const d = opts.adapters[o.source.adapterId];
@@ -483,6 +486,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       }
     }
 
+    const accounting = usage.snapshot();
     return {
       reducerVersion: REDUCER_VERSION,
       recordingId,
@@ -501,6 +505,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       files: [...files.values()].map((f) => ({ ...f, roles: [...f.roles] })).sort((a, b) => a.firstStep - b.firstStep || a.path.localeCompare(b.path)),
       gaps: [...gaps],
       capabilities: { ...capabilities },
+      ...(accounting ? { usage: accounting } : {}),
     };
   }
   return { append, snapshot };
