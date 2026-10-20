@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-1 | @yash + Codex | `codex/perf-1-large-journals` | 2026-10-20 | New isolated benchmark script and focused benchmark checks; `docs/review/perf-1-large-journals.md`, IMPLEMENTATION_ROADMAP §7 and completion docs. Read-only native journals, disposable redacted stores. No ingest/adapter/contracts/projection/runtime edits while DATA-1/2 are claimed. |
-| TEST-2 | @yash + Claude | `yash/test-2-flaky-specs` | 2026-10-20 | `tests/browser/*.spec.ts` (hover-fit, settings-typography, turn-fold, prompt-timeline, product-workspace, fresh-workspace) and, only if a spec exposes a real defect, the one app file involved; docs. No capture, contracts, adapters or daemon work (at most 12 files). |
 
 ---
 
