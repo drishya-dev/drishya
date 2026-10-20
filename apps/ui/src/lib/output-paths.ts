@@ -17,7 +17,8 @@ export function outputPaths(text:string,root?:string,limit=8):OutputPath[]{
  for(const match of text.matchAll(token)){
   const raw=match[0],start=match.index!,before=text.slice(0,start),after=text.slice(start+raw.length);
   // Reject URL fragments, quoted command/source literals and partial tokens.
-  if(start&&/[\p{L}\p{N}_./\\:'"`=-]/u.test(text[start-1]!))continue;
+  if(start&&/[\p{L}\p{N}_./\\:'"`=…-]/u.test(text[start-1]!))continue;
+  if(/^[\p{L}\p{N}_.\\/]/u.test(after))continue;
   const location=/:\d/.test(raw)||/\(\d+,\d+\)$/.test(raw);
   const runner=/^\s*(?:[✓✔√×✕✘]|PASS|FAIL|FAILED|ERROR)\s/.test(before)||/^::/.test(after);
   if(!location&&!runner)continue;

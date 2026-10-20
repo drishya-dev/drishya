@@ -41,7 +41,7 @@ export function LibrarySearch() {
       const target=new URL(location.href);target.hash=`#/r/${encodeURIComponent(hit.recordingId)}`;history.pushState(null,'',target);
       current.set({developerWorkspace:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,expandedOp:undefined,explore:false,follow:false,held:true,focusObservationId:hit.observationId});
       await current.loadHistoryWindow({observationId:hit.observationId});
-      if(file&&useApp.getState().recordingId===hit.recordingId)openCapturedPath(file);
+      if(file&&useApp.getState().source===source&&useApp.getState().screen==='viewer'&&useApp.getState().recordingId===hit.recordingId)openCapturedPath(file);
       setOpen(false);
     } catch(err){setError((err as Error).message);}finally{setOpening(false);}
   };
