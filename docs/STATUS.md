@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-5 | @yash + Codex | `codex/ui-5-file-evidence-chrome` | 2026-10-20 | Finish remaining UI-5 across captured/current readers and Workspace: FileHistory.tsx, CapturedSourceComparison.tsx (presentation only), DeveloperWorkspace.tsx, SessionWorkspace.tsx CurrentFileReader chrome only if needed, scoped CSS, focused browser checks and TASKS/STATUS/review (at most 12 files). Existing Git/patch/source work is retained and reverified. Preserve Legacy, evidence/draft loading/selection/comparison/consent and motion; no History/Viewer/backend/schema/data files. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -73,12 +72,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **GIT-3:** `CommitRows` beneath the Git graph (graph-header toggle, remembered as `git/rows`): hash · message · refs · author · age, newest first, hover and selection mirror both ways, a row pick reveals an off-screen commit. The reference list starts as refs named by loaded commits (plus checked-out/picked) with "In view / All N"; search and All restore the paged server list. Fixed the reference column clipping its bottom controls.
 - **Verified:** typecheck/build, unit tests, the Git specs, and the real repo (50 rows; 18 of 86 refs in view). **Not done:** keyboard arrows between rows beyond Tab; row virtualization beyond `content-visibility` (6 pages × 50 rows).
 
-### Yash with Codex — FILES-2 prose/card paths ready
+### Yash with Codex — UI-5 complete, ready for Claude review
 
-- **When:** 20 October 2026. Branch `codex/files-2-prose-links`, PR #157, **READY FOR CLAUDE REVIEW / MERGE**. Claim removed in this PR. Prose and typed History paths only; parent FILES-2 remains open.
-- **Changed:** Local Markdown links and inline-code paths resolve inside the captured workspace, including Windows display prefixes and line anchors. Read/edit/write titles select their exact captured read/patch; preview and expanded search matches retain exact search evidence and line. Bare versions/IP addresses no longer masquerade as file paths. No browser URL navigation or automatic disk/approval request.
-- **Verified:** 13 focused Markdown/path unit cases, two browser journeys covering keyboard/rooted/relative/prose/read/Edit/Write/Grep and320px containment, plus stored-line/missing-range regression. Both TS/build pass. Actual Drishya Codex docs link and Skeletongraph Claude prose checked; actual Claude `.gitignore` title selected that exact `…/read` rather than its later edit. Local screenshots inspected.
-- **Limits:** test/output paths and non-History search surfaces remain open in TASKS; old Codex typed read headers need DATA-1. No capture/schema/daemon/dependency/native/journal writes or hosted CI. [Verification](review/files-2-prose-links.md). UI-2 Settings/Git typography merged separately as #155; do not reapply it.
+- **When:** 20 October 2026. PR **#165**, `codex/ui-5-file-evidence-chrome`. Finishes the whole remaining UI-5 scope, retaining the Git/patch/source work from #144. Captured-file chrome is consolidated; action trail is tucked away by default on new phone readers and remains in Actions; Workspace imports move into File actions and phone New file into layout Actions. Legacy content, consent, draft/selection/state owners and visualization motion retained.
+- **Verified:** 648 local unit tests before integrating #166; both typechecks/build; focused reader/Git/Workspace journeys including actual copied Drishya Codex and Skeletongraph Claude mouse/touch. See [completion evidence](review/ui-5-reader-workspace-completion.md). No native request submitted, hosted CI or project/harness mutation. Physical/human acceptance stays REL-3.
+- **Merge signal:** ready for cross-builder review; final build, both typechecks and six affected browser journeys pass after integration; squash PR #165. Claim removed in the finishing PR only. Integrated #166 cleanly; DATA claims retained. Next work must be claimed separately from TASKS.
 
 ### Yash with Codex — UI-2 Toolbox typography ready
 
