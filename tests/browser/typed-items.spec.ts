@@ -73,4 +73,5 @@ test('typed child cards show true commands and tests, with the wrapper reachable
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['mcp-call']}`);
   await expect(page.locator('.history article.op')).toHaveCount(1);
   await expect(page.locator('.history article.op')).toContainText('Synthetic documentation');
+  await expect(page.locator('.history article.op')).toContainText('synthetic lookup');
 });

@@ -68,6 +68,7 @@ interface OpState {
   completed?: boolean;
   typedOutcome?: boolean;
   script?: TextValue;
+  scriptTool?: string;
   scriptWrapper?: boolean;
   wrapperResult?: { observation: Observation; payload: Rec };
 }
@@ -282,13 +283,13 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             if (found) return found;
             const edits = targets.filter(st => st.nestedPatch), first = edits[0]!;
             const command = text(first.script) ?? '';
-            const wrapper = newOp(o, `${parentId}#script`, { kind: 'shell', command }, 'exec');
+            const wrapper = newOp(o, `${parentId}#script`, { kind: 'shell', command }, first.scriptTool ?? first.op.tool);
             wrapper.scriptWrapper = true; wrapper.callObservationId = first.callObservationId;
             wrapper.op.observationIds = [first.callObservationId!];
             wrapper.op.classification = { kind: 'captured', observationIds: wrapper.op.observationIds };
             wrapper.op.startSequence = Math.min(...edits.map(st => st.op.startSequence));
             wrapper.op.startTime = first.op.startTime;
-            describeCall(wrapper, { tool: 'exec', input: {} }, rel);
+            describeCall(wrapper, { tool: first.scriptTool ?? first.op.tool, input: {} }, rel);
             // The source call is shared by the per-file edits. Preserve it as a details-only parent.
             if (command.length > (opts.maxInputChars ?? Infinity)) {
               wrapper.op.artifactIds.push(addArtifact({ id: `art_${wrapper.op.id}_input`, kind: 'excerpt', observedAtSequence: wrapper.op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: wrapper.op.observationIds }, redacted: o.redactions.length > 0, content: command }));
@@ -376,7 +377,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           st.intent = intent; st.typedOutcome = true; st.completed = same ? completed : true;
           st.op.durationMs = item.durationMs;
           st.op.status = item.status === 'failed' || item.mcp?.isError || item.mcp?.error || typeof item.exitCode === 'number' && item.exitCode !== 0 ? 'error' : item.status === 'completed' ? 'ok' : 'unknown';
-          describeCall(st, { tool, input: {} }, rel);
+          const input = existing?.op.detail.kind === 'mcp' ? existing.op.detail.input : undefined;
+          describeCall(st, { tool, input }, rel);
           // Node's built-in runner is explicit in typed commands. Leave legacy rollout rules unchanged.
           if (item.item === 'command' && typeof item.command === 'string' && /^node(?:\.exe)?\s+--test(?:\s|=|$)/i.test(item.command.trim())) { st.op.kind = 'test'; st.op.detail = { kind: 'test', command: item.command }; }
           if (item.item === 'command' && typeof item.command === 'string' && st.op.detail.kind !== 'test') { st.op.kind = 'shell'; st.op.detail = { kind: 'shell', command: item.command }; st.op.title = clip(oneLine(item.command), 120); }
@@ -463,6 +465,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               const st = newOp(o, id, { kind: 'edit', path: f.path, edits: [] }, String(p.tool));
               st.nestedPatch = nestedPatch;
               if (nestedPatch) st.script = p.input?.code ?? p.input?.raw;
+              if (nestedPatch) st.scriptTool = String(p.tool);
               if (nestedPatch) st.op.classification = derived('codex-literal-patch-v1', [o.id]);
               const path = rel(f.moveTo ?? f.path, st.cwd);
               const base = knownFull.get(fileKey(o.recordingId, path));

@@ -29,7 +29,7 @@ it('places real commands inside the wrapper window and shows only child cards, i
 it('keeps standalone and ambiguous items uncorrelated, and MCP source IDs enrich one operation', async () => {
   const standalone = await fixture('standalone'); expect(standalone.operations).toHaveLength(1); expect(standalone.operations[0]!.parentOperationId).toBeUndefined();
   const ambiguous = await fixture('ambiguous'); expect(ambiguous.operations).toHaveLength(3); expect(ambiguous.operations.every(op => !op.parentOperationId)).toBe(true);
-  const mcp = await fixture('mcp-call'); expect(mcp.operations).toHaveLength(1); expect(mcp.operations[0]).toMatchObject({ status: 'ok', durationMs: 500, detail: { kind: 'mcp', readOnlyHint: true } });
+  const mcp = await fixture('mcp-call'); expect(mcp.operations).toHaveLength(1); expect(mcp.operations[0]).toMatchObject({ status: 'ok', durationMs: 500, detail: { kind: 'mcp', readOnlyHint: true, input: { query: 'synthetic lookup' } } });
   expect(mcp.timeline.filter(it => it.type === 'op-end')).toHaveLength(1);
 });
 it('resolves exact nested patch paths and retains the script without trusting a reconstructed full file', async () => {
