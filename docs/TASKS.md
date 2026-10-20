@@ -493,6 +493,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - **Accept:** each adopted component is listed in a short attribution note.
 
 - [ ] **UI-5 · Button density and navigation** · P1 · `ui` `files`
+  - [x] **20 October, Git review chrome (PR #144):** Modern repository/branch/current-Git context and Files/refresh/Actions share one row; handoff, recorded work and Git graph move into the existing dismissible keyboard menu. Selected-file path and Open on disk stay together. Legacy and shared patch controls unchanged. [Validation](review/ui-5-git-review-controls.md). Workspace and shared readers remain open below.
   - **Problem:** in Workspace, Git review and readers, rows of controls ("Changes · Side by side · Wrap lines · Hunk [1] of 1", "Working tree · Raw patch", "Open on disk · Recorded work", "Hide files · Refresh changes · Preview handoff") take more space than the content.
   - **Do:** per surface, keep at most 3 primary visible actions. Move secondary actions into one ⋯ menu or a reader toolbar that appears on hover/focus. Use icon buttons with tooltips for frequent toggles (wrap, side-by-side). Use one consistent header layout for every reader.
   - **Accept:** before/after screenshots of each surface; every action is still reachable by keyboard; no lost features.

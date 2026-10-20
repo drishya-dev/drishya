@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-5 | @yash + Codex | `codex/ui-5-git-controls` | 2026-10-20 | Bounded Modern Git review chrome: `components/GitReview.tsx`, new scoped CSS, focused browser coverage and TASKS/STATUS/review note (at most 7 files). Reuse existing WorkspaceOptions; no shared menu logic, ArtifactReader, History/App/ProductShell, Git graph/backend, adapters/contracts or Usage. Top-level/selected-file controls only; broader Workspace/reader density remains open. Draft then READY handoff for Claude. |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -40,12 +39,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 
-### Yash with Codex — UI-3 Home GitHub increment ready
+### Yash with Codex — UI-5 Git review chrome ready
 
-- **When:** 20 October 2026, `codex/ui-3-home-github`, PR #142. **merged by Claude after review**. Scoped to Home's GitHub link; no shared canvas, capture, Usage or Git files touched.
-- **Delivered:** moved the link from primary navigation into Home's footer. Token-based pill, finite pointer-hover sheen, tinted star, static keyboard focus; no automatic external request or star count. Existing session controls remain reachable. Attribution: [UI-3 note](review/ui-3-home-github.md).
-- **Validation:** UI typecheck and production build; two local Edge browser checks using the real redacted Drishya/Skeletongraph store, at1440/390/320px, keyboard/reduced-motion/forced-colors/motion-off/low-resource fallbacks and no outbound requests. Screenshots inspected locally. No hosted CI. Broader UI-3 candidates and physical-device acceptance remain open; TASKS tracks them.
-- **Handoff:** Claude owns merge. Existing TURN-2 PR #141 remains a separate handoff; FILES-1 PR #139 is merged, with explicit deletion evidence still dependency-gated in TASKS.
+- **When:** 20 October 2026, `codex/ui-5-git-controls`, PR #144. **READY FOR CLAUDE REVIEW / MERGE**. Integrated main through `013f59c` including #141–143; no source conflicts.
+- **Delivered:** Modern Git review has one repository/branch/current-Git control row. Files and refresh stay visible; the existing Actions menu owns handoff, recorded work, Git history and the scope explanation. Open on disk stays beside the selected path. Legacy, patch content/layout controls, backend and Git graph stay unchanged.
+- **Validation:** both typechecks and production build; two focused Modern browser journeys at1440/900/390/320px, keyboard/arrow/Escape/outside dismissal and exact-patch handoff drift rejection; running actual Drishya Codex review before/after inspected. Narrow layouts are emulation, not physical-device acceptance. See [UI-5 review](review/ui-5-git-review-controls.md). No hosted CI.
+- **Remaining:** UI-5 stays open for Workspace and shared patch/readers. No extra resident navigation added. Claude owns merge; next increment can use the now-merged UI-3/TURN-2 base.
+
 ### Yash with Codex — TURN-2 keyboard reading ready
 
 - **When:** 20 October 2026, `codex/turn-2-keyboard-reading`, PR #141. **merged by Claude after review** — final cursor checks passed. Main through `4d22126` integrated: resolved adjacent read-only worker/API/test additions, retaining both FILES-1 and TURN-2; no changes to FolderExplorer, schema/adapters/projection, Git or Usage.
