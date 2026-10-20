@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| UI-10 | @yash + Codex | `codex/ui-10-agent-inventory` | 2026-10-20 | Bounded Agents disclosure: `modern/ModernTools.tsx` only, new 3/300-agent browser fixture and TASKS/STATUS/review (at most 5 files). Reuse collectionBounds; no tool-inventories CSS/test (UI-2), agent lineage/capture/schema, Workbench/History/Viewer or REVIEW-1 files. |
 | UI-2 | @yash + Codex | `codex/ui-2-toolbox-type` | 2026-10-20 | Toolbox typography slice only: `modern/tool-inventories.css`, focused browser checks, TASKS/STATUS/review (at most 6 files). No SessionWorkspace/History/Viewer or Usage logic, no capture/backend/data or inventory/motion/layout rewrite. |
 | FILES-2 | @yash + Codex | `codex/files-2-prose-links` | 2026-10-20 | Prose plus typed card/search paths: Markdown parser + pure resolver, History prose/header/search-hit routes, optional scoped path CSS, focused unit/browser checks and TASKS/STATUS/review (at most 10 files). No native/source IO, adapters/store/contracts/projection, Viewer/Search or UI-2 files; external links stay inert. |
 | REVIEW-1 | @yash + Claude Sonnet 5.5 | `yash/review-1-changes` | 2026-10-20 | `packages/scene/src/since.ts` (per-file +/- and last-changing turn; grouped gaps), `EvidenceReview.tsx` + CSS, the header label (`Viewer.tsx`), tests, TASKS/STATUS (at most 9 files). No adapters/contracts/projection (DATA-1/2), no test recognition (DATA-1). |
