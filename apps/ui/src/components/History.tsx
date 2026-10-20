@@ -3,6 +3,7 @@ import { CommandText } from './CommandText.tsx';
 import {commandDisplay} from '../lib/command-display.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
 import { ToolInput } from './ToolInput.tsx';
+import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
@@ -832,6 +833,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
         <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
       </div>;
     case 'other':
+      if (op.tool === 'AskUserQuestion') return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}><QuestionCard op={op}/><div className="material-context">Captured result</div><ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for the answer' : 'No result content captured')}/></div>;
       return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">Captured input</div>
         <ToolInput value={d.input}/>
@@ -960,6 +962,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         </ul>
       );
     default:
+      if (op.tool === 'AskUserQuestion') return <QuestionCard op={op}/>;
       return <>
         <ToolInput value={d.input}/>
         <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : undefined}</ResultArea>

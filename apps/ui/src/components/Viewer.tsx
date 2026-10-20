@@ -1,3 +1,5 @@
+import {CapturedPath,openCapturedPath} from './CapturedPath.tsx';
+import {prosePath} from '../lib/prose-path.ts';
 import {ReplayEntry,ModernReplayTransport} from './ModernReplay.tsx';
 import {useFilePeekLayout} from '../lib/use-file-peek-layout.ts';
 import { useNow } from '../lib/now-store.ts';
@@ -797,9 +799,10 @@ function Search({ projection }: { projection: Projection }) {
               <span>{h.snippet.split(/[«»]/).map((part, j) => (j % 2 ? <mark key={j}>{part}</mark> : part))}</span>
               <small>{[HIT_KIND[h.kind ?? ''] ?? h.kind, h.kind?.startsWith('tool.') ? h.tool : undefined, h.path ?? h.command, h.time ? ago(h.time) : undefined].filter(Boolean).join(' · ')}</small>
             </button>
+            {h.path && <CapturedPath path={h.path}>{h.path}</CapturedPath>}
           </Fragment>
         ))}
-        {scope === 'files' && files.map(file => <button key={file.id} onClick={() => set({ filePanel: file.id, filePanelFocus: undefined, currentFile: undefined, searchOpen: false })}>{file.path}<span aria-hidden="true"> ↗</span></button>)}
+        {scope === 'files' && files.map(file => <button key={file.id} onClick={() => {const ref=prosePath(file.path,useApp.getState().recording?.workspaceRoot,true);if(ref)openCapturedPath(ref);}}>{file.path}<span aria-hidden="true"> ↗</span></button>)}
         {loading && <div role="status">Searching captured work…</div>}
         {error && <div role="alert">{error}</div>}
         {q.trim().length >= 2 && !loading && !error && (scope === 'captured' ? visibleHits.length === 0 : files.length === 0) && <div className="muted">No matches{scope === 'captured' && mode === 'replay' ? ' at this replay step' : ''}</div>}
