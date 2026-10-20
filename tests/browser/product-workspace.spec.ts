@@ -732,7 +732,7 @@ test('prompt chapters review captured work without movie controls and resize det
   await expect(page.locator('.workspace-context')).not.toContainText('Sequence replay');
   await page.getByLabel('More workspace options').click();
   const read = page.locator('article.op-read').first();
-  await read.locator('.op-head').click();
+  await read.locator('.op-head .op-kind').first().click();
   const inspector = page.getByRole('complementary',{name:'Operation detail'});
   const before = (await inspector.boundingBox())!.width;
   const handle = inspector.getByRole('separator',{name:'Resize operation detail'});

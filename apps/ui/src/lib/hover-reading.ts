@@ -101,7 +101,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       // preview content must not unexpectedly change its size under the cursor.
       const element = event.target as Element;
       const header = element.closest('.op-head');
-      const target = header && !element.closest('button, a, input') ? header.closest<HTMLElement>('.op[data-op-id]') : undefined;
+      const target = header && !element.closest('button:not(.captured-file-path), a, input') ? header.closest<HTMLElement>('.op[data-op-id]') : undefined;
       // Test the current enlarged rectangle, not a stale event target or source slot.
       const own = active && containsPointer(active.card);
       if (own) { clearTimers(); return; }
