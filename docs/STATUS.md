@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TEST-1 | @yash + Claude Sonnet 5.5 | `yash/test-1-browser-specs` | 2026-10-20 | `tests/browser/*.spec.ts`, `tests/browser/legacy-test.ts` (test code only; no product code unless a spec reveals a real bug) |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **Waiting on Yash's D4–D6 in [125](review/125-event-schema-proposal.md#9-decisions-to-agree); fixtures/prep only until then.** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **Waiting on Yash's D1, D2, D8 in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -39,11 +38,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Claude (Sonnet 5.5) — TURN-1 regression fix
+### Yash with Claude (Sonnet 5.5) — TEST-1 browser specs
 
-- **When:** 20 October 2026, `yash/turn-1-layout-shift`.
-- **Delivered:** my TURN-1 (#130) broke the `session detours` journey (`fresh-workspace.spec.ts`), which I had not run: the ledger makes the first passage taller than the list's height estimate, so mounting it legitimately moves `scrollTop` from 160 to 199 to keep the content still. The journey's real assertion is the anchor surviving the detour; its `scrollTop === 160` precondition now waits for the scroll to settle. 10/10. Not a user-visible bug.
-- **Lesson:** run the whole `fresh-workspace` file before merging UI changes. It still has 17 failures from LIVE-2's composer pill (TEST-1).
+- **When:** 20 October 2026, `yash/test-1-browser-specs`. Test code only.
+- **Delivered:** full browser suite measured first (212 pass, 21 fail, 18 opt-in skips). Fixed all 21: shared `openComposer(page)` for specs that assume an expanded composer (LIVE-2's pill); stale selectors updated to the current design (no `h1` in the modern header, session id in the identity tooltip, Git review resizes from window edges, right-hand navigation group moves at ≤ 1100 px and the history may start below it); `session-segments` and `prompt-timeline` outside-click and pill order; the import list remembers being open. The product-workspace flakes (:65, :158, :772) did not recur.
+- **Validation:** fresh-workspace + connected-workspace + prompt-timeline + session-segments: 99 passed together. Run the full suite again before relying on this.
+- **Found, not fixed:** phone-width source reader keeps 0.46 of the window for source (READ-9; its 390/320 px assertions are off until then); hover-reading cards are padded to a maximum height instead of fitting their content, and count-dependent surfaces need a small/large rule (UI-9, from Yash's screenshots).
+- **Next:** UI-9, then LIVE-3 or EXPLAIN-1; DATA-1/DATA-2 are Harsh's and wait on Yash ticking D1, D2, D4, D5, D6, D8 in review 125 §9.
 
 ### Harsh with Claude (Opus 5.5) — BUG-7 open/refresh race; PR110 closed
 

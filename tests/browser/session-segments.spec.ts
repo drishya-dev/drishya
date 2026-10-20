@@ -28,6 +28,9 @@ test.beforeAll(async()=>{
 });
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();restore?.();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary directory');rmSync(dir,{recursive:true,force:true});}});
 
+// Any neutral spot closes a popover menu; the modern header carries no title to click anymore.
+const clickOutside=async(page:import('@playwright/test').Page)=>{const box=(await page.locator('.modern-session-header').boundingBox())!;await page.mouse.click(box.x+box.width/2,box.y+box.height/2);};
+
 test('native segment lookup is authenticated, read-only, and explicit navigation opens newer work',async({page,request})=>{
   const endpoint=`${server.url}/v1/recordings/${parentId}/segments`;
   expect((await request.get(endpoint)).status()).toBe(401);
@@ -41,7 +44,7 @@ test('native segment lookup is authenticated, read-only, and explicit navigation
   await expect(page.locator('.studio-actions > .session-segments')).toHaveCount(0);
   const menu=await revealNewerWork(page);
   await expect(menu).toContainText('this history stays available');
-  await page.getByRole('heading').first().click();await expect(menu).not.toHaveAttribute('open','');
+  await clickOutside(page);await expect(menu).not.toHaveAttribute('open','');
   await revealNewerWork(page);await menu.locator('summary').focus();await page.keyboard.press('Enter');await page.keyboard.press('Enter');await page.keyboard.press('Escape');await expect(menu.locator('summary')).toBeFocused();
   await menu.locator('summary').click();await menu.getByRole('button',{name:/^Open /}).click();
   await expect(page.locator('.history')).toContainText('NEWER_NATIVE_SEGMENT_CONFIRMED');await expect(menu).toHaveCount(0);
@@ -49,7 +52,7 @@ test('native segment lookup is authenticated, read-only, and explicit navigation
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${parentId}`);await expect(page.locator('.history')).toContainText('EARLIER_NATIVE_SEGMENT');
   await page.setViewportSize({width:390,height:844});await revealNewerWork(page);
   const bounds=await menu.locator(':scope>div').boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(390);
-  await page.getByRole('heading').first().click();await page.keyboard.press('Control+k');
+  await clickOutside(page);await page.keyboard.press('Control+k');
   const navigation=page.getByRole('dialog',{name:'Navigate workspace'});await navigation.getByRole('combobox').fill('Newer session work');await navigation.getByRole('combobox').press('Enter');
   await expect(menu).toHaveAttribute('open','');await expect(menu.locator('summary')).toBeFocused();
 });
