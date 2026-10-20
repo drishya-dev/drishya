@@ -23,6 +23,6 @@ test('Home rows drop the per-row availability tag, clean titles, and list follow
  await expect(page.locator('.mh-session').filter({hasText:'Tidy the checkout'})).toBeVisible();
  await expect(page.locator('.mh-home')).not.toContainText('being continued from a previous conversation');
  await expect(page.locator('.mh-home')).not.toContainText('https://example.com');
- await page.setViewportSize({width:390,height:844});
+ await page.setViewportSize({width:390,height:844});await expect(active).toBeHidden();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
 });
