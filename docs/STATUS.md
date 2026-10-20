@@ -34,12 +34,17 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | PERF-1 | @yash + Codex | `codex/perf-1-large-journals` | 2026-10-20 | New isolated benchmark script and focused benchmark checks; `docs/review/perf-1-large-journals.md`, IMPLEMENTATION_ROADMAP §7 and completion docs. Read-only native journals, disposable redacted stores. No ingest/adapter/contracts/projection/runtime edits while DATA-1/2 are claimed. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
-| CONTENT-4 | @yash + Claude | `yash/content-4-plans` | 2026-10-20 | TodoWrite only (already mapped to `plan`): `packages/scene/src/plan-threads.ts` (+ test), `apps/ui` History plan case + `PlanChecklist` + css, synthetic fixture and one browser spec. No adapter-claude, contracts or projection edits (Harsh holds those for DATA-1/2), so TaskCreate/TaskUpdate/ExitPlanMode and DATA-4 wait for his merge and a real captured session. |
+| READ-6 | @yash + Claude | `yash/read-6-read-before-write` | 2026-10-20 | `packages/scene/src/read-before-write.ts` (+ test), worker/history/server route, api.ts, one line in the expanded edit card (History.tsx) and Inspector, one browser spec (at most 12 files). Claude edits only; Codex waits for DATA-1 typed reads. No adapter, contracts or projection edits. **CONTENT-9 was not claimed:** it needs review-125 S3 in adapter-claude/adapter-codex/contracts/projection, which the DATA-1/DATA-2 rows hold. |
 
 ---
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — CONTENT-4 plan checklist (TodoWrite slice, partial)
+
+- **When:** 20 October 2026. `planThreads` (scene) groups TodoWrite lists by agent and turn; `PlanChecklist` shows the newest as a checklist and earlier ones as one change line each, with a revision stepper when expanded and in the Inspector. `plan` cards can now be expanded. New `plan-checklist.spec.ts`. DATA-4 was **not** started: it needs adapter-claude/contracts/projection, which Harsh's DATA-2/DATA-1 rows hold; take it after those merge.
+- **Limits:** synthetic data only (no real TodoWrite in any local journal); TaskCreate/TaskUpdate/ExitPlanMode and pinning under the turn header remain open.
 
 ### Yash with Claude (Sonnet 5.5) — READ-7 failure → fix chains
 
@@ -890,6 +895,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-10-20 | **Nemotron explanation work (EXPLAIN-1…5) moves to P3, after everything else** | Builder: it depends on an external service (key, model ids, cost, latency) that we do not control; build the product first, then this. Existing code stays, off unless `NEBIUS_API_KEY` is set; nothing new is built on it. The 19 Oct decision to drop the hackathon stands. | TASKS (P3, EXPLAIN section) |
 | 2026-10-19 | **The Nebius × NVIDIA hackathon is dropped from the active list** | Builder: product first, as fast as possible; the hackathon items (HACK-1…3, the `hack` tag, the 30 Oct deadline) are removed from TASKS. The Nemotron explain work stays as ordinary product items (EXPLAIN-1…5, P1/P2). [`HACKATHON.md`](HACKATHON.md) is kept only as a reference. | `TASKS.md` |
 | 2026-10-19 | **Restructured TASKS (tagged P0–P3 + detail); north star and minimalism rule; harness data before more visuals; keep the wrap-plus-arrows passage layout, hover-only toolbox connectors, peek and Workspace as two modes, and the 3D map as aesthetic; Git graph = Sacred Timeline** | Builder corrections to review 122; audit 123 shows reasoning is mostly unrecorded, so the *why* comes only from labelled, cited model output | `TASKS.md`, `review/122`–`124`, `AGENTS.md` |
 | 2026-10-14 | **Keep Legacy; build independent Modern and retire Workbench selection** | Builder wants a new coherent developer workspace, not another palette pass; use real dense sessions and meaningful evidence motion. Saved fresh links migrate without losing the selected session. | `review/72-modern-spatial-workspace.md` |

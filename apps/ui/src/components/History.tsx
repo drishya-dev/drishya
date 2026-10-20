@@ -28,6 +28,7 @@ import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
 import { FixChainPanel } from './Verification.tsx';
+import { PlanChecklist } from './PlanChecklist.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -764,7 +765,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         {experience !== 'legacy' ? <span className="studio-action-identity">{title}<span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
         {op.detail.kind === 'edit' && op.detail.hunks.length > 0 && <DiffStat hunks={op.detail.hunks} />}
         <StateMark state={so.state} op={op} />
-        {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
+        {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'plan', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {
             e.stopPropagation();
             set({ expandedOp: expanded ? undefined : op.id, selectedOp: undefined });
@@ -835,6 +836,8 @@ function ExpandedOperation({ op }: { op: Operation }) {
         <CapturedOutcomes output={d.resultPreview}/>
         <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
       </div>;
+    case 'plan':
+      return <div className="op-expanded plan-material" onClick={(e) => e.stopPropagation()}><PlanChecklist op={op} full/></div>;
     case 'other':
       if (op.tool === 'AskUserQuestion') return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}><QuestionCard op={op}/><div className="material-context">Captured result</div><ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for the answer' : 'No result content captured')}/></div>;
       return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
@@ -957,13 +960,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         </div>
       );
     case 'plan':
-      return (
-        <ul className="plan">
-          {d.items.slice(0, 6).map((it, i) => (
-            <li key={i} className={`plan-${it.status}`}>{it.text}</li>
-          ))}
-        </ul>
-      );
+      return <PlanChecklist op={op}/>;
     default:
       if (op.tool === 'AskUserQuestion') return <QuestionCard op={op}/>;
       return <>
