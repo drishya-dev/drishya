@@ -45,7 +45,7 @@ test('native segment lookup is authenticated, read-only, and explicit navigation
   await revealNewerWork(page);await menu.locator('summary').focus();await page.keyboard.press('Enter');await page.keyboard.press('Enter');await page.keyboard.press('Escape');await expect(menu.locator('summary')).toBeFocused();
   await menu.locator('summary').click();await menu.getByRole('button',{name:/^Open /}).click();
   await expect(page.locator('.history')).toContainText('NEWER_NATIVE_SEGMENT_CONFIRMED');await expect(menu).toHaveCount(0);
-  expect(app.store.listRecordings()).toHaveLength(before+1);expect(prompts).toEqual([]);expect(app.ingest.isLive(parentId)).toBe(false);
+  expect(app.store.listRecordings()).toHaveLength(before+1);expect(prompts).toEqual([]);expect(app.ingest.isLive(parentId)).toBe(true);
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${parentId}`);await expect(page.locator('.history')).toContainText('EARLIER_NATIVE_SEGMENT');
   await page.setViewportSize({width:390,height:844});await revealNewerWork(page);
   const bounds=await menu.locator(':scope>div').boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(390);

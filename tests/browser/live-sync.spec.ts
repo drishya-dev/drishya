@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer } from '../../apps/daemon/src/server.ts';
 
-test('Follow starts stopped capture and keeps refreshing while notices arrive continuously', async ({ page }) => {
+test('opening starts independent capture and keeps refreshing with Follow off while notices arrive continuously', async ({ page }) => {
   const dir=mkdtempSync(join(tmpdir(),'drishya-live-sync-')),journal=join(dir,'session.jsonl');
   copyFileSync(resolve('fixtures/synthetic/claude/checkout-fix.jsonl'),journal);
   const app=new App(join(dir,'store'));
@@ -16,9 +16,10 @@ test('Follow starts stopped capture and keeps refreshing while notices arrive co
     await expect(page.locator('.home')).toBeVisible();
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
     const follow=page.getByRole('switch',{name:'Automatically follow new work'});
-    await expect(follow).toHaveAttribute('aria-checked','false');
-    await follow.click();
     await expect(follow).toHaveAttribute('aria-checked','true');
+    await expect.poll(()=>app.store.getRecording(recordingId)?.live).toBe(true);
+    await follow.click();
+    await expect(follow).toHaveAttribute('aria-checked','false');
     expect(app.store.getRecording(recordingId)?.live).toBe(true);
     const steps=page.locator('.reading-status');
     const before=Number((await steps.innerText()).match(/\d+/)?.[0]);

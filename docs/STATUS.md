@@ -26,12 +26,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 1. `git pull`, then run `node scripts/claims.ts` (add `P0`, `P1`… for one priority, `--free` for unclaimed only). It lists open items in priority order and marks claimed ones.
 2. Pick a **free** item that does not share files with a claimed row. Overlapping files → pick another, or talk to the claimer first.
 3. Add one row below and **push it to `main` immediately** (`docs: claim <ID>`; a docs-only commit is allowed on `main`). If the push is rejected, someone claimed at the same time: pull and re-check.
-4. When the work merges, **delete your row in the same PR** (or right after). Add a "Last session" block as usual.
+4. When the work merges, **delete your row in the same PR** (or right after), tick the item in [TASKS](TASKS.md) and run `node scripts/sync-tasks.ts`. Add a "Last session" block as usual.
 5. A claim with no branch or commit for 3 days is stale; anyone may take it after asking.
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TURN-1 | @yash + Claude Sonnet 5.5 | `yash/turn-1-chapters` | 2026-10-19 | `components/History.tsx` (turn header), `lib/turn-ledger.ts` (new), `modern/reading-windows.css` |
 
 ---
 
@@ -43,6 +42,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Delivered:** a live refresh starting while `openRecording` was still fetching took the newest projection token and discarded the open, so a returning session lost its restored reader. `reloadProjection` now waits for an in-flight open of the same recording (no schema or API change). PR110 closed with a disposition comment; its two remaining ideas are IDEA-5.
 - **Validation:** both TS; 575 units/106 files including the new race test (fails without the fix); "session detours" browser journey 10/10 at 150 ms and 10/10 with coalescing forced to 25 ms; `p1-pacing` and `connected-workspace` pass except the two TEST-1 journeys that also fail on main.
 - **Next:** review alongside PR128, which restores 150 ms coalescing and notes this race in STATUS; whichever lands second should drop that note.
+
+### Harsh with Codex, then Claude (Opus 5.5) — Investigation, saved evidence and draft recovery finishing
+
+- **When:** 18–19 October 2026, `codex/investigation-finishing` (not yet pushed).
+- **Delivered:** items 2–6 of the remaining-work request ([107](review/107-investigation-finishing.md)): joined investigation with exact origin and return, Saved moments (50 references) and paged legacy notes, selected-evidence packets, explicit encrypted draft recovery in Workspace Actions, shared focus/Escape/switch polish; default journal poll 750→500 ms. Reconciled with main up to `b66f160` (PR111–125, claims). Claude concluded the merges, fixed three branch regressions (Workspace layout keyboard order; draft-bar reload-loss wording; Codex’s 25 ms browser refresh coalescing, reverted to 150 ms because it superseded `openRecording` and lost the reader restored after a session switch) and ran the final checks.
+- **Validation:** both TS; 562 units/103 files. Full browser on the pre-PR125 merge: 224 pass / 18 opt-in skip / 9 fail, all failing identically on clean main or flaky. After PR125, every `fresh-workspace` failure except the session-switch regression (now fixed, 3/3) also fails on clean `b66f160`; all are listed under TEST-1. Ten-minute soak 604 s / 88 rounds / 772 peak nodes; overhead observer −0.4%, observer+browser +2.4%, 0 lost (500 ms poll). Signed-in native checks remain builder-owned; no hosted CI.
+- **Next:** Yash reviews the PR; TEST-1 (now including the PR124/PR125 journeys); decide PR110 (conflicting, partly integrated per [111](review/111-adaptive-content-and-pr110.md)); the open/refresh race it noted is fixed by BUG-7 (merged right after).
 
 ### Yash with Claude (Opus 5.5) — Developer review, harness data audit, restructured TASKS
 
@@ -59,9 +65,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Then (same day, Claude Sonnet 5.5, branch `yash/p0-bugs`):** BUG-1 (wheel chains from cards to history), BUG-2 (Git drawer clears the navigation; Escape closes the newest reader), BUG-3 (links inside bold/italic Markdown), BUG-4 (no top-control overlap from 601–1100 px). One commit each. 546 unit tests, both typechecks and 9 browser specs (Git review, manual scroll, Markdown references, interface craft) pass. Bottom-corner pills at narrow widths remain (UI-1).
 - **LIVE-2 (branch `yash/live-2-composer`):** the idle composer defaults to its pill; auto/open/closed choice persisted (new `composer/choice` key in `working-locations.ts`, both allowlists). Four browser specs were found failing or flaky on main before this work (TEST-1).
 - **READ-1 + READ-2 (branch `yash/read-cards`, Sonnet 5.5):** wide no-wrap code diff cards with `+N −M`, and quiet provenance with one ⓘ popover per card. Pure helpers in `lib/card-evidence.ts` (4 tests). Browser: 72 of 74 card/history specs pass; the failures are the known `product-workspace:158` and a rare prompt-rail flake (TEST-1).
+- **TURN-1 (branch `yash/turn-1-chapters`, Sonnet 5.5):** each prompt is a chapter with a three-line clamp and, once the turn is over, a ledger line (read / searched / edited files +/− / commands / tests / failed / duration), from a new `GET /v1/recordings/:id/turns` over the whole recording (paged sessions included) and the pure `scene/turns.ts`; Modern only, so the retained UIs are unchanged. Collapse is split out as TURN-1b (virtual-list work, Opus-sized). Also: the priority tables now carry a Done column kept in sync by `node scripts/sync-tasks.ts`; the hackathon was removed from TASKS/CONTINUITY (decision logged); Harsh's PR #128 was reviewed and merged. Found while verifying: my LIVE-2 left several specs assuming an expanded composer; on this branch the same three spec files give the same results as main (37 pass, the 2 known TEST-1 failures).
 - **DATA-10 (Sonnet 5.5, docs only):** [review 125](review/125-event-schema-proposal.md), the batched additive schema proposal (five slices, evidence, privacy, order). Measured: typed Codex items cannot be matched to calls by id, 85% sit inside the `exec` window. **Needs both builders to tick D1–D10 before DATA-1/DATA-2 start.** Also corrected 123: no real TaskCreate/ExitPlanMode uses exist locally.
 - **LIVE-1 (branch `yash/live-1-now`, Sonnet 5.5):** the Now line in the composer pill and header, the tab title and favicon state, backed by `GET /v1/recordings/:id/now` (facts from the tail; no schema change). 21 new tests; verified on this live session. Two more browser specs found failing since before PR #124 (`live-sync:8`, `prompt-timeline:22`), added to TEST-1.
-- **Next:** HACK-1 (decide/public repo), EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
+- **Next:** see `node scripts/claims.ts` (the hackathon items were dropped from the list on 19 Oct)., EXPLAIN-4 (real key), DATA-10 → DATA-1/2, LIVE-1, TURN-1.
 
 ### Yash with Codex - Compact right-docked Explorer preview
 
@@ -754,6 +761,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-10-19 | **The Nebius × NVIDIA hackathon is dropped from the active list** | Builder: product first, as fast as possible; the hackathon items (HACK-1…3, the `hack` tag, the 30 Oct deadline) are removed from TASKS. The Nemotron explain work stays as ordinary product items (EXPLAIN-1…5, P1/P2). [`HACKATHON.md`](HACKATHON.md) is kept only as a reference. | `TASKS.md` |
 | 2026-10-19 | **Restructured TASKS (tagged P0–P3 + detail); north star and minimalism rule; harness data before more visuals; keep the wrap-plus-arrows passage layout, hover-only toolbox connectors, peek and Workspace as two modes, and the 3D map as aesthetic; Git graph = Sacred Timeline** | Builder corrections to review 122; audit 123 shows reasoning is mostly unrecorded, so the *why* comes only from labelled, cited model output | `TASKS.md`, `review/122`–`124`, `AGENTS.md` |
 | 2026-10-14 | **Keep Legacy; build independent Modern and retire Workbench selection** | Builder wants a new coherent developer workspace, not another palette pass; use real dense sessions and meaningful evidence motion. Saved fresh links migrate without losing the selected session. | `review/72-modern-spatial-workspace.md` |
 | 2026-10-14 | **Current Git handoffs revalidate the inspected page on both preview and save** | Cached review content can drift before export; retain reading on failures, invalidate the packet and preserve exact previewed text. Shared subprocess deadline/filter overrides keep inspection bounded without an atomic claim. | `review/70-revalidated-git-handoff.md` |
@@ -826,7 +834,6 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 | 2 | Trademark clearance for "Drishya", class 9/42 | Commercial use only | §App. A |
 | 5 | **Require 2FA for the org.** Currently off (verified). Enabling it removes any member without 2FA, so Harsh confirms his first — then an Owner turns it on in org Settings → Authentication security | Security of a repo that will publish an npm package | — |
 | 3 | When do we flip the repo public? Proposed: at the M1 hosted demo. Going public also unlocks free branch protection | Launch timing, enforced review | §18.5 |
-| 4 | Enter the Nebius × NVIDIA hackathon? Deadline **30 Oct 10:00 PT**. Refreshed 19 Oct; it needs a public repo, a live-validated Nemotron layer and a hosted demo (TASKS HACK-1…3) | Scope of the first build | [`HACKATHON.md`](HACKATHON.md) |
 | 6 | **Freeze contracts `0.1.0-draft`?** Implemented in `packages/contracts` following engineering plan §3. Needs @harsh's review | Third-party adapters, the frontend | [`CODEBASE.md`](CODEBASE.md) |
 | 8 | **Agree the schema additions** in [review 125](review/125-event-schema-proposal.md) §9 (D1–D10: typed-item correlation, usage, images, cost, re-import) | DATA-1, DATA-2, CONTENT-1/2/3 | [`125`](review/125-event-schema-proposal.md) |
 | 7 | Accept `node:sqlite` and `node:http`+SSE over the proposed `better-sqlite3` and Fastify+`ws`? (Decisions log, 25 Sep) | Packaging | [`CODEBASE.md`](CODEBASE.md) |

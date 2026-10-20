@@ -187,7 +187,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     const enabled = () => displayNodes.length > 0 && spatialActive && orbit && motion && document.visibilityState === 'visible' && !preference.matches && displayNodes.length <= 1500;
     const tick = (time: number) => {
       if (!enabled()) { frame = 0; last = 0; return; }
-      if (last && time - last >= 1000 / 15) { const elapsed = Math.min(100, time - last); if (time >= manualUntil.current) setYaw(value => (value + elapsed * .000035) % (Math.PI * 2)); last = time; }
+      if (last && time - last >= 1000 / 15) { const elapsed = Math.min(100, time - last); if (time >= manualUntil.current && !wrap.current?.contains(document.activeElement)) setYaw(value => (value + elapsed * .000035) % (Math.PI * 2)); last = time; }
       if (!last) last = time;
       frame = requestAnimationFrame(tick);
     };
@@ -415,6 +415,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       data-map-zoom={cam.k.toFixed(5)}
       data-map-scope={explore && connectionsOpen && neighborhood ? 'direct-neighborhood' : explore&&changesOnly?'changes':observedOnly ? 'observed' : 'all'}
       className={`map${explore ? ' exploring' : ''}`}
+      onFocusCapture={holdOrientation}
+      onBlurCapture={holdOrientation}
       onWheel={(e) => {
         if ((e.target as HTMLElement).closest('.map-tools, .map-zoom, .map-legend, .map-group, .map-file-label, .map-connections')) return;
         if (!explore) return;

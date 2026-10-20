@@ -1,6 +1,6 @@
 /* Modern materials. IDs preserve saved preferences; Legacy keeps its own palettes. */
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] {
-  --bg:#0a0a0a; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
+  --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
   --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#ededed;
   --t2:#b5b7c1; --t3:#9b9da8; --t4:#8b8d98; --focus:#8b92ec;
   --palette-active:#5e6ad2; --syntax-keyword:#c0a8e8; --syntax-string:#adc9b2; --syntax-function:#a9c5eb;

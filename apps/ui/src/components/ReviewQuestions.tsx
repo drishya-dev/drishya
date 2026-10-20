@@ -3,6 +3,8 @@ import type { Operation } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import { readQuestions, saveQuestion, type ReviewQuestion } from '../lib/review-questions.ts';
 import { ReadingDialog } from './ProductShell.tsx';
+import {prepareCorrection} from './InvestigationActions.tsx';
+import {operationObservation} from '../../../../packages/scene/src/operation-observations.ts';
 
 function useQuestions() {
   const id = useApp(s => s.recordingId), kind = useApp(s => s.source?.kind);
@@ -30,6 +32,9 @@ function useQuestions() {
 
 export function ReviewQuestionEditor({ op }: { op: Operation }) {
   const mode = useApp(s => s.mode);
+  const source=useApp(s=>s.source),id=useApp(s=>s.recordingId);
+  const projection=useApp(s=>s.projection),sequence=operationObservation(projection,op.id);
+  const [prepareError,setPrepareError]=useState('');
   const { items, update, error } = useQuestions();
   const existing = items.find(item => item.operationId === op.id && item.status === 'open');
   const [text, setText] = useState(existing?.question ?? ''), [owner, setOwner] = useState(existing?.owner ?? ''), [saved, setSaved] = useState(false);
@@ -38,10 +43,10 @@ export function ReviewQuestionEditor({ op }: { op: Operation }) {
     <p>Your note · anchored to this captured action, separate from agent output.</p>
     <textarea aria-label="Review question" maxLength={2000} placeholder="What still needs checking or a decision?" value={text} onChange={e => { setText(e.target.value); setSaved(false); }} />
     <input aria-label="Question owner" maxLength={80} placeholder="Owner (optional)" value={owner} onChange={e => { setOwner(e.target.value); setSaved(false); }} />
-    <button className="btn" disabled={!text.trim()} onClick={() => {
+    <button className="btn" disabled={!text.trim()||sequence===undefined} onClick={() => {
       const now = new Date().toISOString();
-      update({ id: existing?.id ?? crypto.randomUUID(), operationId: op.id, title: op.title, sequence: op.startSequence, question: text, owner, status: 'open', createdAt: existing?.createdAt ?? now, updatedAt: now }); setSaved(true);
-    }}>Save question</button><span role="status">{error || (saved ? 'Saved locally · view in Review questions' : '')}</span>
+      update({ id: existing?.id ?? crypto.randomUUID(), operationId: op.id, title: op.title, sequence: sequence!, sequenceBasis:'captured-observation', question: text, owner, status: 'open', createdAt: existing?.createdAt ?? now, updatedAt: now }); setSaved(true);
+    }}>Save question</button>{source?.kind==='daemon'&&id&&!id.includes('+')&&<button className="btn ghost" disabled={!text.trim()} onClick={()=>{try{prepareCorrection(op,text);setPrepareError('');}catch(error){setPrepareError((error as Error).message);}}}>Prepare question with harness</button>}<span role="status">{prepareError || error || (saved ? 'Saved locally · view in Review questions' : '')}</span>
   </details>;
 }
 

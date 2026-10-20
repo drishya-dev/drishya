@@ -28,7 +28,9 @@ export function latestOnly(): (key: string) => () => boolean {
 }
 
 /** Refresh during sustained capture, with one request in flight and one trailing refresh.
- * A trailing debounce can starve forever when notices arrive faster than its delay. */
+ * A trailing debounce can starve forever when notices arrive faster than its delay.
+ * Keep the delay above session-switch latency: a refresh that starts while openRecording is
+ * still fetching supersedes it, and the returning session loses its restored reader. */
 export function liveRefresh(refresh: () => Promise<void>, failed: (error: unknown) => void, delay = 150) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let running = false, dirty = false, closed = false;

@@ -66,9 +66,14 @@ test('map file labels are keyboard reading targets beneath header clearance', as
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(`${demoUrl()}&experience=studio`);
   await page.getByRole('button', { name: 'Explore repository map' }).click();
-  const file = page.locator('button.map-file-label').first();
-  await expect(file).toBeVisible();
-  const path = await file.textContent();
+  const candidate = page.locator('button.map-file-label').first();
+  await expect(candidate).toBeVisible();
+  const path = await candidate.textContent();
+  const file = page.getByRole('button', { name: path!, exact: true });
+  await file.focus();
+  const yaw = await page.locator('.map').getAttribute('data-map-yaw');
+  await page.evaluate(async () => { for (let frame = 0; frame < 20; frame++) await new Promise(requestAnimationFrame); });
+  await expect(page.locator('.map')).toHaveAttribute('data-map-yaw', yaw!);
   const header = (await page.locator('.workspace-header').boundingBox())!;
   expect((await file.boundingBox())!.y).toBeGreaterThanOrEqual(header.y + header.height);
   await file.press('Enter');
@@ -163,7 +168,7 @@ test('first-visit evidence review opens exact file work without a reading mark a
   await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
   await expect(review).toContainText('recorded order, not test coverage');
   await page.screenshot({ path: resolve('.local/evidence-review-desktop.png') });
-  await review.getByRole('button', { name: /src\/checkout\/guard.ts/ }).click();
+  await review.getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
   const file = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await expect(file).toBeVisible();
   await expect(file).toContainText('Historical evidence');

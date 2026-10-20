@@ -32,7 +32,7 @@ export interface OverheadOptions {
   /** CPU work the agent does between records, in ms: the "thinking" a real agent does. */
   workMs: number;
   browser: boolean;
-  /** Live poll interval for the observer; the shipped default is 750 ms. */
+  /** Optional interval override; otherwise measure the shipped default. */
   intervalMs?: number;
   log?: (line: string) => void;
 }
@@ -92,14 +92,14 @@ async function runOnce(condition: Condition, run: number, opts: OverheadOptions)
     if (condition !== 'baseline') {
       app = new App(join(dir, 'observer'));
       recordingId = (await app.ingest.importSource('codex', journal)).recordingId;
-      app.ingest.startLive(recordingId, opts.intervalMs ?? 750);
+      app.ingest.startLive(recordingId, opts.intervalMs);
       if (condition === 'observer+browser') {
         const { chromium } = await import('@playwright/test');
         const server = await startServer({ app, port: 0, token: 'overhead-probe' });
         const browser = await chromium.launch({ channel: process.env.DRISHYA_BROWSER_CHANNEL || undefined });
         const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
         await page.goto(server.launchUrl);
-        await page.locator('.row-main.link').first().click();
+        await page.locator('.row-main.link, .mh-session-open').first().click();
         close = async () => {
           await browser.close();
           await server.close();

@@ -105,9 +105,8 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
     }
     const before = (await nav.boundingBox())!;
     const history = page.locator('.history');
-    const historyBox = (await history.boundingBox())!;
-    // The left content gutter avoids the native scrollbar and nested material scrollers.
-    await page.mouse.move(historyBox.x + 4, Math.min(height! - 90, 500));
+    // The exposed right gutter remains outside the narrow Files overlay.
+    await pointAtHistory(page, history);
     // Do not enqueue another wheel burst on every assertion poll: a delayed
     // upward event could otherwise consume the subsequent downward check.
     await page.mouse.wheel(0, -100_000);
@@ -125,3 +124,4 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
     await page.screenshot({ path: resolve(`.local/toolbar-${width}.png`) });
   }
 });
+import { pointAtHistory } from './history-gestures.ts';

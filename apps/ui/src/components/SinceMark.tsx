@@ -125,6 +125,7 @@ export function SinceMarkSection({ projection }: { projection: Projection }) {
           : 'Mark what you have seen, and next time this lists only what happened after it.'}
       </p>
       {boundary && !any && <p className="muted small">Nothing new since your mark.</p>}
+      {!!digest.unplacedCount&&<p className="muted small">{digest.unplacedCount} entries have no captured observation position and cannot be placed after this mark. Inspect whole-recording review.</p>}
       {boundary &&
         GROUPS.filter((g) => digest[g.key].length).map((g) => (
           <div key={g.key} className={`since-group since-${g.key}`}>
@@ -138,7 +139,7 @@ export function SinceMarkSection({ projection }: { projection: Projection }) {
                     <span>{it.title}</span>
                   )}
                   {it.detail && <span className="muted small"> · {it.detail}</span>}
-                  <button className="btn ghost small since-through" disabled={busy} title="Mark everything up to this point as seen" onClick={() => markAt(it.sequence)}>
+                  <button className="btn ghost small since-through" disabled={busy||it.sequenceBasis==='timeline-position'} title="Mark everything up to this point as seen" onClick={() => markAt(it.sequence)}>
                     Mark through here
                   </button>
                 </li>

@@ -14,6 +14,8 @@ import { ReadingResize } from './ReadingResize.tsx';
 import { EvidenceNavigation } from './EvidenceNavigation.tsx';
 import { ReviewQuestionEditor } from './ReviewQuestions.tsx';
 import {operationOutcome} from '../lib/operation-outcome.ts';
+import {InvestigationActions} from './InvestigationActions.tsx';
+import {SaveMoment} from './SavedMoments.tsx';
 
 export function Inspector({ projection }: { projection: Projection }) {
   const width = useApp(s => s.inspectorWidth);
@@ -57,7 +59,7 @@ export function Inspector({ projection }: { projection: Projection }) {
         ))}
       </nav>
       <div className="insp-body">
-        {tab === 'detail' && <><Detail op={op} projection={projection} /><VerificationPanel op={op} /><ReviewQuestionEditor key={op.id} op={op} /></>}
+        {tab === 'detail' && <><Detail op={op} projection={projection} /><VerificationPanel op={op} /><SaveMoment op={op}/><InvestigationActions key={`investigate/${op.id}`} op={op}/><ReviewQuestionEditor key={op.id} op={op} /></>}
         {tab === 'evidence' && <Evidence op={op} links={links} projection={projection} />}
 
       </div>

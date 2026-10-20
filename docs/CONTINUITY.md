@@ -2,10 +2,9 @@
 
 **19 October direction reset (read first):**
 - **North star:** [AGENTS](../AGENTS.md#north-star--read-first-every-session).
-- **Work list:** [TASKS](TASKS.md), restructured as a tagged P0–P3 priority list with per-ID detail and acceptance. Start at P0: BUG-1…4 → HACK-1 / EXPLAIN-4 → DATA-10 → DATA-1/2 → LIVE-1 → TURN-1 → EXPLAIN-1/2 → READ-1/2 → LIVE-2 → HACK-2/3.
+- **Work list:** [TASKS](TASKS.md), restructured as a tagged P0–P3 priority list with per-ID detail and acceptance. Run `node scripts/claims.ts` to see what is open and unclaimed; the priority tables carry a Done column.
 - **Evidence:** review [122](review/122-developer-product-review.md) (builder corrections at the top override its body), harness audit [123](review/123-harness-data-audit.md) (reasoning is mostly unrecorded; much typed data is unused), Sacred Timeline spec [124](review/124-sacred-timeline-git-graph.md).
 - **Keep:** passage wrap with arrows; hover-only toolbox connectors; peek and Workspace as two modes; the 3D map as aesthetic; the minimal UI.
-- **Hackathon:** deadline 30 Oct 10:00 PT; see [HACKATHON](HACKATHON.md).
 
 **18 October compact preview:** Builder screenshot now guides28vw default width (360–720px), taller right-docked geometry with existing safe clearances. Existing saved custom geometry stays; Reset applies new default. Desktop fine-pointer passage content is90% only during preview; screen-space virtual slots and scroll coordinates remain unscaled, phone normal. Material translation/settlement converts zoomed local pixels correctly. Move icon removed from File reader; title/tab-bar drag, title focus/arrow/Home and four-edge resize/reset preserved. Both TS/build,543units/99files, five focused browser journeys and actual three-session Blueprint/current-file/scroll-stability/phone check pass; frames inspected. Review121. TASKS remains the only queue; graph art deferred.
 

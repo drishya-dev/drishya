@@ -110,3 +110,13 @@
 :root[data-ui-version=modern] .composer-minimize[data-now=asking] > span::before { background: var(--edited); }
 :root[data-ui-version=modern] .composer-minimize[data-now=working] > span::before { background: var(--focus); }
 :root[data-ui-version=modern] .modern-composer-state[data-now] { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* A prompt as a chapter: three lines, the rest on request, and a quiet account of the turn once it is over. */
+.history .turn { flex-wrap: wrap; row-gap: 0; }
+.history .turn-text.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.history .turn-more { flex: 1 0 100%; margin: 2px 0 0; padding: 0; border: 0; background: none; color: var(--t3); font: 11px/1.5 var(--sans); text-align: right; cursor: pointer; }
+.history .turn-more:hover, .history .turn-more:focus-visible { color: var(--t1); }
+.history .turn-more:focus-visible { outline: 1px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+.history .turn-ledger { flex: 1 0 100%; text-align: right; margin-top: 4px; font: 11px/1.6 var(--mono); color: var(--t3); font-variant-numeric: tabular-nums; }
+.history .turn-ledger .good { color: var(--pass); }
+.history .turn-ledger .bad { color: var(--fail); }

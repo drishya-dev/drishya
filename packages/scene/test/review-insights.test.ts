@@ -16,7 +16,7 @@ it('groups only proven identical commands and links factual unknown/missing/gap 
 });
 it('pages all prompts and counts operations by start window rather than late result sequence',()=>{
   const p=projection();
-  for(let n=0;n<45;n++){p.timeline.push({type:'turn',id:`turn-${n}`,sequence:n*10,agentId:'agent',prompt:`Prompt ${n}`});p.operations.push({...op(n*10+1),endSequence:900});}
+  for(let n=0;n<45;n++){p.timeline.push({type:'turn',id:`turn-${n}`,sequence:n*10,agentId:'agent',prompt:`Prompt ${n}`});const operation={...op(n*10+1),startSequence:p.timeline.length,endSequence:900};p.operations.push(operation);p.timeline.push({type:'op-start',id:`start-${n}`,operationId:operation.id,sequence:n*10+1,agentId:'agent'});}
   const first=reviewInsights(p),second=reviewInsights(p,1),third=reviewInsights(p,2);
   expect(first.promptCount).toBe(45);expect(first.prompts[0]!.ordinal).toBe(45);expect(third.prompts).toHaveLength(5);
   const prompts=[...first.prompts,...second.prompts,...third.prompts];expect(new Set(prompts.map(p=>p.id)).size).toBe(45);expect(prompts.every(p=>p.operations===1)).toBe(true);
@@ -39,4 +39,9 @@ it('uses full input identity for member queries as well as finding summaries',()
   p.artifacts=p.operations.map((op,n)=>({id:op.artifactIds[0],kind:'excerpt',blob:n===3?'different':'same',availability:'complete'} as Artifact));
   expect(findingMembers(p,'repeat/op-0').items.map(item=>item.id)).toEqual(['op-0','op-1','op-2']);
   expect(findingMembers(p,'repeat/op-3').available).toBe(false);
+});
+it('qualifies timeline-only references and resolves real observation positions for finding members',()=>{
+  const p=projection();p.operations=[{...op(0),status:'unknown'}];p.timeline=[{type:'op-start',id:'start',sequence:80,operationId:'op-0',agentId:'agent'}];
+  expect(findingMembers(p,'unknown').items[0]).toMatchObject({sequence:80,sequenceBasis:'captured-observation'});expect(reviewInsights(p).findings[0]).toMatchObject({sequence:80,sequenceBasis:'captured-observation'});
+  p.timeline=[];expect(findingMembers(p,'unknown').items[0]).toMatchObject({sequence:0,sequenceBasis:'timeline-position'});
 });
