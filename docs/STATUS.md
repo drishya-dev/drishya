@@ -37,6 +37,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude (Opus 5.5) — TEST-2 flaky specs (main cause fixed) and DATA-1/DATA-2 merged
+
+- **When:** 20 October 2026. Found that a prompt-rail jump left follow on, so `followLatest` undid the jump on the next update in a warm browser; the rail now sets `follow: false` (History.tsx). That was the cause of the rotating `turn-fold`/`prompt-timeline`/product-workspace rail failures. Gated Harsh's DATA-2 (#149) and DATA-1 (#151) together on one tree (705 unit, 286 browser pass, only `hover-fit` codex failing, which also failed on main before) and merged both at the builder's request. #151 was stacked on the DATA-2 branch, so deleting that branch auto-closed it; it was reopened, retargeted to main and merged.
+- **Open:** `hover-fit.spec.ts:51` (codex) fails only inside the full suite; TEST-2 stays open for it.
+
 ### Harsh with Codex — DATA-1 typed work and historical Script evidence
 
 - **When:** 20 October 2026. PR151 implements review125 S2 and BUG-5, stacked on DATA-2/PR149. Typed commands retain actual command/exit/duration/output; source-ID matching wins, otherwise exactly one open exec permits a labelled enclosing-call relationship. Multiple/zero open calls remain standalone. Nested patch outcomes require an exact path set. Mixed multi-file patch/test wrappers keep every real card and one captured Script parent in details. MCP enrichment retains existing input. Agent metadata does not invent lineage from proximity; images remain references, unknown shapes metadata-only, and old observation IDs stay stable. No second reducer bump.
