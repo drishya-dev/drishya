@@ -9,6 +9,9 @@ import { ReadingDialog } from './ProductShell.tsx';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { GitPatchReader } from './GitPatchReader.tsx';
 import { FileIcon } from './FileIcon.tsx';
+import { InterfaceGlyph } from './InterfaceGlyph.tsx';
+import { WorkspaceOptions } from './WorkspaceOptions.tsx';
+import './git-review-controls.css';
 import { ReadingResize } from './ReadingResize.tsx';
 import { readReviewMarks, previousReviewNote, updateReviewMark, type ReviewMark } from '../lib/git-review-marks.ts';
 
@@ -101,14 +104,26 @@ function GitReader({ close }: { close: () => void }) {
     finally { if (current()) setChecking(false); }
   };
   const modern = document.documentElement.dataset.uiVersion === 'modern';
+  const workspaceName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected workspace';
+  const canHandoff = !busy && !checking && !!snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint);
   return <ReadingDialog title="Git review" windowId="Git review" resetWindow={()=>{setWidth(680);setFilesHidden(false);}} close={close} modeless={modern} headerIcon={modern ? <GitBranchGlyph /> : undefined} style={modern ? {'--git-reader-width': `${readingWidth}px`} as CSSProperties : undefined} resizeControl={modern ? <ReadingResize value={readingWidth} minimum={420} maximum={maximumWidth} change={setWidth} reset={()=>setWidth(680)} label="Resize Git reading space" fromRight /> : undefined} className={`git-review-dialog${modern ? ' modern-git-drawer' : ''}`}>
-    <div className="git-history-entry"><button className="btn ghost" disabled={busy||checking} onClick={()=>{close();requestAnimationFrame(openGitHistory);}}>Branches &amp; commits ↗</button></div>
-    {modern && <div className="modern-git-context"><strong>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected workspace'}</strong><small>Read-only · current changes</small></div>}
+    {!modern && <div className="git-history-entry"><button className="btn ghost" disabled={busy||checking} onClick={()=>{close();requestAnimationFrame(openGitHistory);}}>Branches &amp; commits ↗</button></div>}
+    {modern && (!workspace?.approved || !consent) && <div className="modern-git-context"><strong>{workspaceName}</strong><small>Read-only · current changes</small></div>}
     {!workspace?.approved ? <section><p>Inspect the selected workspace first. Git access has separate consent.</p><button className="btn" disabled={busy || checking} onClick={() => { setBusy(true); void approve().catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve current workspace</button></section> : !consent ? <section><p>Read local branches, commits, status and bounded staged / working-tree patches from this repository. No repository writes. This is current Git, separate from captured history.</p><button className="btn" disabled={busy || checking} onClick={() => { setBusy(true); void workspaceApi.approveGit(id).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve read-only Git</button></section> : <>
-      <nav className="git-review-toolbar"><span>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span>{modern && snapshot && <button className="btn" aria-expanded={!filesHidden} aria-controls="git-changed-files" onClick={() => setFilesHidden(!filesHidden)}>{filesHidden ? 'Show files' : 'Hide files'} · {snapshot.files.length}</button>}<button className="btn" disabled={busy || checking} onClick={() => void refresh()}>{busy ? 'Inspecting…' : 'Refresh changes'}</button><button className="btn" disabled={busy || checking || !snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint)} onClick={() => void handoff()}>Preview handoff</button></nav>
+      {modern ? <nav className="git-review-toolbar git-review-compact" aria-label="Git review controls">
+        <div className="git-review-identity"><strong title={workspace?.root}>{workspaceName}</strong><span title={snapshot ? `${snapshot.branch} · ${snapshot.head}` : 'Current Git'}>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span><small>Read-only · current changes</small></div>
+        {snapshot && <button className="btn git-file-toggle" aria-expanded={!filesHidden} aria-controls="git-changed-files" onClick={() => setFilesHidden(!filesHidden)} title={filesHidden ? 'Show changed files' : 'Hide changed files'}><InterfaceGlyph name="folder"/>Files <span>{snapshot.files.length}</span></button>}
+        <button className="btn git-refresh-control" aria-label="Refresh changes" aria-busy={busy} title={busy ? 'Inspecting changes…' : 'Refresh changes'} disabled={busy || checking} onClick={() => void refresh()}><InterfaceGlyph name="refresh"/></button>
+        <WorkspaceOptions label="Git review actions">
+          <button className="btn ghost" disabled={!canHandoff} onClick={() => void handoff()}>Preview handoff</button>
+          <button className="btn ghost" disabled={busy || checking || !file} onClick={() => { if (!file) return; close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button>
+          <button className="btn ghost" disabled={busy || checking} onClick={() => { close(); requestAnimationFrame(openGitHistory); }}>Branches &amp; commits ↗</button>
+          <p className="git-review-menu-note">Current Git is separate from captured history. Reviewed marks apply to this exact patch; preview and save recheck content.</p>
+        </WorkspaceOptions>
+      </nav> : <nav className="git-review-toolbar"><span>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span>{modern && snapshot && <button className="btn" aria-expanded={!filesHidden} aria-controls="git-changed-files" onClick={() => setFilesHidden(!filesHidden)}>{filesHidden ? 'Show files' : 'Hide files'} · {snapshot.files.length}</button>}<button className="btn" disabled={busy || checking} onClick={() => void refresh()}>{busy ? 'Inspecting…' : 'Refresh changes'}</button><button className="btn" disabled={busy || checking || !snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint)} onClick={() => void handoff()}>Preview handoff</button></nav>}
       {checking && <p role="status">Checking reviewed content…</p>}
       {snapshot && <>
-        {modern ? <details className="modern-git-scope"><summary>Current Git · separate from captured history</summary><p>Preview and save recheck content. Refresh to inspect new changes. Reviewed marks apply to this exact patch.</p></details> : <p className="git-scope-note">Current Git sample · Preview and save recheck content. Refresh to inspect new changes. Reviewed marks apply to this exact patch.</p>}
+        {!modern && <p className="git-scope-note">Current Git sample · Preview and save recheck content. Refresh to inspect new changes. Reviewed marks apply to this exact patch.</p>}
         {snapshot.totalAllowed !== undefined && snapshot.totalAllowed > snapshot.limit && <nav className="reader-pages git-file-pages" aria-label="Git file pages">
           <button className="btn" disabled={busy || checking || !snapshot.pageStart} onClick={() => void refresh(Math.max(0, (snapshot.pageStart ?? 0) - snapshot.limit))}>Previous files</button>
           <span>{(snapshot.pageStart ?? 0) + 1}–{Math.min((snapshot.pageStart ?? 0) + snapshot.limit, snapshot.totalAllowed)} of {snapshot.totalAllowed} eligible paths</span>
@@ -123,7 +138,7 @@ function GitReader({ close }: { close: () => void }) {
             {snapshot.totalAllowed === undefined && snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
           </aside>
           <section>{file && <>
-            <header><strong>{file.path}</strong><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button></header>
+            <header className={modern ? 'git-selected-file-header' : undefined}><strong title={file.path}>{file.path}</strong><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button>{!modern && <button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button>}</header>
             <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} /></div>
             {file.status !== '??' && <footer>
               <label><input type="checkbox" disabled={busy || checking} checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label>
