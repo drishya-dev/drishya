@@ -18,6 +18,7 @@ import { ReviewQuestionEditor } from './ReviewQuestions.tsx';
 import {operationOutcome} from '../lib/operation-outcome.ts';
 import {InvestigationActions} from './InvestigationActions.tsx';
 import {SaveMoment} from './SavedMoments.tsx';
+import { PlanChecklist } from './PlanChecklist.tsx';
 
 export function Inspector({ projection }: { projection: Projection }) {
   const width = useApp(s => s.inspectorWidth);
@@ -184,13 +185,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
       );
     }
     case 'plan':
-      return (
-        <ul className="plan big">
-          {d.items.map((it, i) => (
-            <li key={i} className={`plan-${it.status}`}>{it.text}</li>
-          ))}
-        </ul>
-      );
+      return <PlanChecklist op={op} full/>;
     default:
       return (
         <>
