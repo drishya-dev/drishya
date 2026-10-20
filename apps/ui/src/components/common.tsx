@@ -1,3 +1,4 @@
+import {outputPathNodes} from './CapturedPath.tsx';
 import { useEffect, useState, type ReactNode, type Ref } from 'react';
 import type { Artifact, ArtifactSlice, Hunk, Provenance } from '@drishya/contracts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
@@ -132,14 +133,16 @@ export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining =
 }
 
 export function Output({ text, maxLines }: { text: string; maxLines?: number }) {
+  const root=useApp(s=>s.recording?.workspaceRoot);
   const all = text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\n$/, '').split('\n');
   const lines = maxLines ? all.slice(-maxLines) : all;
+  const pathBudget={remaining:64,characters:131072};
   return (
     <pre className="output">
       {maxLines && all.length > maxLines && <span className="ln-more">…{all.length - maxLines} earlier lines{'\n'}</span>}
       {lines.map((l, i) => (
         <span key={i} className={/\b(FAIL|Error|failed|×|✗)\b/.test(l) ? 'out-bad' : /\b(PASS|passed|✓)\b/.test(l) ? 'out-good' : undefined}>
-          {l}
+          {outputPathNodes(l,root,pathBudget)}
           {'\n'}
         </span>
       ))}
