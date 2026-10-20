@@ -23,6 +23,39 @@ describe('readJsonl', () => {
     expect(r2.records.map((r) => r.type === 'record' && r.value)).toEqual([{ b: 2 }]);
   });
 
+  it('yields batches at complete records without shrinking the individual record limit', async () => {
+    const lines = [JSON.stringify({ text: 'x'.repeat(6 * 1024 * 1024) }), JSON.stringify({ tail: 'unchanged' })];
+    writeFileSync(file, lines.join('\n') + '\n');
+    const first = await readJsonl(file, initialCursor());
+    expect(first.records.map(r => r.type)).toEqual(['record']);
+    expect(first.cursor.offset).toBe(Buffer.byteLength(lines[0]!) + 1);
+    const next = await readJsonl(file, first.cursor);
+    expect(next.records).toEqual([{ type: 'record', offset: first.cursor.offset, bytes: Buffer.byteLength(lines[1]!) + 1, value: { tail: 'unchanged' } }]);
+    expect((await readJsonl(file, next.cursor)).records).toEqual([]);
+  });
+
+  it('bounds arrays of small records while preserving byte offsets and partial writes', async () => {
+    const line = JSON.stringify({ text: 'é'.repeat(1024) }) + '\n';
+    const count = 3000;
+    writeFileSync(file, line.repeat(count) + '{"pending":');
+    let cursor = initialCursor(); let seen = 0; let turns = 0;
+    for (;;) {
+      const result = await readJsonl(file, cursor);
+      for (const item of result.records) {
+        expect(item.type).toBe('record');
+        expect(item.offset).toBe(seen * Buffer.byteLength(line));
+        seen++;
+      }
+      turns++;
+      if (result.cursor.offset === cursor.offset) break;
+      cursor = result.cursor;
+    }
+    expect(seen).toBe(count); expect(turns).toBeGreaterThan(2);
+    appendFileSync(file, 'true}\n');
+    const final = await readJsonl(file, cursor);
+    expect(final.records).toEqual([{ type: 'record', offset: Buffer.byteLength(line) * count, bytes: 17, value: { pending: true } }]);
+  });
+
   it('reports malformed lines as records, never throws', async () => {
     writeFileSync(file, '{"a":1}\nnot json\n{"c":3}\n');
     const r = await readJsonl(file, initialCursor());
