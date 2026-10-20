@@ -32,3 +32,31 @@
  :root[data-ui-version=modern] .desk-source-tools :is(form>input,form>.btn),
  :root[data-ui-version=modern] .desk-source-tools>.btn {min-height:40px}
 }
+
+/* Historical pages keep their scope visible while secondary source tools are closed. */
+.captured-source-controls{padding:8px 0;min-width:0}
+.captured-source-choices{display:flex;align-items:center;gap:4px;min-width:0}
+.captured-source-choices>.source-find-compact{display:flex;flex-wrap:nowrap;align-items:center;flex:1;min-width:0;gap:3px;margin:0;padding:0;border:0}
+.captured-source-choices>.source-find-compact>input{flex:1;width:0;min-width:0;min-height:32px;font-size:12px;padding:5px 8px}
+.captured-source-choices>.source-find-compact>.btn{flex:none;width:26px;min-width:26px;height:32px;min-height:32px;font-size:12px;padding:4px}
+.captured-source-choices>.source-find-compact>[role=status]{flex:none;max-width:52px;margin:0;font:11px/1.5 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.captured-source-choices>.source-find-compact>[role=status]:empty{display:none}
+.captured-source-choices :is(.captured-source-wrap,.desk-options>summary){display:grid;place-items:center;width:32px;min-width:32px;height:32px;min-height:32px;padding:6px}
+.captured-source-choices .desk-options>summary>span{display:none}
+.captured-source-wrap svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+:root[data-ui-version=modern] .captured-source-wrap[aria-pressed=true]{background:var(--s2);color:var(--t1)}
+.captured-source-context{display:block;padding-top:5px;font:11px/1.5 var(--sans);color:var(--t2);overflow-wrap:anywhere}
+.captured-source-choices .desk-options-body{width:min(290px,var(--menu-inline-space,calc(100vw - 48px)));padding:12px}
+.stored-source-menu-controls>.btn{font-size:12px}
+.captured-source-choices :is(.source-go,.source-range){display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 0;font-size:12px}
+.captured-source-choices :is(.source-go,.source-range)>input{width:64px;min-width:0;min-height:32px;font:12px/1.5 var(--mono)}
+.captured-source-choices :is(.source-go,.source-range)>[role=status]{flex-basis:100%;font-size:11px;white-space:normal}
+.captured-source-choices .source-range>.btn{font-size:12px}
+@media(pointer:coarse){
+ .captured-source-choices>.source-find-compact>:is(input,.btn),
+ .captured-source-choices :is(.captured-source-wrap,.desk-options>summary),
+ .captured-source-choices :is(.source-go,.source-range)>:is(input,.btn),
+ .stored-source-menu-controls>.btn{min-height:40px}
+ .captured-source-choices>.source-find-compact>input,
+ .captured-source-choices :is(.source-go,.source-range)>input{font-size:16px}
+}

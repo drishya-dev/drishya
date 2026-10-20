@@ -6,6 +6,7 @@ import { ChangeColumns } from './ChangeColumns.tsx';
 import { useReadingReference } from './ReadingReference.tsx';
 import { SourceFind } from './SourceFind.tsx';
 import { PatchControls } from './PatchControls.tsx';
+import { CapturedSourceControls } from './CapturedSourceControls.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useApp } from '../state.ts';
@@ -155,14 +156,9 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
     if (offset < pageStart || offset >= (view.nextStart ?? pageStart)) { setPages([offset]); setIndex(0); }
     else reveal(line);
   };
-  return (
-    <div className={`artifact-reader${kind === 'code' ? ` source-reading${wrap ? ' wrap-source' : ''}` : ''}`} ref={reader}>
-      {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.range ? `${view.artifact.kind === 'excerpt' ? 'Excerpt' : 'Historical source'} · lines ${view.artifact.range.start}–${view.artifact.range.end}` : 'Historical artifact'}</span></div>}
-      <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span>{kind === 'code' && <button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button>}<button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>
-      {kind === 'code' && <SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in loaded source page" idleLabel={loading ? 'Opening stored source page…' : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'} />}
-      {kind === 'code' && source?.artifactFind && query && <div className="stored-source-find"><button className="btn ghost small" disabled={finding || loading} onClick={() => void findStored()}>{finding ? 'Searching stored content…' : 'Find next stored match'}</button><span className="muted small" role="status">{findStatus || 'Literal search from this page through the stored artifact'}</span></div>}
-      {kind === 'code' && <details className="source-utilities">
-        <summary>Source tools · go to line, copy & pin range</summary>
+  const modernSource = kind === 'code' && typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern';
+  const copyPageAction = <button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button>;
+  const sourceTools = <>
       <form className="source-go" onSubmit={(e) => { e.preventDefault(); goToLine(); }}>
         <input inputMode="numeric" aria-label="Go to stored source line" placeholder="Source line" maxLength={16} value={lineInput} onChange={(e) => { setLineInput(e.target.value); setLineError(undefined); }} aria-invalid={!!lineError} />
         <button className="btn ghost small" disabled={!view.totalLines}>Go to line</button>
@@ -183,7 +179,14 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
         }}>Pin range</button>}
         <span className="muted small" role="status">{rangeStatus || 'Loaded page only · one temporary reference'}</span>
       </div>}
-      </details>}
+  </>;
+  return (
+    <div className={`artifact-reader${kind === 'code' ? ` source-reading${wrap ? ' wrap-source' : ''}` : ''}`} ref={reader}>
+      {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.range ? `${view.artifact.kind === 'excerpt' ? 'Excerpt' : 'Historical source'} · lines ${view.artifact.range.start}–${view.artifact.range.end}` : 'Historical artifact'}</span></div>}
+      {modernSource ? <><CapturedSourceControls query={query} change={q=>{setQuery(q);setActiveLine(undefined);}} matches={matches} active={activeLine} move={moveMatch} context={loading?'Opening stored source page…':text?`${pageLabel} · lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only`:'Empty source page'} wrap={wrap} toggleWrap={()=>setWrap(!wrap)}>{copyPageAction}{copied&&<span role="status" className="muted small">{copied}</span>}{sourceTools}</CapturedSourceControls></> : <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span>{kind === 'code' && <button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button>}<button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>}
+      {kind === 'code' && !modernSource && <SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in loaded source page" idleLabel={loading ? 'Opening stored source page…' : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'} />}
+      {kind === 'code' && source?.artifactFind && query && <div className="stored-source-find"><button className="btn ghost small" disabled={finding || loading} onClick={() => void findStored()}>{finding ? 'Searching stored content…' : 'Find next stored match'}</button><span className="muted small" role="status">{findStatus || 'Literal search from this page through the stored artifact'}</span></div>}
+      {kind === 'code' && !modernSource && <details className="source-utilities"><summary>Source tools · go to line, copy &amp; pin range</summary>{sourceTools}</details>}
       {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView scrollRef={sourceViewport} text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <ToolOutput text={text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(pageStart > 0 || next) && (
