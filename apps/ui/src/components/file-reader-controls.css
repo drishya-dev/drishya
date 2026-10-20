@@ -3,7 +3,7 @@
 :root[data-ui-version=modern] .file-reading-context { display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;flex:none; }
 :root[data-ui-version=modern] .file-reading-context .evidence-navigation { padding:0;border:0;flex:none; }
 :root[data-ui-version=modern] .file-reading-context .file-workspace-intro { padding:0;border:0;flex:1;min-width:160px; }
-:root[data-ui-version=modern] .file-evidence-toolbar { justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-bottom:10px; }
+:root[data-ui-version=modern] .file-evidence-toolbar { justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:10px; }
 :root[data-ui-version=modern] .file-evidence-toolbar>strong { margin-right:auto;font-size:12px; }
 :root[data-ui-version=modern] .file-evidence-toolbar .btn { font-size:12px;min-height:32px; }
 :root[data-ui-version=modern] .file-evidence-choice { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
@@ -20,3 +20,6 @@
  :root[data-ui-version=modern] .file-evidence-toolbar>strong { flex-basis:100%; }
  :root[data-ui-version=modern] .file-evidence-reading { padding:12px; }
 }
+
+:root[data-ui-version=modern] .file-evidence-toolbar .desk-options>summary>span { display:none; }
+:root[data-ui-version=modern] .file-evidence-toolbar .desk-options>summary { width:34px;justify-content:center;padding-inline:6px; }
