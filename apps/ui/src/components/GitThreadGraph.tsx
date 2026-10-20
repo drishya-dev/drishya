@@ -1,7 +1,9 @@
-import {useEffect,useId,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useId,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {GitCommit} from '../../../daemon/src/git-types.ts';
 import {gitRibbonGeometry} from '../lib/git-ribbon-geometry.ts';
 import {gitThreadLayout} from '../lib/git-thread-layout.ts';
+import {gitLight,hashSeed,lightNodes} from '../lib/git-light.ts';
+import {LightRenderer} from '../lib/light-renderer.ts';
 import './git-thread-graph.css';
 import {useApp} from '../state.ts';
 
@@ -14,8 +16,11 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
   const fit=()=>{const el=viewport.current;if(el){setScale(Math.max(.04,Math.min(1,(el.clientWidth-48)/graph.width,(el.clientHeight-70)/graph.height)));el.scrollTo(0,0);}};
   const previous=useRef<{graph:typeof graph;key:string}|undefined>(undefined);
   const gradient=useId().replace(/:/g,'');
-  const lowResource=useApp(state=>state.lowResource);
-  const ribbons=useMemo(()=>gitRibbonGeometry(graph,scale,angle,lowResource,offset),[graph,scale,angle,lowResource,offset]);
+  const lowResource=useApp(state=>state.lowResource),motion=useApp(state=>state.motion);
+  // GIT-1: filament light drawn by WebGL behind the DOM commits; the SVG ribbon remains only where WebGL2 is unavailable.
+  const canvas=useRef<HTMLCanvasElement>(null),world=useRef<HTMLDivElement>(null),renderer=useRef<LightRenderer|undefined>(undefined),[lit,setLit]=useState(false);
+  useLayoutEffect(()=>{const element=canvas.current;if(!element)return;renderer.current??=LightRenderer.create(element);setLit(!!renderer.current);},[]);
+  const ribbons=useMemo(()=>lit?undefined:gitRibbonGeometry(graph,scale,angle,lowResource,offset),[lit,graph,scale,angle,lowResource,offset]);
   useLayoutEffect(()=>{
     const before=previous.current;previous.current={graph,key:resetKey};
     seeds.clear();for(const hash of graph.mainSeeds)seeds.add(hash);
@@ -42,9 +47,37 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
   };
   const hit=Math.max(3,Math.min(32,76*scale*.8));
   const active=commits.find(commit=>commit.hash===hovered),neighbors=new Set(active?[active.hash,...active.parents,...commits.filter(commit=>commit.parents.includes(active.hash)).map(commit=>commit.hash)]:[]);
+  // Lightning only where a ref names a head with no loaded child; the layout decides which of those are branches.
+  const heads=useMemo(()=>{const children=new Set(commits.flatMap(commit=>commit.parents));return new Set(commits.filter(commit=>commit.labels.length&&!children.has(commit.hash)).map(commit=>commit.hash));},[commits]);
+  const lastFocus=useRef<Set<string>|undefined>(undefined);if(active)lastFocus.current=neighbors;
+  const focusMix=useRef(0),frame=useRef<number|undefined>(undefined),seed=useMemo(()=>hashSeed(primary?.name??'repository'),[primary?.name]);
+  const scene=useRef({graph,scale,selected,lowResource,heads,seed});scene.current={graph,scale,selected,lowResource,heads,seed};
+  // Redraws only when the view, the data or the hover changes; idle costs nothing.
+  const schedule=useCallback(()=>{
+    if(frame.current!==undefined)return;
+    frame.current=requestAnimationFrame(()=>{
+      frame.current=undefined;const light=renderer.current,el=viewport.current,origin=world.current;if(!light||!el||!origin)return;
+      const box=el.getBoundingClientRect(),at=origin.getBoundingClientRect(),s=scene.current;
+      light.resize(el.clientWidth,el.clientHeight,Math.min(2,devicePixelRatio||1));
+      const built=gitLight(s.graph,{scale:s.scale,ox:at.left-box.left,oy:at.top-box.top,width:el.clientWidth,height:el.clientHeight},{focus:lastFocus.current,focusMix:focusMix.current,heads:s.heads,selected:s.selected,lowResource:s.lowResource,seed:s.seed});
+      light.draw({lines:built.lines,points:built.points,bloom:s.lowResource?0:1,exposure:1.6,nebula:true});
+      el.dataset.lightSegments=String(built.segments);
+    });
+  },[]);
+  useLayoutEffect(()=>{if(lit)schedule();},[lit,graph,scale,selected,lowResource,heads,schedule]);
+  useEffect(()=>()=>{if(frame.current!==undefined)cancelAnimationFrame(frame.current);},[]);
+  // Hover brightens the touched strand and dims the rest over 160 ms; instant without motion.
+  useEffect(()=>{
+    if(!lit)return;
+    const target=active?1:0,from=focusMix.current,start=performance.now(),instant=!motion||matchMedia('(prefers-reduced-motion: reduce)').matches;let id=0;
+    const step=(now:number)=>{const t=instant?1:Math.min(1,(now-start)/160);focusMix.current=from+(target-from)*(1-(1-t)**3);schedule();if(t<1)id=requestAnimationFrame(step);};
+    id=requestAnimationFrame(step);return()=>cancelAnimationFrame(id);
+  },[hovered,lit]);
+  const lightPlaced=useMemo(()=>lit?lightNodes(graph,scale):undefined,[lit,graph,scale]),placed=lightPlaced??ribbons!.nodes;
   return <div className="thread-graph">
-    <div className="thread-controls"><span title="One shared mixed-color treatment; primary history is thicker. Width reflects loaded branch-segment commits only.">{primary?.name??'Primary'} timeline</span><button className="btn ghost" aria-label="Zoom out Git graph" onClick={()=>zoom(1/1.25)}>−</button><span>{Math.round(scale*100)}%</span><button className="btn ghost" aria-label="Zoom in Git graph" onClick={()=>zoom(1.25)}>+</button><button className="btn ghost" aria-label="Orbit 3D Git ribbon" title="Toggle orbit, then drag vertically or use Up/Down arrows in the graph" aria-pressed={orbit} onClick={()=>setOrbit(value=>!value)}>Orbit</button><button className="btn ghost" onClick={()=>{setAngle(.35);fit();}}>Fit graph</button></div>
-    <div className="thread-viewport atlas-commit-list" ref={viewport} tabIndex={0} aria-label={orbit?"Commits; drag vertically or use Up and Down arrows to orbit 3D ribbon":"Commits; drag background to pan"} onScroll={event=>{const el=event.currentTarget;if(loading||el.scrollWidth<=el.clientWidth+4)return;if(el.scrollLeft<30&&moreOlder)extend('older');else if(el.scrollLeft+el.clientWidth>el.scrollWidth-30&&moreNewer)extend('newer');}} onPointerDown={event=>{
+    <div className="thread-controls"><span title={lit?'Light gathers where history runs together; the primary line is the widest strand. Branch width reflects loaded branch-segment commits only.':'One shared mixed-color treatment; primary history is thicker. Width reflects loaded branch-segment commits only.'}>{primary?.name??'Primary'} timeline</span><button className="btn ghost" aria-label="Zoom out Git graph" onClick={()=>zoom(1/1.25)}>−</button><span>{Math.round(scale*100)}%</span><button className="btn ghost" aria-label="Zoom in Git graph" onClick={()=>zoom(1.25)}>+</button>{!lit&&<button className="btn ghost" aria-label="Orbit 3D Git ribbon" title="Toggle orbit, then drag vertically or use Up/Down arrows in the graph" aria-pressed={orbit} onClick={()=>setOrbit(value=>!value)}>Orbit</button>}<button className="btn ghost" onClick={()=>{setAngle(.35);fit();}}>Fit graph</button></div>
+    <div className={`thread-stage${lit?' lit':''}`}><canvas ref={canvas} className="thread-light" aria-hidden="true"/>
+    <div className="thread-viewport atlas-commit-list" ref={viewport} tabIndex={0} aria-label={orbit&&!lit?"Commits; drag vertically or use Up and Down arrows to orbit 3D ribbon":"Commits; drag background to pan"} onScroll={event=>{const el=event.currentTarget;if(lit)schedule();if(loading||el.scrollWidth<=el.clientWidth+4)return;if(el.scrollLeft<30&&moreOlder)extend('older');else if(el.scrollLeft+el.clientWidth>el.scrollWidth-30&&moreNewer)extend('newer');}} onPointerDown={event=>{
       if(event.button!==0||(event.target as HTMLElement).closest('button'))return;
       const el=event.currentTarget;drag.current={x:event.clientX,y:event.clientY,left:el.scrollLeft,top:el.scrollTop,id:event.pointerId,angle};el.setPointerCapture(event.pointerId);
     }} onPointerMove={event=>{const state=drag.current;if(state&&state.id===event.pointerId){if(orbit)setAngle(state.angle+(event.clientY-state.y)*.01);else {event.currentTarget.scrollLeft=state.left+state.x-event.clientX;event.currentTarget.scrollTop=state.top+state.y-event.clientY;}}}} onPointerUp={event=>{const state=drag.current;if(state&&!orbit){const dx=state.x-event.clientX;if(dx<0&&event.currentTarget.scrollLeft<40&&moreOlder&&!loading)extend('older');else if(dx>0&&event.currentTarget.scrollLeft+event.currentTarget.clientWidth>event.currentTarget.scrollWidth-40&&moreNewer&&!loading)extend('newer');}drag.current=undefined;}} onPointerCancel={()=>{drag.current=undefined;}} onKeyDown={event=>{
@@ -55,17 +88,17 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
       const buttons=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('.thread-commit')];const index=buttons.indexOf(event.target as HTMLButtonElement);
       if(!buttons.length)return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:Math.max(0,Math.min(buttons.length-1,index+(event.key==='ArrowLeft'?1:-1)));buttons[next]?.focus();
     }}>
-      <div className="thread-space" style={{width:graph.width*scale+48,height:graph.height*scale+48}}><div className="thread-world" style={{width:graph.width,height:graph.height,left:`max(24px,calc(50% - ${graph.width*scale/2}px))`,top:`max(24px,calc(50% - ${graph.height*scale/2}px))`,transform:`scale(${scale})`}}>
-        <svg className="thread-links" width={graph.width} height={graph.height} aria-hidden="true">
+      <div className="thread-space" style={{width:graph.width*scale+48,height:graph.height*scale+48}}><div ref={world} className="thread-world" style={{width:graph.width,height:graph.height,left:`max(24px,calc(50% - ${graph.width*scale/2}px))`,top:`max(24px,calc(50% - ${graph.height*scale/2}px))`,transform:`scale(${scale})`}}>
+        {ribbons&&<svg className="thread-links" width={graph.width} height={graph.height} aria-hidden="true">
           <defs><linearGradient id={gradient} x1="0" y1="0" x2={graph.width} y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#9e81ff"/><stop offset=".24" stopColor="#65dfff"/><stop offset=".48" stopColor="#e0faff"/><stop offset=".7" stopColor="#ae8fff"/><stop offset=".86" stopColor="#ffade9"/><stop offset="1" stopColor="#6be5ff"/></linearGradient></defs>
           {ribbons.pieces.map(piece=>{const edge=piece.edge;return <g key={piece.key} data-depth={piece.depth.toFixed(2)} className={`thread-bundle${active&&!neighbors.has(edge.from)?' muted':''}${selected===edge.to||hovered===edge.to?' active':''}`}>
             <path data-parent={edge.from} data-child={edge.to} style={{fill:`url(#${gradient})`,stroke:`url(#${gradient})`,strokeWidth:0}} className="thread-ribbon" d={piece.surface}/>
             {piece.bands.map((band,index)=><path key={index} d={band.path} className="ribbon-lamina" style={{fill:ribbonColors[band.color],opacity:band.shade}}/>)}
           </g>;})}
-        </svg>
-        {ribbons.nodes.map(node=>{const commit=commits.find(commit=>commit.hash===node.hash)!;return <button key={node.hash} className={`thread-commit atlas-commit${node.primary?' thread-primary':''}`} data-commit-hash={node.hash} style={{left:node.x,top:node.y,width:hit,height:hit,margin:`-${hit/2}px 0 0 -${hit/2}px`,transform:`scale(${1/scale})`}} aria-pressed={selected===node.hash} aria-label={`${commit.subject||'Untitled commit'} · ${node.hash.slice(0,8)}`} onPointerEnter={()=>setHovered(node.hash)} onPointerLeave={()=>setHovered(current=>current===node.hash?'':current)} onFocus={()=>setHovered(node.hash)} onBlur={()=>setHovered('')} onClick={()=>choose(node.hash)}><i aria-hidden="true" style={{width:Math.min(scale<.35?3:6,hit),height:Math.min(scale<.35?3:6,hit),border:0}}/>{!!commit.labels.length&&(scale>=.45||node.hash===hovered||node.hash===selected)&&<span className="thread-label" style={node.x>graph.width-160?{left:'auto',right:0,transform:'none'}:undefined}>{commit.labels[0]}{commit.omittedLabels+commit.labels.length>1&&<small> +{commit.omittedLabels+commit.labels.length-1}</small>}</span>}</button>;})}
+        </svg>}
+        {placed.map(node=>{const commit=commits.find(commit=>commit.hash===node.hash)!;return <button key={node.hash} className={`thread-commit atlas-commit${node.primary?' thread-primary':''}`} data-commit-hash={node.hash} style={{left:node.x,top:node.y,width:hit,height:hit,margin:`-${hit/2}px 0 0 -${hit/2}px`,transform:`scale(${1/scale})`}} aria-pressed={selected===node.hash} aria-label={`${commit.subject||'Untitled commit'} · ${node.hash.slice(0,8)}`} onPointerEnter={()=>setHovered(node.hash)} onPointerLeave={()=>setHovered(current=>current===node.hash?'':current)} onFocus={()=>setHovered(node.hash)} onBlur={()=>setHovered('')} onClick={()=>choose(node.hash)}><i aria-hidden="true" style={{width:Math.min(scale<.35?3:6,hit),height:Math.min(scale<.35?3:6,hit),border:0}}/>{!!commit.labels.length&&(scale>=.45||node.hash===hovered||node.hash===selected)&&<span className="thread-label" style={node.x>graph.width-160?{left:'auto',right:0,transform:'none'}:undefined}>{commit.labels[0]}{commit.omittedLabels+commit.labels.length>1&&<small> +{commit.omittedLabels+commit.labels.length-1}</small>}</span>}</button>;})}
       </div></div>
-    </div>
+    </div></div>
     {active&&<div className="thread-peek" role="status"><code>{active.hash.slice(0,10)}</code><strong>{active.subject||'Untitled commit'}</strong><span>{active.author} · {new Date(active.time).toLocaleString()}</span><span>{active.parents.length>1?`Merge · ${active.parents.length} parents`:active.parents.length?'Commit':'Root commit'}{active.labels.length?` · ${active.labels.join(', ')}`:''}</span><small>Click or Enter to read changed files</small></div>}
     <div className="thread-caption"><select aria-label="Choose Git commit" value="" onChange={event=>{if(event.target.value)choose(event.target.value);}}><option value="">Open a commit…</option>{commits.map(commit=><option key={commit.hash} value={commit.hash}>{commit.hash.slice(0,8)} · {commit.subject}</option>)}</select>{loading?'Loading connected history…':moreOlder?'Scroll left or Page Up for earlier history':'Start of local history'}{moreNewer?' · scroll right for newer history':''}{!graph.primaryFound&&primary?' · primary line outside this loaded neighborhood':''}{graph.omitted?` · ${graph.omitted} additional links: open a commit for its complete parents`:''}<span className="sr-only">Up to 300 commit nodes are mounted. Other history remains reachable by scrolling.</span></div>
   </div>;
