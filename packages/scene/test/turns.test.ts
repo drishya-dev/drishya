@@ -7,6 +7,7 @@ import type { Operation, Projection } from '@drishya/contracts';
 import { Ingestor } from '@drishya/ingest';
 import { Store } from '@drishya/store';
 import { turnLedgers } from '../src/turns.ts';
+import { compose } from '../src/index.ts';
 
 const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.meta.url));
 let dir: string, store: Store, real: Projection;
@@ -86,6 +87,16 @@ describe('turnLedgers', () => {
     expect(ledgers.map((l) => l.step)).toEqual(turns);
     expect(ledgers.reduce((n, l) => n + l.operations, 0)).toBeLessThanOrEqual(real.operations.length);
     expect(ledgers.some((l) => l.edits.files > 0)).toBe(true);
+  });
+
+  it('marks every passage after a prompt with that turn, so a folded turn knows its members', () => {
+    const scene = compose(real, { step: real.timeline.length });
+    let turn: number | undefined;
+    for (const ps of scene.passages) {
+      if (ps.turnStep !== undefined) turn = ps.turnStep;
+      expect(ps.inTurn).toBe(turn);
+    }
+    expect(scene.passages.some((ps) => ps.inTurn !== undefined && ps.turnStep === undefined)).toBe(true);
   });
 
   it('is empty without prompts and deterministic', () => {

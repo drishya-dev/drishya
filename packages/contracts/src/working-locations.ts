@@ -2,7 +2,7 @@
 export interface WorkingLocations { version: 1; last?: string; sessions: { id: string; revision?:number; entries: [string,unknown][] }[] }
 const record=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
 const fields=new Set('files preview developerWorkspace selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence filePanelLine explore compareAgents mapFocusPath filter follow held inspectorTab inspectorWidth readingPassageId start agentId kind server tool x y height k zoom top left id offset query line wrap formatted activeLine scope pages index width layout match trailWidth trailHidden right leftKey rightKey version primary secondary split pane ratio cursor visits location memory open name root harness days workspace'.split(' '));
-const slot=/^(peek\/tabs|surface\/(Git review|Git history|File reader|Captured file)|composer\/(collapsed|choice)|toolbox\/collapsed|location|history\/(top|anchor|heights)|desk\/(files|primary|secondary|split|pane|ratio)|desk\/document\/.+|folders\/(query|open|top|width)|map\/(yaw|pitch|camera|query|observed|changed|connections|file|page|neighborhood)|git\/(selected|page|open|width|historyWidth|filesHidden)|canvas\/(view|panel|panelFocus|camera)|home\/.+|evidence\/trail)$/;
+const slot=/^(peek\/tabs|surface\/(Git review|Git history|File reader|Captured file)|composer\/(collapsed|choice)|toolbox\/collapsed|location|history\/(top|anchor|heights|folded-turns)|desk\/(files|primary|secondary|split|pane|ratio)|desk\/document\/.+|folders\/(query|open|top|width)|map\/(yaw|pitch|camera|query|observed|changed|connections|file|page|neighborhood)|git\/(selected|page|open|width|historyWidth|filesHidden)|canvas\/(view|panel|panelFocus|camera)|home\/.+|evidence\/trail)$/;
 const readerSlot=/^(disk\/(start|version|query|line|lineInput|wrap|width|formatted)|file\/(width|trailWidth|trailHidden|query|start|left|right)|(?:.*\/artifact|diff)\/.+\/(pages|index|query|wrap|line|lineInput|offset|layout|match)|scroll\/.+)$/;
 const locationStrings='selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence mapFocusPath readingPassageId'.split(' ');
 function location(input:unknown):Record<string,unknown> {
@@ -67,6 +67,8 @@ export function workingLocations(input:unknown):WorkingLocations {
       if(key==='evidence/trail')return record(item)&&Array.isArray(item.visits);
       if(key==='desk/files'||key==='folders/open')return Array.isArray(item)&&item.every(x=>typeof x==='string')&&(key!=='desk/files'||item.length<=8);
       if(key==='history/heights')return Array.isArray(item)&&item.every(x=>Array.isArray(x)&&typeof x[0]==='string'&&typeof x[1]==='number');
+      // Folded turns, by the id of the passage that opens each one (TURN-1b).
+      if(key==='history/folded-turns')return Array.isArray(item)&&item.length<=512&&item.every(x=>typeof x==='string'&&x.length<=256);
       if(key==='history/anchor')return record(item)&&typeof item.id==='string'&&typeof item.offset==='number';
       if(key==='map/camera')return record(item)&&['x','y','k'].every(k=>typeof item[k]==='number')&&Number(item.k)>0&&Number(item.k)<=1000;
       if(key==='canvas/camera')return record(item)&&['x','y','zoom'].every(k=>typeof item[k]==='number')&&Number(item.zoom)>0&&Number(item.zoom)<=1000;

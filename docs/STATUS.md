@@ -33,11 +33,17 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
-| TURN-1b | @yash + Claude Opus 5.5 | `yash/turn-1b-collapse` | 2026-10-20 | `apps/ui/src/modern` History and turn header, `apps/ui/src` workspace store, `packages/scene` turn membership and goldens, `tests/browser` new collapse spec |
 
 ---
 
 ## Last session
+
+### Yash with Claude (Opus 5.5) — TURN-1b fold finished turns
+
+- **When:** 20 October 2026, `yash/turn-1b-collapse`.
+- **Delivered:** in Modern, a finished turn folds to its prompt and ledger by clicking the ledger line (chevron). Scene passages carry `inTurn`; `apps/ui/src/lib/turn-fold.ts` decides header/hidden slots and heights; `History.tsx` keeps the reading anchor, holds the document extent when a fold near the end would clamp the scroll, unfolds for selection/expansion/rail jumps, and never folds the active newest turn or replay. Folds persist as `history/folded-turns` (working-locations allowlist). Details in [TASKS](TASKS.md) TURN-1b.
+- **Validation:** unit 605/605; scene goldens differ only by `inTurn`; `turn-fold.spec.ts` 3/3; real 38-turn Codex session folded/unfolded with the header at 0 px movement, no page errors.
+- **Next:** GIT-1 (Sacred Timeline prototype; needs builder sign-off on stills), then UI-1.
 
 ### Yash with Claude (Sonnet 5.5) — UI-9 hover cards fit their content
 
