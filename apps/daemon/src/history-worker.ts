@@ -149,6 +149,7 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   for (const pin of query.pinnedPassageIds?.slice(0, 3) ?? []) selected.add(pin);
   const passages = scene.passages.filter((ps) => selected.has(ps.id));
   const opIds = new Set(passages.flatMap((ps) => ps.ops.map((op) => op.id)));
+  for (const op of historical.operations) if (opIds.has(op.id) && op.parentOperationId) opIds.add(op.parentOperationId);
   const proseIds = new Set(passages.flatMap((ps) => ps.prose.map((pr) => pr.id)));
   const operations = historical.operations.filter((op) => opIds.has(op.id));
   const prose = historical.prose.filter((pr) => proseIds.has(pr.id));

@@ -473,7 +473,35 @@ costState(0.0871, 3, 1);
 
 // ─── write ───────────────────────────────────────────────────────────────────────────────
 
+function writeTypedItems() {
+  const folder = join(out, 'codex-items');
+  mkdirSync(folder, { recursive: true });
+  const stamp = (n: number) => new Date(Date.UTC(2026, 9, 20, 10, 0, n)).toISOString();
+  const record = (type: string, payload: unknown, n = 0) => ({ timestamp: stamp(n), type, payload });
+  const meta = record('session_meta', { id: 'synthetic-typed-items', cwd: CWD, cli_version: '0.162.0-alpha.2' });
+  const call = (id: string, n: number, source = 'text(await tools.exec_command({cmd:"pnpm test"}));', name = 'exec') => record('response_item', { type: 'function_call', name, call_id: id, arguments: JSON.stringify({ code: source }) }, n);
+  const result = (id: string, n: number) => record('response_item', { type: 'function_call_output', call_id: id, output: 'Script completed' }, n);
+  const item = (value: unknown, n: number) => record('event_msg', { type: 'item_completed', thread_id: 'synthetic-thread', turn_id: 'synthetic-turn', item: value }, n);
+  const command = (id: string, cmd = 'pnpm test', exit = 0) => ({ type: 'CommandExecution', id, command: ['pwsh', '-Command', cmd], cwd: CWD, parsed_cmd: [{ type: 'unknown', cmd }], status: exit ? 'failed' : 'completed', exit_code: exit, duration: { secs: 1, nanos: 250000000 }, aggregated_output: 'Tests  441 passed (441)\n' });
+  const writeItems = (name: string, rows: unknown[]) => writeFileSync(join(folder, `${name}.jsonl`), [meta, ...rows].map(row => JSON.stringify(row)).join('\n') + '\n');
+  writeItems('one-command', [call('one', 1), item(command('cmd-one'), 2), result('one', 3)]);
+  writeItems('three-commands', [call('three', 1), item(command('cmd-a', 'pnpm test'), 2), item(command('cmd-b', 'node --test'), 3), item(command('cmd-c', 'printf synthetic', 2), 4), result('three', 5)]);
+  const patch = '*** Begin Patch\n*** Update File: src/a.ts\n@@\n-old\n+new\n*** End Patch';
+  writeItems('file-change', [call('patch', 1, `text(await tools.apply_patch(${JSON.stringify(patch)}));`), item({ type: 'FileChange', id: 'file-one', status: 'completed', changes: { 'src/a.ts': { type: 'update', unified_diff: '@@ -1 +1 @@\n-old\n+new', move_path: null } }, stdout: 'Applied', stderr: '' }, 2), result('patch', 3)]);
+  const mixedPatch = patch.replace('*** End Patch', '*** Update File: src/b.ts\n@@\n-old\n+new\n*** End Patch');
+  writeItems('mixed-patch-command', [call('mixed', 1, `text(await tools.apply_patch(${JSON.stringify(mixedPatch)})); text(await tools.exec_command({cmd:"pnpm test"}));`), item(command('mixed-command'), 2), item({ type: 'FileChange', id: 'mixed-files', status: 'completed', changes: { 'src/a.ts': { type: 'update', unified_diff: '@@ -1 +1 @@\n-old\n+new' }, 'src/b.ts': { type: 'update', unified_diff: '@@ -1 +1 @@\n-old\n+new' } } }, 3), result('mixed', 4)]);
+  writeItems('standalone', [item(command('orphan'), 1)]);
+  writeItems('ambiguous', [call('left', 1), call('right', 2), item(command('ambiguous'), 3), result('left', 4), result('right', 5)]);
+  writeItems('mcp-call', [record('response_item', { type: 'function_call', name: 'mcp__docs__search', call_id: 'mcp-id', arguments: '{"query":"synthetic lookup"}' }, 1), item({ type: 'McpToolCall', id: 'mcp-id', server: 'docs', tool: 'search', arguments: { query: 'synthetic lookup' }, status: 'completed', readOnlyHint: true, duration: { secs: 0, nanos: 500000000 }, result: { content: [{ type: 'text', text: 'Synthetic documentation' }], isError: false } }, 2), result('mcp-id', 3)]);
+  writeItems('subagent', [item({ type: 'SubAgentActivity', id: 'agent-item', kind: 'spawn', agent_thread_id: 'child-thread', agent_path: '/root/review', model: 'synthetic-model', reasoning_effort: 'high', agent_nickname: 'Reviewer' }, 1)]);
+  writeItems('image-view', [item({ type: 'ImageView', id: 'image-one', path: '/home/dev/shop/preview.png' }, 1)]);
+  writeItems('web-search', [item({ type: 'Extension', kind: 'web.search', id: 'web-one', query: 'synthetic docs', results: [{ title: 'Documentation', url: 'https://example.invalid/docs', domain: 'example.invalid', snippet: 'Synthetic result' }] }, 1)]);
+  writeItems('image-generation', [item({ type: 'Extension', kind: 'image.generation', id: 'generated-one', savedPath: '/home/dev/shop/generated.png', revisedPrompt: 'Synthetic generated image reference' }, 1)]);
+  writeItems('unknown', [item({ type: 'FutureItem', id: 'future', privateContent: 'MUST NOT PERSIST' }, 1)]);
+}
+if (process.argv.includes('--typed-items-only')) { writeTypedItems(); process.exit(0); }
 rmSync(out, { recursive: true, force: true });
+writeTypedItems();
 const write = (p: string, s: string) => {
   mkdirSync(dirname(p), { recursive: true });
   writeFileSync(p, s);

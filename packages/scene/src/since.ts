@@ -3,6 +3,7 @@
 // A boundary is an observation sequence (`receivedSequence`), stable across re-import.
 
 import type { Operation, Projection } from '@drishya/contracts';
+import { materialOperations } from '@drishya/contracts';
 import {operationObservations} from './operation-observations.ts';
 
 export interface SinceItem {
@@ -87,6 +88,7 @@ function item(kind: SinceItem['kind'], o: Operation, sequence:number,sequenceBas
  * An operation that started before the boundary but resolved after it counts: its outcome is new.
  */
 export function sinceBoundary(p: Projection, after: number): SinceDigest {
+  p = { ...p, operations: materialOperations(p.operations) };
   const observations=operationObservations(p);
   const position=(o:Operation,outcome=true)=>outcome?observations.ends.get(o.id)??observations.starts.get(o.id):observations.starts.get(o.id);
   const resolvedAfter = p.operations.filter((o) => {const sequence=position(o);return o.status !== 'running' && (after<0||sequence!==undefined&&sequence>after);});

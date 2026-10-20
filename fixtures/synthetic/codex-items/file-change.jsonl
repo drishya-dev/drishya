@@ -1,0 +1,4 @@
+{"timestamp":"2026-10-20T10:00:00.000Z","type":"session_meta","payload":{"id":"synthetic-typed-items","cwd":"/home/dev/shop","cli_version":"0.162.0-alpha.2"}}
+{"timestamp":"2026-10-20T10:00:01.000Z","type":"response_item","payload":{"type":"function_call","name":"exec","call_id":"patch","arguments":"{\"code\":\"text(await tools.apply_patch(\\\"*** Begin Patch\\\\n*** Update File: src/a.ts\\\\n@@\\\\n-old\\\\n+new\\\\n*** End Patch\\\"));\"}"}}
+{"timestamp":"2026-10-20T10:00:02.000Z","type":"event_msg","payload":{"type":"item_completed","thread_id":"synthetic-thread","turn_id":"synthetic-turn","item":{"type":"FileChange","id":"file-one","status":"completed","changes":{"src/a.ts":{"type":"update","unified_diff":"@@ -1 +1 @@\n-old\n+new","move_path":null}},"stdout":"Applied","stderr":""}}}
+{"timestamp":"2026-10-20T10:00:03.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"patch","output":"Script completed"}}

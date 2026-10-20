@@ -264,7 +264,8 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   // Dock: every instrument the recording ever uses, so the dock does not reshuffle while playing.
   const nativeMap = new Map<string, DockInstrument>();
   const mcpMap = new Map<string, DockServer>();
-  for (const op of p.operations) {
+  const scripts = new Set(p.operations.map(op => op.parentOperationId).filter(Boolean));
+  for (const op of p.operations.filter(op => !scripts.has(op.id))) {
     const used = started.has(op.id);
     const act = used && !ended.has(op.id);
     if (op.origin.type === 'mcp') {

@@ -32,12 +32,18 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-1 | @yash + Codex | `codex/perf-1-large-journals` | 2026-10-20 | New isolated benchmark script and focused benchmark checks; `docs/review/perf-1-large-journals.md`, IMPLEMENTATION_ROADMAP §7 and completion docs. Read-only native journals, disposable redacted stores. No ingest/adapter/contracts/projection/runtime edits while DATA-1/2 are claimed. |
-| DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (stacked on DATA-2) | 2026-10-20 | Adapter/contracts/projection, scene material counts, worker parent references, new fixtures/tests; `History.tsx` expanded-material wrapper and `Inspector.tsx` Script disclosure only (separate from READ-6's edit annotation). Handoff scope exceeds 15 files. Draft PR151. **D1, D2, D8 agreed by both (20 Oct); see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | TEST-2 | @yash + Claude | `yash/test-2-flaky-specs` | 2026-10-20 | `tests/browser/*.spec.ts` (hover-fit, settings-typography, turn-fold, prompt-timeline, product-workspace, fresh-workspace) and, only if a spec exposes a real defect, the one app file involved; docs. No capture, contracts, adapters or daemon work (at most 12 files). |
 
 ---
 
 ## Last session
+
+### Harsh with Codex — DATA-1 typed work and historical Script evidence
+
+- **When:** 20 October 2026. PR151 implements review125 S2 and BUG-5, stacked on DATA-2/PR149. Typed commands retain actual command/exit/duration/output; source-ID matching wins, otherwise exactly one open exec permits a labelled enclosing-call relationship. Multiple/zero open calls remain standalone. Nested patch outcomes require an exact path set. Mixed multi-file patch/test wrappers keep every real card and one captured Script parent in details. MCP enrichment retains existing input. Agent metadata does not invent lineage from proximity; images remain references, unknown shapes metadata-only, and old observation IDs stay stable. No second reducer bump.
+- **Verified locally:** `corepack pnpm check` — 695 tests; full browser run — 286 passed, 25 skipped. Dedicated synthetic and isolated real historical-reader journeys both passed after the mixed-wrapper correction. The real copy retained all 4,992 old observations, gained 1,484 typed observations and exposes 1,550 child operations including edits, plus 42 test runs; the next rescan adds zero. Native/live/refresh browser routes were blocked. Package verification passed; demo regeneration is byte-identical and old scene goldens are unchanged. Standard ten-minute synthetic reader soak: 84 rounds, peak 806 DOM nodes, 604478 ms.
+- **Latest integration:** rebased onto the DATA-2 candidate containing main `343acf5` (READ-6 and bounded JSONL batches). The integrated check passes 705 tests; focused typed/Usage/READ-6 browser checks, including the real historical reader, packaging and identical demo checks pass. Full browser/soak counts above predate that upstream rebase. PERF-2's performance gate remains open and is not waived.
+- **Limits/next:** the historical 441-test journal was not among the two available imported Codex sources; the 441-pass synthetic regression and real 42-run recording are verified, but that exact historical example remains unverified. No signed-in native/account turns, hosted CI or broad physical/platform/typed-heavy workload readiness is claimed. `SubAgentActivity` and image-generation shapes have synthetic coverage; per-CLI limits are in the adapter README. Typed reasoning/message extras remain S3/S4, D3/D7 stay undecided and FILES-1's deletion display gate remains open. Both PRs are for Yash's review; do not merge here. Preserve PERF-1/TEST-2 claims.
 
 ### Harsh with Codex — DATA-2 recorded usage and retained-journal enrichment
 

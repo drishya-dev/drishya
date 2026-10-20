@@ -1,4 +1,5 @@
 import type { Projection } from '@drishya/contracts';
+import { materialOperations } from '@drishya/contracts';
 import type { ComposeInput, Marker, Scene } from './index.ts';
 
 /** Local reader API, separate from the immutable capture/event schema. */
@@ -30,7 +31,7 @@ export interface HistoryPage {
 
 export type HistorySummary = ReturnType<typeof historySummary>;
 export function historySummary(p: Projection, from = 0) {
-  const ops = p.operations.filter((op) => op.startSequence >= from);
+  const ops = materialOperations(p.operations).filter((op) => op.startSequence >= from);
   const editedFiles = [...new Set(ops.filter((op) => (op.kind === 'edit' || op.kind === 'write') && op.status === 'ok').flatMap((op) => op.paths.map((ref) => ref.path)))];
   const tests = ops.filter((op) => op.kind === 'test');
   const last = tests.at(-1);

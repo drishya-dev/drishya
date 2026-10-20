@@ -71,6 +71,17 @@ export function Inspector({ projection }: { projection: Projection }) {
 }
 
 export function Detail({ op, projection }: { op: Operation; projection: Projection }) {
+  return <><OperationMaterial op={op} projection={projection} /><ScriptDetails op={op} projection={projection} /></>;
+}
+
+export function ScriptDetails({ op, projection }: { op: Operation; projection: Projection }) {
+  const parent = op.parentOperationId ? projection.operations.find(item => item.id === op.parentOperationId) : undefined;
+  const script = projection.artifacts.find(artifact => op.artifactIds.includes(artifact.id) && artifact.id.endsWith('_script'));
+  const relation = parent && projection.links.find(link => link.from === parent.id && link.to === op.id && link.relation === 'tool-result');
+  return parent || script ? <details className="captured-script" onClick={event => event.stopPropagation()}><summary>Script</summary><p className="insp-note">{parent ? `${relation?.explanation ?? 'Captured script reference.'} This relationship does not assert which instruction caused the work.` : 'The captured script containing this patch.'}</p>{parent ? <OperationMaterial op={parent} projection={projection} /> : <ArtifactCode id={script?.id} />}</details> : null;
+}
+
+function OperationMaterial({ op, projection }: { op: Operation; projection: Projection }) {
   const d = op.detail;
   const set = useApp((s) => s.set);
   const artifacts = projection.artifacts.filter((a) => op.artifactIds.includes(a.id));
