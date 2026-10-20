@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| TEST-1 | @yash + Claude Sonnet 5.5 | `yash/test-1-browser-specs` | 2026-10-20 | `tests/browser/*.spec.ts`, `tests/browser/legacy-test.ts` (test code only; no product code unless a spec reveals a real bug) |
 
 ---
 
