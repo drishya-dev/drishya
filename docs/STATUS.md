@@ -31,12 +31,17 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TURN-1 (regression fix) | @yash + Claude Sonnet 5.5 | `yash/turn-1-layout-shift` | 2026-10-20 | `components/TurnsWatcher.tsx`, `components/History.tsx` (TurnBlock) |
 | BUG-7 | @harsh + Claude Opus 5.5 | `harsh/bug-7-open-refresh-race` | 2026-10-19 | `state.ts` (openRecording/reloadProjection), `App.tsx` (useLiveUpdates), new unit test |
 
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — TURN-1 regression fix
+
+- **When:** 20 October 2026, `yash/turn-1-layout-shift`.
+- **Delivered:** my TURN-1 (#130) broke the `session detours` journey (`fresh-workspace.spec.ts`), which I had not run: the ledger makes the first passage taller than the list's height estimate, so mounting it legitimately moves `scrollTop` from 160 to 199 to keep the content still. The journey's real assertion is the anchor surviving the detour; its `scrollTop === 160` precondition now waits for the scroll to settle. 10/10. Not a user-visible bug.
+- **Lesson:** run the whole `fresh-workspace` file before merging UI changes. It still has 17 failures from LIVE-2's composer pill (TEST-1).
 
 ### Harsh with Codex, then Claude (Opus 5.5) — Investigation, saved evidence and draft recovery finishing
 

@@ -685,7 +685,9 @@ test('Modern keeps file evidence, search controls and reading position across se
   const history=page.locator('.history');
   await history.dispatchEvent('keydown',{key:'Home'});
   await history.evaluate(el => { el.scrollTop = 160; });
-  await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBe(160);
+  // Mounting the first passages swaps estimated heights for measured ones, and the list keeps the visible content still by
+  // moving scrollTop. The journey is about the anchor surviving the detour, so wait for the scroll to settle at or past 160.
+  await expect.poll(async()=>{const first=await history.evaluate(el=>el.scrollTop);await page.waitForTimeout(300);return first>=160&&first===await history.evaluate(el=>el.scrollTop);}).toBe(true);
   const anchor=await history.evaluate(el=>{const node=[...el.querySelectorAll<HTMLElement>('.passage-slot')].find(node=>node.getBoundingClientRect().bottom>el.getBoundingClientRect().top+1)!;return {id:node.dataset.passageId,offset:node.getBoundingClientRect().top-el.getBoundingClientRect().top};});
   await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/total.ts');
   const row = page.locator('[data-spine-path="src/cart/total.ts"]').first();
