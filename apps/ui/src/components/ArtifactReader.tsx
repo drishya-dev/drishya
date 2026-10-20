@@ -5,6 +5,8 @@ import { ToolOutput } from './ToolOutput.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
 import { useReadingReference } from './ReadingReference.tsx';
 import { SourceFind } from './SourceFind.tsx';
+import { PatchControls } from './PatchControls.tsx';
+import { CapturedSourceControls } from './CapturedSourceControls.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useApp } from '../state.ts';
@@ -154,14 +156,9 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
     if (offset < pageStart || offset >= (view.nextStart ?? pageStart)) { setPages([offset]); setIndex(0); }
     else reveal(line);
   };
-  return (
-    <div className={`artifact-reader${kind === 'code' ? ` source-reading${wrap ? ' wrap-source' : ''}` : ''}`} ref={reader}>
-      {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.range ? `${view.artifact.kind === 'excerpt' ? 'Excerpt' : 'Historical source'} · lines ${view.artifact.range.start}–${view.artifact.range.end}` : 'Historical artifact'}</span></div>}
-      <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span>{kind === 'code' && <button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button>}<button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>
-      {kind === 'code' && <SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in loaded source page" idleLabel={loading ? 'Opening stored source page…' : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'} />}
-      {kind === 'code' && source?.artifactFind && query && <div className="stored-source-find"><button className="btn ghost small" disabled={finding || loading} onClick={() => void findStored()}>{finding ? 'Searching stored content…' : 'Find next stored match'}</button><span className="muted small" role="status">{findStatus || 'Literal search from this page through the stored artifact'}</span></div>}
-      {kind === 'code' && <details className="source-utilities">
-        <summary>Source tools · go to line, copy & pin range</summary>
+  const modernSource = kind === 'code' && typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern';
+  const copyPageAction = <button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button>;
+  const sourceTools = <>
       <form className="source-go" onSubmit={(e) => { e.preventDefault(); goToLine(); }}>
         <input inputMode="numeric" aria-label="Go to stored source line" placeholder="Source line" maxLength={16} value={lineInput} onChange={(e) => { setLineInput(e.target.value); setLineError(undefined); }} aria-invalid={!!lineError} />
         <button className="btn ghost small" disabled={!view.totalLines}>Go to line</button>
@@ -182,7 +179,14 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
         }}>Pin range</button>}
         <span className="muted small" role="status">{rangeStatus || 'Loaded page only · one temporary reference'}</span>
       </div>}
-      </details>}
+  </>;
+  return (
+    <div className={`artifact-reader${kind === 'code' ? ` source-reading${wrap ? ' wrap-source' : ''}` : ''}`} ref={reader}>
+      {provenance && <div className="snapshot-provenance"><ProvenanceBadge artifact={view.artifact} /><span className="muted small">{view.artifact?.range ? `${view.artifact.kind === 'excerpt' ? 'Excerpt' : 'Historical source'} · lines ${view.artifact.range.start}–${view.artifact.range.end}` : 'Historical artifact'}</span></div>}
+      {modernSource ? <><CapturedSourceControls query={query} change={q=>{setQuery(q);setActiveLine(undefined);}} matches={matches} active={activeLine} move={moveMatch} context={loading?'Opening stored source page…':text?`${pageLabel} · lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only`:'Empty source page'} wrap={wrap} toggleWrap={()=>setWrap(!wrap)}>{copyPageAction}{copied&&<span role="status" className="muted small">{copied}</span>}{sourceTools}</CapturedSourceControls></> : <div className="reader-tools"><span className="material-context">{pageLabel}{view.nextStart !== undefined ? ` · ${view.nextStart - pageStart} lines` : ''}</span>{kind === 'code' && <button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap lines</button>}<button className="btn ghost small" disabled={loading} onClick={() => { void navigator.clipboard.writeText(text).then(() => setCopied(`Copied ${pageLabel.toLowerCase()}`), () => setCopied('Copy unavailable · select text to copy')); }}>Copy {pageLabel.toLowerCase()}</button><span role="status" className="muted small">{copied}</span></div>}
+      {kind === 'code' && !modernSource && <SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in loaded source page" idleLabel={loading ? 'Opening stored source page…' : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'} />}
+      {kind === 'code' && source?.artifactFind && query && <div className="stored-source-find"><button className="btn ghost small" disabled={finding || loading} onClick={() => void findStored()}>{finding ? 'Searching stored content…' : 'Find next stored match'}</button><span className="muted small" role="status">{findStatus || 'Literal search from this page through the stored artifact'}</span></div>}
+      {kind === 'code' && !modernSource && <details className="source-utilities"><summary>Source tools · go to line, copy &amp; pin range</summary>{sourceTools}</details>}
       {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView scrollRef={sourceViewport} text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <ToolOutput text={text} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(pageStart > 0 || next) && (
@@ -203,6 +207,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
 }
 
 export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope = 'captured' }: { hunks: Hunk[]; path?: string; navigationKey?: string; scope?: 'captured' | 'current-git' | 'git-commit' | 'source-comparison' | 'local-draft' }) {
+  const modern = typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern';
   const [offset, setOffset] = useEvidenceState(`diff/${navigationKey}/offset`, () => firstChangeOffset(hunks));
   const [layout, setLayout] = useEvidenceState<'unified' | 'split'>(`diff/${navigationKey}/layout`, 'unified');
   const [query, setQuery] = useEvidenceState(`diff/${navigationKey}/query`, '');
@@ -224,10 +229,10 @@ export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
   return <div ref={reader} className={`artifact-reader diff-reader diff-${layout}${wrap ? ' reader-wrap' : ''}`}>
-    <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button><button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(value => !value)}>Wrap lines</button>
+    {modern ? <PatchControls layout={layout} setLayout={setLayout} wrap={wrap} toggleWrap={()=>setWrap(value=>!value)} hunk={Math.max(0,starts.findLastIndex(start=>start<=offset))+1} hunks={hunks.length} jump={index=>{setOffset(starts[index]!);setActive(undefined);}} query={query} change={value=>{setQuery(value);setActive(undefined);}} matches={matches} active={active} move={move}/> : <><div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button><button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(value => !value)}>Wrap lines</button>
       <label className="patch-hunk-jump">Hunk <input type="number" aria-label="Jump to patch hunk" min={1} max={hunks.length} value={Math.max(0, starts.findLastIndex(start => start <= offset)) + 1} onChange={e => { const index = Number(e.target.value) - 1; if (Number.isInteger(index) && index >= 0 && index < starts.length) { setOffset(starts[index]!); setActive(undefined); } }} /> of {hunks.length}</label>
     </div>
-    <SourceFind query={query} change={value => { setQuery(value); setActive(undefined); }} matches={matches} activeLine={active} move={move} label="Find in patch" idleLabel="Whole loaded patch" scopeLabel="this patch" />
+    <SourceFind query={query} change={value => { setQuery(value); setActive(undefined); }} matches={matches} activeLine={active} move={move} label="Find in patch" idleLabel="Whole loaded patch" scopeLabel="this patch" /></>}
     {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
     <div ref={viewport} className="diff-scroll" tabIndex={0} role="region" aria-label="Patch content">
       <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} activeOffset={active} showRemaining={false} /></div>

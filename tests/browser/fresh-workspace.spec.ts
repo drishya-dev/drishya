@@ -651,7 +651,7 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await expect.poll(()=>git.evaluate(node=>Math.abs(node.getBoundingClientRect().width-1000))).toBeLessThanOrEqual(8);
   const draggedWidth=Math.round((await git.boundingBox())!.width);
   const patchWidth=(await git.locator('.git-patch').boundingBox())!.width;
-  await git.getByRole('button',{name:/^Hide files/}).click();
+  await git.getByRole('button',{name:/^Files/}).click();
   await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeHidden();
   expect((await git.locator('.git-patch').boundingBox())!.width).toBeGreaterThan(patchWidth+100);
   await expect(git.locator('.git-patch-reader')).toContainText('42');
@@ -660,8 +660,8 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await expect(git).toHaveCount(0);
   await page.getByRole('button',{name:'Git review',exact:true}).click();
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(draggedWidth);
-  await expect(git.getByRole('button',{name:/^Show files/})).toHaveAttribute('aria-expanded','false');
-  await git.getByRole('button',{name:/^Show files/}).click();
+  await expect(git.getByRole('button',{name:/^Files/})).toHaveAttribute('aria-expanded','false');
+  await git.getByRole('button',{name:/^Files/}).click();
   await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
   await git.getByRole('button',{name:'Close Git review'}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
@@ -1320,7 +1320,7 @@ test('whole-file Workspace search and line navigation reach distant source with 
   const reader=desk.getByRole('region',{name:'Workspace file src/cart/large.ts',exact:true});
   await expect(reader.locator('footer')).toContainText('10000 lines');
   await reader.getByRole('searchbox',{name:'Find in src/cart/large.ts',exact:true}).fill('largeLine9000');
-  await expect(reader.locator('.source-find')).toContainText('1 matching line in this file');
+  await expect(reader.locator('.source-find [role=status]')).toHaveAttribute('aria-label','1 matching line in this file');
   await reader.getByRole('button',{name:'Next match',exact:true}).click();
   await expect(reader.locator('[data-source-line="9000"]')).toHaveAttribute('aria-current','location');
   expect(await reader.locator('[data-source-line]').count()).toBeLessThan(150);
