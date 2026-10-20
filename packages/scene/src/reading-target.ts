@@ -4,6 +4,7 @@ export interface ReadingQuery {
   kind: 'operation' | 'edit' | 'failure' | 'turn';
   direction: 1 | -1;
   from?: string;
+  turnFrom?: string;
   at?: number;
   edge?: 'first' | 'last';
   agent?: string;
@@ -11,7 +12,7 @@ export interface ReadingQuery {
   server?: string;
   operationKind?: string;
 }
-export interface ReadingTarget { type: 'operation' | 'turn'; step: number; id?: string }
+export interface ReadingTarget { type: 'operation' | 'turn'; step: number; id?: string; turnKey?: string }
 const indexes = new WeakMap<Projection, { operations: Operation[]; turns: ReadingTarget[] }>();
 
 /** A compact cursor over all captured history, independent of the resident page. */
@@ -20,12 +21,13 @@ export function readingTarget(p: Projection, q: ReadingQuery): ReadingTarget | n
   if (!index) {
     index = {
       operations: [...p.operations].sort((a, b) => a.startSequence - b.startSequence),
-      turns: p.timeline.flatMap((item, step) => item.type === 'turn' ? [{ type: 'turn' as const, step }] : []),
+      turns: p.timeline.flatMap((item, step) => item.type === 'turn' ? [{ type: 'turn' as const, step, turnKey: item.id }] : []),
     };
     indexes.set(p, index);
   }
   const from = index.operations.find(op => op.id === q.from);
-  const at = from?.startSequence ?? q.at;
+  const fromTurn = index.turns.find(turn => turn.turnKey === q.turnFrom);
+  const at = from?.startSequence ?? fromTurn?.step ?? q.at;
   const operations = index.operations.filter(op =>
     (!q.agent || op.agentId === q.agent) && (!q.tool || op.tool === q.tool) &&
     (!q.server || op.origin.type === 'mcp' && op.origin.server === q.server) &&

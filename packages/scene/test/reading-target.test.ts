@@ -4,15 +4,15 @@ import type { Operation, Projection, ReplayBundle } from '@drishya/contracts';
 import { readingTarget } from '../src/reading-target.ts';
 const base=(JSON.parse(readFileSync(new URL('../../../apps/ui/public/demo/bundle.json',import.meta.url),'utf8')) as ReplayBundle).projection;
 const op=(id:string,step:number,kind:Operation['kind']='read',status:Operation['status']='ok'):Operation=>({...base.operations[0]!,id,startSequence:step,kind,status});
-const p:Projection={...base,operations:[op('read',1),op('edit',3,'edit'),op('bad',5,'shell','error'),op('write',8,'write'),op('last',11)],timeline:[{type:'turn',id:'turn-1',agentId:'main',sequence:10,prompt:'First'},{type:'op-start',id:'start',agentId:'main',sequence:11,operationId:'read'},{type:'turn',id:'turn-1',agentId:'main',sequence:100,prompt:'Second'}]};
+const p:Projection={...base,operations:[op('read',1),op('edit',3,'edit'),op('bad',5,'shell','error'),op('write',8,'write'),op('last',11)],timeline:[{type:'turn',id:'turn-1',agentId:'main',sequence:10,prompt:'First'},{type:'op-start',id:'start',agentId:'main',sequence:11,operationId:'read'},{type:'turn',id:'turn-2',agentId:'main',sequence:100,prompt:'Second'}]};
 describe('whole-history reading cursors',()=>{
   it('moves in captured timeline positions, not observation sequence, and never wraps',()=>{
     expect(readingTarget(p,{kind:'operation',direction:1,from:'read'})).toEqual({type:'operation',id:'edit',step:3});
     expect(readingTarget(p,{kind:'operation',direction:-1,from:'edit'})).toEqual({type:'operation',id:'read',step:1});
     expect(readingTarget(p,{kind:'operation',direction:-1,from:'read'})).toBeNull();
     expect(readingTarget(p,{kind:'operation',direction:1,from:'last'})).toBeNull();
-    expect(readingTarget(p,{kind:'turn',direction:1,at:0})).toEqual({type:'turn',step:2});
-    expect(readingTarget(p,{kind:'turn',direction:-1,at:2})).toEqual({type:'turn',step:0});
+    expect(readingTarget(p,{kind:'turn',direction:1,at:0})).toEqual({type:'turn',step:2,turnKey:'turn-2'});
+    expect(readingTarget(p,{kind:'turn',direction:-1,at:2})).toEqual({type:'turn',step:0,turnKey:'turn-1'});
   });
   it('supports edit/write, failures and absolute edges across unloaded operations',()=>{
     expect(readingTarget(p,{kind:'edit',direction:1,from:'edit'})?.id).toBe('write');
@@ -30,5 +30,7 @@ describe('whole-history reading cursors',()=>{
   it('does not reuse an old cursor index after a capture revision',()=>{
     expect(readingTarget(p,{kind:'operation',direction:1,from:'last'})).toBeNull();
     expect(readingTarget({...p,operations:[...p.operations,op('new',12)]},{kind:'operation',direction:1,from:'last'})?.id).toBe('new');
+    const shifted={...p,timeline:[p.timeline[1]!,...p.timeline]};
+    expect(readingTarget(shifted,{kind:'turn',direction:-1,turnFrom:'turn-2',at:2})).toEqual({type:'turn',step:1,turnKey:'turn-1'});
   });
 });

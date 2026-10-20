@@ -25,7 +25,7 @@ export function ReadingKeys(props: {
     let cursor: ReadingTarget | undefined, chain = Promise.resolve();
     const card = (key?: string) => [...(latest.current.root.current?.querySelectorAll<HTMLElement>('article[data-op-id]') ?? [])].find(node => node.dataset.opId === key);
     const valid = () => alive && useApp.getState().recordingId === id && useApp.getState().source === source;
-    const readingValid = () => valid() && useApp.getState().mode === 'history' && !useApp.getState().developerWorkspace && !useApp.getState().explore;
+    const readingValid = () => valid() && useApp.getState().screen === 'viewer' && useApp.getState().mode === 'history' && !useApp.getState().developerWorkspace && !useApp.getState().explore;
     const openHelp = () => { epoch++; window.dispatchEvent(new Event('drishya-reading-help')); };
     const focusMaterial = (key?: string) => {
       const root = latest.current.root.current;
@@ -87,7 +87,7 @@ export function ReadingKeys(props: {
           const query: ReadingQuery = {
             kind: k === 'n' || k === 'p' ? 'edit' : k === 'f' ? 'failure' : k === 't' || k === 'T' ? 'turn' : 'operation',
             direction: ['k','p','T'].includes(k) ? -1 : 1, from,
-            at: cursor?.step, edge: k === 'g' ? 'first' : k === 'G' ? 'last' : undefined,
+            at: cursor?.step, turnFrom: cursor?.turnKey, edge: k === 'g' ? 'first' : k === 'G' ? 'last' : undefined,
             agent: current.filter?.agentId, tool: current.filter?.tool, server: current.filter?.server, operationKind: current.filter?.kind,
           };
           current.set({ follow: false });

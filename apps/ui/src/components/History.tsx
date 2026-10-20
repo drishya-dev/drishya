@@ -545,7 +545,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   return (
     <>
-    <div className="history" role="region" aria-label="Captured work" tabIndex={0} ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
+    <div className="history" role={modern?"region":undefined} aria-label={modern?"Captured work":undefined} tabIndex={modern?0:undefined} ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
       if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; }
       // A slot still moving after a fold would be remembered at its moving position.
       for (const animation of foldAnimations.current) animation.finish();
