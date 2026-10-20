@@ -62,6 +62,7 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     expect(await history.locator('[data-op-id]').count()).toBeLessThan(500);
     await page.keyboard.press('/');
     await page.locator('.search input').fill('synthetic-5999');
+    await expect(page.locator('.search-results .search-hit small').first()).toContainText(/Reply|Call|Result|Prompt|Reasoning/, { timeout: 15000 });
     await page.locator('.search-results button').first().click();
     await expect(page.locator(`[data-op-id="${recordingId}.call-5999"]`)).toBeVisible();
     await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();

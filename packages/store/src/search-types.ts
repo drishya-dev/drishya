@@ -12,3 +12,9 @@ export interface LibrarySearchPage {
   items: { recordingId: string; title?: string; workspaceRoot?: string; harness: string; observationId: string; sourceTime?: string; snippet: string }[];
   nextBefore?: number;
 }
+
+/** One in-session hit with where it sits: the turn it falls in and, for tool activity, the tool and path. Read-only context. */
+export interface SessionSearchHit {
+  observationId: string; snippet: string;
+  kind?: string; time?: string; turn?: number; tool?: string; path?: string; command?: string;
+}

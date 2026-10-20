@@ -11,7 +11,7 @@ import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
 import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
@@ -39,6 +39,9 @@ import { ReviewQuestionsEntry } from './ReviewQuestions.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry } from './Workbench.tsx';
 import { CanvasWorkspace } from './CanvasWorkspace.tsx';
+import { ago } from '../lib/git-commit-rows.ts';
+import './search-context.css';
+import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
 
 export function Viewer() {
@@ -727,6 +730,7 @@ function summarize(p: Projection, from: number) {
 
 // ─── search ──────────────────────────────────────────────────────────────────────────────
 
+const HIT_KIND: Record<string, string> = { 'message.user': 'Prompt', 'message.assistant': 'Reply', reasoning: 'Reasoning', 'tool.call': 'Call', 'tool.result': 'Result' };
 function Search({ projection }: { projection: Projection }) {
   const panel = useRef<HTMLDivElement>(null);
   const open = useApp((s) => s.searchOpen);
@@ -742,7 +746,7 @@ function Search({ projection }: { projection: Projection }) {
   const graph = useApp(s => s.graph);
   const mode = useApp(s => s.mode);
   const step = useApp(s => s.step);
-  const [hits, setHits] = useState<{ observationId: string; snippet: string }[]>([]);
+  const [hits, setHits] = useState<SessionSearchHit[]>([]);
   useEffect(() => {
     const element = panel.current;
     if (!element) return;
@@ -786,9 +790,13 @@ function Search({ projection }: { projection: Projection }) {
       <p className="search-scope-note">{scope === 'captured' ? mode === 'replay' ? 'Captured work visible at this replay step' : 'Whole recording · up to 50 results per recording' : graph?.temporal === 'current' ? `Current index${graph.stale ? ' · out of date' : ''}${graph.truncated ? ' · partial' : ''} · first 50 matches · names only` : 'Captured file references · first 50 matches · names only'}</p>
       <div className="search-results">
         {scope === 'captured' && visibleHits.map((h, i) => (
-          <button key={i} onClick={() => go(h.observationId)}>
-            {h.snippet.split(/[«»]/).map((part, j) => (j % 2 ? <mark key={j}>{part}</mark> : part))}
-          </button>
+          <Fragment key={i}>
+            {h.turn !== undefined && h.turn !== visibleHits[i - 1]?.turn && <div className="search-turn" role="presentation">Turn {h.turn}</div>}
+            <button className="search-hit" onClick={() => go(h.observationId)}>
+              <span>{h.snippet.split(/[«»]/).map((part, j) => (j % 2 ? <mark key={j}>{part}</mark> : part))}</span>
+              <small>{[HIT_KIND[h.kind ?? ''] ?? h.kind, h.kind?.startsWith('tool.') ? h.tool : undefined, h.path ?? h.command, h.time ? ago(h.time) : undefined].filter(Boolean).join(' · ')}</small>
+            </button>
+          </Fragment>
         ))}
         {scope === 'files' && files.map(file => <button key={file.id} onClick={() => set({ filePanel: file.id, filePanelFocus: undefined, currentFile: undefined, searchOpen: false })}>{file.path}<span aria-hidden="true"> ↗</span></button>)}
         {loading && <div role="status">Searching captured work…</div>}

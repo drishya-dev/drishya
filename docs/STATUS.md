@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| REVIEW-2 | @yash + Claude Sonnet 5.5 | `yash/review-2-search-context` | 2026-10-20 | In-session search context: `packages/store/src/index.ts` `search()` only (extra read-only columns), `apps/ui/src/api.ts` hit type, `Viewer.tsx` Search component + scoped CSS, store/browser tests, TASKS/STATUS (at most 9 files). No contracts/adapters/projection (DATA-1/2), no library search. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -39,6 +38,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — REVIEW-2 search result context
+
+- **When:** 20 October 2026. `Store.search` joins each hit to its observation (turn, kind, tool, path/command, time) and returns capture order; the Search panel groups by turn with one context line per hit; the jumped-to operation keeps a marker. A dropped backslash in the query splitter (`/s+/`) was caught by the b4 history spec and fixed, with a multi-word regression test. Verified on a real Codex session (47 hits, 16 turn headers) and the search specs (15 passed).
+- **Note:** two `classic-refinement` explorer specs already fail on `main` (found while checking Harsh's #149); not touched here.
 
 ### Yash with Claude (Sonnet 5.5) — prompt rail made quiet (TURN-3 follow-up)
 
