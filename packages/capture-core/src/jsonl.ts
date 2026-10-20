@@ -29,7 +29,7 @@ export interface ReadResult {
 
 export interface ReadOptions {
   maxRecordBytes?: number;
-  /** Stop after this many bytes so one call stays bounded; call again to continue. */
+  /** Hard byte ceiling. May yield earlier at a complete-record soft batch; continue from cursor. */
   maxReadBytes?: number;
   /** Accept a final line with no trailing newline (the file is complete, not being written). */
   acceptUnterminated?: boolean;
@@ -37,6 +37,9 @@ export interface ReadOptions {
 
 const FINGERPRINT_BYTES = 1024;
 const CHUNK = 1 << 20;
+// Yield at complete records before an ingest turn must seal/store a large array. This
+// is a soft batch budget, separate from the hard read and individual-record limits.
+const BATCH_BYTES = 4 * 1024 * 1024;
 
 export async function fingerprintOf(path: string): Promise<string> {
   const fh = await open(path, 'r');
@@ -75,6 +78,7 @@ export async function readJsonl(path: string, from: SourceCursor, opts: ReadOpti
 
   const fh = await open(path, 'r');
   try {
+    const batchStart = cursor.offset;
     let pos = cursor.offset;
     const end = Math.min(st.size, cursor.offset + maxRead);
     let pending: Buffer[] = [];
@@ -117,6 +121,7 @@ export async function readJsonl(path: string, from: SourceCursor, opts: ReadOpti
         lineStart = lineEnd;
         cursor.offset = lineEnd;
         i = stop + 1;
+        if (cursor.offset - batchStart >= BATCH_BYTES) return { records, cursor, reset, size: st.size };
       }
       pos += bytesRead;
     }

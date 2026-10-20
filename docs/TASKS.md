@@ -621,6 +621,11 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 
 - [ ] **PERF-1 · Very large journals** · P1 · `perf` — import and tail the local 564 MB, 232 MB and 166 MB Codex rollouts. Measure time, peak RSS and UI responsiveness; reading is already chunked (`capture-core/jsonl.ts`). Record the results in IMPLEMENTATION_ROADMAP §7.
 - [ ] **PERF-2 · Restore large-journal budgets** · P1 · `perf` `bug` — PERF-1 (#171) measures peak RSS528.73MiB and append/browser stalls. Reduce batch resource pressure without dropping records or lowering record limits; preserve IDs/order and repeat-sync idempotence. Coordinate DATA-1/2 runtime files, retest after their merges; actual interaction p95<100ms, visible update<1.5s and RSS≤512MiB remain reference gates, physical acceptance separate. Current Codex scope is JSONL batching/yield points only; broader acceptance stays open until the full matrix passes.
+  - **20 October, #174 accepted for merge by the builder:**4MiB soft complete-record batches preserve16MiB individual limits, offsets, oversize gaps and replay identities. Five rotated actual564MB comparisons: median RSS514.50→389.52MiB, but median bulk time7.12→8.14s and API targets still fail.688 units pass. [Tradeoff/report](review/perf-2-jsonl-batches.md). **Parent PERF-2 not done, not a release gate pass.** Builder explicitly accepts the current measured memory/import-time tradeoff for this merge; follow-up remains required.
+    - [x] Complete-record batching, record/offset/gap regressions and five rotated comparisons.
+    - [ ] Profile and resolve remaining import/API/UI latency; reconsider the batch budget against the measured slowdown.
+    - [ ] Coordinate DATA-1/2 retention changes, repeat full resource/interaction/visible-update matrix and keep physical REL-2/REL-3 acceptance separate.
+
 
 - [ ] **REL-1 · Managed-runtime update vs antivirus** · P2 — verify that a supported idle-time update resolves the recurring AV conflict; never interrupt active work or change antivirus protection (review 38).
 - [ ] **REL-2 · Physical platform acceptance** · P2 — lower-resource and lower-core machines; Windows, macOS and Linux; memory, large-repo and long-session performance; real phones and input devices; GPU fallback.
