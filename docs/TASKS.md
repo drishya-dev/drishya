@@ -480,6 +480,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - **Accept:** fewer outlines on screen; identity visible at all widths; nothing overlaps, including the bottom-corner Tools/Follow pills at narrow widths (residual from BUG-4).
 
 - [ ] **UI-2 · Typography floor** · P1 · `ui` — 280 CSS declarations are ≤ 10 px (14 at 7 px, 53 at 8 px, 84 at 9 px). Set a floor of 11 px for meta and 12–13 px for controls and labels; raise secondary-text contrast to ≥ 4.5:1 on every palette. Check with the existing contrast guard.
+  - [x] **20 October, Home (PR #145):** 9–10px metadata raised to11px; About/refresh/filter controls meet12px. Theme-aware Claude Home mark replaces a fixed pale tint. Existing contrast guard plus seven-palette mark checks; real-session Home and300-session keyboard/320px layouts verified. [Evidence](review/ui-2-home-typography.md). Other surfaces remain open.
 
 - [ ] **UI-3 · Uiverse / component-library pass** · P1 · `ui` `motion`
   - **19 October progress (107):** Switch/minimal-input/hover references assessed; original token-based controls/focus/fields with motion/resource/forced-color fallbacks implemented. No copied library/runtime dependency. New shimmer/prototype-choice scope remains separate.
