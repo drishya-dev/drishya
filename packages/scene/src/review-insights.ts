@@ -7,7 +7,7 @@ export interface PromptOverview {id:string;ordinal:number;step:number;sequence:n
 export interface ReviewInsightsPage {recordingId:string;title?:string;through:number;page:number;findingCount:number;promptCount:number;findings:ReviewFinding[];prompts:PromptOverview[];facts:SinceSnapshot}
 const example=(op:Operation,starts:Map<string,number>)=>({operationId:op.id,sequence:starts.get(op.id)??op.startSequence,sequenceBasis:starts.has(op.id)?'captured-observation' as const:'timeline-position' as const});
 const examples=(ops:Operation[],starts:Map<string,number>)=>ops.length?[example(ops[0]!,starts),...(ops.length>1?[example(ops.at(-1)!,starts)]:[])]:[];
-function commandIdentity(op:Operation,artifacts:Map<string,Artifact>):string|undefined {
+export function commandIdentity(op:Operation,artifacts:Map<string,Artifact>):string|undefined {
   if(op.detail.kind!=='shell'&&op.detail.kind!=='test')return;
   const input=op.artifactIds.find(id=>id.endsWith('_input'));
   if(!input&&/^\s*(?:text\(\s*)?\(?await\s+tools\.(?:write_stdin|wait)\s*\(/.test(op.detail.command)&&! /tools\.(?:exec_command|apply_patch)\s*\(/.test(op.detail.command))return;

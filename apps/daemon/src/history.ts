@@ -11,6 +11,7 @@ import type { TurnLedger } from '../../../packages/scene/src/turns.ts';
 import type { Marker } from '@drishya/scene';
 import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
 import type { VerificationTrail } from '../../../packages/scene/src/verification.ts';
+import type { FixChain } from '../../../packages/scene/src/fix-chains.ts';
 import type { ModelConfig, Prepared } from '@drishya/explain';
 import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store/src/search-types.ts';
 
@@ -64,6 +65,7 @@ export class HistoryService {
   now(id: string) { return this.request<NowFacts>('now', { id }); }
   turns(id: string) { return this.request<TurnLedger[]>('turns', { id }); }
   since(id: string, after: number, page = 0) { return this.request<SinceSnapshot>('since', { id, after, page }); }
+  fixChain(id: string, operationId: string) { return this.request<FixChain | null>('fix-chain', { id, operationId }); }
   verification(id: string, operationId: string) { return this.request<VerificationTrail | null>('verification', { id, operationId }); }
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }
   artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) { return this.request<BlobSearchResult | undefined>('artifact-find', { id, artifactId, query, start, continuation }); }

@@ -27,6 +27,7 @@ import { MaterialGlyph } from './MaterialGlyph.tsx';
 import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
+import { FixChainPanel } from './Verification.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -805,6 +806,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'test':
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
         <CommandText text={d.command}/>
+        <FixChainPanel op={op} />
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
         {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
@@ -813,6 +815,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'shell':
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
         <CommandText text={d.command}/>
+        <FixChainPanel op={op} />
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} />
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
