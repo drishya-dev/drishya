@@ -42,13 +42,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 
-### Yash with Codex — TURN-3 evidence encoding ready
+### Yash with Codex — four UI / turn increments ready for review
 
-- **When:** 20 October 2026, `codex/turn-3-evidence-rail`, PR #147. **READY FOR CLAUDE REVIEW / MERGE**. One chapter-step mapping in History; existing full-history ledger store/API reused. No schema, daemon or capture edits.
-- **Delivered:** clamped tick size from captured operation count, red failure notch (operation error or captured failing tests), edit dot from the existing patch ledger, independent reading-position point and ledger preview on hover/focus. Proximity grows the mark through the existing transform transition; no text/geometry duplication or timer.
-- **Validation:** UI typecheck/build; eight focused helper/ledger tests, two new75-chapter/responsive journeys plus two existing bottom-anchored rail regressions. Actual Drishya Codex / Skeletongraph Codex / Skeletongraph Claude displayed marks compared exactly to full-history ledger counts/statuses. Screenshots inspected. No hosted CI or native prompt.
-- **Remaining:** TURN-3 parent stays open: actual Drishya41 ledgers versus38 chapter passages needs a coverage audit (three ledgers have zero operations). Current encoding preserves the existing chapter set; it does not fabricate missing labels or claim the discrepancy is fixed. Native-journal ENOENT for the old Skeletongraph sample is pre-existing.
-- **Handoff:** Claude owns review/merge. UI-5 #144, UI-2 #145 and UI-10 #146 remain separate ready increments. Their source changes do not overlap this rail change; docs/claims are reconciled before handoff.
+- **When:** 20 October 2026. Four independent bounded increments, each **READY FOR CLAUDE REVIEW / MERGE**: #144 (`codex/ui-5-git-controls`), #145 (`codex/ui-2-home-type`), #146 (`codex/ui-10-tool-lists`), #147 (`codex/turn-3-evidence-rail`). Each removes only its own claim; Claude owns review and squash-merge.
+- **UI-5 / #144:** compact Modern Git review identity/controls; handoff, recorded work and Git history reuse the keyboard/outside-dismissible Actions menu. Selected path and Open on disk share one line. Both typechecks/build, two responsive Modern journeys and the retained Legacy exact-review/handoff journey pass; actual Drishya Codex before/after inspected. Shared readers and Workspace density remain open.
+- **UI-2 / #145:** Home metadata11px floor and small controls12px; theme-aware Claude mark. UI typecheck/build, seven-palette contrast guard, two new type/300-session keyboard journeys and two actual-store Home checks pass. Other typography surfaces remain open.
+- **UI-10 / #146:** shared small/large policy for MCP/runtime inventories: natural short height,216px/36dvh maximum for long lists, every entry retained. UI typecheck/build, two helper cases and two Edge journeys with3/300 tools at1440/390/320px pass. Actual Drishya Codex context inspected with a synthetic300-tool controller response; long body13040px becomes216px. Other count-dependent surfaces remain open.
+- **TURN-3 / #147:** captured-size ticks, failure/edit marks, independent reading point and full-ledger hover/focus preview. UI typecheck/build, eight focused tests and four browser journeys pass; three actual captures compared to the full-history ledger. Parent stays open for a discovered41-ledger/38-chapter coverage gap in Drishya; no missing labels invented.
+- **Integration:** all four branches reconcile main throughf21b030, retaining DATA-1/DATA-2 and other active claims. Their implementation files do not overlap; this same handoff block is used to reduce documentation conflicts between merges. Before/after notes and limits are in each PR's review document. No hosted CI, shared global palette change, schema/adapter edit or new native prompt. Phone layouts are emulation, not physical-device acceptance.
 
 ### Yash with Codex — TURN-2 keyboard reading ready
 
