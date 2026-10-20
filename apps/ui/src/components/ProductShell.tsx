@@ -1,5 +1,6 @@
+import { READING_SHORTCUTS } from './ReadingKeys.tsx';
 import { installScrollbarActivity } from '../lib/scrollbar-activity.ts';
-import { useEffect, useId, useRef, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
 import { useEvidenceScroll } from './EvidenceNavigation.tsx';
@@ -63,6 +64,8 @@ export function ReadingDialog({ title, close, children, className = '', modeless
 }
 
 export function ProductShell({ children }: { children: ReactNode }) {
+  const [readingHelp,setReadingHelp]=useState(false);
+  useEffect(()=>{const open=()=>setReadingHelp(true);window.addEventListener('drishya-reading-help',open);return()=>window.removeEventListener('drishya-reading-help',open);},[]);
   const experience = useExperience();
   useDismissMenus();
   useEffect(()=>document.documentElement.dataset.uiVersion==='modern'?installScrollbarActivity():undefined,[]);
@@ -85,7 +88,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
     preference.addEventListener('change', apply);
     return () => preference.removeEventListener('change', apply);
   }, [theme]);
-  return <>{children}{open && (experience === 'canvas' ? <CanvasSettings /> : <Settings />)}</>;
+  return <>{children}{open && (experience === 'canvas' ? <CanvasSettings /> : <Settings />)}{readingHelp && <ReadingDialog title="Reading shortcuts" className="reading-shortcuts" close={()=>setReadingHelp(false)}><p>Navigate captured work in Modern without opening the inspector. Reading keys detach Follow; capture continues.</p><dl>{READING_SHORTCUTS.map(([keys,action])=><div key={keys}><dt><kbd>{keys}</kbd></dt><dd>{action}</dd></div>)}</dl><p className="muted small">Disabled in inputs, editors, menus and readers. Replay keeps its transport controls. Copy uses a selection or the material’s existing copy action; otherwise it copies the card preview.</p></ReadingDialog>}</>;
 }
 
 function CanvasSettings() {
@@ -142,7 +145,7 @@ function Settings() {
     </section>
     <section className="settings-secondary"><details><summary>Sequence diagnostics</summary><p className="muted small">Optional playback for inspecting captured event order. Ordinary reading uses scroll and prompt navigation.</p><button className="btn" onClick={() => { const app = useApp.getState(); app.set({ replayDiagnostics: true, settingsOpen: false }); app.togglePlay(); }}>Replay sequence</button></details></section>
     <section><h3>Your data stays here</h3><p className="muted">Passive capture observes journals independently. Explicitly submitted prompts can resume the selected native session after workspace consent and an idle-client acknowledgement; the native harness owns its normal writes. Imported evidence is copied and redacted before storage. There is no telemetry.</p><p className="muted small">Pattern redaction is best effort. Review sanitized exports before sharing them. Optional model explanations require a separate exact-payload consent; core reading works offline.</p><p className="small">{source?.kind === 'bundle' ? 'Offline replay bundle' : 'Local authenticated daemon'} · {config?.version ?? 'Drishya'}</p></section>
-    <section><h3>Keyboard</h3><dl className="shortcut-list"><div><dt>Ctrl / Cmd K</dt><dd>Navigate workspace</dd></div><div><dt>Alt W</dt><dd>Close the active Workspace file</dd></div><div><dt>/</dt><dd>Search captured work</dd></div><div><dt>Esc</dt><dd>Close the current reading space</dd></div><div><dt>X</dt><dd>Explore / leave repository</dd></div><div><dt>M</dt><dd>Toggle relationship motion</dd></div><div><dt>Space · ← · →</dt><dd>Play / step in explicit replay diagnostics</dd></div><div><dt>E · F</dt><dd>Next edit / failure in sequence replay</dd></div></dl></section>
+    <section><h3>Keyboard</h3><p className="small">Read captured work with j / k, jump to edits with n / p, and press ? for the complete guide.</p><button className="btn" onClick={()=>{useApp.setState({settingsOpen:false});window.dispatchEvent(new Event('drishya-reading-help'));}}>Reading shortcuts</button><dl className="shortcut-list"><div><dt>Ctrl / Cmd K</dt><dd>Navigate workspace</dd></div><div><dt>Alt W</dt><dd>Close the active Workspace file</dd></div><div><dt>/</dt><dd>Search captured work</dd></div><div><dt>Esc</dt><dd>Close the current reading space</dd></div><div><dt>X</dt><dd>Explore / leave repository</dd></div><div><dt>M</dt><dd>Toggle relationship motion</dd></div><div><dt>Space · ← · →</dt><dd>Play / step in explicit replay diagnostics</dd></div><div><dt>E · F</dt><dd>Next edit / failure in sequence replay</dd></div></dl></section>
     </SettingsSections>
   </ReadingDialog>;
 }

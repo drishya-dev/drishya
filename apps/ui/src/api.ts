@@ -1,3 +1,4 @@
+import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/reading-target.ts';
 import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
@@ -76,6 +77,7 @@ export interface DataSource {
   findingMembers?(id:string,key:string,page?:number,q?:string):Promise<FindingMembers>;
   reviewInsights?(id:string,page?:number,kind?:ReviewFinding['kind']):Promise<ReviewInsightsPage>;
   commands?(id:string,query:CommandQuery):Promise<CommandPage>;
+  readingTarget?(id: string, query: ReadingQuery): Promise<ReadingTarget | null>;
   fileEvidence?(id: string, paths: string[], step?: number): Promise<FileEvidence[]>;
   summary?(id: string, from?: number): Promise<HistorySummary>;
   /** The newest captured state of a recording, independent of where the reader is scrolled. */
@@ -214,6 +216,7 @@ export const daemon: DataSource = {
   reviewInsights:(id,page=0,kind)=>req(`/v1/recordings/${encodeURIComponent(id)}/review-insights?${new URLSearchParams({page:String(page),...(kind?{kind}:{})})}`),
   commands:(id,query)=>req(`/v1/recordings/${encodeURIComponent(id)}/commands?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),
   storage: () => req('/v1/storage'),
+  readingTarget: (id, query) => req(`/v1/recordings/${encodeURIComponent(id)}/reading-target?${new URLSearchParams(Object.entries(query).filter(([,value]) => value !== undefined).map(([key,value]) => [key, String(value)]))}`),
   fileEvidence: (id, paths, step) => req(`/v1/recordings/${encodeURIComponent(id)}/file-evidence?${new URLSearchParams([...paths.map(path => ['path', path]), ...(step === undefined ? [] : [['step', String(step)]])])}`),
   summary: (id, from = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/summary?from=${from}`),
   now: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/now`),
