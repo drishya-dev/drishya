@@ -1,7 +1,7 @@
 /* GIT-3: compact commit rows beneath the timeline. Rows are one line; the graph stays the main material. */
 .atlas-rows {flex:none;display:flex;flex-direction:column;min-height:0;height:min(30%,210px);border-top:1px solid var(--line);background:var(--s1);}
 .commit-rows {flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable;position:relative;}
-.commit-row {display:grid;grid-template-columns:54px minmax(0,1fr) auto minmax(0,110px) 74px;align-items:center;gap:10px;width:100%;min-height:30px;padding:0 12px;text-align:left;color:var(--t2);border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);content-visibility:auto;contain-intrinsic-size:auto 30px;transition:background-color .12s ease;}
+.commit-row {display:grid;grid-template-columns:54px minmax(0,1fr) auto auto minmax(0,110px) 74px;align-items:center;gap:10px;width:100%;min-height:30px;padding:0 12px;text-align:left;color:var(--t2);border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);content-visibility:auto;contain-intrinsic-size:auto 30px;transition:background-color .12s ease;}
 .commit-row code {font:10px/1.5 var(--mono);color:var(--source);}
 .commit-row strong {font:12px/1.5 var(--sans);font-weight:450;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .commit-row-refs {display:flex;gap:4px;align-items:center;min-width:0;}
@@ -14,8 +14,8 @@
 .commit-row:focus-visible {outline:1px solid var(--t3);outline-offset:-2px;}
 @media(hover:hover) and (pointer:fine){.commit-row:hover {background:var(--s2);}}
 @media(prefers-reduced-motion:reduce){.commit-row {transition:none;}}
-@media(max-width:1000px){.commit-row {grid-template-columns:54px minmax(0,1fr) auto 74px;}.commit-row-author {display:none;}}
-@media(max-width:820px){.atlas-rows {height:min(40%,240px);}.commit-row {grid-template-columns:minmax(0,1fr) auto 70px;}.commit-row code {display:none;}}
+@media(max-width:1000px){.commit-row {grid-template-columns:54px minmax(0,1fr) auto auto 74px;}.commit-row-author {display:none;}}
+@media(max-width:820px){.atlas-rows {height:min(40%,240px);}.commit-row {grid-template-columns:minmax(0,1fr) auto auto 70px;}.commit-row code {display:none;}}
 @media(pointer:coarse){.commit-row {min-height:44px;}}
 
 /* Ref list: the filter toggle sits under the list, quietly. */
@@ -27,3 +27,5 @@
 /* The reference column's content slot must share the column's height, or its bottom controls are clipped (the slot
  * is otherwise a plain block whose flex child cannot resolve a height). */
 .atlas-references::details-content {display:flex;flex-direction:column;flex:1;min-height:0;}
+.commit-row-turn {font:10px/1.5 var(--mono);color:var(--source);white-space:nowrap;}
+.thread-session-link {color:var(--source);}
