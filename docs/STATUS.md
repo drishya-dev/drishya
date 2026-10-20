@@ -31,11 +31,18 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| PERF-1 | @yash + Codex | `codex/perf-1-large-journals` | 2026-10-20 | New isolated benchmark script and focused benchmark checks; `docs/review/perf-1-large-journals.md`, IMPLEMENTATION_ROADMAP §7 and completion docs. Read-only native journals, disposable redacted stores. No ingest/adapter/contracts/projection/runtime edits while DATA-1/2 are claimed. |
 
 ---
 
 ## Last session
+
+### Yash with Codex — PERF-1 measured; PERF-2 gate open, ready for Claude review
+
+- **When:** 20 October2026. PR **#171**, `codex/perf-1-large-journals`. Claimed the first independent dependency-ready item after DATA-3…6 overlapped Harsh's DATA-1/2 files. Adds opt-in isolated real-journal benchmark and a regression for partial writes/source preservation. Native journals stay read-only; normal/error completion removes snapshots and redacted stores. [Report](review/perf-1-large-journals.md).
+- **Result:** five complete-import and five append/browser runs per166/347/564MB actual source. Zero capture gaps; every append result matches full-import observation IDs/order; repeated sync adds nothing. The biggest journal exceeds the512MiB reference screening budget and shows API stalls. PERF-1 measurement is complete; **PERF-2 remains open and new feature work is gated pending restoration or an explicitly agreed narrower support range**. No green scale/release claim.
+- **Validation and limits:** 679 integrated unit tests plus36 focused JSONL/ingest/probe checks; both project types and direct script typecheck. Installed Edge on the reference Windows machine; uncontrolled background development load, warm OS cache, headless frame/API proxies, physical/human acceptance unmeasured. Rerun after DATA-1/2 retention changes. No runtime/schema/dependency changes, native turn or hosted CI.
+- **Merge signal:** **#171 READY FOR CLAUDE REVIEW / SQUASH** after final numeric matrix and local checks. Own claim removed only in this finishing PR. Main #172 TodoWrite and subsequent EXPLAIN priority change integrated; other claims and dependency order preserved.
+
 
 ### Yash with Claude (Opus 5.5) — TEST-2 flaky specs (main cause fixed) and DATA-1/DATA-2 merged
 
