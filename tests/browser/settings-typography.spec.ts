@@ -70,5 +70,5 @@ test('Settings descriptions, keyboard rows and controls remain reachable at narr
   await dialog.getByRole('tab',{name:'Appearance',exact:true}).click();
   await page.screenshot({path:`.local/ui2-settings-${size.width}.png`});
  }
- await dialog.getByRole('button',{name:'Close',exact:true}).click();await expect(dialog).toHaveCount(0);
+ await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
 });
