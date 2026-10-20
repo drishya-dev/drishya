@@ -34,6 +34,12 @@ test.afterAll(async () => {
 });
 
 const top = async (locator: Locator) => (await locator.boundingBox())!.y;
+// A rail jump can still be settling measured heights under load; take positions only once nothing moves.
+async function settled(locator: Locator) {
+  let last = NaN;
+  await expect.poll(async () => { const now = await top(locator), same = Math.abs(now - last) < .5; last = now; return same; }, { intervals: [150] }).toBe(true);
+  return last;
+}
 const chapter = (page: Page, prompt: string) => page.locator('.history .passage-slot', { hasText: prompt }).locator('.turn-fold');
 const turnOf = (fold: Locator) => fold.evaluate((node) => node.closest<HTMLElement>('.passage-slot')!.dataset.inTurn!);
 const cardsIn = (page: Page, turn: string) => page.locator(`.passage-slot[data-in-turn="${turn}"] article.op`);
@@ -57,7 +63,7 @@ test('folding and unfolding a turn keeps its header still and hides only that tu
   await readFrom(page, /^Go to prompt: Now run/);
   const second = chapter(page, 'Now run the whole suite');
   const turn = await turnOf(second);
-  const before = await top(second), cards = await cardsIn(page, turn).count();
+  const before = await settled(second), cards = await cardsIn(page, turn).count();
   expect(cards).toBeGreaterThan(3);
 
   await second.click();
