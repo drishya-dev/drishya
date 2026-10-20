@@ -716,6 +716,8 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const lit = !!hoveredPath && op.paths.some((p) => p.path === hoveredPath);
   const from = so.origin.type === 'map' ? 'from-map' : 'from-dock';
   const presentation = presentationOf(op);
+  // The operation a search result jumped to keeps a quiet marker until the reader moves on.
+  const searchHit = useApp(s => !!s.focusObservationId && op.observationIds.includes(s.focusObservationId));
   const [sourceWidth, setSourceWidth] = useState<number>();
   const measureSource = useCallback((text: string) => setSourceWidth(Math.max(280, Math.min(420, readingWidth(...text.split('\n').slice(0, 12))))), []);
   const readingAllocation = presentation.width ?? sourceWidth;
@@ -725,6 +727,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   return (
     <article ref={card}
       data-op-id={op.id}
+      data-search-hit={searchHit || undefined}
       data-material={presentation.material}
       data-origin={so.origin.type}
       data-tool-exchange={['shell','test','mcp','web','other'].includes(op.detail.kind) || undefined}

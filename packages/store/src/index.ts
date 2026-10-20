@@ -11,7 +11,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, ren
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import type { BlobText, Observation, RecordingSummary } from '@drishya/contracts';
-import type { LibrarySearchQuery, LibrarySearchPage } from './search-types.ts';
+import type { LibrarySearchQuery, LibrarySearchPage, SessionSearchHit } from './search-types.ts';
 
 // 2: revisions. 3: normalized observation clock. 4: local reading boundaries.
 export const SCHEMA_VERSION = 4;
@@ -640,10 +640,19 @@ export class Store {
 
   // ── search and bookmarks ───────────────────────────────────────────────────
 
-  search(recordingId: string, query: string, limit = 50): { observationId: string; snippet: string }[] {
+  /** Hits come with the turn they fall in (turn.start count for the same agent) and the tool call they belong to, shown in capture order. */
+  search(recordingId: string, query: string, limit = 50): SessionSearchHit[] {
     const safe = query.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
     if (!safe) return [];
-    return (this.q(`SELECT observation_id, snippet(search, 0, '«', '»', '…', 12) AS snippet FROM search WHERE search MATCH ? AND recording_id = ? LIMIT ?`).all(safe, recordingId, limit) as any[]).map((r) => ({ observationId: r.observation_id, snippet: r.snippet }));
+    const rows = this.q(`SELECT search.observation_id AS observationId, snippet(search, 0, '«', '»', '…', 12) AS snippet, o.seq AS seq, o.kind AS kind, o.source_time AS time,
+        json_extract(o.body, '$.payload.tool') AS tool, json_extract(o.body, '$.payload.intent.path') AS path, json_extract(o.body, '$.payload.intent.command') AS command,
+        (SELECT COUNT(*) FROM observations u WHERE u.recording_id = o.recording_id AND u.agent_id = o.agent_id AND u.kind = 'turn.start' AND u.seq <= o.seq) AS turn
+      FROM search JOIN observations o ON o.id = search.observation_id AND o.recording_id = search.recording_id
+      WHERE search MATCH ? AND search.recording_id = ? LIMIT ?`).all(safe, recordingId, limit) as any[];
+    return rows.sort((x, y) => x.seq - y.seq).map((r) => ({
+      observationId: r.observationId, snippet: r.snippet, kind: r.kind, ...(r.time ? { time: r.time } : {}), ...(r.turn ? { turn: r.turn } : {}),
+      ...(typeof r.tool === 'string' ? { tool: r.tool } : {}), ...(typeof r.path === 'string' ? { path: r.path } : {}), ...(typeof r.command === 'string' ? { command: r.command.slice(0, 120) } : {}),
+    }));
   }
 
   /** One worker-side FTS query, never an unbounded list of recording IDs. */
