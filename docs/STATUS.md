@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| TURN-1 (regression fix) | @yash + Claude Sonnet 5.5 | `yash/turn-1-layout-shift` | 2026-10-20 | `components/TurnsWatcher.tsx`, `components/History.tsx` (TurnBlock) |
 | BUG-7 | @harsh + Claude Opus 5.5 | `harsh/bug-7-open-refresh-race` | 2026-10-19 | `state.ts` (openRecording/reloadProjection), `App.tsx` (useLiveUpdates), new unit test |
 
 ---
