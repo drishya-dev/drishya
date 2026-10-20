@@ -11,3 +11,7 @@
   overflow-wrap:anywhere;
 }
 .modern-toolbox .md-inventory-list>button>small { flex:none; }
+
+/* Counts/status remain secondary without becoming miniature text. */
+:root[data-ui-version=modern] .modern-toolbox :is(small,.md-dock-foot) {font-size:11px;}
+:root[data-ui-version=modern] .modern-toolbox :is(.md-server>summary,.md-clear-filter,.station-subagents>summary) {font-size:12px;}
