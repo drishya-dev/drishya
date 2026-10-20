@@ -49,6 +49,8 @@ registerHooks({ resolve(specifier, context, next) {
 
 Run `node --import <hook-path> scripts/bench-real-journals.ts --worker --source <approved-journal> --browser` for before, omitting `--import` for after. Set `DRISHYA_BROWSER_CHANNEL=msedge`. Repeat five pairs, alternating order; never run conditions concurrently. Numeric output contains no native path/title/content. Temporary source snapshots/redacted stores are cleaned by the shared probe; no native source writes or native turns.
 
-## Remaining gate
+## Builder merge decision and remaining gate
+
+On20 October the builder explicitly requested merging PR174 in its current state, with documentation distinguishing completed and remaining work. The accepted increment is the batch-memory reduction and its verified record-preservation behavior. The measured14.2% median import slowdown and unmet responsiveness targets are accepted limitations of this increment, not resolved defects. The task remains open and its claim is released so the follow-up can be coordinated with DATA-1/2.
 
 **PERF-2 is not complete.** This is a bounded reader improvement, not proof of the full responsiveness/resource acceptance. Remaining ingest/sealing, storage and first-history costs overlap DATA-1/2's claimed files. Coordinate those changes and rerun the whole matrix after their merge; preserve individual record limits and evidence fidelity. Actual interaction/visible update acceptance and physical REL-2/REL-3 checks remain separate from headless proxies. Do not start new feature work under a red performance gate.

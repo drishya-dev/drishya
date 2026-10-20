@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| PERF-2 | @yash + Codex | `codex/perf-2-jsonl-batches` | 2026-10-20 | `packages/capture-core/src/jsonl.ts`, `packages/capture-core/test/jsonl.test.ts`, isolated benchmark script/test only if needed and performance docs (≤8 files). Batching/yield points only; no capture-core index/usage exports, adapters, contracts, projection, ingest, store or daemon edits owned by DATA-1/2. Full acceptance stays open until budgets pass and post-DATA retest is available. |
 | PERF-1 | @yash + Codex | `codex/perf-1-large-journals` | 2026-10-20 | New isolated benchmark script and focused benchmark checks; `docs/review/perf-1-large-journals.md`, IMPLEMENTATION_ROADMAP §7 and completion docs. Read-only native journals, disposable redacted stores. No ingest/adapter/contracts/projection/runtime edits while DATA-1/2 are claimed. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
@@ -41,12 +40,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — PERF-2 batch experiment; draft for review, gate still open
+### Yash with Codex — PERF-2 bounded batching accepted for merge; gate still open
 
-- **When:**20 October2026. PR **#174**, `codex/perf-2-jsonl-batches`. Own claim retained because PERF-2 is not complete. Only JSONL source/test changed; no files owned by DATA-1/2 or TEST-2. Complete-record soft4MiB batches preserve16MiB records and all byte/cursor/gap semantics.
+- **When:**20 October2026. PR **#174**, `codex/perf-2-jsonl-batches`. Builder explicitly approved merging the current bounded batching increment. Claim released; PERF-2 remains open for separately claimed follow-up. Only JSONL source/test changed; no files owned by DATA-1/2 or TEST-2. Complete-record soft4MiB batches preserve16MiB records and all byte/cursor/gap semantics.
 - **Evidence:** five rotated before/after actual564MB runs, each8,803 observations identical to full import with zero gaps. Median peak RSS514.50→389.52MiB (-24.3%), but median bulk time7.12→8.14s (+14.2%); API/frame responsiveness remains outside targets. [Numbers and reproducible comparison](review/perf-2-jsonl-batches.md).
 - **Checks:**688 integrated unit tests and backend TypeScript pass. Added maximum16MiB/split/UTF-8 offset/partial-write/truncation/oversized-gap regressions. No hosted CI or native turn.
-- **Signal:** **DRAFT EXPERIMENT, DO NOT AUTO-MERGE.** Reduced memory is real in this sample, throughput/latency tradeoff not settled. Next scope is coordinated ingest/sealing/history profiling and retest after DATA-1/2; preserve their claims. PERF-1 #171 remains a separate measurement PR for Claude review. No new features under the red gate.
+- **Signal:** **MERGE AUTHORIZED BY BUILDER (20 October).** Accept the current memory reduction with the measured import slowdown; throughput/latency tradeoff is still unresolved. Next scope is coordinated ingest/sealing/history profiling and retest after DATA-1/2; preserve their claims. PERF-1 #171 remains a separate measurement PR for Claude review. No new features under the red gate.
 
 
 ### Yash with Claude (Sonnet 5.5) — READ-6 read-before-write (Claude edits)

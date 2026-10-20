@@ -1,6 +1,6 @@
 # Continue here — current handoff
 
-**20 October PERF-2:** draftPR174 explores4MiB complete-record JSONL batching, preserving16MiB records. Five rotated actual564MB comparisons reduce median RSS514.50→389.52MiB but bulk import slows7.12→8.14s; responsiveness still misses targets.688 units/backend types pass. **PERF-2 remains claimed/open; draft is not an auto-merge recommendation.** See [report](review/perf-2-jsonl-batches.md) and TASKS for DATA-1/2 coordination/retest. No new features under the performance gate; native/capture completeness remains independent.
+**20 October PERF-2:** PR174 delivers4MiB complete-record JSONL batching, preserving16MiB records. Five rotated actual564MB comparisons reduce median RSS514.50→389.52MiB but bulk import slows7.12→8.14s; responsiveness still misses targets.688 units/backend types pass. **Builder approved merging this increment as-is on20 October. PERF-2 remains open; claim released for coordinated follow-up. Memory gains do not close latency/resource acceptance.** See [report](review/perf-2-jsonl-batches.md) and TASKS for DATA-1/2 coordination/retest. No new features under the performance gate; native/capture completeness remains independent.
 
 **19 October direction reset (read first):**
 - **North star:** [AGENTS](../AGENTS.md#north-star--read-first-every-session).
