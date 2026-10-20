@@ -108,7 +108,7 @@
  :root[data-ui-version=modern] .modern-git-drawer .git-review-layout { grid-template-columns:minmax(0,1fr); padding:0 14px 14px; }
  :root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside { max-height:120px; }
  :root[data-ui-version=modern][data-experience=classic] .workspace-header .modern-session-header { grid-template-columns:auto minmax(0,1fr) auto; margin:0; gap:10px; padding:8px 14px; }
- :root[data-ui-version=modern] .modern-session-header .brand>span { display:none; }
+ :root[data-ui-version=modern] .modern-session-header .brand>span:not(.brand-mark) { display:none; }
  :root[data-ui-version=modern] .modern-session-header .studio-actions { gap:4px; }
  :root[data-ui-version=modern] .modern-session-header .search-open { width:31px; padding:7px; }
  :root[data-ui-version=modern] .modern-session-header .search-open>span,:root[data-ui-version=modern] .modern-session-header .search-open>kbd { display:none; }
