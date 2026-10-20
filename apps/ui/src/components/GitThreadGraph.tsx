@@ -4,14 +4,14 @@ import {gitRibbonGeometry} from '../lib/git-ribbon-geometry.ts';
 import {gitThreadLayout} from '../lib/git-thread-layout.ts';
 import {branchAt,gitLight,hashSeed,lightLayout,type LightBranch} from '../lib/git-light.ts';
 import {LightRenderer} from '../lib/light-renderer.ts';
+import {ago} from '../lib/git-commit-rows.ts';
 import './git-thread-graph.css';
 import {useApp} from '../state.ts';
 
 const ribbonColors=['#e6ffff','#69eaff','#427bff','#b5afff','#ffb7ee','#9068fa','#96f4ff','#e8dbb7','#4fb8ff','#e5dbff'];
 const MIN_SCALE=.04,MAX_SCALE=2.5,clampScale=(value:number)=>Math.max(MIN_SCALE,Math.min(MAX_SCALE,value));
-const ago=(iso:string)=>{const s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);return s<90?'just now':s<5400?`${Math.round(s/60)} min ago`:s<129600?`${Math.round(s/3600)} h ago`:`${Math.round(s/86400)} d ago`;};
 
-export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,evidence}:{evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
+export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,evidence,mirror,onHover,reveal}:{mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
   const graph=useMemo(()=>gitThreadLayout(commits,primary?.tip,seeds,offset),[commits,primary?.tip,offset]),viewport=useRef<HTMLDivElement>(null);
   const [scale,setScale]=useState(.6),[hovered,setHovered]=useState(''),[orbit,setOrbit]=useState(false),[angle,setAngle]=useState(.35);
   const [branchKey,setBranchKey]=useState('');
@@ -94,8 +94,17 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
 
   const hit=Math.max(3,Math.min(32,76*scale*.8));
   const byHash=useMemo(()=>new Map(commits.map(commit=>[commit.hash,commit])),[commits]);
-  const active=byHash.get(hovered),neighbors=new Set(active?[active.hash,...active.parents,...commits.filter(commit=>commit.parents.includes(active.hash)).map(commit=>commit.hash)]:[]);
+  // A row hovered in the commit list lights the same commit and its neighbours as hovering it here would.
+  const active=byHash.get(hovered||mirror||''),neighbors=new Set(active?[active.hash,...active.parents,...commits.filter(commit=>commit.parents.includes(active.hash)).map(commit=>commit.hash)]:[]);
   const branch=!active&&light?light.branches.find(item=>item.key===branchKey):undefined;
+  useEffect(()=>{onHover?.(hovered);},[hovered,onHover]);
+  // Picking a row brings its commit into view, nudging the timeline only when the commit is off-screen or at an edge.
+  useEffect(()=>{
+    const el=viewport.current,target=reveal?el?.querySelector<HTMLElement>(`[data-commit-hash="${reveal.hash}"]`):null;if(!el||!target)return;
+    const box=el.getBoundingClientRect(),at=target.getBoundingClientRect(),cx=at.left+at.width/2-box.left,cy=at.top+at.height/2-box.top,margin=Math.min(120,el.clientWidth/4);
+    const dx=cx<margin||cx>el.clientWidth-margin?cx-el.clientWidth/2:0,dy=cy<48||cy>el.clientHeight-48?cy-el.clientHeight/2:0;
+    if(dx||dy)el.scrollBy({left:dx,top:dy,behavior:!motion||lowResource?'auto':'smooth'});
+  },[reveal?.hash,reveal?.n]);
   // Lightning only where a ref names a head with no loaded child; the layout decides which of those are branches.
   const heads=useMemo(()=>{const children=new Set(commits.flatMap(commit=>commit.parents));return new Set(commits.filter(commit=>commit.labels.length&&!children.has(commit.hash)&&!squash.has(commit.hash)).map(commit=>commit.hash));},[commits,squash]);
   const focusSet=active?neighbors:branch?new Set([...branch.members,...(branch.fork?[branch.fork]:[]),...(branch.merge?[branch.merge]:[])]):undefined;
