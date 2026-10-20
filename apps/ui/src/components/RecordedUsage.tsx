@@ -11,7 +11,7 @@ function Rows({ rows }: { rows: Row[] }) {
 function RecordedPoint({ point }: { point: UsagePayload }) {
   const tokens = point.tokens;
   return <section aria-label="Recorded usage"><strong>Recorded · {point.source === 'codex-token-count' ? 'Codex token_count' : point.source === 'claude-cost-state' ? 'Claude cost-state' : 'Claude message.usage'}</strong>
-    <small>{point.cumulative ? 'Session cumulative' : 'One assistant message'}{point.model ? ` · ${point.model}` : ''}</small>
+    <small>{point.cumulative ? 'Session cumulative' : point.source === 'claude-message-usage' ? 'One assistant message' : 'Last model request'}{point.model ? ` · ${point.model}` : ''}</small>
     <Rows rows={[
       ['Input tokens', tokens?.input], ['Output tokens', tokens?.output], ['Cached input', tokens?.cachedInput], ['Cache write', tokens?.cacheWrite],
       ['Reasoning output tokens', tokens?.reasoningOutput], ['Total tokens', tokens?.total], ['Context capacity', point.contextWindow],

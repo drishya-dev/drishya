@@ -161,6 +161,7 @@ export function createParser(_ctx: ParseContext): RecordParser {
           const payload = o.payload as { turnId?: string };
           turnId = payload.turnId;
         }
+        if (o.kind === 'turn.end') turnId = undefined;
         if (o.kind === 'session.meta') {
           const p = o.payload as { cwd?: string; harnessVersion?: string; branch?: string; model?: string };
           cwd = p.cwd ?? cwd;
@@ -214,8 +215,8 @@ export function createParser(_ctx: ParseContext): RecordParser {
           if (request) emit(1, { ...shared, cumulative: false, tokens: request });
           return out;
         }
-        if (t === 'task_complete') return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }];
-        if (t === 'turn_aborted') return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }];
+        if (t === 'task_complete') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }]; }
+        if (t === 'turn_aborted') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }]; }
         if (t === 'context_compacted') return [{ ...base, kind: 'compaction', payload: {} }];
         if (IGNORED_EVENTS.has(t)) return [];
         return [{ ...base, kind: 'unknown', payload: { recordType: `event_msg:${t}` }, availability: 'metadata-only' }];

@@ -276,7 +276,7 @@ export class Ingestor extends EventEmitter {
     if (!parser) {
       parser = adapter.createParser({ recordingId: src.recordingId, sourceId: src.id, sourcePath: src.path, agentId: src.agentId });
       // After a restart, rebuild call correlation from what is already stored.
-      parser.prime(this.store.observationsOfKinds(src.recordingId, ['tool.call', 'session.meta', 'turn.start']).filter((o) => o.source.sourceId === src.id));
+      parser.prime(this.store.observationsOfKinds(src.recordingId, ['tool.call', 'session.meta', 'turn.start', 'turn.end']).filter((o) => o.source.sourceId === src.id));
       this.parsers.set(src.id, parser);
     }
     // A record must fit in one read, or a bounded turn could never get past it.

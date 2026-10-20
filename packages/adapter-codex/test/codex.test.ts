@@ -5,6 +5,16 @@ import { readFileSync } from 'node:fs';
 const ctx = { recordingId: 'r', sourceId: 's', sourcePath: 'x.jsonl' };
 
 describe('Codex adapter', () => {
+  it('never attributes post-turn rate updates to a finished turn, including after restart', () => {
+    const parser = createParser(ctx);
+    const start = parser.parse({ type: 'event_msg', payload: { type: 'task_started', turn_id: 'finished' } })[0]!;
+    const end = parser.parse({ type: 'event_msg', payload: { type: 'task_complete', turn_id: 'finished' } })[0]!;
+    const update = { type: 'event_msg', payload: { type: 'token_count', info: null, rate_limits: { primary: { used_percent: 4, window_minutes: 300, resets_at: 1 } } } };
+    expect(parser.parse(update)[0]!.payload).not.toHaveProperty('turnId');
+    const restarted = createParser(ctx);
+    restarted.prime([start, end] as unknown as import('@drishya/contracts').Observation[]);
+    expect(restarted.parse(update)[0]!.payload).not.toHaveProperty('turnId');
+  });
   it('captures cumulative and request usage without credits, identifiers or invented zero counts', () => {
     const parser = createParser(ctx);
     const records = readFileSync(new URL('../../../fixtures/synthetic/usage/codex-rollout-usage.jsonl', import.meta.url), 'utf8').trim().split('\n').map(line => JSON.parse(line));
