@@ -145,13 +145,13 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const ended = new Map<string, number>();
   const proseAt = new Map<string, number>();
   const stoppedAgents = new Set<string>();
-  const turnAt: { step: number; prompt?: string; time?:string }[] = [];
+  const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string }[] = [];
   applied.forEach((it, i) => {
     if (it.type === 'op-start') started.set(it.operationId, i);
     else if (it.type === 'op-end') ended.set(it.operationId, i);
     else if (it.type === 'prose') proseAt.set(it.proseId, i);
     else if (it.type === 'agent-stop') stoppedAgents.add(it.agentId);
-    else if (it.type === 'turn') turnAt.push({ step: i, prompt: it.prompt,time:it.time });
+    else if (it.type === 'turn') turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt,time:it.time });
   });
 
   const stateOf = (op: Operation): OpState => {
@@ -174,7 +174,8 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const latestByAgent = new Map<string, string>();
   for (const ps of visible) latestByAgent.set(ps.agentId, ps.id);
 
-  const passages: ScenePassage[] = visible.map((ps, passageIndex) => {
+  const openedTurns = new Set<number>();
+  const materialPassages: ScenePassage[] = visible.map((ps) => {
     const sceneOps: SceneOp[] = ps.operationIds
       .filter((id) => started.has(id))
       .map((id) => {
@@ -207,8 +208,10 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       else high = mid;
     }
     const turn = turnAt[low - 1];
-    const prevPassage = visible[passageIndex - 1];
-    const opensTurn = turn && (!prevPassage || prevPassage.lastStep < turn.step);
+    // A late result can extend an older passage across a new prompt. It must
+    // not suppress the new chapter's caption.
+    const opensTurn = turn && !openedTurns.has(turn.step);
+    if (turn) openedTurns.add(turn.step);
     return {
       id: ps.id,
       agentId: ps.agentId,
@@ -222,6 +225,23 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       ...(turn ? { inTurn: turn.step } : {}),
     };
   });
+
+  // Prompt-only turns have no projection passage. Preserve their captured
+  // words as reading stops without inventing a response or mutating capture.
+  const promptOnly = turnAt.filter(turn => !openedTurns.has(turn.step) && turn.prompt !== undefined);
+  const passages: ScenePassage[] = [];
+  let promptIndex = 0;
+  const appendPrompt = (turn: typeof turnAt[number]) => passages.push({
+    id: `prompt_${turn.id}`, agentId: turn.agentId, ops: [], prose: [],
+    settled: turn.step !== turnAt.at(-1)?.step,
+    matchesFilter: !f || (!f.kind && !f.server && !f.tool && (!f.agentId || f.agentId === turn.agentId)),
+    turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, inTurn: turn.step,
+  });
+  materialPassages.forEach((passage, index) => {
+    while (promptIndex < promptOnly.length && promptOnly[promptIndex]!.step < visible[index]!.firstStep) appendPrompt(promptOnly[promptIndex++]!);
+    passages.push(passage);
+  });
+  while (promptIndex < promptOnly.length) appendPrompt(promptOnly[promptIndex++]!);
 
   // Agents.
   const running = [...started.keys()].filter((id) => !ended.has(id)).map((id) => ops.get(id)!);

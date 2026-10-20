@@ -164,7 +164,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const targetIndex = scene.passages.findIndex((ps) =>
     readingOp ? ps.ops.some((op) => op.id === readingOp) : focusObservationId ?
       ps.ops.some((op) => ops.get(op.id)?.observationIds.includes(focusObservationId)) ||
-      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : promptStep !== undefined ? ps.id === projection.passages.find(p => p.firstStep >= promptStep - 1)?.id : false,
+      ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : promptStep !== undefined ? ps.id === scene.passages.find(p => p.turnStep !== undefined && p.turnStep >= promptStep - 1)?.id : false,
   );
   const targetId = scene.passages[targetIndex]?.id;
   const intent = readingOp ? `${keyboardOp===readingOp?'key':'op'}:${readingOp}` : focusObservationId ? `observation:${focusObservationId}` : promptStep !== undefined ? `prompt:${promptStep}` : undefined;

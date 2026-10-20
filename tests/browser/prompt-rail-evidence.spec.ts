@@ -5,7 +5,7 @@ test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-rail-'));const journal=join(dir,'session.jsonl'),sessionId='66666666-6666-4666-8666-666666666675';const rows:unknown[]=[];
  for(let turn=0;turn<75;turn++){
   rows.push({type:'user',uuid:`u-${turn}`,sessionId,cwd:dir,message:{role:'user',content:`Rail turn ${turn}`}});
-  const count=[2,12,80][turn]??0;if(!count){rows.push({type:'assistant',uuid:`a-${turn}`,sessionId,message:{id:`a-${turn}`,role:'assistant',content:[{type:'text',text:'Captured fixture response'}]}});continue;}
+  const count=[2,12,80][turn]??0;if(!count)continue;
   const content=Array.from({length:count},(_,n)=>({type:'tool_use',id:`t-${turn}-${n}`,name:turn===2&&n===0?'Write':'Bash',input:turn===2&&n===0?{file_path:'src/created.ts',content:'export const created = true;\n'}:{command:`echo ${turn}-${n}`}}));
   rows.push({type:'assistant',uuid:`a-${turn}`,sessionId,message:{id:`a-${turn}`,role:'assistant',content}});
   rows.push({type:'user',uuid:`r-${turn}`,sessionId,message:{role:'user',content:content.map((tool,n)=>({type:'tool_result',tool_use_id:tool.id,content:'Captured fixture result',is_error:turn===1&&n===0}))}});
@@ -38,4 +38,6 @@ test('full rail remains virtualized, keyboard addressable and readable at deskto
   const preview=await page.locator('.prompt-rail-preview').boundingBox();expect(preview!.x).toBeGreaterThanOrEqual(0);expect(preview!.x+preview!.width).toBeLessThanOrEqual(width);expect(preview!.y+preview!.height).toBeLessThanOrEqual(844);
   await page.screenshot({path:`.local/turn3-${width}.png`});await page.mouse.move(0,0);
  }
+ await page.keyboard.press('End');await page.keyboard.press('Enter');
+ await expect(page.locator('.turn').filter({hasText:'Rail turn 74'})).toBeVisible();
 });

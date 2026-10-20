@@ -11,6 +11,26 @@ let dir: string;
 afterEach(async () => { await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 describe('worker-owned history pages', () => {
+  it('pages a prompt-only chapter by captured turn step with no fabricated material', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'drishya-prompt-only-'));
+    const journal = join(dir, 'rollout.jsonl');
+    const timestamp = '2026-10-07T00:00:00Z';
+    const rows: unknown[] = [{ timestamp, type: 'session_meta', payload: { id: 'prompt-only-reader', cwd: dir } }];
+    for (let i = 0; i < 75; i++) rows.push({ timestamp, type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: `Unanswered prompt ${i}` }] } });
+    (await import('node:fs')).writeFileSync(journal, rows.map(row => JSON.stringify(row)).join('\n') + '\n');
+    app = new App(join(dir, 'data'));
+    const { recordingId } = await app.ingest.importSource('codex', journal);
+    const latest = await app.history.page(recordingId, { count: 1 });
+    expect(latest.scene.passages).toHaveLength(75);
+    const target = latest.scene.passages[20]!;
+    expect(target.unloaded).toBe(true);
+    const page = await app.history.page(recordingId, { count: 1, promptStep: target.turnStep! + 1 });
+    expect(page.loadedPassageIds).toEqual([target.id]);
+    expect(page.scene.passages[20]).toMatchObject({ turnPrompt: 'Unanswered prompt 20' });
+    expect(page.scene.passages[20]!.unloaded).toBeUndefined();
+    expect(page.projection.operations).toEqual([]);
+    expect(page.projection.prose).toEqual([]);
+  });
   it('keeps the requested operation inside a one-passage window',async()=>{
     dir=mkdtempSync(join(tmpdir(),'drishya-one-passage-'));app=new App(join(dir,'data'));
     const journal=join(dir,'rollout.jsonl');copyFileSync(resolve('fixtures/synthetic/codex/rollout-checkout-review.jsonl'),journal);

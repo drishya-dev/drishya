@@ -1,6 +1,6 @@
 # TURN-3 — evidence-bearing prompt rail
 
-20 October 2026 · PR #147. Encoding implemented; TASKS keeps the discovered chapter-coverage follow-up open.
+20 October 2026 · PR #147. Encoding and captured prompt-only chapter coverage implemented.
 
 | Before | After | Why |
 |---|---|---|
@@ -8,6 +8,8 @@
 | No outcome marks on the rail | Red notch for captured operation/test failures, edited dot from the existing patch ledger | See significant turns without opening every chapter |
 | Hover/focus shows only prompt/time | Adds captured operation total and the existing full-turn ledger, including pending-result count | Reading uses the same accounting as turn headers |
 | Hover can be the only bright mark | Independent reading-position point and retained aria-current | Pointer exploration does not erase the reading position |
+| A prompt has no chapter unless agent material follows | The scene retains a prompt-only reading stop using the captured timeline ID, text and timestamp | Consecutive prompts remain addressable without inventing a response |
+| An older operation's late result can hide the next caption | Chapter ownership follows the prompt step rather than the preceding passage's last result | Completion timing does not remove navigation |
 
 Chapter `turnStep` joins the existing `useTurns` store. Paged captures use the whole-recording turn ledger, not counts from the resident material window. Missing ledger has neutral size and no invented counters/statuses. The marker transform and existing finite proximity transition are reused; no text animation, extra request, shared layout change or schema mutation. Hover/focus preview is bounded to the viewport and uses the existing ledger provenance explanation. Selection/navigation and the bottom-anchored independent rail are unchanged.
 
@@ -18,8 +20,13 @@ Chapter `turnStep` joins the existing `useTurns` store. Paged captures use the w
 - Two existing prompt-timeline regressions pass: bottom anchor, independent rail scrolling, main scrollbar placement, short and narrow layouts.
 - Eight focused tests pass: three mark helpers plus five existing turn-ledger tests. UI typecheck and production build pass. Local screenshots inspected; no hosted CI or native prompt execution.
 
-## Unfinished coverage discovered during acceptance
+## Coverage correction and verification
 
-The Drishya capture has41 turn ledgers but38 materialized prompt chapters; three ledgers have zero operations. Existing scene chapter generation supplies the rail. This increment does not manufacture labels or silently claim those turns are addressable. TASKS TURN-3 remains open with a specific coverage follow-up: audit the missing steps and the prompt/scene mapping, including user-only, empty and captionless turns. The75-turn fixture uses recorded assistant responses for otherwise tool-free turns; it is not a substitute for that audit. An initial fixture made consecutive user-only messages and correctly failed the assumption that all75 produced passages; the fixture was corrected rather than changing capture outside this claim.
+The initial actual Drishya capture exposed41 turn ledgers but38 materialized chapters. The scene only associated prompts with later operation/prose passages. The bounded continuation preserves prompts without material as scene-only reading stops, merges them chronologically and updates paged/history prompt targeting. Stored observations, contracts, reducer and adapters are unchanged. Only supplied prompt strings are shown; missing text does not acquire an inferred label or response. Existing golden scenes remain unchanged.
+
+- Actual final chapter totals reconcile to the full ledger: Drishya Codex41/41, Skeletongraph Codex48/48, Skeletongraph Claude287/287. Visible41/48/48 markers respectively match operation/error/edit counts; the long rail remains virtualized.
+- The75-turn browser fixture now deliberately leaves72 consecutive prompts without an assistant response. All75 remain keyboard-addressable, the final captured prompt opens, and1440/390/320px containment and independent scrolling pass (four browser journeys including the retained timeline checks).
+-68 focused tests across11 files pass: whole scene suite, daemon history paging and rail mark helper. Added regressions cover consecutive prompts, no future chapters during replay, late results and exact one-slot loading of an older unanswered prompt. Both typechecks and production build pass.
+- The isolated worktree's shared UI dependency junction initially resolved the scene package from the other checkout. Local validation rebuilt with an explicit Vite alias to this worktree's scene source; the browser tests then verified the actual new composer in both unpaged and paged paths. No dependency files or other checkout were modified.
 
 Old Skeletongraph native-journal ENOENT remains pre-existing, and imported evidence still reads. This is not signed-in native, physical-device, full-theme or broad ten-minute acceptance. Existing map, agent material, replay and follow behavior are retained.
