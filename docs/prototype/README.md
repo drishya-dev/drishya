@@ -57,3 +57,9 @@ It does **not** demonstrate real capture, history virtualization for long sessio
 Mirrors the product's layers: `#map` (canvas, repository map) · `#tethers` (SVG, origin filaments) · `#history` (DOM, the continuous canvas) · `#crown` / `#dock` / `#film` (agents, instruments, transport). All text is DOM; the canvas draws no characters.
 
 The scene is **deterministic**: `seek(n)` rebuilds any moment from the recording, and map heat is a pure function of the playback position. Every animation is tracked, so any deliberate interaction can finish it instantly.
+
+## Sacred Timeline (GIT-1)
+
+`sacred-timeline.html` is step 1 of [124](../review/124-sacred-timeline-git-graph.md): the Git graph as the Loki Sacred Timeline, on **synthetic topology only** (main plus four branches, two merged, two unmerged). WebGL2 draws light only: hundreds of hair-fine additive filaments per bundle into a half-float buffer, a three-level bloom and a tone map, so the white-hot core comes from overlap rather than paint. Merged branches arch out of the river's rim and fade back into it; only unmerged heads split into lightning, and the real head stays the brightest point with its DOM ref label. Commits are DOM buttons (hover or focus dims other strands; arrows move between commits; Escape closes the peek). No text is drawn in WebGL.
+
+Compare the three variants with the buttons or keys `1`–`3`, or open `?v=river`, `?v=ice` or `?v=storm`. `?lite=1` halves the filaments and turns bloom off (the low-resource budget). Integration into `GitThreadGraph` waits for builder sign-off on these stills.
