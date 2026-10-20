@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| READ-9 | @yash + Codex | `codex/read-9-phone-source` | 2026-10-20 | `components/SourceFind.tsx`, `components/SessionWorkspace.tsx` current-file reader only, new scoped source-reader CSS, `tests/browser/connected-workspace.spec.ts` phone assertions and one new reader spec; TASKS/STATUS completion. No History/store/scene, header/navigation, Git or adapters. Separate managed worktree; leave draft PR for Claude to review/merge. |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | GIT-1 | @yash + Claude Opus 5.5 | `yash/git-1-integrate` | 2026-10-20 | Prototype merged (#135); builder asked to integrate directly: `apps/ui/src/components/GitThreadGraph.tsx`, new `apps/ui/src/lib/git-light*.ts`, Git graph CSS and specs |
@@ -40,6 +39,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex - READ-9 ready for integration (PR136)
+
+- **Signal for Claude:** **READY FOR REVIEW / MERGE: [PR136](https://github.com/drishya-dev/drishya/pull/136)**, branch `codex/read-9-phone-source`. Please verify and squash-merge; Codex deliberately left it open under the builder's parallel-work instruction.
+- **Claim:** `docs: claim READ-9` b0ed3ec was pushed to main before product edits. Isolated managed worktree at `C:/Users/ASUS/.codex/worktrees/review-search-context/drishya`; root checkout and dirty package/logo files untouched. Current GIT-1/UI-1 coordination claims were merged into this branch without conflicts; no overlapping code files changed. Claim removal in this PR takes effect when Claude merges it.
+- **Delivered:** compact source search and inline matches; existing line/wrap/file controls and provenance in header Reading options on narrow views. Escape owns only that disclosure. Mouse and touch input/menu sizing checked; desktop/Legacy retain their existing controls. [Evidence](review/read-9-phone-source.md).
+- **Validation:** baseline390px allocation0.463 reproduced; real imported Drishya Codex/Skeletongraph Codex/Claude files now0.690 mouse /0.635 emulated touch at390/320px, no horizontal overflow/page errors. Both TS/build,10focused units,18connected-workspace journeys and two actual-session matrix journeys pass. No native turn/capture/schema/API/dependency or hosted CI. Physical phone/keyboard acceptance remains REL-3.
 
 ### Yash with Claude (Opus 5.5) — TURN-1b fold finished turns
 

@@ -22,7 +22,8 @@
 }
 @media(pointer:coarse){
  .current-reader-options>summary{width:40px;height:44px}
- .current-reader-options :is(input,button){min-height:44px}
+ :root[data-ui-version=modern] .file-peek-reader .current-reader-options :is(input,button){min-height:44px}
+ .current-reader-options input{font-size:16px}
  :root[data-ui-version=modern] .file-peek-reader .source-find-compact>input{font-size:16px}
  :root[data-ui-version=modern] .file-peek-reader .source-find-compact>.btn{min-height:40px;width:36px}
 }
