@@ -390,6 +390,25 @@ export function PromptComposer() {
   const [error, setError] = useState<string>();
   const element = useRef<HTMLElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const focusPrompt = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing || event.repeat || event.key !== 'Enter' || !event.shiftKey || !(event.ctrlKey || event.metaKey) || event.altKey || busy) return;
+      const state = useApp.getState(), target = event.target;
+      if (source?.kind !== 'daemon' || !id || id.includes('+') || state.screen !== 'viewer' || state.developerWorkspace || state.explore) return;
+      if ([...document.querySelectorAll<HTMLElement>('dialog[open],[role="dialog"],[role="menu"],.desk-options[open],.workspace-menu[open],.permission-policy[open]')].some(node => node.getClientRects().length > 0)) return;
+      // Editors and other fields own their chords. Inside our textarea this
+      // shortcut only focuses/expands; it never inserts a line or submits.
+      if (target instanceof Element && target.closest('input,textarea,[contenteditable],.cm-editor,.monaco-editor') && !element.current?.contains(target)) return;
+      const node = element.current;
+      if (!node || !node.getClientRects().length || getComputedStyle(node).visibility === 'hidden') return;
+      event.preventDefault();
+      document.documentElement.removeAttribute('data-ui-press');
+      setChoice('open');
+      requestAnimationFrame(() => input.current?.focus({ preventScroll: true }));
+    };
+    window.addEventListener('keydown', focusPrompt);
+    return () => window.removeEventListener('keydown', focusPrompt);
+  }, [source, id, busy]);
   const [confirmSend, setConfirmSend] = useState(false);
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
   // Idle means nothing to send and nothing asking for the person; any request, run, failure or draft opens it.
@@ -517,7 +536,7 @@ export function PromptComposer() {
         <small>Each Allow once applies only to its native request. Full access and global settings remain in the native CLI.</small>
       </div></details></>;
   if (workspace && !workspace.root) return <section ref={element} className="prompt-composer open composer-readonly" aria-label="Harness prompt"><div><strong>{recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} recording</strong><span>Read-only here · no workspace path was captured.</span></div><button className="btn ghost" onClick={() => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); }}>Choose session</button></section>;
-  return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}${modern && collapsed?' composer-minimized':''}`} aria-label="Harness prompt">
+  return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}${modern && collapsed?' composer-minimized':''}`} aria-label="Harness prompt" aria-keyshortcuts="Control+Shift+Enter Meta+Shift+Enter">
     {modern && <button type="button" className="composer-minimize" data-now={collapsed&&now?now.tone:undefined} title={collapsed&&now?now.basis:statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{prepareCollapse();setChoice(collapsed?'open':'closed');if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}><span data-surface-label={collapsed?'':undefined}>{collapsed?controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':now?now.text:'Ask your agent…':'⌄'}</span></button>}
     {modern && collapsed && running && <button type="button" className="composer-mini-stop" aria-label="Stop turn" title="Stop this turn" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button>}
     {modern ? <div className="modern-composer-top"><div className="modern-composer-target"><span className="modern-composer-identity" title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg></span><span className="modern-composer-location" title={workspace?.root}><span>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Checking workspace…'}</span></span></div><span role="status" className="modern-composer-state" data-now={quietStatus&&now?now.tone:undefined} title={quietStatus&&now?now.basis:statusLabel}>{quietStatus&&now?now.text:workspace?.approved ? statusLabel : 'Needs access'}</span>{nativeOptions}</div> : <>
