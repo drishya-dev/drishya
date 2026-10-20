@@ -34,16 +34,23 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | FILES-1 | @yash + Codex | `codex/files-1-evidence-tree` | 2026-10-20 | FolderExplorer portion of `components/SessionWorkspace.tsx` only (not READ-9 CurrentDocument), new evidence-tree helper/decorations/CSS and focused specs; read-only file-evidence aggregation in new scene helper plus daemon history-worker/history/server and UI api (whole-session counts rather than paged guesses); new scoped CSS/helper/specs, no adapters/contracts/projection/History/Viewer/Git/Usage. At most 15 files. TASKS/STATUS completion. Separate worktree; leave PR ready for Claude, preferably merge READ-9 first; folder hunks are separate. |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
-| GIT-1 | @yash + Claude Opus 5.5 | `yash/git-1-integrate` | 2026-10-20 | Prototype merged (#135); builder asked to integrate directly: `apps/ui/src/components/GitThreadGraph.tsx`, new `apps/ui/src/lib/git-light*.ts`, Git graph CSS and specs |
+| GIT-1 | @yash + Claude Opus 5.5 | next: `yash/git-1-*` | 2026-10-20 | Integrated in #138; remaining perf/acceptance/flow work in `apps/ui/src/components/GitThreadGraph.tsx`, `apps/ui/src/lib/git-light.ts`, `light-renderer.ts`, Git graph CSS and specs |
 | UI-1 | @yash + Claude Opus 5.5 | `yash/ui-1-chrome` (draft #137, awaiting builder look) | 2026-10-20 | `apps/ui/src/components/Viewer.tsx` modern header, `apps/ui/src/modern/hud.css`, `recovered-surfaces.css` header rule |
 
 ---
 
 ## Last session
 
-### Yash with Codex - READ-9 ready for integration (PR136)
+### Yash with Claude (Opus 5.5) — GIT-1 Sacred Timeline integrated; UI-1 drafted; READ-9 reviewed
 
-- **Signal for Claude:** **READY FOR REVIEW / MERGE: [PR136](https://github.com/drishya-dev/drishya/pull/136)**, branch `codex/read-9-phone-source`. Please verify and squash-merge; Codex deliberately left it open under the builder's parallel-work instruction.
+- **When:** 20 October 2026. GIT-1 prototype #135 and integration #138; UI-1 draft #137; Codex READ-9 #136 reviewed, run locally (connected-workspace 18/18) and merged after resolving a claim-table conflict.
+- **GIT-1:** the Git graph draws WebGL2 filament light (`lib/git-light.ts`, `lib/light-renderer.ts`) under unchanged DOM commits; SVG ribbon only without WebGL2. Builder feedback applied: brighter core, branches clear of the river at every zoom, lightning opens forward only so time reads left → right. Still open: 60 fps measurement at 500 commits, fork/merge acceptance matrix, optional flow ([TASKS](TASKS.md) GIT-1).
+- **UI-1:** session title · repo · harness · model and a watch dot share the brand's outline (no capsule); phone brand mark restored. **Draft until the builder looks at it** (TASKS asks for that). Branch is not shown: the projection drops `session-meta.branch`.
+- **Working with Codex in parallel:** Codex claims on `main`, works in its own worktree (which holds the local `main` branch, so this checkout pushes docs with `git push origin HEAD:main` from a detached `origin/main`), and marks its PR ready plus a STATUS note as the merge signal; Claude verifies and squash-merges.
+
+### Yash with Codex - READ-9 (PR136, merged)
+
+- **Signal for Claude:** PR136 was marked ready for review; merged by Claude on 20 October after review.
 - **Claim:** `docs: claim READ-9` b0ed3ec was pushed to main before product edits. Isolated managed worktree at `C:/Users/ASUS/.codex/worktrees/review-search-context/drishya`; root checkout and dirty package/logo files untouched. Current GIT-1/UI-1 coordination claims were merged into this branch without conflicts; no overlapping code files changed. Claim removal in this PR takes effect when Claude merges it.
 - **Delivered:** compact source search and inline matches; existing line/wrap/file controls and provenance in header Reading options on narrow views. Escape owns only that disclosure. Mouse and touch input/menu sizing checked; desktop/Legacy retain their existing controls. [Evidence](review/read-9-phone-source.md).
 - **Validation:** baseline390px allocation0.463 reproduced; real imported Drishya Codex/Skeletongraph Codex/Claude files now0.690 mouse /0.635 emulated touch at390/320px, no horizontal overflow/page errors. Both TS/build,10focused units,18connected-workspace journeys and two actual-session matrix journeys pass. No native turn/capture/schema/API/dependency or hosted CI. Physical phone/keyboard acceptance remains REL-3.
