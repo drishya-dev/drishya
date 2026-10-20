@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**20 October PERF-1 handoff:** PR171 measures actual166/347/564MB Codex journals in30 fresh-process complete-import/append-browser runs. Zero adapter-reported gaps; append IDs/order match a fresh full import. Measurement is done, but peak RSS528.73MiB and observed stalls reopen the scale/resource gate. **PERF-2 in TASKS must restore/retest budgets before new features, coordinated with DATA-1/2 owners; no competing queue.** Details/numeric samples: [PERF-1 report](review/perf-1-large-journals.md), ROADMAP§7. Runtime, schema, dependencies and native sources unchanged; transient snapshots cleaned. PR171 ready for Claude review/squash, not self-merged. Main #172 TodoWrite and EXPLAIN priority reorder integrated. Actual UI interaction/physical acceptance remains distinct from headless proxies.
+
 **19 October direction reset (read first):**
 - **North star:** [AGENTS](../AGENTS.md#north-star--read-first-every-session).
 - **Work list:** [TASKS](TASKS.md), restructured as a tagged P0–P3 priority list with per-ID detail and acceptance. Run `node scripts/claims.ts` to see what is open and unclaimed; the priority tables carry a Done column.
