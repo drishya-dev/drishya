@@ -10,6 +10,18 @@ export interface PatchFile {
   hunks: Hunk[];
 }
 
+/** Read only line ranges actually reported in a unified diff. Never guess them from context. */
+export function parseUnifiedHunks(content: string): Hunk[] {
+  const hunks: Hunk[] = [];
+  let current: Hunk | undefined;
+  for (const line of content.split('\n')) {
+    const match = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
+    if (match) { current = { oldStart: Number(match[1]), oldLines: Number(match[2] ?? 1), newStart: Number(match[3]), newLines: Number(match[4] ?? 1), lines: [] }; hunks.push(current); }
+    else if (current && /^[ +\-]/.test(line) && !line.startsWith('---') && !line.startsWith('+++')) current.lines.push(line);
+  }
+  return hunks;
+}
+
 /** Codex apply_patch ("*** Begin Patch" / "*** Update File:" / "@@" / "-old" "+new"). */
 export function parseApplyPatch(text: string): PatchFile[] {
   const files: PatchFile[] = [];

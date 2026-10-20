@@ -1,9 +1,22 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createParser, intentOf, outcomeOf } from '../src/index.ts';
 
 const ctx = { recordingId: 'r', sourceId: 's', sourcePath: 'x.jsonl' };
 
 describe('Claude Code adapter', () => {
+  it('emits one usage point per assistant message and retains undated cumulative harness estimates', () => {
+    const parser = createParser(ctx);
+    const records = readFileSync(new URL('../../../fixtures/synthetic/usage/claude-usage.jsonl', import.meta.url), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    const observations = records.flatMap(record => parser.parse(record)).filter(o => o.kind === 'usage');
+    expect(observations.filter(o => o.payload.source === 'claude-message-usage')).toHaveLength(2);
+    expect(observations[0]).toMatchObject({ recordId: 'usage:msg_usage01', payload: { tokens: { input: 12, output: 210, cachedInput: 18000, cacheWrite: 4600 }, cumulative: false } });
+    const costs = observations.filter(o => o.payload.source === 'claude-cost-state');
+    expect(costs).toHaveLength(2);
+    expect(costs.every(o => o.sourceTime === undefined)).toBe(true);
+    expect(costs.at(-1)!.payload).toMatchObject({ cumulative: true, cost: { usd: .0871, basis: 'harness-estimate', modelCostUnknown: false }, work: { linesAdded: 3, linesRemoved: 1 } });
+    expect(parser.parse({ type: 'cost-state', totalCostUSD: .1, hasUnknownModelCost: true })[0]!.payload).toMatchObject({ cost: { modelCostUnknown: true } });
+  });
   it('maps harness tools to neutral intents', () => {
     expect(intentOf('Read', { file_path: '/w/a.ts', offset: 10, limit: 5 })).toEqual({ kind: 'read', path: '/w/a.ts', offset: 10, limit: 5 });
     expect(intentOf('mcp__github__search_code', {})).toEqual({ kind: 'mcp', server: 'github', tool: 'search_code' });

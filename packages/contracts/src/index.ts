@@ -2,7 +2,7 @@
 // Shapes follow docs/review/03-engineering-plan.md §3–4: immutable observations, a versioned
 // projection built from them, typed evidence links, historical artifacts with explicit gaps.
 
-export const CONTRACT_VERSION = '0.1.0-draft';
+export const CONTRACT_VERSION = '0.2.0-draft';
 
 // ─── Observations: what a source actually said, sanitized, never rewritten ─────────────
 
@@ -37,6 +37,8 @@ export type ObservationKind =
   | 'agent.stop'
   | 'compaction'
   | 'capture.gap'
+  | 'usage'
+  | 'item.completed'
   | 'unknown';
 
 export interface Observation {
@@ -54,6 +56,7 @@ export interface Observation {
   agentId: string;
   /** Native tool call id, so a call and its result correlate into one operation. */
   operationId?: string;
+  correlation?: { operationId: string; basis: 'source-id' | 'enclosing-call' };
   kind: ObservationKind | (string & {});
   payload: ObservationPayload;
   privacyPolicyVersion: string;
@@ -69,6 +72,8 @@ export type ObservationPayload =
   | AgentSpawnPayload
   | AgentStopPayload
   | GapPayload
+  | UsagePayload
+  | ItemPayload
   | UnknownPayload
   | Record<string, unknown>;
 
@@ -79,6 +84,11 @@ export interface SessionMetaPayload {
   branch?: string;
   model?: string;
   title?: string;
+  agentNickname?: string;
+  agentPath?: string;
+  parentThreadId?: string;
+  forkedFromId?: string;
+  effort?: string;
 }
 
 export interface MessagePayload {
@@ -86,6 +96,40 @@ export interface MessagePayload {
   model?: string;
   /** Codex exposes reasoning only as summaries; Claude as thinking text. */
   exposure?: 'full' | 'summary';
+}
+
+/** Accounting reported by a harness, never a price or missing token count inferred by Drishya. */
+export interface UsagePayload {
+  source: 'codex-token-count' | 'claude-message-usage' | 'claude-cost-state';
+  model?: string;
+  turnId?: string;
+  tokens?: { input?: number; cachedInput?: number; cacheWrite?: number; output?: number; reasoningOutput?: number; total?: number };
+  cumulative: boolean;
+  contextWindow?: number;
+  cost?: { usd: number; basis: 'harness-estimate'; modelCostUnknown?: boolean };
+  work?: { linesAdded?: number; linesRemoved?: number; durationMs?: number; apiDurationMs?: number; toolDurationMs?: number };
+  limits?: { usedPercent: number; windowMinutes: number; resetsAt: number; plan?: string };
+}
+
+/** Image references only in DATA-1. Inline image byte policy D7 is still undecided. */
+export interface ImageRef {
+  path?: string; mime?: string; bytes?: number; width?: number; height?: number;
+  origin: 'agent-viewed' | 'user-attached' | 'tool-output' | 'generated';
+  availability: Availability;
+  revisedPrompt?: TextValue;
+  savedPath?: string;
+}
+export interface ItemPayload {
+  item: 'command' | 'file-change' | 'mcp-call' | 'image-view' | 'web-search' | 'image-generation' | 'subagent';
+  itemId: string;
+  status?: string;
+  command?: string; cwd?: string; exitCode?: number; durationMs?: number; output?: TextValue;
+  parsed?: { kind: string; path?: string }[];
+  changes?: { path: string; type: 'add' | 'update' | 'delete' | 'move'; content?: TextValue }[];
+  mcp?: { server: string; tool: string; readOnlyHint?: boolean; isError?: boolean; error?: string; result?: TextValue };
+  image?: ImageRef;
+  web?: { query?: string; results?: { title?: string; url: string; domain?: string; snippet?: string }[] };
+  agent?: { threadId: string; path?: string; kind?: string; model?: string; effort?: string };
 }
 
 export interface ToolCallPayload {
@@ -206,6 +250,8 @@ export type OperationStatus = 'running' | 'ok' | 'error' | 'unknown';
 
 export interface Operation {
   id: string;
+  parentOperationId?: string;
+  durationMs?: number;
   agentId: string;
   kind: OperationKind;
   /** Captured tool name, shown in inspection. */
@@ -237,13 +283,19 @@ export interface PathRef {
   lines?: { start: number; end: number };
 }
 
+/** Typed children are the material; their enclosing script stays available only as evidence. */
+export function materialOperations(operations: Operation[]): Operation[] {
+  const scripts = new Set(operations.map(op => op.parentOperationId).filter(Boolean));
+  return operations.filter(op => !scripts.has(op.id));
+}
+
 export type OperationDetail =
   | { kind: 'read'; path: string; startLine: number; lineCount: number; totalLines?: number; excerptArtifactId?: string }
   | { kind: 'search'; query: string; mode: 'text' | 'file' | 'web'; hits: SearchHit[]; total?: number }
   | { kind: 'edit'; path: string; hunks: Hunk[]; created: boolean; reconstruction: Availability; reconstructionNote?: string }
   | { kind: 'shell'; command: string; exitCode?: number | null; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'test'; command: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
-  | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string }
+  | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
   | { kind: 'web'; url?: string; query?: string; resultPreview?: string }
   | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string }
   | { kind: 'plan'; items: { text: string; status: string }[] }
@@ -295,6 +347,10 @@ export interface Agent {
   agentType?: string;
   model?: string;
   firstSequence: number;
+  nickname?: string;
+  address?: string;
+  effort?: string;
+  forkedFromId?: string;
   lastSequence: number;
   stoppedSequence?: number;
 }
@@ -367,6 +423,7 @@ export interface Passage {
 }
 
 export interface Projection {
+  usage?: { latest?: UsagePayload; byTurn: Record<string, UsagePayload> };
   reducerVersion: string;
   recordingId: string;
   observationCount: number;

@@ -1,4 +1,5 @@
 import type {Artifact,Operation,Projection} from '@drishya/contracts';
+import {materialOperations} from '@drishya/contracts';
 import {sinceSnapshot,type SinceSnapshot} from './since.ts';
 import {operationObservations} from './operation-observations.ts';
 
@@ -19,7 +20,7 @@ export interface FindingMember {sequenceBasis?:'captured-observation'|'timeline-
 export interface FindingMembers {key:string;through:number;page:number;total:number;matching:number;items:FindingMember[];available:boolean}
 /** Query exact membership in the same worker projection; never ship whole operations/output. */
 export function findingMembers(p:Projection,key:string,page=0,q=''):FindingMembers {
-  const operations=[...p.operations].sort((a,b)=>a.startSequence-b.startSequence||a.id.localeCompare(b.id));
+  const operations=materialOperations(p.operations).sort((a,b)=>a.startSequence-b.startSequence||a.id.localeCompare(b.id));
   const starts=operationObservations(p).starts;
   let selected:Operation[]=[],items:FindingMember[]=[],available=true;
   if(key==='unknown')selected=operations.filter(op=>op.status==='unknown');
@@ -45,7 +46,7 @@ export function findingMembers(p:Projection,key:string,page=0,q=''):FindingMembe
 /** Explicit evidence conditions only. No risk score, causal story or model-generated summary. */
 export function reviewInsights(p:Projection,page=0,kind?:ReviewFinding['kind']):ReviewInsightsPage {
   page=Math.max(0,Math.floor(page));
-  const operations=[...p.operations].sort((a,b)=>a.startSequence-b.startSequence||a.id.localeCompare(b.id));
+  const operations=materialOperations(p.operations).sort((a,b)=>a.startSequence-b.startSequence||a.id.localeCompare(b.id));
   const findings:ReviewFinding[]=[],starts=operationObservations(p).starts;
   const artifacts=new Map(p.artifacts.map(artifact=>[artifact.id,artifact]));
   const repeated=new Map<string,Operation[]>();
