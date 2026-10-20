@@ -34,12 +34,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | PERF-1 | @yash + Codex | `codex/perf-1-large-journals` | 2026-10-20 | New isolated benchmark script and focused benchmark checks; `docs/review/perf-1-large-journals.md`, IMPLEMENTATION_ROADMAP §7 and completion docs. Read-only native journals, disposable redacted stores. No ingest/adapter/contracts/projection/runtime edits while DATA-1/2 are claimed. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
-| READ-6 | @yash + Claude | `yash/read-6-read-before-write` | 2026-10-20 | `packages/scene/src/read-before-write.ts` (+ test), worker/history/server route, api.ts, one line in the expanded edit card (History.tsx) and Inspector, one browser spec (at most 12 files). Claude edits only; Codex waits for DATA-1 typed reads. No adapter, contracts or projection edits. **CONTENT-9 was not claimed:** it needs review-125 S3 in adapter-claude/adapter-codex/contracts/projection, which the DATA-1/DATA-2 rows hold. |
 
 ---
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — READ-6 read-before-write (Claude edits)
+
+- **When:** 20 October 2026. `readBeforeWriteFor` (scene) lists the same agent's earlier successful reads of the edited file and relates them to the lines the edit replaces; one line in the expanded edit card; worker route `read-before`; bundles compute locally. New `read-before-write.spec.ts`. **CONTENT-9 was not started:** it needs review-125 S3 (an observation for empty/encrypted reasoning) in adapter-claude, adapter-codex, contracts and projection, which Harsh's DATA-1/DATA-2 rows hold. Take CONTENT-9, DATA-3…6 and the data-dependent CONTENT items after those merge; they are the critical path.
+- **Limits:** Claude only; a read taken before an earlier edit is not compared by line number; the count of reads is of this capture, not of everything the agent knew.
 
 ### Yash with Claude (Sonnet 5.5) — CONTENT-4 plan checklist (TodoWrite slice, partial)
 
