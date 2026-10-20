@@ -15,7 +15,7 @@ test('continuous explorer reaches every file with bounded rows and keyboard navi
   const template = sample.graph.nodes[0];
   const types = ['ts', 'tsx', 'js', 'json', 'py', 'md', 'css', 'svg', 'yml', 'rs'];
   sample.graph.nodes = Array.from({ length: 600 }, (_, n) => ({ ...template, id: `file-${n}`, path: `file-${String(n).padStart(3, '0')}.${types[n % types.length]}` }));
-  sample.graph.edges = [];
+  sample.graph.edges = []; sample.projection.files = [];
   await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(url());
@@ -244,7 +244,7 @@ test('change to check to Back restores the same patch and comparison layout', as
 test('expanding a distant folder preserves its scroll anchor and sibling positions', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
   const template = sample.graph.nodes[0];
-  sample.graph.nodes = Array.from({ length: 160 }, (_, n) => ({ ...template, id: `folder-${n}/file.ts`, path: `folder-${String(n).padStart(3, '0')}/file.ts` })); sample.graph.edges = [];
+  sample.graph.nodes = Array.from({ length: 160 }, (_, n) => ({ ...template, id: `folder-${n}/file.ts`, path: `folder-${String(n).padStart(3, '0')}/file.ts` })); sample.graph.edges = []; sample.projection.files = [];
   await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
   await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(url());
   const tree = page.getByRole('tree', { name: 'Workspace files' });
