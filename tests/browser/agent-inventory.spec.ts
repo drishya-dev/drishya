@@ -52,5 +52,8 @@ for(const count of [3,300])test(`${count} agents keep their family and filter in
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:`.local/ui10-agents-${count}-${width}.png`});
  }
+ await page.setViewportSize({width:320,height:568});await list.evaluate(el=>el.scrollTop=el.scrollHeight);
+ await expect(last).toBeInViewport();await expect(summary).toBeInViewport();
+ expect(await list.evaluate(el=>el.clientHeight)).toBeLessThanOrEqual(Math.ceil(568*.36));
  await summary.click();await expect(list).toBeHidden();
 });

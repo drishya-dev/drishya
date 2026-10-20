@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-10 | @yash + Codex | `codex/ui-10-agent-inventory` | 2026-10-20 | Bounded Agents disclosure: `modern/ModernTools.tsx` only, new 3/300-agent browser fixture and TASKS/STATUS/review (at most 5 files). Reuse collectionBounds; no tool-inventories CSS/test (UI-2), agent lineage/capture/schema, Workbench/History/Viewer or REVIEW-1 files. |
 | UI-2 | @yash + Codex | `codex/ui-2-toolbox-type` | 2026-10-20 | Toolbox typography slice only: `modern/tool-inventories.css`, focused browser checks, TASKS/STATUS/review (at most 6 files). No SessionWorkspace/History/Viewer or Usage logic, no capture/backend/data or inventory/motion/layout rewrite. |
 | FILES-2 | @yash + Codex | `codex/files-2-prose-links` | 2026-10-20 | Prose plus typed card/search paths: Markdown parser + pure resolver, History prose/header/search-hit routes, optional scoped path CSS, focused unit/browser checks and TASKS/STATUS/review (at most 10 files). No native/source IO, adapters/store/contracts/projection, Viewer/Search or UI-2 files; external links stay inert. |
 | REVIEW-1 | @yash + Claude Sonnet 5.5 | `yash/review-1-changes` | 2026-10-20 | `packages/scene/src/since.ts` (per-file +/- and last-changing turn; grouped gaps), `EvidenceReview.tsx` + CSS, the header label (`Viewer.tsx`), tests, TASKS/STATUS (at most 9 files). No adapters/contracts/projection (DATA-1/2), no test recognition (DATA-1). |
@@ -68,7 +67,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **GIT-3:** `CommitRows` beneath the Git graph (graph-header toggle, remembered as `git/rows`): hash · message · refs · author · age, newest first, hover and selection mirror both ways, a row pick reveals an off-screen commit. The reference list starts as refs named by loaded commits (plus checked-out/picked) with "In view / All N"; search and All restore the paged server list. Fixed the reference column clipping its bottom controls.
 - **Verified:** typecheck/build, unit tests, the Git specs, and the real repo (50 rows; 18 of 86 refs in view). **Not done:** keyboard arrows between rows beyond Tab; row virtualization beyond `content-visibility` (6 pages × 50 rows).
 
-### Yash with Codex — LIVE-2b ready for review
+### Yash with Codex — UI-10 agent inventory ready
+
+- **When:** 20 October 2026. Branch `codex/ui-10-agent-inventory`, PR #160, **READY FOR CLAUDE REVIEW / MERGE**. Claim removed in this PR; parent UI-10 remains open for other collections.
+- **Changed:** recorded Agents reuse ToolCollection: short lists retain natural height, more than six agents use216px/36dvh local scrolling. Existing explicit family nesting and filtering remain; no new panel/control or lineage inference.
+- **Verified:** synthetic normalized3/300-agent fixtures with long names, nested disclosure, exact counts, filter/clear, keyboard End and1440/390/320/short320px bounds. Existing3/300 MCP/runtime checks pass alongside them (four journeys). Real redacted Drishya Codex seven-agent list now216px; last row and outer summary stay reachable. UI TS/build pass; local frame inspected.
+- **Limits:** no agent-row virtualization/native-lineage certification. Native/data, physical/human and other UI-10 surfaces remain open. [Evidence](review/ui-10-agent-inventory.md). No backend/schema/dependency/native/journal writes or hosted CI.
+- **Other independent handoffs:** FILES-2 prose/card/search navigation ready in #157; Toolbox typography ready in #159. UI-2 Settings/Git typography merged as #155 and LIVE-2b as #153. Preserve the other builders' claims and inspect docs conflicts when merging these separate task branches.
+
 ### Yash with Codex — UI-2 Settings/Git typography ready
 
 - **When:** 20 October 2026. Branch `codex/ui-2-settings-type`, PR #155, **READY FOR CLAUDE REVIEW / MERGE**. Settings and Git graph typography slice only; parent UI-2 stays open. Claim removed in this PR; Claude owns squash-merge.
