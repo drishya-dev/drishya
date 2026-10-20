@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-3 | @yash + Codex | `codex/ui-3-home-github` | 2026-10-20 | First bounded UI-3 increment: Modern `SessionHome.tsx` GitHub link placement, new scoped link component/CSS and focused browser spec; TASKS/STATUS/attribution note. At most 8 files. No History/App/ProductShell, adapters/contracts/Git/Usage. Broader component candidates remain open for the specified prototype/selection pass. Draft then READY handoff for Claude. |
 | TURN-2 | @yash + Codex | `codex/turn-2-keyboard-reading` | 2026-10-20 | `App.tsx` keyboard dispatch, `components/History.tsx` keyboard focus/fold entry only, `ProductShell.tsx` Keyboard section; new reading-key helper/help component/scoped CSS and focused tests; bounded worker navigation via history/history-worker/server/api, no schema/adapters/projection/Git/Usage or FILES-1 FolderExplorer edits. Up to 15 files; separate worktree, draft then READY handoff for Claude to merge. |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
@@ -41,12 +40,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 
-### Yash with Codex — FILES-1 supported file evidence ready
+### Yash with Codex — UI-3 Home GitHub increment ready
 
-- **When:** 20 October 2026, `codex/files-1-evidence-tree`, PR #139. **READY FOR CLAUDE REVIEW / MERGE** — final local verification passed. Integrated main through `cefb2ca` (READ-9/UI-1/GIT-1 merged cleanly); this branch's `SessionWorkspace.tsx` changes are FolderExplorer only. No capture/schema/projection, History/Viewer/header, Git or Usage edits.
-- **Delivered:** quiet read-call counts, adapter-recorded creation/edit marks, live open-call hints and distinct touched-file counts on folders. Touched lives inside Find's menu; captured paths remain visible even when absent from the current index. Read-only history-worker aggregation is independent of resident history pages and current Git; only up to 100 requested visible rows cross the API, with replay step support. Existing menu dismissal/motion reused, tree accessible names preserved.
-- **Validation:** both typechecks/build, 615 full-suite unit tests plus final 45/45 focused reducer/API tests including the Review-work membership assertion; 20 browser journeys including connected workspace and actual Drishya Codex / Skeletongraph Codex / Skeletongraph Claude captures. Actual Claude README shows 10 captured reads plus E. One older Codex capture has no supported read/change path evidence; tested honest unmarked/empty state. Phone320/390, desktop1440, local live append/result updates; emulation, not physical device acceptance. Final results in [review](review/files-1-evidence-tree.md).
-- **Remaining:** FILES-1 is deliberately not fully ticked: D needs explicit deletion evidence from DATA-1 integration. Do not infer it from an empty patch. Missing original Skeletongraph journal still produces the pre-existing session-segments ENOENT warning; imported evidence remains readable. See TASKS for the exact pending dependency. No hosted CI; Claude owns merge.
+- **When:** 20 October 2026, `codex/ui-3-home-github`, PR #142. **READY FOR CLAUDE REVIEW / MERGE**. Scoped to Home's GitHub link; no shared canvas, capture, Usage or Git files touched.
+- **Delivered:** moved the link from primary navigation into Home's footer. Token-based pill, finite pointer-hover sheen, tinted star, static keyboard focus; no automatic external request or star count. Existing session controls remain reachable. Attribution: [UI-3 note](review/ui-3-home-github.md).
+- **Validation:** UI typecheck and production build; two local Edge browser checks using the real redacted Drishya/Skeletongraph store, at1440/390/320px, keyboard/reduced-motion/forced-colors/motion-off/low-resource fallbacks and no outbound requests. Screenshots inspected locally. No hosted CI. Broader UI-3 candidates and physical-device acceptance remain open; TASKS tracks them.
+- **Handoff:** Claude owns merge. Existing TURN-2 PR #141 remains a separate handoff; FILES-1 PR #139 is merged, with explicit deletion evidence still dependency-gated in TASKS.
 
 ### Yash with Claude (Opus 5.5) — GIT-1 Sacred Timeline integrated; UI-1 drafted; READ-9 reviewed
 

@@ -480,10 +480,10 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 
 - [ ] **UI-3 · Uiverse / component-library pass** · P1 · `ui` `motion`
   - **19 October progress (107):** Switch/minimal-input/hover references assessed; original token-based controls/focus/fields with motion/resource/forced-color fallbacks implemented. No copied library/runtime dependency. New shimmer/prototype-choice scope remains separate.
-  - **First:** the builder's reference [Star on GitHub shimmer button](https://uiverse.io/elijahgummer/bright-chicken-11) (MIT): black pill, a diagonal light sweep on hover (1 s ease-out), ring-offset on hover, and a star icon that tints on hover.
-    - Port it to our tokens (no Tailwind dependency); respect reduced motion.
-    - Show **no live star count**: a GitHub API call would be an automatic external request.
-    - Move it from the primary header to About or Home's footer.
+  - [x] **First (20 October, PR #142):** the builder's reference [Star on GitHub shimmer button](https://uiverse.io/elijahgummer/bright-chicken-11) (MIT): black pill, a diagonal light sweep on hover (1 s ease-out), ring-offset on hover, and a star icon that tints on hover.
+    - [x] Ported to our tokens (no Tailwind dependency); reduced-motion, low-resource and motion-off fallbacks.
+    - [x] **No live star count** or automatic GitHub request; normal external link only.
+    - [x] Moved from the primary header to Home's footer. [Attribution and local checks](review/ui-3-home-github.md). Broader UI-3 component selection remains open.
   - **Then** survey Uiverse and similar libraries (shadcn/ui, Origin UI, Magic UI, Aceternity UI, motion-primitives, React Bits) per component: toggles, segmented controls, inputs, search fields, menus, tooltips, tabs, checkboxes, dialogs, loaders/empty states.
     - Selection rules: fits the dark flat hairline theme; no glow pools; CSS-first; MIT or compatible licence with attribution; accessible (focus, keyboard, forced colours); reduced-motion fallback.
     - Use the `prototype` skill to show 2–3 candidates per component behind a switcher; the builder picks.
