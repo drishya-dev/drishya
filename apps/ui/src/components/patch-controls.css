@@ -1,0 +1,25 @@
+.modern-patch-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 0;flex:none;min-width:0}
+.patch-layout-choice{display:flex;flex:none;gap:2px;align-items:center}
+.modern-patch-tools .patch-layout-choice>.btn{min-height:32px;font-size:12px;padding:5px 8px}
+:root[data-ui-version=modern] .modern-patch-tools :is(.patch-layout-choice>.btn,.patch-wrap)[aria-pressed=true]{background:var(--s2);color:var(--t1);border-color:transparent}
+.patch-reading-options{display:flex;flex:none;align-items:center;gap:3px}
+.modern-patch-tools .patch-reading-options :is(.patch-wrap,.desk-options>summary){display:grid;place-items:center;width:32px;height:32px;min-height:32px;padding:6px}
+.patch-reading-options .desk-options>summary>span{display:none}
+.patch-wrap svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.modern-patch-tools>.source-find-compact{display:flex;flex-wrap:nowrap;align-items:center;flex:1 1 170px;min-width:0;gap:3px;margin:0;padding:0;border:0}
+.modern-patch-tools>.source-find-compact>input{flex:1;width:0;min-width:0;min-height:32px;font-size:12px;padding:5px 8px}
+.modern-patch-tools>.source-find-compact>.btn{flex:none;width:28px;min-width:28px;height:32px;min-height:32px;padding:4px;font-size:12px}
+.modern-patch-tools>.source-find-compact>[role=status]{flex:none;max-width:56px;margin:0;font:11px/1.5 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modern-patch-tools>.source-find-compact>[role=status]:empty{display:none}
+.modern-patch-tools .patch-reading-options .desk-options-body{min-width:0;width:min(250px,var(--menu-inline-space,calc(100vw - 48px)));padding:12px}
+.modern-patch-tools .patch-hunk-jump{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;white-space:normal}
+.modern-patch-tools .patch-hunk-jump>input{width:64px;min-height:32px;font:12px/1.5 var(--mono)}
+.modern-patch-tools .desk-options-body>small{color:var(--t2);font:11px/1.5 var(--sans)}
+@media(pointer:coarse){
+ .modern-patch-tools .patch-layout-choice>.btn,
+ .modern-patch-tools .patch-reading-options :is(.patch-wrap,.desk-options>summary),
+ .modern-patch-tools>.source-find-compact>:is(input,.btn),
+ .modern-patch-tools .patch-hunk-jump>input{min-height:40px}
+ .modern-patch-tools>.source-find-compact>input,
+ .modern-patch-tools .patch-hunk-jump>input{font-size:16px}
+}

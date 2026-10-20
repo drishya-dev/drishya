@@ -5,6 +5,7 @@ import { ToolOutput } from './ToolOutput.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
 import { useReadingReference } from './ReadingReference.tsx';
 import { SourceFind } from './SourceFind.tsx';
+import { PatchControls } from './PatchControls.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useApp } from '../state.ts';
@@ -203,6 +204,7 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
 }
 
 export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope = 'captured' }: { hunks: Hunk[]; path?: string; navigationKey?: string; scope?: 'captured' | 'current-git' | 'git-commit' | 'source-comparison' | 'local-draft' }) {
+  const modern = typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern';
   const [offset, setOffset] = useEvidenceState(`diff/${navigationKey}/offset`, () => firstChangeOffset(hunks));
   const [layout, setLayout] = useEvidenceState<'unified' | 'split'>(`diff/${navigationKey}/layout`, 'unified');
   const [query, setQuery] = useEvidenceState(`diff/${navigationKey}/query`, '');
@@ -224,10 +226,10 @@ export function DiffReader({ hunks, path, navigationKey = path ?? 'patch', scope
   const total = hunks.reduce((n, h) => n + h.lines.length, 0);
   const pageSize = 120;
   return <div ref={reader} className={`artifact-reader diff-reader diff-${layout}${wrap ? ' reader-wrap' : ''}`}>
-    <div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button><button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(value => !value)}>Wrap lines</button>
+    {modern ? <PatchControls layout={layout} setLayout={setLayout} wrap={wrap} toggleWrap={()=>setWrap(value=>!value)} hunk={Math.max(0,starts.findLastIndex(start=>start<=offset))+1} hunks={hunks.length} jump={index=>{setOffset(starts[index]!);setActive(undefined);}} query={query} change={value=>{setQuery(value);setActive(undefined);}} matches={matches} active={active} move={move}/> : <><div className="reader-tools" aria-label="Change layout"><button className="btn ghost small" aria-pressed={layout === 'unified'} onClick={() => setLayout('unified')}>Changes</button><button className="btn ghost small" aria-pressed={layout === 'split'} onClick={() => setLayout('split')}>Side by side</button><button className="btn ghost small" aria-pressed={wrap} onClick={() => setWrap(value => !value)}>Wrap lines</button>
       <label className="patch-hunk-jump">Hunk <input type="number" aria-label="Jump to patch hunk" min={1} max={hunks.length} value={Math.max(0, starts.findLastIndex(start => start <= offset)) + 1} onChange={e => { const index = Number(e.target.value) - 1; if (Number.isInteger(index) && index >= 0 && index < starts.length) { setOffset(starts[index]!); setActive(undefined); } }} /> of {hunks.length}</label>
     </div>
-    <SourceFind query={query} change={value => { setQuery(value); setActive(undefined); }} matches={matches} activeLine={active} move={move} label="Find in patch" idleLabel="Whole loaded patch" scopeLabel="this patch" />
+    <SourceFind query={query} change={value => { setQuery(value); setActive(undefined); }} matches={matches} activeLine={active} move={move} label="Find in patch" idleLabel="Whole loaded patch" scopeLabel="this patch" /></>}
     {offset > 0 && <div className="material-context">Focused on changed lines · earlier patch context available below</div>}
     <div ref={viewport} className="diff-scroll" tabIndex={0} role="region" aria-label="Patch content">
       <div className="unified-change"><DiffView hunks={hunks} path={path} skipLines={offset} maxLines={pageSize} activeOffset={active} showRemaining={false} /></div>
