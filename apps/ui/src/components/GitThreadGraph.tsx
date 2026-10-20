@@ -11,7 +11,7 @@ const ribbonColors=['#e6ffff','#69eaff','#427bff','#b5afff','#ffb7ee','#9068fa',
 const MIN_SCALE=.04,MAX_SCALE=2.5,clampScale=(value:number)=>Math.max(MIN_SCALE,Math.min(MAX_SCALE,value));
 const ago=(iso:string)=>{const s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);return s<90?'just now':s<5400?`${Math.round(s/60)} min ago`:s<129600?`${Math.round(s/3600)} h ago`:`${Math.round(s/86400)} d ago`;};
 
-export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset}:{commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
+export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,evidence}:{evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
   const graph=useMemo(()=>gitThreadLayout(commits,primary?.tip,seeds,offset),[commits,primary?.tip,offset]),viewport=useRef<HTMLDivElement>(null);
   const [scale,setScale]=useState(.6),[hovered,setHovered]=useState(''),[orbit,setOrbit]=useState(false),[angle,setAngle]=useState(.35);
   const [branchKey,setBranchKey]=useState('');
@@ -24,7 +24,18 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
   const canvas=useRef<HTMLCanvasElement>(null),world=useRef<HTMLDivElement>(null),renderer=useRef<LightRenderer|undefined>(undefined),[lit,setLit]=useState(false);
   useLayoutEffect(()=>{const element=canvas.current;if(!element)return;renderer.current??=LightRenderer.create(element);setLit(!!renderer.current);},[]);
   const ribbons=useMemo(()=>lit?undefined:gitRibbonGeometry(graph,scale,angle,lowResource,offset),[lit,graph,scale,angle,lowResource,offset]);
-  const light=useMemo(()=>lit?lightLayout(graph,scale):undefined,[lit,graph,scale]);
+  // A branch head whose whole change a newer primary commit wrote exactly (same paths, same contents) was squash-merged
+  // there; Git keeps no parent link for that, so this is the only evidence, and it is exact or absent.
+  const squash=useMemo(()=>{
+    const into=new Map<string,string>(),byX=[...graph.nodes].filter(node=>node.primary).sort((a,b)=>a.x-b.x);
+    for(const node of graph.nodes){
+      const mark=!node.primary?evidence?.branches.get(node.hash):undefined;if(!mark)continue;
+      const target=byX.find(candidate=>candidate.x>node.x&&evidence!.changes.get(candidate.hash)===mark);
+      if(target)into.set(node.hash,target.hash);
+    }
+    return into;
+  },[graph,evidence]);
+  const light=useMemo(()=>lit?lightLayout(graph,scale,squash):undefined,[lit,graph,scale,squash]);
   const worldHeight=light?.height??graph.height,heightNow=useRef(worldHeight);heightNow.current=worldHeight;
   useLayoutEffect(()=>{
     const before=previous.current;previous.current={graph,key:resetKey};
@@ -86,7 +97,7 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
   const active=byHash.get(hovered),neighbors=new Set(active?[active.hash,...active.parents,...commits.filter(commit=>commit.parents.includes(active.hash)).map(commit=>commit.hash)]:[]);
   const branch=!active&&light?light.branches.find(item=>item.key===branchKey):undefined;
   // Lightning only where a ref names a head with no loaded child; the layout decides which of those are branches.
-  const heads=useMemo(()=>{const children=new Set(commits.flatMap(commit=>commit.parents));return new Set(commits.filter(commit=>commit.labels.length&&!children.has(commit.hash)).map(commit=>commit.hash));},[commits]);
+  const heads=useMemo(()=>{const children=new Set(commits.flatMap(commit=>commit.parents));return new Set(commits.filter(commit=>commit.labels.length&&!children.has(commit.hash)&&!squash.has(commit.hash)).map(commit=>commit.hash));},[commits,squash]);
   const focusSet=active?neighbors:branch?new Set([...branch.members,...(branch.fork?[branch.fork]:[]),...(branch.merge?[branch.merge]:[])]):undefined;
   const lastFocus=useRef<Set<string>|undefined>(undefined);if(focusSet)lastFocus.current=focusSet;
   const focusMix=useRef(0),frame=useRef<number|undefined>(undefined),seed=useMemo(()=>hashSeed(primary?.name??'repository'),[primary?.name]);
@@ -164,8 +175,9 @@ function BranchPeek({branch,byHash,primary}:{branch:LightBranch;byHash:Map<strin
   const first=commits[0],name=head?.labels[0];
   return <div className="thread-peek thread-branch-peek" role="status">
     <code>{name??'Unnamed branch'}{head&&head.labels.length+head.omittedLabels>1?` +${head.labels.length+head.omittedLabels-1}`:''}</code>
-    <strong>{commits.length} {commits.length===1?'commit':'commits'} · {merge?`merged into ${primary??'the primary line'} at ${merge.hash.slice(0,7)}`:'not merged in this history'}</strong>
+    <strong>{commits.length} {commits.length===1?'commit':'commits'} · {merge?`${branch.squash?'squash-merged':'merged'} into ${primary??'the primary line'} at ${merge.hash.slice(0,7)}`:'not merged in this history'}</strong>
     <span>{authors.slice(0,3).join(', ')}{authors.length>3?` +${authors.length-3}`:''}{first&&head?` · ${ago(first.time)} → ${ago(head.time)}`:''}{fork?` · left ${fork.hash.slice(0,7)}`:''}</span>
+    {branch.squash&&merge&&<span>Git has no merge link: {merge.hash.slice(0,7)} “{merge.subject}” wrote exactly this branch’s file contents.</span>}
     <ol>{[...commits].reverse().slice(0,5).map(commit=><li key={commit.hash}><code>{commit.hash.slice(0,7)}</code>{commit.subject||'Untitled commit'}</li>)}{commits.length>5&&<li className="more">{commits.length-5} earlier</li>}</ol>
     <small>Click the strand to open its newest commit</small>
   </div>;
