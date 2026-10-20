@@ -423,6 +423,54 @@ shell('npm test', PASSING_RUN(7), 0, 2);
 cx('response_item', { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: "The guard change is correct: `== null` rejects only a missing total, so a total of 0 passes, and the free-order test now passes. I added a test that a missing total still blocks checkout (7 of 7 pass).\n\nOne real risk remains: checkout passes the 0 total to `charge()`, which throws on `!amount` — so a free order will clear the guard and then fail at payment. That should be fixed before this ships." }] }, 6);
 cx('event_msg', { type: 'task_complete', turn_id: 'turn-1', last_agent_message: 'The guard change is correct…' }, 0);
 
+// ─── usage and cost (DATA-2) ─────────────────────────────────────────────────────────────
+// Separate small sessions, so the demo story and its goldens stay unchanged. Shapes follow the
+// harnesses' real records (probed for structure only); every number is invented.
+
+const usageAt = (() => { let c = Date.parse('2026-10-20T09:00:00.000Z'); return (sec: number) => new Date((c += sec * 1000)).toISOString(); })();
+const codexUsage: string[] = [];
+const ux = (type: string, payload: Record<string, unknown>, t: number) => codexUsage.push(JSON.stringify({ timestamp: usageAt(t), type, payload }));
+const tokens = (input: number, cached: number, output: number, reasoning: number) => ({ input_tokens: input, cached_input_tokens: cached, cache_write_input_tokens: 0, output_tokens: output, reasoning_output_tokens: reasoning, total_tokens: input + output });
+// Account fields (credits balance, limit id) are present in real records and must never be stored.
+const limits = (used: number, secondary: boolean) => ({ limit_id: 'synthetic-limit-id', limit_name: null, individual_limit: null, plan_type: 'plus', primary: { used_percent: used, window_minutes: 300, resets_at: 1792486800 }, secondary: secondary ? { used_percent: 12.5, window_minutes: 10080, resets_at: 1792900000 } : null, credits: { has_credits: true, unlimited: false, balance: '17.25' }, rate_limit_reached_type: null, spend_control_reached: null });
+ux('session_meta', { id: '0199c0de-0000-7000-8000-0000000000aa', timestamp: '2026-10-20T09:00:00.000Z', cwd: CWD, originator: 'codex_cli_rs', cli_version: '0.60.0', model_provider: 'openai', git: { branch: 'main' } }, 0);
+ux('turn_context', { cwd: CWD, approval_policy: 'on-request', sandbox_policy: { type: 'workspace-write' }, model: 'gpt-5-codex', effort: 'medium', summary: 'auto' }, 0);
+ux('event_msg', { type: 'task_started', turn_id: 'turn-u1', model_context_window: 272000 }, 0);
+ux('response_item', { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Run the tests and tell me if anything fails.' }] }, 1);
+ux('event_msg', { type: 'token_count', info: null, rate_limits: limits(3.0, true) }, 1);
+ux('response_item', { type: 'function_call', name: 'shell_command', arguments: JSON.stringify({ command: 'npm test', workdir: CWD }), call_id: 'call_usage1' }, 2);
+ux('event_msg', { type: 'token_count', info: { total_token_usage: tokens(9200, 4100, 310, 120), last_token_usage: tokens(9200, 4100, 310, 120), model_context_window: 272000 }, rate_limits: limits(4.0, true) }, 0);
+ux('response_item', { type: 'function_call_output', call_id: 'call_usage1', output: `Exit code: 0\nWall time: 1.2 seconds\nOutput:\n${PASSING_RUN(6)}` }, 2);
+ux('response_item', { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'All 6 tests pass.' }] }, 2);
+ux('event_msg', { type: 'token_count', info: { total_token_usage: tokens(18900, 12000, 420, 160), last_token_usage: tokens(9700, 7900, 110, 40), model_context_window: 272000 }, rate_limits: limits(4.5, true) }, 0);
+ux('event_msg', { type: 'task_complete', turn_id: 'turn-u1', last_agent_message: 'All 6 tests pass.', duration_ms: 7100, time_to_first_token_ms: 900 }, 0);
+ux('event_msg', { type: 'task_started', turn_id: 'turn-u2', model_context_window: 272000 }, 5);
+ux('response_item', { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Thanks, that is all.' }] }, 1);
+ux('response_item', { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'You are welcome.' }] }, 2);
+ux('event_msg', { type: 'token_count', info: { total_token_usage: tokens(28800, 21000, 450, 160), last_token_usage: tokens(9900, 9000, 30, 0), model_context_window: 272000 }, rate_limits: limits(5.0, false) }, 0);
+ux('event_msg', { type: 'task_complete', turn_id: 'turn-u2', last_agent_message: 'You are welcome.', duration_ms: 2300, time_to_first_token_ms: 700 }, 0);
+
+const claudeUsage: string[] = [];
+let usageUid = 0;
+const uuidU = () => `00000000-0000-4000-9000-${(++usageUid).toString(16).padStart(12, '0')}`;
+const claudeBase = { cwd: CWD, sessionId: 'c0ffee00-0000-4000-8000-0000000000bb', version: '2.1.0', gitBranch: 'main', userType: 'external', entrypoint: 'cli', isSidechain: false };
+// Claude repeats the same usage on every line of one message (one line per content block).
+const msgUsage = (input: number, cacheRead: number, cacheCreate: number, output: number) => ({ input_tokens: input, cache_creation_input_tokens: cacheCreate, cache_read_input_tokens: cacheRead, output_tokens: output, cache_creation: { ephemeral_5m_input_tokens: cacheCreate, ephemeral_1h_input_tokens: 0 }, server_tool_use: { web_search_requests: 0, web_fetch_requests: 0 }, service_tier: 'standard', speed: 'standard', inference_geo: 'us', iterations: [{ type: 'message', input_tokens: input, output_tokens: output, cache_read_input_tokens: cacheRead, cache_creation_input_tokens: cacheCreate, cache_creation: { ephemeral_5m_input_tokens: cacheCreate, ephemeral_1h_input_tokens: 0 } }] });
+let uparent: string | null = null;
+const cu = (rec: Record<string, unknown>, t: number) => { const id = uuidU(); claudeUsage.push(JSON.stringify({ ...claudeBase, parentUuid: uparent, ...rec, uuid: id, timestamp: usageAt(t) })); uparent = id; };
+const assistantLine = (msgId: string, block: Record<string, unknown>, usage: Record<string, unknown>, stop: string | null, t: number) => cu({ type: 'assistant', message: { id: msgId, type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [block], stop_reason: stop, usage } }, t);
+// cost-state records carry no timestamp in real journals; they are session-cumulative.
+const costState = (usd: number, added: number, removed: number, unknown = false) => claudeUsage.push(JSON.stringify({ type: 'cost-state', totalCostUSD: usd, totalAPIDuration: 4100, totalAPIDurationWithoutRetries: 4100, totalDuration: 9800, totalToolDuration: 1300, totalLinesAdded: added, totalLinesRemoved: removed, hasUnknownModelCost: unknown, startTime: 1792486800000, modelUsage: { 'claude-opus-5-5': { inputTokens: 52, outputTokens: 640, cacheReadInputTokens: 38000, cacheCreationInputTokens: 9100, thinkingTokens: 120, webSearchRequests: 0, costUSD: usd } } }));
+cu({ type: 'user', message: { role: 'user', content: 'Run the tests and tell me if anything fails.' } }, 0);
+const u1 = msgUsage(12, 18000, 4600, 210);
+assistantLine('msg_usage01', { type: 'thinking', thinking: 'I will run the suite.', signature: 'synthetic' }, u1, null, 2);
+assistantLine('msg_usage01', { type: 'tool_use', id: 'toolu_usage0001', name: 'Bash', input: { command: 'npm test', description: 'Run the test suite' } }, u1, 'tool_use', 0);
+cu({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_usage0001', content: PASSING_RUN(6), is_error: false }] }, toolUseResult: { stdout: PASSING_RUN(6), stderr: '', interrupted: false, isImage: false } }, 2);
+costState(0.0412, 0, 0);
+const u2 = msgUsage(40, 20000, 4500, 430);
+assistantLine('msg_usage02', { type: 'text', text: 'All 6 tests pass.' }, u2, 'end_turn', 2);
+costState(0.0871, 3, 1);
+
 // ─── write ───────────────────────────────────────────────────────────────────────────────
 
 rmSync(out, { recursive: true, force: true });
@@ -434,6 +482,8 @@ for (const [p, s] of Object.entries(WORKSPACE)) write(join(out, 'workspace/shop'
 write(join(out, 'claude/checkout-fix.jsonl'), main.lines.join('\n') + '\n');
 write(join(out, 'claude/checkout-fix/subagents/agent-explore01.jsonl'), sub.lines.join('\n') + '\n');
 write(join(out, 'codex/rollout-checkout-review.jsonl'), codex.join('\n') + '\n');
+write(join(out, 'usage/codex-rollout-usage.jsonl'), codexUsage.join('\n') + '\n');
+write(join(out, 'usage/claude-usage.jsonl'), claudeUsage.join('\n') + '\n');
 write(
   join(out, 'README.md'),
   `# Synthetic fixtures
@@ -446,6 +496,8 @@ write(
 | \`claude/checkout-fix.jsonl\` | Claude Code transcript (\`~/.claude/projects/<slug>/<session>.jsonl\`) |
 | \`claude/checkout-fix/subagents/agent-explore01.jsonl\` | Claude Code subagent transcript |
 | \`codex/rollout-checkout-review.jsonl\` | Codex rollout (\`~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl\`) |
+| \`usage/codex-rollout-usage.jsonl\` | Codex rollout with \`token_count\` usage, rate limits (including account fields that must be dropped) and two turns (DATA-2) |
+| \`usage/claude-usage.jsonl\` | Claude Code transcript with per-message \`usage\` repeated across the lines of one message, and \`cost-state\` records without timestamps (DATA-2) |
 | \`workspace/shop/\` | The repository both sessions work in, in its final state |
 
 The sessions record \`cwd\` as \`${CWD}\`; importers map the repository with \`--workspace fixtures/synthetic/workspace/shop\`.

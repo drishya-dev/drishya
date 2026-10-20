@@ -8,6 +8,8 @@
 | `claude/checkout-fix.jsonl` | Claude Code transcript (`~/.claude/projects/<slug>/<session>.jsonl`) |
 | `claude/checkout-fix/subagents/agent-explore01.jsonl` | Claude Code subagent transcript |
 | `codex/rollout-checkout-review.jsonl` | Codex rollout (`~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`) |
+| `usage/codex-rollout-usage.jsonl` | Codex rollout with `token_count` usage, rate limits (including account fields that must be dropped) and two turns (DATA-2) |
+| `usage/claude-usage.jsonl` | Claude Code transcript with per-message `usage` repeated across the lines of one message, and `cost-state` records without timestamps (DATA-2) |
 | `workspace/shop/` | The repository both sessions work in, in its final state |
 
 The sessions record `cwd` as `/home/dev/shop`; importers map the repository with `--workspace fixtures/synthetic/workspace/shop`.
