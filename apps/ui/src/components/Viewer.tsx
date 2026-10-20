@@ -1,4 +1,5 @@
 import {useFilePeekLayout} from '../lib/use-file-peek-layout.ts';
+import { useNow } from '../lib/now-store.ts';
 import {GitHistory} from './GitHistory.tsx';
 import {ReviewInsights} from './ReviewInsights.tsx';
 import {SavedMomentsEntry} from './SavedMoments.tsx';
@@ -229,6 +230,29 @@ function WorkbenchExport() {
   return url ? <a className="btn ghost" href={url} download>Export recording</a> : null;
 }
 
+const HARNESS_NAME: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
+
+/**
+ * Which session this is, beside the brand and inside its outline (UI-1): the title, then the repository, harness and the
+ * main agent's recorded model, and a dot for whether the journal is watched and the agent is working now.
+ */
+function SessionLine({ projection }: { projection: Projection }) {
+  const recording = useApp(s => s.recording);
+  const source = useApp(s => s.source);
+  const working = useNow(s => !!s.view?.mark);
+  if (!recording) return null;
+  const title = projection.title || recording.title || 'Untitled session';
+  const repo = recording.workspaceRoot?.replace(/\\/g, '/').replace(/\/$/, '').split('/').at(-1);
+  const model = projection.agents.find(agent => !agent.parentId)?.model;
+  const meta = [repo ?? (source?.kind === 'bundle' ? 'Offline evidence' : undefined), HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ');
+  const state = !recording.live ? undefined : working ? 'working' : 'watching';
+  const stateText = state === 'working' ? 'Agent working now' : state === 'watching' ? 'Watching the journal; the agent is quiet' : undefined;
+  return <div className="session-line" title={[title, meta, stateText].filter(Boolean).join('\n')}>
+    <span className="session-line-title">{title}</span>
+    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}{meta}</span>
+  </div>;
+}
+
 /** A task-oriented shell; evidence and native capabilities stay in shared functional readers. */
 function StudioHeader({ scene, projection }: { scene: Scene; projection: Projection }) {
   const recording = useApp(s => s.recording);
@@ -240,7 +264,8 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
   const exportUrl = id ? source?.exportUrl(id) : undefined;
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   return <header className={`studio-header crown${modern ? ' modern-session-header' : ''}`}>
-    <button className="brand" aria-label={modern ? 'Drishya' : undefined} title={modern ? 'All sessions' : 'All recordings'} onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>
+    {modern ? <div className="modern-identity"><button className="brand" aria-label="Drishya" title="All sessions" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button><SessionLine projection={projection} /></div>
+      : <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>}
     {!modern&&<div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title || recording?.title}>{projection.title || recording?.title || 'Untitled session'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>}
     {modern&&connection==='reconnecting'&&<span role="status" className="session-connection">Reconnecting…</span>}
     <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div className={modern?"workspace-utilities":undefined}>{modern&&<span className="utility-heading">Session tools</span>}<NativeReturnEntry deferMoments={modern}/><SessionSegments/>{modern && <div className="modern-evidence-actions"><EvidenceReview key={id} projection={projection} /><ReviewQuestionsEntry key={`questions/${id}`} /><SavedMomentsEntry/><SessionIdentity/></div>}<UsagePeek />{modern&&<span className="utility-heading">Navigate &amp; share</span>}<LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
