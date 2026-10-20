@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import type { Operation, Projection, ReplayBundle } from '@drishya/contracts';
+import { sinceSnapshot } from '../src/since.ts';
 import { fileEvidence, touchedFiles } from '../src/file-evidence.ts';
 const base = (JSON.parse(readFileSync(new URL('../../../apps/ui/public/demo/bundle.json', import.meta.url), 'utf8')) as ReplayBundle).projection;
 const op = (path: string, kind: Operation['kind']='read', status: Operation['status']='ok', created=false): Operation => ({ ...base.operations[0]!, id: path, kind, status, paths: [{path, role:kind==='read'?'read':'write',basis:'captured'}], detail: kind==='read'?{kind:'read',path,startLine:1,lineCount:1}:{kind:'edit',path,hunks:[],created,reconstruction:'unavailable'} });
@@ -28,6 +29,11 @@ describe('file evidence',()=>{
     expect(fileEvidence(p,['old.ts','old.ts'])).toEqual([{path:'old.ts',readCalls:250,now:false}]);
     expect(fileEvidence({...p,operations:[...p.operations,op('old.ts')]},['old.ts'])[0]!.readCalls).toBe(251);
     expect(fileEvidence(p,['other.ts'])).toEqual([]);
+  });
+  it('uses the same resolved change membership as Review work',()=>{
+    const p=projection([op('edited.ts','edit'),op('created.ts','write','ok',true),op('uncertain.ts','edit','unknown'),op('failed.ts','edit','error'),op('pending.ts','edit','running')]);
+    const paths=p.operations.flatMap(operation=>operation.paths.map(ref=>ref.path));
+    expect(fileEvidence(p,paths).filter(file=>file.change).map(file=>file.path).sort()).toEqual(sinceSnapshot(p,-1).editedFiles.sort());
   });
   it('aggregates distinct touched files, excludes mentions and unsafe/unresolved locations',()=>{
     const file=(path:string,roles:Projection['files'][number]['roles'])=>({path,roles,firstStep:0,lastStep:1});

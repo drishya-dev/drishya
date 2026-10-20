@@ -57,13 +57,17 @@ test('actual dense Codex and Claude sessions show whole-session counts without c
       await expect(explorer.locator('.file-change,.file-reads,.file-now')).toHaveCount(0);continue;
     }
     await explorer.getByRole('textbox',{name:'Find repository files'}).fill(target.path);
-    const row=explorer.locator('[data-spine-path]').filter({hasText:target!.path});await expect(row).toBeVisible();
+    const row=explorer.locator(`[data-spine-path=${JSON.stringify(target.path)}]`);await expect(row).toBeVisible();
     if(target!.readCalls)await expect(row.getByLabel(`${target!.readCalls} captured read calls`,{exact:true})).toBeVisible();
     if(target!.change)await expect(row.locator('.file-change')).toHaveText(target!.change);
     expect(await row.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
     await page.screenshot({path:resolve(`.local/files1-${recordingId}.png`)});
-    await page.setViewportSize({width:390,height:844});if(!await explorer.isVisible())await page.getByRole('button',{name:'Show files',exact:true}).click();
-    await expect(row).toBeVisible();expect(await explorer.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
-    await explorer.getByLabel('File filters',{exact:true}).click();await expect(explorer.getByRole('button',{name:'Touched',exact:true})).toBeVisible();await page.keyboard.press('Escape');await expect(explorer).toBeVisible();
+    for(const width of [390,320]) {
+      await page.setViewportSize({width,height:844});if(!await explorer.isVisible())await page.getByRole('button',{name:'Show files',exact:true}).click();
+      await expect(row).toBeVisible();expect(await explorer.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+      await explorer.getByLabel('File filters',{exact:true}).click();await expect(explorer.getByRole('button',{name:'Touched',exact:true})).toBeVisible();
+      const menu=await explorer.locator('.tree-evidence-filter-menu').boundingBox();expect(menu!.width).toBeGreaterThan(160);expect(menu!.x).toBeGreaterThanOrEqual(0);expect(menu!.x+menu!.width).toBeLessThanOrEqual(width);
+      await page.keyboard.press('Escape');await expect(explorer).toBeVisible();
+    }
   }expect(errors).toEqual([]);}finally{await actualServer.close();await actualApp.close();}
 });

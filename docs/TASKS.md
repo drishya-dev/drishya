@@ -430,7 +430,10 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
     - Folders aggregate (dot plus count).
     - A "Touched" filter shows only files with session evidence.
     - Decorations come from captured operations, never current Git status alone; Git status stays in Git review.
-  - **Accept:** matches Review work's changed files; updates live; no resident new buttons (the filter goes in the Find field's menu). `modern/ModernFiles.tsx` currently has no decorations.
+  - **Accept:** matches Review work's changed files; updates live; no resident new buttons (the filter goes in the Find field's menu). Active implementation is shared `FolderExplorer` in `SessionWorkspace.tsx`; the older standalone `ModernFiles.tsx` is not the active Modern tree.
+
+  - [x] **20 October supported-evidence increment:** read-call eye/count, recorded creation (`A`) and edit/write (`E`) marks, open captured-call `now` in live history, distinct touched-file counts on folders, and Touched in Find's menu. Counts use a bounded whole-history worker query; file opening and virtual-tree keyboard names remain intact. See [FILES-1 evidence](review/files-1-evidence-tree.md).
+  - [ ] **Remaining, DATA-1 dependent:** deletion (`D`) requires a retained explicit deletion discriminator; current `OperationDetail.edit` has `created` but no deleted field. Do not infer deletion from empty replacements, absent current files or Git status. Recheck typed Codex changes and Claude deletion evidence after DATA-1; also re-import/rescan legacy captures missing those items. FILES-1 stays open for this scope.
 
 - [ ] **FILES-2 · Paths open in peek** · P1 · `files` `read` — any path in prose, card headers, search hits and test output opens in the tabbed peek (captured version by default, with an explicit current-file toggle under consent).
 
