@@ -1,3 +1,7 @@
+import {Fragment} from 'react';
+import {outputPaths} from '../lib/output-paths.ts';
+import type {ProsePath} from '../lib/prose-path.ts';
+import {openCapturedPath} from './CapturedPath.tsx';
 import {useEffect,useId,useRef,useState} from 'react';
 import {useApp} from '../state.ts';
 import {workspaceApi} from '../api.ts';
@@ -29,7 +33,7 @@ export function LibrarySearch() {
     },160);
     return()=>{active=false;clearTimeout(timer);};
   },[open,source,q,root,harness,from,to,before,retry]);
-  const choose=async(hit:LibrarySearchPage['items'][number])=>{
+  const choose=async(hit:LibrarySearchPage['items'][number],file?:ProsePath)=>{
     if(opening||!source)return;setOpening(true);setError(undefined);
     try {
       await useApp.getState().openRecording(hit.recordingId);
@@ -37,6 +41,7 @@ export function LibrarySearch() {
       const target=new URL(location.href);target.hash=`#/r/${encodeURIComponent(hit.recordingId)}`;history.pushState(null,'',target);
       current.set({developerWorkspace:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,expandedOp:undefined,explore:false,follow:false,held:true,focusObservationId:hit.observationId});
       await current.loadHistoryWindow({observationId:hit.observationId});
+      if(file&&useApp.getState().recordingId===hit.recordingId)openCapturedPath(file);
       setOpen(false);
     } catch(err){setError((err as Error).message);}finally{setOpening(false);}
   };
@@ -54,7 +59,7 @@ export function LibrarySearch() {
       {loading&&<p role="status">Searching local evidence…</p>}{error&&<p role="alert">{error} <button className="btn ghost" onClick={()=>setRetry(n=>n+1)}>Retry</button></p>}
       {!loading&&!error&&page&&!page.items.length&&<p>No indexed evidence matched these filters.</p>}
       {!page&&!loading&&!error&&<p>Search across imported conversations without opening each session.</p>}
-      {page?.items.map(hit=><button key={`${hit.recordingId}/${hit.observationId}`} disabled={opening} onClick={()=>void choose(hit)}><strong>{hit.title||'Untitled session'}</strong><span>{hit.harness==='codex'?'Codex':'Claude Code'}{hit.sourceTime&&<> · <CapturedTime iso={hit.sourceTime}/></>}</span><small title={hit.workspaceRoot}>{hit.workspaceRoot||'Workspace not recorded'}</small><p>{hit.snippet}</p></button>)}
+      {page?.items.map(hit=><Fragment key={`${hit.recordingId}/${hit.observationId}`}><button disabled={opening} onClick={()=>void choose(hit)}><strong>{hit.title||'Untitled session'}</strong><span>{hit.harness==='codex'?'Codex':'Claude Code'}{hit.sourceTime&&<> · <CapturedTime iso={hit.sourceTime}/></>}</span><small title={hit.workspaceRoot}>{hit.workspaceRoot||'Workspace not recorded'}</small><p>{hit.snippet}</p></button>{outputPaths(hit.snippet,hit.workspaceRoot,4).map(ref=><button key={ref.start} className="md-path" disabled={opening} aria-label={`Open captured work for ${ref.path}${ref.line?` at line ${ref.line}`:''}`} onClick={()=>void choose(hit,ref)}>{hit.snippet.slice(ref.start,ref.end)} ↗</button>)}</Fragment>)}
     </div>
     <footer><span role="status">{page?`${page.items.length} results${before?' · continued':''}`:'Local evidence search'}</span><button className="btn ghost" disabled={!before||loading} onClick={()=>setBefore(undefined)}>First page</button><button className="btn" disabled={!page?.nextBefore||loading} onClick={()=>setBefore(page!.nextBefore)}>Next results</button></footer>
     </div></ReadingDialog>;
