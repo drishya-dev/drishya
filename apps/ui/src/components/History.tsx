@@ -32,7 +32,8 @@ import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { NativeTurn } from './SessionWorkspace.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
-import { useWorkspaceMemory } from '../lib/workspace-memory-react.ts';
+import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
+import { foldedHeights, foldedSteps, foldOf, measureKey } from '../lib/turn-fold.ts';
 
 /** Navigation targets the readable world below any overlapping fixed controls. */
 function readingClearance(history: HTMLElement): number {
@@ -61,6 +62,15 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const ref = useRef<HTMLDivElement>(null);
   const memory = useWorkspaceMemory();
   useHoverReading(ref);
+  const activeNow = useNow((s) => !!s.view?.mark);
+  // Folded turns, by the id of the passage that opens each one (TURN-1b).
+  const [storedFolds, setStoredFolds] = useWorkspaceState<string[]>('history/folded-turns', []);
+  const foldMotion = useRef<{ opener: string; tops: Map<string, number> } | undefined>(undefined);
+  const foldAnimations = useRef<Animation[]>([]);
+  // Folding near the end shortens the document under the reader; the browser would clamp the scroll and move the header.
+  // Hold the old extent until the reader scrolls back inside the real one (see onScroll).
+  const [extentFloor, setExtentFloor] = useState(0);
+  const extent = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ top: memory.get('history/top') as number ?? 0, height: 900 });
   const [measurementVersion, setMeasurementVersion] = useState(0);
   const [focusedPassageId, setFocusedPassageId] = useState<string | undefined>();
@@ -159,9 +169,48 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const ids = scene.passages.map((ps) => ps.id);
   const hoverPassageId = scene.passages.find(ps => ps.ops.some(op => op.id === hoveredOp))?.id;
   const pinned = new Set([readingAnchor.current?.id, targetId, expandedId, focusedPassageId, hoverPassageId].filter((id): id is string => !!id));
-  const layout = useMemo(() => passageWindow(ids, measurements.current, viewport.top, viewport.height, pinned, lowResource ? 300 : 900),
+  // A folded turn opens for whatever a reader is sent to inside it, and the newest turn never folds while the agent works in it.
+  // Folding belongs to the Modern chapter header; the retained UIs have no control to unfold with.
+  const targetTurn = scene.passages[targetIndex]?.inTurn;
+  const expandedTurn = expandedId ? scene.passages.find((ps) => ps.id === expandedId)?.inTurn : undefined;
+  const newestTurn = scene.passages.at(-1)?.inTurn;
+  const stored = useMemo(() => new Set(storedFolds), [storedFolds]);
+  const modern = typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern';
+  const folded = useMemo(() => mode === 'history' && modern
+    ? foldedSteps(scene.passages, stored, new Set([targetTurn, expandedTurn, activeNow ? newestTurn : undefined].filter((n): n is number => n !== undefined)))
+    : new Set<number>(), [scene.passages, stored, mode, modern, targetTurn, expandedTurn, activeNow, newestTurn]);
+  const heights = useMemo(() => foldedHeights(scene.passages, measurements.current, folded), [scene.passages, folded, measurementVersion]);
+  const layout = useMemo(() => passageWindow(ids, heights, viewport.top, viewport.height, pinned, lowResource ? 300 : 900),
     // IDs and pinning are recreated as scene and reader state change. Measurements need their own revision.
-    [scene.passages, viewport, measurementVersion, targetId, expandedId, focusedPassageId, hoverPassageId, readingAnchor.current?.id, lowResource]);
+    [scene.passages, viewport, heights, targetId, expandedId, focusedPassageId, hoverPassageId, readingAnchor.current?.id, lowResource]);
+
+  // Opening a turn to show a selection is the reader's choice from then on, so it stays open after the selection clears.
+  useEffect(() => {
+    const opened = scene.passages.filter((ps) => ps.turnStep !== undefined && (ps.turnStep === targetTurn || ps.turnStep === expandedTurn) && stored.has(ps.id)).map((ps) => ps.id);
+    if (opened.length) setStoredFolds((list) => list.filter((id) => !opened.includes(id)));
+  }, [targetTurn, expandedTurn, stored]);
+
+  const setFolds = useRef(setStoredFolds);
+  setFolds.current = setStoredFolds;
+  const toggleFold = useCallback((id: string) => {
+    const el = ref.current;
+    for (const animation of foldAnimations.current) animation.finish();
+    foldAnimations.current = [];
+    // Remember where the work below the header sits, so it moves from there instead of jumping (see the layout effect).
+    if (el && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const slots = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]:not([data-folded=hidden])')];
+      const bottom = el.getBoundingClientRect().bottom;
+      foldMotion.current = { opener: id, tops: new Map(slots.slice(slots.findIndex((slot) => slot.dataset.passageId === id) + 1).flatMap((slot) => {
+        const top = slot.getBoundingClientRect().top;
+        return top < bottom + 400 ? [[slot.dataset.passageId!, top] as const] : [];
+      })) };
+    }
+    if (!useApp.getState().follow) setExtentFloor((floor) => Math.max(floor, extentTotal.current));
+    setFolds.current((list) => list.includes(id) ? list.filter((item) => item !== id) : [...list, id]);
+  }, [lowResource]);
+  const extentTotal = useRef(layout.total);
+  extentTotal.current = layout.total;
+  useLayoutEffect(() => { if (follow) setExtentFloor(0); }, [follow]);
 
   useLayoutEffect(() => {
     // A selection can end outside history. Do not leave following locked by a
@@ -179,9 +228,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   useLayoutEffect(() => {
     if (!onWindow) return;
-    const visible = passageWindow(ids, measurements.current, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
+    const visible = passageWindow(ids, heights, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
     const missing = visible.runs.flatMap((run) => Array.from({ length: run.end - run.start }, (_, i) => run.start + i))
-      .find((i) => scene.passages[i]?.unloaded);
+      .find((i) => scene.passages[i]?.unloaded && foldOf(scene.passages[i]!, folded) !== 'hidden');
     if (missing === undefined) { requestedWindow.current = undefined; return; }
     const start = Math.max(0, missing - 8);
     const key = `${scene.step}:${start}`;
@@ -193,13 +242,13 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       requestedWindow.current = undefined;
       set({ error: error.message });
     });
-  }, [scene.passages, scene.step, viewport, measurementVersion, onWindow]);
+  }, [scene.passages, scene.step, viewport, heights, onWindow]);
 
   const rememberReading = () => {
     const el = ref.current;
     if (!el) return;
     const viewport = el.getBoundingClientRect();
-    const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => {
+    const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]:not([data-folded=hidden])')].find((item) => {
       const bounds = item.getBoundingClientRect();
       return bounds.bottom > viewport.top + 1 && bounds.top < viewport.bottom;
     });
@@ -306,10 +355,10 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // for ResizeObserver lets a frame expose their extra height, then jumps back.
     let changed = false;
     if (!pointerFocus.current) for (const node of ref.current?.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]') ?? []) {
-      if (node.dataset.unloaded === 'true') continue;
+      if (node.dataset.unloaded === 'true' || node.dataset.folded === 'hidden') continue;
       const height = node.getBoundingClientRect().height;
-      if (Math.abs((measurements.current.get(node.dataset.passageId!) ?? 0) - height) > .5) {
-        measurements.current.set(node.dataset.passageId!, height);
+      if (Math.abs((measurements.current.get(node.dataset.measureKey!) ?? 0) - height) > .5) {
+        measurements.current.set(node.dataset.measureKey!, height);
         changed = true;
       }
     }
@@ -317,6 +366,23 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // Correct measured spacer changes before paint, using the latest user-scroll anchor.
     restoreReading(true);
   }, [scene.passages, layout, follow, compareAgents, explore, theme, measurementVersion]);
+
+  // Folding moves the work below the header: it travels from where it was, and unfolded work eases in under the header.
+  useLayoutEffect(() => {
+    const moved = foldMotion.current, el = ref.current;
+    if (!moved || !el) return;
+    foldMotion.current = undefined;
+    const slots = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]:not([data-folded=hidden])')];
+    const bottom = el.getBoundingClientRect().bottom;
+    const easing = 'cubic-bezier(.23,1,.32,1)';
+    for (const slot of slots.slice(slots.findIndex((item) => item.dataset.passageId === moved.opener) + 1)) {
+      const top = slot.getBoundingClientRect().top;
+      if (top > bottom) break;
+      const before = moved.tops.get(slot.dataset.passageId!);
+      if (before === undefined) foldAnimations.current.push(slot.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing, id: 'turn-fold' }));
+      else if (Math.abs(before - top) > 1) foldAnimations.current.push(slot.animate([{ transform: `translateY(${before - top}px)` }, { transform: 'none' }], { duration: 260, easing, id: 'turn-fold' }));
+    }
+  }, [storedFolds]);
 
   // A passage can grow after its artifact arrives or its width changes. Record the actual slot
   // height, then reflow spacers; preserve the captured passage/pixel anchor while detached.
@@ -328,8 +394,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       for (const entry of entries) {
         // A paged-out placeholder retains its last real allocation; it is not a
         // fresh measurement of the captured passage that will replace it.
-        if ((entry.target as HTMLElement).dataset.unloaded === 'true') continue;
-        const id = (entry.target as HTMLElement).dataset.passageId;
+        if ((entry.target as HTMLElement).dataset.unloaded === 'true' || (entry.target as HTMLElement).dataset.folded === 'hidden') continue;
+        const id = (entry.target as HTMLElement).dataset.measureKey;
         if (!id) continue;
         const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height;
         if (Math.abs((measurements.current.get(id) ?? 0) - height) > 0.5) {
@@ -435,6 +501,12 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // Even a programmatic scroll changes the required data window. A reader can scroll
     // again before its one-frame guard clears; skipping the viewport leaves unloaded work.
     setViewport((old) => old.height !== el.clientHeight || Math.abs(old.top - el.scrollTop) > (programmatic.current ? 120 : .5) ? { top: el.scrollTop, height: el.clientHeight } : old);
+    // A held extent shrinks to what the reader still sees below the real content, and goes once that is none.
+    if (extentFloor && extent.current) {
+      const below = el.getBoundingClientRect().bottom - extent.current.getBoundingClientRect().top;
+      if (below <= layout.total + .5) setExtentFloor(0);
+      else if (below < extentFloor - .5) setExtentFloor(below);
+    }
     if (programmatic.current && Math.abs(el.scrollTop - lastScrollTop.current) < 0.5) return;
     if (follow && performance.now() >= userScrollUntil.current) return;
     navigating.current = true;
@@ -472,6 +544,9 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     <>
     <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
       if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; }
+      // A slot still moving after a fold would be remembered at its moving position.
+      for (const animation of foldAnimations.current) animation.finish();
+      foldAnimations.current = [];
       cancelledNavigation.current = intent; pendingNavigation.current = undefined;
       userScrollUntil.current = performance.now() + 750;
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? (ref.current?.clientHeight ?? 1) : 1;
@@ -503,15 +578,18 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     }} onPointerUp={holdForSelection} onKeyUp={holdForSelection} onCopy={holdForSelection} onFocusCapture={(e) => { if (scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) return; if (pointerFocus.current && (e.target as HTMLElement).closest('button, input, select, a')) return; const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId; setFocusedPassageId(id); if (id) rememberReading(); }} onBlurCapture={(e) => { if (!(e.relatedTarget as HTMLElement | null)?.closest('[data-passage-id]')) setFocusedPassageId(undefined); }}>
       {/* Keep the document extent stable while React replaces disjoint virtual runs.
           Otherwise removing a spacer can clamp native scroll to the pinned old work. */}
-      <div className="history-inner"><div style={{ minHeight: layout.total }}>
+      <div className="history-inner"><div ref={extent} style={{ minHeight: Math.max(layout.total, extentFloor) }}>
         {scene.passages.length === 0 && <div className="history-empty">No captured work in this view yet.</div>}
         {layout.runs.flatMap((run) => [
           ...(run.before > 0 ? [<div key={`gap-${run.start}`} aria-hidden="true" style={{ height: run.before }} />] : []),
-          ...scene.passages.slice(run.start, run.end).map((ps) => (
-            <div className="passage-slot" data-passage-id={ps.id} data-unloaded={ps.unloaded || undefined} key={ps.id}>
-              {ps.unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} />}
-            </div>
-          )),
+          ...scene.passages.slice(run.start, run.end).map((ps) => {
+            // A folded opener keeps its prompt while paged out, so it shows as a header rather than a loading slot.
+            const fold = foldOf(ps, folded);
+            const unloaded = ps.unloaded && fold !== 'header';
+            return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={measureKey(ps.id, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
+              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
+            </div>;
+          }),
         ])}
         {layout.runs.length > 0 && <div aria-hidden="true" style={{ height: layout.total - layout.prefix[layout.runs.at(-1)!.end]! }} />}
       </div>
@@ -522,6 +600,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     </div>
       {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index,time:ps.turnTime }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
+          // A chapter jump lands on an open turn; it is a jump, so nothing travels.
+          if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));
           set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
           navigationBoundary.current = { step: scene.step, projection };
           chapterNavigation.current = onWindow && ps.unloaded ? { id: ps.id, step: scene.step } : undefined;
@@ -546,13 +626,13 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   );
 }
 
-const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, focus }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; agent?: Agent; agents: Agent[]; focus: boolean }) {
+const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, focus, foldable = false, folded = false, onFold }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; agent?: Agent; agents: Agent[]; focus: boolean; foldable?: boolean; folded?: boolean; onFold?: (id: string) => void }) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
-    <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} />}
-      {ps.ops.length > 0 && (
+    <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
+      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {!folded && ps.ops.length > 0 && (
         <>
           <div className="passage-head">
             {agents.length > 1 && <><span className="agent-dot" /><span className="passage-agent">{agentName(agent)}</span></>}
@@ -566,7 +646,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
           </div>
         </>
       )}
-      {ps.prose.map((p) => {
+      {!folded && ps.prose.map((p) => {
         const pr = prose.get(p.id);
         return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
       })}
@@ -860,7 +940,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
  * a single line of what it did. The newest turn waits until the agent is quiet, and replay shows no ledger,
  * so nothing here tells the future.
  */
-function TurnBlock({ prompt, step }: { prompt: string; step?: number }) {
+function TurnBlock({ prompt, step, fold }: { prompt: string; step?: number; fold?: { folded: boolean; toggle: () => void } }) {
   const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
   const newest = useTurns((s) => s.lastStep === step);
   const active = useNow((s) => !!s.view?.mark);
@@ -885,7 +965,13 @@ function TurnBlock({ prompt, step }: { prompt: string; step?: number }) {
       <span className="turn-who">You</span>
       <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
-      {parts.length > 0 && <div className="turn-ledger" title={LEDGER_BASIS}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
+      {fold ? (
+        // The ledger line is the fold control: what the turn did is what stays when it folds.
+        <button type="button" className="turn-ledger turn-fold" aria-expanded={!fold.folded} aria-label={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `: ${parts.map((part) => part.text).join(', ')}` : ''}`} title={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `. ${LEDGER_BASIS}` : ''}`} onClick={(e) => { e.stopPropagation(); fold.toggle(); }}>
+          <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          {parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}
+        </button>
+      ) : parts.length > 0 && <div className="turn-ledger" title={LEDGER_BASIS}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
     </div>
   );
 }

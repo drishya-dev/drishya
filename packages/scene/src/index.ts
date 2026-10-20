@@ -62,6 +62,11 @@ export interface ScenePassage {
   turnTime?: string;
   /** Timeline step of that turn's prompt, to find its ledger (see turns.ts). */
   turnStep?: number;
+  /**
+   * Timeline step of the prompt this passage follows, on every passage of the turn (not only the one that opens it),
+   * so a reader can fold a finished turn even when its opening passage is paged out.
+   */
+  inTurn?: number;
 }
 
 export interface SceneAgent {
@@ -214,6 +219,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       turnPrompt: opensTurn ? turn!.prompt : undefined,
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
       ...(opensTurn&&turn?{turnStep:turn.step}:{}),
+      ...(turn ? { inTurn: turn.step } : {}),
     };
   });
 
