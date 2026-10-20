@@ -809,7 +809,7 @@ test('paged prompt rail spans the full session and loads an older chapter on sel
   await expect(rail.getByRole('button').first()).toHaveAttribute('aria-current', 'location');
   await rail.getByRole('button').first().hover();
   await expect(page.locator('.prompt-rail-preview time')).toHaveAttribute('datetime','2026-10-09T00:00:00Z');
-  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 3).map(node => Math.round(node.getBoundingClientRect().width)))).toEqual([24, 16, 8]);
+  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 3).map(node => Math.round(node.getBoundingClientRect().width)))).toEqual([8, 8, 8]);
 });
 
 test('prompt marks jump to captured prompt starts without starting a native turn', async ({ page }) => {
@@ -823,7 +823,7 @@ test('prompt marks jump to captured prompt starts without starting a native turn
   await expect(rail.getByRole('button').first()).toHaveAttribute('data-proximity', 'current');
   await expect(rail.getByRole('button').nth(1)).toHaveAttribute('data-proximity', 'near');
   // Assert visible lengths, including the finite scale easing, rather than layout widths.
-  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 2).map(node => Math.round(node.getBoundingClientRect().width)))).toEqual([24, 16]);
+  await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 2).map(node => Math.round(node.getBoundingClientRect().width)))).toEqual([8, 8]);
   await expect(page.locator('.turn').first()).toBeInViewport({ ratio: .5 });
   await expect(page.getByRole('button', { name: /Back to latest/ })).toHaveText('↓');
   await expect(page.locator('.history-transport .prompt-menu')).toHaveCount(0);

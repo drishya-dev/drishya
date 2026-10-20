@@ -1,0 +1,4 @@
+/* REVIEW-1: each changed file says how much it changed and in which turn; repeated gaps collapse to one line. */
+.review-file-stat {flex:none;font:11px/1.5 var(--mono);color:var(--t3);white-space:nowrap;}
+.review-file-stat .add {font-weight:400;color:var(--pass);}.review-file-stat .del {font-weight:400;color:var(--fail);}
+.review-gap-group {display:flex;align-items:baseline;gap:8px;}.review-gap-group>small {font:11px/1.5 var(--mono);color:var(--t3);}

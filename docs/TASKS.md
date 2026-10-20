@@ -561,6 +561,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 
 - [ ] **REVIEW-1 · Review work as Changes** · P1 · `review`
   - **Do:** make it reachable from the top bar as **Changes**, not only from the ⋯ menu. Group repeated capture gaps ("9 compactions" with a disclosure). Show `+N −M` per file and the turn that last changed each file. Recognize tests via DATA-1.
+  - **20 October progress:** Modern header has a **Changes** button (the dialog is still titled "Review work"); each changed file shows captured `+N −M` and the prompt turn of its last captured edit (0 when a patch was not captured); repeated capture gaps collapse to one line with a count (real session: "compaction × 9"). **Open:** test recognition (DATA-1) and renaming the dialog/menu entry, which 33 specs reference.
 
 - [x] **REVIEW-2 · Search result context** · P1 · `review` — each hit shows session · turn · tool · file · time; the jump keeps the hit highlighted; results are grouped by turn.
   - **20 October, done:** in-recording search returns each hit with its turn (turn.start count for that agent), kind (prompt, reply, reasoning, call, result), tool, path or command and time, in capture order; the panel groups by turn with a quiet header and a one-line context under each snippet; the operation a result jumped to keeps a thin marker. Not done: grouping across several sessions; Codex wrapper tools still show as `exec` until DATA-1 types them.

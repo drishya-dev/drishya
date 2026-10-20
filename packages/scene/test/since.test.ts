@@ -94,3 +94,25 @@ describe('sinceBoundary', () => {
     const missing={...q,timeline:[]};expect(sinceBoundary(missing,10).unplacedCount).toBe(1);expect(sinceBoundary(missing,10).tests).toHaveLength(0);expect(sinceBoundary(missing,-1).tests[0]!.sequenceBasis).toBe('timeline-position');
   });
 });
+
+describe('REVIEW-1 Changes facts', () => {
+  it('counts captured +/- per edited file with the turn of its last edit, and groups repeated gaps', () => {
+    const snapshot = sinceSnapshot(p, -1);
+    const stats = snapshot.fileStats ?? {};
+    for (const path of snapshot.editedFiles) {
+      expect(stats[path]).toBeDefined();
+      expect(stats[path]!.added).toBeGreaterThanOrEqual(0);
+      expect(stats[path]!.edits).toBeGreaterThan(0);
+    }
+    const added = Object.values(stats).reduce((sum, stat) => sum + stat.added, 0);
+    expect(added).toBeGreaterThan(0);
+    expect(snapshot.gapGroups?.reduce((sum, group) => sum + group.count, 0)).toBe(snapshot.counts.gaps);
+  });
+});
+
+it('reads nine identical capture gaps as one grouped line', () => {
+  const gaps = Array.from({ length: 9 }, (_, i) => ({ sequence: i, reason: 'source-truncated' }));
+  const snapshot = sinceSnapshot({ ...p, gaps } as Projection, -1);
+  expect(snapshot.counts.gaps).toBe(9);
+  expect(snapshot.gapGroups).toEqual([{ title: expect.stringContaining('source truncated'), count: 9 }]);
+});

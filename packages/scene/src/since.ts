@@ -35,9 +35,32 @@ export interface SinceDigest {
 }
 
 export type SinceGroup = 'failures' | 'edits' | 'tests' | 'unfinished' | 'gaps';
+/** Captured patch size of one edited file, and the prompt turn of the last captured edit to it. */
+export interface SinceFileStat { added: number; removed: number; edits: number; /** 1-based turn of the agent's prompts at the last captured edit. */ turn?: number }
 export interface SinceSnapshot extends SinceDigest {
   counts: Record<SinceGroup, number>;
   editedFileCount: number;
+  /** For the files on this page only. Counts come from captured hunks, so a patch that was not captured counts as 0. */
+  fileStats?: Record<string, SinceFileStat>;
+  /** Capture gaps across the whole recording grouped by what they say, so nine identical gaps read as one line. */
+  gapGroups?: { title: string; count: number }[];
+}
+
+/** Per-file +/- from captured hunks and the turn of the latest edit, in capture order. */
+export function sinceFileStats(p: Projection, edits: SinceItem[], paths: string[]): Record<string, SinceFileStat> {
+  const wanted = new Set(paths), ops = new Map(p.operations.map((o) => [o.id, o])), stats: Record<string, SinceFileStat> = {};
+  const turnsByAgent = new Map<string, number[]>();
+  for (const item of p.timeline) if (item.type === 'turn') (turnsByAgent.get(item.agentId) ?? turnsByAgent.set(item.agentId, []).get(item.agentId)!).push(item.sequence);
+  for (const edit of [...edits].sort((a, b) => a.sequence - b.sequence)) {
+    const op = edit.operationId ? ops.get(edit.operationId) : undefined;
+    if (!op || op.detail.kind !== 'edit' || !wanted.has(op.detail.path)) continue;
+    const stat = stats[op.detail.path] ??= { added: 0, removed: 0, edits: 0 };
+    for (const hunk of op.detail.hunks) for (const line of hunk.lines) { if (line.startsWith('+')) stat.added++; else if (line.startsWith('-')) stat.removed++; }
+    stat.edits++;
+    const turns = turnsByAgent.get(op.agentId)?.filter((sequence) => sequence <= op.startSequence).length;
+    if (turns) stat.turn = turns;
+  }
+  return stats;
 }
 
 /** Whole-session facts with bounded previews for the reader; never count just a page. */
@@ -46,7 +69,9 @@ export function sinceSnapshot(p: Projection, after: number, page = 0): SinceSnap
   const offset = Math.max(0, Math.floor(Number.isFinite(page) ? page : 0));
   const groups: SinceGroup[] = ['failures', 'edits', 'tests', 'unfinished', 'gaps'];
   const counts = Object.fromEntries(groups.map((key) => [key, digest[key].length])) as Record<SinceGroup, number>;
-  return { ...digest, ...Object.fromEntries(groups.map((key) => [key, digest[key].slice(offset * 20, offset * 20 + 20)])), counts, editedFiles: digest.editedFiles.slice(offset * 50, offset * 50 + 50), editedFileCount: digest.editedFiles.length };
+  const pageFiles = digest.editedFiles.slice(offset * 50, offset * 50 + 50), gapCounts = new Map<string, number>();
+  for (const gap of digest.gaps) gapCounts.set(gap.title, (gapCounts.get(gap.title) ?? 0) + 1);
+  return { fileStats: sinceFileStats(p, digest.edits, pageFiles), gapGroups: [...gapCounts].map(([title, count]) => ({ title, count })).sort((a, b) => b.count - a.count), ...digest, ...Object.fromEntries(groups.map((key) => [key, digest[key].slice(offset * 20, offset * 20 + 20)])), counts, editedFiles: digest.editedFiles.slice(offset * 50, offset * 50 + 50), editedFileCount: digest.editedFiles.length };
 }
 
 /** Where an operation's outcome landed: its result if it has one, else where it started. */
