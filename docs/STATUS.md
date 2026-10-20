@@ -37,6 +37,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude (Opus 5.5) — PERF-2 profiled after DATA-1/2 (claim held, fixes tomorrow)
+
+- **When:** 20 October 2026. Merged DATA-2 (#149), DATA-1 (#151), TEST-2 (#175) and Codex PERF-1 (#171). Re-measured the 564 MB journal with typed items (26,593 observations): first history page ≈ 6.6 s, append+browser RSS 531–545 MiB, API p95 139–214 ms. The cold build's largest cost is ≈ 2.7 s of per-file derived blob writes (≈ 4,400 new files, 90 MB); then ≈ 1.8 s reducer logic and 0.66 s ordered read; live sync turns block the event loop 110–150 ms. Ordered plan for the fixes is under PERF-2 in TASKS. The performance gate stays red, so feature items wait.
+
 ### Yash with Codex — PERF-1 measured; PERF-2 gate open, ready for Claude review
 
 - **When:** 20 October2026. PR **#171**, `codex/perf-1-large-journals`. Claimed the first independent dependency-ready item after DATA-3…6 overlapped Harsh's DATA-1/2 files. Adds opt-in isolated real-journal benchmark and a regression for partial writes/source preservation. Native journals stay read-only; normal/error completion removes snapshots and redacted stores. [Report](review/perf-1-large-journals.md).
