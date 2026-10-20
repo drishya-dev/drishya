@@ -342,6 +342,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (!['operation','edit','failure','turn'].includes(kind) || !['1','-1'].includes(direction) || edge && !['first','last'].includes(edge) || Object.values(fields).some(value => !value || value.length > 300)) throw new HttpError(400, 'Invalid reading cursor');
         return json(res, await app.history.readingTarget(id, { kind: kind as 'operation'|'edit'|'failure'|'turn', direction: direction === '-1' ? -1 : 1, edge: edge as 'first'|'last'|undefined, ...fields, at: url.searchParams.has('at') ? intParam(url, 'at', 0, 0, Number.MAX_SAFE_INTEGER) : undefined }));
       }
+      if (sub === 'file-evidence' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key);
+        const paths = url.searchParams.getAll('path');
+        if (!paths.length || paths.length > 100 || paths.some(path => !path || path.length > 1024)) throw new HttpError(400, 'Choose 1 to 100 file paths');
+        return json(res, await app.history.fileEvidence(id, paths, url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined));
+      }
       if (sub === 'now' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, await app.history.now(id));

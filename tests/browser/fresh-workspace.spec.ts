@@ -556,6 +556,16 @@ test('local Git atlas connects real branches and commits with root/merge patches
     await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});
     // Panning redraws the light from the new view; nothing is stale.
     const before=await viewport.getAttribute('data-light-segments');await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await expect.poll(async()=>await viewport.getAttribute('data-light-segments')).not.toBe(before);await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
+    // Zoom keeps the commit under the anchor where it was; Ctrl + wheel zooms the graph, never the page.
+    const centre=async()=>{const b=(await merged.boundingBox())!;return b.x+b.width/2;};const zoomLabel=atlas.locator('.thread-controls>span').nth(1);
+    const x0=await centre(),v=(await viewport.boundingBox())!;await page.mouse.move(x0,v.y+v.height/2);const label0=await zoomLabel.textContent();
+    await page.keyboard.down('Control');await page.mouse.wheel(0,-240);await page.keyboard.up('Control');await expect(zoomLabel).not.toHaveText(label0!);
+    expect(Math.abs(await centre()-x0)).toBeLessThan(12);expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
+    // A branch strand between commits names its branch and lists its commits, from Git alone.
+    await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
+    const fb=(await atlas.locator(`[data-commit-hash="${feature}"]`).boundingBox())!;
+    let peek=false;for(const off of [4,8,12,-4,-8]){await page.mouse.move(off>0?fb.x-off:fb.x+fb.width-off,fb.y+fb.height/2);if(await atlas.locator('.thread-branch-peek').isVisible()){peek=true;break;}}
+    expect(peek).toBe(true);await expect(atlas.locator('.thread-branch-peek')).toContainText('atlas-feature');await expect(atlas.locator('.thread-branch-peek')).toContainText('Atlas feature fixture');await page.mouse.move(v.x+4,v.y+4);
   } else {
     await expect(atlas.locator('.thread-links')).toBeVisible();await expect(atlas.locator('.thread-fiber')).toHaveCount(0);expect(await atlas.locator('.ribbon-lamina').count()).toBeGreaterThan(0);expect(await atlas.locator('.thread-links path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
     const surface=atlas.locator('.thread-ribbon').first(),beforeOrbit=await surface.getAttribute('d'),orbit=atlas.getByRole('button',{name:'Orbit 3D Git ribbon',exact:true});await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','true');const view=(await atlas.locator('.thread-viewport').boundingBox())!;await page.mouse.move(view.x+40,view.y+40);await page.mouse.down();await page.mouse.move(view.x+40,view.y+110,{steps:5});await page.mouse.up();await expect(surface).not.toHaveAttribute('d',beforeOrbit!);await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','false');await page.screenshot({path:resolve('.local/git-spatial-orbit.png')});
