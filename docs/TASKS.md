@@ -34,6 +34,23 @@ Evidence for this restructure: [122 developer review](review/122-developer-produ
    - Sonnet is suitable for executing items here that have explicit **Accept** lines.
    - Either model must verify in the browser on actual sessions before ticking.
 
+### Dependency gates and retest triggers
+
+Keep dependent work here **and** under its own item; this is a cross-reference within the single checklist, not a second queue. “Free” in `claims.ts` means unclaimed, not necessarily ready. When a dependency merges/becomes available, the next agent checks this table, claims the affected item, reruns its stated acceptance on fresh/redacted real data and records the result. A merged dependency alone does not tick the dependent item. Keep the row until the retest passes; add newly discovered gates as work proceeds.
+
+| Dependent item / remaining scope | Required evidence or dependency | Retest when available |
+| --- | --- | --- |
+| FILES-1: deletion badges; enrichment of old Codex captures | DATA-1 with an explicit retained deletion discriminator; original journal available for enrichment. Supported A/E/read/tree work is ready in #139. | Rescan an existing recording without duplicating operations; verify A/E/D against exact captured changes, failed/running writes stay unmarked, folder/Touched totals and live/replay agree. If deletion is still not retained, keep this gate open. |
+| READ-1 and TURN-1: Codex edit line numbers and tests hidden inside wrappers | DATA-1 typed FileChange / CommandExecution items | Re-import dense Codex session; inspect true hunk line numbers and runner outcomes, ensure wrapper/child deduplication and turn counts match captured evidence. Existing checked scope remains bounded. |
+| CONTENT-9: explicit missing-reasoning state | Reasoning-state slice S3 in review125; shared contract work DATA-1/DATA-2 must be coordinated first | One quiet missing-text line for encrypted/signature-only blocks; genuine summaries/text remain visible, no line when no reasoning block was recorded; live, replay and both harnesses. |
+| CONTENT-3 / CONTENT-1 / CONTENT-2: historical questions, images and web evidence | DATA-1 typed items plus review125 S4 / DATA-4; inline-image byte policy D7 needs both builders' decision | Verify pending → answered/cancelled historical states and supported native replies; mixed image/text and browser results retain exact raw access. Use a fresh sample, not tool definitions. |
+| CONTENT-4: additional plan/task sources | DATA-7 and a real Claude TaskCreate/TaskUpdate/ExitPlanMode sample (review125 D10) | Ten or more captured updates show one evolving per-turn checklist, revisions remain reachable, no invented task statuses. Existing TodoWrite can be tested separately. |
+| CONTENT-5: native sub-agent identities | DATA-1 / DATA-3 retained names, model, effort and lineage | Actual Codex and Claude parent/child sessions; distinguish source-linked from enclosing-call correlation, retain unresolved lineage honestly. |
+| HOME-1 stats / LIVE-4 context and limits | DATA-2 usage plus DATA-3 metadata where required | Fresh real sessions and enrichment; reported vs derived labels, missing data hidden, context denominators/limit resets correct, no current-page totals mistaken for full history. |
+| EXPLAIN-1 / EXPLAIN-2 / EXPLAIN-3 / EXPLAIN-5 live acceptance | EXPLAIN-4 real endpoint/key, verified model IDs and explicit exact-payload opt-in | Run explain/labels/briefing on Codex and Claude evidence; validate citations, visible generated provenance, latency and cost; no call before consent. |
+| NATIVE-1..4 and REL-2/REL-3 broad acceptance | Real signed-in native harnesses, multi-agent/conflict samples, physical lower-resource/phone/accessibility environment | Repeat the corresponding end-to-end and freeze/truth/ten-minute checks. Synthetic transports and viewport emulation do not close these gates. |
+
+
 **Tags:**
 - `bug` defect
 - `live` live loop / "now"
