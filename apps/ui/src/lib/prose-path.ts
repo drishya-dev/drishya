@@ -23,6 +23,7 @@ export function prosePath(value:string,workspaceRoot?:string):ProsePath|undefine
  const parts=path.split('/');
  if(parts.some(part=>!part||part.includes(':'))||!parts.every(part=>/^[\p{L}\p{N}_.@ ()+-]+$/u.test(part)))return;
  const file=parts.at(-1)!;
+ if(parts.length===1&&/^v?\d+(?:\.\d+){1,3}(?:[-+][\w.-]+)?$/i.test(file))return;
  if(!/\.[\p{L}\p{N}_-]{1,16}$/u.test(file)&&!['LICENSE','README','Dockerfile','Makefile','Containerfile'].includes(file))return;
  return {path,...(line?{line}:{})};
 }

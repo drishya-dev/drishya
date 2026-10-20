@@ -33,7 +33,7 @@ it('resolves local file links and line anchors only inside their captured worksp
   expect(prosePath('./docs/研究.md')).toEqual({path:'docs/研究.md'});
   expect(prosePath('.gitignore')).toEqual({path:'.gitignore'});
   expect(prosePath('LICENSE')).toEqual({path:'LICENSE'});
-  for(const target of ['https://host/file.ts','file:///C:/Work/App/a.ts','javascript:alert(1)','data:text/a.ts','//host/share/a.ts','../a.ts','src/../a.ts','src/a.ts?raw=1','npm test','C:relative.ts'])expect(prosePath(target,'C:/Work/App'),target).toBeUndefined();
+  for(const target of ['https://host/file.ts','file:///C:/Work/App/a.ts','javascript:alert(1)','data:text/a.ts','//host/share/a.ts','../a.ts','src/../a.ts','src/a.ts?raw=1','npm test','C:relative.ts','v0.2.0','1.2.3-beta','127.0.0.1'])expect(prosePath(target,'C:/Work/App'),target).toBeUndefined();
   expect(prosePath('C:/Work/Application/a.ts','C:/Work/App')).toBeUndefined();
   expect(prosePath('/home/dev/App/a.ts','/home/dev/app')).toBeUndefined();
   expect(prosePath('/home/dev/app/a.ts')).toBeUndefined();
