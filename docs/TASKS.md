@@ -283,6 +283,8 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 
 - [ ] **TURN-3 · Prompt rail encodes turns** · P1 · `turn` `ui`
+  - [x] **20 October, encoding (PR #147):** full-history ledger drives clamped size ticks, failure notches, edit dots and hover/focus ledger. Active reading and nearest-row growth retained. Four local browser journeys, eight focused unit cases and three actual Codex/Claude captures verified. [Evidence](review/turn-3-evidence-rail.md).
+  - [ ] **Coverage follow-up:** actual Drishya has41 turn ledgers but38 chapter passages; three ledgers have zero operations. Audit non-materialized prompt turns and keep every captured prompt addressable without fabricating labels. Current encoding uses the existing chapter set; this parent stays open until that coverage is reconciled.
   - **Do:** tick length ∝ operations in the turn (clamped); red notch if the turn contains a failure; amber dot if it edited files; the current reading position is marked. The hover preview shows the ledger. Keep it as an independent chapter rail.
 
 - [ ] **TURN-4 · Replay transport in Modern** · P1 · `turn` `motion`
