@@ -1,18 +1,20 @@
 // Minimal, safe Markdown for agent prose: paragraphs, lists, fenced code, `code`, **bold**, links
-// shown as text. Everything is React text — no HTML from a transcript is ever interpreted.
+// shown as text, with explicit local file navigation when supplied. Everything is
+// React text — no HTML from a transcript is ever interpreted.
 
 import { createElement, type ReactNode } from 'react';
 import { FencedCode } from '../components/FencedCode.tsx';
+import { prosePath } from './prose-path.ts';
 
 type PathAction = (path: string, line?: number) => void;
-export function Markdown({ text, onPath, document = false }: { text: string; onPath?: PathAction; document?: boolean }) {
-  return renderMarkdown(text, onPath, document, 0);
+export function Markdown({ text, onPath, document = false, workspaceRoot }: { text: string; onPath?: PathAction; document?: boolean; workspaceRoot?:string }) {
+  return renderMarkdown(text, onPath, document, 0, workspaceRoot);
 }
 
 const listMarker = (line: string) => /^( *)([-+*]|\d{1,9}[.)])([ \t]+)(.*)$/.exec(line);
 const orderedMarker = (marker: string) => /^\d/.test(marker);
 
-function renderMarkdown(text: string, onPath: PathAction | undefined, document: boolean, depth: number): ReactNode {
+function renderMarkdown(text: string, onPath: PathAction | undefined, document: boolean, depth: number, workspaceRoot?:string): ReactNode {
   // Malformed/extremely nested captured content must remain readable without
   // making transcript rendering recursively unbounded.
   if (depth >= 32) return <FencedCode text={text} language="text" />;
@@ -26,11 +28,11 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
       const cells = (row:string) => row.trim().replace(/^\||\|$/g,'').split(/(?<!\\)\|/).map(c=>c.trim().replace(/\\\|/g,'|'));
       const headers=cells(line),rows:string[][]=[];i+=2;
       while(i<lines.length && lines[i]!.includes('|') && lines[i]!.trim())rows.push(cells(lines[i++]!));
-      blocks.push(<div className="md-table-scroll" key={key++}><table><thead><tr>{headers.map((cell,n)=><th key={n}>{inline(cell,onPath)}</th>)}</tr></thead><tbody>{rows.map((row,n)=><tr key={n}>{row.map((cell,j)=><td key={j}>{inline(cell,onPath)}</td>)}</tr>)}</tbody></table></div>);continue;
+      blocks.push(<div className="md-table-scroll" key={key++}><table><thead><tr>{headers.map((cell,n)=><th key={n}>{inline(cell,onPath,workspaceRoot)}</th>)}</tr></thead><tbody>{rows.map((row,n)=><tr key={n}>{row.map((cell,j)=><td key={j}>{inline(cell,onPath,workspaceRoot)}</td>)}</tr>)}</tbody></table></div>);continue;
     }
     if (document && /^\s*>/.test(line)) {
       const quote:string[]=[];while(i<lines.length && /^\s*>/.test(lines[i]!))quote.push(lines[i++]!.replace(/^\s*> ?/,''));
-      blocks.push(<blockquote key={key++}>{renderMarkdown(quote.join('\n'), onPath, document, depth + 1)}</blockquote>);continue;
+      blocks.push(<blockquote key={key++}>{renderMarkdown(quote.join('\n'), onPath, document, depth + 1, workspaceRoot)}</blockquote>);continue;
     }
     if (document && /^\s*(---+|\*\*\*+)\s*$/.test(line)) {blocks.push(<hr key={key++}/>);i++;continue;}
     const fence = /^\s*```(\w*)/.exec(line);
@@ -67,14 +69,14 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
           body.push(content); i++; blank = !next.trim() && !fenced;
         }
         const ordinal = ordered ? Number.parseInt(item[2]!, 10) : undefined;
-        items.push(<li key={items.length} value={ordered && ordinal !== start! + items.length ? ordinal : undefined}>{renderMarkdown(body.join('\n'), onPath, document, depth + 1)}</li>);
+        items.push(<li key={items.length} value={ordered && ordinal !== start! + items.length ? ordinal : undefined}>{renderMarkdown(body.join('\n'), onPath, document, depth + 1, workspaceRoot)}</li>);
       }
       blocks.push(ordered ? <ol className="md-list" key={key++} start={start === 1 ? undefined : start}>{items}</ol> : <ul className="md-list" key={key++}>{items}</ul>);
       continue;
     }
     const h = /^(#{1,6})\s+(.*)$/.exec(line);
     if (h) {
-      blocks.push(document ? createElement(`h${h[1]!.length}`, {key:key++}, inline(h[2]!,onPath)) : <p key={key++} className="md-h">{inline(h[2]!, onPath)}</p>);
+      blocks.push(document ? createElement(`h${h[1]!.length}`, {key:key++}, inline(h[2]!,onPath,workspaceRoot)) : <p key={key++} className="md-h">{inline(h[2]!, onPath, workspaceRoot)}</p>);
       i++;
       continue;
     }
@@ -88,12 +90,12 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
       if(document && para.length && /^\s*>/.test(lines[i]!))break;
       para.push(lines[i++]!);
     }
-    blocks.push(<p key={key++}>{inline(para.join(' '), onPath)}</p>);
+    blocks.push(<p key={key++}>{inline(para.join(' '), onPath, workspaceRoot)}</p>);
   }
   return <>{blocks}</>;
 }
 
-function inline(s: string, onPath?: PathAction): ReactNode[] {
+function inline(s: string, onPath?: PathAction, workspaceRoot?:string): ReactNode[] {
   const out: ReactNode[] = [];
   // A link target may hold one level of parentheses, e.g. /docs/report (copy).md.
   const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(((?:[^()]|\([^()]*\))+)\))|(\*[^*\n]+\*|(?<![\w_])_[^_\n]+_(?![\w_]))/g;
@@ -104,17 +106,20 @@ function inline(s: string, onPath?: PathAction): ReactNode[] {
     if (i > last) out.push(s.slice(last, i));
     if (m[1]) {
       const code = m[1].slice(1, -1);
-      const reference = /^((?:[A-Za-z]:)?[\p{L}\p{N}_./@\\ ()-]+\.[\p{L}\p{N}_-]{1,12})(?::([1-9]\d{0,8}))?$/u.exec(code);
+      const reference = prosePath(code,workspaceRoot);
       out.push(
         reference && onPath ? (
-          <button type="button" key={k++} className="md-path" aria-label={`Open captured work for ${reference[1]}${reference[2] ? ` at line ${reference[2]}` : ''}`} onClick={() => onPath(reference[1]!, reference[2] ? Number(reference[2]) : undefined)}><code>{code}</code></button>
+          <button type="button" key={k++} className="md-path" aria-label={`Open captured work for ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path, reference.line)}><code>{code}</code></button>
         ) : (
           <code key={k++}>{code}</code>
         ),
       );
-    } else if (m[2]) out.push(<strong key={k++}>{inline(m[2].slice(2, -2), onPath)}</strong>);
-    else if (m[6]) out.push(<em key={k++}>{inline(m[6].slice(1,-1), onPath)}</em>);
-    else if (m[3]) out.push(<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>);
+    } else if (m[2]) out.push(<strong key={k++}>{inline(m[2].slice(2, -2), onPath, workspaceRoot)}</strong>);
+    else if (m[6]) out.push(<em key={k++}>{inline(m[6].slice(1,-1), onPath, workspaceRoot)}</em>);
+    else if (m[3]) {
+      const reference=prosePath(m[5]!,workspaceRoot);
+      out.push(reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open captured work for ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>);
+    }
     last = i + m[0].length;
   }
   if (last < s.length) out.push(s.slice(last));

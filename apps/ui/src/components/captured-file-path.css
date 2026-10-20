@@ -1,0 +1,6 @@
+/* The existing title remains in place; only its exact file reference is actionable. */
+.history .op-title.captured-file-path {text-align:left;border-radius:2px;}
+.history .op-title.captured-file-path:focus-visible {outline:1px solid var(--t2);outline-offset:-1px;}
+@media(hover:hover) and (pointer:fine) {
+ .history .op-title.captured-file-path:hover {text-decoration:underline;text-underline-offset:3px;}
+}

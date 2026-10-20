@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | UI-10 | @yash + Codex | `codex/ui-10-agent-inventory` | 2026-10-20 | Bounded Agents disclosure: `modern/ModernTools.tsx` only, new 3/300-agent browser fixture and TASKS/STATUS/review (at most 5 files). Reuse collectionBounds; no tool-inventories CSS/test (UI-2), agent lineage/capture/schema, Workbench/History/Viewer or REVIEW-1 files. |
 | UI-2 | @yash + Codex | `codex/ui-2-toolbox-type` | 2026-10-20 | Toolbox typography slice only: `modern/tool-inventories.css`, focused browser checks, TASKS/STATUS/review (at most 6 files). No SessionWorkspace/History/Viewer or Usage logic, no capture/backend/data or inventory/motion/layout rewrite. |
-| FILES-2 | @yash + Codex | `codex/files-2-prose-links` | 2026-10-20 | Prose plus typed card/search paths: Markdown parser + pure resolver, History prose/header/search-hit routes, optional scoped path CSS, focused unit/browser checks and TASKS/STATUS/review (at most 10 files). No native/source IO, adapters/store/contracts/projection, Viewer/Search or UI-2 files; external links stay inert. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -71,7 +70,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **GIT-3:** `CommitRows` beneath the Git graph (graph-header toggle, remembered as `git/rows`): hash · message · refs · author · age, newest first, hover and selection mirror both ways, a row pick reveals an off-screen commit. The reference list starts as refs named by loaded commits (plus checked-out/picked) with "In view / All N"; search and All restore the paged server list. Fixed the reference column clipping its bottom controls.
 - **Verified:** typecheck/build, unit tests, the Git specs, and the real repo (50 rows; 18 of 86 refs in view). **Not done:** keyboard arrows between rows beyond Tab; row virtualization beyond `content-visibility` (6 pages × 50 rows).
 
-### Yash with Codex — LIVE-2b ready for review
+### Yash with Codex — FILES-2 prose/card paths ready
+
+- **When:** 20 October 2026. Branch `codex/files-2-prose-links`, PR #157, **READY FOR CLAUDE REVIEW / MERGE**. Claim removed in this PR. Prose and typed History paths only; parent FILES-2 remains open.
+- **Changed:** Local Markdown links and inline-code paths resolve inside the captured workspace, including Windows display prefixes and line anchors. Read/edit/write titles select their exact captured read/patch; preview and expanded search matches retain exact search evidence and line. Bare versions/IP addresses no longer masquerade as file paths. No browser URL navigation or automatic disk/approval request.
+- **Verified:** 13 focused Markdown/path unit cases, two browser journeys covering keyboard/rooted/relative/prose/read/Edit/Write/Grep and320px containment, plus stored-line/missing-range regression. Both TS/build pass. Actual Drishya Codex docs link and Skeletongraph Claude prose checked; actual Claude `.gitignore` title selected that exact `…/read` rather than its later edit. Local screenshots inspected.
+- **Limits:** test/output paths and non-History search surfaces remain open in TASKS; old Codex typed read headers need DATA-1. No capture/schema/daemon/dependency/native/journal writes or hosted CI. [Verification](review/files-2-prose-links.md). UI-2 Settings/Git typography merged separately as #155; do not reapply it.
+
 ### Yash with Codex — UI-2 Settings/Git typography ready
 
 - **When:** 20 October 2026. Branch `codex/ui-2-settings-type`, PR #155, **READY FOR CLAUDE REVIEW / MERGE**. Settings and Git graph typography slice only; parent UI-2 stays open. Claim removed in this PR; Claude owns squash-merge.
