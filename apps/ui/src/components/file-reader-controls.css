@@ -1,0 +1,25 @@
+/* UI-5: compact the reader's controls, never its captured material. */
+.file-reading-context,.file-evidence-choice { display:contents; }
+:root[data-ui-version=modern] .file-reading-context { display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;flex:none; }
+:root[data-ui-version=modern] .file-reading-context .evidence-navigation { padding:0;border:0;flex:none; }
+:root[data-ui-version=modern] .file-reading-context .file-workspace-intro { padding:0;border:0;flex:1;min-width:160px; }
+:root[data-ui-version=modern] .file-evidence-toolbar { justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:10px; }
+:root[data-ui-version=modern] .file-evidence-toolbar>strong { margin-right:auto;font-size:12px; }
+:root[data-ui-version=modern] .file-evidence-toolbar .btn { font-size:12px;min-height:32px; }
+:root[data-ui-version=modern] .file-evidence-choice { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+:root[data-ui-version=modern] .file-evidence-choice>label { flex:1;min-width:140px; }
+:root[data-ui-version=modern] .file-evidence-choice>label>span { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
+:root[data-ui-version=modern] .file-evidence-choice select { font-size:12px;min-height:34px; }
+:root[data-ui-version=modern] .file-evidence-choice .captured-source-comparison { margin:0; }
+:root[data-ui-version=modern] .file-evidence-material { margin-top:8px;padding:8px;border:0;background:transparent; }
+:root[data-ui-version=modern] :is(.file-evidence-toolbar,.desk-document) .desk-options .import-context { margin:0;padding:6px 0;border:0; }
+:root[data-ui-version=modern] :is(.file-evidence-toolbar,.desk-document) .desk-options .import-context button { font-size:12px; }
+:root[data-ui-version=modern] .file-evidence-choice .captured-source-comparison [role=alert] { max-width:280px;font-size:12px; }
+@media(max-width:600px) {
+ :root[data-ui-version=modern] .file-reading-context { gap:4px 10px;padding:6px 12px; }
+ :root[data-ui-version=modern] .file-evidence-toolbar>strong { flex-basis:100%; }
+ :root[data-ui-version=modern] .file-evidence-reading { padding:12px; }
+}
+
+:root[data-ui-version=modern] .file-evidence-toolbar .desk-options>summary>span { display:none; }
+:root[data-ui-version=modern] .file-evidence-toolbar .desk-options>summary { width:34px;justify-content:center;padding-inline:6px; }

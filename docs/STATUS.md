@@ -31,7 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-5 | @yash + Codex | `codex/ui-5-file-evidence-chrome` | 2026-10-20 | Finish remaining UI-5 across captured/current readers and Workspace: FileHistory.tsx, CapturedSourceComparison.tsx (presentation only), DeveloperWorkspace.tsx, SessionWorkspace.tsx CurrentFileReader chrome only if needed, scoped CSS, focused browser checks and TASKS/STATUS/review (at most 12 files). Existing Git/patch/source work is retained and reverified. Preserve Legacy, evidence/draft loading/selection/comparison/consent and motion; no History/Viewer/backend/schema/data files. |
+| CONTENT-3 | @yash + Claude Sonnet 5.5 | `yash/content-3-question-cards` | 2026-10-20 | UI slice for Claude `AskUserQuestion` only: new `lib/ask-question.ts` parser, `QuestionCard.tsx` + CSS, a one-line hook where `History.tsx` renders `other` operations, tests, TASKS/STATUS (at most 8 files). No adapters/contracts/projection (DATA-1/2/4), no Codex questions, no inline answering. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -77,7 +77,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **When:** 20 October 2026. PR **#167**, `codex/files-2-output-paths`. Finishes remaining test/output and non-History search navigation after #157: bounded diagnostic links in shared output/case excerpts, exact Inspector hit/line, captured paths from recording search and library snippets. Library links open their owning recording before file evidence; indexed files use their path, not opaque graph ID. Raw output and consent preserved. No adapters/contracts/Usage/backend or UI-5 chrome edits.
 - **Verified:** 665 local units, final17 parser cases, six focused browser journeys; actual copied Drishya Codex and Skeletongraph Claude output links open via keyboard, desktop/390/320px inspection without document overflow. Both typechecks/build pass. No native submission or hosted CI. [Evidence and limits](review/files-2-output-navigation.md).
-- **Merge signal:** PR #167 ready for Claude review and squash. FILES-2 ticked; only its claim removed here. PR #165/UI-5 remains independently ready; preserve its existing claim until its finishing PR lands. DATA-1/2 claims untouched.
+- **Merge signal:** PR #167 ready for Claude review and squash. FILES-2 ticked; only its claim removed here. Integrated merged UI-5 #165 and Claude’s new CONTENT-3 claim without source conflicts; its claim and DATA-1/2 claims retained. Only STATUS required reconciliation.
+
+### Yash with Codex — UI-5 complete, ready for Claude review
+
+- **When:** 20 October 2026. PR **#165**, `codex/ui-5-file-evidence-chrome`. Finishes the whole remaining UI-5 scope, retaining the Git/patch/source work from #144. Captured-file chrome is consolidated; action trail is tucked away by default on new phone readers and remains in Actions; Workspace imports move into File actions and phone New file into layout Actions. Legacy content, consent, draft/selection/state owners and visualization motion retained.
+- **Verified:** 648 local unit tests before integrating #166; both typechecks/build; focused reader/Git/Workspace journeys including actual copied Drishya Codex and Skeletongraph Claude mouse/touch. See [completion evidence](review/ui-5-reader-workspace-completion.md). No native request submitted, hosted CI or project/harness mutation. Physical/human acceptance stays REL-3.
+- **Merge signal:** ready for cross-builder review; final build, both typechecks and six affected browser journeys pass after integration; squash PR #165. Claim removed in the finishing PR only. Integrated #166 cleanly; DATA claims retained. Next work must be claimed separately from TASKS.
 
 ### Yash with Codex — UI-2 Toolbox typography ready
 
