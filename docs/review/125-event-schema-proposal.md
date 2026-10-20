@@ -157,16 +157,24 @@ Tick when agreed (initial and date). Recommendation first; the alternative is li
 
 | # | Decision | Recommendation | Alternative | Yash | Harsh |
 |---|---|---|---|---|---|
-| D1 | How typed items attach to the wrapper | Separate observations + `correlation` (`source-id` / `enclosing-call`), children become operations with `parentOperationId` | Attach as nested data on the wrapper op (no child operations) | ☐ | ☑ HJ 2026-10-20 |
-| D2 | What the UI shows when a wrapper has typed children | Children are the cards; the wrapper stays reachable as "script" in details | Show both (duplicates), or wrapper only | ☐ | ☑ HJ 2026-10-20 |
-| D3 | New operation kinds `image`, `question` | Add, after an audit that every `KIND_LABEL`-style lookup has a safe fallback | Reuse `other` with a detail kind | ☐ | ☐ |
-| D4 | Usage as its own `usage` observation | Yes; projection keeps last point per turn | Fields on `turn.end` only | ☐ | ☑ HJ 2026-10-20 |
-| D5 | Show harness-estimated cost | Yes, labelled "harness estimate", per session, hidden when `hasUnknownModelCost` | Never show cost | ☐ | ☑ HJ 2026-10-20 |
+| D1 | How typed items attach to the wrapper | Separate observations + `correlation` (`source-id` / `enclosing-call`), children become operations with `parentOperationId` | Attach as nested data on the wrapper op (no child operations) | ☑ YD 2026-10-20 | ☑ HJ 2026-10-20 |
+| D2 | What the UI shows when a wrapper has typed children | Children are the cards; the wrapper stays reachable as "script" in details | Show both (duplicates), or wrapper only | ☑ YD 2026-10-20 | ☑ HJ 2026-10-20 |
+| D3 | New operation kinds `image`, `question` | Add, after an audit that every `KIND_LABEL`-style lookup has a safe fallback | Reuse `other` with a detail kind | ☑ YD 2026-10-20 | ☑ YD 2026-10-20 |
+| D4 | Usage as its own `usage` observation | Yes; projection keeps last point per turn | Fields on `turn.end` only | ☑ YD 2026-10-20 | ☑ HJ 2026-10-20 |
+| D5 | Show harness-estimated cost | Yes, labelled "harness estimate", per session, hidden when `hasUnknownModelCost` | Never show cost | ☑ YD 2026-10-20 | ☑ HJ 2026-10-20 |
 | D6 | Rate-limit data | Store primary window `usedPercent`, `windowMinutes`, `resetsAt`, `plan`; drop credits balance and ids | Store nothing about limits | ☐ | ☑ HJ 2026-10-20 |
 | D7 | Image bytes | Only when inline in the journal, ≤ 1 MiB each, ≤ 32 per recording, redaction/type sniff first; paths are references | References only, never bytes | ☐ | ☐ |
 | D8 | Enriching existing recordings | Re-import appends new observations to the same recording (order-independent, §6); offer it only if the journal still exists | Re-import creates a new recording | ☐ | ☑ HJ 2026-10-20 |
 | D9 | Claude turn boundaries | Derive from prompt boundaries, `basis: 'derived'`, labelled | Show no turn durations for Claude | ☐ | ☐ |
 | D10 | Plans | Wait for a real captured sample | Specify now from tool definitions | ☐ | ☐ |
+
+**Checked by Yash with Claude, 20 Oct, before ticking D1, D2, D4, D5, D6 and D8** (structure only, 30 real Codex journals and 157 Claude files on this machine; no content read):
+
+- **D1/D2.** Over 30 journals: 0 of 7,034 `CommandExecution` and 0 of 1,520 `FileChange` items share an id with a call, so `correlation` cannot be `source-id` for them. 7,777 of 8,554 (91%) were recorded while exactly one `exec` call was open (calls never overlapped, so the enclosing call is always unique); 4,483 of 5,902 windows hold exactly one item, the rest several, which is why children are separate operations and `FileChange` is matched by exact path. The remaining 9% have no open call and stand alone, as §4 says. `McpToolCall` matches by id in 431 of 587 (73%), the rest fall back to the window. The recommendation holds; the 85% / 181-of-206 figures in §4 were from the smaller first sample.
+- **D4.** `appendObservations` skips any observation whose id already exists, so a field added to an *existing* kind (e.g. timing on `turn.end`) can never reach an old recording. Only new ids are appended. That is the strongest argument for a separate `usage` observation: it back-fills; the alternative does not.
+- **D5/D6.** `token_count.rate_limits` has `primary { used_percent, window_minutes, resets_at }`, `plan_type` and `credits { has_credits, unlimited, balance }` (7,723 of 7,724 events). Storing the primary window and plan and dropping credits and ids is what the data supports. `cost-state` with `hasUnknownModelCost` appears in 157 Claude files.
+- **D8, an implementation requirement.** Today a plain re-import reads nothing: `upsertSource` is `ON CONFLICT DO NOTHING`, so the source cursor stays at the end of the file. DATA-1/DATA-2 must add an explicit *rescan from the start* (reset the cursor, keep the recording); existing ids are then skipped and only new observations are appended, as §6 describes. Offer it only when the journal still exists.
+- **For the implementers.** Ids of existing observation kinds must stay stable across adapter versions, otherwise enrichment duplicates old records instead of adding to them. New data goes in new-id observations.
 
 ## 10. Fixtures, tests and order of work
 

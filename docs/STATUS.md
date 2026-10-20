@@ -31,8 +31,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **Waiting on Yash's D4–D6 in [125](review/125-event-schema-proposal.md#9-decisions-to-agree); fixtures/prep only until then.** |
-| DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **Waiting on Yash's D1, D2, D8 in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
+| DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
+| DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
 ---
 
