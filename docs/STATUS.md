@@ -32,11 +32,15 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-1 | @yash + Codex | `codex/perf-1-large-journals` | 2026-10-20 | New isolated benchmark script and focused benchmark checks; `docs/review/perf-1-large-journals.md`, IMPLEMENTATION_ROADMAP §7 and completion docs. Read-only native journals, disposable redacted stores. No ingest/adapter/contracts/projection/runtime edits while DATA-1/2 are claimed. |
-| TEST-2 | @yash + Claude | `yash/test-2-flaky-specs` | 2026-10-20 | `tests/browser/*.spec.ts` (hover-fit, settings-typography, turn-fold, prompt-timeline, product-workspace, fresh-workspace) and, only if a spec exposes a real defect, the one app file involved; docs. No capture, contracts, adapters or daemon work (at most 12 files). |
 
 ---
 
 ## Last session
+
+### Yash with Claude (Opus 5.5) — TEST-2 flaky specs (main cause fixed) and DATA-1/DATA-2 merged
+
+- **When:** 20 October 2026. Found that a prompt-rail jump left follow on, so `followLatest` undid the jump on the next update in a warm browser; the rail now sets `follow: false` (History.tsx). That was the cause of the rotating `turn-fold`/`prompt-timeline`/product-workspace rail failures. Gated Harsh's DATA-2 (#149) and DATA-1 (#151) together on one tree (705 unit, 286 browser pass, only `hover-fit` codex failing, which also failed on main before) and merged both at the builder's request. #151 was stacked on the DATA-2 branch, so deleting that branch auto-closed it; it was reopened, retargeted to main and merged.
+- **Open:** `hover-fit.spec.ts:51` (codex) fails only inside the full suite; TEST-2 stays open for it.
 
 ### Harsh with Codex — DATA-1 typed work and historical Script evidence
 
