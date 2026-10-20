@@ -115,7 +115,7 @@ test('usage expands inside the utility menu without clipping at narrow widths', 
     expect(menu.x).toBeGreaterThanOrEqual(0);
     expect(menu.x + menu.width).toBeLessThanOrEqual(width);
     expect(await panel.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual(Math.ceil(box.width));
-    await expect(panel).toContainText('Native runtime values only');
+    await expect(panel).toContainText('Only reported values');
     expect(await page.locator('.workspace-menu .usage-peek > summary').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);
     if (width === 1440) await page.screenshot({ path: resolve('.local/classic-usage-fixed.png') });
     await page.keyboard.press('Escape');

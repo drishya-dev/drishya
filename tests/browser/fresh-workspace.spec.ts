@@ -1577,7 +1577,7 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
   const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
   const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('Session tools',{exact:true})).toBeVisible();
   await page.keyboard.press('ArrowDown');await expect(menu.getByRole('button',{name:'Review work',exact:true})).toBeFocused();
-  await menu.locator('.usage-peek>summary').focus();await page.keyboard.press('Enter');await expect(menu.getByText('Input tokens',{exact:true})).toBeVisible();
+  await menu.locator('.usage-peek>summary').focus();await page.keyboard.press('Enter');await expect(menu.getByText('No usage values captured for this session.',{exact:true})).toBeVisible();
   await page.keyboard.press('End');await expect(menu.locator('.prompt-menu>summary')).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
   for(const width of [1440,390]) {
