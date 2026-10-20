@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TURN-4 | @yash + Codex | `codex/turn-4-modern-replay` | 2026-10-20 | Explicit Modern Replay entry and compact transport: `components/Viewer.tsx`, new Replay component/scoped CSS and focused browser checks; TASKS/STATUS/review note (at most 8 files). Reuse existing state clock, marker API, capture/SSE and Settings entry; no state/schema/backend, History/TURN-3, Git/UI-5, Home/UI-2, inventories/UI-10 or Usage edits. Verify real sessions, controls and uninterrupted replay under hover/scroll. Draft then READY for Claude. |
 | TURN-3 | @yash + Codex | `codex/turn-3-evidence-rail` | 2026-10-20 | Prompt rail encoding/ledger preview: `components/PromptRail.tsx`, one chapter-step mapping in `History.tsx`, new scoped CSS/pure mark helper, focused unit/browser checks and TASKS/STATUS/review note (at most 10 files). Reuse existing full-history turn ledger store/API; no schema/adapters/daemon, turn-fold layout, Git, Home/UI-2, inventories/UI-10 or Usage. Draft then READY handoff for Claude. |
 | UI-10 | @yash + Codex | `codex/ui-10-tool-lists` | 2026-10-20 | Bounded tool-inventory increment: `modern/ModernTools.tsx`, new scoped list CSS, shared pure count/cap helper, helper/browser checks and TASKS/STATUS/review note (at most 9 files). MCP/runtime lists only; no station reflow, agent families, History/App/ProductShell, SessionWorkspace, Git/UI-5, Home/UI-2, adapters/contracts or Usage. Small3/large300 and actual-session checks; broader surfaces remain open. Draft then READY handoff for Claude. |
 | UI-2 | @yash + Codex | `codex/ui-2-home-type` | 2026-10-20 | Bounded Home typography/contrast increment: Modern `SessionHome.tsx`/`session-home.css`, new scoped font or contrast helper only if needed, focused tests, TASKS/STATUS/review note (at most 8 files). No shared global palettes, History/App/ProductShell, Git/UI-5, adapters/contracts or Usage. Verify real-session Home and 320/390/1440px; broader UI-2 remains open. Draft then READY handoff for Claude. |
@@ -44,12 +43,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 
-### Yash with Codex — UI-3 Home GitHub increment ready
+### Yash with Codex — TURN-4 Modern replay ready
 
-- **When:** 20 October 2026, `codex/ui-3-home-github`, PR #142. **merged by Claude after review**. Scoped to Home's GitHub link; no shared canvas, capture, Usage or Git files touched.
-- **Delivered:** moved the link from primary navigation into Home's footer. Token-based pill, finite pointer-hover sheen, tinted star, static keyboard focus; no automatic external request or star count. Existing session controls remain reachable. Attribution: [UI-3 note](review/ui-3-home-github.md).
-- **Validation:** UI typecheck and production build; two local Edge browser checks using the real redacted Drishya/Skeletongraph store, at1440/390/320px, keyboard/reduced-motion/forced-colors/motion-off/low-resource fallbacks and no outbound requests. Screenshots inspected locally. No hosted CI. Broader UI-3 candidates and physical-device acceptance remain open; TASKS tracks them.
-- **Handoff:** Claude owns merge. Existing TURN-2 PR #141 remains a separate handoff; FILES-1 PR #139 is merged, with explicit deletion evidence still dependency-gated in TASKS.
+- **When:** 20 October 2026, `codex/turn-4-modern-replay`, PR #148. **READY FOR CLAUDE REVIEW / MERGE**. Modern menu/transport only; no clock, capture, schema, daemon, History/TURN-3, Git, Home, tool-inventory or Usage edits.
+- **Delivered:** explicit Replay captured work menu entry and compact transport: play/pause, step,0.5–4× speed, next edit/failure, keyboard/native slider with turn ticks and Exit to live history. Settings Replay sequence opens the same bar. Normal live reading remains the default. Playback controls retain established accessible names and shortcut ownership; pointer entry uses a160ms opacity/transform transition, keyboard/reduced-motion/low-resource entry is immediate.
+- **Validation:** UI typecheck/build, two new focused browser journeys and the existing replay-shortcut-guide regression pass. Tested controls and1440/900/390/320px; hover/up-scroll preserve playing, paused replay receives newly captured steps while keeping position, Exit shows the appended prompt. Three actual redacted recordings2671/2912/5955 steps play/pause, seek to loaded end material, show turn ticks and exit cleanly. Screenshots inspected; [TURN-4 note](review/turn-4-modern-replay.md). No hosted CI or native prompt.
+- **Handoff:** TURN-4 checked within these local limits. Claude owns review/merge. Other pending UI PRs #144–147 retain separate scope; TURN-3 coverage gap remains open. Phone emulation, not physical-platform acceptance.
+
 ### Yash with Codex — TURN-2 keyboard reading ready
 
 - **When:** 20 October 2026, `codex/turn-2-keyboard-reading`, PR #141. **merged by Claude after review** — final cursor checks passed. Main through `4d22126` integrated: resolved adjacent read-only worker/API/test additions, retaining both FILES-1 and TURN-2; no changes to FolderExplorer, schema/adapters/projection, Git or Usage.

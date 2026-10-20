@@ -24,7 +24,7 @@ export function ModernReplayTransport({scene,markers}:{scene:Scene;markers:reado
    <span className="modern-replay-caption" title="Captured event order; playback is paced for reading, not original execution time.">Replay</span>
    <div className="t-controls modern-replay-buttons" role="group" aria-label="Playback">
     <button className="icon-btn" aria-label="Step back" title="Step back (←)" disabled={!position} onClick={()=>useApp.getState().stepBy(-1)}>‹</button>
-    <button ref={play} className="play" aria-label={playing?'Pause replay':'Play replay'} title="Play / pause (Space)" disabled={!scene.total} onClick={()=>useApp.getState().togglePlay()}>{playing?<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>:<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>}</button>
+    <button ref={play} className="play" aria-label={playing?'Pause':'Play'} title="Play / pause (Space)" disabled={!scene.total} onClick={()=>useApp.getState().togglePlay()}>{playing?<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>:<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>}</button>
     <button className="icon-btn" aria-label="Step forward" title="Step forward (→)" disabled={position>=scene.total} onClick={()=>useApp.getState().stepBy(1)}>›</button>
     <select className="speed" value={speed} aria-label="Replay speed" onChange={event=>useApp.getState().set({speed:Number(event.target.value)})}>{[.5,1,1.5,2,4].map(value=><option key={value} value={value}>{value}×</option>)}</select>
    </div>
@@ -35,7 +35,7 @@ export function ModernReplayTransport({scene,markers}:{scene:Scene;markers:reado
    <button className="icon-btn modern-replay-exit" aria-label="Exit replay" title="Back to live history" onClick={()=>{const app=useApp.getState();app.set({replayDiagnostics:false});app.showHistory();}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5-7 7 7 7M2 12h20"/></svg></button>
   </div>
   <div className="modern-replay-position">
-   <div className="modern-replay-scrubber"><svg viewBox="0 0 1000 8" preserveAspectRatio="none" aria-hidden="true"><path d={turns}/></svg><input type="range" min={0} max={total} step={1} value={position} disabled={!scene.total} aria-label="Replay timeline" aria-valuetext={`${position} of ${scene.total} captured steps`} onChange={event=>useApp.getState().seek(Number(event.target.value),{hold:true})}/></div>
+   <div className="modern-replay-scrubber"><svg viewBox="0 0 1000 8" preserveAspectRatio="none" aria-hidden="true"><path d={turns}/></svg><input type="range" min={0} max={total} step={1} value={position} disabled={!scene.total} aria-label="Timeline" aria-valuemin={0} aria-valuemax={scene.total} aria-valuenow={position} aria-valuetext={`${position} of ${scene.total} captured steps`} onChange={event=>useApp.getState().seek(Number(event.target.value),{hold:true})}/></div>
    <output aria-label="Replay position">{position.toLocaleString()} / {scene.total.toLocaleString()}</output>
   </div>
  </footer>;
