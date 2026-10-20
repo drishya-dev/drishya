@@ -40,6 +40,30 @@ function stable(v: unknown): unknown {
   return JSON.parse(s);
 }
 
+it('keeps consecutive captured prompts addressable without inventing responses or future chapters', () => {
+  const turns = p.timeline.filter(item => item.type === 'turn');
+  const first = turns[0]!;
+  const pending = { ...p, operations: [], prose: [], passages: [], timeline: [
+    { ...first, id: 'prompt-a', prompt: 'First captured prompt' },
+    { ...first, id: 'prompt-b', prompt: 'Second captured prompt' },
+    { ...first, id: 'prompt-c', prompt: 'Third captured prompt' },
+  ] };
+  const partial = compose(pending, { step: 2 });
+  expect(partial.passages.map(ps => ps.turnPrompt)).toEqual(['First captured prompt', 'Second captured prompt']);
+  expect(partial.passages.map(ps => ps.turnStep)).toEqual([0, 1]);
+  expect(partial.passages.every(ps => !ps.ops.length && !ps.prose.length)).toBe(true);
+  const full = compose(pending, { step: 3 });
+  expect(full.passages.slice(0, 2)).toEqual(partial.passages.map((ps) => ({ ...ps, settled: true })));
+  expect(full.passages[2]!.turnPrompt).toBe('Third captured prompt');
+  expect(compose(pending, { step: 0 }).passages).toEqual([]);
+});
+
+it('does not lose a chapter when an older operation resolves after its prompt', () => {
+  const late = { ...p, passages: p.passages.map((passage, index) => index === 0 ? { ...passage, lastStep: p.timeline.length - 1 } : passage) };
+  const expected = compose(p, { step: p.timeline.length }).passages.filter(ps => ps.turnPrompt).map(ps => ps.turnPrompt);
+  expect(compose(late, { step: p.timeline.length }).passages.filter(ps => ps.turnPrompt).map(ps => ps.turnPrompt)).toEqual(expected);
+});
+
 describe('scene composer', () => {
   it('carries captured prompt times into reading outlines without inventing missing times',()=>{
     expect(compose(p,{step:p.timeline.length}).passages.some(passage=>passage.turnPrompt&&passage.turnTime)).toBe(true);
