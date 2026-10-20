@@ -478,7 +478,7 @@ function writeTypedItems() {
   mkdirSync(folder, { recursive: true });
   const stamp = (n: number) => new Date(Date.UTC(2026, 9, 20, 10, 0, n)).toISOString();
   const record = (type: string, payload: unknown, n = 0) => ({ timestamp: stamp(n), type, payload });
-  const meta = record('session_meta', { id: 'synthetic-typed-items', cwd: CWD, cli_version: '0.130.0' });
+  const meta = record('session_meta', { id: 'synthetic-typed-items', cwd: CWD, cli_version: '0.162.0-alpha.2' });
   const call = (id: string, n: number, source = 'text(await tools.exec_command({cmd:"pnpm test"}));', name = 'exec') => record('response_item', { type: 'function_call', name, call_id: id, arguments: JSON.stringify({ code: source }) }, n);
   const result = (id: string, n: number) => record('response_item', { type: 'function_call_output', call_id: id, output: 'Script completed' }, n);
   const item = (value: unknown, n: number) => record('event_msg', { type: 'item_completed', thread_id: 'synthetic-thread', turn_id: 'synthetic-turn', item: value }, n);

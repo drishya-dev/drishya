@@ -29,7 +29,8 @@ export interface TurnLedger {
 const parse = (iso?: string) => iso && Number.isFinite(Date.parse(iso)) ? Date.parse(iso) : undefined;
 
 export function turnLedgers(projection: Projection): TurnLedger[] {
-  const ops = new Map(projection.operations.map((op) => [op.id, op]));
+  const scripts = new Set(projection.operations.map(op => op.parentOperationId).filter(Boolean));
+  const ops = new Map(projection.operations.filter(op => !scripts.has(op.id)).map((op) => [op.id, op]));
   const starts: number[] = [];
   projection.timeline.forEach((item, index) => { if (item.type === 'turn') starts.push(index); });
 

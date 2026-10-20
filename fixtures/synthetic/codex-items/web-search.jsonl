@@ -1,2 +1,2 @@
-{"timestamp":"2026-10-20T10:00:00.000Z","type":"session_meta","payload":{"id":"synthetic-typed-items","cwd":"/home/dev/shop","cli_version":"0.130.0"}}
+{"timestamp":"2026-10-20T10:00:00.000Z","type":"session_meta","payload":{"id":"synthetic-typed-items","cwd":"/home/dev/shop","cli_version":"0.162.0-alpha.2"}}
 {"timestamp":"2026-10-20T10:00:01.000Z","type":"event_msg","payload":{"type":"item_completed","thread_id":"synthetic-thread","turn_id":"synthetic-turn","item":{"type":"Extension","kind":"web.search","id":"web-one","query":"synthetic docs","results":[{"title":"Documentation","url":"https://example.invalid/docs","domain":"example.invalid","snippet":"Synthetic result"}]}}}

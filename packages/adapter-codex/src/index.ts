@@ -23,13 +23,14 @@ import {
   type ToolOutcome,
 } from '@drishya/capture-core';
 import { sanitize } from '@drishya/privacy';
+import { typedItem } from './items.ts';
 
 export const descriptor: AdapterDescriptor = {
   id: 'codex',
   harness: 'codex',
   version: '0.1.0',
   label: 'Codex',
-  testedHarnessVersions: ['rollout format with response_item/event_msg, verified on this machine 2026-09-22'],
+  testedHarnessVersions: ['rollout format with response_item/event_msg, verified on this machine 2026-09-22', '0.162.0-alpha.2: typed-item field audit and synthetic fixture coverage, 2026-10-20; see adapter-codex/README.md for limits', '0.162.0-alpha.17.2: message/reasoning item metadata only; command/file/MCP item coverage unverified'],
   capabilities: {
     liveLifecycle: 'partial',
     chunkedOutput: 'unavailable',
@@ -53,7 +54,7 @@ const IGNORED_TOP = new Set(['token_usage_record', 'world_state', 'compacted_his
 /** Codex addresses agents by path: "/root" is the main agent, "/root/<task>" a spawned one. */
 const agentFromAddress = (a: unknown) => (typeof a === 'string' && a !== '/root' && a.startsWith('/root/') ? `agent:${a.split('/').pop()}` : MAIN);
 const IGNORED_EVENTS = new Set([
-  'item_completed', 'item_started', 'thread_settings_applied', 'user_message', 'agent_message',
+  'item_started', 'thread_settings_applied', 'user_message', 'agent_message',
   'agent_reasoning', 'agent_reasoning_raw_content', 'exec_command_begin', 'exec_command_end', 'exec_command_output_delta',
   'patch_apply_begin', 'patch_apply_end', 'mcp_tool_call_begin', 'mcp_tool_call_end', 'web_search_begin', 'web_search_end',
   'session_configured', 'background_event', 'turn_diff', 'plan_update', 'entered_review_mode', 'exited_review_mode',
@@ -148,6 +149,8 @@ export function parseShellOutput(raw: unknown): { text?: string; exitCode?: numb
 
 export function createParser(_ctx: ParseContext): RecordParser {
   const calls = new Map<string, { tool: string; intent: ToolIntent }>();
+  const openExec = new Set<string>();
+  const track = (id: string, tool: string) => { if (tool === 'exec' || tool === 'functions.exec') openExec.add(id); };
   let cwd: string | undefined;
   let version: string | undefined;
   let branch: string | undefined;
@@ -172,7 +175,9 @@ export function createParser(_ctx: ParseContext): RecordParser {
         if (o.kind === 'tool.call' && o.operationId) {
           const p = o.payload as { tool?: string; intent?: ToolIntent };
           if (p.tool && p.intent) calls.set(o.operationId, { tool: p.tool, intent: p.intent });
+          if (p.tool) track(o.operationId, p.tool);
         }
+        if (o.kind === 'tool.result' && o.operationId) openExec.delete(o.operationId);
       }
     },
 
@@ -189,7 +194,11 @@ export function createParser(_ctx: ParseContext): RecordParser {
         version = typeof p.cli_version === 'string' ? p.cli_version : version;
         branch = typeof p.git?.branch === 'string' ? p.git.branch : branch;
         // Provider identifies a service, not the model that performed this turn.
-        return [{ ...base, workspaceRoot: cwd, harnessVersion: version, branchRef: branch, kind: 'session.meta', payload: { harness: 'codex', harnessVersion: version, cwd, branch } }];
+        const out: RawObservation[] = [{ ...base, workspaceRoot: cwd, harnessVersion: version, branchRef: branch, kind: 'session.meta', payload: { harness: 'codex', harnessVersion: version, cwd, branch } }];
+        const identity = Object.fromEntries(Object.entries({ agentNickname: p.agent_nickname, agentPath: p.agent_path, parentThreadId: p.parent_thread_id, forkedFromId: p.forked_from_id, effort: p.reasoning_effort }).filter(([, value]) => typeof value === 'string'));
+        // Existing metadata IDs/payloads remain unchanged. New identity data can enrich old recordings.
+        if (Object.keys(identity).length) out.push({ ...base, part: 1, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', ...identity } });
+        return out;
       }
       if (type === 'turn_context') {
         const nextCwd = typeof p.cwd === 'string' ? p.cwd : cwd;
@@ -202,6 +211,16 @@ export function createParser(_ctx: ParseContext): RecordParser {
       }
       if (type === 'event_msg') {
         const t = String(p.type ?? '');
+        if (t === 'item_completed') {
+          const parsed = typedItem(p.item, commandText);
+          if (!parsed) return [{ ...base, kind: 'unknown', payload: { recordType: `item_completed:${typeof p.item?.type === 'string' ? p.item.type : 'untyped'}` }, availability: 'metadata-only' }];
+          const id = parsed.payload.itemId;
+          const correlation = calls.has(id) ? { operationId: id, basis: 'source-id' as const } : openExec.size === 1 ? { operationId: [...openExec][0]!, basis: 'enclosing-call' as const } : undefined;
+          const denyContent = parsed.denyContent || !!correlation && touchesProtectedFile(calls.get(correlation.operationId)?.intent ?? { kind: 'other' });
+          const out: RawObservation[] = [{ ...base, kind: 'item.completed', correlation, payload: { ...parsed.payload }, denyContent, contentKeys: ['output', 'mcp'], availability: denyContent ? 'partial' : 'complete' }];
+          if (parsed.payload.agent && typeof p.item.agent_nickname === 'string') out.push({ ...base, part: 1, agentId: parsed.payload.agent.path ? agentFromAddress(parsed.payload.agent.path) : `agent:${parsed.payload.agent.threadId}`, kind: 'session.meta', payload: { harness: 'codex', agentNickname: p.item.agent_nickname } });
+          return out;
+        }
         if (t === 'task_started') { turnId = typeof p.turn_id === 'string' ? p.turn_id : undefined; return [{ ...base, kind: 'turn.start', payload: { turnId: p.turn_id } }]; }
         if (t === 'token_count') {
           const keys = { input_tokens: 'input', cached_input_tokens: 'cachedInput', cache_write_input_tokens: 'cacheWrite', output_tokens: 'output', reasoning_output_tokens: 'reasoningOutput', total_tokens: 'total' } as const;
@@ -244,6 +263,7 @@ export function createParser(_ctx: ParseContext): RecordParser {
           const intent = intentOf(name, args, typeof p.namespace === 'string' ? p.namespace : undefined);
           const id = String(p.call_id ?? p.id ?? '');
           if (id) calls.set(id, { tool: name, intent });
+          if (id) track(id, name);
           // A patch that edits a protected file carries its contents in the call itself.
           const protectedPatch = intent.kind === 'patch' && touchesProtectedFile(intent);
           return [{ ...base, kind: 'tool.call', operationId: id || undefined, payload: { tool: name, input: args, intent }, ...(protectedPatch ? { denyContent: true, contentKeys: ['input', 'intent'] } : {}) }];
@@ -252,6 +272,7 @@ export function createParser(_ctx: ParseContext): RecordParser {
         case 'custom_tool_call_output': {
           const id = String(p.call_id ?? '');
           const call = calls.get(id);
+          openExec.delete(id);
           const intent = call?.intent ?? { kind: 'other' as const };
           const parsed = parseShellOutput(p.output);
           let outcome: ToolOutcome = { kind: 'other' };
@@ -280,6 +301,7 @@ export function createParser(_ctx: ParseContext): RecordParser {
           return text ? [{ ...base, agentId: author, kind: 'message.assistant', payload: { text }, contentKeys: ['text'] }] : [];
         }
         case 'web_search_call':
+          if (typeof p.id === 'string') calls.set(p.id, { tool: 'web_search', intent: { kind: 'web', query: p.action?.query } });
           return [{ ...base, kind: 'tool.call', operationId: typeof p.id === 'string' ? p.id : undefined, payload: { tool: 'web_search', input: p.action ?? {}, intent: { kind: 'web', query: p.action?.query } } }];
         default:
           return [{ ...base, kind: 'unknown', payload: { recordType: `response_item:${p.type}` }, availability: 'metadata-only' }];

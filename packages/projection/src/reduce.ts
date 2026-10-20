@@ -23,15 +23,17 @@ import type {
   SearchHit,
   TextValue,
   TimelineItem,
+  ItemPayload,
 } from '@drishya/contracts';
 import { isBlobText } from '@drishya/contracts';
 import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
 import { literalPatch, touchesProtectedFile } from '@drishya/capture-core';
-import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch } from './patch.ts';
+import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks } from './patch.ts';
 import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
+import { placeChildren } from './children.ts';
 
 export const REDUCER_VERSION = 'r5';
 
@@ -64,6 +66,8 @@ interface OpState {
   cwd?: string;
   callObservationId?: string;
   completed?: boolean;
+  typedOutcome?: boolean;
+  script?: TextValue;
 }
 
 export function reduce(recordingId: string, input: Iterable<Observation>, io: BlobIO, opts: ReduceOptions): Projection {
@@ -78,6 +82,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   let observationCount = 0;
   let lastSequence = -1;
   const usage = new UsageAccumulator();
+  const itemReceipts = new Map<string, number>();
 
   const agents = new Map<string, Agent>();
   const ops = new Map<string, OpState>();
@@ -257,6 +262,103 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           const a = ensureAgent(o);
           if (typeof p.model === 'string') a.model = p.model;
+          if (typeof p.agentNickname === 'string') { a.nickname = p.agentNickname; a.label = p.agentNickname; }
+          if (typeof p.agentPath === 'string') a.address = p.agentPath;
+          if (typeof p.effort === 'string') a.effort = p.effort;
+          if (typeof p.forkedFromId === 'string') a.forkedFromId = p.forkedFromId;
+          if (typeof p.parentThreadId === 'string') a.parentId = `${o.recordingId}.agent:${p.parentThreadId}`;
+          break;
+        }
+        case 'item.completed': {
+          const item = { ...p, command: text(p.command) } as ItemPayload;
+          const parentId = o.correlation ? `${o.recordingId}.${o.correlation.operationId}` : undefined;
+          const parent = parentId ? ops.get(parentId) : undefined;
+          const targets = parentId ? (opGroups.get(parentId) ?? []).map(id => ops.get(id)!) : [];
+          const relate = (op: Operation) => {
+            if (!o.correlation) return;
+            link({ from: parentId!, to: op.id, relation: 'tool-result', basis: o.correlation.basis === 'source-id' ? 'source-id' : 'deterministic-rule',
+              ...(o.correlation.basis === 'enclosing-call' ? { ruleVersion: 'codex-enclosing-call-v1' } : {}), sourceObservationIds: [targets[0]?.callObservationId, o.id].filter((id): id is string => !!id),
+              explanation: o.correlation.basis === 'enclosing-call' ? 'Recorded between this call and its output.' : 'The harness recorded the same item and call id.' });
+          };
+          if (item.item === 'subagent' && item.agent) {
+            const native = item.agent.path?.startsWith('/root/') ? item.agent.path.split('/').at(-1)! : item.agent.threadId;
+            const a = ensureAgent({ ...o, agentId: `agent:${native}` });
+            a.address = item.agent.path; a.model = item.agent.model; a.effort = item.agent.effort;
+            if (parent) a.parentId = parent.op.agentId;
+            break;
+          }
+          const edits = targets.filter(st => st.nestedPatch && st.op.detail.kind === 'edit');
+          if (item.item === 'file-change' && edits.length) {
+            const paths = new Set(item.changes?.map(change => rel(change.path, o.workspaceRoot)));
+            const exact = edits.length === paths.size && edits.every(st => st.op.detail.kind === 'edit' && paths.has(st.op.detail.path));
+            if (exact) for (const st of edits) {
+              st.typedOutcome = true;
+              st.op.status = item.status === 'failed' ? 'error' : item.status === 'completed' ? 'ok' : 'unknown';
+              st.op.observationIds.push(o.id); st.op.classification = { kind: 'captured', observationIds: [o.id] };
+              if (st.op.detail.kind === 'edit') st.op.detail.reconstructionNote = 'Patch outcome recorded by a typed file change; path set matches exactly.';
+              if (st.op.detail.kind === 'edit') {
+                const change = item.changes?.find(change => rel(change.path, o.workspaceRoot) === (st.op.detail as Extract<OperationDetail, { kind: 'edit' }>).path);
+                const hunks = parseUnifiedHunks(text(change?.content) ?? '');
+                if (hunks.length) st.op.detail.hunks = hunks;
+              }
+              st.op.tool = 'FileChange'; st.op.origin = { type: 'native', tool: 'FileChange' };
+              if (st.script !== undefined) st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_script`, kind: 'excerpt', observedAtSequence: st.op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [st.callObservationId!] }, redacted: o.redactions.length > 0, content: text(st.script) }));
+              dirtyOperations.add(st.op.id); relate(st.op);
+            }
+            break;
+          }
+          if (item.item === 'file-change') {
+            for (const [index, change] of (item.changes ?? []).entries()) {
+              const id = `${o.recordingId}.item:${o.id}#${index}`;
+              const st = newOp(o, id, { kind: 'edit', path: change.path, edits: [] }, 'FileChange');
+              itemReceipts.set(id, o.receivedSequence);
+              const path = rel(change.path, o.workspaceRoot), content = text(change.content);
+              st.op.paths = [{ path, role: 'write', basis: 'captured' }];
+              st.op.title = `${change.type === 'add' ? 'Create' : change.type === 'delete' ? 'Delete' : 'Edit'} ${path}`;
+              st.op.detail = { kind: 'edit', path, hunks: content ? (change.type === 'add' ? addHunk(content) : parseUnifiedHunks(content)) : [], created: change.type === 'add', reconstruction: 'unavailable', reconstructionNote: 'Captured file change; no full file snapshot is inferred.' };
+              st.op.status = item.status === 'failed' ? 'error' : item.status === 'completed' ? 'ok' : 'unknown';
+              st.completed = true; st.op.startTime = undefined; st.op.endTime = o.sourceTime; st.op.endSequence = step();
+              if (parent) { st.op.parentOperationId = parent.op.id; relate(st.op); }
+              else { timeline.push({ type: 'op-start', id: `s_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime }); st.op.endSequence = step(); timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime }); }
+            }
+            break;
+          }
+          let intent: ToolIntent = { kind: 'other' }, tool: string = item.item;
+          if (item.item === 'command' && typeof item.command === 'string') { intent = { kind: 'shell', command: item.command, cwd: item.cwd }; tool = 'CommandExecution'; }
+          else if (item.item === 'mcp-call' && item.mcp) { intent = { kind: 'mcp', server: item.mcp.server, tool: item.mcp.tool }; tool = item.mcp.tool; }
+          else if (item.item === 'web-search') intent = { kind: 'web', query: item.web?.query };
+          const same = o.correlation?.basis === 'source-id' && parent && (item.item === 'mcp-call' && parent.op.detail.kind === 'mcp' || item.item === 'command' && parent.op.detail.kind === 'shell' || item.item === 'web-search' && parent.op.detail.kind === 'web');
+          const id = same ? parent.op.id : `${o.recordingId}.item:${o.id}`;
+          if (!same && ops.has(id)) break;
+          ensureAgent(o);
+          const st = same ? parent : newOp(o, id, intent, tool);
+          itemReceipts.set(id, o.receivedSequence);
+          const completed = st.completed;
+          st.intent = intent; st.typedOutcome = true; st.completed = same ? completed : true;
+          st.op.durationMs = item.durationMs;
+          st.op.status = item.status === 'failed' || item.mcp?.isError || item.mcp?.error || typeof item.exitCode === 'number' && item.exitCode !== 0 ? 'error' : item.status === 'completed' ? 'ok' : 'unknown';
+          describeCall(st, { tool, input: {} }, rel);
+          if (item.item === 'command' && typeof item.command === 'string' && st.op.detail.kind !== 'test') { st.op.kind = 'shell'; st.op.detail = { kind: 'shell', command: item.command }; st.op.title = clip(oneLine(item.command), 120); }
+          if ((st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.command.length > (opts.maxInputChars ?? Infinity)) {
+            const command = st.op.detail.command;
+            st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_input`, kind: 'excerpt', observedAtSequence: st.op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: command }));
+            st.op.detail.command = clip(command, opts.maxInputChars!);
+          }
+          st.op.classification = { kind: 'captured', observationIds: [o.id] };
+          st.op.observationIds = [...new Set([...st.op.observationIds, o.id])];
+          st.op.endTime = o.sourceTime;
+          if (!same) { st.op.startTime = undefined; st.op.endSequence = step(); }
+          if (item.image) { st.op.title = `${item.item === 'image-view' ? 'View image' : 'Generated image'} · ${item.image.path ?? item.image.savedPath ?? 'reference'}`; st.op.detail = { kind: 'other', input: { image: item.image }, resultPreview: 'Image reference captured; image bytes not captured.' }; }
+          const output = item.mcp?.result ?? item.output ?? (item.web ? JSON.stringify(item.web) : undefined);
+          completeOp(st, o, { text: output, exitCode: item.exitCode, outcome: { kind: 'other' } }, { text, rel, addArtifact, knownFull, link, fileKey });
+          if (output !== undefined && item.item !== 'command') st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_out`, kind: 'output', observedAtSequence: st.op.endSequence ?? st.op.startSequence, availability: o.availability, provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: text(output) }));
+          st.intent = { kind: 'other' };
+          if (st.op.detail.kind === 'mcp' && item.mcp) { st.op.detail.readOnlyHint = item.mcp.readOnlyHint; st.op.detail.error = item.mcp.error; }
+          if (!same) {
+            if (parent) { st.op.parentOperationId = parent.op.id; relate(st.op); }
+            else { timeline.push({ type: 'op-start', id: `s_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime }); st.op.endSequence = step(); timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime }); }
+          }
+          dirtyOperations.add(id);
           break;
         }
         case 'message.user': {
@@ -319,6 +421,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               const id = files.length === 1 ? baseId : `${baseId}#${i}`;
               const st = newOp(o, id, { kind: 'edit', path: f.path, edits: [] }, String(p.tool));
               st.nestedPatch = nestedPatch;
+              if (nestedPatch) st.script = p.input?.code ?? p.input?.raw;
               if (nestedPatch) st.op.classification = derived('codex-literal-patch-v1', [o.id]);
               const path = rel(f.moveTo ?? f.path, st.cwd);
               const base = knownFull.get(fileKey(o.recordingId, path));
@@ -387,8 +490,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             st.op.observationIds.push(o.id);
             st.op.endSequence = step();
             st.op.endTime = o.sourceTime;
-            st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
-            completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
+            if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
+            if (!st.typedOutcome) completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
             link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: 'source-id', sourceObservationIds: [st.callObservationId ?? o.id, o.id], explanation: 'The harness recorded this result for this call id.' });
             // Completed calls no longer need their potentially large edit/command input.
             st.intent = { kind: 'other' };
@@ -471,11 +574,12 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       for (const a of finalAgents.values()) if (a.stoppedSequence === undefined && a.id.endsWith('.agent:main')) a.stoppedSequence = Math.max(0, timeline.length - 1);
     }
 
-    crossLinks(operations, prose, finalLink);
-    const passages = buildPassages(timeline, operations, prose);
+    const placed = placeChildren(operations, timeline, [...artifacts.values()], prose, [...finalAgents.values()], itemReceipts);
+    crossLinks(placed.operations, placed.prose, finalLink);
+    const passages = buildPassages(placed.timeline, placed.operations, placed.prose);
 
     const files = new Map<string, { path: string; firstStep: number; lastStep: number; roles: Set<PathRef['role']> }>();
-    for (const op of operations) {
+    for (const op of placed.operations) {
       for (const pr of op.paths) {
         if (!inWorkspace(pr.path)) continue;
         const f = files.get(pr.path) ?? { path: pr.path, firstStep: op.startSequence, lastStep: op.startSequence, roles: new Set() };
@@ -495,12 +599,12 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       harnesses: [...harnesses],
       workspaceRoot: multipleWorktrees ? undefined : workspaceRoot,
       title: title ?? (firstPrompt ? clip(firstPrompt.replace(/\s+/g, ' ').trim(), 120) : undefined),
-      agents: [...finalAgents.values()],
-      operations,
-      prose: [...prose],
-      artifacts: [...artifacts.values()],
+      agents: placed.agents,
+      operations: placed.operations,
+      prose: [...placed.prose],
+      artifacts: placed.artifacts,
       links: finalLinks,
-      timeline: [...timeline],
+      timeline: [...placed.timeline],
       passages,
       files: [...files.values()].map((f) => ({ ...f, roles: [...f.roles] })).sort((a, b) => a.firstStep - b.firstStep || a.path.localeCompare(b.path)),
       gaps: [...gaps],
@@ -877,6 +981,7 @@ function crossLinks(operations: Operation[], prose: Prose[], link: Ctx['link']) 
  * prose that follows them beneath. A user turn closes every open passage.
  */
 export function buildPassages(timeline: TimelineItem[], operations: Operation[], prose: Prose[]): Projection['passages'] {
+  const scripts = new Set(operations.map(op => op.parentOperationId).filter(Boolean));
   const opAgent = new Map(operations.map((o) => [o.id, o.agentId]));
   const proseAgent = new Map(prose.map((p) => [p.id, p.agentId]));
   const out: Projection['passages'] = [];
@@ -888,6 +993,7 @@ export function buildPassages(timeline: TimelineItem[], operations: Operation[],
       return;
     }
     if (it.type === 'op-start') {
+      if (scripts.has(it.operationId)) return;
       const agent = opAgent.get(it.operationId)!;
       let p = open.get(agent);
       if (!p || p.proseIds.length || p.operationIds.length >= 32) {

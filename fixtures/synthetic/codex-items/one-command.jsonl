@@ -1,4 +1,4 @@
-{"timestamp":"2026-10-20T10:00:00.000Z","type":"session_meta","payload":{"id":"synthetic-typed-items","cwd":"/home/dev/shop","cli_version":"0.130.0"}}
+{"timestamp":"2026-10-20T10:00:00.000Z","type":"session_meta","payload":{"id":"synthetic-typed-items","cwd":"/home/dev/shop","cli_version":"0.162.0-alpha.2"}}
 {"timestamp":"2026-10-20T10:00:01.000Z","type":"response_item","payload":{"type":"function_call","name":"exec","call_id":"one","arguments":"{\"code\":\"text(await tools.exec_command({cmd:\\\"pnpm test\\\"}));\"}"}}
 {"timestamp":"2026-10-20T10:00:02.000Z","type":"event_msg","payload":{"type":"item_completed","thread_id":"synthetic-thread","turn_id":"synthetic-turn","item":{"type":"CommandExecution","id":"cmd-one","command":["pwsh","-Command","pnpm test"],"cwd":"/home/dev/shop","parsed_cmd":[{"type":"unknown","cmd":"pnpm test"}],"status":"completed","exit_code":0,"duration":{"secs":1,"nanos":250000000},"aggregated_output":"Tests  441 passed (441)\n"}}}
 {"timestamp":"2026-10-20T10:00:03.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"one","output":"Script completed"}}
