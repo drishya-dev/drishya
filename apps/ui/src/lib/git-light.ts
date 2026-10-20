@@ -24,7 +24,11 @@ export interface LightOptions {
   olderBeyond?: boolean;
 }
 /** One run of non-primary commits: from the commit it left (fork) to the primary commit it was merged into, if any. */
-export interface LightBranch { key: string; members: string[]; fork?: string; merge?: string; head: string; side: number; tier: number }
+export interface LightBranch {
+  key: string; members: string[]; fork?: string; merge?: string; head: string; side: number; tier: number;
+  /** The merge is a squash: no parent link in Git, but that primary commit wrote exactly this branch's file contents. */
+  squash?: boolean;
+}
 export interface LightLayout {
   nodes: LayoutNode[];
   byHash: Map<string, LayoutNode>;
@@ -56,7 +60,7 @@ function colour(t: number) {
 }
 
 /** Main-strand width in CSS pixels for a zoom: wide enough to read as a river, never wider than ~46 px. */
-export const riverWidth = (scale: number) => clamp(34 * Math.sqrt(scale / .6), 16, 46);
+export const riverWidth = (scale: number) => clamp(56 * scale, 14, 120);
 /** A branch starts thin and gains width with every commit, never more than half the river. */
 export const branchWidth = (mainW: number, ordinal: number) => Math.min(mainW * .5, mainW * (.1 + .065 * ordinal));
 
@@ -65,7 +69,7 @@ export const branchWidth = (mainW: number, ordinal: number) => Math.min(mainW * 
  * side, the nearest free tier on it (so branches that overlap in time never collide), a seeded extra distance and a slow
  * drift along its length. Distances are screen pixels at this zoom, so a branch never sinks into the river when zoomed out.
  */
-export function lightLayout(graph: Graph, scale: number): LightLayout {
+export function lightLayout(graph: Graph, scale: number, squash: ReadonlyMap<string, string> = new Map()): LightLayout {
   const mainW = riverWidth(scale);
   const nodes0 = new Map(graph.nodes.map((node) => [node.hash, node]));
   const firstParent = new Map<string, string>(), children = new Map<string, string[]>();
@@ -94,7 +98,8 @@ export function lightLayout(graph: Graph, scale: number): LightLayout {
     members.sort((a, b) => a.x - b.x);
     const last = members.at(-1)!;
     const merge = (children.get(last.hash) ?? []).find((child) => nodes0.get(child)?.primary);
-    return { key, members: members.map((m) => m.hash), fork: firstParent.get(key), merge, head: last.hash, side: 1, tier: 0 };
+    const into = squash.get(last.hash), squashed = !merge && !children.has(last.hash) && into && nodes0.get(into)?.primary ? into : undefined;
+    return { key, members: members.map((m) => m.hash), fork: firstParent.get(key), merge: merge ?? squashed, head: last.hash, side: 1, tier: 0, squash: !!squashed };
   }).sort((a, b) => nodes0.get(a.members[0]!)!.x - nodes0.get(b.members[0]!)!.x);
   const branchOf = new Map<string, LightBranch>(), ordinal = new Map<string, number>();
   for (const branch of branches) branch.members.forEach((hash, i) => { branchOf.set(hash, branch); ordinal.set(hash, i + 1); });
@@ -149,7 +154,9 @@ export function gitLight(graph: Graph, layout: LightLayout, view: LightView, opt
   const budget = options.lowResource ? 8000 : 40000;
 
   // Only edges that cross the view, with a sample every ~6 px of screen length.
-  const edges = graph.edges.flatMap((edge) => {
+  // Squash merges join the drawing as edges from the branch head into the primary commit that wrote its contents.
+  const squashEdges = layout.branches.filter((branch) => branch.squash && branch.merge).map((branch) => ({ ...graph.edges[0]!, from: branch.head, to: branch.merge!, primary: false, lane: 0, width: 2 }));
+  const edges = [...graph.edges, ...squashEdges].flatMap((edge) => {
     const a = nodes.get(edge.from), b = nodes.get(edge.to);
     if (!a || !b) return [];
     const ax = sx(a.x), bx = sx(b.x), ay = sy(a.y), by = sy(b.y);
@@ -229,11 +236,14 @@ export function gitLight(graph: Graph, layout: LightLayout, view: LightView, opt
     const merge = !main && b.primary;
     // A fork leaves from inside its parent's outer rim, and a merge returns into the river's rim, never through a core.
     const parentW = a.primary ? mainW : branchWidth(mainW, ordinal.get(a.hash) ?? 1);
-    const bend = Math.max(20, (bx - ax) * .5);
+    // A fork rises early and a merge drops late, so a long branch travels beside the river and flows in at its merge.
+    const span = bx - ax;
+    const c1 = merge ? ax + span * .62 : fork ? ax + Math.max(Math.min(20, span * .5), span * .25) : ax + Math.max(20, span * .5);
+    const c2 = merge ? bx - Math.max(Math.min(20, span * .5), span * .2) : fork ? ax + Math.min(span * .6, span * .25 + 40) : bx - Math.max(20, span * .5);
     const centre: [number, number][] = [], widths: number[] = [], fades: number[] = [];
     for (let i = 0; i < samples; i++) {
       const t = i / (samples - 1), u = 1 - t;
-      const x = u * u * u * ax + 3 * u * u * t * (ax + bend) + 3 * u * t * t * (bx - bend) + t * t * t * bx;
+      const x = u * u * u * ax + 3 * u * u * t * c1 + 3 * u * t * t * c2 + t * t * t * bx;
       let y = u * u * u * ay + 3 * u * u * t * ay + 3 * u * t * t * by + t * t * t * by;
       if (fork) y += (Math.sign(by - ay) || 1) * parentW * .42 * (1 - t) ** 2;
       if (merge) y += (Math.sign(ay - by) || 1) * mainW * .42 * t ** 2;
@@ -255,7 +265,7 @@ export function gitLight(graph: Graph, layout: LightLayout, view: LightView, opt
     const x0 = sx(node.x), y0 = sy(node.y);
     if (x0 < -200 || x0 > W + 200 || y0 < -200 || y0 > H + 200) continue;
     const r = rng(hashSeed(hash)), size = Math.min(5, branch.members.length);
-    const base = branchWidth(mainW, branch.members.length) * .5, reach = (26 + 12 * size) * (.75 + r() * .6) * clamp(scale / .6, .7, 1.3);
+    const base = branchWidth(mainW, branch.members.length) * .5, reach = (26 + 12 * size) * (.75 + r() * .6) * clamp(scale / .6, .5, 3);
     const filaments = clamp(mainCount * (.05 + .03 * size), 4, 40), depth = options.lowResource || size < 2 ? 1 : size < 4 ? 2 : 3;
     const forward = (value: number) => clamp(value, -.95, .95);
     const grow = (x: number, y: number, angle: number, length: number, width: number, count: number, level: number) => {

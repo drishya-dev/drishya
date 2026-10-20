@@ -1,0 +1,35 @@
+.mh-footer { align-items:center; gap:12px; flex-wrap:wrap; }
+.home-github-star {
+  position:relative; isolation:isolate; display:inline-flex; align-items:center; justify-content:center;
+  gap:7px; min-height:34px; padding:6px 12px; overflow:hidden; flex:none;
+  border:1px solid var(--line-2); border-radius:999px; background:var(--s1); color:var(--t2);
+  font:500 12px/20px var(--sans); text-decoration:none;
+  transition:color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.home-github-star svg { width:15px; height:15px; flex:none; transition:color 160ms ease, fill 160ms ease; }
+.home-github-arrow { color:var(--t3); }
+.home-github-star::before {
+  content:""; position:absolute; inset:-50% -20%; z-index:-1; pointer-events:none; opacity:0;
+  background:linear-gradient(110deg,transparent 35%,color-mix(in srgb,var(--t1) 15%,transparent) 50%,transparent 65%);
+  transform:translateX(-110%);
+}
+.home-github-star:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
+@media (hover:hover) and (pointer:fine) {
+  .home-github-star:hover { color:var(--t1); border-color:var(--t3); box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--line); }
+  .home-github-star:hover svg { color:var(--modern-accent,var(--t1)); fill:color-mix(in srgb,currentColor 20%,transparent); }
+  .home-github-star:hover::before { opacity:1; transform:translateX(110%); transition:transform 1s var(--ease-out,cubic-bezier(.23,1,.32,1)); }
+}
+@media (prefers-reduced-motion:reduce), (forced-colors:active) {
+  .home-github-star::before { display:none; }
+  .home-github-star,.home-github-star svg { transition:none; }
+}
+:root:not([data-ui-motion]) .home-github-star::before,
+:root[data-low-resource] .home-github-star::before { display:none; }
+@media (forced-colors:active) {
+  .home-github-star { border-color:ButtonText; color:LinkText; }
+  .home-github-star:focus-visible { outline-color:Highlight; }
+}
+@media (max-width:450px) {
+  .mh-footer { column-gap:10px; row-gap:8px; }
+  .mh-footer>.home-github-star { order:3; margin-inline:auto; }
+}

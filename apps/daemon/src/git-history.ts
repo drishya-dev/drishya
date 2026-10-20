@@ -57,9 +57,49 @@ export async function gitHistory(git:Git,options:GitHistoryQuery={}):Promise<Git
     commits.push({hash:id!,parents,author:preview(author!,256),time:time!,subject:preview(subject!,2048),labels:labels.slice(0,6).map(ref=>ref.name),omittedLabels:Math.max(0,labels.length-6)});
   }
   const matching=before.refs.filter(ref=>ref.name.toLowerCase().includes(query.toLowerCase()));
-  if((await state(git)).generation!==before.generation)throw changed();
   const primary=before.refs.find(ref=>ref.raw==='refs/heads/main')??before.refs.find(ref=>ref.raw==='refs/heads/master');
-  return {mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,selectedReference:selected?publicRef(selected):undefined};
+  const signatures=await squashEvidence(git,commits.slice(0,50),primary?.tip??before.head);
+  if((await state(git)).generation!==before.generation)throw changed();
+  return {mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,selectedReference:selected?publicRef(selected):undefined,...signatures};
+}
+
+/**
+ * Evidence for squash merges, which leave no parent link in Git. A content signature is the sorted list of every path a
+ * change writes and the blob it writes there (or its deletion), hashed. `changeSignatures` covers each non-merge commit's
+ * own change; `branchSignatures` covers a branch head's whole change since it left the primary line (three-dot diff).
+ * Equal signatures mean the primary commit wrote exactly the branch's file contents. Git objects never change, so both
+ * are cached by object id.
+ */
+const signatureCache=new Map<string,string>();
+const remember=(key:string,value:string)=>{signatureCache.set(key,value);if(signatureCache.size>4000)signatureCache.delete(signatureCache.keys().next().value!);return value;};
+function signature(raw:string):string {
+  const tokens=raw.split('\0'),entries:string[]=[];
+  for(let i=0;i<tokens.length;i++){
+    const meta=tokens[i]!.trim();if(!meta.startsWith(':'))continue;
+    const fields=meta.slice(1).split(/\s+/),path=tokens[i+1]??'';i++;
+    if(fields.length<5||!oid.test(fields[3]??''))continue;
+    entries.push(`${path}\0${fields[4]==='D'?'-':fields[3]}`);
+  }
+  return entries.length?hash(entries.sort().join('\n')).slice(0,24):'';
+}
+async function squashEvidence(git:Git,commits:GitCommit[],tip:string|undefined) {
+  const changeSignatures:Record<string,string>={},branchSignatures:Record<string,string>={};
+  if(!tip||!oid.test(tip))return {changeSignatures,branchSignatures};
+  const single=commits.filter(commit=>commit.parents.length===1);
+  const missing=single.filter(commit=>!signatureCache.has(`c:${commit.hash}`)).map(commit=>commit.hash);
+  if(missing.length){
+    const log=await git(['log','--no-walk=unsorted','--no-renames','--no-abbrev','--raw','-z','--format=%x01%H',...missing,'--']).catch(()=>'');
+    for(const chunk of log.split('\x01').slice(1)){const end=chunk.indexOf('\0');const id=chunk.slice(0,end).trim();if(oid.test(id))remember(`c:${id}`,signature(chunk.slice(end+1)));}
+  }
+  for(const commit of single){const value=signatureCache.get(`c:${commit.hash}`);if(value)changeSignatures[commit.hash]=value;}
+  // Branch heads: commits with no child on this page. A head already on the primary line gives an empty diff.
+  const children=new Set(commits.flatMap(commit=>commit.parents));
+  for(const commit of commits.filter(commit=>!children.has(commit.hash)&&commit.hash!==tip).slice(0,30)){
+    const key=`b:${tip}:${commit.hash}`;
+    const value=signatureCache.get(key)??remember(key,signature(await git(['diff','--raw','--no-renames','--no-abbrev','-z',`${tip}...${commit.hash}`,'--']).catch(()=>'')));
+    if(value)branchSignatures[commit.hash]=value;
+  }
+  return {changeSignatures,branchSignatures};
 }
 
 export async function gitCommit(git:Git,id:string,parentIndex=0,start=0,generation?:string):Promise<GitCommitDetail> {
