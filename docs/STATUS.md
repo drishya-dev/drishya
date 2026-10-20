@@ -34,7 +34,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | UI-10 | @yash + Codex | `codex/ui-10-agent-inventory` | 2026-10-20 | Bounded Agents disclosure: `modern/ModernTools.tsx` only, new 3/300-agent browser fixture and TASKS/STATUS/review (at most 5 files). Reuse collectionBounds; no tool-inventories CSS/test (UI-2), agent lineage/capture/schema, Workbench/History/Viewer or REVIEW-1 files. |
 | UI-2 | @yash + Codex | `codex/ui-2-toolbox-type` | 2026-10-20 | Toolbox typography slice only: `modern/tool-inventories.css`, focused browser checks, TASKS/STATUS/review (at most 6 files). No SessionWorkspace/History/Viewer or Usage logic, no capture/backend/data or inventory/motion/layout rewrite. |
 | FILES-2 | @yash + Codex | `codex/files-2-prose-links` | 2026-10-20 | Prose plus typed card/search paths: Markdown parser + pure resolver, History prose/header/search-hit routes, optional scoped path CSS, focused unit/browser checks and TASKS/STATUS/review (at most 10 files). No native/source IO, adapters/store/contracts/projection, Viewer/Search or UI-2 files; external links stay inert. |
-| REVIEW-1 | @yash + Claude Sonnet 5.5 | `yash/review-1-changes` | 2026-10-20 | `packages/scene/src/since.ts` (per-file +/- and last-changing turn; grouped gaps), `EvidenceReview.tsx` + CSS, the header label (`Viewer.tsx`), tests, TASKS/STATUS (at most 9 files). No adapters/contracts/projection (DATA-1/2), no test recognition (DATA-1). |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -42,6 +41,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — REVIEW-1 Changes (partial)
+
+- **When:** 20 October 2026. `sinceSnapshot` gains `fileStats` (captured +/-, last-edit turn) and `gapGroups`; the Review dialog shows them; Modern gets a top-bar **Changes** button. Verified on a real Codex session and review specs. Also fixed two rail specs from #152 that still expected the old near/current tick lift (ticks are uniform now). REVIEW-1 stays open (test recognition needs DATA-1).
 
 ### Yash with Claude (Sonnet 5.5) — HOME-1 quiet rows (UI slice)
 
