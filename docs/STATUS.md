@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-10 | @yash + Codex | `codex/ui-10-agent-inventory` | 2026-10-20 | Bounded Agents disclosure: `modern/ModernTools.tsx` only, new 3/300-agent browser fixture and TASKS/STATUS/review (at most 5 files). Reuse collectionBounds; no tool-inventories CSS/test (UI-2), agent lineage/capture/schema, Workbench/History/Viewer or REVIEW-1 files. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -82,6 +81,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Changed:** Toolbox counts/MCP labels/agent states reach11px; disclosure/filter controls12px. Modern-only scoped CSS; no inventory, geometry or motion rewrite.
 - **Verified:** both3/300-tool browser journeys now include metadata/control floors, Agents, Clear focus, seven palettes and1440/390/320px layouts. Large lists retain keyboard End and visible disclosure. Actual redacted Drishya Codex before/after and Skeletongraph Claude checked; no measured Toolbox text below11px. UI TS/build and palette contrast guard pass; local frames inspected.
 - **Limits:** human/physical and other UI-2 surfaces remain open. No capture/backend/schema/native/journal writes or hosted CI. [Evidence](review/ui-2-toolbox-typography.md). FILES-2 prose/typed History paths are independently ready in #157.
+
+### Yash with Codex — UI-10 agent inventory ready
+
+- **When:** 20 October 2026. Branch `codex/ui-10-agent-inventory`, PR #160, **READY FOR CLAUDE REVIEW / MERGE**. Claim removed in this PR; parent UI-10 remains open for other collections.
+- **Changed:** recorded Agents reuse ToolCollection: short lists retain natural height, more than six agents use216px/36dvh local scrolling. Existing explicit family nesting and filtering remain; no new panel/control or lineage inference.
+- **Verified:** synthetic normalized3/300-agent fixtures with long names, nested disclosure, exact counts, filter/clear, keyboard End and1440/390/320/short320px bounds. Existing3/300 MCP/runtime checks pass alongside them (four journeys). Real redacted Drishya Codex seven-agent list now216px; last row and outer summary stay reachable. UI TS/build pass; local frame inspected.
+- **Limits:** no agent-row virtualization/native-lineage certification. Native/data, physical/human and other UI-10 surfaces remain open. [Evidence](review/ui-10-agent-inventory.md). No backend/schema/dependency/native/journal writes or hosted CI.
+- **Other independent handoffs:** FILES-2 prose/card/search navigation ready in #157; Toolbox typography ready in #159. UI-2 Settings/Git typography merged as #155 and LIVE-2b as #153. Preserve the other builders' claims and inspect docs conflicts when merging these separate task branches.
 
 ### Yash with Codex — UI-2 Settings/Git typography ready
 
