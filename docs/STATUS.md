@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | FILES-2 | @yash + Codex | `codex/files-2-prose-links` | 2026-10-20 | Prose-path slice: Markdown parser + new pure path resolver, History prose callback only, focused unit/browser checks and TASKS/STATUS/review (at most 9 files). No native/source IO, adapters/store/contracts/projection, Viewer/Search or UI-2 files; external links stay inert. |
-| UI-2 | @yash + Codex | codex/ui-2-settings-type | 2026-10-20 | Settings and Git graph typography/contrast slice: modern/settings.css, scoped Git typography CSS imported by GitHistory, browser tests, TASKS/STATUS and review notes (at most 9 files). No ProductShell/Viewer/Search, Usage, SessionWorkspace or graph geometry/motion changes; no palette rewrite. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -40,6 +39,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — HOME-1 quiet rows (UI slice)
+
+- **When:** 20 October 2026. Home drops the per-row "Available locally", cleans titles for display, and shows an "Active now" line for followed journals. New `session-title.test.ts`, `home-active.spec.ts`; all 18 Home specs pass. HOME-1 stays open for harness-reported stats (DATA-2).
 
 ### Yash with Claude (Sonnet 5.5) — LIVE-3 opt-in notifications
 
@@ -63,6 +66,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Verified:** typecheck/build, unit tests, the Git specs, and the real repo (50 rows; 18 of 86 refs in view). **Not done:** keyboard arrows between rows beyond Tab; row virtualization beyond `content-visibility` (6 pages × 50 rows).
 
 ### Yash with Codex — LIVE-2b ready for review
+### Yash with Codex — UI-2 Settings/Git typography ready
+
+- **When:** 20 October 2026. Branch `codex/ui-2-settings-type`, PR #155, **READY FOR CLAUDE REVIEW / MERGE**. Settings and Git graph typography slice only; parent UI-2 stays open. Claim removed in this PR; Claude owns squash-merge.
+- **Changed:** Settings metadata/captions at11px, controls/shortcut rows at12px, visible phone palette descriptions and wrapping shortcut/parent rows. Git references, badges, hover/caption metadata reach11px and controls12px. Modern-only; timeline geometry/motion and Legacy visualization retained.
+- **Verified:** four new browser journeys across seven palettes and desktop/short/390/320px layouts; two existing root/merge and continuous Git journeys; both TS/build and palette contrast guard. Actual redacted Drishya Codex Settings/current Git with commit rows and Skeletongraph Claude phone Settings checked; local screenshots inspected. Settings tests measure actual composited contrast, not tokens alone.
+- **Limits:** other UI-2 surfaces remain open; no whole-product/physical/human ten-minute claim. No capture/schema/native writes, native prompt or hosted CI. See [verification](review/ui-2-settings-git-typography.md). LIVE-2b remains independently ready in #153.
 
 - **When:**20 October 2026. Branch `codex/live-2b-composer-access`, PR #153, **READY FOR CLAUDE REVIEW / MERGE**. Claim removed and TASKS checked; Claude owns squash-merge.
 - **Delivered:** Ctrl/Cmd+Shift+Enter expands/focuses the visible prompt without sending or changing its draft. ARIA and Settings keyboard help expose it. Fields/editors, visible dialogs/menus, IME/repeat and hidden Workspace/map/replay surfaces retain ownership; replay clock continues.

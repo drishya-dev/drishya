@@ -487,6 +487,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 
 - [ ] **UI-2 · Typography floor** · P1 · `ui` — 280 CSS declarations are ≤ 10 px (14 at 7 px, 53 at 8 px, 84 at 9 px). Set a floor of 11 px for meta and 12–13 px for controls and labels; raise secondary-text contrast to ≥ 4.5:1 on every palette. Check with the existing contrast guard.
   - [x] **20 October, Home (PR #145):** 9–10px metadata raised to11px; About/refresh/filter controls meet12px. Theme-aware Claude Home mark replaces a fixed pale tint. Existing contrast guard plus seven-palette mark checks; real-session Home and300-session keyboard/320px layouts verified. [Evidence](review/ui-2-home-typography.md). Other surfaces remain open.
+  - [x] **20 October, Settings/Git graph (PR #155):** Settings metadata and palette captions reach11px; controls/shortcut rows reach12px, with visible phone palette notes and wrapping keys. Git reference/commit/hover metadata reaches11px and controls12px, without graph geometry/motion changes. Seven-palette actual-composited Settings contrast and phone/short-window checks; real Codex/Claude sessions and existing Git navigation regressions pass. [Evidence](review/ui-2-settings-git-typography.md). Other surfaces remain open.
 
 - [ ] **UI-3 · Uiverse / component-library pass** · P1 · `ui` `motion`
   - **19 October progress (107):** Switch/minimal-input/hover references assessed; original token-based controls/focus/fields with motion/resource/forced-color fallbacks implemented. No copied library/runtime dependency. New shimmer/prototype-choice scope remains separate.
@@ -547,6 +548,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 ### HOME — sessions
 
 - [ ] **HOME-1 · Useful rows, quieter chrome** · P1 · `home` `data`
+  - **20 October, UI-only slice done:** rows no longer carry "Available locally" (health or journal-updated tags remain); titles drop continuation boilerplate and bare links for display; an "Active now" line above the library lists sessions whose journals are being followed with recent events (labelled so, since Drishya cannot tell whether the agent is alive). **Open:** harness-reported duration, files, `+/-` lines and last outcome (needs DATA-2), `custom-title` > `ai-title` preference (adapter side), moving Star on GitHub is already done (UI-3). Item stays unchecked.
   - **Do:**
     - Per row, harness-reported stats where recorded: duration · files changed · `+lines −lines` (Claude `cost-state`) · last outcome · live dot.
     - Remove the blue "Available locally" from every row (show only exceptions such as "missing journal").
