@@ -11,6 +11,7 @@ const ROW = 16;
 export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapter[]; activeId?: string; open: (chapter: PromptChapter) => void }) {
   const ledgers=useTurns(s=>s.byStep);
   const rail = useRef<HTMLElement>(null);
+  const pendingFocus = useRef<number|undefined>(undefined);
   const hovering = useRef(false);
   const [viewport, setViewport] = useState({ top: 0, height: 400 });
   const [preview, setPreview] = useState<{ ordinal: number; top: number; left: number }>();
@@ -48,6 +49,12 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
   }, [active, chapters.length]);
   const first = Math.max(0, Math.floor(viewport.top / ROW) - 2);
   const end = Math.min(chapters.length, Math.ceil((viewport.top + viewport.height) / ROW) + 2);
+  useLayoutEffect(()=>{
+    if(pendingFocus.current===undefined)return;
+    const target=rail.current?.querySelector<HTMLButtonElement>(`[data-prompt-ordinal="${pendingFocus.current+1}"]`);
+    // A frame callback can run before React commits a newly virtualized row under load.
+    if(target){pendingFocus.current=undefined;target.focus({preventScroll:true});}
+  },[viewport,chapters]);
   const nearest = preview?.ordinal ?? active;
   const show = (ordinal: number, node: HTMLElement) => {
     const r = node.getBoundingClientRect();
@@ -63,8 +70,8 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
       const stride = Math.max(1, Math.floor(e.currentTarget.clientHeight / ROW));
       const next = Math.max(0, Math.min(chapters.length - 1, e.key === 'Home' ? 0 : e.key === 'End' ? chapters.length - 1 : current + (e.key.endsWith('Up') ? -1 : 1) * (e.key.startsWith('Page') ? stride : 1)));
       e.currentTarget.scrollTop = Math.max(0, next * ROW - e.currentTarget.clientHeight / 2);
+      pendingFocus.current=next;
       setViewport({ top: e.currentTarget.scrollTop, height: e.currentTarget.clientHeight });
-      requestAnimationFrame(() => rail.current?.querySelector<HTMLButtonElement>(`[data-prompt-ordinal="${next + 1}"]`)?.focus());
     }} onPointerEnter={() => { hovering.current = true; }} onPointerLeave={() => { hovering.current = false; setPreview(undefined); }} onScroll={e => { setViewport({ top: e.currentTarget.scrollTop, height: e.currentTarget.clientHeight }); setPreview(undefined); }}>
       <div style={{ height: chapters.length * ROW, position: 'relative' }}>
         {chapters.slice(first, end).map((chapter, offset) => {

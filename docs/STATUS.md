@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-10 | @yash + Codex | `codex/ui-10-collections` | 2026-10-20 | Finish remaining count-dependent surfaces: collectionBounds helper, import/search/Git changed-file/rail/tree/ledger presentation only as needed, focused 3/300 unit/browser fixtures, TASKS/STATUS/review (at most 15 files). Keep existing virtualization/paging and full entry access; no History.tsx (CONTENT-3), adapters/contracts/Usage/backend or FILES-2 output/search navigation edits. Existing hover/tool/Agents owners retained and reverified. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -82,11 +81,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **GIT-3:** `CommitRows` beneath the Git graph (graph-header toggle, remembered as `git/rows`): hash · message · refs · author · age, newest first, hover and selection mirror both ways, a row pick reveals an off-screen commit. The reference list starts as refs named by loaded commits (plus checked-out/picked) with "In view / All N"; search and All restore the paged server list. Fixed the reference column clipping its bottom controls.
 - **Verified:** typecheck/build, unit tests, the Git specs, and the real repo (50 rows; 18 of 86 refs in view). **Not done:** keyboard arrows between rows beyond Tab; row virtualization beyond `content-visibility` (6 pages × 50 rows).
 
-### Yash with Codex — FILES-2 complete, ready for Claude review
+### Yash with Codex — UI-10 complete, ready for Claude review
 
-- **When:** 20 October 2026. PR **#167**, `codex/files-2-output-paths`. Finishes remaining test/output and non-History search navigation after #157: bounded diagnostic links in shared output/case excerpts, exact Inspector hit/line, captured paths from recording search and library snippets. Library links open their owning recording before file evidence; indexed files use their path, not opaque graph ID. Raw output and consent preserved. No adapters/contracts/Usage/backend or UI-5 chrome edits.
-- **Verified:** 665 local units, final17 parser cases, six focused browser journeys; actual copied Drishya Codex and Skeletongraph Claude output links open via keyboard, desktop/390/320px inspection without document overflow. Both typechecks/build pass. No native submission or hosted CI. [Evidence and limits](review/files-2-output-navigation.md).
-- **Merge signal:** PR #167 ready for Claude review and squash. FILES-2 ticked; only its claim removed here. Integrated merged UI-5 #165 and Claude’s new CONTENT-3 claim without source conflicts; its claim and DATA-1/2 claims retained. Only STATUS required reconciliation.
+- **When:** 20 October 2026. PR **#169**, `codex/ui-10-collections`. Finishes the remaining count-dependent surfaces after #146/#160. Imports share clamped collection paging; long Git file lists gain264px desktop/144px phone budgets with viewport caps, short lists stay natural. Prompt-rail keyboard focus waits for the React commit instead of a guessed frame. Specialized tree/rail/hover/ledger owners retained; 3/300 matrix covers their complete supported navigation. [Evidence and policy](review/ui-10-collection-completion.md).
+- **Verified:** 672 local units and14 browser journeys after integration; both types/build. Copied real Drishya/Skeletongraph Codex and Skeletongraph Claude rails cover41/48/287 prompts; real import/current-Git reading checked at desktop/phone widths. Missing old journal metadata logged an ENOENT separately; NATIVE-1 now records that recheck. No native request, source writes or hosted CI.
+- **Merge signal:** PR #169 ready for Claude review/squash; whole UI-10 ticked, claim removed only here. Main #167/#168 integrated without source conflicts; other claims preserved. Prior completed FILES-2 handoff is retained in its merged review.
 
 ### Yash with Codex — UI-5 complete, ready for Claude review
 
