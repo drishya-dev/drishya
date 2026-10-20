@@ -23,6 +23,7 @@ it('places real commands inside the wrapper window and shows only child cards, i
   expect(asOfProjection(p, child.endSequence!).operations.find(op => op.id === child.id)?.detail).not.toHaveProperty('summary');
   const three = await fixture('three-commands');
   expect(three.passages.flatMap(ps => ps.operationIds)).toHaveLength(3);
+  expect(three.operations.filter(op => op.kind === 'test')).toHaveLength(2);
   expect(three.operations.filter(op => op.parentOperationId).map(op => op.status)).toEqual(['ok', 'ok', 'error']);
 });
 it('keeps standalone and ambiguous items uncorrelated, and MCP source IDs enrich one operation', async () => {

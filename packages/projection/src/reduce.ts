@@ -338,6 +338,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           st.op.durationMs = item.durationMs;
           st.op.status = item.status === 'failed' || item.mcp?.isError || item.mcp?.error || typeof item.exitCode === 'number' && item.exitCode !== 0 ? 'error' : item.status === 'completed' ? 'ok' : 'unknown';
           describeCall(st, { tool, input: {} }, rel);
+          // Node's built-in runner is explicit in typed commands. Leave legacy rollout rules unchanged.
+          if (item.item === 'command' && typeof item.command === 'string' && /^node(?:\.exe)?\s+--test(?:\s|=|$)/i.test(item.command.trim())) { st.op.kind = 'test'; st.op.detail = { kind: 'test', command: item.command }; }
           if (item.item === 'command' && typeof item.command === 'string' && st.op.detail.kind !== 'test') { st.op.kind = 'shell'; st.op.detail = { kind: 'shell', command: item.command }; st.op.title = clip(oneLine(item.command), 120); }
           if ((st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.command.length > (opts.maxInputChars ?? Infinity)) {
             const command = st.op.detail.command;

@@ -1,0 +1,52 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { App } from '../../apps/daemon/src/app.ts';
+import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+
+let dir: string, app: App, server: RunningServer;
+const ids: Record<string, string> = {};
+test.beforeAll(async () => {
+  dir = mkdtempSync(join(tmpdir(), 'drishya-typed-browser-')); app = new App(join(dir, 'store'));
+  for (const name of ['three-commands', 'file-change', 'image-view', 'mcp-call']) ids[name] = (await app.ingest.importSource('codex', resolve('fixtures/synthetic/codex-items', `${name}.jsonl`))).recordingId;
+  server = await startServer({ app, port: 0 });
+});
+test.afterAll(async () => { await server?.close(); await app?.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
+
+test('typed child cards show true commands and tests, with the wrapper reachable only as Script', async ({ page }) => {
+  await page.route(/\/v1\/.*controller/, route => route.fulfill({ status: 404, body: '{}' }));
+  await page.route('**/live', route => route.fulfill({ contentType: 'application/json', body: '{"live":false}' }));
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['three-commands']}`);
+  const cards = page.locator('.history article.op');
+  await expect(cards).toHaveCount(3);
+  await expect(cards.filter({ hasText: 'pnpm test' })).toContainText('441 passed');
+  await expect(cards.filter({ hasText: 'node --test' })).toHaveClass(/op-test/);
+  const parent = app.projection(ids['three-commands']!).operations.find(op => op.tool === 'exec')!;
+  await expect(page.locator(`article[data-op-id="${parent.id}"]`)).toHaveCount(0);
+  await expect(page.locator('details.captured-script')).toHaveCount(0);
+  const first = cards.filter({ hasText: 'pnpm test' });
+  await first.getByRole('button', { name: /Expand/ }).click();
+  await first.locator('.captured-script>summary').click();
+  await expect(first.locator('.captured-script')).toContainText('tools.exec_command');
+  const summary = await page.request.get(`${server.url}/v1/recordings/${ids['three-commands']}/summary`);
+  expect(await summary.json()).toMatchObject({ tests: 2, errors: 1 });
+  const commands = await page.request.get(`${server.url}/v1/recordings/${ids['three-commands']}/commands`);
+  expect((await commands.json()).total).toBe(3);
+  await page.screenshot({ path: resolve('.local/typed-children.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['file-change']}`);
+  await expect(page.locator('.history article.op-edit')).toHaveCount(1);
+  await expect(page.locator('.history article.op-edit')).toContainText('FileChange');
+  await page.locator('.history article.op-edit').getByRole('button', { name: /Expand/ }).click();
+  await page.locator('.captured-script>summary').click();
+  await expect(page.locator('.captured-script')).toContainText('tools.apply_patch');
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['image-view']}`);
+  await expect(page.locator('.history article.op')).toContainText('View image');
+  await expect(page.locator('.history article.op img')).toHaveCount(0);
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['mcp-call']}`);
+  await expect(page.locator('.history article.op')).toHaveCount(1);
+  await expect(page.locator('.history article.op')).toContainText('Synthetic documentation');
+});
