@@ -1,3 +1,4 @@
+import { readingTarget } from '../../../packages/scene/src/reading-target.ts';
 import {reviewInsights,findingMembers} from '../../../packages/scene/src/review-insights.ts';
 import {commandPage} from '../../../packages/scene/src/commands.ts';
 import { parentPort, workerData } from 'node:worker_threads';
@@ -211,6 +212,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
+    else if (message.method === 'reading-target') value = readingTarget(current(a.id).projection, a.query);
     else if (message.method === 'now') value = nowFacts(current(a.id).projection);
     else if (message.method === 'turns') value = turnLedgers(current(a.id).projection).slice(-2000);
     else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after, a.page);

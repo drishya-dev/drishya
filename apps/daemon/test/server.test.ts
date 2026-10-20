@@ -487,3 +487,17 @@ it('guards connected workspace and native prompt routes with local API authentic
   expect((await call(`/v1/recordings/${recId}/workspace/file?path=a.ts&count=invalid`, { headers: auth() })).status).toBe(400);
   expect((await call(`/v1/recordings/${recId}/controller/prompt`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body: { prompt: 'hello' } })).status).toBe(400);
 });
+
+it('authenticates and bounds whole-history keyboard cursors', async () => {
+  const url=`/v1/recordings/${recId}/reading-target`;
+  expect((await call(url)).status).toBe(401);
+  for(const query of ['?kind=bad','?direction=2','?edge=middle','?from='+ 'a'.repeat(301),'?at=invalid'])expect((await call(url+query,{headers:auth()})).status).toBe(400);
+  const operations=[...s.app.projection(recId).operations].sort((a,b)=>a.startSequence-b.startSequence);
+  await s.app.history.page(recId,{count:1});
+  const first=await call(url+'?edge=first',{headers:auth()}),last=await call(url+'?edge=last',{headers:auth()});
+  expect(first.body).toEqual({type:'operation',id:operations[0]!.id,step:operations[0]!.startSequence});
+  expect(last.body.id).toBe(operations.at(-1)!.id);
+  expect((await call(url+'?from='+encodeURIComponent(operations.at(-1)!.id),{headers:auth()})).body).toBeNull();
+  const previous=await call(url+'?direction=-1&from='+encodeURIComponent(operations.at(-1)!.id),{headers:auth()});expect(previous.body.id).toBe(operations.at(-2)!.id);
+  expect((await call(url+'?agent=missing',{headers:auth()})).body).toBeNull();
+});

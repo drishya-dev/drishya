@@ -1,3 +1,4 @@
+import { ReadingKeys } from './ReadingKeys.tsx';
 import { CommandText } from './CommandText.tsx';
 import {commandDisplay} from '../lib/command-display.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
@@ -54,6 +55,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const lowResource = useApp((s) => s.lowResource);
   const follow = useApp((s) => s.follow);
   const selectedOp = useApp((s) => s.selectedOp);
+  const [keyboardOp, setKeyboardOp] = useState<string>();
+  const readingOp = selectedOp ?? keyboardOp;
   const expandedOp = useApp((s) => s.expandedOp);
   const hoveredOp = useApp((s) => s.hoveredOp);
   const focusObservationId = useApp((s) => s.focusObservationId);
@@ -159,12 +162,12 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   }, [scene.passages, scene.step, projection]);
 
   const targetIndex = scene.passages.findIndex((ps) =>
-    selectedOp ? ps.ops.some((op) => op.id === selectedOp) : focusObservationId ?
+    readingOp ? ps.ops.some((op) => op.id === readingOp) : focusObservationId ?
       ps.ops.some((op) => ops.get(op.id)?.observationIds.includes(focusObservationId)) ||
       ps.prose.some((p) => prose.get(p.id)?.observationIds.includes(focusObservationId)) : promptStep !== undefined ? ps.id === projection.passages.find(p => p.firstStep >= promptStep - 1)?.id : false,
   );
   const targetId = scene.passages[targetIndex]?.id;
-  const intent = selectedOp ? `op:${selectedOp}` : focusObservationId ? `observation:${focusObservationId}` : promptStep !== undefined ? `prompt:${promptStep}` : undefined;
+  const intent = readingOp ? `${keyboardOp===readingOp?'key':'op'}:${readingOp}` : focusObservationId ? `observation:${focusObservationId}` : promptStep !== undefined ? `prompt:${promptStep}` : undefined;
   const expandedId = scene.passages.find((ps) => ps.ops.some((op) => op.id === expandedOp))?.id;
   const ids = scene.passages.map((ps) => ps.id);
   const hoverPassageId = scene.passages.find(ps => ps.ops.some(op => op.id === hoveredOp))?.id;
@@ -458,7 +461,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (!node) return;
     // Bring the selected action itself into view: a tall passage centred as a whole can leave
     // its first action above the viewport. Taller-than-viewport material aligns to its top.
-    const selected = selectedOp ? [...node.querySelectorAll<HTMLElement>('[data-op-id]')].find((n) => n.dataset.opId === selectedOp) : undefined;
+    const selected = readingOp ? [...node.querySelectorAll<HTMLElement>('[data-op-id]')].find((n) => n.dataset.opId === readingOp) : undefined;
     const bounds = (selected ?? node).getBoundingClientRect();
     const viewportBounds = el.getBoundingClientRect();
     const clearance = readingClearance(el);
@@ -470,7 +473,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     readingAnchor.current = { id: targetId, offset: node.getBoundingClientRect().top - el.getBoundingClientRect().top };
     if (useApp.getState().readingPassageId !== targetId) set({ readingPassageId: targetId });
     pendingNavigation.current = undefined;
-  }, [intent, targetId, targetIndex, layout, selectedOp]);
+  }, [intent, targetId, targetIndex, layout, readingOp]);
 
   // Follow remains active across bursts and late artifacts. Only deliberate reading
   // detaches it; live capture and the replay clock advance independently.
@@ -542,7 +545,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   return (
     <>
-    <div className="history" ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
+    <div className="history" role="region" aria-label="Captured work" tabIndex={0} ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
       if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; }
       // A slot still moving after a fold would be remembered at its moving position.
       for (const animation of foldAnimations.current) animation.finish();
@@ -598,6 +601,21 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       <Origins scene={scene} projection={projection} isProgrammaticScroll={isProgrammaticScroll} />
       <FlowConnections projection={projection} />
     </div>
+      <ReadingKeys root={ref} projection={projection} focused={keyboardOp} focus={setKeyboardOp} navigate={async target=>{
+        pointerFocus.current=false;
+        set({follow:false,selectedOp:undefined,expandedOp:undefined,focusObservationId:undefined,promptStep:target.type==='turn'?target.step+1:undefined});
+        setKeyboardOp(target.id);
+        if(onWindow && (target.type==='turn'||!ops.has(target.id!))) await onWindow(target.type==='turn'?{promptStep:target.step+1}:{selectedOperationId:target.id});
+        // Let the measured virtual window pin and position the real card before focus.
+        await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+        if(target.type==='turn')ref.current?.focus({preventScroll:true});
+      }} fold={collapse=>{
+        pointerFocus.current=false;rememberReading();
+        for(const animation of foldAnimations.current)animation.finish();foldAnimations.current=[];foldMotion.current=undefined;
+        const keep=targetTurn??expandedTurn??scene.passages.find(ps=>ps.id===readingAnchor.current?.id)?.inTurn;
+        setExtentFloor(floor=>Math.max(floor,extentTotal.current));
+        setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
+      }}/>
       {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index,time:ps.turnTime }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.

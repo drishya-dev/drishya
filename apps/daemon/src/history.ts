@@ -1,3 +1,4 @@
+import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/reading-target.ts';
 import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
 import { Worker } from 'node:worker_threads';
@@ -57,6 +58,7 @@ export class HistoryService {
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
+  readingTarget(id: string, query: ReadingQuery) { return this.request<ReadingTarget | null>('reading-target', { id, query }); }
   now(id: string) { return this.request<NowFacts>('now', { id }); }
   turns(id: string) { return this.request<TurnLedger[]>('turns', { id }); }
   since(id: string, after: number, page = 0) { return this.request<SinceSnapshot>('since', { id, after, page }); }

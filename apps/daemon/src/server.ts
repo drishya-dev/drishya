@@ -335,6 +335,13 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         for (const key of id.split('+')) app.recording(key);
         return json(res, { turns: await app.history.turns(id) });
       }
+      if (sub === 'reading-target' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key);
+        const kind = url.searchParams.get('kind') ?? 'operation', direction = url.searchParams.get('direction') ?? '1', edge = url.searchParams.get('edge') ?? undefined;
+        const fields = Object.fromEntries(['from', 'agent', 'tool', 'server', 'operationKind'].flatMap(key => url.searchParams.has(key) ? [[key, url.searchParams.get(key)!]] : []));
+        if (!['operation','edit','failure','turn'].includes(kind) || !['1','-1'].includes(direction) || edge && !['first','last'].includes(edge) || Object.values(fields).some(value => !value || value.length > 300)) throw new HttpError(400, 'Invalid reading cursor');
+        return json(res, await app.history.readingTarget(id, { kind: kind as 'operation'|'edit'|'failure'|'turn', direction: direction === '-1' ? -1 : 1, edge: edge as 'first'|'last'|undefined, ...fields, at: url.searchParams.has('at') ? intParam(url, 'at', 0, 0, Number.MAX_SAFE_INTEGER) : undefined }));
+      }
       if (sub === 'now' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, await app.history.now(id));
