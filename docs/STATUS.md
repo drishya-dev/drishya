@@ -31,9 +31,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| TURN-2 | @yash + Codex | `codex/turn-2-keyboard-reading` | 2026-10-20 | `App.tsx` keyboard dispatch, `components/History.tsx` keyboard focus/fold entry only, `ProductShell.tsx` Keyboard section; new reading-key helper/help component/scoped CSS and focused tests; bounded worker navigation via history/history-worker/server/api, no schema/adapters/projection/Git/Usage or FILES-1 FolderExplorer edits. Up to 15 files; separate worktree, draft then READY handoff for Claude to merge. |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
-| GIT-1 | @yash + Claude Opus 5.5 | next: `yash/git-1-*` | 2026-10-20 | Integrated in #138; remaining perf/acceptance/flow work in `apps/ui/src/components/GitThreadGraph.tsx`, `apps/ui/src/lib/git-light.ts`, `light-renderer.ts`, Git graph CSS and specs |
 
 ---
 

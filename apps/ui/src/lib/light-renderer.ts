@@ -27,7 +27,7 @@ precision highp float; in vec2 uv; uniform sampler2D sharp, b1, b2, b3; uniform 
 float blob(vec2 p, vec2 c, float r){ p = (p - c) * aspect; return exp(-dot(p, p) / (r * r)); }
 void main(){ vec3 light = texture(sharp, uv).rgb + bloom * (texture(b1, uv).rgb * .55 + texture(b2, uv).rgb * .75 + texture(b3, uv).rgb * .9);
   vec3 haze = vec3(.16, .08, .3) * blob(uv, vec2(.32, .62), .32) + vec3(.03, .14, .22) * blob(uv, vec2(.74, .38), .28);
-  vec3 c = vec3(.012, .016, .035) + haze * .09 * nebula + (1. - exp(-light * exposure));
+  vec3 c = vec3(.004, .005, .008) + haze * .09 * nebula + (1. - exp(-light * exposure));
   o = vec4(pow(c, vec3(.92)), 1); }`;
 
 interface Target { tex: WebGLTexture; fb: WebGLFramebuffer; w: number; h: number }
