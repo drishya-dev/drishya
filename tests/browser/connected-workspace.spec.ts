@@ -107,16 +107,18 @@ for(const version of ['classic','modern']) test(`${version}: current source read
   await expect(reader.locator('[data-source-line="205"]')).toHaveAttribute('aria-current', 'location');
   await reader.getByRole('button', { name: 'Wrap lines', exact: true }).click();
   await expect(reader.locator('.current-file-code')).toHaveClass(/wrap-source/);
-  for(const width of version==='modern'?[1440]:[]) {   // 390/320: see READ-9 (the reader's find controls take over 40% of a phone)
+  for(const width of version==='modern'?[1440,390,320]:[]) {
     await page.setViewportSize({width,height:844});
+    await expect.poll(()=>reader.evaluate(el=>el.querySelector('.current-file-code')!.getBoundingClientRect().height/el.getBoundingClientRect().height),{message:`${width}px reader source allocation`}).toBeGreaterThanOrEqual(width<=390?.62:.55);
     const allocation=await reader.evaluate(el=>({ratio:el.querySelector('.current-file-code')!.getBoundingClientRect().height/el.getBoundingClientRect().height,overflow:el.scrollWidth-el.clientWidth}));
     await page.screenshot({path:resolve(`.local/current-reader-${width}.png`),animations:'disabled'});
-    expect(allocation.ratio,`${width}px: most of the current-file reader should remain source space`).toBeGreaterThanOrEqual(.55);
+    expect(allocation.ratio,`${width}px: most of the current-file reader should remain source space`).toBeGreaterThanOrEqual(width<=390?.62:.55);
     expect(allocation.overflow).toBeLessThanOrEqual(1);
   }
   await page.setViewportSize({width:1440,height:900});
   await page.screenshot({ path: resolve('.local/source-reader-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });
+  if(version==='modern')await reader.getByLabel('Reading options',{exact:true}).click();
   await expect(reader.getByRole('button', { name: 'Copy file' })).toBeVisible();
   const bounds = await reader.boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
