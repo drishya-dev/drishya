@@ -1,5 +1,6 @@
+import { READING_SHORTCUTS } from './ReadingKeys.tsx';
 import { installScrollbarActivity } from '../lib/scrollbar-activity.ts';
-import { useEffect, useId, useRef, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
 import { useEvidenceScroll } from './EvidenceNavigation.tsx';
@@ -63,6 +64,8 @@ export function ReadingDialog({ title, close, children, className = '', modeless
 }
 
 export function ProductShell({ children }: { children: ReactNode }) {
+  const [readingHelp,setReadingHelp]=useState(false);
+  useEffect(()=>{const open=()=>setReadingHelp(true);window.addEventListener('drishya-reading-help',open);return()=>window.removeEventListener('drishya-reading-help',open);},[]);
   const experience = useExperience();
   useDismissMenus();
   useEffect(()=>document.documentElement.dataset.uiVersion==='modern'?installScrollbarActivity():undefined,[]);
@@ -85,7 +88,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
     preference.addEventListener('change', apply);
     return () => preference.removeEventListener('change', apply);
   }, [theme]);
-  return <>{children}{open && (experience === 'canvas' ? <CanvasSettings /> : <Settings />)}</>;
+  return <>{children}{open && (experience === 'canvas' ? <CanvasSettings /> : <Settings />)}{readingHelp && <ReadingDialog title="Reading shortcuts" className="reading-shortcuts" close={()=>setReadingHelp(false)}><p>Navigate captured work in Modern without opening the inspector. Reading keys detach Follow; capture continues.</p><dl>{READING_SHORTCUTS.map(([keys,action])=><div key={keys}><dt><kbd>{keys}</kbd></dt><dd>{action}</dd></div>)}</dl><p className="muted small">Disabled in inputs, editors, menus and readers. Replay keeps its transport controls. Copy uses a selection or the material’s existing copy action; otherwise it copies the card preview.</p></ReadingDialog>}</>;
 }
 
 function CanvasSettings() {

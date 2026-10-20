@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { Projection } from '@drishya/contracts';
 import { readingTarget, type ReadingQuery, type ReadingTarget } from '../../../../packages/scene/src/reading-target.ts';
 import { useApp } from '../state.ts';
-import { ReadingDialog } from './ProductShell.tsx';
 import './reading-keys.css';
 
 export const READING_SHORTCUTS = [
@@ -19,14 +18,15 @@ export function ReadingKeys(props: {
   focus: (id?: string) => void; navigate: (target: ReadingTarget) => Promise<void>; fold: (collapse: boolean) => void;
 }) {
   const id = useApp(s => s.recordingId), source = useApp(s => s.source);
-  const [help, setHelp] = useState(false), [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState('');
   const latest = useRef(props); latest.current = props;
   useEffect(() => {
     let alive = true, epoch = 0, queued = 0;
     let cursor: ReadingTarget | undefined, chain = Promise.resolve();
     const card = (key?: string) => [...(latest.current.root.current?.querySelectorAll<HTMLElement>('article[data-op-id]') ?? [])].find(node => node.dataset.opId === key);
     const valid = () => alive && useApp.getState().recordingId === id && useApp.getState().source === source;
-    const openHelp = () => { epoch++; setHelp(true); };
+    const readingValid = () => valid() && useApp.getState().mode === 'history' && !useApp.getState().developerWorkspace && !useApp.getState().explore;
+    const openHelp = () => { epoch++; window.dispatchEvent(new Event('drishya-reading-help')); };
     const focusMaterial = (key?: string) => {
       const root = latest.current.root.current;
       root?.querySelectorAll('[data-reading-focus]').forEach(node => node.removeAttribute('data-reading-focus'));
@@ -46,7 +46,7 @@ export function ReadingKeys(props: {
       if (document.querySelector('dialog[open], [popover]:popover-open') || state.developerWorkspace || state.explore || state.searchOpen || state.settingsOpen) return;
       if (event.target instanceof Element && event.target.closest('button,a,summary,[role=slider],[role=menu]')) return;
       const k = event.key;
-      if (k === '?') { event.preventDefault(); event.stopImmediatePropagation(); openHelp(); return; }
+      if (k === '?') { document.documentElement.removeAttribute('data-ui-press'); event.preventDefault(); event.stopImmediatePropagation(); openHelp(); return; }
       // Replay retains its explicit transport shortcuts; reading keys never seek its clock.
       if (state.mode !== 'history' || !['j','k','n','p','f','t','T','g','G','e','o','y','c','C','Escape'].includes(k)) return;
       if (k === 'Escape' && !latest.current.focused) return;
@@ -55,6 +55,7 @@ export function ReadingKeys(props: {
       if (k === 'Escape') { epoch++; cursor = undefined; latest.current.focus(undefined); focusMaterial(); latest.current.root.current?.focus({ preventScroll: true }); return; }
       if (k === 'c' || k === 'C') { epoch++; state.set({ follow: false }); latest.current.fold(k === 'c'); setNotice(k === 'c' ? 'Other finished turns folded' : 'Turns unfolded'); return; }
       if (['e','o','y'].includes(k)) {
+        epoch++;
         const focused = latest.current.focused ?? (event.target instanceof Element ? event.target.closest<HTMLElement>('article[data-op-id]')?.dataset.opId : undefined);
         if (!focused) { setNotice('Focus an operation with j or k first'); return; }
         const node = card(focused), op = state.projection?.operations.find(item => item.id === focused);
@@ -78,7 +79,7 @@ export function ReadingKeys(props: {
       const requestEpoch = epoch; queued++;
       chain = chain.then(async () => {
         try {
-          if (!valid() || requestEpoch !== epoch) return;
+          if (!readingValid() || requestEpoch !== epoch || document.querySelector('dialog[open]')) return;
           const current = useApp.getState(), root = latest.current.root.current;
           const bounds = root?.getBoundingClientRect();
           const visible = [...(root?.querySelectorAll<HTMLElement>('article[data-op-id]') ?? [])].find(node => { const r = node.getBoundingClientRect(); return bounds && r.bottom > bounds.top + 100 && r.top < bounds.bottom; });
@@ -91,11 +92,11 @@ export function ReadingKeys(props: {
           };
           current.set({ follow: false });
           const target = source?.readingTarget && id ? await source.readingTarget(id, query) : readingTarget(latest.current.projection, query);
-          if (!valid() || requestEpoch !== epoch) return;
+          if (!readingValid() || requestEpoch !== epoch || document.querySelector('dialog[open]')) return;
           if (!target) { setNotice('No further matching captured work'); return; }
           cursor = target;
           await latest.current.navigate(target);
-          if (!valid() || requestEpoch !== epoch) return;
+          if (!readingValid() || requestEpoch !== epoch || document.querySelector('dialog[open]')) return;
           focusMaterial(target.id);
           setNotice(target.type === 'turn' ? 'Turn prompt' : card(target.id)?.getAttribute('aria-label') ?? 'Captured operation');
         } catch (error) { if (valid()) setNotice(`Reading navigation failed: ${(error as Error).message}`); }
@@ -105,8 +106,7 @@ export function ReadingKeys(props: {
     window.addEventListener('keydown', key, true);
     document.addEventListener('pointerdown', pointer, true);
     document.addEventListener('focusin', focusInput);
-    window.addEventListener('drishya-reading-help', openHelp);
-    return () => { alive = false; epoch++; focusMaterial(); window.removeEventListener('keydown', key, true); document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('focusin', focusInput); window.removeEventListener('drishya-reading-help', openHelp); };
+    return () => { alive = false; epoch++; focusMaterial(); window.removeEventListener('keydown', key, true); document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('focusin', focusInput); };
   }, [id, source]);
-  return <><span className="reading-key-notice" role="status" aria-live="polite">{notice}</span>{help && <ReadingDialog title="Reading shortcuts" className="reading-shortcuts" close={() => setHelp(false)}><p>Navigate captured work without opening the inspector. Reading keys detach Follow; capture continues.</p><dl>{READING_SHORTCUTS.map(([keys, action]) => <div key={keys}><dt><kbd>{keys}</kbd></dt><dd>{action}</dd></div>)}</dl><p className="muted small">Disabled in inputs, editors, menus and readers. Replay keeps its transport controls. Copy uses a selection or the material’s existing copy action; otherwise it copies the card preview.</p></ReadingDialog>}</>;
+  return <span className="reading-key-notice" role="status" aria-live="polite">{notice}</span>;
 }
