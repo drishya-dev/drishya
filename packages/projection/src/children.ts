@@ -10,19 +10,28 @@ export function placeChildren(operations: Operation[], timeline: TimelineItem[],
   }
   if (!children.size) return { operations, timeline, artifacts, prose, agents };
   const positions = new Map<number, number>(), next: TimelineItem[] = [];
-  const endedParents = new Set(timeline.filter(it => it.type === 'op-end').map(it => it.operationId));
+  const existingStarts = new Set(timeline.filter(it => it.type === 'op-start').map(it => it.operationId));
+  const byId = new Map(operations.map(op => [op.id, op]));
+  const startsAt = new Map<number, Operation[]>(), endsAt = new Map<number, Operation[]>();
   const orphanEnds = new Map<number, Operation[]>();
-  for (const [parent, group] of children) if (!endedParents.has(parent)) for (const child of group) {
-    const at = child.endSequence ?? timeline.length;
-    orphanEnds.set(at, [...(orphanEnds.get(at) ?? []), child]);
+  for (const [parentId, group] of children) {
+    const parent = byId.get(parentId)!;
+    for (const child of group.filter(op => !existingStarts.has(op.id))) {
+      startsAt.set(parent.startSequence, [...(startsAt.get(parent.startSequence) ?? []), child]);
+      if (parent.endSequence !== undefined) endsAt.set(parent.endSequence, [...(endsAt.get(parent.endSequence) ?? []), child]);
+      else {
+        const at = child.endSequence ?? timeline.length;
+        orphanEnds.set(at, [...(orphanEnds.get(at) ?? []), child]);
+      }
+    }
   }
   const finishAt = (index: number) => { for (const child of orphanEnds.get(index) ?? []) next.push({ type: 'op-end', id: `e_${child.id}`, operationId: child.id, agentId: child.agentId, sequence: receipts.get(child.id)!, time: child.endTime }); };
   timeline.forEach((item, index) => {
     finishAt(index);
     positions.set(index, next.length);
-    if (item.type === 'op-end') for (const child of children.get(item.operationId) ?? []) next.push({ ...item, id: `e_${child.id}`, operationId: child.id, sequence: receipts.get(child.id)!, time: child.endTime });
+    for (const child of endsAt.get(index) ?? []) next.push({ type: 'op-end', id: `e_${child.id}`, operationId: child.id, agentId: child.agentId, sequence: receipts.get(child.id)!, time: child.endTime });
     next.push(item);
-    if (item.type === 'op-start') for (const child of children.get(item.operationId) ?? []) next.push({ ...item, id: `s_${child.id}`, operationId: child.id, sequence: receipts.get(child.id)!, time: child.startTime });
+    for (const child of startsAt.get(index) ?? []) next.push({ type: 'op-start', id: `s_${child.id}`, operationId: child.id, agentId: child.agentId, sequence: receipts.get(child.id)!, time: child.startTime });
   });
   finishAt(timeline.length);
   const starts = new Map<string, number>(), ends = new Map<string, number>();

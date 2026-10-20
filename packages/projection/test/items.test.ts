@@ -4,7 +4,7 @@ import { join, resolve, sep } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { Store } from '../../store/src/index.ts';
 import { Ingestor, defaultAdapters } from '../../ingest/src/index.ts';
-import { asOfProjection } from '@drishya/contracts';
+import { asOfProjection, isBlobText } from '@drishya/contracts';
 
 let dir: string, store: Store, ingest: Ingestor;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'drishya-items-')); store = new Store(join(dir, 'store')); ingest = new Ingestor(store); });
@@ -34,12 +34,26 @@ it('keeps standalone and ambiguous items uncorrelated, and MCP source IDs enrich
 });
 it('resolves exact nested patch paths and retains the script without trusting a reconstructed full file', async () => {
   const p = await fixture('file-change');
-  expect(p.operations).toHaveLength(1); expect(p.operations[0]).toMatchObject({ status: 'ok', tool: 'FileChange', detail: { kind: 'edit', hunks: [{ oldStart: 1, newStart: 1 }] } });
+  expect(p.passages.flatMap(ps => ps.operationIds)).toHaveLength(1); expect(p.operations[0]).toMatchObject({ status: 'ok', tool: 'FileChange', detail: { kind: 'edit', hunks: [{ oldStart: 1, newStart: 1 }] } });
   expect(p.operations[0]!.artifactIds.some(id => id.endsWith('_script'))).toBe(true);
   const input = readFileSync(resolve('fixtures/synthetic/codex-items/file-change.jsonl'), 'utf8').replace('"src/a.ts":', '"src/elsewhere.ts":');
   const journal = join(dir, 'mismatch.jsonl'); writeFileSync(journal, input);
   const { recordingId } = await ingest.importSource('codex', journal);
   expect(ingest.projection(recordingId).operations[0]!.status).toBe('unknown');
+});
+
+it('keeps every edit and test in mixed multi-file wrappers, while sharing one captured Script parent', async () => {
+  const p = await fixture('mixed-patch-command');
+  const material = p.operations.filter(op => !p.operations.some(child => child.parentOperationId === op.id));
+  expect(material).toHaveLength(3);
+  expect(material.filter(op => op.detail.kind === 'edit' && op.status === 'ok')).toHaveLength(2);
+  expect(material.filter(op => op.detail.kind === 'test' && op.status === 'ok')).toHaveLength(1);
+  expect(p.passages.flatMap(ps => ps.operationIds)).toHaveLength(3);
+  const parents = new Set(material.map(op => op.parentOperationId)); expect(parents.size).toBe(1);
+  const script = p.operations.find(op => parents.has(op.id))!;
+  expect(script.detail).toMatchObject({ kind: 'shell', command: expect.stringContaining('tools.apply_patch') });
+  const child = material.find(op => op.kind === 'test')!;
+  expect(asOfProjection(p, child.endSequence! + 1).operations.some(op => op.id === script.id)).toBe(true);
 });
 it('keeps image paths as references, web content captured, agent identity honest and unknown shapes metadata-only', async () => {
   for (const name of ['image-view', 'image-generation', 'web-search']) {
@@ -67,4 +81,18 @@ it('rescan adds typed children without duplicate cards or new historical placeme
   expect(p.operations.filter(op => op.parentOperationId).every(op => op.endSequence! < p.timeline.length - 1)).toBe(true);
   expect((await ingest.rescan(recordingId)).added).toBe(0);
   expect(ingest.projection(recordingId)).toEqual(p);
+});
+
+it('stores large typed output as redacted TextValue blobs before deriving previews', async () => {
+  const token = `gh${'p_'}${'B'.repeat(36)}`;
+  const rows = readFileSync(resolve('fixtures/synthetic/codex-items/one-command.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  rows[2].payload.item.aggregated_output = `${token}\n${'synthetic output\n'.repeat(1000)}`;
+  const journal = join(dir, 'private-output.jsonl'); writeFileSync(journal, rows.map(row => JSON.stringify(row)).join('\n') + '\n');
+  const { recordingId } = await ingest.importSource('codex', journal);
+  const item = store.observations(recordingId).find(o => o.kind === 'item.completed')!;
+  const output = (item.payload as any).output;
+  expect(isBlobText(output)).toBe(true);
+  expect(store.blobs.get(output.$blob)).not.toContain(token);
+  expect(JSON.stringify(item)).not.toContain(token);
+  expect(JSON.stringify(ingest.projection(recordingId))).not.toContain(token);
 });

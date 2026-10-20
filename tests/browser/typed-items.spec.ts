@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
@@ -11,6 +11,30 @@ test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-typed-browser-')); app = new App(join(dir, 'store'));
   for (const name of ['three-commands', 'file-change', 'image-view', 'mcp-call']) ids[name] = (await app.ingest.importSource('codex', resolve('fixtures/synthetic/codex-items', `${name}.jsonl`))).recordingId;
   server = await startServer({ app, port: 0 });
+});
+
+test('existing local typed children retain parent evidence in an isolated historical reader', async ({ page }) => {
+  test.skip(!process.env.DRISHYA_TYPED_REAL_CONFIG, 'Opt-in isolated redacted store copy only');
+  const config = JSON.parse(readFileSync(process.env.DRISHYA_TYPED_REAL_CONFIG!, 'utf8')) as { dir: string; id: string; childId: string; parentId: string };
+  if (!resolve(config.dir).startsWith(resolve('.local/data-1-real-'))) throw new Error('Require the dedicated isolated typed-items store');
+  const isolated = new App(config.dir), local = await startServer({ app: isolated, port: 0 });
+  try {
+    const child = isolated.projection(config.id).operations.find(op => op.id === config.childId)!;
+    await page.route(/\/v1\/.*(?:controller|native)/, route => route.fulfill({ status: 404, body: '{}' }));
+    await page.route('**/live', route => route.fulfill({ contentType: 'application/json', body: '{"live":false}' }));
+    await page.route('**/refresh', route => route.fulfill({ contentType: 'application/json', body: '{"added":0,"more":false}' }));
+    await page.goto(local.launchUrl); await expect(page.locator('.home')).toBeVisible();
+    await page.goto(`${local.url}/?experience=modern&motion=0&at=${child.endSequence! + 1}#/r/${config.id}`);
+    await expect(page.locator('.history')).toBeVisible({ timeout: 60_000 });
+    const card = page.locator(`.history article[data-op-id="${config.childId}"]`);
+    await expect(card).toBeVisible();
+    await expect(card).toHaveClass(/op-test/);
+    await expect(page.locator(`.history article[data-op-id="${config.parentId}"]`)).toHaveCount(0);
+    await card.getByRole('button', { name: /Expand/ }).click();
+    await card.locator('.captured-script>summary').click();
+    await expect(card.locator('.captured-script .insp-note').first()).toContainText('Recorded between this call and its output.');
+    await expect(card.locator('.captured-script')).toContainText(/tools\.(exec_command|apply_patch)/);
+  } finally { await local.close(); await isolated.close(); }
 });
 test.afterAll(async () => { await server?.close(); await app?.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
 
