@@ -157,14 +157,14 @@ Tick when agreed (initial and date). Recommendation first; the alternative is li
 
 | # | Decision | Recommendation | Alternative | Yash | Harsh |
 |---|---|---|---|---|---|
-| D1 | How typed items attach to the wrapper | Separate observations + `correlation` (`source-id` / `enclosing-call`), children become operations with `parentOperationId` | Attach as nested data on the wrapper op (no child operations) | ☐ | ☐ |
-| D2 | What the UI shows when a wrapper has typed children | Children are the cards; the wrapper stays reachable as "script" in details | Show both (duplicates), or wrapper only | ☐ | ☐ |
+| D1 | How typed items attach to the wrapper | Separate observations + `correlation` (`source-id` / `enclosing-call`), children become operations with `parentOperationId` | Attach as nested data on the wrapper op (no child operations) | ☐ | ☑ HJ 2026-10-20 |
+| D2 | What the UI shows when a wrapper has typed children | Children are the cards; the wrapper stays reachable as "script" in details | Show both (duplicates), or wrapper only | ☐ | ☑ HJ 2026-10-20 |
 | D3 | New operation kinds `image`, `question` | Add, after an audit that every `KIND_LABEL`-style lookup has a safe fallback | Reuse `other` with a detail kind | ☐ | ☐ |
-| D4 | Usage as its own `usage` observation | Yes; projection keeps last point per turn | Fields on `turn.end` only | ☐ | ☐ |
-| D5 | Show harness-estimated cost | Yes, labelled "harness estimate", per session, hidden when `hasUnknownModelCost` | Never show cost | ☐ | ☐ |
-| D6 | Rate-limit data | Store primary window `usedPercent`, `windowMinutes`, `resetsAt`, `plan`; drop credits balance and ids | Store nothing about limits | ☐ | ☐ |
+| D4 | Usage as its own `usage` observation | Yes; projection keeps last point per turn | Fields on `turn.end` only | ☐ | ☑ HJ 2026-10-20 |
+| D5 | Show harness-estimated cost | Yes, labelled "harness estimate", per session, hidden when `hasUnknownModelCost` | Never show cost | ☐ | ☑ HJ 2026-10-20 |
+| D6 | Rate-limit data | Store primary window `usedPercent`, `windowMinutes`, `resetsAt`, `plan`; drop credits balance and ids | Store nothing about limits | ☐ | ☑ HJ 2026-10-20 |
 | D7 | Image bytes | Only when inline in the journal, ≤ 1 MiB each, ≤ 32 per recording, redaction/type sniff first; paths are references | References only, never bytes | ☐ | ☐ |
-| D8 | Enriching existing recordings | Re-import appends new observations to the same recording (order-independent, §6); offer it only if the journal still exists | Re-import creates a new recording | ☐ | ☐ |
+| D8 | Enriching existing recordings | Re-import appends new observations to the same recording (order-independent, §6); offer it only if the journal still exists | Re-import creates a new recording | ☐ | ☑ HJ 2026-10-20 |
 | D9 | Claude turn boundaries | Derive from prompt boundaries, `basis: 'derived'`, labelled | Show no turn durations for Claude | ☐ | ☐ |
 | D10 | Plans | Wait for a real captured sample | Specify now from tool definitions | ☐ | ☐ |
 
