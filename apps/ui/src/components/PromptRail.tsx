@@ -2,7 +2,6 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import {useTurns} from '../lib/turns-store.ts';
 import {ledgerParts,LEDGER_BASIS} from '../lib/turn-ledger.ts';
-import {promptRailMark} from '../lib/prompt-rail-mark.ts';
 import './prompt-rail-evidence.css';
 
 export interface PromptChapter { id: string; label: string; index: number; time?:string; turnStep?:number }
@@ -70,9 +69,9 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
       <div style={{ height: chapters.length * ROW, position: 'relative' }}>
         {chapters.slice(first, end).map((chapter, offset) => {
           const ordinal = first + offset;
-          const ledger=chapter.turnStep===undefined?undefined:ledgers.get(chapter.turnStep),mark=promptRailMark(ledger);
+          const ledger=chapter.turnStep===undefined?undefined:ledgers.get(chapter.turnStep);
           const description=ledger?`${ledger.operations} captured operations${ledger.open?`, ${ledger.open} awaiting results`:''}. ${ledgerParts(ledger).map(p=>p.text).join(', ')}`:undefined;
-          return <button key={chapter.id} style={{ position: 'absolute', top: ordinal * ROW,'--turn-size':mark.ratio } as CSSProperties} data-turn-step={chapter.turnStep} data-operation-count={ledger?.operations} aria-description={description} data-prompt-ordinal={ordinal + 1} data-proximity={ordinal === nearest ? 'current' : Math.abs(ordinal - nearest) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${chapter.label}`} aria-current={chapter.id === activeId ? 'location' : undefined} onMouseEnter={e => show(ordinal, e.currentTarget)} onFocus={e => show(ordinal, e.currentTarget)} onBlur={() => setPreview(undefined)} onClick={() => open(chapter)}><span className="prompt-rail-tick" aria-hidden="true" />{mark.failed&&<span className="prompt-turn-failed" aria-hidden="true"/>}{mark.edited&&<span className="prompt-turn-edited" aria-hidden="true"/>}</button>;
+          return <button key={chapter.id} style={{ position: 'absolute', top: ordinal * ROW } as CSSProperties} data-turn-step={chapter.turnStep} data-operation-count={ledger?.operations} aria-description={description} data-prompt-ordinal={ordinal + 1} data-proximity={ordinal === nearest ? 'current' : Math.abs(ordinal - nearest) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${chapter.label}`} aria-current={chapter.id === activeId ? 'location' : undefined} onMouseEnter={e => show(ordinal, e.currentTarget)} onFocus={e => show(ordinal, e.currentTarget)} onBlur={() => setPreview(undefined)} onClick={() => open(chapter)}><span className="prompt-rail-tick" aria-hidden="true" /></button>;
         })}
       </div>
     </nav>

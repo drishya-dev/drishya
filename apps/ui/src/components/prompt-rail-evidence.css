@@ -1,21 +1,14 @@
-/* The equal-rank chapter rail now carries captured turn size; proximity adds a small lift. */
-.connected-workspace .complete-prompt-rail.turn-evidence-rail button { --turn-proximity:0; }
-.connected-workspace .complete-prompt-rail.turn-evidence-rail button[data-proximity=current] { --turn-proximity:.166667; }
-.connected-workspace .complete-prompt-rail.turn-evidence-rail button[data-proximity=near] { --turn-proximity:.083333; }
+/* The rail is quiet at rest: every tick is the same length. The captured turn ledger appears only on hover or focus. */
 .connected-workspace .complete-prompt-rail.turn-evidence-rail button[data-proximity] .prompt-rail-tick {
- width:24px; transform:scaleX(calc(var(--turn-size,.333333) + var(--turn-proximity))); transform-origin:right center;
+ width:24px; transform:scaleX(.333333); transform-origin:right center;
 }
+.connected-workspace .complete-prompt-rail.turn-evidence-rail button[aria-current=location] .prompt-rail-tick { opacity:1; }
 .connected-workspace .complete-prompt-rail.turn-evidence-rail button[aria-current=location]::before {
  content:""; display:block; position:absolute; left:0; top:7px; width:3px; height:3px; border-radius:50%; background:var(--t1);
 }
-.prompt-turn-failed { position:absolute; right:4px; top:4px; height:8px; width:2px; background:var(--fail); }
-.prompt-turn-edited { position:absolute; right:0; top:6px; height:4px; width:4px; border-radius:50%; background:var(--edited); }
 .prompt-rail-ledger { margin-top:8px; padding-top:7px; border-top:1px solid var(--line); color:var(--t2); font:11px/17px var(--sans); }
 .prompt-rail-ledger>span+span::before { content:' · '; color:var(--t3); }
 .prompt-rail-ledger .bad { color:var(--fail); }.prompt-rail-ledger .good { color:var(--pass); }
 .prompt-rail-preview>.prompt-rail-ledger>small,.prompt-rail-preview>small,.prompt-rail-preview>time { font-size:11px; }
-@media(forced-colors:active) {
- .prompt-turn-failed { background:Mark; }.prompt-turn-edited { background:LinkText; }
-}
 
 .prompt-rail-preview.prompt-evidence-preview { width:min(300px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; }
