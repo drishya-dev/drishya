@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-2 | @yash + Codex | `codex/ui-2-home-type` | 2026-10-20 | Bounded Home typography/contrast increment: Modern `SessionHome.tsx`/`session-home.css`, new scoped font or contrast helper only if needed, focused tests, TASKS/STATUS/review note (at most 8 files). No shared global palettes, History/App/ProductShell, Git/UI-5, adapters/contracts or Usage. Verify real-session Home and 320/390/1440px; broader UI-2 remains open. Draft then READY handoff for Claude. |
 | UI-5 | @yash + Codex | `codex/ui-5-git-controls` | 2026-10-20 | Bounded Modern Git review chrome: `components/GitReview.tsx`, new scoped CSS, focused browser coverage and TASKS/STATUS/review note (at most 7 files). Reuse existing WorkspaceOptions; no shared menu logic, ArtifactReader, History/App/ProductShell, Git graph/backend, adapters/contracts or Usage. Top-level/selected-file controls only; broader Workspace/reader density remains open. Draft then READY handoff for Claude. |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
@@ -41,12 +40,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 
-### Yash with Codex — UI-3 Home GitHub increment ready
+### Yash with Codex — UI-2 Home typography ready
 
-- **When:** 20 October 2026, `codex/ui-3-home-github`, PR #142. **merged by Claude after review**. Scoped to Home's GitHub link; no shared canvas, capture, Usage or Git files touched.
-- **Delivered:** moved the link from primary navigation into Home's footer. Token-based pill, finite pointer-hover sheen, tinted star, static keyboard focus; no automatic external request or star count. Existing session controls remain reachable. Attribution: [UI-3 note](review/ui-3-home-github.md).
-- **Validation:** UI typecheck and production build; two local Edge browser checks using the real redacted Drishya/Skeletongraph store, at1440/390/320px, keyboard/reduced-motion/forced-colors/motion-off/low-resource fallbacks and no outbound requests. Screenshots inspected locally. No hosted CI. Broader UI-3 candidates and physical-device acceptance remain open; TASKS tracks them.
-- **Handoff:** Claude owns merge. Existing TURN-2 PR #141 remains a separate handoff; FILES-1 PR #139 is merged, with explicit deletion evidence still dependency-gated in TASKS.
+- **When:** 20 October 2026, `codex/ui-2-home-type`, PR #145. **READY FOR CLAUDE REVIEW / MERGE**. Home CSS and focused coverage only; no global tokens or visualization changes.
+- **Delivered:** Home metadata now has an11px floor at desktop and phone sizes; About/refresh/filter labels meet12px. Claude's Home mark uses the theme's contrast-checked edited color instead of a fixed pale tint. Existing font family, compact layout, row measurements and virtualized scrolling retained.
+- **Validation:** UI typecheck, production build, existing seven-palette contrast guard and four local Edge journeys: new type/contrast and300-session keyboard/phone checks, plus actual redacted-store Home GitHub/accessibility checks. Actual Drishya/Skeletongraph Codex+Claude Home inspected before/after. See [UI-2 note](review/ui-2-home-typography.md). No hosted CI; physical-device and full-product typography acceptance stay open.
+- **Handoff:** Claude owns merge. Git review controls are separately ready in #144. UI-2 and UI-5 stay open for remaining surfaces; the dependency table remains the retest source.
+
 ### Yash with Codex — TURN-2 keyboard reading ready
 
 - **When:** 20 October 2026, `codex/turn-2-keyboard-reading`, PR #141. **merged by Claude after review** — final cursor checks passed. Main through `4d22126` integrated: resolved adjacent read-only worker/API/test additions, retaining both FILES-1 and TURN-2; no changes to FolderExplorer, schema/adapters/projection, Git or Usage.
