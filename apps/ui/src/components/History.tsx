@@ -625,7 +625,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.
           if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));
-          set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
+          // Choosing a chapter is deliberate navigation: it stops following the live edge, or the next record pulls the view back down.
+          set({ follow: false, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
           navigationBoundary.current = { step: scene.step, projection };
           chapterNavigation.current = onWindow && ps.unloaded ? { id: ps.id, step: scene.step } : undefined;
           setFocusedPassageId(ps.id);
