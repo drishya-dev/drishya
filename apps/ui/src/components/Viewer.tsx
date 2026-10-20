@@ -32,6 +32,7 @@ import { EvidenceNavigationProvider } from './EvidenceNavigation.tsx';
 import { sampleActivity } from '../lib/activity.ts';
 import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComposer, useSessionWorkspace } from './SessionWorkspace.tsx';
 import { NowWatcher } from './NowWatcher.tsx';
+import { NotifyWatcher } from './NotifyWatcher.tsx';
 import { TurnsWatcher } from './TurnsWatcher.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
@@ -190,7 +191,7 @@ function WorkspaceViewer() {
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
-      <NowWatcher key={recordingId} />
+      <NowWatcher key={recordingId} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
       <PromptComposer key={recordingId} />
       <DeveloperWorkspace />
