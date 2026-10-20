@@ -36,6 +36,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude (Sonnet 5.5) — TURN-1 regression fix
+
+- **When:** 20 October 2026, `yash/turn-1-layout-shift`.
+- **Delivered:** my TURN-1 (#130) broke the `session detours` journey (`fresh-workspace.spec.ts`), which I had not run: the ledger makes the first passage taller than the list's height estimate, so mounting it legitimately moves `scrollTop` from 160 to 199 to keep the content still. The journey's real assertion is the anchor surviving the detour; its `scrollTop === 160` precondition now waits for the scroll to settle. 10/10. Not a user-visible bug.
+- **Lesson:** run the whole `fresh-workspace` file before merging UI changes. It still has 17 failures from LIVE-2's composer pill (TEST-1).
+
 ### Harsh with Claude (Opus 5.5) — BUG-7 open/refresh race; PR110 closed
 
 - **When:** 19 October 2026, `harsh/bug-7-open-refresh-race`.
