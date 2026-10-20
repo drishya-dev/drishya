@@ -8,12 +8,15 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
   const started = new Set(applied.filter((item) => item.type === 'op-start').map((item) => item.operationId));
   const ended = new Set(applied.filter((item) => item.type === 'op-end').map((item) => item.operationId));
   const proseIds = new Set(applied.filter((item) => item.type === 'prose').map((item) => item.proseId));
-  const operations = projection.operations.filter((op) => started.has(op.id)).map((op) => ended.has(op.id) ? op : pending(op));
+  const parents = new Set(projection.operations.filter(op => started.has(op.id)).map(op => op.parentOperationId).filter(Boolean));
+  const operations = projection.operations.filter((op) => started.has(op.id) || parents.has(op.id)).map((op) => ended.has(op.id) || parents.has(op.id) && op.endSequence !== undefined && op.endSequence < step ? op : pending(op));
   const visibleArtifacts = new Set(operations.flatMap((op) => op.artifactIds));
   for (const id of proseIds) visibleArtifacts.add(`art_${id}_prose`);
   const visibleEvidence = new Set([...operations.flatMap((op) => op.observationIds), ...projection.prose.filter((p) => proseIds.has(p.id)).flatMap((p) => p.observationIds)]);
   return {
     ...projection,
+    // Accounting points do not own timeline steps. Whole-session totals are not historical evidence.
+    usage: undefined,
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
     artifacts: projection.artifacts.filter((a) => visibleArtifacts.has(a.id)),

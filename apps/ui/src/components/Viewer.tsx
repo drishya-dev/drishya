@@ -8,6 +8,7 @@ import {ReviewInsights} from './ReviewInsights.tsx';
 import {SavedMomentsEntry} from './SavedMoments.tsx';
 import {CapturedCommands} from './CapturedCommands.tsx';
 import { NativeReturn } from './NativeReturn.tsx';
+import { UsagePeek } from './RecordedUsage.tsx';
 import {SessionSegments} from "./SessionSegments.tsx";
 import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
@@ -376,12 +377,6 @@ function SessionIdentity() {
   const [status,setStatus]=useState('');
   if(!recording||!id)return null;
   return <details className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline evidence bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span></details>;
-}
-
-function UsagePeek() {
-  const { controller } = useSessionWorkspace();
-  const usage = controller?.usage;
-  return <details className="usage-peek"><summary>Usage</summary><div><strong>{controller?.harness === 'codex' ? 'Last model request' : 'Connected turn'}</strong><dl><dt>Input tokens</dt><dd>{usage?.input ?? 'Not reported'}</dd><dt>Output tokens</dt><dd>{usage?.output ?? 'Not reported'}</dd><dt>Cached input</dt><dd>{usage?.cached ?? 'Not reported'}</dd><dt>Cost (USD)</dt><dd>{usage?.costUsd ?? 'Not reported'}</dd>{usage?.contextWindow !== undefined && <><dt>Context input / capacity</dt><dd>{usage.contextInput ?? 'Unknown'} / {usage.contextWindow}</dd></>}{usage?.threadTotal !== undefined && <><dt>Thread tokens so far</dt><dd>{usage.threadTotal}</dd></>}{usage?.reasoningOutput !== undefined && <><dt>Reasoning output tokens</dt><dd>{usage.reasoningOutput}</dd></>}</dl><small>Native runtime values only. Thread totals are cumulative usage, not occupied context. Historical accounting and subscription billing are not inferred.</small></div></details>;
 }
 
 // ─── dock: native instruments, then MCP servers by name ──────────────────────────────────

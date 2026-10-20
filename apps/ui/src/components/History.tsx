@@ -5,6 +5,7 @@ import {operationOutcome} from '../lib/operation-outcome.ts';
 import { ToolInput } from './ToolInput.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
+import { ScriptDetails } from './Inspector.tsx';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
@@ -625,7 +626,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.
           if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));
-          set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
+          // Choosing a chapter is deliberate navigation: it stops following the live edge, or the next record pulls the view back down.
+          set({ follow: false, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, promptStep: undefined, readingPassageId: ps.id });
           navigationBoundary.current = { step: scene.step, projection };
           chapterNavigation.current = onWindow && ps.unloaded ? { id: ps.id, step: scene.step } : undefined;
           setFocusedPassageId(ps.id);
@@ -783,6 +785,11 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
 });
 
 function ExpandedOperation({ op }: { op: Operation }) {
+  const projection = useApp(state => state.projection);
+  return <><ExpandedMaterial op={op} />{projection && <ScriptDetails op={op} projection={projection} />}</>;
+}
+
+function ExpandedMaterial({ op }: { op: Operation }) {
   const d = op.detail;
   const select = useApp((s) => s.select);
   const input = op.artifactIds.find((id) => id.endsWith('_input'));

@@ -195,6 +195,11 @@ async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Pr
   return body as T;
 }
 
+export const recordedUsageApi = {
+  available: (id: string) => req<{ available: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/rescan`),
+  rescan: (id: string) => req<{ added: number; more: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/rescan`, { method: 'POST', json: {} }),
+};
+
 /**
  * Exchanges the launch token in the URL fragment for a session cookie, then removes it from the
  * address bar. The token stays valid for the daemon's lifetime; sessions expire and can be revoked.

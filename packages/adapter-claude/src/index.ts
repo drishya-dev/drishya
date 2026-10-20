@@ -12,6 +12,7 @@ import {
   parseMcpName,
   textOf,
   touchesProtectedFile,
+  usageTokens,
   type Adapter,
   type ParseContext,
   type RawHunk,
@@ -48,7 +49,7 @@ const MAIN = 'agent:main';
 /** Bookkeeping record types that carry no agent activity. Ignored on purpose, not by accident. */
 const IGNORED = new Set([
   'queue-operation', 'file-history-snapshot', 'file-history-delta', 'bridge-session', 'mode', 'atis-latch',
-  'last-prompt', 'agent-name', 'attachment', 'permission-mode', 'progress', 'cost-state', 'frame-link',
+  'last-prompt', 'agent-name', 'attachment', 'permission-mode', 'progress', 'frame-link',
   'artifact-autoreact-ledger', 'artifact-comment-monitor',
 ]);
 
@@ -150,6 +151,7 @@ function str(v: unknown): string | undefined {
 export function createParser(ctx: ParseContext): RecordParser {
   const calls = new Map<string, { tool: string; intent: ToolIntent }>();
   let lastCwd: string | undefined;
+  const messagesWithUsage = new Set<string>();
 
   const agentOf = (r: Rec): string => {
     if (ctx.agentId) return ctx.agentId;
@@ -180,6 +182,20 @@ export function createParser(ctx: ParseContext): RecordParser {
         harnessVersion: typeof r.version === 'string' ? r.version : undefined,
       };
       const out: RawObservation[] = [];
+
+      if (type === 'cost-state') {
+        const work: Record<string, number> = {};
+        for (const [key, field] of Object.entries({ totalLinesAdded: 'linesAdded', totalLinesRemoved: 'linesRemoved', totalDuration: 'durationMs', totalAPIDuration: 'apiDurationMs', totalToolDuration: 'toolDurationMs' })) {
+          if (Number.isSafeInteger(r[key]) && r[key] >= 0) work[field] = r[key];
+        }
+        // A single model's reported cumulative counters need no cross-model estimate or summation.
+        const models = r.modelUsage && typeof r.modelUsage === 'object' ? Object.entries(r.modelUsage) : [];
+        const tokens = models.length === 1 ? usageTokens(models[0]![1], { inputTokens: 'input', outputTokens: 'output', cacheReadInputTokens: 'cachedInput', cacheCreationInputTokens: 'cacheWrite', thinkingTokens: 'reasoningOutput' }) : undefined;
+        const cost = typeof r.totalCostUSD === 'number' && Number.isFinite(r.totalCostUSD) && r.totalCostUSD >= 0
+          ? { usd: r.totalCostUSD, basis: 'harness-estimate', ...(typeof r.hasUnknownModelCost === 'boolean' ? { modelCostUnknown: r.hasUnknownModelCost } : {}) } : undefined;
+        return [{ ...base, part: 0, kind: 'usage', payload: { source: 'claude-cost-state', cumulative: true,
+          ...(tokens ? { tokens, model: models[0]![0] } : {}), ...(cost ? { cost } : {}), ...(Object.keys(work).length ? { work } : {}) } }];
+      }
 
       if (base.workspaceRoot && base.workspaceRoot !== lastCwd && !ctx.agentId) {
         lastCwd = base.workspaceRoot;
@@ -250,6 +266,13 @@ export function createParser(ctx: ParseContext): RecordParser {
       if (type === 'assistant') {
         const content = r.message?.content;
         const model = str(r.message?.model);
+        const messageId = str(r.message?.id);
+        const tokens = usageTokens(r.message?.usage, { input_tokens: 'input', cache_read_input_tokens: 'cachedInput', cache_creation_input_tokens: 'cacheWrite', output_tokens: 'output' });
+        if (messageId && tokens && !messagesWithUsage.has(messageId)) {
+          messagesWithUsage.add(messageId);
+          // New identity, independent of the repeated transcript line's uuid and of existing block parts.
+          out.push({ ...base, recordId: `usage:${messageId}`, part: 0, kind: 'usage', payload: { source: 'claude-message-usage', cumulative: false, tokens, ...(model ? { model } : {}) } });
+        }
         if (!Array.isArray(content)) return out;
         content.forEach((c: Rec, i: number) => {
           if (c.type === 'text' && c.text) {

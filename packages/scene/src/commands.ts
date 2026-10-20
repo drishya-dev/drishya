@@ -13,6 +13,8 @@ const compare=(sequence:number,id:string,other:[number,string])=>other[0]-sequen
 const cursor=(row:Operation)=>JSON.stringify([row.startSequence,row.id]);
 /** Captured shell/test inputs only. Search covers stored previews, never unseen blob text. */
 export function commandPage(operations:Operation[],query:CommandQuery={}):CommandPage {
+  const scripts=new Set(operations.map(op=>op.parentOperationId).filter(Boolean));
+  operations=operations.filter(op=>!scripts.has(op.id));
   const needle=(query.q??'').trim().toLowerCase();
   const all=operations.filter(op=>(op.detail.kind==='shell'||op.detail.kind==='test')&&(!query.status||op.status===query.status)&&(!needle||`${op.detail.command} ${op.tool}`.toLowerCase().includes(needle))).sort((a,b)=>compare(a.startSequence,a.id,[b.startSequence,b.id]));
   const anchor=query.cursor?commandCursor(query.cursor):undefined;
