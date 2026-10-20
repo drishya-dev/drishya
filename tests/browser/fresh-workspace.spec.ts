@@ -1320,7 +1320,7 @@ test('whole-file Workspace search and line navigation reach distant source with 
   const reader=desk.getByRole('region',{name:'Workspace file src/cart/large.ts',exact:true});
   await expect(reader.locator('footer')).toContainText('10000 lines');
   await reader.getByRole('searchbox',{name:'Find in src/cart/large.ts',exact:true}).fill('largeLine9000');
-  await expect(reader.locator('.source-find')).toContainText('1 matching line in this file');
+  await expect(reader.locator('.source-find [role=status]')).toHaveAttribute('aria-label','1 matching line in this file');
   await reader.getByRole('button',{name:'Next match',exact:true}).click();
   await expect(reader.locator('[data-source-line="9000"]')).toHaveAttribute('aria-current','location');
   expect(await reader.locator('[data-source-line]').count()).toBeLessThan(150);
