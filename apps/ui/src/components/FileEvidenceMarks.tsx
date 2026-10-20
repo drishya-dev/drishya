@@ -31,7 +31,7 @@ export function useFileEvidence(paths: string[], projection: Projection, shown: 
 }
 
 export function FileEvidenceMarks({ evidence, count }: { evidence?: FileEvidence; count?: number }) {
-  if (count) return <span className="file-evidence folder-evidence" title={`${count} files with captured activity`} aria-label={`${count} files with captured activity`}><i aria-hidden="true"/>{count}</span>;
+  if (count) return <span className="file-evidence folder-evidence" title={`${count} file${count===1?'':'s'} with captured activity`} aria-label={`${count} file${count===1?'':'s'} with captured activity`}><i aria-hidden="true"/>{count}</span>;
   if (!evidence || !evidence.change && !evidence.readCalls && !evidence.now) return null;
   const change = evidence.change === 'A' ? 'creation' : 'edit/write';
   return <span className="file-evidence">

@@ -8,15 +8,17 @@
 .folder-explorer .file-now { color: var(--t1); }
 .folder-explorer .folder-evidence i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .folder-explorer .ux-search { position: relative; }
-.folder-explorer .file-filter { flex: 0 0 auto; margin: 0; }
-.folder-explorer .file-filter > summary { display: grid; place-items: center; width: 28px; height: 28px; padding: 5px; cursor: pointer; list-style: none; border-radius: 5px; color: var(--t2); }
-.folder-explorer .file-filter > summary::-webkit-details-marker { display: none; }
-.folder-explorer .file-filter > summary svg { width: 16px; height: 16px; fill: none; stroke: currentColor; }
-.folder-explorer .file-filter[data-touched=true] > summary { color: var(--t1); background: color-mix(in srgb, currentColor 9%, transparent); }
-.folder-explorer .file-filter-menu { position: absolute; z-index: 5; inset: calc(100% + 5px) 0 auto auto; width: min(240px, 100%); padding: 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--s1); box-shadow: 0 8px 24px #0004; }
-.folder-explorer .file-filter-menu button { width: 100%; text-align: left; padding: 10px; border: 0; background: transparent; color: inherit; border-radius: 5px; }
-.folder-explorer .file-filter-menu button[aria-pressed=true] { background: color-mix(in srgb, currentColor 9%, transparent); }
-.folder-explorer .file-filter-menu small { display: block; padding: 8px 10px; color: var(--t2); line-height: 1.4; white-space: normal; }
-.folder-explorer .file-filter-menu button:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
-.folder-explorer .file-filter summary:focus-visible, .folder-explorer .file-filter-menu button:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
-@media (pointer: coarse) { .folder-explorer .file-filter > summary { width: 40px; height: 40px; } .folder-explorer .file-filter-menu button { min-height: 44px; } }
+.folder-explorer .tree-evidence-filter { flex: 0 0 auto; margin: 0; }
+.folder-explorer .tree-evidence-filter > summary { display: grid; place-items: center; width: 28px; height: 28px; padding: 5px; cursor: pointer; list-style: none; border-radius: 5px; color: var(--t2); }
+.folder-explorer .tree-evidence-filter > summary::-webkit-details-marker { display: none; }
+.folder-explorer .tree-evidence-filter > summary svg { width: 16px; height: 16px; fill: none; stroke: currentColor; }
+.folder-explorer .tree-evidence-filter[data-touched=true] > summary { color: var(--t1); background: color-mix(in srgb, currentColor 9%, transparent); }
+.folder-explorer .tree-evidence-filter-menu { position: absolute; z-index: 5; inset: calc(100% + 5px) 0 auto auto; width: min(240px, var(--menu-inline-space, calc(100vw - 40px))); max-height: var(--menu-max-height, 50dvh); overflow: auto; padding: 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--s1); box-shadow: 0 8px 24px #0004; }
+.folder-explorer .tree-evidence-filter-menu button { width: 100%; text-align: left; padding: 10px; border: 0; background: transparent; color: inherit; border-radius: 5px; }
+.folder-explorer .tree-evidence-filter-menu button[aria-pressed=true] { background: color-mix(in srgb, currentColor 9%, transparent); }
+.folder-explorer .tree-evidence-filter-menu small { display: block; padding: 8px 10px; color: var(--t2); line-height: 1.4; white-space: normal; }
+.folder-explorer .tree-evidence-filter-menu button:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+.folder-explorer .tree-evidence-filter summary:focus-visible, .folder-explorer .tree-evidence-filter-menu button:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+@media (pointer: coarse) { .folder-explorer .tree-evidence-filter > summary { width: 40px; height: 40px; } .folder-explorer .tree-evidence-filter-menu button { min-height: 44px; } }
+
+.folder-explorer:has(.tree-evidence-filter[open]) { overflow: visible; }

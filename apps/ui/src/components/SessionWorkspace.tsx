@@ -222,7 +222,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       closeExplorer();
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]') || event.target instanceof Element && event.target.closest('.file-filter[open]')) return;
+      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]') || event.target instanceof Element && event.target.closest('.tree-evidence-filter[open]')) return;
       if (!element.contains(event.target as Node) && !(event.target instanceof Element && event.target.closest('[data-workspace-files-trigger]'))) return;
       event.preventDefault(); event.stopPropagation(); closeExplorer(true);
     };
@@ -249,9 +249,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     {modern && !narrow && <ReadingResize value={readingWidth} minimum={220} maximum={maximumWidth} change={setWidth} reset={()=>setWidth(260)} label="Resize Files reading space" />}
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
     <div className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={modern ? 'Find repository files' : 'Find session files'} placeholder={touchedOnly?'Find touched files…':'Find files…'} maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}
-      <details className="desk-options file-filter" data-touched={touchedOnly} onKeyDown={event=>{if(event.key==='Escape'&&event.currentTarget.open){event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus();}}}>
+      <details className="desk-options tree-evidence-filter" data-touched={touchedOnly} onKeyDown={event=>{if(event.key==='Escape'&&event.currentTarget.open){event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus();}}}>
         <summary aria-label="File filters" title={touchedOnly?'File filters · Touched':'File filters'}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M5 10h10M8 16h4" strokeWidth="1.5"/></svg></summary>
-        <div className="file-filter-menu">{[{value:false,label:'All files'},{value:true,label:'Touched'}].map(option=><button key={option.label} type="button" aria-pressed={touchedOnly===option.value} onClick={event=>{setTouchedOnly(option.value);const menu=event.currentTarget.closest('details')!;menu.open=false;menu.querySelector('summary')?.focus();}}>{option.label}</button>)}<small>Captured activity in this session. Badges describe tool calls, not current Git status.</small></div>
+        <div className="tree-evidence-filter-menu">{[{value:false,label:'All files'},{value:true,label:'Touched'}].map(option=><button key={option.label} type="button" aria-pressed={touchedOnly===option.value} onClick={event=>{setTouchedOnly(option.value);const menu=event.currentTarget.closest('details')!;menu.open=false;menu.querySelector('summary')?.focus();}}>{option.label}</button>)}<small>Captured activity in this session. Badges describe tool calls, not current Git status.</small></div>
       </details>
     </div>
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}
