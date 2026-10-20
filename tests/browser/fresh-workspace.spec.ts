@@ -1149,7 +1149,7 @@ test('phone Workspace file chooser preserves its header, dismisses normally and 
   await expect(document).toBeFocused();await expect(document.locator('.code')).toContainText('42');
   await trigger.click();await expect(explorer).toBeVisible();
   await page.keyboard.press('Escape');await expect(explorer).toHaveCount(0);await expect(desk).toBeVisible();await expect(trigger).toBeFocused();
-  await trigger.click();await desk.getByRole('button',{name:'＋ New file',exact:true}).click();
+  await trigger.click();await desk.getByLabel('Workspace layout actions',{exact:true}).click();await desk.getByRole('button',{name:'＋ New file',exact:true}).click();
   await expect(explorer).toHaveCount(0);await expect(desk.getByRole('textbox',{name:'New workspace file path'})).toBeVisible();
   await desk.getByRole('button',{name:'Cancel',exact:true}).click();
   await trigger.click();await desk.getByRole('button',{name:'Back to agent',exact:true}).focus();
