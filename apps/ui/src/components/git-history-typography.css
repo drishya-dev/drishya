@@ -1,0 +1,26 @@
+/* Keep metadata readable without changing the timeline's spatial material or Legacy. */
+:root[data-ui-version=modern] .git-atlas :is(
+ .atlas-eyebrow,.atlas-toolbar>span,.atlas-ref small,.atlas-ref-pages,
+ .atlas-history>header>span,.atlas-commit-copy>span,.atlas-commit-copy code,
+ .atlas-commit-copy time,.atlas-commit-copy>small,.atlas-labels em,
+ .atlas-history>footer nav,.atlas-history>footer>small,.atlas-message>span,
+ .atlas-message p,.atlas-files small,.atlas-file-pages,.atlas-file-actions,
+ .thread-controls,.thread-controls>span:first-child,.thread-peek code,
+ .thread-peek small,.thread-label small,.thread-caption,.commit-row code,
+ .commit-row-refs em,.commit-row-refs small,.atlas-ref-scope
+) {font-size:11px;}
+
+:root[data-ui-version=modern] .git-atlas :is(
+ .btn,input,select,.atlas-ref strong,.atlas-references>summary,
+ .atlas-ref-content>label,.atlas-history>header strong,.atlas-detail>header strong,
+ .atlas-parent label,.atlas-parent select,.atlas-files>button,.atlas-file-actions>strong,
+ .atlas-ref-scope button,.atlas-rows-toggle
+) {font-size:12px;}
+
+/* The rows keep one-line subjects; badge text and hashes use their own metadata floor. */
+:root[data-ui-version=modern] .git-atlas .commit-row {gap:8px;}
+:root[data-ui-version=modern] .git-atlas .atlas-parent label {flex-wrap:wrap;}
+:root[data-ui-version=modern] .git-atlas .atlas-parent select {max-width:100%;}
+@media(pointer:coarse) {
+ :root[data-ui-version=modern] .git-atlas :is(input,select) {font-size:16px;}
+}
