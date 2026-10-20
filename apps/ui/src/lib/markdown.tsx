@@ -1,5 +1,6 @@
 // Minimal, safe Markdown for agent prose: paragraphs, lists, fenced code, `code`, **bold**, links
-// shown as text. Everything is React text — no HTML from a transcript is ever interpreted.
+// shown as text, with explicit local file navigation when supplied. Everything is
+// React text — no HTML from a transcript is ever interpreted.
 
 import { createElement, type ReactNode } from 'react';
 import { FencedCode } from '../components/FencedCode.tsx';
@@ -108,7 +109,7 @@ function inline(s: string, onPath?: PathAction, workspaceRoot?:string): ReactNod
       const reference = prosePath(code,workspaceRoot);
       out.push(
         reference && onPath ? (
-          <button type="button" key={k++} className="md-path" aria-label={`Open captured work for ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path!, reference.line)}><code>{code}</code></button>
+          <button type="button" key={k++} className="md-path" aria-label={`Open captured work for ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path, reference.line)}><code>{code}</code></button>
         ) : (
           <code key={k++}>{code}</code>
         ),

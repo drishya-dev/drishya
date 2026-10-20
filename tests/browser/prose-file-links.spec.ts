@@ -12,6 +12,12 @@ test.beforeAll(async()=>{
   {...common,type:'user',uuid:'u1',message:{role:'user',content:'Read the captured source and explain the change'}},
   {...common,type:'assistant',uuid:'a1',message:{role:'assistant',content:[{type:'tool_use',id:'r1',name:'Read',input:{file_path:`${root}/src/source.ts`}}]}},
   {...common,type:'user',uuid:'u2',message:{role:'user',content:[{type:'tool_result',tool_use_id:'r1',content:'1→export const capturedValue = 42;\n2→export const retainedEvidence = true;'}]}},
+  {...common,type:'assistant',uuid:'search',message:{role:'assistant',content:[{type:'tool_use',id:'s1',name:'Grep',input:{pattern:'retainedEvidence',path:root,output_mode:'content','-n':true}}]}},
+  {...common,type:'user',uuid:'search-result',message:{role:'user',content:[{type:'tool_result',tool_use_id:'s1',content:'src/source.ts:2:export const retainedEvidence = true;'}]}},
+  {...common,type:'assistant',uuid:'edit',message:{role:'assistant',content:[{type:'tool_use',id:'e1',name:'Edit',input:{file_path:`${root}/src/source.ts`,old_string:'export const capturedValue = 42;',new_string:'export const capturedValue = 43;'}}]}},
+  {...common,type:'user',uuid:'edit-result',message:{role:'user',content:[{type:'tool_result',tool_use_id:'e1',content:'File updated successfully.'}]}},
+  {...common,type:'assistant',uuid:'write',message:{role:'assistant',content:[{type:'tool_use',id:'w1',name:'Write',input:{file_path:`${root}/src/new.ts`,content:'export const createdByWrite = true;'}}]}},
+  {...common,type:'user',uuid:'write-result',message:{role:'user',content:[{type:'tool_result',tool_use_id:'w1',content:'File written successfully.'}]}},
   {...common,type:'assistant',uuid:'a2',message:{role:'assistant',content:[{type:'text',text:`See **[source](${root.startsWith('/')?'':'/'}${root}/src/source.ts#L2)**, [relative](src/source.ts:1), and \`src/source.ts:2\`. [web](https://example.invalid/src/source.ts) and [outside](${root}-other/secret.txt) stay separate.`}]}},
  ];
  const journal=join(dir,'session.jsonl');writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');
@@ -35,6 +41,26 @@ test('local prose links open exact captured source without current-file IO or br
  }
  for(const title of ['web','outside']){
   const inert=page.locator('.prose span.md-link').filter({hasText:title});await expect(inert).toHaveCount(1);await inert.click();expect(page.url()).toBe(url);
+ }
+ const card=page.locator('article.op-read');await card.locator('header button.captured-file-path').focus();await page.keyboard.press('Enter');
+ let reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toHaveValue(/\/read$/);
+ await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+ for(const kind of ['edit','write']){
+  const file=kind==='edit'?'src/source.ts':'src/new.ts';const title=page.locator('article.op-edit header').getByRole('button',{name:`Open captured work for ${file}`,exact:true});await title.focus();await page.keyboard.press('Enter');
+  reader=page.getByRole('dialog',{name:`Work on ${file}`,exact:true});await expect(reader).toBeVisible();
+  await expect(reader).toContainText(kind==='edit'?'capturedValue':'createdByWrite');
+  if(kind==='edit')await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toHaveValue(/\/patch$/);
+  await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+ }
+ const search=page.locator('article.op-search');
+ for(const expanded of [false,true]){
+  if(expanded)await search.locator('[data-expand-op]').click();
+  await search.locator('.search-bead').first().focus();await page.keyboard.press('Enter');
+  reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});
+  await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toHaveValue(/\/search\/0$/);
+  await expect(reader).toContainText('Exact captured search result');
+  await expect(reader.locator('[data-source-line="2"]')).toContainText('retainedEvidence');
+  await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
  }
  await page.setViewportSize({width:320,height:568});await local.first().click();
  await expect(page.getByRole('dialog',{name:'Work on src/source.ts',exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

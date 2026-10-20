@@ -11,6 +11,8 @@ import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.t
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
+import {prosePath} from '../lib/prose-path.ts';
+import './captured-file-path.css';
 import { useApp } from '../state.ts';
 import { CodeView, DiffView, Output, CapturedTime, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
@@ -672,8 +674,12 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
   );
 });
 
+function openCapturedFile(path:string,line?:number,evidence?:string) {
+  const state=useApp.getState(),reference=prosePath(path,state.recording?.workspaceRoot,true);
+  if(reference)state.set({hoveredPath:reference.path,filePanel:reference.path,filePanelLine:line??reference.line,filePanelEvidence:evidence,filePanelFocus:undefined,currentFile:undefined,selectedOp:undefined,follow:false,held:true});
+}
+
 function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agent?: Agent }) {
-  const set = useApp((s) => s.set);
   const detail = useApp(s => s.reasoningDetail);
   const workspaceRoot = useApp(s => s.recording?.workspaceRoot);
   const [open, setOpen] = useState(true);
@@ -698,7 +704,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
           {open ? ' · collapse' : ' · show'}
         </button>
       )}
-      {open && <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={(path, line) => set({ hoveredPath: path, filePanel: path, filePanelLine: line, filePanelEvidence: undefined, filePanelFocus: undefined, currentFile: undefined, selectedOp: undefined, follow: false, held: true })} />}
+      {open && <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />}
       {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); }}>{full ? 'Close full captured text' : 'Preview · read full captured text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
     </div>
   );
@@ -708,6 +714,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
 
 const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operation; index: number }) {
   const experience = useExperience();
+  const workspaceRoot = useApp(s=>s.recording?.workspaceRoot);
   const card = useRef<HTMLElement>(null);
   const selected = useApp((s) => s.selectedOp === op.id);
   const expanded = useApp((s) => s.expandedOp === op.id);
@@ -725,6 +732,9 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   const command = op.detail.kind === 'shell' || op.detail.kind === 'test' ? commandDisplay(op.detail.command) : undefined;
   const displayTitle = command?.decoded ? command.text : op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '');
+  const file=op.detail.kind==='read'||op.detail.kind==='edit'?prosePath(op.detail.path,workspaceRoot,true):undefined;
+  const evidence=op.detail.kind==='read'?`${op.id}/read`:op.detail.kind==='edit'&&op.detail.hunks.length?`${op.id}/patch`:undefined;
+  const title=file?<button type="button" className="op-title captured-file-path" title={displayTitle} aria-label={`Open captured work for ${file.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(file.path,op.detail.kind==='read'?op.detail.startLine:undefined,evidence);}}>{displayTitle}</button>:<span className="op-title" title={displayTitle}>{displayTitle}</span>;
   return (
     <article ref={card}
       data-op-id={op.id}
@@ -749,7 +759,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
     >
       <header className="op-head">
         <MaterialGlyph material={presentation.material} />
-        {experience !== 'legacy' ? <span className="studio-action-identity"><span className="op-title" title={displayTitle}>{displayTitle}</span><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
+        {experience !== 'legacy' ? <span className="studio-action-identity">{title}<span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
         {op.detail.kind === 'edit' && op.detail.hunks.length > 0 && <DiffStat hunks={op.detail.hunks} />}
         <StateMark state={so.state} op={op} />
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'other'].includes(op.detail.kind) && (
@@ -788,7 +798,7 @@ function ExpandedOperation({ op }: { op: Operation }) {
     case 'search':
       return <div className="op-expanded search-material" onClick={(e) => e.stopPropagation()}>
         <div className="query">{d.query} · {d.total ?? d.hits.length} recorded result{(d.total ?? d.hits.length) === 1 ? '' : 's'}</div>
-        {d.hits.slice(0, 50).map((hit, i) => <div className="hit" key={i}>{hit.path}{hit.line ? `:${hit.line}` : ''}{hit.text ? ` · ${hit.text}` : ''}</div>)}
+        {d.hits.slice(0, 50).map((hit, i) => <button type="button" className="hit search-bead" key={i} title={`Open captured match on ${hit.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(hit.path,hit.line,`${op.id}/search/${i}`);}}>{hit.path}{hit.line ? `:${hit.line}` : ''}{hit.text ? ` · ${hit.text}` : ''}</button>)}
         {d.hits.length > 50 && <div className="muted">{d.hits.length - 50} more recorded hits · open details to inspect all</div>}
       </div>;
     case 'test':
@@ -871,7 +881,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
           <div className="query">{d.query}</div>
           <ResultArea state={op.status} resolving={resolving}>
             {d.hits.slice(0, 5).map((h, i) => (
-              <button key={i} className="hit search-bead" title={`Open captured match on ${h.path}`} onClick={(e) => { e.stopPropagation(); set({ filePanel: h.path, filePanelEvidence: `${op.id}/search/${i}`, filePanelFocus: undefined, currentFile: undefined }); }} onMouseEnter={() => set({ hoveredPath: h.path })}>
+              <button key={i} className="hit search-bead" title={`Open captured match on ${h.path}`} onClick={(e) => { e.stopPropagation(); openCapturedFile(h.path,h.line,`${op.id}/search/${i}`); }} onMouseEnter={() => set({ hoveredPath: h.path })}>
                 <span className="hit-path">{h.path}</span>
                 {h.line !== undefined && <span className="hit-line">:{h.line}</span>}
                 {h.text && <span className="hit-excerpt">{h.text.slice(0, 180)}</span>}
