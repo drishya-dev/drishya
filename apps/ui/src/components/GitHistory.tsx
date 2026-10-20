@@ -15,6 +15,7 @@ import {GitPatchReader} from './GitPatchReader.tsx';
 import {FileIcon} from './FileIcon.tsx';
 import {WholeSource} from './WholeSource.tsx';
 import './git-history.css';
+import './git-history-typography.css';
 
 export const openGitHistory=()=>window.dispatchEvent(new Event('drishya-git-history'));
 export function GitHistory() {
