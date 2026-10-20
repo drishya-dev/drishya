@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-2 | @yash + Codex | `codex/ui-2-toolbox-type` | 2026-10-20 | Toolbox typography slice only: `modern/tool-inventories.css`, focused browser checks, TASKS/STATUS/review (at most 6 files). No SessionWorkspace/History/Viewer or Usage logic, no capture/backend/data or inventory/motion/layout rewrite. |
 | FILES-2 | @yash + Codex | `codex/files-2-prose-links` | 2026-10-20 | Prose plus typed card/search paths: Markdown parser + pure resolver, History prose/header/search-hit routes, optional scoped path CSS, focused unit/browser checks and TASKS/STATUS/review (at most 10 files). No native/source IO, adapters/store/contracts/projection, Viewer/Search or UI-2 files; external links stay inert. |
 | REVIEW-1 | @yash + Claude Sonnet 5.5 | `yash/review-1-changes` | 2026-10-20 | `packages/scene/src/since.ts` (per-file +/- and last-changing turn; grouped gaps), `EvidenceReview.tsx` + CSS, the header label (`Viewer.tsx`), tests, TASKS/STATUS (at most 9 files). No adapters/contracts/projection (DATA-1/2), no test recognition (DATA-1). |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
@@ -67,7 +66,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **GIT-3:** `CommitRows` beneath the Git graph (graph-header toggle, remembered as `git/rows`): hash · message · refs · author · age, newest first, hover and selection mirror both ways, a row pick reveals an off-screen commit. The reference list starts as refs named by loaded commits (plus checked-out/picked) with "In view / All N"; search and All restore the paged server list. Fixed the reference column clipping its bottom controls.
 - **Verified:** typecheck/build, unit tests, the Git specs, and the real repo (50 rows; 18 of 86 refs in view). **Not done:** keyboard arrows between rows beyond Tab; row virtualization beyond `content-visibility` (6 pages × 50 rows).
 
-### Yash with Codex — LIVE-2b ready for review
+### Yash with Codex — UI-2 Toolbox typography ready
+
+- **When:** 20 October 2026. Branch `codex/ui-2-toolbox-type`, PR #159, **READY FOR CLAUDE REVIEW / MERGE**. Claim removed in this PR; parent UI-2 remains open for other surfaces.
+- **Changed:** Toolbox counts/MCP labels/agent states reach11px; disclosure/filter controls12px. Modern-only scoped CSS; no inventory, geometry or motion rewrite.
+- **Verified:** both3/300-tool browser journeys now include metadata/control floors, Agents, Clear focus, seven palettes and1440/390/320px layouts. Large lists retain keyboard End and visible disclosure. Actual redacted Drishya Codex before/after and Skeletongraph Claude checked; no measured Toolbox text below11px. UI TS/build and palette contrast guard pass; local frames inspected.
+- **Limits:** human/physical and other UI-2 surfaces remain open. No capture/backend/schema/native/journal writes or hosted CI. [Evidence](review/ui-2-toolbox-typography.md). FILES-2 prose/typed History paths are independently ready in #157.
+
 ### Yash with Codex — UI-2 Settings/Git typography ready
 
 - **When:** 20 October 2026. Branch `codex/ui-2-settings-type`, PR #155, **READY FOR CLAUDE REVIEW / MERGE**. Settings and Git graph typography slice only; parent UI-2 stays open. Claim removed in this PR; Claude owns squash-merge.
