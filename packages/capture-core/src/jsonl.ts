@@ -29,7 +29,7 @@ export interface ReadResult {
 
 export interface ReadOptions {
   maxRecordBytes?: number;
-  /** Stop after this many bytes so one call stays bounded; call again to continue. */
+  /** Hard byte ceiling. May yield earlier at a complete-record soft batch; continue from cursor. */
   maxReadBytes?: number;
   /** Accept a final line with no trailing newline (the file is complete, not being written). */
   acceptUnterminated?: boolean;

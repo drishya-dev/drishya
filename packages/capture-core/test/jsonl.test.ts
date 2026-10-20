@@ -23,8 +23,8 @@ describe('readJsonl', () => {
     expect(r2.records.map((r) => r.type === 'record' && r.value)).toEqual([{ b: 2 }]);
   });
 
-  it('yields batches at complete records without shrinking the individual record limit', async () => {
-    const lines = [JSON.stringify({ text: 'x'.repeat(6 * 1024 * 1024) }), JSON.stringify({ tail: 'unchanged' })];
+  it.each([6, 16])('yields a complete %i MiB record without shrinking the individual record limit', async (mib) => {
+    const lines = [JSON.stringify({ text: 'x'.repeat(mib * 1024 * 1024 - 11) }), JSON.stringify({ tail: 'unchanged' })];
     writeFileSync(file, lines.join('\n') + '\n');
     const first = await readJsonl(file, initialCursor());
     expect(first.records.map(r => r.type)).toEqual(['record']);
@@ -32,6 +32,28 @@ describe('readJsonl', () => {
     const next = await readJsonl(file, first.cursor);
     expect(next.records).toEqual([{ type: 'record', offset: first.cursor.offset, bytes: Buffer.byteLength(lines[1]!) + 1, value: { tail: 'unchanged' } }]);
     expect((await readJsonl(file, next.cursor)).records).toEqual([]);
+  });
+
+  it('restarts the soft batch budget from the new generation after truncation', async () => {
+    writeFileSync(file, JSON.stringify({ text: 'x'.repeat(6 * 1024 * 1024) }) + '\n');
+    const old = await readJsonl(file, initialCursor());
+    const line = JSON.stringify({ text: 'y'.repeat(4 * 1024 * 1024) }) + '\n';
+    writeFileSync(file, line + '{"next":true}\n');
+    const reset = await readJsonl(file, old.cursor);
+    expect(reset.reset).toBe('truncated');
+    expect(reset.records).toHaveLength(1);
+    expect(reset.cursor.offset).toBe(Buffer.byteLength(line));
+    expect(reset.cursor.generation).toBe(old.cursor.generation + 1);
+    expect((await readJsonl(file, reset.cursor)).records.map(r=>r.type==='record'&&r.value)).toEqual([{next:true}]);
+  });
+
+  it('emits an oversized-line gap once when it also ends a soft batch', async () => {
+    const line = JSON.stringify({ text: 'x'.repeat(5 * 1024 * 1024) }) + '\n';
+    writeFileSync(file, line + '{"after":true}\n');
+    const first = await readJsonl(file, initialCursor(), {maxRecordBytes: 1024});
+    expect(first.records).toEqual([{type:'oversized',offset:0,bytes:Buffer.byteLength(line)}]);
+    expect(first.cursor.inOversized).toBe(false);
+    expect((await readJsonl(file, first.cursor, {maxRecordBytes:1024})).records.map(r=>r.type==='record'&&r.value)).toEqual([{after:true}]);
   });
 
   it('bounds arrays of small records while preserving byte offsets and partial writes', async () => {

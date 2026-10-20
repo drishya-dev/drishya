@@ -41,6 +41,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — PERF-2 batch experiment; draft for review, gate still open
+
+- **When:**20 October2026. PR **#174**, `codex/perf-2-jsonl-batches`. Own claim retained because PERF-2 is not complete. Only JSONL source/test changed; no files owned by DATA-1/2 or TEST-2. Complete-record soft4MiB batches preserve16MiB records and all byte/cursor/gap semantics.
+- **Evidence:** five rotated before/after actual564MB runs, each8,803 observations identical to full import with zero gaps. Median peak RSS514.50→389.52MiB (-24.3%), but median bulk time7.12→8.14s (+14.2%); API/frame responsiveness remains outside targets. [Numbers and reproducible comparison](review/perf-2-jsonl-batches.md).
+- **Checks:**688 integrated unit tests and backend TypeScript pass. Added maximum16MiB/split/UTF-8 offset/partial-write/truncation/oversized-gap regressions. No hosted CI or native turn.
+- **Signal:** **DRAFT EXPERIMENT, DO NOT AUTO-MERGE.** Reduced memory is real in this sample, throughput/latency tradeoff not settled. Next scope is coordinated ingest/sealing/history profiling and retest after DATA-1/2; preserve their claims. PERF-1 #171 remains a separate measurement PR for Claude review. No new features under the red gate.
+
 
 ### Yash with Claude (Sonnet 5.5) — READ-6 read-before-write (Claude edits)
 

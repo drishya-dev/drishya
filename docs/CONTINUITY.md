@@ -1,5 +1,7 @@
 # Continue here — current handoff
 
+**20 October PERF-2:** draftPR174 explores4MiB complete-record JSONL batching, preserving16MiB records. Five rotated actual564MB comparisons reduce median RSS514.50→389.52MiB but bulk import slows7.12→8.14s; responsiveness still misses targets.688 units/backend types pass. **PERF-2 remains claimed/open; draft is not an auto-merge recommendation.** See [report](review/perf-2-jsonl-batches.md) and TASKS for DATA-1/2 coordination/retest. No new features under the performance gate; native/capture completeness remains independent.
+
 **19 October direction reset (read first):**
 - **North star:** [AGENTS](../AGENTS.md#north-star--read-first-every-session).
 - **Work list:** [TASKS](TASKS.md), restructured as a tagged P0–P3 priority list with per-ID detail and acceptance. Run `node scripts/claims.ts` to see what is open and unclaimed; the priority tables carry a Done column.
