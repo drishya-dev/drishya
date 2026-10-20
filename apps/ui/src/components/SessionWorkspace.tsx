@@ -399,6 +399,8 @@ export function PromptComposer() {
       // Editors and other fields own their chords. Inside our textarea this
       // shortcut only focuses/expands; it never inserts a line or submits.
       if (target instanceof Element && target.closest('input,textarea,[contenteditable],.cm-editor,.monaco-editor') && !element.current?.contains(target)) return;
+      const node = element.current;
+      if (!node || !node.getClientRects().length || getComputedStyle(node).visibility === 'hidden') return;
       event.preventDefault();
       document.documentElement.removeAttribute('data-ui-press');
       setChoice('open');
