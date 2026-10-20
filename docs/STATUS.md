@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| GIT-3 | @yash + Claude Sonnet 5.5 | `yash/git-3-commit-rows` | 2026-10-20 | `components/GitHistory.tsx`, `git-thread-graph.css`/atlas CSS, ref-filter helper in `lib/`, tests, TASKS/STATUS (at most 8 files). Commit rows synced with the timeline and ref filter; no daemon/contracts/Git graph geometry changes, no DATA-1/2 files. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
