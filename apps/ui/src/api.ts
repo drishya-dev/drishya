@@ -13,7 +13,7 @@ import type { NowFacts } from '../../../packages/scene/src/now.ts';
 import type { TurnLedger } from '../../../packages/scene/src/turns.ts';
 import type { Marker } from '@drishya/scene';
 import type { Operation } from '@drishya/contracts';
-import type { BlobSearchResult } from '../../../packages/store/src/search-types.ts';
+import type { BlobSearchResult, SessionSearchHit } from '../../../packages/store/src/search-types.ts';
 
 /** The reader's mark: the last observation sequence they marked as seen, and the one before it. */
 export interface ReadingBoundary {
@@ -92,7 +92,7 @@ export interface DataSource {
   approveGraph(id: string): Promise<RepoGraph>;
   artifact(id: string, artifactId: string, range?: { start: number; count: number }): Promise<ArtifactSlice>;
   artifactFind?(id: string, artifactId: string, query: string, start: number, continuation?: string): Promise<BlobSearchResult>;
-  search(id: string, q: string): Promise<{ observationId: string; snippet: string }[]>;
+  search(id: string, q: string): Promise<SessionSearchHit[]>;
   setLive(id: string, on: boolean): Promise<boolean>;
   /** One bounded passive read of an already imported local journal. No persistent watch. */
   refreshRecording?(id:string):Promise<{added:number;more:boolean}>;
@@ -234,7 +234,7 @@ export const daemon: DataSource = {
   approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
   artifactFind: (id, art, query, start, continuation) => req<BlobSearchResult>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?${new URLSearchParams({ find: query, start: String(start), ...(continuation ? { cursor: continuation } : {}) })}`),
-  search: async (id, q) => (await req<{ hits: { observationId: string; snippet: string }[] }>(`/v1/recordings/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`)).hits,
+  search: async (id, q) => (await req<{ hits: SessionSearchHit[] }>(`/v1/recordings/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`)).hits,
   setLive: async (id, on) => (await req<{ live: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/live`, { method: 'POST', json: { on } })).live,
   refreshRecording: id => req(`/v1/recordings/${encodeURIComponent(id)}/refresh`,{method:'POST',json:{}}),
   sessionSegments: id=>req(`/v1/recordings/${encodeURIComponent(id)}/segments`),
@@ -328,9 +328,9 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     },
     search: async (_id, q) => {
       const t = q.toLowerCase();
-      const hits: { observationId: string; snippet: string }[] = [];
-      for (const p of bundle.projection.prose) if (p.text.toLowerCase().includes(t)) hits.push({ observationId: p.observationIds[0]!, snippet: snippet(p.text, t) });
-      for (const o of bundle.projection.operations) if (o.title.toLowerCase().includes(t)) hits.push({ observationId: o.observationIds[0]!, snippet: o.title });
+      const hits: SessionSearchHit[] = [];
+      for (const p of bundle.projection.prose) if (p.text.toLowerCase().includes(t)) hits.push({ observationId: p.observationIds[0]!, snippet: snippet(p.text, t), kind: p.role === 'user' ? 'message.user' : p.role === 'reasoning' ? 'reasoning' : 'message.assistant' });
+      for (const o of bundle.projection.operations) if (o.title.toLowerCase().includes(t)) hits.push({ observationId: o.observationIds[0]!, snippet: o.title, kind: 'tool.call', tool: o.tool, ...(o.paths[0] ? { path: o.paths[0].path } : {}) });
       return hits.slice(0, 50);
     },
     setLive: unsupported,
