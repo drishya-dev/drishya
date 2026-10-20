@@ -640,17 +640,17 @@ export class Store {
 
   // ── search and bookmarks ───────────────────────────────────────────────────
 
-  /** Hits come with the turn they fall in (turn.start count for the same agent) and the tool call they belong to, shown in capture order. */
+  /** Hits come with the turn they fall in (turn.start count for the same agent, else prompts for harnesses that record none) and the tool call they belong to, shown in capture order. */
   search(recordingId: string, query: string, limit = 50): SessionSearchHit[] {
     const safe = query.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
     if (!safe) return [];
-    const rows = this.q(`SELECT search.observation_id AS observationId, snippet(search, 0, '«', '»', '…', 12) AS snippet, o.seq AS seq, o.kind AS kind, o.source_time AS time,
+    const rows = this.q(`SELECT search.observation_id AS observationId, snippet(search, 0, '«', '»', '…', 12) AS snippet, o.seq AS seq, o.kind AS kind, o.source_time AS time, o.operation_id AS operationId,
         json_extract(o.body, '$.payload.tool') AS tool, json_extract(o.body, '$.payload.intent.path') AS path, json_extract(o.body, '$.payload.intent.command') AS command,
-        (SELECT COUNT(*) FROM observations u WHERE u.recording_id = o.recording_id AND u.agent_id = o.agent_id AND u.kind = 'turn.start' AND u.seq <= o.seq) AS turn
+        (SELECT COUNT(*) FROM observations u WHERE u.recording_id = o.recording_id AND u.agent_id = o.agent_id AND u.kind = CASE WHEN EXISTS (SELECT 1 FROM observations s WHERE s.recording_id = o.recording_id AND s.agent_id = o.agent_id AND s.kind = 'turn.start') THEN 'turn.start' ELSE 'message.user' END AND u.seq <= o.seq) AS turn
       FROM search JOIN observations o ON o.id = search.observation_id AND o.recording_id = search.recording_id
       WHERE search MATCH ? AND search.recording_id = ? LIMIT ?`).all(safe, recordingId, limit) as any[];
     return rows.sort((x, y) => x.seq - y.seq).map((r) => ({
-      observationId: r.observationId, snippet: r.snippet, kind: r.kind, ...(r.time ? { time: r.time } : {}), ...(r.turn ? { turn: r.turn } : {}),
+      observationId: r.observationId, snippet: r.snippet, kind: r.kind, ...(r.operationId ? { operationId: r.operationId } : {}), ...(r.time ? { time: r.time } : {}), ...(r.turn ? { turn: r.turn } : {}),
       ...(typeof r.tool === 'string' ? { tool: r.tool } : {}), ...(typeof r.path === 'string' ? { path: r.path } : {}), ...(typeof r.command === 'string' ? { command: r.command.slice(0, 120) } : {}),
     }));
   }

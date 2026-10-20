@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | UI-5 | @yash + Codex | `codex/ui-5-file-evidence-chrome` | 2026-10-20 | Finish remaining UI-5 across captured/current readers and Workspace: FileHistory.tsx, CapturedSourceComparison.tsx (presentation only), DeveloperWorkspace.tsx, SessionWorkspace.tsx CurrentFileReader chrome only if needed, scoped CSS, focused browser checks and TASKS/STATUS/review (at most 12 files). Existing Git/patch/source work is retained and reverified. Preserve Legacy, evidence/draft loading/selection/comparison/consent and motion; no History/Viewer/backend/schema/data files. |
-| GIT-2 | @yash + Claude Sonnet 5.5 | `yash/git-2-session-links` | 2026-10-20 | Git history only: `apps/daemon/src/git-history.ts` + `git-types.ts` (session links per commit page from the recording search index), `GitHistory.tsx`, `GitThreadGraph.tsx` peek, `CommitRows.tsx`, tests, TASKS/STATUS (at most 9 files). No GitReview/DeveloperWorkspace/ArtifactReader (UI-5), no adapters/contracts/projection (DATA-1/2), no store schema. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -40,6 +39,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+
+### Yash with Claude (Sonnet 5.5) — GIT-2 session ↔ commit links (partial)
+
+- **When:** 20 October 2026. `git-session-links.ts` reads the recording search index per commit page (full hash or 7-char prefix in tool results); UI shows a turn chip, a peek line and a "Seen in turn N" button. Search hits now carry `operationId`; turn falls back to prompt count for harnesses without `turn.start`. Verified on a real Claude session and daemon/browser specs. Also stabilised the commit-row grid (empty refs/turn cells keep columns aligned). **Open:** time+path matching and the working-tree entry.
 
 ### Yash with Claude (Sonnet 5.5) — REVIEW-1 Changes (partial)
 

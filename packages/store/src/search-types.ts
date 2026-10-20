@@ -16,5 +16,5 @@ export interface LibrarySearchPage {
 /** One in-session hit with where it sits: the turn it falls in and, for tool activity, the tool and path. Read-only context. */
 export interface SessionSearchHit {
   observationId: string; snippet: string;
-  kind?: string; time?: string; turn?: number; tool?: string; path?: string; command?: string;
+  operationId?: string; kind?: string; time?: string; turn?: number; tool?: string; path?: string; command?: string;
 }
