@@ -35,7 +35,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | GIT-1 | @yash + Claude Opus 5.5 | next: `yash/git-1-*` | 2026-10-20 | Integrated in #138; remaining perf/acceptance/flow work in `apps/ui/src/components/GitThreadGraph.tsx`, `apps/ui/src/lib/git-light.ts`, `light-renderer.ts`, Git graph CSS and specs |
-| UI-1 | @yash + Claude Opus 5.5 | `yash/ui-1-chrome` (draft #137, awaiting builder look) | 2026-10-20 | `apps/ui/src/components/Viewer.tsx` modern header, `apps/ui/src/modern/hud.css`, `recovered-surfaces.css` header rule |
 
 ---
 
@@ -45,7 +44,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **When:** 20 October 2026. GIT-1 prototype #135 and integration #138; UI-1 draft #137; Codex READ-9 #136 reviewed, run locally (connected-workspace 18/18) and merged after resolving a claim-table conflict.
 - **GIT-1:** the Git graph draws WebGL2 filament light (`lib/git-light.ts`, `lib/light-renderer.ts`) under unchanged DOM commits; SVG ribbon only without WebGL2. Builder feedback applied: brighter core, branches clear of the river at every zoom, lightning opens forward only so time reads left → right. Still open: 60 fps measurement at 500 commits, fork/merge acceptance matrix, optional flow ([TASKS](TASKS.md) GIT-1).
-- **UI-1:** session title · repo · harness · model and a watch dot share the brand's outline (no capsule); phone brand mark restored. **Draft until the builder looks at it** (TASKS asks for that). Branch is not shown: the projection drops `session-meta.branch`.
+- **UI-1:** session title · repo · harness · model and a watch dot share the brand's outline (no capsule); phone brand mark restored. Builder approved and #137 merged; rest of UI-1 stays open, claim released. Branch is not shown: the projection drops `session-meta.branch`.
 - **Working with Codex in parallel:** Codex claims on `main`, works in its own worktree (which holds the local `main` branch, so this checkout pushes docs with `git push origin HEAD:main` from a detached `origin/main`), and marks its PR ready plus a STATUS note as the merge signal; Claude verifies and squash-merges.
 
 ### Yash with Codex - READ-9 (PR136, merged)

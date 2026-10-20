@@ -447,6 +447,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 
 - [ ] **UI-1 · Chrome consolidation and session identity** · P1 · `ui`
   - **19 October progress (107):** Session details in existing utilities shows exact title/harness/recording/root and journal-watch qualification. Modern central capsule remains absent under latest builder correction; proposed unified bar is not adopted here.
+  - **20 October, identity shipped (#137, builder approved):** the brand pill holds the session title and one quiet `repo · harness · model` line with a dot (journal watched; green while the agent works); phones show mark + title; the phone rule that had hidden the brand mark is fixed. No capsule, no new outline. **Still open:** branch in the identity line (needs the projection to keep `session-meta.branch`), fewer floating islands (Files|Repository, Git review|Git graph, Workspace), and the bottom-corner Tools/Follow overlap at narrow widths.
   - **Problem:** nine floating clusters (logo, Files|Repository, search/settings/menu, Git review|Git graph, Workspace, Toolbox, rail, Follow, composer), each with its own border. The session's title, repo, branch, harness and live state are invisible.
   - **Do:**
     - One slim top bar: identity (title · repo@branch · harness/model · live dot · LIVE-1 status), then navigation (Files · Git · Map · Workspace · Search · ⋯).
