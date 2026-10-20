@@ -2,6 +2,9 @@ import { useEffect, type RefObject } from 'react';
 import { useApp } from '../state.ts';
 import { materialIsMoving, moveMaterial } from './material-motion.ts';
 
+/** A hovered card never shrinks below a title strip and a few lines. */
+const MIN_READING_HEIGHT = 96;
+
 /** Enlarge one real DOM preview. Its resting slot stays in history; no evidence is copied. */
 export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
@@ -18,7 +21,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
     const restore = (focus: Focus) => {
       focus.animation?.cancel();
       focus.card.removeAttribute('data-hover-reading');
-      for (const name of ['--hover-left', '--hover-top', '--hover-width', '--hover-height']) focus.card.style.removeProperty(name);
+      for (const name of ['--hover-left', '--hover-top', '--hover-width', '--hover-height', '--hover-room']) focus.card.style.removeProperty(name);
       focus.slot.remove(); focuses.delete(focus);
       if (useApp.getState().hoveredOp === focus.card.dataset.opId && !focus.card.matches(':hover')) useApp.setState({ hoveredOp: undefined, hoveredPath: undefined });
       window.dispatchEvent(new Event('drishya-material-layout'));
@@ -76,17 +79,13 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       const left = Math.max(viewport.left + 16, Math.min(viewport.right - width - 16, from.left + (from.width - width) / 2));
       card.style.setProperty('--hover-width', `${width}px`); card.style.setProperty('--hover-height', 'auto');
       card.style.setProperty('--hover-left', `${left}px`); card.style.setProperty('--hover-top', `${top}px`);
-      // Keep the reading space near its source and clamp to real available bounds.
-      const style = getComputedStyle(card);
-      // scrollHeight omits the border: allocating it verbatim leaves a tiny
-      // overflow and an unnecessary scrollbar even when all content fits.
-      const body = card.querySelector<HTMLElement>('.op-body');
-      const bodyOverflow = body ? Math.max(0, body.scrollHeight - body.clientHeight) : 0;
-      // Tool previews allocate input and outcome independently. Include their
-      // hidden depth when opening a reader, not just the outer body's overflow.
-      const exchangeOverflow = [...card.querySelectorAll<HTMLElement>('.command-request,.tool-input,.result-content')].reduce((sum,node)=>sum+Math.max(0,node.scrollHeight-node.clientHeight),0);
-      const needed = Math.ceil(card.scrollHeight + bodyOverflow + exchangeOverflow + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 2);
-      const height = Math.min(bottom - top, innerHeight * .72, Math.max(from.height * 1.12, needed));
+      // Fit the content: lay the card out at its natural height with the most room it may take, measure it,
+      // then allocate exactly that (never padded) up to the viewport cap. A tall result scrolls inside the cap.
+      const room = Math.min(bottom - top, innerHeight * .72);
+      card.style.setProperty('--hover-room', `${room}px`); card.style.height = 'auto';
+      const natural = Math.ceil(card.getBoundingClientRect().height);
+      card.style.removeProperty('height');
+      const height = Math.min(room, Math.max(MIN_READING_HEIGHT, natural));
       card.style.setProperty('--hover-height', `${height}px`);
       card.style.setProperty('--hover-top', `${Math.max(top, Math.min(bottom - height, from.top + (from.height - height) / 2))}px`);
       const focus: Focus = previous ?? { card, slot, returning: false, scrollTop: root.scrollTop }; focus.returning = false; focus.scrollTop = root.scrollTop; active = focus; focuses.add(focus);
