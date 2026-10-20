@@ -1,0 +1,10 @@
+.history:focus-visible { outline: none; }
+.history article[data-reading-focus] { outline: 1px solid var(--focus); outline-offset: 3px; }
+.reading-key-notice { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.reading-shortcuts { width: min(540px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); }
+.reading-shortcuts > p, .reading-shortcuts > dl { margin: 16px 22px; }
+.reading-shortcuts > p { font-size: 13px; line-height: 1.6; color: var(--t2); }
+.reading-shortcuts dl > div { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 16px; padding: 8px 0; align-items: baseline; }
+.reading-shortcuts dt { margin: 0; }
+.reading-shortcuts dd { margin: 0; font-size: 13px; line-height: 1.5; }
+.reading-shortcuts kbd { font: 12px var(--mono); color: var(--t1); }
