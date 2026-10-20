@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| BUG-7 | @harsh + Claude Opus 5.5 | `harsh/bug-7-open-refresh-race` | 2026-10-19 | `state.ts` (openRecording/reloadProjection), `App.tsx` (useLiveUpdates), new unit test |
 
 ---
 
@@ -43,12 +42,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Delivered:** my TURN-1 (#130) broke the `session detours` journey (`fresh-workspace.spec.ts`), which I had not run: the ledger makes the first passage taller than the list's height estimate, so mounting it legitimately moves `scrollTop` from 160 to 199 to keep the content still. The journey's real assertion is the anchor surviving the detour; its `scrollTop === 160` precondition now waits for the scroll to settle. 10/10. Not a user-visible bug.
 - **Lesson:** run the whole `fresh-workspace` file before merging UI changes. It still has 17 failures from LIVE-2's composer pill (TEST-1).
 
+### Harsh with Claude (Opus 5.5) — BUG-7 open/refresh race; PR110 closed
+
+- **When:** 19 October 2026, `harsh/bug-7-open-refresh-race`.
+- **Delivered:** a live refresh starting while `openRecording` was still fetching took the newest projection token and discarded the open, so a returning session lost its restored reader. `reloadProjection` now waits for an in-flight open of the same recording (no schema or API change). PR110 closed with a disposition comment; its two remaining ideas are IDEA-5.
+- **Validation:** both TS; 575 units/106 files including the new race test (fails without the fix); "session detours" browser journey 10/10 at 150 ms and 10/10 with coalescing forced to 25 ms; `p1-pacing` and `connected-workspace` pass except the two TEST-1 journeys that also fail on main.
+- **Next:** review alongside PR128, which restores 150 ms coalescing and notes this race in STATUS; whichever lands second should drop that note.
+
 ### Harsh with Codex, then Claude (Opus 5.5) — Investigation, saved evidence and draft recovery finishing
 
 - **When:** 18–19 October 2026, `codex/investigation-finishing` (not yet pushed).
 - **Delivered:** items 2–6 of the remaining-work request ([107](review/107-investigation-finishing.md)): joined investigation with exact origin and return, Saved moments (50 references) and paged legacy notes, selected-evidence packets, explicit encrypted draft recovery in Workspace Actions, shared focus/Escape/switch polish; default journal poll 750→500 ms. Reconciled with main up to `b66f160` (PR111–125, claims). Claude concluded the merges, fixed three branch regressions (Workspace layout keyboard order; draft-bar reload-loss wording; Codex’s 25 ms browser refresh coalescing, reverted to 150 ms because it superseded `openRecording` and lost the reader restored after a session switch) and ran the final checks.
 - **Validation:** both TS; 562 units/103 files. Full browser on the pre-PR125 merge: 224 pass / 18 opt-in skip / 9 fail, all failing identically on clean main or flaky. After PR125, every `fresh-workspace` failure except the session-switch regression (now fixed, 3/3) also fails on clean `b66f160`; all are listed under TEST-1. Ten-minute soak 604 s / 88 rounds / 772 peak nodes; overhead observer −0.4%, observer+browser +2.4%, 0 lost (500 ms poll). Signed-in native checks remain builder-owned; no hosted CI.
-- **Next:** Yash reviews the PR; TEST-1 (now including the PR124/PR125 journeys); decide PR110 (conflicting, partly integrated per [111](review/111-adaptive-content-and-pr110.md)); latent race: a live refresh during `openRecording` discards the restored location, which a longer coalescing delay only hides.
+- **Next:** Yash reviews the PR; TEST-1 (now including the PR124/PR125 journeys); decide PR110 (conflicting, partly integrated per [111](review/111-adaptive-content-and-pr110.md)); the open/refresh race it noted is fixed by BUG-7 (merged right after).
 
 ### Yash with Claude (Opus 5.5) — Developer review, harness data audit, restructured TASKS
 
