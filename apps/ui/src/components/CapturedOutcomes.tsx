@@ -2,7 +2,7 @@ import {useId,useMemo,useState,type ReactNode} from 'react';
 import {capturedOutcomes,type CapturedOutcome,type OutcomeState} from '../lib/captured-outcomes.ts';
 import {testTiles} from '../lib/test-tiles.ts';
 import './captured-outcomes.css';
-import {useArtifact} from './common.tsx';
+import {useArtifact,Output} from './common.tsx';
 import {ReadingDialog} from './ProductShell.tsx';
 import {outcomeMaterial} from '../lib/outcome-material.ts';
 
@@ -45,7 +45,7 @@ function RunOutcomes({run,onFailure}:{run:CapturedOutcome;onFailure?:()=>void}){
   <div className="verification-basis">Derived · {run.observedOnly?'captured result rows only · runner totals unavailable':tap?.ordered?'captured flat TAP indices':cases.length?'captured result rows · runner summary totals':'grouped counts, not execution order'}{total>displayed?` · ${total-displayed} additional outcomes in counts`:''}</div>
   {current&&<div onClick={event=>event.stopPropagation()}><ReadingDialog title="Captured test result" className="test-result-dialog" close={()=>{setSelected('');setPeek('');}}><div id={detail} className="case-evidence" role="region" aria-label="Selected captured test result" onClick={event=>event.stopPropagation()}>
    <div><strong>{current.name}</strong></div>
-   <small>Captured output {run.output} · excerpt near line {current.line} · {current.state}</small><pre>{current.context}</pre>
+   <small>Captured output {run.output} · excerpt near line {current.line} · {current.state}</small><Output text={current.context}/>
    {onFailure&&<button type="button" className="material-more" onClick={()=>{setSelected('');onFailure();}}>Open full captured output</button>}
   </div></ReadingDialog></div>}
  </section>;

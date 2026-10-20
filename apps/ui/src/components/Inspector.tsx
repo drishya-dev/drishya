@@ -1,3 +1,5 @@
+import {CapturedPath,openCapturedPath} from './CapturedPath.tsx';
+import {prosePath} from '../lib/prose-path.ts';
 import { ToolInput } from './ToolInput.tsx';
 import {StructuredResult} from './StructuredResult.tsx';
 import { useEffect, useMemo, useState } from 'react';
@@ -77,7 +79,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
       return (
         <>
           <p className="insp-note">
-            {art?.range ? `Captured lines ${art.range.start}–${art.range.end}` : `Read range from line ${d.startLine}${d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''}`} of <code className="md-path" onClick={() => set({ filePanel: d.path })}>{d.path}</code>.
+            {art?.range ? `Captured lines ${art.range.start}–${art.range.end}` : `Read range from line ${d.startLine}${d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''}`} of <CapturedPath path={d.path} line={d.startLine} evidence={`${op.id}/read`}>{d.path}</CapturedPath>.
             {art?.kind === 'excerpt' && ' Nothing outside this range is known for this moment.'}
           </p>
           {art && <ProvenanceBadge artifact={art} />}
@@ -98,7 +100,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
           </p>
           <div className="hit-list">
             {d.hits.map((h, i) => (
-              <button key={i} className="hit-row" onMouseEnter={() => set({ hoveredPath: h.path })} onMouseLeave={() => set({ hoveredPath: undefined })} onClick={() => set({ filePanel: h.path })}>
+              <button key={i} className="hit-row" onMouseEnter={() => set({ hoveredPath: h.path })} onMouseLeave={() => set({ hoveredPath: undefined })} onClick={() => {const ref=prosePath(h.path,useApp.getState().recording?.workspaceRoot,true);if(ref)openCapturedPath({...ref,line:h.line},`${op.id}/search/${i}`);}}>
                 <span className="hit-path">{h.path}</span>
                 {h.line !== undefined && <span className="hit-line">:{h.line}</span>}
                 {h.text && <span className="hit-text">{h.text.trim()}</span>}
@@ -125,8 +127,7 @@ export function Detail({ op, projection }: { op: Operation; projection: Projecti
               <div className="failure-name">{f.name}</div>
               {f.file && (
                 <div className="muted">
-                  {f.file}
-                  {f.line ? `:${f.line}` : ''}
+                  <CapturedPath path={f.file} line={f.line}>{f.file}{f.line ? `:${f.line}` : ''}</CapturedPath>
                 </div>
               )}
               {f.message && <div className="failure-msg">{f.message}</div>}
