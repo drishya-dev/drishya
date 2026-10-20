@@ -409,6 +409,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 ### GIT — Git review, graph and Sacred Timeline
 
 - [ ] **GIT-1 · Sacred Timeline** · P1 · `git` `motion`
+  - **20 October progress:** step 1 prototype landed as [`docs/prototype/sacred-timeline.html`](prototype/sacred-timeline.html) (synthetic topology; WebGL2 additive filaments, half-float bloom, starfield, DOM commits/refs/peek/keyboard; variants River, Ice, Storm; `?lite=1`). **Waiting for builder sign-off on the stills** before swapping the drawing layer in `GitThreadGraph`.
   - Build to the spec in [124](review/124-sacred-timeline-git-graph.md):
     - WebGL/Canvas additive **filaments** with bloom;
     - the main line as a braided luminous river;
