@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| UI-10 | @yash + Codex | `codex/ui-10-tool-lists` | 2026-10-20 | Bounded tool-inventory increment: `modern/ModernTools.tsx`, new scoped list CSS, shared pure count/cap helper, helper/browser checks and TASKS/STATUS/review note (at most 9 files). MCP/runtime lists only; no station reflow, agent families, History/App/ProductShell, SessionWorkspace, Git/UI-5, Home/UI-2, adapters/contracts or Usage. Small3/large300 and actual-session checks; broader surfaces remain open. Draft then READY handoff for Claude. |
 | UI-5 | @yash + Codex | `codex/ui-5-git-controls` | 2026-10-20 | Bounded Modern Git review chrome: `components/GitReview.tsx`, new scoped CSS, focused browser coverage and TASKS/STATUS/review note (at most 7 files). Reuse existing WorkspaceOptions; no shared menu logic, ArtifactReader, History/App/ProductShell, Git graph/backend, adapters/contracts or Usage. Top-level/selected-file controls only; broader Workspace/reader density remains open. Draft then READY handoff for Claude. |
 | DATA-2 | @harsh + Claude Opus 5.5 | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Claude Opus 5.5 | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
@@ -40,12 +41,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 
-### Yash with Codex — UI-2 Home typography ready
+### Yash with Codex — UI-5 / UI-2 / UI-10 ready for review
 
-- **When:** 20 October 2026, `codex/ui-2-home-type`, PR #145. **READY FOR CLAUDE REVIEW / MERGE**. Home CSS and focused coverage only; no global tokens or visualization changes.
-- **Delivered:** Home metadata now has an11px floor at desktop and phone sizes; About/refresh/filter labels meet12px. Claude's Home mark uses the theme's contrast-checked edited color instead of a fixed pale tint. Existing font family, compact layout, row measurements and virtualized scrolling retained.
-- **Validation:** UI typecheck, production build, existing seven-palette contrast guard and four local Edge journeys: new type/contrast and300-session keyboard/phone checks, plus actual redacted-store Home GitHub/accessibility checks. Actual Drishya/Skeletongraph Codex+Claude Home inspected before/after. See [UI-2 note](review/ui-2-home-typography.md). No hosted CI; physical-device and full-product typography acceptance stay open.
-- **Handoff:** Claude owns merge. Git review controls are separately ready in #144. UI-2 and UI-5 stay open for remaining surfaces; the dependency table remains the retest source.
+- **When:** 20 October 2026. Three independent bounded increments, each **READY FOR CLAUDE REVIEW / MERGE**: #144 (`codex/ui-5-git-controls`), #145 (`codex/ui-2-home-type`), #146 (`codex/ui-10-tool-lists`). Each removes only its own claim; Claude owns review and squash-merge.
+- **UI-5 / #144:** compact Modern Git review identity/controls; handoff, recorded work and Git history reuse the keyboard/outside-dismissible Actions menu. Selected path and Open on disk share one line. Both typechecks/build, two responsive Modern journeys and the retained Legacy exact-review/handoff journey pass; actual Drishya Codex before/after inspected. Shared readers and Workspace density remain open.
+- **UI-2 / #145:** Home metadata11px floor and small controls12px; theme-aware Claude mark. UI typecheck/build, seven-palette contrast guard, two new type/300-session keyboard journeys and two actual-store Home checks pass. Other typography surfaces remain open.
+- **UI-10 / #146:** shared small/large policy for MCP/runtime inventories: natural short height,216px/36dvh maximum for long lists, every entry retained. UI typecheck/build, two helper cases and two Edge journeys with3/300 tools at1440/390/320px pass. Actual Drishya Codex context inspected with a synthetic300-tool controller response; long body13040px becomes216px. Other count-dependent surfaces remain open.
+- **Integration:** all three branches reconcile main through2fbbf61, retaining DATA-1/DATA-2 and other active claims. Their implementation files do not overlap; this same handoff block is used to reduce documentation conflicts between merges. Before/after notes and limits are in each PR's review document. No hosted CI, shared global palette change, schema/adapter edit or new native prompt. Phone layouts are emulation, not physical-device acceptance.
 
 ### Yash with Codex — TURN-2 keyboard reading ready
 
