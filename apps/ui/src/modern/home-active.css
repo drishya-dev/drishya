@@ -1,0 +1,10 @@
+/* HOME-1: sessions whose journals are changing now, as one quiet line above the library. */
+.mh-active {display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0 4px;min-width:0;}
+.mh-active>h2 {font:550 11px/1.5 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin:0 4px 0 0;}
+.mh-active>button {display:flex;align-items:center;gap:8px;min-width:0;max-width:min(320px,100%);padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--s1);color:var(--t2);}
+.mh-active>button strong {font:12px/1.5 var(--sans);font-weight:450;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.mh-active>button small {font:11px/1.5 var(--sans);color:var(--t3);white-space:nowrap;}
+.mh-active>button::before {content:"";width:6px;height:6px;border-radius:50%;background:var(--pass);flex:none;order:-1;}
+.mh-active-more {font:11px/1.5 var(--sans);color:var(--t3);}
+@media(hover:hover) and (pointer:fine){.mh-active>button:hover {background:var(--s2);}}
+@media(max-width:620px){.mh-active>button small {display:none;}}
