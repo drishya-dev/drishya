@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| GIT-3 | @yash + Claude Sonnet 5.5 | `yash/git-3-commit-rows` | 2026-10-20 | `components/GitHistory.tsx`, `git-thread-graph.css`/atlas CSS, ref-filter helper in `lib/`, tests, TASKS/STATUS (at most 8 files). Commit rows synced with the timeline and ref filter; no daemon/contracts/Git graph geometry changes, no DATA-1/2 files. |
 | DATA-2 | @harsh + Codex | `harsh/data-2-usage` | 2026-10-20 | `packages/contracts`, `packages/adapter-codex`, `packages/adapter-claude`, `packages/projection`, `apps/ui` Usage, new fixtures; D8 rescan in ingest/store/daemon and tests. Handoff scope spans more than 15 files, approximately 5 commits. **D4–D6 agreed by both (20 Oct); see the checks and the rescan requirement in [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 | DATA-1 | @harsh + Codex | `harsh/data-1-codex-items` (after DATA-2) | 2026-10-20 | `packages/adapter-codex`, `packages/contracts`, `packages/projection`, new fixtures. **D1, D2, D8 agreed by both (20 Oct); D8 needs an explicit rescan-from-start, see [125](review/125-event-schema-proposal.md#9-decisions-to-agree).** |
 
@@ -40,7 +39,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 
-### Yash with Codex — UI-5 ready; recent merged increments recorded
+### Yash with Claude (Sonnet 5.5) — GIT-3 commit rows and ref filter
+
+- **When:** 20 October 2026. Reviewed, locally verified and squash-merged Codex #144–#148 first (UI-5, UI-2, UI-10, TURN-3, TURN-4); one stale assertion in `fresh-workspace.spec.ts` (the Git review file toggle is now "Files") was fixed in #144.
+- **GIT-3:** `CommitRows` beneath the Git graph (graph-header toggle, remembered as `git/rows`): hash · message · refs · author · age, newest first, hover and selection mirror both ways, a row pick reveals an off-screen commit. The reference list starts as refs named by loaded commits (plus checked-out/picked) with "In view / All N"; search and All restore the paged server list. Fixed the reference column clipping its bottom controls.
+- **Verified:** typecheck/build, unit tests, the Git specs, and the real repo (50 rows; 18 of 86 refs in view). **Not done:** keyboard arrows between rows beyond Tab; row virtualization beyond `content-visibility` (6 pages × 50 rows).
+
+### Yash with Codex — UI-5, UI-2, UI-10, TURN-3, TURN-4 (PRs 144–148, merged 20 October)
 
 - **When:** 20 October 2026. UI-2 #145, UI-10 #146 and TURN-3 #147 have merged. UI-5 #144 is READY FOR CLAUDE REVIEW / MERGE; TURN-4 #148 remains ready separately. Claude owns review and squash-merge.
 - **UI-5 / #144:** compact Modern Git review identity, Workspace source, shared patch and historical-source toolbars. Patch search/layout/wrap share a row; multi-hunk navigation uses Patch options. Stored source keeps Find/Wrap and exact scope visible; validated line/range/copy tools use one menu with visible feedback. Actual patch allocation109→48px desktop,137→86px at320px; actual Claude stored-source before/after inspected.18 relevant browser journeys (including a two-line source without needless scroll), five diff/cache cases and both typechecks/build pass, plus prior Workspace checks.15 files, claim reconciled throughd4e2ab1. Broader Workspace headers/whole-reader acceptance remain open. READY FOR CLAUDE REVIEW / MERGE.

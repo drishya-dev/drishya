@@ -547,6 +547,11 @@ test('local Git atlas connects real branches and commits with root/merge patches
   const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();
   if(await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).isVisible())await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).click();
   const merged=atlas.locator(`[data-commit-hash="${merge}"]`);await expect(merged).toBeVisible();
+  // GIT-3: one compact row per loaded commit that mirrors the timeline both ways; references start as those named in view.
+  const mergeRow=atlas.locator(`[data-row-hash="${merge}"]`);await expect(mergeRow).toBeVisible();expect(await atlas.locator('.commit-row').count()).toBe(await atlas.locator('.thread-commit').count());
+  await mergeRow.click();await expect(mergeRow).toHaveAttribute('aria-pressed','true');await expect(merged).toHaveAttribute('aria-pressed','true');
+  await expect(atlas.getByRole('button',{name:'In view',exact:true})).toHaveAttribute('aria-pressed','true');await expect(atlas.getByRole('navigation',{name:'Reference pages'})).toHaveCount(0);
+  await atlas.getByRole('button',{name:/^All \d+/}).click();await expect(atlas.getByRole('navigation',{name:'Reference pages'})).toBeVisible();await atlas.getByRole('button',{name:'In view',exact:true}).click();
   // GIT-1: with WebGL2 the graph is filament light under DOM commits; without it the SVG ribbon (and its orbit) remains.
   const lit=await atlas.locator('.thread-stage.lit').count()>0;
   if(lit){
