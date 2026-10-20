@@ -347,6 +347,7 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
   - **Accept:** a browser-heavy Claude session (like this review's own session) reads as a browsing story, not 40 identical `Claude_Browser · computer` cards.
 
 - [ ] **CONTENT-3 · Questions and approvals as first-class cards** · P1 · `content` `live`
+  - **20 October, Claude question card (UI slice):** a captured `AskUserQuestion` renders as question text with its header and the captured answer (chosen options marked when the offered options are present; typed words shown separately) instead of raw JSON, in the card preview and the expanded view. **Limit found:** the projection bounds nested input, so offered options arrive as `{…}` placeholders and cannot be listed or marked; the card says so. A fuller card needs DATA-4 to keep option labels. **Open:** Codex questions (unverified), approval cards with the exact command or diff, and inline answering in a connected session.
   - **Sources:** Claude `AskUserQuestion` (questions/answers/annotations); Codex `request_user_input_async` and `AgentMessage.questions`; native pending approvals (already wired for the controller).
   - **Do:**
     - The question card shows each question with its options; the chosen answer is highlighted once answered.
@@ -621,7 +622,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - Fail on main `b66f160` since PR125 (idle composer collapses by default), passing before it: `fresh-workspace.spec.ts` :16, :313, :331, :397, :657 (both harnesses), :792, :1135, :1344, :1723, :1791, :1809, :1828. Most expect the composer expanded or a prompt control visible.
   - Flaky: `workspace-toolbar.spec.ts:88` (exposed-gutter scroll) passes and fails across runs of `codex/investigation-finishing`.
   - **Do:** decide per spec whether the product or the test is wrong, fix, and re-run each 10× for flakiness. **Accept:** all four pass 10 of 10 on a clean build.
-  - **20 October, later:** the two `classic-refinement` explorer specs that had been red since FILES-1 (#139) now clear the demo's captured paths from their synthetic trees (#164); #162 restored hover reading from file-title buttons after FILES-2 and updated one stale head click; the rail specs expect uniform ticks. **Still load-flaky when a whole file runs, passing alone:** `product-workspace` (paged prompt rail, studio hover reading) and `fresh-workspace` Home. Not yet diagnosed.
+  - **20 October, later:** the two `classic-refinement` explorer specs that had been red since FILES-1 (#139) now clear the demo's captured paths from their synthetic trees (#164); #162 restored hover reading from file-title buttons after FILES-2 and updated one stale head click; the rail specs expect uniform ticks. **Still load-flaky when a whole file runs, passing alone:** `fresh-workspace` "Workspace large draft comparison" (alternates pass/fail even alone), `product-workspace` (paged prompt rail, studio hover reading) and `fresh-workspace` Home. Not yet diagnosed.
 
 ---
 
