@@ -8,6 +8,7 @@ import type {CommandQuery,CommandPage} from '../../../packages/scene/src/command
 import type { ArtifactSlice, DiscoveredSource, Projection, RecordingHealth, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
 import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
 import { verificationFor, type VerificationTrail } from '../../../packages/scene/src/verification.ts';
+import { fixChainFor, type FixChain } from '../../../packages/scene/src/fix-chains.ts';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { NowFacts } from '../../../packages/scene/src/now.ts';
 import type { TurnLedger } from '../../../packages/scene/src/turns.ts';
@@ -107,6 +108,7 @@ export interface DataSource {
   since?(id: string, after: number, page?: number): Promise<SinceSnapshot>;
   /** P2-C: test runs recorded after one change, over the whole session; null if not a change. */
   verification?(id: string, operationId: string): Promise<VerificationTrail | null>;
+  fixChain?(id: string, operationId: string): Promise<FixChain | null>;
   /** Moves the mark. Only explicit reader actions call this. */
   setBoundary(id: string, sequence: number): Promise<ReadingBoundary>;
   /** New data (`added` > 0) or a capture-state change (`health` set, nothing added). */
@@ -246,6 +248,14 @@ export const daemon: DataSource = {
   },
   boundary: async (id) => (await req<{ boundary: ReadingBoundary | null }>(`/v1/recordings/${encodeURIComponent(id)}/boundary`)).boundary,
   since: (id, after, page = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/since?after=${after}&page=${page}`),
+  fixChain: async (id, operationId) => {
+    try {
+      return await req<FixChain>(`/v1/recordings/${encodeURIComponent(id)}/fix-chain/${encodeURIComponent(operationId)}`);
+    } catch (e) {
+      if (e instanceof HttpError && e.status === 404) return null;
+      throw e;
+    }
+  },
   verification: async (id, operationId) => {
     try {
       return await req<VerificationTrail>(`/v1/recordings/${encodeURIComponent(id)}/verification/${encodeURIComponent(operationId)}`);
@@ -298,6 +308,7 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     sources: async () => ({ sources: [], errors: [] }),
     // A bundle carries the whole projection, so freshness is computed here exactly as the worker would.
     verification: async (_id, operationId) => verificationFor(bundle.projection, operationId) ?? null,
+    fixChain: async (_id, operationId) => fixChainFor(bundle.projection, operationId) ?? null,
     importSource: unsupported,
     artifactFind: async (_id, art, query, start, continuation) => {
       const text = bundle.artifactText[art];

@@ -423,6 +423,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (!trail) throw new HttpError(404, 'not a captured change in this recording');
         return json(res, trail);
       }
+      // READ-7: a failed command, the next run of the same command and the edits between them.
+      if (sub === 'fix-chain' && subId && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'fix chains are computed per recording, not for a combined view');
+        app.recording(firstId);
+        const chain = await app.history.fixChain(id, subId);
+        if (!chain) throw new HttpError(404, 'no failure-to-later-run link for this command');
+        return json(res, chain);
+      }
       if (sub === 'since' && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');
         return json(res, await app.history.since(id, intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER), intParam(url, 'page', 0, 0, 1_000_000)));

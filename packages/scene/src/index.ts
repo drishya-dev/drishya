@@ -7,6 +7,7 @@ import { asOfProjection, type Agent, type Operation, type OperationKind, type Pr
 export { asOfProjection } from '@drishya/contracts';
 export { sinceBoundary, type SinceDigest, type SinceItem } from './since.ts';
 export { verificationFor, type VerificationCheck, type VerificationTrail } from './verification.ts';
+export { fixChainFor, type FixChain, type FixChainLink, type FixChainRun, type FixChainEdit } from './fix-chains.ts';
 
 export const COMPOSER_VERSION = 'c1';
 

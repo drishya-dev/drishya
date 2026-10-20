@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Operation } from '@drishya/contracts';
-import type { VerificationTrail } from '@drishya/scene';
+import type { FixChain, VerificationTrail } from '@drishya/scene';
 import { CapturedTime } from './common.tsx';
 import { useApp } from '../state.ts';
 
@@ -83,6 +83,51 @@ export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (ope
           </ul>
         </div>
       )}
+    </section>
+  );
+}
+
+// READ-7: a failed command and the next recorded run of the same command, with the edits
+// recorded between them. A relationship by recorded order, never a cause.
+export function FixChainPanel({ op }: { op: Operation }) {
+  const source = useApp((s) => s.source);
+  const recordingId = useApp((s) => s.recordingId);
+  const mode = useApp((s) => s.mode);
+  const revision = useApp((s) => s.renderedRevisions[recordingId ?? '']);
+  const select = useApp((s) => s.select);
+  const [chain, setChain] = useState<FixChain | null>();
+  const supported = !!source?.fixChain && !!recordingId && (source.kind === 'bundle' || !recordingId.includes('+'));
+
+  useEffect(() => {
+    setChain(undefined);
+    if (!supported || mode === 'replay') return;
+    let live = true;
+    source!.fixChain!(recordingId!, op.id).then((c) => live && setChain(c)).catch(() => live && setChain(null));
+    return () => {
+      live = false;
+    };
+  }, [supported, source, recordingId, op.id, mode, revision]);
+
+  if (!chain) return null;
+  const mark = (status: string) => (status === 'error' ? '✗' : status === 'ok' ? '✓' : '·');
+  return (
+    <section className="fix-chain" aria-label="Same command, later run" title="Same command, later run, in recorded order. The edits are not shown to be the reason the result changed.">
+      {chain.links.map((link) => (
+        <p key={link.from.operationId + link.to.operationId} className="small">
+          <button className={`link verify-open${link.from.operationId === op.id ? ' here' : ''}`} onClick={() => select(link.from.operationId)}><span className="bad">✗</span> failed{link.from.detail ? ` · ${link.from.detail}` : ''}</button>
+          <span className="muted"> → </span>
+          {link.totalEdits ? (
+            <details className="fix-chain-edits">
+              <summary>{link.totalEdits} edit{link.totalEdits === 1 ? '' : 's'}</summary>
+              <ul>{link.edits.map((e) => <li key={e.operationId}><button className="link verify-open" title={e.paths.join(', ')} onClick={() => select(e.operationId)}>{e.title}</button></li>)}</ul>
+              {link.totalEdits > link.edits.length && <small className="muted">{link.totalEdits - link.edits.length} more</small>}
+            </details>
+          ) : <span className="muted">no edits recorded</span>}
+          <span className="muted"> → </span>
+          <button className={`link verify-open${link.to.operationId === op.id ? ' here' : ''}`} onClick={() => select(link.to.operationId)}><span className={link.to.status === 'error' ? 'bad' : link.to.status === 'ok' ? 'good' : 'muted'}>{mark(link.to.status)}</span> {link.to.status === 'ok' ? 'passed' : link.to.status === 'error' ? 'failed again' : link.to.status}{link.to.detail ? ` · ${link.to.detail}` : ''}</button>
+        </p>
+      ))}
+      <small className="muted">Same command, later run · recorded order</small>
     </section>
   );
 }
