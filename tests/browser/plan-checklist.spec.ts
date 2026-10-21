@@ -34,7 +34,8 @@ test('repeated TodoWrite lists read as one evolving checklist, earlier updates a
  await expect(cards.nth(0)).toContainText('Revision 1 · 0 of 3 done');
  await expect(cards.nth(1)).toContainText('Revision 2 · 1 of 3 done');await expect(cards.nth(1)).toContainText('completed Read the cart code');
  // Expanded, the list steps back through the updates it went through.
- await cards.nth(2).getByRole('button',{name:/Expand/}).click();
+ // Keyboard, not a pointer: moving the pointer over the card can start hover reading, which moves it under the click.
+ const expand=cards.nth(2).locator('button.op-expand');await expand.focus();await page.keyboard.press('Enter');await expect(expand).toHaveAttribute('aria-expanded','true');
  const expanded=page.locator('.plan-material');await expect(expanded).toBeVisible();
  await expanded.getByRole('button',{name:'Earlier revision'}).click();
  await expect(expanded).toContainText('Revision 2 · 1 of 3 done');
