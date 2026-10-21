@@ -344,7 +344,7 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 - [ ] **CONTENT-1 · Images (finish)** · P1 · `content` `data`
   - **Sources:** Codex `ImageView.path` (348 in sample) and user `input_image` blocks; Claude Read of image files, Bash `isImage`, screenshot tools (browser MCP `computer` screenshot results); Codex `Extension` image generation (`savedPath`, `revisedPrompt`).
   - **Do:**
-    - Captured bytes present → bounded preview with fit/zoom/pan reader.
+    - Captured bytes present → bounded preview with fit/zoom/pan reader. D7 (revised 21 Oct): ≤ 4 MiB each, no count cap, ≤ 256 MiB distinct bytes per recording; over the limit → placeholder with size and consented "open original"; lazy, content-addressed, never inside history pages.
     - Path only → an honest card ("image at path, not captured") with an explicit, consented "Open current file" that says the current file may differ from what the agent saw.
     - Never auto-load remote images; never dump base64.
   - **Accept:** each source verified on actual sessions; missing, expired and remote states are explicit; the phone sheet works.
