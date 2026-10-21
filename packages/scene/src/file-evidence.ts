@@ -7,6 +7,8 @@ export interface FileEvidence {
   /** The file's latest captured change: created, edited or deleted. */
   change?: 'A' | 'E' | 'D';
   changeStatus?: 'ok' | 'unknown';
+  /** DATA-6: times the harness noticed this file change on disk outside its own edits. */
+  outside?: number;
   now: boolean;
 }
 
@@ -33,6 +35,12 @@ export function fileEvidence(projection: Projection, paths: readonly string[]): 
         entry.now ||= op.status === 'running';
         index.set(path, entry);
       }
+    }
+    for (const notice of projection.notices ?? []) {
+      if (notice.kind !== 'external-change' || !evidencePath(notice.path)) continue;
+      const entry = index.get(notice.path) ?? { path: notice.path, readCalls: 0, now: false };
+      entry.outside = (entry.outside ?? 0) + 1;
+      index.set(notice.path, entry);
     }
     indexes.set(projection, index);
   }

@@ -4,7 +4,7 @@
 
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, Observation } from '@drishya/contracts';
+import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, ExternalChangePayload, Observation } from '@drishya/contracts';
 import {
   fileInfo,
   headRecords,
@@ -23,7 +23,7 @@ import {
   type ToolIntent,
   type ToolOutcome,
 } from '@drishya/capture-core';
-import { sanitize } from '@drishya/privacy';
+import { isDeniedPath, sanitize } from '@drishya/privacy';
 
 export const descriptor: AdapterDescriptor = {
   id: 'claude-code',
@@ -193,7 +193,7 @@ export function createParser(ctx: ParseContext): RecordParser {
       const r = record as Rec;
       const type = String(r.type ?? '');
       if (typeof r.sessionId === 'string') lastSession = r.sessionId;
-      if (IGNORED.has(type)) return [];
+      if (IGNORED.has(type) && !(type === 'attachment' && (r.attachment as Rec | undefined)?.type === 'edited_text_file')) return [];
       const base = {
         recordId: typeof r.uuid === 'string' ? r.uuid : undefined,
         sourceTime: typeof r.timestamp === 'string' ? r.timestamp : undefined,
@@ -218,6 +218,13 @@ export function createParser(ctx: ParseContext): RecordParser {
         const messageId = str(type === 'file-history-snapshot' ? r.messageId ?? snap.messageId : r.snapshotMessageId);
         if (!messageId || !files.length) return [];
         return [{ ...base, part: 0, kind: 'checkpoint', payload: { messageId, ...defined({ at: str(snap.timestamp) ?? str(r.timestamp), session: lastSession }), files } satisfies CheckpointPayload }];
+      }
+
+      // DATA-6: Claude Code noticed a file it had read changed on disk outside its edit tools.
+      if (type === 'attachment' && (r.attachment as Rec | undefined)?.type === 'edited_text_file') {
+        const at = r.attachment as Rec;
+        if (typeof at.filename !== 'string' || !at.filename) return [];
+        return [{ ...base, part: 0, kind: 'external.change', payload: { path: at.filename, ...(typeof at.snippet === 'string' ? { snippet: at.snippet } : {}), basis: 'harness-notice' } satisfies ExternalChangePayload, contentKeys: ['snippet'], denyContent: isDeniedPath(at.filename) }];
       }
 
       if (type === 'cost-state') {

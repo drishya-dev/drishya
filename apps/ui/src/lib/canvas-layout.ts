@@ -24,6 +24,8 @@ export function canvasLayout(scene: Scene, projection: Projection, columns: numb
   const passages = lanes ? scene.agents.flatMap(agent => scene.passages.filter(p => p.agentId === agent.id)) : scene.passages;
   let previousAgent: string | undefined;
   for (const passage of passages) {
+    // Canvas draws operations and prose; a passage holding only harness notices (DATA-6) has nothing to place.
+    if (!passage.unloaded && !passage.ops.length && !passage.prose.length && !passage.turnPrompt) continue;
     const agent = projection.agents.find(a => a.id === passage.agentId);
     const x = lanes ? laneOffsets.get(passage.agentId) ?? 0 : agent?.parentId ? 24 : 0;
     const laneStart = lanes && previousAgent !== passage.agentId;

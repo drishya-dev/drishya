@@ -56,6 +56,8 @@ export interface ScenePassage {
   agentId: string;
   ops: SceneOp[];
   prose: SceneProse[];
+  /** DATA-6: harness notices recorded in this passage, as of this step. */
+  notices?: { id: string; arriving: boolean }[];
   /** Earlier passages ease back; the latest passage per agent is in front. */
   settled: boolean;
   matchesFilter: boolean;
@@ -149,6 +151,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const started = new Map<string, number>();
   const ended = new Map<string, number>();
   const proseAt = new Map<string, number>();
+  const noticeAt = new Map<string, number>();
   const stoppedAgents = new Set<string>();
   const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string; modeChange?: string }[] = [];
   let lastMode: string | undefined;
@@ -156,6 +159,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     if (it.type === 'op-start') started.set(it.operationId, i);
     else if (it.type === 'op-end') ended.set(it.operationId, i);
     else if (it.type === 'prose') proseAt.set(it.proseId, i);
+    else if (it.type === 'notice') noticeAt.set(it.noticeId, i);
     else if (it.type === 'agent-stop') stoppedAgents.add(it.agentId);
     else if (it.type === 'turn') {
       const modeChange = it.permissionMode && it.permissionMode !== lastMode ? it.permissionMode : undefined;
@@ -227,6 +231,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       agentId: ps.agentId,
       ops: sceneOps,
       prose: sceneProse,
+      ...(ps.noticeIds?.some((id) => noticeAt.has(id)) ? { notices: ps.noticeIds.filter((id) => noticeAt.has(id)).map((id) => ({ id, arriving: noticeAt.get(id) === step - 1 })) } : {}),
       settled: latestByAgent.get(ps.agentId) !== ps.id,
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,

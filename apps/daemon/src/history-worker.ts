@@ -158,6 +158,8 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   const proseIds = new Set(passages.flatMap((ps) => ps.prose.map((pr) => pr.id)));
   const operations = historical.operations.filter((op) => opIds.has(op.id));
   const prose = historical.prose.filter((pr) => proseIds.has(pr.id));
+  const noticeIds = new Set(passages.flatMap((ps) => ps.notices?.map((n) => n.id) ?? []));
+  const notices = historical.notices?.filter((n) => noticeIds.has(n.id));
   const artifactIds = new Set(operations.flatMap((op) => op.artifactIds));
   for (const pr of prose) if (pr.truncated) artifactIds.add(`art_${pr.id}_prose`);
   const evidenceIds = new Set([...operations.flatMap((op) => op.observationIds), ...prose.flatMap((pr) => pr.observationIds)]);
@@ -165,7 +167,7 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   const targets = new Set(links.flatMap((link) => [link.from, link.to]));
   const references = Object.fromEntries(historical.operations.filter((op) => targets.has(op.id)).map((op) => [op.id, { title: op.title, step: (op.endSequence ?? op.startSequence) + 1 }]));
   const projection: Projection = {
-    ...historical, operations, prose,
+    ...historical, operations, prose, ...(notices?.length ? { notices } : { notices: undefined }),
     artifacts: historical.artifacts.filter((a) => artifactIds.has(a.id)),
     links,
     passages: historical.passages.filter((ps) => selected.has(ps.id)),

@@ -9,7 +9,7 @@ import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { ScriptDetails } from './Inspector.tsx';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
+import type { Agent, Hunk, Notice, Operation, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
@@ -35,6 +35,7 @@ import { PlanChecklist } from './PlanChecklist.tsx';
 import { WebResults } from './WebResults.tsx';
 import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
 import { BeforeTurnPanel } from './BeforeTurn.tsx';
+import { NoticeLine } from './NoticeLine.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -160,6 +161,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
+  const notices = useMemo(() => new Map((projection.notices ?? []).map((n) => [n.id, n])), [projection]);
   const agents = useMemo(() => new Map(projection.agents.map((a) => [a.id, a])), [projection]);
 
   useLayoutEffect(() => {
@@ -601,7 +603,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
             const fold = foldOf(ps, folded);
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={measureKey(ps.id, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
-              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
+              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} notices={notices} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
             </div>;
           }),
         ])}
@@ -656,7 +658,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   );
 }
 
-const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, focus, foldable = false, folded = false, onFold }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; agent?: Agent; agents: Agent[]; focus: boolean; foldable?: boolean; folded?: boolean; onFold?: (id: string) => void }) {
+const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; notices: Map<string, Notice>; agent?: Agent; agents: Agent[]; focus: boolean; foldable?: boolean; folded?: boolean; onFold?: (id: string) => void }) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
@@ -680,6 +682,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
         const pr = prose.get(p.id);
         return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
       })}
+      {!folded && ps.notices?.map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
     </section>
   );
 });

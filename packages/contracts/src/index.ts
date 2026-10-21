@@ -40,6 +40,7 @@ export type ObservationKind =
   | 'usage'
   | 'item.completed'
   | 'checkpoint'
+  | 'external.change'
   | 'unknown';
 
 export interface Observation {
@@ -141,6 +142,14 @@ export interface CheckpointPayload {
   /** The harness session whose checkpoint folder holds the backups (a forked journal continues another session). */
   session?: string;
   files: { path: string; parentDir?: string; backup?: { name: string; version?: number; time?: string }; absent?: boolean }[];
+}
+
+/** A harness notice that a file changed on disk outside its own edit tools (review125 S5). Never attributed to a person. */
+export interface ExternalChangePayload {
+  path: string;
+  /** The changed region as the harness showed it to the model, line-numbered. */
+  snippet?: TextValue;
+  basis: 'harness-notice';
 }
 
 /** Accounting reported by a harness, never a price or missing token count inferred by Drishya. */
@@ -462,7 +471,24 @@ export type TimelineItem =
   | { type: 'op-end'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'prose'; id: string; proseId: string; sequence: number; agentId: string; time?: string }
   | { type: 'agent-stop'; id: string; sequence: number; agentId: string; time?: string }
-  | { type: 'gap'; id: string; sequence: number; agentId: string; reason: string; time?: string };
+  | { type: 'gap'; id: string; sequence: number; agentId: string; reason: string; time?: string }
+  | { type: 'notice'; id: string; noticeId: string; sequence: number; agentId: string; time?: string };
+
+/** DATA-6: the harness noticed a file changed on disk outside its own edits (you, another program, or a command). */
+export interface Notice {
+  id: string;
+  agentId: string;
+  kind: 'external-change';
+  path: string;
+  /** Line-numbered changed region, as the harness recorded it; bounded. */
+  snippet?: string;
+  truncated?: boolean;
+  /** Identical notices that followed (the harness repeats one until the model reads the file). */
+  repeats: number;
+  sequence: number;
+  time?: string;
+  observationIds: string[];
+}
 
 export interface Passage {
   id: string;
@@ -471,6 +497,8 @@ export interface Passage {
   operationIds: string[];
   /** Prose emitted right after these operations, rendered beneath. */
   proseIds: string[];
+  /** Harness notices recorded in this passage (DATA-6). */
+  noticeIds?: string[];
   firstStep: number;
   lastStep: number;
 }
@@ -487,6 +515,8 @@ export interface Projection {
   agents: Agent[];
   operations: Operation[];
   prose: Prose[];
+  /** Harness notices, e.g. files changed outside the agent (DATA-6). Absent in older projections. */
+  notices?: Notice[];
   artifacts: Artifact[];
   links: EvidenceLink[];
   timeline: TimelineItem[];
