@@ -127,6 +127,8 @@ export interface MessagePayload {
   exposure?: 'full' | 'summary' | 'none';
   /** Claude Code's permission mode when the person sent this prompt (e.g. acceptEdits, auto). */
   permissionMode?: string;
+  /** CONTENT-1: images attached to this prompt; see ToolResultPayload.images. */
+  images?: ToolResultPayload['images'];
   /** Why a `none` block has no text: stored encrypted, kept only as a signature, or recorded empty. */
   reason?: ReasoningGap;
 }
@@ -473,7 +475,7 @@ export interface EvidenceLink {
 
 /** One unit of playback. The timeline is what the transport steps through. */
 export type TimelineItem =
-  | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string; permissionMode?: string }
+  | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string; permissionMode?: string; /** CONTENT-1: images the person attached. */ images?: OperationImage[] }
   | { type: 'op-start'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'op-end'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'prose'; id: string; proseId: string; sequence: number; agentId: string; time?: string }

@@ -347,7 +347,12 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
     - **Storage and serving:** bytes go to the blob store with no preview; history pages carry only a hash. `/v1/recordings/:id/images/:sha` serves a recording's own images (nosniff, immutable).
     - **Cards:** lazy thumbnails sized by the recorded aspect ratio, a fit/actual-size reader, and a dashed note saying why an image was not kept. Exports leave image bytes out, as the engineering plan §10 asks.
     - **Real sessions:** 75 of 75 and 137 of 137 images kept and served (at most 6 ms each). Import time was unchanged after one fix: decode only the first 4 KB to identify the type.
-    - **Open (slice 2):** images you pasted into prompts, Codex `input_image` and `ImageView.path`, path-only cards with a consented "open current file", the browser strip (CONTENT-2), and the phone sheet.
+  - **21 Oct, slice 2 (pasted and Codex images):**
+    - **Pasted images:** images you paste into a prompt show under the prompt text. Claude stores them as separate parts of the prompt record; they meet the turn through that record, whichever part comes first.
+    - **Codex:** images attached to prompts and images in tool outputs (`input_image` data URLs) go through the same certified path. Remote image URLs are never stored or fetched.
+    - **Real sessions:** a Claude session showed 22 prompt images on 13 prompts plus 6 tool images. Two Codex sessions showed 3 prompt images plus 94 tool images, and 72 tool images. Every distinct image served; none refused. `REDUCER_VERSION` r15.
+    - **Old recordings:** a pasted image there was a capture-gap observation, so a rescan cannot replace it; forget and re-import instead.
+    - **Open (slice 3):** path-only cards with a consented "open current file" (no Codex `ImageView` items exist on this machine to verify against), the browser strip (CONTENT-2) and the phone sheet.
   - **Sources:** Codex `ImageView.path` (348 in sample) and user `input_image` blocks; Claude Read of image files, Bash `isImage`, screenshot tools (browser MCP `computer` screenshot results); Codex `Extension` image generation (`savedPath`, `revisedPrompt`).
   - **Do:**
     - Captured bytes present → bounded preview with fit/zoom/pan reader. D7 (revised 21 Oct): ≤ 4 MiB each, no count cap, ≤ 256 MiB distinct bytes per recording; over the limit → placeholder with size and consented "open original"; lazy, content-addressed, never inside history pages.

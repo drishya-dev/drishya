@@ -18,3 +18,6 @@
 .image-reader-stage.actual img {max-width:none;max-height:none;cursor:zoom-out;}
 @media (prefers-reduced-motion: no-preference) { .image-reader[open] {animation:image-reader-in 160ms cubic-bezier(.23,1,.32,1);} }
 @keyframes image-reader-in {from {opacity:0;transform:scale(.98);} to {opacity:1;transform:none;}}
+/* CONTENT-1: images the person attached sit under their prompt text. */
+.turn-images {flex:1 0 100%;min-width:0;font-size:12px;padding-left:calc(3ch + 12px);}
+.turn-images .op-images {margin-top:4px;}

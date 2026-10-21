@@ -307,6 +307,9 @@ export function createParser(ctx: ParseContext): RecordParser {
             }
           } else if (c.type === 'text' && !r.isMeta) {
             out.push({ ...base, part: i, kind: 'message.user', payload: { text: c.text, ...mode }, contentKeys: ['text'] });
+          } else if (c.type === 'image' && !r.isMeta && c.source?.type === 'base64') {
+            // CONTENT-1: an image the person attached; it belongs to the prompt in this same record.
+            out.push({ ...base, part: i, kind: 'message.user', payload: { text: '', images: [imageCandidate(c.source.data)] }, contentKeys: ['text', 'images'] });
           } else if (c.type === 'image') {
             out.push({ ...base, part: i, kind: 'capture.gap', payload: { reason: 'unsupported-content', detail: 'image omitted by privacy policy' }, availability: 'metadata-only' });
           }

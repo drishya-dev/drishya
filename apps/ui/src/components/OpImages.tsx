@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Operation, OperationImage } from '@drishya/contracts';
+import type { OperationImage } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import './op-images.css';
 
@@ -15,11 +15,10 @@ const WHY: Record<string, string> = {
  * CONTENT-1: images an action returned, as the agent received them. Thumbnails load only when on
  * screen, with their size reserved; the full image opens on request. Nothing is fetched from elsewhere.
  */
-export function OpImages({ op, compact = false }: { op: Operation; compact?: boolean }) {
+export function OpImages({ images, compact = false }: { images: OperationImage[]; compact?: boolean }) {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
   const [open, setOpen] = useState<OperationImage>();
-  const images = op.images ?? [];
   const url = (img: OperationImage) => img.sha && source?.imageUrl && recordingId ? source.imageUrl(recordingId, img.sha) : undefined;
   const shown = compact ? images.slice(0, 3) : images;
   return <div className={`op-images${compact ? ' compact' : ''}`} onClick={(e) => e.stopPropagation()}>

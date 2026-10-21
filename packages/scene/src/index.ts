@@ -3,7 +3,7 @@
 // only renders what this returns, so any paused frame can be rebuilt exactly and golden-tested.
 // Runs in both the daemon (tests, export) and the browser.
 
-import { asOfProjection, type Agent, type Operation, type OperationKind, type Projection, type Prose, type TimelineItem } from '@drishya/contracts';
+import { asOfProjection, type Agent, type Operation, type OperationImage, type OperationKind, type Projection, type Prose, type TimelineItem } from '@drishya/contracts';
 export { asOfProjection } from '@drishya/contracts';
 export { sinceBoundary, type SinceDigest, type SinceItem } from './since.ts';
 export { verificationFor, type VerificationCheck, type VerificationTrail } from './verification.ts';
@@ -69,6 +69,8 @@ export interface ScenePassage {
   turnStep?: number;
   /** Claude Code permission mode recorded with this prompt, only when it differs from the previous prompt's. */
   turnPermissionMode?: string;
+  /** CONTENT-1: images the person attached to this prompt. */
+  turnImages?: OperationImage[];
   /**
    * Timeline step of the prompt this passage follows, on every passage of the turn (not only the one that opens it),
    * so a reader can fold a finished turn even when its opening passage is paged out.
@@ -153,7 +155,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const proseAt = new Map<string, number>();
   const noticeAt = new Map<string, number>();
   const stoppedAgents = new Set<string>();
-  const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string; modeChange?: string }[] = [];
+  const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string; modeChange?: string; images?: OperationImage[] }[] = [];
   let lastMode: string | undefined;
   applied.forEach((it, i) => {
     if (it.type === 'op-start') started.set(it.operationId, i);
@@ -164,7 +166,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     else if (it.type === 'turn') {
       const modeChange = it.permissionMode && it.permissionMode !== lastMode ? it.permissionMode : undefined;
       if (it.permissionMode) lastMode = it.permissionMode;
-      turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt, time: it.time, ...(modeChange ? { modeChange } : {}) });
+      turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt, time: it.time, ...(modeChange ? { modeChange } : {}), ...(it.images?.length ? { images: it.images } : {}) });
     }
   });
 
@@ -238,6 +240,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
       ...(opensTurn&&turn?{turnStep:turn.step}:{}),
       ...(opensTurn&&turn?.modeChange?{turnPermissionMode:turn.modeChange}:{}),
+      ...(opensTurn&&turn?.images?{turnImages:turn.images}:{}),
       ...(turn ? { inTurn: turn.step } : {}),
     };
   });
@@ -253,6 +256,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     matchesFilter: !f || (!f.kind && !f.server && !f.tool && (!f.agentId || f.agentId === turn.agentId)),
     turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, inTurn: turn.step,
     ...(turn.modeChange ? { turnPermissionMode: turn.modeChange } : {}),
+    ...(turn.images ? { turnImages: turn.images } : {}),
   });
   materialPassages.forEach((passage, index) => {
     while (promptIndex < promptOnly.length && promptOnly[promptIndex]!.step < visible[index]!.firstStep) appendPrompt(promptOnly[promptIndex++]!);

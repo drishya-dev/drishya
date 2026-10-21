@@ -9,7 +9,7 @@ import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { ScriptDetails } from './Inspector.tsx';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Agent, Hunk, Notice, Operation, Projection, Prose } from '@drishya/contracts';
+import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
 import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
@@ -664,7 +664,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, 
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
     <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
@@ -801,10 +801,10 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </header>
       {!expanded && <div className="op-body">
         <OpPreview op={op} resolving={so.resolving} onSource={measureSource} />
-        {op.images?.length && !(op.detail.kind === 'read' && !op.detail.excerptArtifactId) ? <OpImages op={op} compact /> : null}
+        {op.images?.length && !(op.detail.kind === 'read' && !op.detail.excerptArtifactId) ? <OpImages images={op.images!} compact /> : null}
       </div>}
       {expanded && <ExpandedOperation op={op} />}
-      {expanded && op.images?.length ? <OpImages op={op} /> : null}
+      {expanded && op.images?.length ? <OpImages images={op.images!} /> : null}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
       <EvidenceNote op={op} />
     </article>
@@ -916,7 +916,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'read':
       return <>
         {op.status === 'running' && <div className="request-line excerpt-range">Requested from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · awaiting excerpt</div>}
-        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : !d.excerptArtifactId && op.images?.length ? <OpImages op={op} compact /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : !d.excerptArtifactId && op.images?.length ? <OpImages images={op.images!} compact /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
       </>;
     case 'edit':
       return <>
@@ -1016,7 +1016,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
  * a single line of what it did. The newest turn waits until the agent is quiet, and replay shows no ledger,
  * so nothing here tells the future.
  */
-function TurnBlock({ prompt, step, fold, permissionMode }: { prompt: string; step?: number; permissionMode?: string; fold?: { folded: boolean; toggle: () => void } }) {
+function TurnBlock({ prompt, step, fold, permissionMode, images }: { prompt: string; step?: number; permissionMode?: string; images?: OperationImage[]; fold?: { folded: boolean; toggle: () => void } }) {
   const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
   const newest = useTurns((s) => s.lastStep === step);
   const active = useNow((s) => !!s.view?.mark);
@@ -1041,6 +1041,7 @@ function TurnBlock({ prompt, step, fold, permissionMode }: { prompt: string; ste
       <span className="turn-who">You</span>
       <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
+      {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
       {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}
       {fold ? (
         // The ledger line is the fold control: what the turn did is what stays when it folds.
