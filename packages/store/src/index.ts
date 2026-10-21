@@ -19,6 +19,8 @@ const clockTime = (time: string | null | undefined) => time && Number.isFinite(D
 /** Strings longer than this move out of the observation into the blob store. */
 export const INLINE_LIMIT = 16 * 1024;
 const PREVIEW = 2048;
+/** D7 (revised 21 Oct): distinct image bytes one recording may keep. */
+const IMAGE_BUDGET = 256 * 1024 * 1024;
 
 export interface StoredCursor {
   offset: number;
@@ -503,6 +505,7 @@ export class Store {
       this.q('DELETE FROM recordings WHERE id = ?').run(id);
     });
     this.policyCache.delete(id);
+    this.imageBudgets.delete(id);
     const shared = new Set<string>();
     for (const table of ['observations', 'projections']) {
       for (const row of this.db.prepare(`SELECT body FROM ${table}`).iterate()) {
@@ -580,7 +583,7 @@ export class Store {
       for (const o of obs) {
         if (exists.get(o.id)) continue;
         seq += 1;
-        const full: Observation = { ...o, payload: this.externalize(o.payload) as Observation['payload'], receivedSequence: seq };
+        const full: Observation = { ...o, payload: this.externalize(o.payload, recordingId) as Observation['payload'], receivedSequence: seq };
         ins.run(full.id, recordingId, seq, full.kind, full.agentId, full.operationId ?? null, full.sourceTime ?? null, JSON.stringify(full));
         this.q('UPDATE observations SET clock_time=? WHERE id=?').run(clockTime(full.sourceTime), full.id);
         const text = searchableText(o);
@@ -685,19 +688,60 @@ export class Store {
   }
 
   /** Moves long strings into blobs, leaving a small reference with a preview. */
-  externalize(v: unknown): unknown {
+  externalize(v: unknown, recordingId?: string): unknown {
     if (typeof v === 'string') {
       if (v.length <= INLINE_LIMIT) return v;
       const { sha, bytes } = this.blobs.put(v);
       const ref: BlobText = { $blob: sha, bytes, preview: v.slice(0, PREVIEW) };
       return ref;
     }
-    if (Array.isArray(v)) return v.map((x) => this.externalize(x));
+    if (Array.isArray(v)) return v.map((x) => this.externalize(x, recordingId));
     if (v && typeof v === 'object') {
       if (typeof (v as BlobText).$blob === 'string') return v;
-      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, this.externalize(x)]));
+      const o = v as Record<string, unknown>;
+      if (o.kind === 'captured-image' && typeof o.data === 'string') return this.keepImage(o, recordingId);
+      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, this.externalize(x, recordingId)]));
     }
     return v;
+  }
+
+  /**
+   * D7 (revised 21 Oct): a recording keeps at most IMAGE_BUDGET of distinct image bytes. The base64
+   * goes to the blob store with no preview, so observations and history pages never carry it.
+   */
+  private keepImage(o: Record<string, unknown>, recordingId?: string): Record<string, unknown> {
+    const data = o.data as string, size = typeof o.bytes === 'number' ? o.bytes : data.length;
+    const sha = createHash('sha256').update(Buffer.from(data, 'utf8')).digest('hex');
+    if (recordingId) {
+      const budget = this.imageBudget(recordingId);
+      if (!budget.shas.has(sha)) {
+        if (budget.total + size > IMAGE_BUDGET) return { ...o, data: undefined, omitted: 'recording-budget' };
+        budget.shas.add(sha);
+        budget.total += size;
+      }
+    }
+    const { bytes } = this.blobs.put(data);
+    return { ...o, data: { $blob: sha, bytes, preview: '' } satisfies BlobText };
+  }
+
+  /** Image blobs this recording holds (CONTENT-1), so an image is served only to its own recording. */
+  imageShas(recordingId: string): ReadonlySet<string> { return this.imageBudget(recordingId).shas; }
+
+  private imageBudgets = new Map<string, { shas: Set<string>; total: number }>();
+  private imageBudget(recordingId: string) {
+    let budget = this.imageBudgets.get(recordingId);
+    if (budget) return budget;
+    budget = { shas: new Set(), total: 0 };
+    // Once per recording per process: the images it already holds count against its budget.
+    for (const row of this.q(`SELECT body FROM observations WHERE recording_id = ? AND body LIKE '%"captured-image"%'`).iterate(recordingId) as Iterable<{ body: string }>) {
+      for (const m of row.body.matchAll(/"kind":"captured-image"[^{}]*?"bytes":(\d+)[^{}]*?"data":\{"\$blob":"([0-9a-f]{64})"/g)) {
+        if (budget.shas.has(m[2]!)) continue;
+        budget.shas.add(m[2]!);
+        budget.total += Number(m[1]);
+      }
+    }
+    this.imageBudgets.set(recordingId, budget);
+    return budget;
   }
 
   // ── projections and graphs (rebuildable caches) ────────────────────────────

@@ -28,6 +28,7 @@ import { App, HttpError, VERSION } from './app.ts';
 import { storageUsage } from './storage.ts';
 import { readPersistedOutput } from './persisted-output.ts';
 import { readCheckpointFile } from './checkpoint-file.ts';
+import { readImage } from './images.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { sessionLinks } from './git-session-links.ts';
@@ -447,6 +448,16 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (id.includes('+')) throw new HttpError(400, 'saved output is read per recording, not for a combined view');
         app.recording(firstId);
         return json(res, await readPersistedOutput(app.store, firstId, subId));
+      }
+      // CONTENT-1: an image this recording captured inline, by content hash. Immutable, so cacheable.
+      if (sub === 'images' && subId && m === 'GET') {
+        const ids = id.split('+');
+        for (const key of ids) app.recording(key);
+        const image = readImage(app.store, ids, subId);
+        if (!image) throw new HttpError(404, 'No captured image with that hash in this recording.');
+        res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'private, max-age=31536000, immutable', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline' });
+        res.end(image.body);
+        return;
       }
       // DATA-5: a file as Claude Code checkpointed it at the start of a turn; workspace approval required.
       if (sub === 'checkpoint' && subId && m === 'GET') {

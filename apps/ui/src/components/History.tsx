@@ -36,6 +36,7 @@ import { WebResults } from './WebResults.tsx';
 import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
 import { BeforeTurnPanel } from './BeforeTurn.tsx';
 import { NoticeLine } from './NoticeLine.tsx';
+import { OpImages } from './OpImages.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -800,8 +801,10 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </header>
       {!expanded && <div className="op-body">
         <OpPreview op={op} resolving={so.resolving} onSource={measureSource} />
+        {op.images?.length && !(op.detail.kind === 'read' && !op.detail.excerptArtifactId) ? <OpImages op={op} compact /> : null}
       </div>}
       {expanded && <ExpandedOperation op={op} />}
+      {expanded && op.images?.length ? <OpImages op={op} /> : null}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
       <EvidenceNote op={op} />
     </article>
@@ -913,7 +916,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'read':
       return <>
         {op.status === 'running' && <div className="request-line excerpt-range">Requested from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · awaiting excerpt</div>}
-        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : !d.excerptArtifactId && op.images?.length ? <OpImages op={op} compact /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
       </>;
     case 'edit':
       return <>

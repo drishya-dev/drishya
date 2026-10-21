@@ -114,6 +114,8 @@ export interface DataSource {
   readBefore?(id: string, operationId: string): Promise<ReadBeforeWrite | null>;
   /** DATA-4: full output Claude Code saved to a file, read on request and redacted. Local recordings only. */
   persistedOutput?(id: string, operationId: string): Promise<PersistedOutput>;
+  /** CONTENT-1: where a captured image's bytes are served. Local recordings only. */
+  imageUrl?(id: string, sha: string): string;
   /** DATA-5: a Claude Code checkpoint backup, read on request with workspace approval. Local recordings only. */
   checkpoint?(id: string, backup: string): Promise<CheckpointFile>;
   /** Moves the mark. Only explicit reader actions call this. */
@@ -268,6 +270,7 @@ export const daemon: DataSource = {
       throw e;
     }
   },
+  imageUrl: (id, sha) => `/v1/recordings/${encodeURIComponent(id)}/images/${sha}`,
   checkpoint: (id, backup) => req<CheckpointFile>(`/v1/recordings/${encodeURIComponent(id)}/checkpoint/${encodeURIComponent(backup)}`),
   persistedOutput: (id, operationId) => req<PersistedOutput>(`/v1/recordings/${encodeURIComponent(id)}/persisted-output/${encodeURIComponent(operationId)}`),
   fixChain: async (id, operationId) => {

@@ -2,6 +2,8 @@
 // (AGENTS.md constraint 3). Pattern detection is best effort — it is never a guarantee.
 
 import type { RedactionNote } from '@drishya/contracts';
+import { captureImage } from './image.ts';
+export * from './image.ts';
 
 // p2: object keys, fields beside a dropped base64 payload and the branch name are redacted, and
 // matching runs before truncation. Data stored under p1 may hold secrets in those places.
@@ -171,7 +173,20 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
     if (Array.isArray(v)) return v.map((x, i) => walk(x, `${field}[${i}]`, denied));
     if (v && typeof v === 'object') {
       const o = v as Record<string, unknown>;
-      // Images are never kept: text redaction cannot certify them safe (engineering plan §10).
+      // D7 (revised 21 Oct): an image an adapter captured is kept only if its bytes re-check as an
+      // image within the limits, never inside a protected scope, and its data is never text-redacted.
+      if (o.kind === 'captured-image') {
+        const label = (x: unknown) => typeof x === 'string' && /^image\/[a-z]+$/.test(x) ? x : undefined;
+        if (denied || typeof o.data !== 'string') {
+          if (denied) omitted = true;
+          const size = (x: unknown) => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0;
+          return { kind: 'captured-image', ...(label(o.mime) ? { mime: o.mime } : {}), ...(size(o.bytes) ? { bytes: o.bytes } : {}), ...(size(o.width) ? { width: o.width } : {}), ...(size(o.height) ? { height: o.height } : {}), omitted: denied ? 'protected' : typeof o.omitted === 'string' && /^[a-z-]{1,20}$/.test(o.omitted) ? o.omitted : 'unrecognised' };
+        }
+        const kept = captureImage(o.data, { width: o.width, height: o.height });
+        if (!kept.data) omitted = true;
+        return kept;
+      }
+      // Other images are never kept: text redaction cannot certify them safe (engineering plan §10).
       if ((o.type === 'image' || o.type === 'base64') && ('source' in o || 'data' in o || 'base64' in o || 'file' in o)) {
         omitted = true;
         return { type: 'image', omitted: true };

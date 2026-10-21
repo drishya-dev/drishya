@@ -1,0 +1,20 @@
+/* CONTENT-1: captured images. Flat thumbnails with reserved size; the reader is a plain modal. */
+.op-images {display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-width:0;}
+.op-images.compact .op-image {height:72px;}
+/* A fixed height and the recorded aspect ratio size the thumbnail before its bytes arrive. */
+.op-image {display:block;flex:0 0 auto;height:180px;aspect-ratio:4 / 3;max-width:100%;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--s1);overflow:hidden;cursor:zoom-in;}
+.op-image img {display:block;width:100%;height:100%;object-fit:contain;}
+.op-image:hover, .op-image:focus-visible {border-color:var(--line-3, var(--t3));}
+.op-image-missing {padding:6px 8px;border:1px dashed var(--line);border-radius:6px;color:var(--t3);font:11.5px/1.5 var(--sans);}
+.op-images-more {align-self:center;color:var(--t3);font:11px/1.5 var(--sans);}
+.image-reader {width:min(96vw, 1400px);max-height:94vh;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--bg, #0b0b0c);color:var(--t1);}
+.image-reader::backdrop {background:#000a;}
+.image-reader-bar {display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font:12px/1.5 var(--sans);color:var(--t2);}
+.image-reader-bar span {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.image-reader-bar button {padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:none;color:var(--t2);font:inherit;cursor:pointer;}
+.image-reader-bar button:hover, .image-reader-bar button:focus-visible {color:var(--t1);}
+.image-reader-stage {display:grid;place-items:center;max-height:calc(94vh - 44px);overflow:auto;padding:12px;}
+.image-reader-stage img {max-width:100%;max-height:calc(94vh - 70px);object-fit:contain;cursor:zoom-in;}
+.image-reader-stage.actual img {max-width:none;max-height:none;cursor:zoom-out;}
+@media (prefers-reduced-motion: no-preference) { .image-reader[open] {animation:image-reader-in 160ms cubic-bezier(.23,1,.32,1);} }
+@keyframes image-reader-in {from {opacity:0;transform:scale(.98);} to {opacity:1;transform:none;}}
