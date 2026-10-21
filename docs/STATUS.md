@@ -37,6 +37,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude (Opus 5.5) — paused 21 Oct: PERF-2 measured, TEST-2 awaiting acceptance runs
+
+- **Merged today:** PERF-2 fixes 1–3 (#176), TEST-2 spec fixes (#177 connected-workspace Home search, #178 hover-fit retry, #179 keyboard Expand/ⓘ, #180 settings-typography waits for colour transitions). No open PRs or claims.
+- **PERF-2 (gate red):** idle re-measure is in [perf-2-latency](review/perf-2-latency.md). Visible update passes; interaction p95 (145–294 ms) and append + browser RSS on 563.8 MB (529 / 573 MiB) fail. First history page 6.8 → 4.0 s head-to-head. Next: profile the daemon thread during append beyond ingest; measure the worker's resident reducer + projection.
+- **TEST-2 (open):** every full-run failure seen so far has a recorded cause and fix. Acceptance still needs three consecutive clean full runs on main after #180; they were started and stopped at the builder's request. Run `DRISHYA_BROWSER_CHANNEL=msedge npx playwright test` three times and tick TEST-2 if all are clean.
+
 ### Harsh with Codex — PERF-2 reference-source handoff pending
 
 - **When:** 21 October 2026. Claimed follow-up to merged #176; coordinated on that PR. This machine has an i7-13650HX / 23.7 GiB RAM, unlike the i9-14900HX reference machine. No 166/347/564 MB journals exist in its Codex sessions/archive; largest available is 57.7 MB. Requested reference-machine execution/location; do not substitute the smaller source for the required gate matrix.
