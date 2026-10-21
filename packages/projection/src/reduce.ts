@@ -5,6 +5,7 @@
 import { createHash } from 'node:crypto';
 import type {
   AdapterDescriptor,
+  WebResult,
   Agent,
   Artifact,
   ArtifactKind,
@@ -35,7 +36,7 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r7';
+export const REDUCER_VERSION = 'r8';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -397,6 +398,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (output !== undefined && item.item !== 'command') st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_out`, kind: 'output', observedAtSequence: st.op.endSequence ?? st.op.startSequence, availability: o.availability, provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: text(output) }));
           st.intent = { kind: 'other' };
           if (st.op.detail.kind === 'mcp' && item.mcp) { st.op.detail.readOnlyHint = item.mcp.readOnlyHint; st.op.detail.error = item.mcp.error; }
+          if (st.op.detail.kind === 'web' && item.web?.results) st.op.detail.results = boundResults(item.web.results);
           if (!same) {
             if (parent) { st.op.parentOperationId = parent.op.id; relate(st.op); }
             else { timeline.push({ type: 'op-start', id: `s_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime }); st.op.endSequence = step(); timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime }); }
@@ -943,9 +945,12 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
     case 'mcp':
       op.detail.resultPreview = clip(resultText ?? '', PREVIEW);
       break;
-    case 'web':
-      op.detail.resultPreview = clip(c.text((outcome as Rec).text as TextValue) ?? resultText ?? '', PREVIEW);
+    case 'web': {
+      const full = c.text((outcome as Rec).text as TextValue) ?? resultText ?? '';
+      op.detail.resultPreview = clip(full, PREVIEW);
+      op.detail.results ??= searchLinks(full);
       break;
+    }
     case 'spawn':
       op.detail.resultPreview = clip(c.text((outcome as Rec).text as TextValue) ?? resultText ?? '', PREVIEW);
       if (outcome.kind === 'spawn' && outcome.childAgentId) op.detail.childAgentId = `${o.recordingId}.${outcome.childAgentId}`;
@@ -1110,6 +1115,28 @@ export function previewValue(v: unknown, depth = 0, maxDepth = 3): unknown {
     return Object.fromEntries(Object.entries(v).slice(0, 30).map(([k, x]) => [k, previewValue(x, depth + 1, maxDepth)]));
   }
   return v;
+}
+
+/** Recorded search results, bounded: http(s) links only, at most 20, short fields. */
+export function boundResults(results: { url?: unknown; title?: unknown; domain?: unknown; snippet?: unknown }[] | undefined): WebResult[] | undefined {
+  const kept = (results ?? []).flatMap((r): WebResult[] => {
+    if (typeof r.url !== 'string' || !/^https?:\/\//i.test(r.url)) return [];
+    const str = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? clip(v.trim(), max) : undefined);
+    return [{ url: r.url.slice(0, 2048), title: str(r.title, 200), domain: str(r.domain, 100) ?? hostOf(r.url), snippet: str(r.snippet, 300) }];
+  }).slice(0, 20);
+  return kept.length ? kept : undefined;
+}
+
+/** Claude's WebSearch result names its links as `Links: [{"title":…,"url":…}, …]`. Reads whole pairs only. */
+export function searchLinks(text: string | undefined): WebResult[] | undefined {
+  if (!text) return undefined;
+  const at = text.indexOf('Links: [');
+  if (at < 0) return undefined;
+  const found: { url: string; title: string }[] = [];
+  for (const m of text.slice(at).matchAll(/\{"title":"((?:[^"\\]|\\.)*)","url":"((?:[^"\\]|\\.)*)"\}/g)) {
+    try { found.push({ title: JSON.parse(`"${m[1]}"`), url: JSON.parse(`"${m[2]}"`) }); } catch { /* a malformed pair is skipped, never guessed */ }
+  }
+  return boundResults(found);
 }
 
 /** A Fernet-style encrypted token (version byte 0x80, base64url), as Codex records some delegated tasks. */

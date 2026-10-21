@@ -296,10 +296,12 @@ export type OperationDetail =
   | { kind: 'shell'; command: string; exitCode?: number | null; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'test'; command: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
-  | { kind: 'web'; url?: string; query?: string; resultPreview?: string }
+  | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[] }
   | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string; /** The harness recorded the task text only in encrypted form. */ descriptionEncrypted?: boolean }
   | { kind: 'plan'; items: { text: string; status: string }[] }
   | { kind: 'other'; input: unknown; resultPreview?: string };
+
+export interface WebResult { url: string; title?: string; domain?: string; snippet?: string }
 
 export interface SearchHit {
   path: string;
