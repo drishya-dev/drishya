@@ -38,7 +38,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Claude (Opus 5.5) — DATA-6 outside changes, DATA-5 checkpoints, DATA-4 Claude extras, CONTENT-9; PERF-2 profile earlier
+### Yash with Claude (Opus 5.5) — CONTENT-1 images (slice 1); DATA-4/5/6 and CONTENT-9 earlier today
+- **CONTENT-1 slice 1:** images in Claude tool results are kept under the revised D7 (signature-checked, 4 MiB each, 256 MiB per session), served lazily by hash and shown as thumbnails with a reader. Details are in TASKS CONTENT-1. The claim stays open for slice 2 (pasted images, Codex images, path-only cards).
 
 - **DATA-6:** Claude Code's "file changed outside its edits" notices show as a muted line in history (snippet on click, placed in recorded order) and a ≠ mark on the file row, never attributed to a person. Details are in TASKS DATA-6. review125 S5 is now complete. **Next:** CONTENT-1 (images) with the revised D7.
 
