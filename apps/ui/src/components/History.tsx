@@ -2,6 +2,8 @@ import { ReadingKeys } from './ReadingKeys.tsx';
 import { CommandText } from './CommandText.tsx';
 import {commandDisplay} from '../lib/command-display.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
+import { reasoningGap } from '../lib/reasoning-gap.ts';
+import './reasoning-gap.css';
 import { ToolInput } from './ToolInput.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
@@ -702,6 +704,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   }, [arriving, pr.id]);
   const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   if (label && detail === 'hidden') return null;
+  if (pr.exposure === 'none') return <ReasoningGapLine pr={pr} agent={agent} />;
   return (
     <div ref={prose} data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
@@ -712,6 +715,20 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
       )}
       {open && <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />}
       {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); }}>{full ? 'Close full captured text' : 'Preview · read full captured text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
+    </div>
+  );
+}
+
+/** One quiet line where reasoning happened but its text was never saved. Never filled in. */
+function ReasoningGapLine({ pr, agent }: { pr: Prose; agent?: Agent }) {
+  const [why, setWhy] = useState(false);
+  const gap = reasoningGap(pr, agent?.harness);
+  return (
+    <div data-prose-id={pr.id} data-agent-id={pr.agentId} className="prose prose-reasoning reasoning-gap">
+      <button className="reasoning-gap-line" onClick={() => setWhy((v) => !v)} aria-expanded={why} title={gap.explain}>
+        <span>{gap.line}</span>{gap.count && <small>{gap.count}</small>}<span className="reasoning-gap-info" aria-hidden>ⓘ</span>
+      </button>
+      {why && <p className="reasoning-gap-why">{gap.explain}</p>}
     </div>
   );
 }

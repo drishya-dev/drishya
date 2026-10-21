@@ -253,7 +253,9 @@ export function createParser(_ctx: ParseContext): RecordParser {
         }
         case 'reasoning': {
           const text = (Array.isArray(p.summary) ? p.summary : []).map((s: Rec) => s.text).filter(Boolean).join('\n\n');
-          return text ? [{ ...base, kind: 'reasoning', payload: { text, exposure: 'summary' }, contentKeys: ['text'] }] : [];
+          if (text.trim()) return [{ ...base, kind: 'reasoning', payload: { text, exposure: 'summary' }, contentKeys: ['text'] }];
+          // Reasoning happened but only its encrypted form was saved; never decoded.
+          return [{ ...base, kind: 'reasoning', payload: { text: '', exposure: 'none', reason: p.encrypted_content ? 'encrypted' : 'empty' } }];
         }
         case 'function_call':
         case 'custom_tool_call':

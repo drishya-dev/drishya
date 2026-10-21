@@ -47,9 +47,12 @@ describe('Codex adapter', () => {
     for (const name of ['exec_command', 'functions.exec_command']) expect(intentOf(name, { cmd: 'echo captured' })).toEqual({ kind: 'shell', command: 'echo captured', cwd: undefined });
   });
 
-  it('never surfaces encrypted reasoning, only summaries', () => {
+  it('never surfaces encrypted reasoning: summaries, or a textless marker', () => {
     const p = createParser(ctx);
-    expect(p.parse({ type: 'response_item', payload: { type: 'reasoning', summary: [], encrypted_content: 'gAAAA' } })).toEqual([]);
+    // Encrypted-only reasoning is kept as a textless 'not recorded' marker; the ciphertext is never stored.
+    const [gap] = p.parse({ type: 'response_item', payload: { type: 'reasoning', summary: [], encrypted_content: 'gAAAA' } });
+    expect(gap!.payload).toEqual({ text: '', exposure: 'none', reason: 'encrypted' });
+    expect(JSON.stringify(gap)).not.toContain('gAAAA');
     const [o] = p.parse({ type: 'response_item', payload: { type: 'reasoning', summary: [{ type: 'summary_text', text: 'Plan' }], encrypted_content: 'gAAAA' } });
     expect(o!.payload).toEqual({ text: 'Plan', exposure: 'summary' });
     expect(JSON.stringify(o)).not.toContain('gAAAA');

@@ -36,7 +36,7 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r9';
+export const REDUCER_VERSION = 'r10';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -97,6 +97,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   // result does not scan every prior operation in a long session.
   const opGroups = new Map<string, string[]>();
   const prose: Prose[] = [];
+  // Reasoning recorded without text folds to one line per turn and agent (review125 S3).
+  const turnByRecording = new Map<string, string>();
+  const unrecorded = new Map<string, Prose>();
   const artifacts = new Map<string, Artifact>();
   const links: EvidenceLink[] = [];
   const timeline: TimelineItem[] = [];
@@ -415,12 +418,25 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (o.agentId !== 'agent:main') break;
           if (!firstPrompt) firstPrompt = clip(t.replace(/\s+/g, ' ').trim(), 120);
           const id = `turn_${o.id}`;
+          turnByRecording.set(o.recordingId, id);
           timeline.push({ type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime });
           break;
         }
         case 'message.assistant':
         case 'reasoning': {
           const t = text(p.text) ?? '';
+          if (o.kind === 'reasoning' && p.exposure === 'none') {
+            const a = ensureAgent(o);
+            const key = `${turnByRecording.get(o.recordingId) ?? o.recordingId}|${a.id}`;
+            const line = unrecorded.get(key);
+            if (line) { line.count = (line.count ?? 1) + 1; line.observationIds.push(o.id); break; }
+            const reason = p.reason === 'encrypted' || p.reason === 'signature-only' ? p.reason : 'empty';
+            const pr: Prose = { id: `prose_${o.id}`, agentId: a.id, role: 'reasoning', text: '', truncated: false, exposure: 'none', count: 1, reason, sequence: step(), time: o.sourceTime, observationIds: [o.id] };
+            unrecorded.set(key, pr);
+            prose.push(pr);
+            timeline.push({ type: 'prose', id: `t_${pr.id}`, proseId: pr.id, sequence: o.receivedSequence, agentId: a.id, time: o.sourceTime });
+            break;
+          }
           if (!t.trim()) break;
           const a = ensureAgent(o);
           if (typeof p.model === 'string') a.model = p.model;

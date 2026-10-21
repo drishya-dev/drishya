@@ -171,6 +171,7 @@ export function evidenceForOperation(p: Projection, operationId: string, art: Ar
       add({ ref: { type: 'operation', id: o.id }, observationIds: o.observationIds, step: stepOf(p, o.id), label: `${o.kind}: ${o.title}`, text: clipItem(describeOp(o, art)) });
     } else if (t.type === 'prose') {
       const pr = p.prose.find((x) => x.id === t.proseId)!;
+      if (pr.exposure === 'none') continue; // no recorded text to cite
       add({ ref: { type: 'prose', id: pr.id }, observationIds: pr.observationIds, step: pr.sequence + 1, label: proseLabel(pr), text: clipItem(pr.text) });
     }
   }
@@ -197,6 +198,7 @@ export function evidenceForBriefing(p: Projection, art: ArtifactText, fromStep =
       it = { ref: { type: 'operation', id: o.id }, observationIds: o.observationIds, step: stepOf(p, o.id), label: `${o.kind}: ${o.title}`, text };
     } else if (t.type === 'prose') {
       const pr = p.prose.find((x) => x.id === t.proseId)!;
+      if (pr.exposure === 'none') continue; // no recorded text to cite
       if (pr.role === 'reasoning' && pr.text.length > 1500) continue; // long private reasoning adds bulk, not outcomes
       it = { ref: { type: 'prose', id: pr.id }, observationIds: pr.observationIds, step: pr.sequence + 1, label: proseLabel(pr), text: clipItem(pr.text) };
     }
