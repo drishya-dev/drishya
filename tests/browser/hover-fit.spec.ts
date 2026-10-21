@@ -59,9 +59,15 @@ for (const harness of ['codex', 'short'] as const) test(`${harness}: a hovered c
   for (const opId of opIds) {
     const card = page.locator(`.history article.op[data-op-id="${opId}"]`);
     await card.scrollIntoViewIfNeeded();
-    await page.mouse.move(5, 5);
-    await card.locator('.op-head').first().hover();
-    try { await expect(card).toHaveAttribute('data-hover-reading', 'focused', { timeout: 2000 }); } catch { continue; }   // under the header or too close to an edge: hover reading declines, which is fine }
+    // A busy machine can miss the 2 s window once; a card that hover reading really declines (under the header, too
+    // close to an edge) declines again, so one retry separates slow from declined without loosening the bound.
+    let focused = false;
+    for (let attempt = 0; attempt < 2 && !focused; attempt++) {
+      await page.mouse.move(5, 5);
+      await card.locator('.op-head').first().hover();
+      focused = await expect(card).toHaveAttribute('data-hover-reading', 'focused', { timeout: 2000 }).then(() => true, () => false);
+    }
+    if (!focused) continue;   // under the header or too close to an edge: hover reading declines, which is fine
     found.push(await emptyBand(card));
     await page.keyboard.press('Escape');
     await expect(page.locator('.op[data-hover-reading]')).toHaveCount(0);
