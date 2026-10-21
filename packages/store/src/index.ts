@@ -601,20 +601,26 @@ export class Store {
     const rank = ids.map((_, i) => `WHEN ? THEN ${i}`).join(' ');
     return {
       *[Symbol.iterator]() {
-        const rows = store.db.prepare(`
+        // Sort only row ids, then fetch each body by id. Sorting rows that carry their whole JSON
+        // body cost a third of a large history's ordered read (PERF-2: 666 -> 450 ms on 26k rows).
+        const order = store.db.prepare(`
           WITH timed AS (
-            SELECT body, seq, recording_id,
+            SELECT rowid AS rid, seq, recording_id,
               MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (
                 PARTITION BY recording_id, json_extract(body, '$.source.sourceId') ORDER BY seq
                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
               ) AS clock_seq
             FROM observations WHERE recording_id IN (${marks})
-          ) SELECT timed.body FROM timed LEFT JOIN observations clock
+          ) SELECT timed.rid AS rid FROM timed LEFT JOIN observations clock
             ON clock.recording_id = timed.recording_id AND clock.seq = timed.clock_seq
           ORDER BY COALESCE(clock.clock_time, ''), timed.seq,
             CASE timed.recording_id ${rank} END
-        `).iterate(...ids, ...ids) as Iterable<{ body: string }>;
-        for (const row of rows) yield JSON.parse(row.body) as Observation;
+        `).all(...ids, ...ids) as { rid: number }[];
+        const body = store.q('SELECT body FROM observations WHERE rowid = ?');
+        for (const { rid } of order) {
+          const row = body.get(rid) as { body: string } | undefined;
+          if (row) yield JSON.parse(row.body) as Observation;
+        }
       },
     };
   }
