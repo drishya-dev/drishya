@@ -9,6 +9,7 @@ import type {
   CommandRun,
   BeforeTurn,
   CheckpointPayload,
+  OperationImage,
   Notice,
   Agent,
   Artifact,
@@ -43,7 +44,7 @@ import { placeChildren } from './children.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r14';
+export const REDUCER_VERSION = 'r15';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -108,6 +109,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const prose: Prose[] = [];
   // Reasoning recorded without text folds to one line per turn and agent (review125 S3).
   const turnByRecording = new Map<string, string>();
+  // CONTENT-1: a prompt's turn by "<recording>|<record id>", and images seen before its text part.
+  const turnByRecord = new Map<string, TimelineItem & { type: 'turn' }>();
+  const pendingTurnImages = new Map<string, OperationImage[]>();
   const unrecorded = new Map<string, Prose>();
   // DATA-5: checkpoints by "<recording>|<prompt id>", then by workspace path. Order-independent:
   // an edit is matched at snapshot time, whichever of the two was recorded first.
@@ -430,6 +434,15 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         }
         case 'message.user': {
           const t = text(p.text) ?? '';
+          // CONTENT-1: images attached to a prompt. Claude stores them as separate parts of the
+          // prompt's record, before or after its text, so they meet the turn through that record.
+          const images = Array.isArray(p.images) && p.images.length && o.agentId === 'agent:main' ? imageRefs(p.images) : undefined;
+          if (images) {
+            const key = `${o.recordingId}|${o.source.recordId ?? o.id}`;
+            const turn = turnByRecord.get(key);
+            if (turn) (turn.images ??= []).push(...images);
+            else if (!t.trim()) pendingTurnImages.set(key, [...(pendingTurnImages.get(key) ?? []), ...images]);
+          }
           if (!t.trim()) break;
           ensureAgent(o);
           // A subagent's first "user" message is its delegation prompt, already shown on the
@@ -439,7 +452,12 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           const id = `turn_${o.id}`;
           turnByRecording.set(o.recordingId, id);
           if (o.source.recordId) turnMessageByRecording.set(o.recordingId, o.source.recordId);
-          timeline.push({ type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime, ...(typeof p.permissionMode === 'string' ? { permissionMode: p.permissionMode } : {}) });
+          const recordKey = `${o.recordingId}|${o.source.recordId ?? o.id}`;
+          const attached = [...(pendingTurnImages.get(recordKey) ?? []), ...(images ?? [])];
+          pendingTurnImages.delete(recordKey);
+          const turn: TimelineItem & { type: 'turn' } = { type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime, ...(typeof p.permissionMode === 'string' ? { permissionMode: p.permissionMode } : {}), ...(attached.length ? { images: attached } : {}) };
+          turnByRecord.set(recordKey, turn);
+          timeline.push(turn);
           break;
         }
         case 'message.assistant':
@@ -884,6 +902,18 @@ interface Ctx {
   link: (l: Omit<EvidenceLink, 'id'>) => void;
 }
 
+/** CONTENT-1: image references from captured images; bytes stay in blobs. */
+function imageRefs(raw: unknown[]): OperationImage[] {
+  return (raw as Rec[]).slice(0, 50).map((img) => ({
+    ...(isBlobText(img.data) ? { sha: img.data.$blob } : {}),
+    ...(typeof img.mime === 'string' ? { mime: img.mime } : {}),
+    ...(typeof img.bytes === 'number' ? { bytes: img.bytes } : {}),
+    ...(typeof img.width === 'number' ? { width: img.width } : {}),
+    ...(typeof img.height === 'number' ? { height: img.height } : {}),
+    ...(!isBlobText(img.data) ? { omitted: typeof img.omitted === 'string' ? img.omitted : 'unrecognised' } : {}),
+  }));
+}
+
 /** The harness's record of how a command ran. Only fields it recorded; nothing inferred. */
 function commandRun(outcome: ToolOutcome & Rec): CommandRun {
   if (outcome.kind !== 'shell') return {};
@@ -908,14 +938,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
   const run = commandRun(outcome);
   if (Object.keys(run).length) op.run = run;
   // CONTENT-1: images the action returned. Only references reach the projection; bytes stay in blobs.
-  if (Array.isArray(p.images) && p.images.length) op.images = (p.images as Rec[]).slice(0, 50).map((img) => ({
-    ...(isBlobText(img.data) ? { sha: img.data.$blob } : {}),
-    ...(typeof img.mime === 'string' ? { mime: img.mime } : {}),
-    ...(typeof img.bytes === 'number' ? { bytes: img.bytes } : {}),
-    ...(typeof img.width === 'number' ? { width: img.width } : {}),
-    ...(typeof img.height === 'number' ? { height: img.height } : {}),
-    ...(!isBlobText(img.data) ? { omitted: typeof img.omitted === 'string' ? img.omitted : 'unrecognised' } : {}),
-  }));
+  if (Array.isArray(p.images) && p.images.length) op.images = imageRefs(p.images);
 
   switch (op.detail.kind) {
     case 'read': {

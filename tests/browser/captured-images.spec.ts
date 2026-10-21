@@ -15,13 +15,16 @@ test('an image the agent read shows as a lazy thumbnail and opens whole; a refus
  const session='images',base={timestamp:'2026-10-21T00:00:00Z',cwd:dir,sessionId:session},source=join(dir,session+'.jsonl');
  const image=(data:string)=>({type:'image',source:{type:'base64',media_type:'image/png',data}});
  const rows=[
-  {...base,type:'user',uuid:'p',message:{role:'user',content:'Look at the diagram'}},
+  {...base,type:'user',uuid:'p',message:{role:'user',content:[image(PNG),{type:'text',text:'Look at the diagram'}]}},
   {...base,type:'assistant',uuid:'a1',message:{id:'m1',role:'assistant',content:[{type:'tool_use',id:'read1',name:'Read',input:{file_path:join(dir,'diagram.png')}},{type:'tool_use',id:'read2',name:'Read',input:{file_path:join(dir,'notes.png')}}]}},
   {...base,type:'user',uuid:'r1',toolUseResult:{type:'image',file:{base64:PNG,type:'image/png',originalSize:75,dimensions:{originalWidth:2,originalHeight:1,displayWidth:2,displayHeight:1}}},message:{role:'user',content:[{type:'tool_result',tool_use_id:'read1',content:[image(PNG)]}]}},
   {...base,type:'user',uuid:'r2',message:{role:'user',content:[{type:'tool_result',tool_use_id:'read2',content:[image(Buffer.from('plain text pretending to be a picture').toString('base64'))]}]}},
  ];
  writeFileSync(source,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('claude-code',source)).recordingId;
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+ // The image pasted into the prompt sits under the prompt text.
+ await expect(page.locator('.turn .turn-images .op-image')).toHaveCount(1);
+ if(process.env.IMG_SHOT)await page.locator('.turn').first().screenshot({path:resolve('.local/turn-image.png')});
  const card=page.locator('article.op').filter({hasText:'diagram.png'}).first();
  const thumb=card.locator('.op-image');await expect(thumb).toHaveCount(1);
  const img=thumb.locator('img');await expect(img).toHaveAttribute('loading','lazy');
