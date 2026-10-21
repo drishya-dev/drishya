@@ -44,3 +44,42 @@ The machine was heavily loaded on 21 October (a game running, CPU ≈ 59%), so a
 ## Gate status
 
 Not green. The interaction target (p95 < 100 ms) and the large-journal targets must be re-measured on an unloaded machine with five runs per source, as in PERF-1. Remaining candidates: checkpoint scheduling (`wal_autocheckpoint` plus an idle checkpoint), keeping the cold build's reducer and projection from both staying resident, and moving sealing off the daemon thread.
+
+## Idle re-measure against the targets (21 October, after #176)
+
+The machine was idle (CPU load 9% at start, test runs stopped). `scripts/bench-real-journals.ts`, five runs per source and mode; p50 / nearest-rank p95 (with n = 5, p95 is the maximum). [Raw runs](perf-2-latency-results.json).
+
+| Source | Whole import s | First history page s | Peak RSS MiB (import) | Observations |
+|---|---:|---:|---:|---:|
+| 166.4 MB | 1.79 / 1.94 | 1.39 / 1.74 | 326 / 389 | 7,418 |
+| 347.9 MB | 4.72 / 5.17 | 4.44 / 4.51 | 380 / 416 | 16,480 |
+| 563.8 MB | 10.43 / 11.10 | 7.90 / 8.06 | 472 / 475 | 26,593 |
+
+| Source | Tail catch-up ms | Warm open ms | Peak RSS MiB (append + browser) | API p95 ms | API max ms | Frame max ms |
+|---|---:|---:|---:|---:|---:|---:|
+| 166.4 MB | 732 / 829 | 752 / 881 | 433 / 460 | 294 / 389 | 838 / 965 | 337 / 459 |
+| 347.9 MB | 284 / 410 | 827 / 1059 | 476 / 492 | 172 / 445 | 200 / 1045 | 100 / 171 |
+| 563.8 MB | 686 / 720 | 1073 / 1154 | **529 / 573** | **145 / 160** | 292 / 307 | 17 / 21 |
+
+Every append run matched a fresh full import (ids, order, gaps).
+
+**The long matrix ran slower than the paired check right after it,** so for the effect of the fixes use the alternating head-to-head on the 563.8 MB complete import (same idle machine, minutes apart):
+
+| Code | Whole import s | First history page s | Peak RSS MiB |
+|---|---:|---:|---:|
+| before the fixes (`7f11225`) | 7.33 / 7.24 | 6.83 / 6.84 | 417 / 427 |
+| main after #176 | 7.25 / 7.17 | **4.09 / 3.96** | 473 / 484 |
+| main, derived blobs back in files (diagnostic) | 7.55 / 7.26 | 6.27 / 6.47 | 433 / 471 |
+
+The first history page is about 41% faster and import time is unchanged; the row-backed derived blobs account for nearly all of it. Peak RSS in complete-import runs reads higher after the fixes, but repeated runs of one variant differ by up to 40 MiB, so this sample cannot attribute it.
+
+### Against the reference targets
+
+| Target | Result | |
+|---|---|---|
+| Visible update < 1.5 s | tail catch-up 0.28–0.83 s, warm open 0.75–1.15 s | **pass** |
+| Interaction p95 < 100 ms (automation proxy: API round-trip during append) | 145–294 ms p50, up to 445 ms | **fail** |
+| Peak RSS ≤ 512 MiB | complete import ≤ 475 MiB pass; append + browser on 563.8 MB 529 / 573 MiB | **fail** |
+| First history page (no fixed target; was 6.6 s) | 1.4 / 4.4 / 7.9 s p50 in the matrix; 4.0 s head-to-head | improved |
+
+**The gate stays red** on interaction latency and append + browser memory. Next, in order: (1) find what holds the daemon thread during append besides ingest. The API p95 is worst on the smallest source, where the tail is a larger share of the work, so profile the `/v1/recordings` path and the worker-to-main page transfer during a tail. (2) Measure the history worker's resident set during append + browser: the reducer and the cached projection both stay resident. (3) Then re-run this matrix.
