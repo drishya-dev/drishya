@@ -9,6 +9,7 @@ import type {
   CommandRun,
   BeforeTurn,
   CheckpointPayload,
+  Notice,
   Agent,
   Artifact,
   ArtifactKind,
@@ -39,7 +40,10 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r12';
+/** Longest changed-region snippet kept on a notice. */
+const NOTICE_SNIPPET = 10_000;
+
+export const REDUCER_VERSION = 'r13';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -111,6 +115,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   // Paths stay as recorded until matching: a turn's snapshot precedes the prompt that sets the root.
   const checkpoints = new Map<string, { raw: { path: string; at: BeforeTurn }[]; byPath?: Map<string, BeforeTurn> }>();
   const awaitingCheckpoint = new Set<string>();
+  // DATA-6: harness notices of files changed outside its edits; identical repeats fold into one.
+  const notices: Notice[] = [];
+  const lastNotice = new Map<string, Notice>();
   const artifacts = new Map<string, Artifact>();
   const links: EvidenceLink[] = [];
   const timeline: TimelineItem[] = [];
@@ -609,6 +616,21 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           break;
         }
+        case 'external.change': {
+          if (typeof p.path !== 'string') break;
+          const a = ensureAgent(o);
+          const path = rel(p.path, o.workspaceRoot);
+          const full = text(p.snippet as TextValue | undefined);
+          const key = `${o.recordingId}|${path}`;
+          const last = lastNotice.get(key);
+          if (last && last.snippet === (full === undefined ? undefined : clip(full, NOTICE_SNIPPET))) { last.repeats++; last.observationIds.push(o.id); break; }
+          const notice: Notice = { id: `notice_${o.id}`, agentId: a.id, kind: 'external-change', path, repeats: 0, sequence: step(), time: o.sourceTime, observationIds: [o.id],
+            ...(full !== undefined ? { snippet: clip(full, NOTICE_SNIPPET), ...(full.length > NOTICE_SNIPPET ? { truncated: true } : {}) } : {}) };
+          notices.push(notice);
+          lastNotice.set(key, notice);
+          timeline.push({ type: 'notice', id: `t_${notice.id}`, noticeId: notice.id, sequence: o.receivedSequence, agentId: a.id, time: o.sourceTime });
+          break;
+        }
         case 'compaction':
           ensureAgent(o);
           timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: 'compaction', time: o.sourceTime });
@@ -710,6 +732,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       agents: placed.agents,
       operations: placed.operations,
       prose: [...placed.prose],
+      ...(notices.length ? { notices: notices.map((n) => ({ ...n, observationIds: [...n.observationIds] })) } : {}),
       artifacts: placed.artifacts,
       links: finalLinks,
       timeline: [...placed.timeline],
@@ -1152,6 +1175,16 @@ export function buildPassages(timeline: TimelineItem[], operations: Operation[],
         open.set(agent, p);
       }
       p.proseIds.push(it.proseId);
+      p.lastStep = i;
+    } else if (it.type === 'notice') {
+      // A notice sits with the agent's open passage and never splits it.
+      let p = open.get(it.agentId);
+      if (!p) {
+        p = { id: `psg_${it.id}`, agentId: it.agentId, operationIds: [], proseIds: [], firstStep: i, lastStep: i };
+        out.push(p);
+        open.set(it.agentId, p);
+      }
+      (p.noticeIds ??= []).push(it.noticeId);
       p.lastStep = i;
     }
   });
