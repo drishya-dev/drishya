@@ -79,6 +79,9 @@ test('Studio native workspace connects its composer, attachments, approval and e
 for(const version of ['classic','modern']) test(`${version}: current source reading finds, navigates and wraps bounded disk pages without replacing captured evidence`, async ({ page }) => {
   const target=new URL(server.launchUrl);target.searchParams.set('experience',version);
   await page.goto(target.href);
+  // Home also lists sessions discovered on this machine and pages long lists, so a fixture dated in the past may sit
+  // beyond the first page; find it the way a reader would.
+  if(version==='modern') await page.getByRole('textbox',{name:'Find sessions'}).fill('Connected workspace synthetic session');
   const session=version==='modern'?page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}):page.getByRole('button', { name: /Connected workspace synthetic session/ });
   await session.click();
   const folders = page.getByRole('complementary', { name: version==='modern'?'Repository files':'Session folders' });
