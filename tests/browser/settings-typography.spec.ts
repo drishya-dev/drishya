@@ -22,6 +22,8 @@ test('all Settings sections meet text and control floors on every palette',async
   await page.evaluate(value=>document.documentElement.dataset.palette=value,palette);
   for(const section of sections){
    await dialog.getByRole('tab',{name:section,exact:true}).click();
+   // Controls transition their colours (120 ms); measure the settled palette, not a frame between two of them.
+   await page.evaluate(()=>Promise.all(document.getAnimations().map(animation=>animation.finished.catch(()=>undefined))));
    const failures=await dialog.evaluate(root=>{
     const result:string[]=[];
     // Compute the actual inherited/composited background, not just a token pair.
