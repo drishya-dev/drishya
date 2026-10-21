@@ -964,7 +964,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       return (
         <div className="spawn">
           <div className="query">{d.agentType ?? 'subagent'}</div>
-          <div className="muted">{d.description}</div>
+          <div className="muted">{d.descriptionEncrypted ? 'Task text not recorded: Codex stored it encrypted' : d.description}</div>
         </div>
       );
     case 'plan':
