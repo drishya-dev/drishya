@@ -297,7 +297,7 @@ export type OperationDetail =
   | { kind: 'test'; command: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
   | { kind: 'web'; url?: string; query?: string; resultPreview?: string }
-  | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string }
+  | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string; /** The harness recorded the task text only in encrypted form. */ descriptionEncrypted?: boolean }
   | { kind: 'plan'; items: { text: string; status: string }[] }
   | { kind: 'other'; input: unknown; resultPreview?: string };
 

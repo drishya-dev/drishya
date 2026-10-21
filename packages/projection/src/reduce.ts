@@ -35,7 +35,7 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r6';
+export const REDUCER_VERSION = 'r7';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -770,10 +770,15 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
       op.detail = { kind: 'web', url: intent.url, query: intent.query };
       op.title = intent.url ? `Fetch ${hostOf(intent.url)}` : `Web search “${clip(intent.query ?? '', 60)}”`;
       break;
-    case 'spawn':
-      op.detail = { kind: 'spawn', agentType: intent.agentType, description: intent.description };
-      op.title = `Delegate${intent.agentType ? ` to ${intent.agentType}` : ''}${intent.description ? `: ${clip(intent.description, 60)}` : ''}`;
+    case 'spawn': {
+      // Codex can record a delegated task only as an encrypted token; showing it would present
+      // ciphertext as the agent's words, so keep the agent and say the task text was not recorded.
+      const encrypted = encryptedToken(intent.description);
+      const description = encrypted ? undefined : intent.description;
+      op.detail = { kind: 'spawn', agentType: intent.agentType, description, ...(encrypted ? { descriptionEncrypted: true } : {}) };
+      op.title = `Delegate${intent.agentType ? ` to ${intent.agentType}` : ''}${description ? `: ${clip(description, 60)}` : ''}`;
       break;
+    }
     case 'plan':
       op.detail = { kind: 'plan', items: intent.items.slice(0, 50) };
       op.title = `Update plan · ${intent.items.length} items`;
@@ -1106,6 +1111,9 @@ export function previewValue(v: unknown, depth = 0, maxDepth = 3): unknown {
   }
   return v;
 }
+
+/** A Fernet-style encrypted token (version byte 0x80, base64url), as Codex records some delegated tasks. */
+export const encryptedToken = (value: unknown): boolean => typeof value === 'string' && /^gAAAAA[A-Za-z0-9_-]{40,}={0,2}$/.test(value.trim());
 
 /** How deep a tool's input is kept. A question's offered options sit four levels down
  *  (questions → question → options → option); summarising them left the card unable to list them. */

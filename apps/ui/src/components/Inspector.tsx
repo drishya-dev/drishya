@@ -183,7 +183,7 @@ function OperationMaterial({ op, projection }: { op: Operation; projection: Proj
       return (
         <>
           <p className="insp-note">
-            Delegated to <strong>{d.agentType ?? 'a subagent'}</strong>: {d.description}
+            Delegated to <strong>{d.agentType ?? 'a subagent'}</strong>{d.descriptionEncrypted ? '. The task text was stored encrypted by Codex and is not recorded here.' : <>: {d.description}</>}
           </p>
           {child && (
             <button className="btn" onClick={() => useApp.getState().setFilter({ ...useApp.getState().filter, agentId: child.id })}>
