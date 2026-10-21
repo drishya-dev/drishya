@@ -7,7 +7,7 @@ import { sinceSnapshot } from '../../../packages/scene/src/since.ts';
 import { verificationFor } from '../../../packages/scene/src/verification.ts';
 import { fixChainFor } from '../../../packages/scene/src/fix-chains.ts';
 import { readBeforeWriteFor } from '../../../packages/scene/src/read-before-write.ts';
-import { mkdirSync, readdirSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { ArtifactSlice, Observation, Operation, Projection } from '@drishya/contracts';
@@ -19,17 +19,16 @@ import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/hist
 import { historySummary } from '../../../packages/scene/src/history.ts';
 import { nowFacts } from '../../../packages/scene/src/now.ts';
 import { turnLedgers } from '../../../packages/scene/src/turns.ts';
-import { BlobStore, Store } from '@drishya/store';
+import { SqliteBlobStore, Store } from '@drishya/store';
 import { sanitize } from '@drishya/privacy';
 import { prepareBriefing, prepareExplain, prepareLabels } from '@drishya/explain';
 
 const source = new Store(workerData.dir, { readOnly: true });
 const dir = join(workerData.dir, 'history');
 mkdirSync(dir, { recursive: true, mode: 0o700 });
-const blobs = new BlobStore(join(dir, 'blobs'));
-const io = { get: (sha: string) => source.blobs.get(sha) ?? blobs.get(sha), put: (text: string) => blobs.put(text) };
 const db = new DatabaseSync(join(dir, 'index.db'));
-db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-8192;
+// Everything here is a rebuildable cache, so a commit need not reach the disk before returning.
+db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-8192;
   CREATE TABLE IF NOT EXISTS views(id TEXT PRIMARY KEY, revision TEXT NOT NULL, header TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS items(view_id TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
     kind TEXT NOT NULL, id TEXT NOT NULL, position INTEGER NOT NULL, body TEXT NOT NULL,
@@ -39,8 +38,14 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-819
     path TEXT NOT NULL, op_id TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY(view_id,path,op_id));
   CREATE INDEX IF NOT EXISTS file_position ON file_ops(view_id,path,position);
 `);
+// Derived blobs live in index.db (PERF-2): one file per artifact made a cold rebuild of a large
+// history spend seconds creating and renaming files. Earlier versions kept them in history/blobs;
+// that directory is disposable and every view is rebuilt under the new HISTORY_VERSION.
+rmSync(join(dir, 'blobs'), { recursive: true, force: true });
+const blobs = new SqliteBlobStore(db, join(dir, 'blobs'));
+const io = { get: (sha: string) => source.blobs.get(sha) ?? blobs.get(sha), put: (text: string) => blobs.put(text) };
 const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.id, a.descriptor]));
-const HISTORY_VERSION = 'h1-4096';
+const HISTORY_VERSION = 'h2-4096';
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
 let cached: { id: string; revision: string; projection: Projection; revisions: Record<string, number> } | undefined;
 let incremental: { id: string; reducer: ReturnType<typeof createReducer>; sequence: number; clock: string; roots: Set<string> } | undefined;
@@ -246,15 +251,9 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
         const sha = (JSON.parse(String(row.body)) as { blob?: string }).blob;
         if (sha) referenced.add(sha);
       }
-      // Derived blobs are disposable. Only validated content-addressed files under our own
-      // blob directory are swept; captured source blobs and harness paths are untouched.
-      for (const prefix of readdirSync(blobs.dir, { withFileTypes: true })) {
-        if (!prefix.isDirectory() || !/^[0-9a-f]{2}$/.test(prefix.name)) continue;
-        for (const entry of readdirSync(join(blobs.dir, prefix.name), { withFileTypes: true })) {
-          const sha = entry.name;
-          if (entry.isFile() && /^[0-9a-f]{64}$/.test(sha) && sha.startsWith(prefix.name) && !referenced.has(sha)) blobs.delete(sha);
-        }
-      }
+      // Derived blobs are disposable. Only rows of our own derived table are swept; captured
+      // source blobs and harness paths are untouched.
+      for (const sha of [...blobs.shas()]) if (!referenced.has(sha)) blobs.delete(sha);
     } else if (message.method === 'close') { cached = undefined; db.close(); source.close(); }
     else throw new Error('Unknown history request');
     parentPort!.postMessage({ id: message.id, value });
