@@ -117,6 +117,8 @@
 .history .turn-more { flex: 1 0 100%; margin: 2px 0 0; padding: 0; border: 0; background: none; color: var(--t3); font: 11px/1.5 var(--sans); text-align: right; cursor: pointer; }
 .history .turn-more:hover, .history .turn-more:focus-visible { color: var(--t1); }
 .history .turn-more:focus-visible { outline: 1px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+/* DATA-4: the recorded permission mode, only where it changes. */
+.history .turn-mode { flex: 1 0 100%; margin: 2px 0 0; color: var(--t3); font: 11px/1.5 var(--sans); text-align: right; }
 .history .turn-ledger { flex: 1 0 100%; text-align: right; margin-top: 4px; font: 11px/1.6 var(--mono); color: var(--t3); font-variant-numeric: tabular-nums; }
 .history .turn-ledger .good { color: var(--pass); }
 .history .turn-ledger .bad { color: var(--fail); }

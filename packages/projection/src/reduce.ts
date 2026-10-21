@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import type {
   AdapterDescriptor,
   WebResult,
+  CommandRun,
   Agent,
   Artifact,
   ArtifactKind,
@@ -36,7 +37,7 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r10';
+export const REDUCER_VERSION = 'r11';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -419,7 +420,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (!firstPrompt) firstPrompt = clip(t.replace(/\s+/g, ' ').trim(), 120);
           const id = `turn_${o.id}`;
           turnByRecording.set(o.recordingId, id);
-          timeline.push({ type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime });
+          timeline.push({ type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime, ...(typeof p.permissionMode === 'string' ? { permissionMode: p.permissionMode } : {}) });
           break;
         }
         case 'message.assistant':
@@ -816,6 +817,20 @@ interface Ctx {
   link: (l: Omit<EvidenceLink, 'id'>) => void;
 }
 
+/** The harness's record of how a command ran. Only fields it recorded; nothing inferred. */
+function commandRun(outcome: ToolOutcome & Rec): CommandRun {
+  if (outcome.kind !== 'shell') return {};
+  const run = (outcome.run ?? {}) as Rec;
+  const out: CommandRun = {};
+  if (outcome.interrupted) out.interrupted = true;
+  if (typeof run.backgroundTaskId === 'string') out.backgroundTaskId = run.backgroundTaskId;
+  if (typeof run.timedOutAfterMs === 'number') out.timedOutAfterMs = run.timedOutAfterMs;
+  if (typeof run.exitNote === 'string') out.exitNote = clip(run.exitNote, 200);
+  const spilled = run.persistedOutput as Rec | undefined;
+  if (spilled && typeof spilled.path === 'string') out.persistedOutput = { path: spilled.path, ...(typeof spilled.bytes === 'number' ? { bytes: spilled.bytes } : {}) };
+  return out;
+}
+
 function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
   const { op } = st;
   const outcome = (p.outcome ?? { kind: 'other' }) as ToolOutcome & Rec;
@@ -823,6 +838,8 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
   const redacted = o.redactions.length > 0;
   const omitted = (s: string | undefined) => !!s && s.startsWith('[OMITTED');
   const seq = op.endSequence ?? op.startSequence;
+  const run = commandRun(outcome);
+  if (Object.keys(run).length) op.run = run;
 
   switch (op.detail.kind) {
     case 'read': {
@@ -965,6 +982,10 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       const full = c.text((outcome as Rec).text as TextValue) ?? resultText ?? '';
       op.detail.resultPreview = clip(full, PREVIEW);
       op.detail.results ??= searchLinks(full);
+      if (outcome.kind === 'web') {
+        const fetch = Object.fromEntries(Object.entries({ status: outcome.status, statusText: outcome.statusText, bytes: outcome.bytes, durationMs: outcome.durationMs }).filter(([, v]) => v !== undefined && v !== null));
+        if (Object.keys(fetch).length) op.detail.fetch = fetch;
+      }
       break;
     }
     case 'spawn':

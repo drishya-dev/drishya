@@ -91,11 +91,29 @@ export interface SessionMetaPayload {
   effort?: string;
 }
 
+/** How a command ran, as the harness recorded it (review125 S5). */
+export interface CommandRun {
+  interrupted?: boolean;
+  backgroundTaskId?: string;
+  timedOutAfterMs?: number;
+  /** The harness's reading of a non-zero exit, e.g. "No matches found". */
+  exitNote?: string;
+  /** Full output the harness saved to a file because it was too large. Reference only; read on request. */
+  persistedOutput?: { path: string; bytes?: number };
+}
+
+/** A harness-saved full output, read on request (DATA-4). */
+export type PersistedOutput =
+  | { available: true; text: string; bytes: number; truncated: boolean; redacted: boolean }
+  | { available: false; reason: 'not-recorded' | 'removed' | 'outside-harness-folder' | 'protected' };
+
 export interface MessagePayload {
   text: TextValue;
   model?: string;
   /** Codex exposes reasoning only as summaries; Claude as thinking text. `none`: a reasoning block was recorded without readable text. */
   exposure?: 'full' | 'summary' | 'none';
+  /** Claude Code's permission mode when the person sent this prompt (e.g. acceptEdits, auto). */
+  permissionMode?: string;
   /** Why a `none` block has no text: stored encrypted, kept only as a signature, or recorded empty. */
   reason?: ReasoningGap;
 }
@@ -256,6 +274,8 @@ export interface Operation {
   id: string;
   parentOperationId?: string;
   durationMs?: number;
+  /** How the harness says a command ran (any command, including ones shown as reads or searches). */
+  run?: CommandRun;
   agentId: string;
   kind: OperationKind;
   /** Captured tool name, shown in inspection. */
@@ -300,7 +320,7 @@ export type OperationDetail =
   | { kind: 'shell'; command: string; exitCode?: number | null; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'test'; command: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
-  | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[] }
+  | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[]; /** What the harness recorded about a page fetch. */ fetch?: { status?: number; statusText?: string; bytes?: number; durationMs?: number } }
   | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string; /** The harness recorded the task text only in encrypted form. */ descriptionEncrypted?: boolean }
   | { kind: 'plan'; items: { text: string; status: string }[] }
   | { kind: 'other'; input: unknown; resultPreview?: string };
@@ -414,7 +434,7 @@ export interface EvidenceLink {
 
 /** One unit of playback. The timeline is what the transport steps through. */
 export type TimelineItem =
-  | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string }
+  | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string; permissionMode?: string }
   | { type: 'op-start'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'op-end'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'prose'; id: string; proseId: string; sequence: number; agentId: string; time?: string }

@@ -26,6 +26,7 @@ import type { ChangeEvent, HealthEvent } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 import { storageUsage } from './storage.ts';
+import { readPersistedOutput } from './persisted-output.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { sessionLinks } from './git-session-links.ts';
@@ -439,6 +440,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         const found = await app.history.readBefore(id, subId);
         if (!found) throw new HttpError(404, 'no read-before-write facts for this operation');
         return json(res, found);
+      }
+      // DATA-4: full output Claude Code saved to a file, read only on request and redacted.
+      if (sub === 'persisted-output' && subId && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'saved output is read per recording, not for a combined view');
+        app.recording(firstId);
+        return json(res, await readPersistedOutput(app.store, firstId, subId));
       }
       // READ-7: a failed command, the next run of the same command and the edits between them.
       if (sub === 'fix-chain' && subId && m === 'GET') {

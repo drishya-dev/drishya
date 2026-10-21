@@ -1,0 +1,6 @@
+/* DATA-4: harness notes on how a command ran. Muted single lines; the saved output opens on request. */
+.command-run {display:grid;gap:4px;margin-top:6px;min-width:0;}
+.command-run-note {font:12px/1.6 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
+.command-run-read {margin-left:8px;padding:0;border:0;background:none;color:var(--t2);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;}
+.command-run-read:hover, .command-run-read:focus-visible {color:var(--t1);}
+.command-run-full {display:grid;gap:4px;min-width:0;}
