@@ -1,0 +1,6 @@
+/* DATA-5: the harness checkpoint from the start of a turn. One muted line; the file opens on request. */
+.before-turn {display:grid;gap:4px;margin:4px 0 6px;min-width:0;}
+.before-turn-line {font:12px/1.6 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
+.before-turn-read {margin-left:8px;padding:0;border:0;background:none;color:var(--t2);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;}
+.before-turn-read:hover, .before-turn-read:focus-visible {color:var(--t1);}
+.before-turn-file {display:grid;gap:4px;min-width:0;}

@@ -4,7 +4,7 @@
 
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
+import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, Observation } from '@drishya/contracts';
 import {
   fileInfo,
   headRecords,
@@ -46,10 +46,14 @@ export const descriptor: AdapterDescriptor = {
 };
 
 const MAIN = 'agent:main';
+/** One checkpoint lists every tracked file; bound it so an unusual session cannot bloat one observation. */
+const MAX_CHECKPOINT_FILES = 2000;
+/** Claude Code's backup file names: a content hash and a version, e.g. `306e5c83b76fd12d@v2`. */
+const BACKUP_NAME = /^[0-9a-f]{8,64}@v\d+$/;
 
 /** Bookkeeping record types that carry no agent activity. Ignored on purpose, not by accident. */
 const IGNORED = new Set([
-  'queue-operation', 'file-history-snapshot', 'file-history-delta', 'bridge-session', 'mode', 'atis-latch',
+  'queue-operation', 'bridge-session', 'mode', 'atis-latch',
   'last-prompt', 'agent-name', 'attachment', 'permission-mode', 'progress', 'frame-link',
   'artifact-autoreact-ledger', 'artifact-comment-monitor',
 ]);
@@ -164,6 +168,9 @@ function str(v: unknown): string | undefined {
 export function createParser(ctx: ParseContext): RecordParser {
   const calls = new Map<string, { tool: string; intent: ToolIntent }>();
   let lastCwd: string | undefined;
+  // Checkpoint rows carry no session id; a forked journal holds rows of the session it continues,
+  // whose backups live in that session's folder. Use the last session id the journal named.
+  let lastSession: string | undefined;
   const messagesWithUsage = new Set<string>();
 
   const agentOf = (r: Rec): string => {
@@ -185,6 +192,7 @@ export function createParser(ctx: ParseContext): RecordParser {
       if (!record || typeof record !== 'object') return [];
       const r = record as Rec;
       const type = String(r.type ?? '');
+      if (typeof r.sessionId === 'string') lastSession = r.sessionId;
       if (IGNORED.has(type)) return [];
       const base = {
         recordId: typeof r.uuid === 'string' ? r.uuid : undefined,
@@ -195,6 +203,22 @@ export function createParser(ctx: ParseContext): RecordParser {
         harnessVersion: typeof r.version === 'string' ? r.version : undefined,
       };
       const out: RawObservation[] = [];
+
+      // DATA-5: Claude Code's checkpoints (file backups per turn), as references only.
+      if (type === 'file-history-snapshot' || type === 'file-history-delta') {
+        const files: CheckpointPayload['files'] = [];
+        const add = (path: unknown, b: Rec | undefined) => {
+          if (typeof path !== 'string' || !path || !b || files.length >= MAX_CHECKPOINT_FILES) return;
+          const name = str(b.backupFileName);
+          files.push({ path, ...(str(b.realParentDir) ? { parentDir: b.realParentDir } : {}), ...(name && BACKUP_NAME.test(name) ? { backup: { name, ...defined({ version: num(b.version), time: str(b.backupTime) }) } } : b.backupFileName === null ? { absent: true } : {}) });
+        };
+        const snap = (r.snapshot ?? {}) as Rec;
+        if (type === 'file-history-snapshot') for (const [path, b] of Object.entries((snap.trackedFileBackups ?? {}) as Record<string, Rec>)) add(path, b);
+        else add(r.trackingPath, r.backup as Rec | undefined);
+        const messageId = str(type === 'file-history-snapshot' ? r.messageId ?? snap.messageId : r.snapshotMessageId);
+        if (!messageId || !files.length) return [];
+        return [{ ...base, part: 0, kind: 'checkpoint', payload: { messageId, ...defined({ at: str(snap.timestamp) ?? str(r.timestamp), session: lastSession }), files } satisfies CheckpointPayload }];
+      }
 
       if (type === 'cost-state') {
         const work: Record<string, number> = {};

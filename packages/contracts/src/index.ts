@@ -39,6 +39,7 @@ export type ObservationKind =
   | 'capture.gap'
   | 'usage'
   | 'item.completed'
+  | 'checkpoint'
   | 'unknown';
 
 export interface Observation {
@@ -91,6 +92,14 @@ export interface SessionMetaPayload {
   effort?: string;
 }
 
+/** A file at the start of a turn, as the harness checkpointed it: a backup reference, or "did not exist". */
+export type BeforeTurn = { backup: string; version?: number; time?: string } | { absent: true; time?: string };
+
+/** A file backup read on request from the harness's checkpoint folder (DATA-5). */
+export type CheckpointFile =
+  | { available: true; text: string; bytes: number; truncated: boolean; redacted: boolean }
+  | { available: false; reason: 'not-recorded' | 'removed' | 'needs-workspace-approval' | 'protected' };
+
 /** How a command ran, as the harness recorded it (review125 S5). */
 export interface CommandRun {
   interrupted?: boolean;
@@ -119,6 +128,20 @@ export interface MessagePayload {
 }
 
 export type ReasoningGap = 'encrypted' | 'signature-only' | 'empty';
+
+/**
+ * A harness checkpoint (review125 S5): which file backups it holds for one turn. References only;
+ * the backup bytes stay in the harness's folder and are read on request. `absent`: the file did
+ * not exist at the checkpoint (created in that turn).
+ */
+export interface CheckpointPayload {
+  /** The harness's id for the prompt that opens the turn (Claude: the user message uuid). */
+  messageId: string;
+  at?: string;
+  /** The harness session whose checkpoint folder holds the backups (a forked journal continues another session). */
+  session?: string;
+  files: { path: string; parentDir?: string; backup?: { name: string; version?: number; time?: string }; absent?: boolean }[];
+}
 
 /** Accounting reported by a harness, never a price or missing token count inferred by Drishya. */
 export interface UsagePayload {
@@ -316,7 +339,7 @@ export function materialOperations(operations: Operation[]): Operation[] {
 export type OperationDetail =
   | { kind: 'read'; path: string; startLine: number; lineCount: number; totalLines?: number; excerptArtifactId?: string }
   | { kind: 'search'; query: string; mode: 'text' | 'file' | 'web'; hits: SearchHit[]; total?: number }
-  | { kind: 'edit'; path: string; hunks: Hunk[]; created: boolean; /** The harness recorded this change as deleting the file. */ deleted?: boolean; reconstruction: Availability; reconstructionNote?: string }
+  | { kind: 'edit'; path: string; hunks: Hunk[]; created: boolean; /** The harness recorded this change as deleting the file. */ deleted?: boolean; reconstruction: Availability; reconstructionNote?: string; /** The harness's checkpoint of this file at the start of the turn (DATA-5). */ beforeTurn?: BeforeTurn }
   | { kind: 'shell'; command: string; exitCode?: number | null; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'test'; command: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }

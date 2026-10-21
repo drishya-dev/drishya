@@ -7,6 +7,8 @@ import type {
   AdapterDescriptor,
   WebResult,
   CommandRun,
+  BeforeTurn,
+  CheckpointPayload,
   Agent,
   Artifact,
   ArtifactKind,
@@ -37,7 +39,7 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r11';
+export const REDUCER_VERSION = 'r12';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -73,6 +75,8 @@ interface OpState {
   scriptTool?: string;
   scriptWrapper?: boolean;
   wrapperResult?: { observation: Observation; payload: Rec };
+  /** The harness id of the prompt that opened this operation's turn (Claude: message uuid). */
+  turnMessage?: string;
 }
 
 export function reduce(recordingId: string, input: Iterable<Observation>, io: BlobIO, opts: ReduceOptions): Projection {
@@ -101,6 +105,12 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   // Reasoning recorded without text folds to one line per turn and agent (review125 S3).
   const turnByRecording = new Map<string, string>();
   const unrecorded = new Map<string, Prose>();
+  // DATA-5: checkpoints by "<recording>|<prompt id>", then by workspace path. Order-independent:
+  // an edit is matched at snapshot time, whichever of the two was recorded first.
+  const turnMessageByRecording = new Map<string, string>();
+  // Paths stay as recorded until matching: a turn's snapshot precedes the prompt that sets the root.
+  const checkpoints = new Map<string, { raw: { path: string; at: BeforeTurn }[]; byPath?: Map<string, BeforeTurn> }>();
+  const awaitingCheckpoint = new Set<string>();
   const artifacts = new Map<string, Artifact>();
   const links: EvidenceLink[] = [];
   const timeline: TimelineItem[] = [];
@@ -235,8 +245,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       observationIds: [o.id],
       classification: { kind: 'captured', observationIds: [o.id] },
     };
-    const st: OpState = { op, intent, cwd, callObservationId: o.id };
+    const st: OpState = { op, intent, cwd, callObservationId: o.id, turnMessage: turnMessageByRecording.get(o.recordingId) };
     ops.set(id, st);
+    if (st.turnMessage && (intent.kind === 'edit' || intent.kind === 'write' || intent.kind === 'patch')) awaitingCheckpoint.add(id);
     dirtyOperations.add(id);
     opOrder.push(id);
     const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
@@ -420,6 +431,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (!firstPrompt) firstPrompt = clip(t.replace(/\s+/g, ' ').trim(), 120);
           const id = `turn_${o.id}`;
           turnByRecording.set(o.recordingId, id);
+          if (o.source.recordId) turnMessageByRecording.set(o.recordingId, o.source.recordId);
           timeline.push({ type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime, ...(typeof p.permissionMode === 'string' ? { permissionMode: p.permissionMode } : {}) });
           break;
         }
@@ -582,6 +594,21 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           link({ from: opId, to: child, relation: 'spawned', basis: p.basis === 'source-id' ? 'source-id' : 'heuristic', sourceObservationIds: [o.id], explanation: 'The harness recorded this subagent as started by this call.' });
           break;
         }
+        case 'checkpoint': {
+          if (typeof p.messageId !== 'string' || !Array.isArray(p.files)) break;
+          const key = `${o.recordingId}|${p.messageId}`;
+          const entry = checkpoints.get(key) ?? { raw: [] };
+          checkpoints.set(key, entry);
+          entry.byPath = undefined;
+          for (const f of p.files as CheckpointPayload['files']) {
+            // Claude records the path relative to its cwd and the real parent folder; join them.
+            const name = toPosix(f.path).split('/').pop()!;
+            const path = f.parentDir ? `${toPosix(f.parentDir).replace(/\/+$/, '')}/${name}` : f.path;
+            if (f.backup) entry.raw.push({ path, at: { backup: f.backup.name, ...(f.backup.version !== undefined ? { version: f.backup.version } : {}), ...(f.backup.time ? { time: f.backup.time } : {}) } });
+            else if (f.absent) entry.raw.push({ path, at: { absent: true, ...(typeof p.at === 'string' ? { time: p.at } : {}) } });
+          }
+          break;
+        }
         case 'compaction':
           ensureAgent(o);
           timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: 'compaction', time: o.sourceTime });
@@ -604,6 +631,23 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   append(obs);
 
   function snapshot(live = opts.live): Projection {
+    for (const id of awaitingCheckpoint) {
+      const st = ops.get(id)!, d = st.op.detail;
+      if (d.kind !== 'edit') { if (st.completed) awaitingCheckpoint.delete(id); continue; }
+      const recording = st.op.id.split('.')[0]!;
+      const entry = checkpoints.get(`${recording}|${st.turnMessage}`);
+      if (entry && !entry.byPath) {
+        entry.byPath = new Map();
+        // The turn-start snapshot (recorded first) wins over a later per-file delta.
+        for (const f of entry.raw) { const path = rel(f.path); if (path && !entry.byPath.has(path)) entry.byPath.set(path, f.at); }
+      }
+      const found = entry?.byPath?.get(d.path);
+      // Checkpoint records land within their turn; once a later prompt exists, stop looking.
+      if (!found) { if (turnMessageByRecording.get(recording) !== st.turnMessage) awaitingCheckpoint.delete(id); continue; }
+      d.beforeTurn = found;
+      dirtyOperations.add(id);
+      awaitingCheckpoint.delete(id);
+    }
     // Finalization works on copies: an unfinished call may complete on the next append.
     const finalAgents = new Map([...agents].map(([id, agent]) => [id, structuredClone(agent)]));
     const operations = opOrder.map((id) => {

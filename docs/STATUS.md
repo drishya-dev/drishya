@@ -32,13 +32,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-2 | @harsh + Codex | `harsh/perf-2-responsive-ingest` | 2026-10-21 | Follow-up to merged #176; benchmark/profiling scripts and tests, ingest/store/daemon latency fixes if measured, performance report and completion docs (at most 15 files). Five-run retained-journal matrix; no schema/UI features or native turns. Claim released by Yash; coordination posted on #176. |
-| DATA-5 | @yash + Claude | `yash/data-5-checkpoints` | 2026-10-21 | review125 S5 (DATA-5 part): adapter-claude file-history-snapshot/delta records as `checkpoint` references, contracts, projection, daemon on-request backup reader, History "before this turn" view, tests, one browser spec, TASKS/STATUS (about 12 files). |
 
 ---
 
 ## Last session
 
-### Yash with Claude (Opus 5.5) — DATA-4 Claude extras and CONTENT-9 reasoning state; PERF-2 profile earlier
+### Yash with Claude (Opus 5.5) — DATA-5 checkpoints, DATA-4 Claude extras, CONTENT-9; PERF-2 profile earlier
+
+- **DATA-5:** each Claude edit links to its turn's checkpoint, and "Show file before this turn" reads the backup on request with workspace approval. Details are in TASKS DATA-5. **Watch out for:** never copy `node_modules` into a scratch git worktree on Windows. Removing it followed pnpm junctions and deleted this checkout's `packages/` and installed dependencies (21 Oct; restored from git plus a forced frozen-lockfile install). **Next:** DATA-6, then CONTENT-1 with the revised D7.
 
 - **DATA-4 (PR #187):** Claude command facts (interrupted, background, exit note, saved-output reference with an on-request redacted reader), WebFetch status/size/time and permission mode per prompt. Details and what stays unmapped are in TASKS DATA-4. **Next:** DATA-5 (checkpoints), DATA-6 (changed outside the agent), then CONTENT-1 with the revised D7.
 

@@ -34,6 +34,7 @@ import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
 import { PlanChecklist } from './PlanChecklist.tsx';
 import { WebResults } from './WebResults.tsx';
 import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
+import { BeforeTurnPanel } from './BeforeTurn.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -822,6 +823,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.path} · captured patch{d.reconstruction !== 'complete' ? ' · after-state not verified' : ''}</div>
         <ReadBeforePanel op={op} />
+        <BeforeTurnPanel op={op} />
         {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ArtifactReader id={op.artifactIds.find(id => id.endsWith('_after'))} kind="code" path={d.path} provenance /> : <p className="muted">No source bytes or patch captured.</p>}
         <button className="material-more" onClick={() => select(op.id)}>Open provenance and file states</button>
       </div>;
