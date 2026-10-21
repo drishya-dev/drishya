@@ -580,6 +580,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
     - Titles: prefer `custom-title` > `ai-title` > cleaned first prompt (strip "This session is being continued…" boilerplate and bare URLs).
     - Add a "Running now" strip across repositories at the top when any session is live.
     - Move "Star on GitHub" out of the primary header (UI-3).
+  - **21 October, row stats deferred (data too sparse):** only 6 of 33 local Claude journals carry a `cost-state` record (the source of duration and `+/-` lines), a sampled one reports zero lines, and Codex reports tokens only; most rows would show nothing. Revisit when more journals carry it, or derive counts from the history worker's cached `file_ops` for sessions already opened.
   - **Accept:** 300+ session inventory stays virtual and fast.
 
 ### REVIEW — Review work, search and packets

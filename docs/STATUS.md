@@ -31,7 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| HOME-1 | @yash + Claude | `yash/home-1-stats` | 2026-10-21 | Harness-reported duration and +/- lines on Home rows from the latest recorded usage (DATA-2): store query, recordings summary field, SessionHome row meta, tests (at most 8 files). No new capture or schema. |
+| CONTENT-5 | @yash + Claude | `yash/content-5-subagents` | 2026-10-21 | Real sub-agent names in passages, Agents list and spawn cards from captured Claude `subagent_type`/description and Codex nickname/path (DATA-1); `apps/ui` (agent label helper, History, Agents surface), tests (at most 10 files). No capture or schema change. |
 | PERF-2 | @harsh + Codex | `harsh/perf-2-responsive-ingest` | 2026-10-21 | Follow-up to merged #176; benchmark/profiling scripts and tests, ingest/store/daemon latency fixes if measured, performance report and completion docs (at most 15 files). Five-run retained-journal matrix; no schema/UI features or native turns. Claim released by Yash; coordination posted on #176. |
 
 ---
