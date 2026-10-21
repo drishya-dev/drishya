@@ -72,6 +72,8 @@ export interface IngestorOptions {
   liveTurnBytes?: number;
 }
 
+/** Bytes of records sealed and stored before the ingest yields to the daemon's other work. */
+const SLICE_BYTES = 1024 * 1024;
 const MAX_RECORD_BYTES = 16 * 1024 * 1024;
 
 /** What the ingestor remembers about a recording's collection; `health()` derives the state. */
@@ -301,8 +303,14 @@ export class Ingestor extends EventEmitter {
         this.parsers.set(src.id, parser);
       }
       const observedAt = this.now().toISOString();
-      const sealed = [];
-      for (const rec of res.records) {
+      // Seal and store one read in slices of about SLICE_BYTES, committing the cursor after
+      // each and yielding between them. A whole 4 MiB read sealed and written at once held the
+      // daemon thread for 110-150 ms on a large Codex journal (PERF-2), stalling API requests.
+      let sealed = [];
+      let sliceBytes = 0;
+      if (res.reset) sealed.unshift(seal({ raw: gap('source-truncated', undefined, `source ${res.reset}; reading a new generation`, src.agentId), recordingId: src.recordingId, adapter: adapter.descriptor, sourceId: src.id, generation: res.cursor.generation, byteOffset: -1, observedAt }));
+      for (let r = 0; r < res.records.length; r++) {
+        const rec = res.records[r]!;
         let raws: RawObservation[];
         if (rec.type === 'record') {
           try {
@@ -317,10 +325,18 @@ export class Ingestor extends EventEmitter {
           if (raw.kind === 'capture.gap') gaps++;
           sealed.push(seal({ raw, recordingId: src.recordingId, adapter: adapter.descriptor, sourceId: src.id, generation: res.cursor.generation, byteOffset: rec.offset, observedAt }));
         }
+        sliceBytes += rec.bytes;
+        const last = r === res.records.length - 1;
+        if (!last && sliceBytes < SLICE_BYTES) continue;
+        // Records before the last are complete lines, so the slice ends exactly after this one.
+        const through = last ? res.cursor : { ...res.cursor, offset: rec.offset + rec.bytes, inOversized: false };
+        added += this.store.appendObservations(src.recordingId, src.id, through, sealed).length;
+        sealed = [];
+        sliceBytes = 0;
+        if (!last) await new Promise((ok) => setImmediate(ok));
       }
-      if (res.reset) sealed.unshift(seal({ raw: gap('source-truncated', undefined, `source ${res.reset}; reading a new generation`, src.agentId), recordingId: src.recordingId, adapter: adapter.descriptor, sourceId: src.id, generation: res.cursor.generation, byteOffset: -1, observedAt }));
-      const stored = this.store.appendObservations(src.recordingId, src.id, res.cursor, sealed);
-      added += stored.length;
+      // A read with no records still moves the cursor (an oversized line being skipped, a reset).
+      if (!res.records.length || sealed.length) added += this.store.appendObservations(src.recordingId, src.id, res.cursor, sealed).length;
       const progressed = res.cursor.offset !== cursor.offset || res.cursor.generation !== cursor.generation;
       cursor = res.cursor;
       if (turnBytes !== undefined) {
