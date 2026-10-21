@@ -277,8 +277,12 @@ export function createParser(ctx: ParseContext): RecordParser {
         content.forEach((c: Rec, i: number) => {
           if (c.type === 'text' && c.text) {
             out.push({ ...base, part: i, kind: 'message.assistant', payload: { text: c.text, model }, contentKeys: ['text'] });
-          } else if (c.type === 'thinking' && c.thinking) {
+          } else if (c.type === 'thinking' && typeof c.thinking === 'string' && c.thinking.trim()) {
             out.push({ ...base, part: i, kind: 'reasoning', payload: { text: c.thinking, exposure: 'full', model }, contentKeys: ['text'] });
+          } else if (c.type === 'thinking' || c.type === 'redacted_thinking') {
+            // The block exists but its text was not saved; record that so the UI can say so.
+            const reason = c.type === 'redacted_thinking' ? 'encrypted' : c.signature ? 'signature-only' : 'empty';
+            out.push({ ...base, part: i, kind: 'reasoning', payload: { text: '', exposure: 'none', reason, model } });
           } else if (c.type === 'tool_use') {
             const input = (c.input ?? {}) as Rec;
             const intent = intentOf(String(c.name), input);

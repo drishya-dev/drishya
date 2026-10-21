@@ -32,15 +32,15 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-2 | @harsh + Codex | `harsh/perf-2-responsive-ingest` | 2026-10-21 | Follow-up to merged #176; benchmark/profiling scripts and tests, ingest/store/daemon latency fixes if measured, performance report and completion docs (at most 15 files). Five-run retained-journal matrix; no schema/UI features or native turns. Claim released by Yash; coordination posted on #176. |
-| CONTENT-9 | @yash + Claude | `yash/content-9-reasoning-state` | 2026-10-21 | review125 S3: contracts MessagePayload/Prose exposure "none", adapter-claude and adapter-codex reasoning items, projection fold, History reasoning line + CSS, fixtures/tests, one browser spec, TASKS/STATUS/review125 (about 12 files). |
 
 ---
 
 ## Last session
 
-### Yash with Claude (Opus 5.5) — PERF-2 interaction profile; other items resume
+### Yash with Claude (Opus 5.5) — CONTENT-9 reasoning state (S3); PERF-2 profile earlier
 
-- **When:** 21 October 2026. Policy-version cache (≈ 900 ms of daemon main-thread time per probe window), map palette cache, file-tree early return; all pixel-identical. API p95 unchanged because the remaining cost is the page's render work during live bursts. Builder decision: continue other TASKS items while PERF-2 stays red (logged).
+- **CONTENT-9 (PR #186):** Yash approved review125 S3, S5 and D7 (decision logged; D7 caps provisional). Reasoning saved without text now reads as one quiet "Reasoning not recorded by <harness>" line per turn; saved thinking and summaries are unchanged. Old recordings need a journal rescan to show it. Measured counts are in TASKS CONTENT-9 and DATA-8. **Next:** S5 (DATA-4, DATA-5, DATA-6), then CONTENT-1 with D7.
+- **When (PERF-2):** 21 October 2026. Policy-version cache (≈ 900 ms of daemon main-thread time per probe window), map palette cache, file-tree early return; all pixel-identical. API p95 unchanged because the remaining cost is the page's render work during live bursts. Builder decision: continue other TASKS items while PERF-2 stays red (logged).
 
 ### Yash with Claude (Opus 5.5) — paused 21 Oct: PERF-2 measured, TEST-2 awaiting acceptance runs
 

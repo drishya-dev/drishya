@@ -94,9 +94,13 @@ export interface SessionMetaPayload {
 export interface MessagePayload {
   text: TextValue;
   model?: string;
-  /** Codex exposes reasoning only as summaries; Claude as thinking text. */
-  exposure?: 'full' | 'summary';
+  /** Codex exposes reasoning only as summaries; Claude as thinking text. `none`: a reasoning block was recorded without readable text. */
+  exposure?: 'full' | 'summary' | 'none';
+  /** Why a `none` block has no text: stored encrypted, kept only as a signature, or recorded empty. */
+  reason?: ReasoningGap;
 }
+
+export type ReasoningGap = 'encrypted' | 'signature-only' | 'empty';
 
 /** Accounting reported by a harness, never a price or missing token count inferred by Drishya. */
 export interface UsagePayload {
@@ -335,7 +339,11 @@ export interface Prose {
   role: 'assistant' | 'reasoning' | 'user';
   text: string;
   truncated: boolean;
-  exposure: 'full' | 'summary';
+  /** `none`: reasoning the harness recorded without text, folded to one line per turn and agent. */
+  exposure: 'full' | 'summary' | 'none';
+  /** For `none`: how many recorded reasoning blocks the line stands for, and why they have no text. */
+  count?: number;
+  reason?: ReasoningGap;
   sequence: number;
   time?: string;
   observationIds: string[];
