@@ -12,8 +12,9 @@ test.afterAll(async () => { await server.close(); await app.close(); if (!resolv
 test('review questions survive reload, return to the captured action and resolve only explicitly', async ({ page }) => {
   await page.goto(new URL('/?demo&experience=classic', server.launchUrl).href);
   const op = page.locator('article.op-edit').first();
-  await op.getByRole('button', { name: /Expand/ }).click();
-  await op.getByRole('button', { name: 'Open provenance and file states' }).click();
+  // Keyboard, not a pointer: moving the pointer over the card can start hover reading, which moves it under the click.
+  const expand = op.locator('button.op-expand'); await expand.focus(); await page.keyboard.press('Enter'); await expect(expand).toHaveAttribute('aria-expanded', 'true');
+  await op.getByRole('button', { name: 'Open provenance and file states' }).focus(); await page.keyboard.press('Enter');
   const inspector = page.getByRole('complementary', { name: 'Operation detail' });
   const targetTitle = await inspector.locator('.insp-title').innerText();
   await inspector.getByText('Leave a review question', { exact: true }).click();
