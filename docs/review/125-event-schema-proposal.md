@@ -10,7 +10,7 @@ The seam today is `packages/contracts/src/index.ts`: **observations** (immutable
 |---|---|---|
 | **S1 Turns and usage** | turn timing and settings; a `usage` observation; `Projection.turns` and `usage` | TURN-1, LIVE-1, LIVE-4, DATA-2, DATA-3 |
 | **S2 Typed Codex items** | `item.completed` observation with commands (real exit codes and durations), file changes (real status), MCP calls, web search, sub-agent activity; correlation to the enclosing call | DATA-1, BUG-5, CONTENT-5, READ-1 line numbers |
-| **S3 Reasoning state** | an explicit "reasoning exists but is not recorded" observation | CONTENT-9 |
+| **S3 Reasoning state** | an explicit "reasoning exists but is not recorded" observation | CONTENT-9 (S3 and S5 approved by Yash 2026-10-21; Harsh reviews in the PRs) |
 | **S4 Questions, images, web** | question, image and richer web detail | CONTENT-1, CONTENT-2, CONTENT-3 |
 | **S5 Claude extras** | checkpoint references, outside-the-agent edits, spilled-output references, `interrupted` | DATA-4, DATA-5, DATA-6 |
 
@@ -163,7 +163,7 @@ Tick when agreed (initial and date). Recommendation first; the alternative is li
 | D4 | Usage as its own `usage` observation | Yes; projection keeps last point per turn | Fields on `turn.end` only | ☑ YD 2026-10-20 | ☑ HJ 2026-10-20 |
 | D5 | Show harness-estimated cost | Yes, labelled "harness estimate", per session, hidden when `hasUnknownModelCost` | Never show cost | ☑ YD 2026-10-20 | ☑ HJ 2026-10-20 |
 | D6 | Rate-limit data | Store primary window `usedPercent`, `windowMinutes`, `resetsAt`, `plan`; drop credits balance and ids | Store nothing about limits | ☑ YD 2026-10-20 (per 60e4040) | ☑ HJ 2026-10-20 |
-| D7 | Image bytes | Only when inline in the journal, ≤ 1 MiB each, ≤ 32 per recording, redaction/type sniff first; paths are references | References only, never bytes | ☐ | ☐ |
+| D7 | Image bytes | Only when inline in the journal, ≤ 1 MiB each, ≤ 32 per recording, redaction/type sniff first; paths are references | References only, never bytes | ☑ YD 2026-10-21 (caps provisional; revisit on real image-heavy sessions) | ☐ |
 | D8 | Enriching existing recordings | Re-import appends new observations to the same recording (order-independent, §6); offer it only if the journal still exists | Re-import creates a new recording | ☑ YD 2026-10-20 (per 60e4040) | ☑ HJ 2026-10-20 |
 | D9 | Claude turn boundaries | Derive from prompt boundaries, `basis: 'derived'`, labelled | Show no turn durations for Claude | ☐ | ☐ |
 | D10 | Plans | Wait for a real captured sample | Specify now from tool definitions | ☐ | ☐ |

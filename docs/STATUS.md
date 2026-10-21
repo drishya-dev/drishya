@@ -32,6 +32,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-2 | @harsh + Codex | `harsh/perf-2-responsive-ingest` | 2026-10-21 | Follow-up to merged #176; benchmark/profiling scripts and tests, ingest/store/daemon latency fixes if measured, performance report and completion docs (at most 15 files). Five-run retained-journal matrix; no schema/UI features or native turns. Claim released by Yash; coordination posted on #176. |
+| CONTENT-9 | @yash + Claude | `yash/content-9-reasoning-state` | 2026-10-21 | review125 S3: contracts MessagePayload/Prose exposure "none", adapter-claude and adapter-codex reasoning items, projection fold, History reasoning line + CSS, fixtures/tests, one browser spec, TASKS/STATUS/review125 (about 12 files). |
 
 ---
 
@@ -921,6 +922,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **21 October — Reasoning state, Claude extras and inline image bytes (review125 S3, S5, D7):** Yash approved building S3 (CONTENT-9), S5 (DATA-4/5/6) and D7 as recommended (image bytes only when already inline in the journal, at most 1 MiB each and 32 per recording, after redaction and type sniffing; paths stay references). Yash is unsure the D7 caps are right; they are a starting point to revisit on real image-heavy sessions, not a final limit. Harsh reviews each slice in its PR. Reason: these keep facts the journals already hold and the UI currently drops; S3 lets the UI say honestly that reasoning happened but was not saved.
 
 - **16 October — Bounded everyday reading and review:** Keep source-scoped reading locations only in memory, capped at eight sessions/64 slots with existing eight-visit evidence trails. Review continuation uses bounded pages of existing worker-owned derived snapshots, retaining global counts and tied-sequence outcomes. No whole-history browser cache or new capture schema. Real native-account acceptance is assigned to the builder by explicit request. See [81](review/81-workspace-reliability.md).
 
