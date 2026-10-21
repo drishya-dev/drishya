@@ -27,6 +27,7 @@ import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 import { storageUsage } from './storage.ts';
 import { readPersistedOutput } from './persisted-output.ts';
+import { readCheckpointFile } from './checkpoint-file.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { sessionLinks } from './git-session-links.ts';
@@ -446,6 +447,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (id.includes('+')) throw new HttpError(400, 'saved output is read per recording, not for a combined view');
         app.recording(firstId);
         return json(res, await readPersistedOutput(app.store, firstId, subId));
+      }
+      // DATA-5: a file as Claude Code checkpointed it at the start of a turn; workspace approval required.
+      if (sub === 'checkpoint' && subId && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'checkpoints are read per recording, not for a combined view');
+        app.recording(firstId);
+        return json(res, await readCheckpointFile(app.store, firstId, subId, workspace.status(firstId).approved));
       }
       // READ-7: a failed command, the next run of the same command and the edits between them.
       if (sub === 'fix-chain' && subId && m === 'GET') {
