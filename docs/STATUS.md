@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| PERF-2 | @harsh + Codex | `harsh/perf-2-responsive-ingest` | 2026-10-21 | Follow-up to merged #176; benchmark/profiling scripts and tests, ingest/store/daemon latency fixes if measured, performance report and completion docs (at most 15 files). Five-run retained-journal matrix; no schema/UI features or native turns. Claim released by Yash; coordination posted on #176. |
 
 ---
 
@@ -47,12 +46,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **PERF-2 (gate red):** idle re-measure is in [perf-2-latency](review/perf-2-latency.md). Visible update passes; interaction p95 (145–294 ms) and append + browser RSS on 563.8 MB (529 / 573 MiB) fail. First history page 6.8 → 4.0 s head-to-head. Next: profile the daemon thread during append beyond ingest; measure the worker's resident reducer + projection.
 - **TEST-2 (open):** every full-run failure seen so far has a recorded cause and fix. Acceptance still needs three consecutive clean full runs on main after #180; they were started and stopped at the builder's request. Run `DRISHYA_BROWSER_CHANNEL=msedge npx playwright test` three times and tick TEST-2 if all are clean.
 
-### Harsh with Codex — PERF-2 reference-source handoff pending
+### Harsh with Codex — PERF-2 diagnostic candidate; real gate pending Yash
 
-- **When:** 21 October 2026. Claimed follow-up to merged #176; coordinated on that PR. This machine has an i7-13650HX / 23.7 GiB RAM, unlike the i9-14900HX reference machine. No 166/347/564 MB journals exist in its Codex sessions/archive; largest available is 57.7 MB. Requested reference-machine execution/location; do not substitute the smaller source for the required gate matrix.
-- **Local diagnostic only:** current UI builds. One isolated complete import of 57,651,337 bytes: 5,830 observations, zero capture gaps, repeat sync added zero; import 1,647 ms, first history page 1,576 ms, peak daemon RSS 322.68 MiB. No runtime edits, no before/after improvement claim. Numeric output stays in `.local/perf-2/local-baseline.jsonl`; source contents were not printed.
-- **Measurement gap:** `bench-real-journals.ts` reports ingest tail completion, not rendered visible-update completion; API/frame timings are proxies, not actual interaction measurements. Extend those measurements before declaring the gate green. No hosted CI/native turn. PERF-2 claim held pending source handoff; DATA-3 stays unclaimed.
-
+- **When:** 21 October 2026. Bounded follow-up to #176 on `harsh/perf-2-responsive-ingest`; claim pushed before work. Comparison/verification base `f48d778` includes #181. Adopted Yash's policy-version cache and dropped the overlapping expression-index experiment. Later CONTENT-9/DATA-4 work is outside this measured base and preserved on main.
+- **Changes:** 256 KiB complete-record committed slices; history blob reuse only for references owned by the current view, with forget/restart regressions; deterministic invented generator and stronger end-to-end reader/rescan measurements. No schema/version/record-limit change, dropped records or native turns. [Report and before/after](review/perf-2-responsive-ingest.md).
+- **Synthetic diagnostic only:** actual 171/374/600 MB; derived-blob payload 85.9→8.5 /188.1→18.7 /301.7→29.9 MiB. Latency/RSS are mixed, bulk imports slower; all reader updates exceed 1.5 s and the largest RSS exceeds 512 MiB. No gate pass or universal improvement claim. Local 57.7 MB real sanity retains all 5,830 observations, zero gaps, exact IDs/order and idempotent rescan.
+- **Validation:** 720 unit tests and both typechecks; script typecheck/UI build pass; final browser run 288 passed/26 skipped; isolated package verification passes. Demo regeneration only refreshes upstream's stale reducer tag r5→r9. Repeated demo regeneration is byte-identical. Final ten-minute soak passes: 90 rounds, peak 806 DOM nodes, 602,577 ms.
+- **Known test history:** earlier full browser run failed `b2-live.spec.ts:186` pinned-reader scrollTop; it also reproduces on unchanged main `f48d778` in isolation. The final full run passes it; cause not diagnosed, TEST-2 stays open. Initial soak setup timed out before its timed loop; stable operation identity and keyboard activation repair setup without weakening ten-minute assertions.
+- **Handoff:** draft PR for Yash's review and five full-import plus five append/browser runs on each private 166/347/564 MB journal, on an idle machine. Numeric results only; no journal copies requested. PERF-2 remains open, DATA-3 unclaimed/blocked in this lane until all three real targets pass. No hosted CI, merge, physical/platform acceptance or broader workload readiness claim. Own claim released only in this finishing PR.
 
 ### Yash with Claude (Opus 5.5) — PERF-2 fixes 1–3 (gate still red)
 

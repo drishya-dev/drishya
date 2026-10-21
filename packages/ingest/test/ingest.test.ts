@@ -61,6 +61,33 @@ function claudeLine(rec: Record<string, unknown>) {
 }
 
 describe('import', () => {
+  it('serves an event-loop turn between committed sub-megabyte slices without splitting records', async () => {
+    const path = join(dir, 'rollout-sliced.jsonl');
+    const rows = [JSON.stringify({ type: 'session_meta', payload: { id: 'sliced', cwd: '/synthetic' } })];
+    for (let i = 0; i < 10; i++) {
+      rows.push(JSON.stringify({ type: 'response_item', payload: { type: 'function_call', name: 'shell_command', call_id: `slice-${i}`, arguments: '{"command":"echo invented"}' } }));
+      rows.push(JSON.stringify({ type: 'response_item', payload: { type: 'function_call_output', call_id: `slice-${i}`, output: `Invented ${i} ` + 'line\n'.repeat(i === 4 ? 60000 : 16000) } }));
+    }
+    writeFileSync(path, rows.join('\n') + '\n');
+    const through = new Set<number>(); let offset = 0;
+    for (const row of rows) { offset += Buffer.byteLength(row) + 1; through.add(offset); }
+    const commit = store.appendObservations.bind(store), yielded: number[] = [], cursors: number[] = [];
+    const spy = vi.spyOn(store, 'appendObservations').mockImplementation((recordingId, sourceId, cursor, observations) => {
+      const result = commit(recordingId, sourceId, cursor, observations);
+      cursors.push(cursor.offset);
+      setImmediate(() => yielded.push(store.getSources(recordingId)[0]!.cursor.offset));
+      return result;
+    });
+    const imported = await ingest.importSource('codex', path);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(imported).toMatchObject({ added: 21, gaps: 0, more: false });
+    expect(cursors.every(cursor => through.has(cursor))).toBe(true);
+    expect(yielded.some(cursor => cursor > 0 && cursor < offset)).toBe(true);
+    const ids = store.observations(imported.recordingId).map(o => o.id);
+    spy.mockRestore();
+    expect((await ingest.rescan(imported.recordingId)).added).toBe(0);
+    expect(store.observations(imported.recordingId).map(o => o.id)).toEqual(ids);
+  });
   it('preserves unreported process exits and does not classify quoted runner mentions as tests',async()=>{
     const path=join(dir,'wrapper-outcomes.jsonl');
     const command='text(await tools.exec_command({cmd:"rg -n \'palette|mocha|tokyo\' themes.css"}));';

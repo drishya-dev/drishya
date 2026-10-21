@@ -555,11 +555,19 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     await history.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   };
   await scrollHistory(-100_000);
-  const read = history.locator('article.op-read').first();
+  // Keep the captured identity: opening material can reflow the virtual window's first read.
+  const readId = await history.locator('article.op-read').first().getAttribute('data-op-id');
+  expect(readId).toBeTruthy();
+  const read = history.locator(`article.op-read[data-op-id="${readId}"]`);
   await read.scrollIntoViewIfNeeded();
-  await read.getByRole('button', { name: /Read excerpt of/ }).click();
-  await read.locator('.source-utilities > summary').click();
-  await read.getByRole('button', { name: 'Pin range', exact: true }).click();
+  const excerpt = read.getByRole('button', { name: /Read excerpt of/ });
+  await excerpt.focus(); await page.keyboard.press('Enter');
+  const utilities = read.locator('.source-utilities');
+  await expect(utilities).toBeVisible();
+  if (await utilities.getAttribute('open') === null) { await utilities.locator('summary').focus(); await page.keyboard.press('Enter'); }
+  const pin = read.getByRole('button', { name: 'Pin range', exact: true });
+  await expect(pin).toBeVisible({ timeout: 10_000 });
+  await pin.focus(); await page.keyboard.press('Enter');
   const pinned = page.getByRole('complementary', { name: 'Pinned source reference' });
   await expect(pinned).toBeVisible();
   const pinnedLabel = (await pinned.textContent())!;

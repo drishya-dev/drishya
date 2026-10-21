@@ -1,4 +1,4 @@
-import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { appendFileSync, copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -6,12 +6,63 @@ import { compose } from '@drishya/scene';
 import { App } from '../src/app.ts';
 import { SqliteBlobStore } from '@drishya/store';
 import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
 
 let app: App | undefined;
 let dir: string;
 afterEach(async () => { await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 describe('worker-owned history pages', () => {
+  it('keeps derived material after forgetting another recording with coincidentally identical bytes', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'drishya-history-ownership-'));
+    app = new App(join(dir, 'data'));
+    const first = 'Invented stdout line\n'.repeat(2000), second = 'Invented stderr line\n'.repeat(2000), combined = first + '\n' + second;
+    const write = (name: string, separate: boolean) => {
+      const journal = join(dir, `${name}.jsonl`);
+      const base = { sessionId: name, cwd: '/synthetic', timestamp: '2026-01-01T00:00:00Z' };
+      const rows = [
+        { ...base, type: 'assistant', uuid: name + '-call', message: { role: 'assistant', content: [{ type: 'tool_use', id: name, name: 'Bash', input: { command: 'echo invented' } }] } },
+        { ...base, type: 'user', uuid: name + '-result', ...(separate ? { toolUseResult: { stdout: first, stderr: second, exitCode: 0 } } : {}), message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: name, content: separate ? 'Captured separate streams' : combined }] } },
+      ];
+      writeFileSync(journal, rows.map(r => JSON.stringify(r)).join('\n') + '\n');
+      return journal;
+    };
+    const a = (await app.ingest.importSource('claude-code', write('a', false))).recordingId;
+    const b = (await app.ingest.importSource('claude-code', write('b', true))).recordingId;
+    const sha = createHash('sha256').update(combined).digest('hex');
+    expect(app.store.blobs.has(sha)).toBe(true);
+    const page = await app.history.page(b, { count: 1 });
+    const artifact = page.projection.artifacts.find(item => item.kind === 'output' && item.blob === sha)!;
+    expect(artifact).toBeDefined();
+    await app.forget(a);
+    expect(app.store.blobs.has(sha)).toBe(false);
+    expect((await app.history.artifact(b, artifact.id, 0, 5000)).text).toBe(combined);
+    await app.close(); app = new App(join(dir, 'data'));
+    expect((await app.history.artifact(b, artifact.id, 0, 5000)).text).toBe(combined);
+  });
+  it('reuses captured output blobs without copying their bytes into the history cache', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'drishya-history-reuse-'));
+    const journal = join(dir, 'rollout.jsonl'), output = 'Invented captured line\n'.repeat(5000);
+    const rows = [
+      { type: 'session_meta', payload: { id: 'reuse', cwd: '/synthetic' } },
+      { type: 'response_item', payload: { type: 'function_call', name: 'shell_command', call_id: 'one', arguments: '{"command":"echo invented"}' } },
+      { type: 'response_item', payload: { type: 'function_call_output', call_id: 'one', output } },
+    ];
+    writeFileSync(journal, rows.map((r, i) => JSON.stringify({ ...r, timestamp: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString() })).join('\n') + '\n');
+    app = new App(join(dir, 'data'));
+    const { recordingId } = await app.ingest.importSource('codex', journal);
+    const sha = app.store.blobs.put(output).sha;
+    const page = await app.history.page(recordingId, { count: 1 });
+    const artifact = page.projection.artifacts.find(a => a.kind === 'output' && a.blob === sha)!;
+    expect(artifact).toBeDefined();
+    const cache = new DatabaseSync(join(dir, 'data', 'history', 'index.db'), { readOnly: true });
+    try { expect(cache.prepare('SELECT 1 FROM derived_blob WHERE sha=?').get(sha)).toBeUndefined(); }
+    finally { cache.close(); }
+    expect((await app.history.artifact(recordingId, artifact.id, 0, 6000)).text).toBe(output);
+    await app.close(); app = new App(join(dir, 'data'));
+    expect((await app.history.artifact(recordingId, artifact.id, 0, 6000)).text).toBe(output);
+    expect((await app.ingest.rescan(recordingId)).added).toBe(0);
+  });
   it('pages a prompt-only chapter by captured turn step with no fabricated material', async () => {
     dir = mkdtempSync(join(tmpdir(), 'drishya-prompt-only-'));
     const journal = join(dir, 'rollout.jsonl');

@@ -12,12 +12,20 @@ import { performance } from 'node:perf_hooks';
 import { App } from '../apps/daemon/src/app.ts';
 import { startServer } from '../apps/daemon/src/server.ts';
 import { sampleRss } from './resource-probe.ts';
+import type { Page } from '@playwright/test';
+import { DatabaseSync } from 'node:sqlite';
 
 const self = fileURLToPath(import.meta.url);
 const percentile = (values: number[], p: number) => [...values].sort((a,b)=>a-b)[Math.max(0, Math.ceil(values.length*p)-1)] ?? 0;
 const arg = (name: string, fallback: string) => { const i=process.argv.indexOf(name); return i<0?fallback:process.argv[i+1]; };
 const browserEnabled=process.argv.includes('--browser');
 const fullImport=process.argv.includes('--full-import');
+const stage=(name:string)=>{if(process.env.DRISHYA_BENCH_DIAGNOSTICS)console.error(name,Math.round(performance.now()),Math.round(process.memoryUsage().rss/1048576));};
+const derivedBytes=(dir:string)=>{
+  const db=new DatabaseSync(join(dir,'data','history','index.db'),{readOnly:true});
+  try{return Number((db.prepare('SELECT COALESCE(SUM(length(body)),0) AS bytes FROM derived_blob').get() as {bytes:number}).bytes);}
+  finally{db.close();}
+};
 assert.ok(!(fullImport&&browserEnabled),'run full import and browser append probes separately');
 
 async function measure(source: string) {
@@ -33,6 +41,7 @@ async function measure(source: string) {
   let app: App|undefined;
   let server: Awaited<ReturnType<typeof startServer>>|undefined;
   let browser: { close(): Promise<void> }|undefined;
+  let page: Page|undefined;
   let stopPeak: ReturnType<typeof sampleRss>|undefined;
   const stalls:number[]=[];
   let last=performance.now();
@@ -44,13 +53,19 @@ async function measure(source: string) {
     const t0=performance.now();
     const imported=await app.ingest.importSource('codex',snapshot);
     const importMs=performance.now()-t0;
+    stage('imported');
     const pageAt=performance.now();
     const history=await app.history.page(imported.recordingId,{count:1});
     const historyPageMs=performance.now()-pageAt;
+    stage('history');
     if(fullImport){
       assert.equal((await app.ingest.sync(imported.recordingId)).added,0,'repeat import duplicated observations');
       const peakRssMiB=await stopPeak();stopPeak=undefined;
-      return {mode:'complete import',sourceBytes:bytes,importMs,historyPageMs,observations:imported.added,gaps:imported.gaps,peakRssMiB,eventLoopMaxMs:Math.max(0,...stalls)};
+      const eventLoopMaxMs=Math.max(0,...stalls);
+      const before=app.store.countObservations(imported.recordingId);
+      assert.equal((await app.ingest.rescan(imported.recordingId)).added,0,'rescan duplicated observations');
+      assert.equal(app.store.countObservations(imported.recordingId),before);
+      return {mode:'complete import',rescanIdempotent:true,sourceBytes:bytes,importMs,historyPageMs,observations:imported.added,gaps:imported.gaps,peakRssMiB,eventLoopMaxMs,derivedBlobBytes:derivedBytes(dir)};
     }
     let ui:Record<string,unknown>|undefined;
     let sample: Promise<unknown>|undefined;
@@ -58,12 +73,20 @@ async function measure(source: string) {
       const { chromium }=await import('@playwright/test');
       server=await startServer({app,port:0});
       const instance=await chromium.launch({channel:process.env.DRISHYA_BROWSER_CHANNEL||undefined});browser=instance;
-      const page=await instance.newPage({viewport:{width:1440,height:900},reducedMotion:'no-preference'});
+      page=await instance.newPage({viewport:{width:1440,height:900},reducedMotion:'no-preference'});
+      // Only the disposable snapshot is imported. Never discover or control native sessions,
+      // and let this probe alone advance capture so repeated runs use the same append schedule.
+      await page.route(/\/v1\/sources(?:[/?]|$)/, route=>route.fulfill({json:{sources:[],errors:[]}}));
+      // Do not intercept ordinary reads: sending each heartbeat through the busy benchmark
+      // process would add an artificial scheduling hop to the API latency being measured.
+      await page.route(/\/v1\/(?:.*\/)?(?:controller|native|live|refresh)(?:[/?]|$)/,
+        route=>route.fulfill({status:403,json:{error:'disabled by isolated benchmark'}}));
       await page.goto(server.launchUrl);
       const open=page.locator('.mh-session-open, .home .row-main.link').first();
       await open.waitFor({timeout:60000});
       const openAt=performance.now();await open.click();
       await page.locator('.history').waitFor({timeout:60000});
+      stage('browser-open');
       ui={openMs:performance.now()-openAt,mode:'default resource/motion settings, 1440x900'};
       sample=page.evaluate(async()=>{
         const frames:number[]=[],requests:number[]=[];let running=true,last=performance.now();
@@ -71,7 +94,6 @@ async function measure(source: string) {
         for(let i=0;i<20;i++){
           const start=performance.now();const response=await fetch('/v1/recordings');
           if(!response.ok)throw new Error('heartbeat failed');await response.arrayBuffer();requests.push(performance.now()-start);
-          const el=document.querySelector('.history');if(el)el.scrollTop+=i%2?48:-48;
           await new Promise(r=>setTimeout(r,50));
         }
         running=false;
@@ -80,24 +102,49 @@ async function measure(source: string) {
       }).catch(()=>({probeError:'browser probe interrupted'}));
     }
     // Append only to our snapshot. Splitting through a record also tests the partial-line cursor.
+    const appendAt=performance.now();
+    const appendStallStart=stalls.length;
     await pipeline(createReadStream(source,{start:split,end:bytes-1}),createWriteStream(snapshot,{flags:'a'}));
     const tailAt=performance.now();let tailAdded=0,tailGaps=0,turns=0,more=true;
     while(more){const r=await app.ingest.sync(imported.recordingId,{turnBytes:16*1048576,acceptUnterminated:false});tailAdded+=r.added;tailGaps+=r.gaps;more=r.more;turns++;assert.ok(turns<1000,'tail did not converge');await new Promise(r=>setImmediate(r));}
     const tailMs=performance.now()-tailAt;
+    stage('tail');
+    if(page){
+      const latest=await app.history.page(imported.recordingId,{count:1});
+      // Check that the reader has incorporated the final revision, then wait for paint.
+      // This is reader-update latency, not a claim that every offscreen item was painted.
+      await page.waitForFunction(total=>Number(document.querySelector('.reading-status')?.textContent?.match(/\d+/)?.[0])===total,latest.scene.total,{timeout:60000});
+      const passage=latest.loadedPassageIds.at(-1);
+      if(passage)await page.waitForFunction(id=>[...document.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].some(el=>{
+        const rect=el.getBoundingClientRect();
+        return el.dataset.passageId===id&&!!el.querySelector('article[data-op-id], .prose')&&rect.height>0&&rect.top<innerHeight&&rect.bottom>0;
+      }),passage,{timeout:60000});
+      await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
+      ui!.appendToReaderUpdateMs=performance.now()-appendAt;
+      ui!.visibleUpdateBasis='final reader revision and latest material passage intersects viewport, then two animation frames';
+      stage('reader-update');
+    }
+    const appendEventLoopMaxMs=Math.max(0,...stalls.slice(appendStallStart));
     const stable=await app.ingest.sync(imported.recordingId,{turnBytes:16*1048576,acceptUnterminated:false});
     assert.equal(stable.added,0,'repeat tail duplicated observations');
     const count=app.store.getRecording(imported.recordingId)!.observationCount;
-    assert.ok(count>=imported.added+tailAdded,'observation accounting mismatch');
+    assert.equal(count,imported.added+tailAdded,'observation accounting mismatch');
     const capturedGaps=Number((app.store.db.prepare("SELECT count(*) AS n FROM observations WHERE recording_id = ? AND kind = 'capture.gap'").get(imported.recordingId) as {n:number}).n);
-    const concurrentCaptured=count-imported.added-tailAdded; // The normal viewer also requests bounded native catch-up.
+    const concurrentCaptured=count-imported.added-tailAdded; // Must be zero: native/live browser routes are blocked.
     if(sample){Object.assign(ui!,await sample);assert.ok(!ui!.probeError,'browser probe did not complete');}
     const peakRssMiB=await stopPeak();stopPeak=undefined;
+    const eventLoopMaxMs=Math.max(0,...stalls),eventLoopP95Ms=percentile(stalls,.95);
+    const derivedBlobBytes=derivedBytes(dir); // Outside the performance sample window.
     // Independently import the complete snapshot: accounting alone cannot detect dropped records.
     const identity=(owner:App)=>{const hash=createHash('sha256');for(const row of owner.store.db.prepare('SELECT id FROM observations WHERE recording_id = ? ORDER BY seq').iterate(imported.recordingId))hash.update(String(row.id)+'\n');return hash.digest('hex');};
     const expectedIdentity=identity(app);
+    assert.equal((await app.ingest.rescan(imported.recordingId)).added,0,'rescan duplicated observations');
+    assert.equal(identity(app),expectedIdentity,'rescan changed identity/order');
+    stage('rescan');
     const reference=new App(join(dir,'reference'));
     try {const full=await reference.ingest.importSource('codex',snapshot);assert.equal(full.added,count,'tail lost or added observations versus fresh import');assert.equal(full.gaps,capturedGaps,'gap mismatch');assert.equal(identity(reference),expectedIdentity,'tail identity/order differs from fresh import');}finally{await reference.close();}
-    return {verifiedAgainstFullImport:true,sourceBytes:bytes,importBytes:split,tailBytes:bytes-split,importMs,tailMs,tailTurns:turns,concurrentCaptured,historyPageMs,initialOperations:history.operationCount,observations:count,gaps:capturedGaps,peakRssMiB,eventLoopP95Ms:percentile(stalls,.95),eventLoopMaxMs:Math.max(0,...stalls),ui};
+    stage('validated');
+    return {verifiedAgainstFullImport:true,rescanIdempotent:true,sourceBytes:bytes,importBytes:split,tailBytes:bytes-split,importMs,tailMs,tailTurns:turns,concurrentCaptured,historyPageMs,initialOperations:history.operationCount,observations:count,gaps:capturedGaps,peakRssMiB,eventLoopP95Ms,eventLoopMaxMs,appendEventLoopMaxMs,derivedBlobBytes,ui};
   } finally {
     clearInterval(timer);if(stopPeak)await stopPeak();if(browser)await browser.close();if(server)await server.close();if(app)await app.close();
     if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('benchmark escaped temp');

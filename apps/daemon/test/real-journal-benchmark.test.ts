@@ -5,6 +5,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from 'vitest';
+import { generateLargeJournal } from '../../../scripts/make-large-journal.ts';
+import { App } from '../src/app.ts';
 
 const exec=promisify(execFile);
 test('real-journal probe snapshots complete lines and preserves source bytes in both modes',async()=>{
@@ -25,6 +27,7 @@ test('real-journal probe snapshots complete lines and preserves source bytes in 
       const {stdout}=await exec(process.execPath,['scripts/bench-real-journals.ts','--worker','--source',source,...flags],{cwd:resolve('.'),timeout:30000});
       const result=JSON.parse(stdout.trim());
       expect(result.observations).toBe(3);expect(result.gaps).toBe(0);
+      expect(result.rescanIdempotent).toBe(true);
       expect(result.sourceBytes).toBe(readFileSync(source).length-'{"unfinished":'.length);
       expect(digest()).toBe(original);
       expect(stdout).not.toContain('invented sample');expect(stdout).not.toContain(source);
@@ -35,3 +38,22 @@ test('real-journal probe snapshots complete lines and preserves source bytes in 
     rmSync(dir,{recursive:true,force:true,maxRetries:10,retryDelay:200});
   }
 },60000);
+
+test('invented large workload is deterministic and retains calibrated typed/usage observations',async()=>{
+  const dir=mkdtempSync(join(tmpdir(),'drishya-invented-probe-'));
+  const source=join(dir,'rollout-invented.jsonl');
+  const app=new App(join(dir,'data'));
+  try{
+    const first=generateLargeJournal(source,2);
+    const second=generateLargeJournal(join(dir,'same.jsonl'),2);
+    expect(second).toEqual(first);
+    expect(()=>generateLargeJournal(source,2)).toThrow();
+    expect(first.maxRecordBytes).toBeLessThan(16*1048576);
+    const imported=await app.ingest.importSource('codex',source);
+    expect(imported.added).toBe(first.expectedObservations);
+    expect(imported.gaps).toBe(0);
+    const before=app.store.observations(imported.recordingId).map(o=>o.id);
+    expect((await app.ingest.rescan(imported.recordingId)).added).toBe(0);
+    expect(app.store.observations(imported.recordingId).map(o=>o.id)).toEqual(before);
+  }finally{await app.close();rmSync(dir,{recursive:true,force:true,maxRetries:10,retryDelay:200});}
+},30000);
