@@ -35,7 +35,7 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r5';
+export const REDUCER_VERSION = 'r6';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -779,7 +779,7 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
       op.title = `Update plan · ${intent.items.length} items`;
       break;
     default:
-      op.detail = { kind: 'other', input: previewValue(p.input) };
+      op.detail = { kind: 'other', input: previewValue(p.input, 0, inputDepth(p.tool)) };
       op.title = String(p.tool ?? 'Tool');
   }
 }
@@ -1095,16 +1095,20 @@ function hostOf(url: string): string {
   }
 }
 
-/** A bounded copy of a tool input for display: long strings clipped, big arrays cut. */
-export function previewValue(v: unknown, depth = 0): unknown {
+/** A bounded copy of a tool input for display: long strings clipped, big arrays cut, deep nesting summarised. */
+export function previewValue(v: unknown, depth = 0, maxDepth = 3): unknown {
   if (typeof v === 'string') return v.length > 600 ? v.slice(0, 599) + '…' : v;
   if (isBlobText(v)) return v.preview.slice(0, 600) + '…';
-  if (Array.isArray(v)) return depth > 3 ? `[${v.length} items]` : v.slice(0, 20).map((x) => previewValue(x, depth + 1));
+  if (Array.isArray(v)) return depth > maxDepth ? `[${v.length} items]` : v.slice(0, 20).map((x) => previewValue(x, depth + 1, maxDepth));
   if (v && typeof v === 'object') {
-    if (depth > 3) return '{…}';
-    return Object.fromEntries(Object.entries(v).slice(0, 30).map(([k, x]) => [k, previewValue(x, depth + 1)]));
+    if (depth > maxDepth) return '{…}';
+    return Object.fromEntries(Object.entries(v).slice(0, 30).map(([k, x]) => [k, previewValue(x, depth + 1, maxDepth)]));
   }
   return v;
 }
+
+/** How deep a tool's input is kept. A question's offered options sit four levels down
+ *  (questions → question → options → option); summarising them left the card unable to list them. */
+const inputDepth = (tool: unknown) => (tool === 'AskUserQuestion' ? 5 : 3);
 
 export type { OperationDetail };

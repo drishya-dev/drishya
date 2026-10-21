@@ -22,4 +22,8 @@ test('a captured AskUserQuestion reads as a question with its answer, not raw JS
  const question_card=card.getByRole('group',{name:'Question to you'});
  await expect(question_card).toContainText(question);await expect(question_card).toContainText('Cart totals');
  await expect(question_card.locator('.question-header')).toContainText('Area');
+ // The offered options are kept (CONTENT-3), so the card lists them and marks the one chosen.
+ await expect(question_card.locator('.question-options li')).toHaveCount(2);
+ await expect(question_card.locator('.question-options li[data-chosen]')).toHaveText(/Cart totals/);
+ await expect(question_card).not.toContainText('not the offered options');
 });

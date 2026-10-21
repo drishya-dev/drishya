@@ -18,6 +18,9 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
     return [{ question, ...(text(entry.header, 60) ? { header: text(entry.header, 60) } : {}), multiSelect: entry.multiSelect === true, options, chosen: [] }];
   });
   if (!result) return questions;
+  // Claude Code appends its own instruction after the last answer ("." then e.g. "Read the answers carefully…"). That
+  // sentence has no double quotes; cut it so it is never shown as the person's words.
+  result = result.replace(/"\.\s+[A-Z][^"]*$/, '"');
   // The result reads: The user answered: "Q1"="A1", "Q2"="A2". Slice each answer between the known questions.
   const marks = questions.map((q) => ({ q, at: result.indexOf(`"${q.question}"="`) })).filter((m) => m.at >= 0).sort((a, b) => a.at - b.at);
   marks.forEach((mark, index) => {
