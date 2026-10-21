@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TEST-2 | @yash + Claude | `yash/test-2-connected-workspace` | 2026-10-21 | `connected-workspace.spec.ts:79` (modern) failing on main, then `hover-fit` codex; spec files and, only if a real defect, the one app file involved (at most 6 files). |
 
 ---
 
