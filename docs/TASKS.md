@@ -352,7 +352,12 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
     - **Codex:** images attached to prompts and images in tool outputs (`input_image` data URLs) go through the same certified path. Remote image URLs are never stored or fetched.
     - **Real sessions:** a Claude session showed 22 prompt images on 13 prompts plus 6 tool images. Two Codex sessions showed 3 prompt images plus 94 tool images, and 72 tool images. Every distinct image served; none refused. `REDUCER_VERSION` r15.
     - **Old recordings:** a pasted image there was a capture-gap observation, so a rescan cannot replace it; forget and re-import instead.
-    - **Open (slice 3):** path-only cards with a consented "open current file" (no Codex `ImageView` items exist on this machine to verify against), the browser strip (CONTENT-2) and the phone sheet.
+  - **21 Oct, slice 3 (path-only cards):**
+    - **The card:** an image known only by its path (a Read of an image file with no kept bytes, or a Codex image item) says "<path> · image bytes not captured". It offers "Open current file", which reads today's file only with workspace approval.
+    - **What can be opened:** only a path one of this recording's own actions referenced, inside the approved root. Symlinks, protected paths and non-images are refused, and the size limit is 4 MiB.
+    - **What it shows:** the file, captioned "Current file, modified … It may differ from what the agent saw." It is never cached. Refusals say why (approval, gone, not an image, too large).
+    - **Where it applies:** sessions imported now keep every image's bytes (187 of 187 image Reads in two real sessions), so path-only cards mainly serve recordings imported before slice 1, over-limit images and Codex `ImageView`. `REDUCER_VERSION` r16.
+    - **Still open for CONTENT-1 acceptance:** a real Codex `ImageView` sample (none on this machine; synthetic fixture only), the phone sheet check, and the browser strip, which is tracked in CONTENT-2.
   - **Sources:** Codex `ImageView.path` (348 in sample) and user `input_image` blocks; Claude Read of image files, Bash `isImage`, screenshot tools (browser MCP `computer` screenshot results); Codex `Extension` image generation (`savedPath`, `revisedPrompt`).
   - **Do:**
     - Captured bytes present → bounded preview with fit/zoom/pan reader. D7 (revised 21 Oct): ≤ 4 MiB each, no count cap, ≤ 256 MiB distinct bytes per recording; over the limit → placeholder with size and consented "open original"; lazy, content-addressed, never inside history pages.

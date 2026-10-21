@@ -21,3 +21,12 @@
 /* CONTENT-1: images the person attached sit under their prompt text. */
 .turn-images {flex:1 0 100%;min-width:0;font-size:12px;padding-left:calc(3ch + 12px);}
 .turn-images .op-images {margin-top:4px;}
+/* CONTENT-1 slice 3: an image known only by its path; today's file opens on request. */
+.path-image {display:grid;gap:6px;margin-top:6px;min-width:0;}
+.path-image-line {display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;color:var(--t3);font:12px/1.6 var(--sans);}
+.path-image-path {font:11.5px/1.6 var(--mono);color:var(--t2);overflow-wrap:anywhere;}
+.path-image-open {padding:0;border:0;background:none;color:var(--t2);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;}
+.path-image-open:hover, .path-image-open:focus-visible {color:var(--t1);}
+.path-image-current {display:grid;gap:4px;margin:0;}
+.path-image-current img {height:180px;width:auto;max-width:min(100%, 480px);object-fit:contain;justify-self:start;border:1px solid var(--line);border-radius:6px;background:var(--s1);}
+.path-image-current figcaption {color:var(--t3);font:11.5px/1.5 var(--sans);}

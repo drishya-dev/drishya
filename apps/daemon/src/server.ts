@@ -28,7 +28,7 @@ import { App, HttpError, VERSION } from './app.ts';
 import { storageUsage } from './storage.ts';
 import { readPersistedOutput } from './persisted-output.ts';
 import { readCheckpointFile } from './checkpoint-file.ts';
-import { readImage } from './images.ts';
+import { readImage, referencedImagePath } from './images.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { sessionLinks } from './git-session-links.ts';
@@ -448,6 +448,18 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (id.includes('+')) throw new HttpError(400, 'saved output is read per recording, not for a combined view');
         app.recording(firstId);
         return json(res, await readPersistedOutput(app.store, firstId, subId));
+      }
+      // CONTENT-1: the current file behind an image path one of this recording's actions referenced.
+      // Needs workspace approval; it is today's file, so it is never cached.
+      if (sub === 'workspace' && subId === 'image' && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'choose one session workspace');
+        app.recording(firstId);
+        const path = referencedImagePath(app.store, firstId, url.searchParams.get('operation') ?? '');
+        if (!path) throw new HttpError(404, 'This action did not reference an image file.');
+        const image = await workspace.image(firstId, path);
+        res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline', 'x-drishya-modified-at': image.modifiedAt });
+        res.end(image.body);
+        return;
       }
       // CONTENT-1: an image this recording captured inline, by content hash. Immutable, so cacheable.
       if (sub === 'images' && subId && m === 'GET') {

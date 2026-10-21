@@ -44,7 +44,7 @@ import { placeChildren } from './children.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r15';
+export const REDUCER_VERSION = 'r16';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -418,7 +418,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           st.op.observationIds = [...new Set([...st.op.observationIds, o.id])];
           st.op.endTime = o.sourceTime;
           if (!same) { st.op.startTime = undefined; st.op.endSequence = step(); }
-          if (item.image) { st.op.title = `${item.item === 'image-view' ? 'View image' : 'Generated image'} · ${item.image.path ?? item.image.savedPath ?? 'reference'}`; st.op.detail = { kind: 'other', input: { image: item.image }, resultPreview: 'Image reference captured; image bytes not captured.' }; }
+          if (item.image) { st.op.title = `${item.item === 'image-view' ? 'View image' : 'Generated image'} · ${item.image.path ?? item.image.savedPath ?? 'reference'}`; st.op.detail = { kind: 'other', input: { image: item.image } }; }
           const output = item.mcp?.result ?? item.output ?? (item.web ? JSON.stringify(item.web) : undefined);
           completeOp(st, o, { text: output, exitCode: item.exitCode, outcome: { kind: 'other' } }, { text, rel, addArtifact, knownFull, link, fileKey });
           if (output !== undefined && item.item !== 'command') st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_out`, kind: 'output', observedAtSequence: st.op.endSequence ?? st.op.startSequence, availability: o.availability, provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: text(output) }));

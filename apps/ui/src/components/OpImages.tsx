@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { OperationImage } from '@drishya/contracts';
+import type { Operation, OperationImage } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import './op-images.css';
 
@@ -50,4 +50,59 @@ function ImageReader({ src, image, onClose }: { src: string; image: OperationIma
     </div>
     <div className={`image-reader-stage${actual ? ' actual' : ''}`}><img src={src} alt="Captured image" onClick={() => setActual((v) => !v)} /></div>
   </dialog>;
+}
+
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp)$/i;
+
+/** The image path an action referenced when its bytes were not captured (DATA-1 image items, Reads). */
+export function pathOnlyImage(op: Operation): string | undefined {
+  if (op.images?.some((img) => img.sha)) return undefined;
+  // Text recorded for an image Read is not the image, so only kept bytes count as captured.
+  if (op.detail.kind === 'read') return IMAGE_FILE.test(op.detail.path) ? op.detail.path : undefined;
+  if (op.detail.kind === 'other') {
+    const image = (op.detail.input as { image?: { path?: unknown; savedPath?: unknown } } | undefined)?.image;
+    const path = image?.path ?? image?.savedPath;
+    return typeof path === 'string' ? path : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * CONTENT-1 slice 3: an image known only by its path. Says so, and opens today's file on request,
+ * under workspace approval, labelled as current: it may differ from what the agent saw.
+ */
+export function PathImage({ op, path }: { op: Operation; path: string }) {
+  const source = useApp((s) => s.source);
+  const recordingId = useApp((s) => s.recordingId);
+  const [state, setState] = useState<{ url: string; modified?: string } | { error: string } | 'loading'>();
+  const canOpen = !!source?.currentImageUrl && !!recordingId && !recordingId.includes('+');
+  const open = async () => {
+    setState('loading');
+    try {
+      const url = source!.currentImageUrl!(recordingId!, op.id);
+      // Checked first so a refusal can be explained; the image then loads from the same address
+      // (the page policy allows same-origin images, not blob: URLs).
+      const response = await fetch(url);
+      if (!response.ok) {
+        const reason = response.status === 403 && /approve/.test(await response.text()) ? 'Allow workspace reading for this session to open the current file.' : response.status === 404 ? 'The file is no longer there.' : response.status === 415 ? 'The current file is not a PNG, JPEG, GIF or WebP image.' : response.status === 413 ? 'The current file is larger than 4 MB.' : 'The current file could not be opened here.';
+        setState({ error: reason });
+        return;
+      }
+      await response.arrayBuffer();
+      setState({ url, modified: response.headers.get('x-drishya-modified-at') ?? undefined });
+    } catch { setState({ error: 'The current file could not be opened here.' }); }
+  };
+  return <div className="path-image" onClick={(e) => e.stopPropagation()}>
+    <div className="path-image-line">
+      <span className="path-image-path">{path}</span>
+      <span>image bytes not captured</span>
+      {canOpen && state === undefined && <button type="button" className="path-image-open" onClick={() => void open()}>Open current file</button>}
+    </div>
+    {state === 'loading' && <div className="path-image-line">Opening the current file…</div>}
+    {state && typeof state === 'object' && 'error' in state && <div className="path-image-line">{state.error}</div>}
+    {state && typeof state === 'object' && 'url' in state && <figure className="path-image-current">
+      <img src={state.url} alt="Current file" />
+      <figcaption>Current file{state.modified ? `, modified ${new Date(state.modified).toLocaleString()}` : ''}. It may differ from what the agent saw.</figcaption>
+    </figure>}
+  </div>;
 }
