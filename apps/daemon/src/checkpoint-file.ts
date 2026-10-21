@@ -16,7 +16,7 @@ export async function readCheckpointFile(store: Store, recordingId: string, back
   const recording = store.getRecording(recordingId);
   if (!recording?.sourcePath || recording.harness !== 'claude-code' || !BACKUP_NAME.test(backup)) return { available: false, reason: 'not-recorded' };
   // Only a backup this recording's own checkpoints name, and the path it was recorded for.
-  const entry = store.observationsOfKind(recordingId, 'checkpoint')
+  const entry = store.observationsOfKinds(recordingId, ['checkpoint'])
     .flatMap((o) => (o.payload as CheckpointPayload).files ?? [])
     .find((f) => f.backup?.name === backup);
   if (!entry) return { available: false, reason: 'not-recorded' };

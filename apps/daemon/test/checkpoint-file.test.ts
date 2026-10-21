@@ -38,7 +38,7 @@ it('links each edit to its turn checkpoint and reads the backup only with approv
 
   expect(detail('e1')).toMatchObject({ kind: 'edit', path: 'src/cart.ts', beforeTurn: { backup: 'aaaaaaaaaaaaaaaa@v2', version: 2 } });
   expect(detail('w1')).toMatchObject({ kind: 'edit', path: 'src/new.ts', beforeTurn: { absent: true } });
-  expect(app.store.observationsOfKind(recordingId, 'checkpoint')).toHaveLength(2);
+  expect(app.store.observationsOfKinds(recordingId, ['checkpoint'])).toHaveLength(2);
 
   expect(await readCheckpointFile(app.store, recordingId, 'aaaaaaaaaaaaaaaa@v2', false)).toEqual({ available: false, reason: 'needs-workspace-approval' });
   const file = await readCheckpointFile(app.store, recordingId, 'aaaaaaaaaaaaaaaa@v2', true);
@@ -46,7 +46,7 @@ it('links each edit to its turn checkpoint and reads the backup only with approv
   expect(file.available && file.text).toContain('export const total = 1;');
   expect(file.available && file.text).not.toContain(secret);
   // Ingest omits the backup name of a protected file (.env), so it can never be referenced.
-  expect(JSON.stringify(app.store.observationsOfKind(recordingId, 'checkpoint'))).not.toContain('cccccccccccccccc');
+  expect(JSON.stringify(app.store.observationsOfKinds(recordingId, ['checkpoint']))).not.toContain('cccccccccccccccc');
   expect(await readCheckpointFile(app.store, recordingId, 'cccccccccccccccc@v1', true)).toEqual({ available: false, reason: 'not-recorded' });
   expect(await readCheckpointFile(app.store, recordingId, 'bbbbbbbbbbbbbbbb@v1', true)).toEqual({ available: false, reason: 'not-recorded' });
   expect(await readCheckpointFile(app.store, recordingId, '../../projects/C--work/cp-session.jsonl', true)).toEqual({ available: false, reason: 'not-recorded' });
