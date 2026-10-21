@@ -24,6 +24,11 @@ describe('file evidence',()=>{
       {path:'running.ts',readCalls:0,now:true},
     ]);
   });
+  it('marks a recorded deletion D; the latest change wins, so a file created again reads A',()=>{
+    const del=(path:string)=>{const o=op(path,'edit');return {...o,detail:{...(o.detail as Extract<Operation['detail'],{kind:'edit'}>),deleted:true}} as Operation;};
+    const p=projection([op('gone.ts','edit'),del('gone.ts'),del('back.ts'),op('back.ts','write','ok',true),op('brief.ts','write','ok',true),del('brief.ts')]);
+    expect(fileEvidence(p,['gone.ts','back.ts','brief.ts']).map(e=>[e.path,e.change])).toEqual([['gone.ts','D'],['back.ts','A'],['brief.ts','D']]);
+  });
   it('keeps revisions isolated and bounds rows independently of full-session counts',()=>{
     const p=projection(Array.from({length:250},()=>op('old.ts')));
     expect(fileEvidence(p,['old.ts','old.ts'])).toEqual([{path:'old.ts',readCalls:250,now:false}]);

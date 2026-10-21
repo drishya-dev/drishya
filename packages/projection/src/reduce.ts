@@ -36,7 +36,7 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r8';
+export const REDUCER_VERSION = 'r9';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -354,7 +354,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               const path = rel(change.path, o.workspaceRoot), content = text(change.content);
               st.op.paths = [{ path, role: 'write', basis: 'captured' }];
               st.op.title = `${change.type === 'add' ? 'Create' : change.type === 'delete' ? 'Delete' : 'Edit'} ${path}`;
-              st.op.detail = { kind: 'edit', path, hunks: content ? (change.type === 'add' ? addHunk(content) : parseUnifiedHunks(content)) : [], created: change.type === 'add', reconstruction: 'unavailable', reconstructionNote: 'Captured file change; no full file snapshot is inferred.' };
+              st.op.detail = { kind: 'edit', path, hunks: content ? (change.type === 'add' ? addHunk(content) : parseUnifiedHunks(content)) : [], created: change.type === 'add', ...(change.type === 'delete' ? { deleted: true } : {}), reconstruction: 'unavailable', reconstructionNote: 'Captured file change; no full file snapshot is inferred.' };
               st.op.status = item.status === 'failed' ? 'error' : item.status === 'completed' ? 'ok' : 'unknown';
               st.completed = true; st.op.startTime = undefined; st.op.endTime = o.sourceTime; st.op.endSequence = step();
               if (parent) { st.op.parentOperationId = parent.op.id; relate(st.op); }
@@ -495,7 +495,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
                 : base === undefined ? 'No complete earlier capture of this file to apply the patch to.'
                 : 'The patch context does not match the captured base.';
               if (reconstruction !== 'complete' && f.op !== 'add') knownFull.delete(fileKey(o.recordingId, path));
-              st.op.detail = { kind: 'edit', path, hunks, created: f.op === 'add', reconstruction, reconstructionNote };
+              st.op.detail = { kind: 'edit', path, hunks, created: f.op === 'add', ...(f.op === 'delete' ? { deleted: true } : {}), reconstruction, reconstructionNote };
               if (nestedPatch) {
                 st.op.detail.reconstructionNote = 'Patch input captured; individual nested-tool outcome not exposed.';
                 knownFull.delete(fileKey(o.recordingId, path));

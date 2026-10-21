@@ -33,13 +33,13 @@ export function useFileEvidence(paths: string[], projection: Projection, shown: 
 export function fileEvidenceDescription(evidence?: FileEvidence, count?: number): string | undefined {
   if (count) return `${count} file${count===1?'':'s'} with captured activity`;
   if (!evidence) return undefined;
-  return [evidence.readCalls ? `${evidence.readCalls} captured read calls` : '', evidence.change ? `Captured ${evidence.change==='A'?'creation':'edit/write'}${evidence.changeStatus==='unknown'?', outcome not reported':''}` : '', evidence.now ? 'Open captured tool call' : ''].filter(Boolean).join('; ') || undefined;
+  return [evidence.readCalls ? `${evidence.readCalls} captured read calls` : '', evidence.change ? `Captured ${evidence.change==='A'?'creation':evidence.change==='D'?'deletion':'edit/write'}${evidence.changeStatus==='unknown'?', outcome not reported':''}` : '', evidence.now ? 'Open captured tool call' : ''].filter(Boolean).join('; ') || undefined;
 }
 
 export function FileEvidenceMarks({ evidence, count }: { evidence?: FileEvidence; count?: number }) {
   if (count) return <span className="file-evidence folder-evidence" title={`${count} file${count===1?'':'s'} with captured activity`} aria-label={`${count} file${count===1?'':'s'} with captured activity`}><i aria-hidden="true"/>{count}</span>;
   if (!evidence || !evidence.change && !evidence.readCalls && !evidence.now) return null;
-  const change = evidence.change === 'A' ? 'creation' : 'edit/write';
+  const change = evidence.change === 'A' ? 'creation' : evidence.change === 'D' ? 'deletion' : 'edit/write';
   return <span className="file-evidence">
     {!!evidence.readCalls && <span className="file-reads" title={`${evidence.readCalls} captured read calls`} aria-label={`${evidence.readCalls} captured read calls`}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z"/><circle cx="10" cy="10" r="2"/></svg>{evidence.readCalls}</span>}
     {evidence.change && <span className={`file-change change-${evidence.change}`} title={`Captured ${change}${evidence.changeStatus === 'unknown' ? ' · outcome not reported' : ''}`} aria-label={`Captured ${change}${evidence.changeStatus === 'unknown' ? ', outcome not reported' : ''}`}>{evidence.change}</span>}
