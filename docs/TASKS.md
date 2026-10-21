@@ -342,6 +342,12 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 ### CONTENT — content-shaped presentation per action type
 
 - [ ] **CONTENT-1 · Images (finish)** · P1 · `content` `data`
+  - **21 Oct, slice 1 (tool-result images):**
+    - **What is kept:** images Claude received in tool results (Read of image files, MCP/browser screenshots), when the decoded bytes carry a PNG/JPEG/GIF/WebP signature. At most 4 MiB each and 256 MiB of distinct image bytes per recording. The type comes from the bytes, not the journal. Data is never text-redacted and never kept inside a protected scope.
+    - **Storage and serving:** bytes go to the blob store with no preview; history pages carry only a hash. `/v1/recordings/:id/images/:sha` serves a recording's own images (nosniff, immutable).
+    - **Cards:** lazy thumbnails sized by the recorded aspect ratio, a fit/actual-size reader, and a dashed note saying why an image was not kept. Exports leave image bytes out, as the engineering plan §10 asks.
+    - **Real sessions:** 75 of 75 and 137 of 137 images kept and served (at most 6 ms each). Import time was unchanged after one fix: decode only the first 4 KB to identify the type.
+    - **Open (slice 2):** images you pasted into prompts, Codex `input_image` and `ImageView.path`, path-only cards with a consented "open current file", the browser strip (CONTENT-2), and the phone sheet.
   - **Sources:** Codex `ImageView.path` (348 in sample) and user `input_image` blocks; Claude Read of image files, Bash `isImage`, screenshot tools (browser MCP `computer` screenshot results); Codex `Extension` image generation (`savedPath`, `revisedPrompt`).
   - **Do:**
     - Captured bytes present → bounded preview with fit/zoom/pan reader. D7 (revised 21 Oct): ≤ 4 MiB each, no count cap, ≤ 256 MiB distinct bytes per recording; over the limit → placeholder with size and consented "open original"; lazy, content-addressed, never inside history pages.
@@ -683,7 +689,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - `product-workspace.spec.ts:772` ("paged prompt rail spans the full session…") — rare flake under load (failed twice in about 16 runs while the whole suite ran; 20 of 20 passes when run alone): `.turn` first does not contain `Rail prompt 0`.
   - Also failing on clean main (19 Oct, Harsh with Claude, while verifying `codex/investigation-finishing`): `fresh-workspace.spec.ts` composer target (:129, `.modern-composer-location`), chrome fit (:287, `.modern-session-header h1`), Git review (:593, resize handle), edge actions (:1190, since PR124 the rightmost navigation action no longer reaches the right edge); `session-segments.spec.ts:31`.
   - Fail on main `b66f160` since PR125 (idle composer collapses by default), passing before it: `fresh-workspace.spec.ts` :16, :313, :331, :397, :657 (both harnesses), :792, :1135, :1344, :1723, :1791, :1809, :1828. Most expect the composer expanded or a prompt control visible.
-  - Flaky: `workspace-toolbar.spec.ts:88` (exposed-gutter scroll) passes and fails across runs of `codex/investigation-finishing`.
+  - Flaky: `workspace-toolbar.spec.ts:88` (exposed-gutter scroll) passes and fails across runs of `codex/investigation-finishing`. **21 Oct:** confirmed on main: the 9-spec warm group ending in it failed 2 of 3 runs (`expect > 20, received 0` at line 115); it also failed once in the CONTENT-1 full run.
   - **Do:** decide per spec whether the product or the test is wrong, fix, and re-run each 10× for flakiness. **Accept:** all four pass 10 of 10 on a clean build.
   - **20 October, later:** the two `classic-refinement` explorer specs that had been red since FILES-1 (#139) now clear the demo's captured paths from their synthetic trees (#164); #162 restored hover reading from file-title buttons after FILES-2 and updated one stale head click; the rail specs expect uniform ticks. **Still load-flaky when a whole file runs, passing alone:** `fresh-workspace` "Workspace large draft comparison" (alternates pass/fail even alone), `product-workspace` (paged prompt rail, studio hover reading) and `fresh-workspace` Home. Not yet diagnosed.
 

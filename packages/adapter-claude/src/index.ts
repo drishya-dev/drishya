@@ -23,7 +23,7 @@ import {
   type ToolIntent,
   type ToolOutcome,
 } from '@drishya/capture-core';
-import { isDeniedPath, sanitize } from '@drishya/privacy';
+import { imageCandidate, isDeniedPath, sanitize } from '@drishya/privacy';
 
 export const descriptor: AdapterDescriptor = {
   id: 'claude-code',
@@ -275,7 +275,12 @@ export function createParser(ctx: ParseContext): RecordParser {
           if (c.type === 'tool_result') {
             const call = calls.get(c.tool_use_id);
             const text = textOf(c.content);
-            const structured = r.toolUseResult;
+            // CONTENT-1 (D7): images returned to the model (Read of an image file, screenshots).
+            // Claude's toolUseResult repeats them; keep one copy, with its recorded display size.
+            const shown = (r.toolUseResult as Rec | undefined)?.file?.dimensions as Rec | undefined;
+            const images = Array.isArray(c.content) ? (c.content as Rec[]).filter((b) => b?.type === 'image' && b.source?.type === 'base64')
+              .map((b) => imageCandidate(b.source.data, shown ? { width: shown.displayWidth, height: shown.displayHeight } : undefined)) : [];
+            const structured = Array.isArray(r.toolUseResult) ? (r.toolUseResult as Rec[]).filter((b) => b?.type !== 'image') : r.toolUseResult?.type === 'image' && images.length ? { ...r.toolUseResult, file: undefined } : r.toolUseResult;
             const intent = call?.intent ?? { kind: 'other' as const };
             const outcome = outcomeOf(intent, structured, text);
             const exitMatch = /^Exit code (-?\d+)/m.exec(text ?? '');
@@ -292,9 +297,10 @@ export function createParser(ctx: ParseContext): RecordParser {
                 // Unknown tools keep their structured result (sanitized) so nothing is lost.
                 structured: outcome.kind === 'other' ? structured : undefined,
                 exitCode: intent.kind === 'shell' ? (exitMatch ? Number(exitMatch[1]) : c.is_error ? null : 0) : undefined,
+                ...(images.length ? { images } : {}),
               },
               denyContent: touchesProtectedFile(intent),
-              contentKeys: ['text', 'outcome', 'structured'],
+              contentKeys: ['text', 'outcome', 'structured', 'images'],
             });
             if (intent.kind === 'spawn' && outcome.kind === 'spawn' && outcome.childAgentId) {
               out.push({ ...base, part: 100 + i, kind: 'agent.spawn', operationId: c.tool_use_id, payload: { childAgentId: outcome.childAgentId, agentType: intent.agentType, description: intent.description, basis: 'source-id' } });

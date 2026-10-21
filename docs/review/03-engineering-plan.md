@@ -285,7 +285,7 @@ The application observes sensitive source, commands and conversations. No teleme
 - Archives need path traversal, symlink, decompression-size and file-count limits. Imported bundles must not gain arbitrary file/network access.
 - Retention and purge include blobs, indexes, previews and backups under application control. Externally shared copies and OS backups have separate lifecycles; do not promise remote recall.
 
-Unknown payloads and images require especially conservative handling. Automatic text redaction cannot certify screenshots as safe. Exclude images from export by default until individually previewed.
+Unknown payloads and images require especially conservative handling. Automatic text redaction cannot certify screenshots as safe. Exclude images from export by default until individually previewed. *(21 Oct, review125 D7 revised: inline image bytes are now kept within limits after a signature check; see TASKS CONTENT-1. Exports still leave them out.)*
 
 ## 11. Deployment, packaging and operations
 

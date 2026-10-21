@@ -101,6 +101,9 @@ export type CheckpointFile =
   | { available: true; text: string; bytes: number; truncated: boolean; redacted: boolean }
   | { available: false; reason: 'not-recorded' | 'removed' | 'needs-workspace-approval' | 'protected' };
 
+/** An image an action returned. `sha` names stored bytes; `omitted` says why there are none. */
+export interface OperationImage { sha?: string; mime?: string; bytes?: number; width?: number; height?: number; omitted?: string }
+
 /** How a command ran, as the harness recorded it (review125 S5). */
 export interface CommandRun {
   interrupted?: boolean;
@@ -201,6 +204,8 @@ export interface ToolResultPayload {
   structured?: unknown;
   exitCode?: number | null;
   durationMs?: number;
+  /** CONTENT-1 (D7): images in the result, kept inline only within limits; see @drishya/privacy captureImage. */
+  images?: { kind: 'captured-image'; mime?: string; bytes?: number; width?: number; height?: number; data?: TextValue; omitted?: string }[];
 }
 
 export interface AgentSpawnPayload {
@@ -308,6 +313,8 @@ export interface Operation {
   durationMs?: number;
   /** How the harness says a command ran (any command, including ones shown as reads or searches). */
   run?: CommandRun;
+  /** CONTENT-1: images this action returned; bytes are fetched by `sha`, never carried in history pages. */
+  images?: OperationImage[];
   agentId: string;
   kind: OperationKind;
   /** Captured tool name, shown in inspection. */
