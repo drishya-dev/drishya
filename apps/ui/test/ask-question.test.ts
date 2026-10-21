@@ -34,3 +34,12 @@ it('keeps a question whose options the capture reduced to placeholders, with its
   expect(only!.options).toEqual([]);
   expect(only).toMatchObject({ answer: 'too slow, and the font', typed: 'too slow, and the font', chosen: [] });
 });
+
+it("never shows Claude Code's trailing instruction as the person's words", () => {
+  const input = { questions: [{ question: 'Which area?', options: [{ label: 'Cart' }, { label: 'Checkout' }] }] };
+  const typed = askQuestions(input, 'User has answered your questions: "Which area?"="Both, but start small". Read the answers carefully — they may request clarification, changes, or that you not proceed — and follow what they actually say')[0]!;
+  expect(typed.typed).toBe('Both, but start small');
+  const chosen = askQuestions(input, 'User has answered your questions: "Which area?"="Checkout". You can now continue with the user\'s answers in mind.')[0]!;
+  expect(chosen.chosen).toEqual(['Checkout']);
+  expect(chosen.typed).toBeUndefined();
+});
