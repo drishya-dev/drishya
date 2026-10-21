@@ -4,7 +4,8 @@ import type { Projection } from '@drishya/contracts';
 export interface FileEvidence {
   path: string;
   readCalls: number;
-  change?: 'A' | 'E';
+  /** The file's latest captured change: created, edited or deleted. */
+  change?: 'A' | 'E' | 'D';
   changeStatus?: 'ok' | 'unknown';
   now: boolean;
 }
@@ -23,8 +24,10 @@ export function fileEvidence(projection: Projection, paths: readonly string[]): 
         const entry = index.get(path) ?? { path, readCalls: 0, now: false };
         if (op.paths.some(ref => ref.path === path && ref.role === 'read')) entry.readCalls++;
         if ((op.kind === 'edit' || op.kind === 'write') && (op.status === 'ok' || op.status === 'unknown')) {
-          // `created` is recorded by the adapter. Empty replacement text does not prove deletion.
-          entry.change = entry.change === 'A' || op.detail.kind === 'edit' && op.detail.path === path && op.detail.created ? 'A' : 'E';
+          // `created` and `deleted` are recorded by the adapter. Empty replacement text does not prove deletion.
+          // The latest change wins: a file deleted and then created again reads as created.
+          const own = op.detail.kind === 'edit' && op.detail.path === path ? op.detail : undefined;
+          entry.change = own?.deleted ? 'D' : entry.change === 'A' || own?.created ? 'A' : 'E';
           entry.changeStatus = op.status;
         }
         entry.now ||= op.status === 'running';

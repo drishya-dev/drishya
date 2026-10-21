@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-1 | @yash + Claude | `yash/files-1-deletions` | 2026-10-21 | D (deleted) file marks from captured deletes (Codex typed FileChange delete, apply_patch Delete File): edit detail `deleted` flag, file-evidence D, FileEvidenceMarks label/colour, tests (at most 8 files). |
 | PERF-2 | @harsh + Codex | `harsh/perf-2-responsive-ingest` | 2026-10-21 | Follow-up to merged #176; benchmark/profiling scripts and tests, ingest/store/daemon latency fixes if measured, performance report and completion docs (at most 15 files). Five-run retained-journal matrix; no schema/UI features or native turns. Claim released by Yash; coordination posted on #176. |
 
 ---

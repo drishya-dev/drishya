@@ -472,6 +472,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 ### FILES — Explorer, peek and Workspace
 
 - [ ] **FILES-1 · Evidence-decorated tree** · P1 · `files` `live`
+  - **21 October, deletion marks:** file rows now show a red `D` when the latest captured change deleted the file (Codex typed `FileChange` delete and `apply_patch` `Delete File`; edit detail `deleted`, `REDUCER_VERSION` r9). The latest change wins: deleted then written again reads `A`. Real 564 MB session: `ci-scope.mjs` and its test read `D`; `Origins.tsx`, deleted and rewritten in one patch, reads `A`. Claude has no delete tool, so its deletions (via shell `rm`) stay unmarked rather than guessed.
   - **Do:**
     - Each file row may show `E` edited / `A` created / `D` deleted (amber/green/red letter), a read eye with a count, and a subtle "now" mark on the file under the current operation.
     - Folders aggregate (dot plus count).

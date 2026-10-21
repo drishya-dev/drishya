@@ -292,7 +292,7 @@ export function materialOperations(operations: Operation[]): Operation[] {
 export type OperationDetail =
   | { kind: 'read'; path: string; startLine: number; lineCount: number; totalLines?: number; excerptArtifactId?: string }
   | { kind: 'search'; query: string; mode: 'text' | 'file' | 'web'; hits: SearchHit[]; total?: number }
-  | { kind: 'edit'; path: string; hunks: Hunk[]; created: boolean; reconstruction: Availability; reconstructionNote?: string }
+  | { kind: 'edit'; path: string; hunks: Hunk[]; created: boolean; /** The harness recorded this change as deleting the file. */ deleted?: boolean; reconstruction: Availability; reconstructionNote?: string }
   | { kind: 'shell'; command: string; exitCode?: number | null; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'test'; command: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
