@@ -37,6 +37,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — PERF-2 reference-source handoff pending
+
+- **When:** 21 October 2026. Claimed follow-up to merged #176; coordinated on that PR. This machine has an i7-13650HX / 23.7 GiB RAM, unlike the i9-14900HX reference machine. No 166/347/564 MB journals exist in its Codex sessions/archive; largest available is 57.7 MB. Requested reference-machine execution/location; do not substitute the smaller source for the required gate matrix.
+- **Local diagnostic only:** current UI builds. One isolated complete import of 57,651,337 bytes: 5,830 observations, zero capture gaps, repeat sync added zero; import 1,647 ms, first history page 1,576 ms, peak daemon RSS 322.68 MiB. No runtime edits, no before/after improvement claim. Numeric output stays in `.local/perf-2/local-baseline.jsonl`; source contents were not printed.
+- **Measurement gap:** `bench-real-journals.ts` reports ingest tail completion, not rendered visible-update completion; API/frame timings are proxies, not actual interaction measurements. Extend those measurements before declaring the gate green. No hosted CI/native turn. PERF-2 claim held pending source handoff; DATA-3 stays unclaimed.
+
+
 ### Yash with Claude (Opus 5.5) — PERF-2 fixes 1–3 (gate still red)
 
 - **When:** 21 October 2026. Derived blobs as rows (`SqliteBlobStore`, `HISTORY_VERSION` h2), ordered read sorts row ids, ingest stores reads in 1 MiB slices. Paired A/B on the 564 MB journal under heavy machine load: first history page ≈ 43% faster, RSS lower, tail catch-up slower but < 1.5 s, ids/order identical. See [perf-2-latency](review/perf-2-latency.md).
