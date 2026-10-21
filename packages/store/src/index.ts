@@ -70,6 +70,7 @@ export class BlobStore {
   private lineIndexes = new Map<string, LineIndex>();
   private searches = new Map<string, BlobSearchState>();
   readonly dir: string;
+  private madeDirs = new Set<string>();
   constructor(dir: string) {
     this.dir = dir;
     mkdirSync(dir, { recursive: true });
@@ -77,29 +78,44 @@ export class BlobStore {
   private pathOf(sha: string) {
     return join(this.dir, sha.slice(0, 2), sha);
   }
-  /** Atomic: written to a temp name and renamed, so a reference never points at half a file. */
-  put(text: string): { sha: string; bytes: number } {
-    const buf = Buffer.from(text, 'utf8');
-    const sha = createHash('sha256').update(buf).digest('hex');
-    const p = this.pathOf(sha);
-    if (!existsSync(p)) {
-      mkdirSync(dirname(p), { recursive: true });
-      const tmp = `${p}.${randomUUID()}.tmp`;
-      writeFileSync(tmp, buf, { mode: 0o600 });
-      renameSync(tmp, p);
-    }
-    return { sha, bytes: buf.length };
+  // Storage primitives. The base class keeps one file per blob; a subclass may override all five.
+  protected exists(sha: string): boolean {
+    return existsSync(this.pathOf(sha));
   }
-  get(sha: string): string | undefined {
-    if (!/^[0-9a-f]{64}$/.test(sha)) return undefined;
+  protected load(sha: string): string | undefined {
     try {
       return readFileSync(this.pathOf(sha), 'utf8');
     } catch {
       return undefined;
     }
   }
+  /** Atomic: written to a temp name and renamed, so a reference never points at half a file. */
+  protected save(sha: string, buf: Buffer): void {
+    const p = this.pathOf(sha), folder = dirname(p);
+    if (!this.madeDirs.has(folder)) { mkdirSync(folder, { recursive: true }); this.madeDirs.add(folder); }
+    const tmp = `${p}.${randomUUID()}.tmp`;
+    writeFileSync(tmp, buf, { mode: 0o600 });
+    renameSync(tmp, p);
+  }
+  protected open(sha: string): BlobReader {
+    const fd = openSync(this.pathOf(sha), 'r');
+    return { read: (buf, length, position) => readSync(fd, buf, 0, length, position), close: () => closeSync(fd) };
+  }
+  protected remove(sha: string): void {
+    rmSync(this.pathOf(sha), { force: true });
+  }
+  put(text: string): { sha: string; bytes: number } {
+    const buf = Buffer.from(text, 'utf8');
+    const sha = createHash('sha256').update(buf).digest('hex');
+    if (!this.exists(sha)) this.save(sha, buf);
+    return { sha, bytes: buf.length };
+  }
+  get(sha: string): string | undefined {
+    if (!/^[0-9a-f]{64}$/.test(sha)) return undefined;
+    return this.load(sha);
+  }
   has(sha: string): boolean {
-    return /^[0-9a-f]{64}$/.test(sha) && existsSync(this.pathOf(sha));
+    return /^[0-9a-f]{64}$/.test(sha) && this.exists(sha);
   }
   /**
    * Lines [start, start + count) of a blob, capped at `maxBytes`, without loading the whole file
@@ -132,11 +148,11 @@ export class BlobStore {
     let line = Math.floor(first / LINE_STRIDE) * LINE_STRIDE;
     let pos = index.offsets[line / LINE_STRIDE] ?? index.bytes;
     let done = count <= 0 || first >= index.totalLines;
-    const fd = openSync(this.pathOf(sha), 'r');
+    const reader = this.open(sha);
     try {
       const buf = Buffer.alloc(READ_CHUNK);
       while (!done && pos < index.bytes) {
-        const n = readSync(fd, buf, 0, Math.min(READ_CHUNK, index.bytes - pos), pos);
+        const n = reader.read(buf, Math.min(READ_CHUNK, index.bytes - pos), pos);
         this.stats.bytesRead += n;
         if (n === 0) break;
         let i = 0;
@@ -158,7 +174,7 @@ export class BlobStore {
       // The blob's last line has no newline after it.
       if (!done && line >= first && line < index.totalLines) finishLine();
     } finally {
-      closeSync(fd);
+      reader.close();
     }
     const text = lines.map((l) => l.toString('utf8')).join('\n');
     return { text, totalLines: index.totalLines, totalBytes: index.bytes, returnedLines: lines.length, truncated, hasMore: first + lines.length < index.totalLines };
@@ -188,12 +204,12 @@ export class BlobStore {
       }
       cursor.line++; cursor.chunks = []; cursor.length = 0; cursor.oversized = false;
     };
-    const fd = openSync(this.pathOf(sha), 'r');
+    const reader = this.open(sha);
     try {
       const buffer = Buffer.alloc(READ_CHUNK);
       while (cursor.position < index.bytes && read < 4 * 1024 * 1024 && scanned < 10_000 && matches.length < 50) {
         const base = cursor.position;
-        const n = readSync(fd, buffer, 0, Math.min(buffer.length, index.bytes - base, 4 * 1024 * 1024 - read), base);
+        const n = reader.read(buffer, Math.min(buffer.length, index.bytes - base, 4 * 1024 * 1024 - read), base);
         this.stats.bytesRead += n; read += n;
         if (!n) break;
         let offset = 0;
@@ -211,7 +227,7 @@ export class BlobStore {
         }
       }
       if (cursor.position >= index.bytes && cursor.line < index.totalLines && scanned < 10_000 && matches.length < 50) finish();
-    } finally { closeSync(fd); }
+    } finally { reader.close(); }
     let next: string | undefined;
     if (cursor.line < index.totalLines) {
       next = randomUUID(); this.searches.set(next, cursor);
@@ -230,11 +246,11 @@ export class BlobStore {
     const offsets = [0]; // offsets[k] = where line k × LINE_STRIDE starts
     let lines = 1;
     let pos = 0;
-    const fd = openSync(this.pathOf(sha), 'r');
+    const reader = this.open(sha);
     try {
       const buf = Buffer.alloc(READ_CHUNK);
       for (;;) {
-        const n = readSync(fd, buf, 0, READ_CHUNK, pos);
+        const n = reader.read(buf, READ_CHUNK, pos);
         this.stats.bytesRead += n;
         if (n === 0) break;
         for (let i = buf.indexOf(0x0a, 0); i !== -1 && i < n; i = buf.indexOf(0x0a, i + 1)) {
@@ -244,7 +260,7 @@ export class BlobStore {
         pos += n;
       }
     } finally {
-      closeSync(fd);
+      reader.close();
     }
     const index = { totalLines: lines, bytes: pos, offsets };
     this.lineIndexes.set(sha, index);
@@ -254,7 +270,56 @@ export class BlobStore {
 
   delete(sha: string) {
     this.lineIndexes.delete(sha);
-    if (/^[0-9a-f]{64}$/.test(sha)) rmSync(this.pathOf(sha), { force: true });
+    if (/^[0-9a-f]{64}$/.test(sha)) this.remove(sha);
+  }
+}
+
+/** Positional reads over one stored blob. */
+export interface BlobReader { read(buf: Buffer, length: number, position: number): number; close(): void }
+
+/**
+ * Derived blobs kept as rows of the caller's own SQLite database instead of one file each.
+ * Rebuilding a large history writes thousands of derived artifacts; as files that cost a
+ * create and a rename apiece (about 2.7 s for 4,400 on the PERF-2 journal), as rows it is
+ * part of the caller's transaction. Same content addressing and line reads as the base class.
+ */
+export class SqliteBlobStore extends BlobStore {
+  private readonly db: DatabaseSync;
+  private readonly stmt: { has: StatementSync; get: StatementSync; put: StatementSync; del: StatementSync };
+  constructor(db: DatabaseSync, dir: string) {
+    super(dir);
+    this.db = db;
+    db.exec('CREATE TABLE IF NOT EXISTS derived_blob(sha TEXT PRIMARY KEY, body BLOB NOT NULL)');
+    this.stmt = {
+      has: db.prepare('SELECT 1 AS ok FROM derived_blob WHERE sha = ?'),
+      get: db.prepare('SELECT body FROM derived_blob WHERE sha = ?'),
+      put: db.prepare('INSERT OR IGNORE INTO derived_blob(sha, body) VALUES (?, ?)'),
+      del: db.prepare('DELETE FROM derived_blob WHERE sha = ?'),
+    };
+  }
+  private bytes(sha: string): Buffer | undefined {
+    const row = this.stmt.get.get(sha) as { body: Uint8Array } | undefined;
+    return row ? Buffer.from(row.body.buffer, row.body.byteOffset, row.body.byteLength) : undefined;
+  }
+  protected override exists(sha: string): boolean {
+    return !!this.stmt.has.get(sha);
+  }
+  protected override load(sha: string): string | undefined {
+    return this.bytes(sha)?.toString('utf8');
+  }
+  protected override save(sha: string, buf: Buffer): void {
+    this.stmt.put.run(sha, buf);
+  }
+  protected override open(sha: string): BlobReader {
+    const body = this.bytes(sha) ?? Buffer.alloc(0);
+    return { read: (buf, length, position) => body.copy(buf, 0, position, Math.min(body.length, position + length)), close: () => undefined };
+  }
+  protected override remove(sha: string): void {
+    this.stmt.del.run(sha);
+  }
+  /** Every stored sha, for sweeping blobs no view references any more. */
+  *shas(): Iterable<string> {
+    for (const row of this.db.prepare('SELECT sha FROM derived_blob').iterate()) yield String((row as { sha: string }).sha);
   }
 }
 
@@ -536,20 +601,26 @@ export class Store {
     const rank = ids.map((_, i) => `WHEN ? THEN ${i}`).join(' ');
     return {
       *[Symbol.iterator]() {
-        const rows = store.db.prepare(`
+        // Sort only row ids, then fetch each body by id. Sorting rows that carry their whole JSON
+        // body cost a third of a large history's ordered read (PERF-2: 666 -> 450 ms on 26k rows).
+        const order = store.db.prepare(`
           WITH timed AS (
-            SELECT body, seq, recording_id,
+            SELECT rowid AS rid, seq, recording_id,
               MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (
                 PARTITION BY recording_id, json_extract(body, '$.source.sourceId') ORDER BY seq
                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
               ) AS clock_seq
             FROM observations WHERE recording_id IN (${marks})
-          ) SELECT timed.body FROM timed LEFT JOIN observations clock
+          ) SELECT timed.rid AS rid FROM timed LEFT JOIN observations clock
             ON clock.recording_id = timed.recording_id AND clock.seq = timed.clock_seq
           ORDER BY COALESCE(clock.clock_time, ''), timed.seq,
             CASE timed.recording_id ${rank} END
-        `).iterate(...ids, ...ids) as Iterable<{ body: string }>;
-        for (const row of rows) yield JSON.parse(row.body) as Observation;
+        `).all(...ids, ...ids) as { rid: number }[];
+        const body = store.q('SELECT body FROM observations WHERE rowid = ?');
+        for (const { rid } of order) {
+          const row = body.get(rid) as { body: string } | undefined;
+          if (row) yield JSON.parse(row.body) as Observation;
+        }
       },
     };
   }

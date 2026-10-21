@@ -4,7 +4,8 @@ import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { compose } from '@drishya/scene';
 import { App } from '../src/app.ts';
-import { BlobStore } from '@drishya/store';
+import { SqliteBlobStore } from '@drishya/store';
+import { DatabaseSync } from 'node:sqlite';
 
 let app: App | undefined;
 let dir: string;
@@ -141,10 +142,13 @@ describe('worker-owned history pages', () => {
     const page = await app.history.page(b);
     const artifact = page.projection.artifacts.find((item) => item.blob)!;
     const before = await app.history.artifact(b, artifact.id, 0, 100);
-    const derived = new BlobStore(join(dir, 'data/history/blobs'));
-    const orphan = derived.put('invented unreferenced cache file');
+    // Derived blobs are rows of the worker's index.db (PERF-2); plant an unreferenced one there.
+    const index = new DatabaseSync(join(dir, 'data/history/index.db'));
+    const derived = new SqliteBlobStore(index, join(dir, 'planted-blobs'));
+    const orphan = derived.put('invented unreferenced cache entry');
     await app.forget(a);
     expect(derived.has(orphan.sha)).toBe(false);
+    index.close();
     expect((await app.history.artifact(b, artifact.id, 0, 100)).text).toBe(before.text);
     expect(app.store.getRecording(b)).toBeDefined();
     // The harness journal is an independent file; forgetting never deletes it.
