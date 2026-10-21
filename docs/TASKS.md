@@ -350,6 +350,7 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
   - **Accept:** each source verified on actual sessions; missing, expired and remote states are explicit; the phone sheet works.
 
 - [ ] **CONTENT-2 · Browser and web evidence (finish)** · P1 · `content` `data`
+  - **21 October, search results slice:** web search cards now read as a result list (muted domain · title; snippets when expanded) instead of a raw text dump, for Claude WebSearch (`Links: […]` in the recorded result, whole pairs only) and Codex typed web items (DATA-1 results). http(s) links only, at most 20, bounded fields, click-only (`rel="noopener noreferrer"`), nothing fetched (`REDUCER_VERSION` r8). 163 Claude web searches across local sessions now carry lists. **Open:** WebFetch status/bytes/duration (DATA-4), the browser-MCP strip with step scrubber.
   - **Do:**
     - WebFetch → URL, status code, bytes, duration, result excerpt as a readable page summary.
     - WebSearch / Codex `Extension` search → query plus result list (title · domain · snippet) with safe external links.

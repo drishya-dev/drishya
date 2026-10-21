@@ -30,6 +30,7 @@ import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
 import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
 import { PlanChecklist } from './PlanChecklist.tsx';
+import { WebResults } from './WebResults.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -840,6 +841,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
     case 'web':
       return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
+        {d.results?.length ? <><div className="material-context">{d.results.length} recorded result{d.results.length === 1 ? '' : 's'}</div><WebResults results={d.results} snippets/></> : null}
         <div className="material-context">Captured result preview</div>
         <CapturedOutcomes output={d.resultPreview}/>
         <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
@@ -956,7 +958,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="web">
           <div className="query">{d.url ?? d.query}</div>
           <ResultArea state={op.status} resolving={resolving}>
-            {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
+            {d.results?.length ? <WebResults results={d.results} limit={5}/> : d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
           </ResultArea>
         </div>
       );
