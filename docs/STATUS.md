@@ -31,11 +31,15 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| PERF-2 | @yash + Claude | `yash/perf-2-latency` | 2026-10-20 | Follow-up only: re-measure with DATA-1/2 merged, profile import/API/UI latency during append and first-history indexing on the 564 MB journal, fix the main stall (daemon ingest/sync scheduling, history worker paging); `apps/daemon` ingest/sync/server scheduling, `packages/ingest`, `packages/capture-core` only where the profile points, `scripts/bench-real-journals.ts`, perf docs (at most 12 files). No record limits lowered, no fidelity dropped. |
 
 ---
 
 ## Last session
+
+### Yash with Claude (Opus 5.5) — PERF-2 fixes 1–3 (gate still red)
+
+- **When:** 21 October 2026. Derived blobs as rows (`SqliteBlobStore`, `HISTORY_VERSION` h2), ordered read sorts row ids, ingest stores reads in 1 MiB slices. Paired A/B on the 564 MB journal under heavy machine load: first history page ≈ 43% faster, RSS lower, tail catch-up slower but < 1.5 s, ids/order identical. See [perf-2-latency](review/perf-2-latency.md).
+- **Open:** API p95 < 100 ms not established (load); re-measure five runs per source unloaded. Claim released; next candidates are listed in the report.
 
 ### Yash with Claude (Opus 5.5) — PERF-2 profiled after DATA-1/2 (claim held, fixes tomorrow)
 
