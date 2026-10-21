@@ -664,6 +664,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, 
   return (
     <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
       {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
           <div className="passage-head">
@@ -682,7 +683,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, 
         const pr = prose.get(p.id);
         return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
       })}
-      {!folded && ps.notices?.map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
+      {!folded && ps.notices?.filter((n) => !n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
     </section>
   );
 });

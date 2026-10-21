@@ -57,7 +57,7 @@ export interface ScenePassage {
   ops: SceneOp[];
   prose: SceneProse[];
   /** DATA-6: harness notices recorded in this passage, as of this step. */
-  notices?: { id: string; arriving: boolean }[];
+  notices?: { id: string; arriving: boolean; /** Recorded before this passage's first operation, so it reads above them. */ leading?: boolean }[];
   /** Earlier passages ease back; the latest passage per agent is in front. */
   settled: boolean;
   matchesFilter: boolean;
@@ -231,7 +231,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       agentId: ps.agentId,
       ops: sceneOps,
       prose: sceneProse,
-      ...(ps.noticeIds?.some((id) => noticeAt.has(id)) ? { notices: ps.noticeIds.filter((id) => noticeAt.has(id)).map((id) => ({ id, arriving: noticeAt.get(id) === step - 1 })) } : {}),
+      ...(ps.noticeIds?.some((id) => noticeAt.has(id)) ? { notices: ps.noticeIds.filter((id) => noticeAt.has(id)).map((id) => { const at = noticeAt.get(id)!, firstOp = Math.min(...ps.operationIds.map((op) => started.get(op) ?? Infinity)); return { id, arriving: at === step - 1, ...(at < firstOp ? { leading: true } : {}) }; }) } : {}),
       settled: latestByAgent.get(ps.agentId) !== ps.id,
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,
