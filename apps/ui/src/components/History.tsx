@@ -33,6 +33,7 @@ import { VerificationStrip } from './VerificationStrip.tsx';
 import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
 import { PlanChecklist } from './PlanChecklist.tsx';
 import { WebResults } from './WebResults.tsx';
+import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -659,7 +660,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
     <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.ops.length > 0 && (
         <>
           <div className="passage-head">
@@ -829,6 +830,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         <div className="query">{d.query} · {d.total ?? d.hits.length} recorded result{(d.total ?? d.hits.length) === 1 ? '' : 's'}</div>
         {d.hits.slice(0, 50).map((hit, i) => <button type="button" className="hit search-bead" key={i} title={`Open captured match on ${hit.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(hit.path,hit.line,`${op.id}/search/${i}`);}}>{hit.path}{hit.line ? `:${hit.line}` : ''}{hit.text ? ` · ${hit.text}` : ''}</button>)}
         {d.hits.length > 50 && <div className="muted">{d.hits.length - 50} more recorded hits · open details to inspect all</div>}
+        <CommandRunNotes op={op} />
       </div>;
     case 'test':
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
@@ -838,6 +840,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
         {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
+        <CommandRunNotes op={op} />
       </div>;
     case 'shell':
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
@@ -846,6 +849,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} />
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
+        <CommandRunNotes op={op} />
         <div className="muted small">Exit {d.exitCode ?? 'not captured'}</div>
       </div>;
     case 'mcp':
@@ -858,6 +862,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
     case 'web':
       return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
+        {d.fetch && <div className="material-context">{fetchFacts(d.fetch)}</div>}
         {d.results?.length ? <><div className="material-context">{d.results.length} recorded result{d.results.length === 1 ? '' : 's'}</div><WebResults results={d.results} snippets/></> : null}
         <div className="material-context">Captured result preview</div>
         <CapturedOutcomes output={d.resultPreview}/>
@@ -1002,7 +1007,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
  * a single line of what it did. The newest turn waits until the agent is quiet, and replay shows no ledger,
  * so nothing here tells the future.
  */
-function TurnBlock({ prompt, step, fold }: { prompt: string; step?: number; fold?: { folded: boolean; toggle: () => void } }) {
+function TurnBlock({ prompt, step, fold, permissionMode }: { prompt: string; step?: number; permissionMode?: string; fold?: { folded: boolean; toggle: () => void } }) {
   const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
   const newest = useTurns((s) => s.lastStep === step);
   const active = useNow((s) => !!s.view?.mark);
@@ -1027,6 +1032,7 @@ function TurnBlock({ prompt, step, fold }: { prompt: string; step?: number; fold
       <span className="turn-who">You</span>
       <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
+      {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}
       {fold ? (
         // The ledger line is the fold control: what the turn did is what stays when it folds.
         <button type="button" className="turn-ledger turn-fold" aria-expanded={!fold.folded} aria-label={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `: ${parts.map((part) => part.text).join(', ')}` : ''}`} title={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `. ${LEDGER_BASIS}` : ''}`} onClick={(e) => { e.stopPropagation(); fold.toggle(); }}>
@@ -1037,6 +1043,9 @@ function TurnBlock({ prompt, step, fold }: { prompt: string; step?: number; fold
     </div>
   );
 }
+
+/** Claude Code permission modes, in its own words where it has them. */
+const PERMISSION_MODE: Record<string, string> = { default: 'Asks before edits', acceptEdits: 'Accepts edits', auto: 'Auto mode', bypassPermissions: 'Bypasses permissions', plan: 'Plan mode' };
 
 /** Added and removed lines, counted from the captured patch. */
 function DiffStat({ hunks }: { hunks: Hunk[] }) {

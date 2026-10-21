@@ -18,6 +18,7 @@ import {
   type RawHunk,
   type RawObservation,
   type RecordParser,
+  type ShellRun,
   type SourceSet,
   type ToolIntent,
   type ToolOutcome,
@@ -99,6 +100,18 @@ export function intentOf(name: string, input: Rec): ToolIntent {
   }
 }
 
+const defined = <T extends Rec>(o: T): Partial<T> => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
+
+function shellRun(s: Rec): { run?: ShellRun } {
+  const run = defined({
+    backgroundTaskId: str(s.backgroundTaskId),
+    timedOutAfterMs: num(s.timedOutAfterMs),
+    exitNote: str(s.returnCodeInterpretation),
+    persistedOutput: str(s.persistedOutputPath) ? defined({ path: s.persistedOutputPath as string, bytes: num(s.persistedOutputSize) }) as { path: string; bytes?: number } : undefined,
+  });
+  return Object.keys(run).length ? { run } : {};
+}
+
 export function outcomeOf(intent: ToolIntent, structured: unknown, text: string | undefined): ToolOutcome {
   const s = (structured && typeof structured === 'object' ? structured : {}) as Rec;
   switch (intent.kind) {
@@ -131,9 +144,9 @@ export function outcomeOf(intent: ToolIntent, structured: unknown, text: string 
       return { kind: 'search', files: Array.isArray(s.filenames) ? s.filenames : undefined, lines: str(s.content) ?? (s.filenames ? undefined : text), total: num(s.numFiles) ?? num(s.totalMatches) };
     case 'shell':
       if (typeof structured === 'string') return { kind: 'shell', stdout: structured };
-      return { kind: 'shell', stdout: str(s.stdout) ?? text, stderr: str(s.stderr), interrupted: !!s.interrupted };
+      return { kind: 'shell', stdout: str(s.stdout) ?? text, stderr: str(s.stderr), interrupted: !!s.interrupted, ...shellRun(s) };
     case 'web':
-      return { kind: 'web', url: str(s.url), status: num(s.code), text: str(s.result) ?? text };
+      return { kind: 'web', url: str(s.url), status: num(s.code), text: str(s.result) ?? text, ...defined({ statusText: str(s.codeText), bytes: num(s.bytes), durationMs: num(s.durationMs) }) };
     case 'spawn':
       return { kind: 'spawn', childAgentId: typeof s.agentId === 'string' ? `agent:${s.agentId}` : undefined, text: textOf(s.content) ?? text };
     default:
@@ -221,8 +234,9 @@ export function createParser(ctx: ParseContext): RecordParser {
           out.push({ ...base, part: 0, kind: 'compaction', payload: { summary: textOf(content) }, contentKeys: ['summary'] });
           return out;
         }
+        const mode = typeof r.permissionMode === 'string' ? { permissionMode: r.permissionMode } : {};
         if (typeof content === 'string') {
-          if (!r.isMeta) out.push({ ...base, part: 0, kind: 'message.user', payload: { text: content }, contentKeys: ['text'] });
+          if (!r.isMeta) out.push({ ...base, part: 0, kind: 'message.user', payload: { text: content, ...mode }, contentKeys: ['text'] });
           return out;
         }
         if (!Array.isArray(content)) return out;
@@ -255,7 +269,7 @@ export function createParser(ctx: ParseContext): RecordParser {
               out.push({ ...base, part: 100 + i, kind: 'agent.spawn', operationId: c.tool_use_id, payload: { childAgentId: outcome.childAgentId, agentType: intent.agentType, description: intent.description, basis: 'source-id' } });
             }
           } else if (c.type === 'text' && !r.isMeta) {
-            out.push({ ...base, part: i, kind: 'message.user', payload: { text: c.text }, contentKeys: ['text'] });
+            out.push({ ...base, part: i, kind: 'message.user', payload: { text: c.text, ...mode }, contentKeys: ['text'] });
           } else if (c.type === 'image') {
             out.push({ ...base, part: i, kind: 'capture.gap', payload: { reason: 'unsupported-content', detail: 'image omitted by privacy policy' }, availability: 'metadata-only' });
           }

@@ -65,6 +65,8 @@ export interface ScenePassage {
   turnTime?: string;
   /** Timeline step of that turn's prompt, to find its ledger (see turns.ts). */
   turnStep?: number;
+  /** Claude Code permission mode recorded with this prompt, only when it differs from the previous prompt's. */
+  turnPermissionMode?: string;
   /**
    * Timeline step of the prompt this passage follows, on every passage of the turn (not only the one that opens it),
    * so a reader can fold a finished turn even when its opening passage is paged out.
@@ -148,13 +150,18 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const ended = new Map<string, number>();
   const proseAt = new Map<string, number>();
   const stoppedAgents = new Set<string>();
-  const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string }[] = [];
+  const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string; modeChange?: string }[] = [];
+  let lastMode: string | undefined;
   applied.forEach((it, i) => {
     if (it.type === 'op-start') started.set(it.operationId, i);
     else if (it.type === 'op-end') ended.set(it.operationId, i);
     else if (it.type === 'prose') proseAt.set(it.proseId, i);
     else if (it.type === 'agent-stop') stoppedAgents.add(it.agentId);
-    else if (it.type === 'turn') turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt,time:it.time });
+    else if (it.type === 'turn') {
+      const modeChange = it.permissionMode && it.permissionMode !== lastMode ? it.permissionMode : undefined;
+      if (it.permissionMode) lastMode = it.permissionMode;
+      turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt, time: it.time, ...(modeChange ? { modeChange } : {}) });
+    }
   });
 
   const stateOf = (op: Operation): OpState => {
@@ -225,6 +232,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       turnPrompt: opensTurn ? turn!.prompt : undefined,
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
       ...(opensTurn&&turn?{turnStep:turn.step}:{}),
+      ...(opensTurn&&turn?.modeChange?{turnPermissionMode:turn.modeChange}:{}),
       ...(turn ? { inTurn: turn.step } : {}),
     };
   });
@@ -239,6 +247,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     settled: turn.step !== turnAt.at(-1)?.step,
     matchesFilter: !f || (!f.kind && !f.server && !f.tool && (!f.agentId || f.agentId === turn.agentId)),
     turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, inTurn: turn.step,
+    ...(turn.modeChange ? { turnPermissionMode: turn.modeChange } : {}),
   });
   materialPassages.forEach((passage, index) => {
     while (promptIndex < promptOnly.length && promptOnly[promptIndex]!.step < visible[index]!.firstStep) appendPrompt(promptOnly[promptIndex++]!);

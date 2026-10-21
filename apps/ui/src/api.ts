@@ -10,6 +10,7 @@ import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
 import { verificationFor, type VerificationTrail } from '../../../packages/scene/src/verification.ts';
 import { fixChainFor, type FixChain } from '../../../packages/scene/src/fix-chains.ts';
 import { readBeforeWriteFor, type ReadBeforeWrite } from '../../../packages/scene/src/read-before-write.ts';
+import type { PersistedOutput } from '@drishya/contracts';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { NowFacts } from '../../../packages/scene/src/now.ts';
 import type { TurnLedger } from '../../../packages/scene/src/turns.ts';
@@ -111,6 +112,8 @@ export interface DataSource {
   verification?(id: string, operationId: string): Promise<VerificationTrail | null>;
   fixChain?(id: string, operationId: string): Promise<FixChain | null>;
   readBefore?(id: string, operationId: string): Promise<ReadBeforeWrite | null>;
+  /** DATA-4: full output Claude Code saved to a file, read on request and redacted. Local recordings only. */
+  persistedOutput?(id: string, operationId: string): Promise<PersistedOutput>;
   /** Moves the mark. Only explicit reader actions call this. */
   setBoundary(id: string, sequence: number): Promise<ReadingBoundary>;
   /** New data (`added` > 0) or a capture-state change (`health` set, nothing added). */
@@ -263,6 +266,7 @@ export const daemon: DataSource = {
       throw e;
     }
   },
+  persistedOutput: (id, operationId) => req<PersistedOutput>(`/v1/recordings/${encodeURIComponent(id)}/persisted-output/${encodeURIComponent(operationId)}`),
   fixChain: async (id, operationId) => {
     try {
       return await req<FixChain>(`/v1/recordings/${encodeURIComponent(id)}/fix-chain/${encodeURIComponent(operationId)}`);

@@ -609,6 +609,11 @@ export class Store {
     return (this.q('SELECT body FROM observations WHERE recording_id = ? AND seq > ? ORDER BY seq LIMIT ?').all(recordingId, after, limit) as { body: string }[]).map((r) => JSON.parse(r.body));
   }
 
+  /** Observations of one native tool call, in order (uses the recording/operation index). */
+  operationObservations(recordingId: string, operationId: string): Observation[] {
+    return (this.q('SELECT body FROM observations WHERE recording_id = ? AND operation_id = ? ORDER BY seq').all(recordingId, operationId) as { body: string }[]).map((r) => JSON.parse(r.body));
+  }
+
   /** Repeatable disk-backed ordering matching the reducer's source-clock carry-forward. */
   orderedObservations(recordingId: string | string[]): Iterable<Observation> {
     const store = this;
