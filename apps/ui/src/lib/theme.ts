@@ -11,8 +11,28 @@ export function useResolvedTheme() {
   return useSyncExternalStore(subscribe, () => `${document.documentElement.dataset.theme ?? 'dark'}:${document.documentElement.dataset.palette ?? ''}:${document.documentElement.dataset.experience ?? ''}`, () => 'dark:');
 }
 
-/** Read tokens once per paint, rather than querying CSS for every node in a large map. */
-export function mapPalette(canvas: HTMLCanvasElement) {
+// Everything that can change the map's colour tokens. Reading these never forces a style recalculation.
+const themeKey = () => {
+  const d = document.documentElement.dataset;
+  return `${d.theme ?? ''}:${d.palette ?? ''}:${d.experience ?? ''}:${d.uiVersion ?? ''}:${matchMedia('(prefers-color-scheme: dark)').matches}`;
+};
+type MapPalette = ReturnType<typeof readPalette>;
+const palettes = new WeakMap<HTMLCanvasElement, { key: string; palette: MapPalette }>();
+
+/**
+ * The map's colours, read from CSS once per theme rather than once per paint. The map paints every
+ * frame while history is live, and each getPropertyValue forced a full style recalculation against
+ * a DOM that changed every frame (PERF-2: ~410 ms of a 2.6 s window on a 166 MB journal).
+ */
+export function mapPalette(canvas: HTMLCanvasElement): MapPalette {
+  const key = themeKey(), cached = palettes.get(canvas);
+  if (cached?.key === key) return cached.palette;
+  const palette = readPalette(canvas);
+  palettes.set(canvas, { key, palette });
+  return palette;
+}
+
+function readPalette(canvas: HTMLCanvasElement) {
   const styles = getComputedStyle(canvas);
   const colour = (token: string) => styles.getPropertyValue(token).trim();
   return {

@@ -235,9 +235,14 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('focusin', outside); document.removeEventListener('keydown', escape, true); };
   }, [narrow, shown, developerWorkspace, workspace?.approved]);
   useLayoutEffect(() => { treeElement.current?.scrollTo({ top: 0 }); setTreeScroll(0); }, [query, touchedOnly]);
+  const treeRows = useRef(0);
   useLayoutEffect(() => {
     const el = treeElement.current; if (!el) return;
     const anchor = folderAnchor.current; folderAnchor.current = undefined;
+    // A live update rebuilds the tree with the same rows; only an anchor or a changed row count can move
+    // the scroll, so skip the forced layout otherwise (PERF-2).
+    const rows = treeRows.current; treeRows.current = tree.length;
+    if (!anchor && rows === tree.length) return;
     const index = anchor ? tree.findIndex(row => row.path === anchor.path) : -1;
     const top = index >= 0 ? index * rowHeight - anchor!.offset : el.scrollTop;
     el.scrollTop = Math.max(0, Math.min(top, tree.length * rowHeight - el.clientHeight));

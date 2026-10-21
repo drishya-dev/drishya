@@ -219,3 +219,19 @@ describe('reading boundaries', () => {
     expect(store.getBoundary('rec_a')).toBeUndefined();
   });
 });
+
+// PERF-2: the recordings list asks for policy versions on every poll; the answer is cached and grown
+// on append rather than recomputed by scanning every stored body.
+describe('policy versions', () => {
+  it('grows with appended observations and forgets a deleted recording', () => {
+    seed();
+    store.appendObservations('rec_a', 'src_a', cursor, [obs('v1')]);
+    expect(store.policyVersions('rec_a')).toEqual(['p3']);
+    store.appendObservations('rec_a', 'src_a', cursor, [{ ...obs('v2'), privacyPolicyVersion: 'p4' }]);
+    expect(store.policyVersions('rec_a').sort()).toEqual(['p3', 'p4']);
+    store.appendObservations('rec_a', 'src_a', cursor, [{ ...obs('v2'), privacyPolicyVersion: 'p9' }]); // duplicate id: not stored
+    expect(store.policyVersions('rec_a').sort()).toEqual(['p3', 'p4']);
+    store.deleteRecording('rec_a');
+    expect(store.policyVersions('rec_a')).toEqual([]);
+  });
+});
