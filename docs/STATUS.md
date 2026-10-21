@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| TEST-2 | @yash + Claude | `yash/test-2-hover-fit` | 2026-10-21 | `hover-fit.spec.ts:51` (codex) failing only in the full suite; the spec and, only if a real defect, `apps/ui/src/lib/hover-reading.ts` (at most 4 files). |
 
 ---
 
