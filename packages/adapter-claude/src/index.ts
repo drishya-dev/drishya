@@ -168,6 +168,9 @@ function str(v: unknown): string | undefined {
 export function createParser(ctx: ParseContext): RecordParser {
   const calls = new Map<string, { tool: string; intent: ToolIntent }>();
   let lastCwd: string | undefined;
+  // Checkpoint rows carry no session id; a forked journal holds rows of the session it continues,
+  // whose backups live in that session's folder. Use the last session id the journal named.
+  let lastSession: string | undefined;
   const messagesWithUsage = new Set<string>();
 
   const agentOf = (r: Rec): string => {
@@ -189,6 +192,7 @@ export function createParser(ctx: ParseContext): RecordParser {
       if (!record || typeof record !== 'object') return [];
       const r = record as Rec;
       const type = String(r.type ?? '');
+      if (typeof r.sessionId === 'string') lastSession = r.sessionId;
       if (IGNORED.has(type)) return [];
       const base = {
         recordId: typeof r.uuid === 'string' ? r.uuid : undefined,
@@ -213,7 +217,7 @@ export function createParser(ctx: ParseContext): RecordParser {
         else add(r.trackingPath, r.backup as Rec | undefined);
         const messageId = str(type === 'file-history-snapshot' ? r.messageId ?? snap.messageId : r.snapshotMessageId);
         if (!messageId || !files.length) return [];
-        return [{ ...base, part: 0, kind: 'checkpoint', payload: { messageId, ...defined({ at: str(snap.timestamp) ?? str(r.timestamp) }), files } satisfies CheckpointPayload }];
+        return [{ ...base, part: 0, kind: 'checkpoint', payload: { messageId, ...defined({ at: str(snap.timestamp) ?? str(r.timestamp), session: lastSession }), files } satisfies CheckpointPayload }];
       }
 
       if (type === 'cost-state') {

@@ -138,6 +138,8 @@ export interface CheckpointPayload {
   /** The harness's id for the prompt that opens the turn (Claude: the user message uuid). */
   messageId: string;
   at?: string;
+  /** The harness session whose checkpoint folder holds the backups (a forked journal continues another session). */
+  session?: string;
   files: { path: string; parentDir?: string; backup?: { name: string; version?: number; time?: string }; absent?: boolean }[];
 }
 

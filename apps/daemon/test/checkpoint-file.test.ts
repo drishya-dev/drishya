@@ -11,13 +11,15 @@ afterEach(async () => { await app.close(); if (!resolve(dir).startsWith(resolve(
 
 // DATA-5 (review125 S5): checkpoint references per turn; backups read only on request, with approval.
 it('links each edit to its turn checkpoint and reads the backup only with approval, redacted', async () => {
-  const session = 'cp-session', work = join(dir, 'work'), project = join(dir, 'projects', 'C--work'), history = join(dir, 'file-history', session);
+  const session = 'cp-session', work = join(dir, 'work'), project = join(dir, 'projects', 'C--work'), history = join(dir, 'file-history', 'origin-session');
   mkdirSync(join(work, 'src'), { recursive: true }); mkdirSync(project, { recursive: true }); mkdirSync(history, { recursive: true });
   const secret = 'AKIA' + 'ABCDEFGHIJKLMNOP';
   writeFileSync(join(history, 'aaaaaaaaaaaaaaaa@v2'), `export const key = '${secret}';\nexport const total = 1;\n`);
   writeFileSync(join(history, 'cccccccccccccccc@v1'), 'SECRET=1\n');
-  const t = '2026-10-21T00:00:00Z', base = { timestamp: t, cwd: work, sessionId: session };
+  // A forked journal: its rows (and backups) belong to the session it continues, not its own file name.
+  const t = '2026-10-21T00:00:00Z', base = { timestamp: t, cwd: work, sessionId: 'origin-session' };
   const rows = [
+    { ...base, type: 'system', subtype: 'informational', uuid: 's0', content: 'resumed' },
     { type: 'file-history-snapshot', messageId: 'p1', isSnapshotUpdate: false, snapshot: { messageId: 'p1', timestamp: t, trackedFileBackups: {
       'src\\cart.ts': { backupFileName: 'aaaaaaaaaaaaaaaa@v2', version: 2, backupTime: t, realParentDir: join(work, 'src') },
       '.env': { backupFileName: 'cccccccccccccccc@v1', version: 1, backupTime: t, realParentDir: work },
