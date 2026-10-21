@@ -37,6 +37,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude (Opus 5.5) — PERF-2 interaction profile; other items resume
+
+- **When:** 21 October 2026. Policy-version cache (≈ 900 ms of daemon main-thread time per probe window), map palette cache, file-tree early return; all pixel-identical. API p95 unchanged because the remaining cost is the page's render work during live bursts. Builder decision: continue other TASKS items while PERF-2 stays red (logged).
+
 ### Yash with Claude (Opus 5.5) — paused 21 Oct: PERF-2 measured, TEST-2 awaiting acceptance runs
 
 - **Merged today:** PERF-2 fixes 1–3 (#176), TEST-2 spec fixes (#177 connected-workspace Home search, #178 hover-fit retry, #179 keyboard Expand/ⓘ, #180 settings-typography waits for colour transitions). No open PRs or claims.
@@ -954,6 +958,7 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 | Date | Decision | Why | Where |
 |---|---|---|---|
+| 2026-10-21 | **Other TASKS items continue while the PERF-2 gate is red** | Builder: PERF-2's remaining work (cheaper history renders during live bursts, append + browser memory) is long and architectural, Harsh + Codex hold it and Claude may race it; meanwhile "complete the others" and decide when all is ready. Performance fixes may not cost anything visible. Supersedes the "no new feature while a performance gate is red" hold for now, by explicit builder decision. | TASKS PERF-2; AGENTS.md rule |
 | 2026-10-20 | **Nemotron explanation work (EXPLAIN-1…5) moves to P3, after everything else** | Builder: it depends on an external service (key, model ids, cost, latency) that we do not control; build the product first, then this. Existing code stays, off unless `NEBIUS_API_KEY` is set; nothing new is built on it. The 19 Oct decision to drop the hackathon stands. | TASKS (P3, EXPLAIN section) |
 | 2026-10-19 | **The Nebius × NVIDIA hackathon is dropped from the active list** | Builder: product first, as fast as possible; the hackathon items (HACK-1…3, the `hack` tag, the 30 Oct deadline) are removed from TASKS. The Nemotron explain work stays as ordinary product items (EXPLAIN-1…5, P1/P2). [`HACKATHON.md`](HACKATHON.md) is kept only as a reference. | `TASKS.md` |
 | 2026-10-19 | **Restructured TASKS (tagged P0–P3 + detail); north star and minimalism rule; harness data before more visuals; keep the wrap-plus-arrows passage layout, hover-only toolbox connectors, peek and Workspace as two modes, and the 3D map as aesthetic; Git graph = Sacred Timeline** | Builder corrections to review 122; audit 123 shows reasoning is mostly unrecorded, so the *why* comes only from labelled, cited model output | `TASKS.md`, `review/122`–`124`, `AGENTS.md` |

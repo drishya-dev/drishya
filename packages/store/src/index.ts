@@ -328,6 +328,7 @@ export class Store {
   readonly blobs: BlobStore;
   readonly dataDir: string;
   private stmts = new Map<string, StatementSync>();
+  private policyCache = new Map<string, Set<string>>();
 
   constructor(dataDir: string, opts: { memory?: boolean; readOnly?: boolean } = {}) {
     this.dataDir = dataDir;
@@ -501,6 +502,7 @@ export class Store {
       this.q('DELETE FROM search WHERE recording_id = ?').run(id);
       this.q('DELETE FROM recordings WHERE id = ?').run(id);
     });
+    this.policyCache.delete(id);
     const shared = new Set<string>();
     for (const table of ['observations', 'projections']) {
       for (const row of this.db.prepare(`SELECT body FROM ${table}`).iterate()) {
@@ -516,10 +518,20 @@ export class Store {
     return { blobsRemoved };
   }
 
-  /** The privacy policy versions a recording's stored observations were sealed under. */
+  /**
+   * The privacy policy versions a recording's stored observations were sealed under. The recordings
+   * list asks this for every recording on every poll; scanning every body each time held the daemon
+   * thread ~45 ms per request on a large journal (PERF-2), so the set is computed once and grown as
+   * observations are appended. Observations are never rewritten; deleting a recording drops it.
+   */
   policyVersions(recordingId: string): string[] {
-    const rows = this.q(`SELECT DISTINCT json_extract(body, '$.privacyPolicyVersion') AS v FROM observations WHERE recording_id = ?`).all(recordingId) as { v: unknown }[];
-    return rows.map((r) => String(r.v ?? 'unknown'));
+    let versions = this.policyCache.get(recordingId);
+    if (!versions) {
+      const rows = this.q(`SELECT DISTINCT json_extract(body, '$.privacyPolicyVersion') AS v FROM observations WHERE recording_id = ?`).all(recordingId) as { v: unknown }[];
+      versions = new Set(rows.map((r) => String(r.v ?? 'unknown')));
+      this.policyCache.set(recordingId, versions);
+    }
+    return [...versions];
   }
 
   // ── sources and cursors ────────────────────────────────────────────────────
@@ -559,7 +571,7 @@ export class Store {
    * stable id) are skipped — re-importing a source adds nothing.
    */
   appendObservations(recordingId: string, sourceId: string, cursor: StoredCursor, obs: Omit<Observation, 'receivedSequence'>[]): Observation[] {
-    return this.tx(() => {
+    const stored = this.tx(() => {
       const added: Observation[] = [];
       let seq = (this.q('SELECT COALESCE(MAX(seq), -1) AS m FROM observations WHERE recording_id = ?').get(recordingId) as { m: number }).m;
       const exists = this.q('SELECT 1 FROM observations WHERE id = ?');
@@ -587,6 +599,10 @@ export class Store {
       }
       return added;
     });
+    // After the commit, so a rolled-back append never leaves a version in the cached set.
+    const versions = this.policyCache.get(recordingId);
+    if (versions) for (const o of stored) versions.add(String((o as { privacyPolicyVersion?: unknown }).privacyPolicyVersion ?? 'unknown'));
+    return stored;
   }
 
   observations(recordingId: string, after = -1, limit = 1_000_000): Observation[] {

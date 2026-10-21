@@ -347,8 +347,12 @@ describe('privacy policy of stored data', () => {
   it('flags a recording whose observations predate the current policy', async () => {
     const r = await ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
     expect(ingest.privacyOutdated(r.recordingId)).toBe(false);
+    // Observations are never rewritten, so an older-policy body only exists from an earlier run: reopen the store.
     store.db.prepare(`UPDATE observations SET body = json_set(body, '$.privacyPolicyVersion', 'p1') WHERE recording_id = ? AND seq = 0`).run(r.recordingId);
+    await ingest.close(); store.close();
+    store = new Store(join(dir, 'data')); ingest = new Ingestor(store);
     expect(ingest.privacyOutdated(r.recordingId)).toBe(true);
+
   });
 });
 
