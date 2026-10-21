@@ -32,14 +32,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-2 | @harsh + Codex | `harsh/perf-2-responsive-ingest` | 2026-10-21 | Follow-up to merged #176; benchmark/profiling scripts and tests, ingest/store/daemon latency fixes if measured, performance report and completion docs (at most 15 files). Five-run retained-journal matrix; no schema/UI features or native turns. Claim released by Yash; coordination posted on #176. |
-| CONTENT-1 | @yash + Claude | `yash/content-1-images` | 2026-10-21 | Slice 1 under revised D7: inline images in tool results (Claude Read of image files, MCP/browser screenshots). privacy image capture + type sniff, capture-core, adapter-claude, contracts, store budget, projection, daemon image route, card thumbnails + reader, tests, one spec, TASKS/STATUS (about 16 files). User-pasted images and Codex image paths are a later slice. |
 
 ---
 
 ## Last session
 
 ### Yash with Claude (Opus 5.5) — CONTENT-1 images (slice 1); DATA-4/5/6 and CONTENT-9 earlier today
-- **CONTENT-1 slice 1:** images in Claude tool results are kept under the revised D7 (signature-checked, 4 MiB each, 256 MiB per session), served lazily by hash and shown as thumbnails with a reader. Details are in TASKS CONTENT-1. Slice 2 added images pasted into prompts and Codex prompt/tool-output images. The claim stays open for slice 3 (path-only cards).
+- **CONTENT-1 slice 1:** images in Claude tool results are kept under the revised D7 (signature-checked, 4 MiB each, 256 MiB per session), served lazily by hash and shown as thumbnails with a reader. Details are in TASKS CONTENT-1. Slice 2 added images pasted into prompts and Codex prompt/tool-output images. Slice 3 added path-only cards with a consented "open current file". Claim released; the acceptance gaps (real Codex ImageView, phone) are listed in TASKS CONTENT-1.
 
 - **DATA-6:** Claude Code's "file changed outside its edits" notices show as a muted line in history (snippet on click, placed in recorded order) and a ≠ mark on the file row, never attributed to a person. Details are in TASKS DATA-6. review125 S5 is now complete. **Next:** CONTENT-1 (images) with the revised D7.
 

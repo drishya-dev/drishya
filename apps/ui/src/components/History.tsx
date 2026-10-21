@@ -36,7 +36,7 @@ import { WebResults } from './WebResults.tsx';
 import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
 import { BeforeTurnPanel } from './BeforeTurn.tsx';
 import { NoticeLine } from './NoticeLine.tsx';
-import { OpImages } from './OpImages.tsx';
+import { OpImages, PathImage, pathOnlyImage } from './OpImages.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -802,6 +802,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       {!expanded && <div className="op-body">
         <OpPreview op={op} resolving={so.resolving} onSource={measureSource} />
         {op.images?.length && !(op.detail.kind === 'read' && !op.detail.excerptArtifactId) ? <OpImages images={op.images!} compact /> : null}
+        {op.detail.kind === 'other' && pathOnlyImage(op) ? <PathImage op={op} path={pathOnlyImage(op)!} /> : null}
       </div>}
       {expanded && <ExpandedOperation op={op} />}
       {expanded && op.images?.length ? <OpImages images={op.images!} /> : null}
@@ -916,7 +917,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'read':
       return <>
         {op.status === 'running' && <div className="request-line excerpt-range">Requested from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · awaiting excerpt</div>}
-        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : !d.excerptArtifactId && op.images?.length ? <OpImages images={op.images!} compact /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : pathOnlyImage(op) ? <>{op.images?.length ? <OpImages images={op.images} compact /> : null}<PathImage op={op} path={pathOnlyImage(op)!} /></> : !d.excerptArtifactId && op.images?.length ? <OpImages images={op.images!} compact /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
       </>;
     case 'edit':
       return <>

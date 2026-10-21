@@ -613,6 +613,12 @@ export class Store {
   }
 
   /** Observations of one native tool call, in order (uses the recording/operation index). */
+  /** One observation of a recording by its id. */
+  observationById(recordingId: string, id: string): Observation | undefined {
+    const row = this.q('SELECT body FROM observations WHERE recording_id = ? AND id = ?').get(recordingId, id) as { body: string } | undefined;
+    return row ? JSON.parse(row.body) : undefined;
+  }
+
   operationObservations(recordingId: string, operationId: string): Observation[] {
     return (this.q('SELECT body FROM observations WHERE recording_id = ? AND operation_id = ? ORDER BY seq').all(recordingId, operationId) as { body: string }[]).map((r) => JSON.parse(r.body));
   }
