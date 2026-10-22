@@ -1426,6 +1426,16 @@
         "rounds": 90,
         "peakNodes": 806
       }
+    },
+    "lateIntegration": {
+      "main": "cb75dab",
+      "unitTests": 755,
+      "unitFiles": 142,
+      "projectTypes": true,
+      "focusedBrowserPassed": 2,
+      "package": true,
+      "demoRepeatIdentical": true,
+      "scope": "Broader browser/soak and all performance samples predate this merge; TEST-2 claim preserved."
     }
   }
 }

@@ -143,3 +143,7 @@ Next acceptance remains Yash's five-run real comparison on this revised branch, 
 - Initial check had an image-path failure from the Windows short TEMP alias; setting TEMP/TMP to `fs.realpathSync.native(os.tmpdir())` makes the full check pass without changing production symlink safeguards.
 
 All measurements and broad validation above pin integrated main e85cffd; later main commits are not included in these performance claims. No hosted CI or merge dispatched. Draft awaits review, unresolved TEST-2 failures and the original real performance gate.
+
+### Late main integration
+
+After the broader checks, main advanced with CONTENT-3 #195 and Yash's TEST-2 claim. Integrated `cb75dab`, resolved the STATUS conflict preserving TEST-2, and reran the check: **755 tests/142 files and both typechecks pass**. UI build plus declined-actions and prompt-only-probe browser journeys pass (2/2). Package verification passes again; demo refreshes only upstream r16→r17 and repeats byte-identically. Full-suite/soak and performance tables above remain explicitly pinned to their earlier e85cffd integration; they are not claimed as full measurements of the late merge. No code or assertions in Yash's TEST-2 work were changed.
