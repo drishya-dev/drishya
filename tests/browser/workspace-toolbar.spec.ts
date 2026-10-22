@@ -105,6 +105,8 @@ test('workspace navigation stays readable and hit-testable through scrolling, co
     }
     const before = (await nav.boundingBox())!;
     const history = page.locator('.history');
+    // A wheel that lands before the demo's history is measured has nothing to scroll; wait until it can.
+    await expect.poll(() => history.evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(100);
     // The exposed right gutter remains outside the narrow Files overlay.
     await pointAtHistory(page, history);
     // Do not enqueue another wheel burst on every assertion poll: a delayed

@@ -13,7 +13,12 @@ async function openComposer(page:Page) {
   const composer=page.getByRole('region',{name:'Harness prompt'});await expect(composer).toBeVisible();
   const pill=composer.getByRole('button',{name:'Expand prompt',exact:true});if(await pill.count())await pill.click();
   await expect(composer.getByRole('button',{name:'Minimize prompt',exact:true})).toBeVisible();
-  await composer.evaluate(node=>Promise.all(node.getAnimations({subtree:true}).map(animation=>animation.finished)));
+  await settled(composer);
+}
+// An opening or resize transition can start a frame after the state change; collect animations only after two frames.
+async function settled(node:Locator) {
+  await node.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+  await node.evaluate(el=>Promise.all(el.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>undefined))));
 }
 async function pasteDraft(editor:Locator,text:string) {
   await editor.focus();await editor.press('Control+a');
@@ -1773,7 +1778,7 @@ test('prompt symbol and workspace name stay on one compact line for both harness
   for(const width of [320,390,1440]){
    await page.setViewportSize({width,height:900});
    for(const text of ['shop','extremely-long-workspace-name-for-a-large-monorepo-'.repeat(4)]){
-    await name.locator('span').evaluate((node,text)=>node.textContent=text,text);
+    await name.locator('span').evaluate((node,text)=>node.textContent=text,text);await settled(target);
     const icon=(await symbol.boundingBox())!,label=(await name.boundingBox())!,row=(await target.boundingBox())!;
     expect(Math.abs(icon.y+icon.height/2-label.y-label.height/2)).toBeLessThan(1.5);
     expect(label.x-icon.x-icon.width).toBeGreaterThanOrEqual(7);expect(label.x-icon.x-icon.width).toBeLessThanOrEqual(11);

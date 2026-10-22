@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { expandCard } from './history-gestures.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
@@ -30,8 +31,8 @@ test('existing local typed children retain parent evidence in an isolated histor
     await expect(card).toBeVisible();
     await expect(card).toHaveClass(/op-test/);
     await expect(page.locator(`.history article[data-op-id="${config.parentId}"]`)).toHaveCount(0);
-    await card.getByRole('button', { name: /Expand/ }).click();
-    await card.locator('.captured-script>summary').click();
+    await expandCard(card);
+    await card.locator('.captured-script>summary').press('Enter');
     await expect(card.locator('.captured-script .insp-note').first()).toContainText('Recorded between this call and its output.');
     await expect(card.locator('.captured-script')).toContainText(/tools\.(exec_command|apply_patch)/);
   } finally { await local.close(); await isolated.close(); }
@@ -51,8 +52,8 @@ test('typed child cards show true commands and tests, with the wrapper reachable
   await expect(page.locator(`article[data-op-id="${parent.id}"]`)).toHaveCount(0);
   await expect(page.locator('details.captured-script')).toHaveCount(0);
   const first = cards.filter({ hasText: 'pnpm test' });
-  await first.getByRole('button', { name: /Expand/ }).click();
-  await first.locator('.captured-script>summary').click();
+  await expandCard(first);
+  await first.locator('.captured-script>summary').press('Enter');
   await expect(first.locator('.captured-script')).toContainText('tools.exec_command');
   const summary = await page.request.get(`${server.url}/v1/recordings/${ids['three-commands']}/summary`);
   expect(await summary.json()).toMatchObject({ tests: 2, errors: 1 });
@@ -64,8 +65,8 @@ test('typed child cards show true commands and tests, with the wrapper reachable
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['file-change']}`);
   await expect(page.locator('.history article.op-edit')).toHaveCount(1);
   await expect(page.locator('.history article.op-edit')).toContainText('FileChange');
-  await page.locator('.history article.op-edit').getByRole('button', { name: /Expand/ }).click();
-  await page.locator('.captured-script>summary').click();
+  await expandCard(page.locator('.history article.op-edit'));
+  await page.locator('.captured-script>summary').press('Enter');
   await expect(page.locator('.captured-script')).toContainText('tools.apply_patch');
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids['image-view']}`);
   await expect(page.locator('.history article.op')).toContainText('View image');

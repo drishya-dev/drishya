@@ -1,5 +1,5 @@
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join,resolve,sep} from 'node:path';
-import {test,expect,type Page} from '@playwright/test';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {test,expect,type Page} from '@playwright/test';import {expandCard} from './history-gestures.ts';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 let dir:string,app:App,server:RunningServer;const ids=new Map<number,string>();
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-collections-'));app=new App(join(dir,'store'));
@@ -41,8 +41,8 @@ for(const count of [3,300]){
    return {height:box.height,band:box.bottom-bottom};
   });expect(metrics.height).toBeLessThan(900);expect(metrics.band).toBeLessThanOrEqual(48);
   await page.screenshot({path:`.local/ui10-hover-${count}.png`});await page.keyboard.press('Escape');await page.mouse.move(0,0);
-  await card.locator('[data-expand-op]').click();await expect(card.locator('.op-expanded')).toContainText('Collection output line 0');
-  if(count===300)await card.getByRole('button',{name:'Next lines',exact:true}).click();
+  await expandCard(card);await expect(card.locator('.op-expanded')).toContainText('Collection output line 0');
+  if(count===300)await card.getByRole('button',{name:'Next lines',exact:true}).press('Enter');
   await expect(card.locator('.op-expanded')).toContainText(`Collection output line ${count-1}`);
  });
  test(`${count} files, prompts, search hits and ledger counts remain navigable`,async({page})=>{

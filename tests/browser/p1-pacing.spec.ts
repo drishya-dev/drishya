@@ -1,4 +1,4 @@
-import { pointAtHistory } from './history-gestures.ts';
+import { expandCard, pointAtHistory } from './history-gestures.ts';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -201,8 +201,8 @@ test('patch layouts retain captured changes and adapt without overflowing a narr
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(demo.href);
   const edit = page.locator('article.op-edit').last();
-  await edit.getByRole('button', { name: /Expand/ }).click();
-  await edit.getByRole('button', { name: 'Side by side' }).click();
+  await expandCard(edit);
+  await edit.getByRole('button', { name: 'Side by side' }).press('Enter');
   await expect(edit.locator('.split-change')).toBeVisible();
   await expect(edit.locator('.split-change')).toContainText('still blocks a cart whose total is missing');
   await expect(edit.locator('.split-change')).toContainText('columns aligned by patch order');
