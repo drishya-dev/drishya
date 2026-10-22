@@ -10,6 +10,7 @@ import { ToolOutput } from './ToolOutput.tsx';
 import { ScriptDetails } from './Inspector.tsx';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
+import { operationFailed } from '@drishya/contracts';
 import type { PinnedPlan, Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
@@ -32,6 +33,7 @@ import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
 import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
 import { PinnedPlanList, PlanChecklist } from './PlanChecklist.tsx';
+import { DeclinedLine } from './DeclinedLine.tsx';
 import { WebResults } from './WebResults.tsx';
 import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
 import { BeforeTurnPanel } from './BeforeTurn.tsx';
@@ -773,7 +775,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       data-origin={so.origin.type}
       data-tool-exchange={['shell','test','mcp','web','other'].includes(op.detail.kind) || undefined}
       data-diff={op.detail.kind === 'edit' && op.detail.hunks.length > 0 && presentation.shape === 'wide' ? (isProse(op.detail.path) ? 'prose' : 'code') : undefined}
-      className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
+      className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.declined ? 'declined' : so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
       style={{ zIndex: selected ? 50 : 10 + index, ...(readingAllocation ? { '--reading-width': `${readingAllocation}px` } : {}) } as React.CSSProperties}
       tabIndex={0}
       onClick={(e) => {
@@ -790,7 +792,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       <header className="op-head">
         <MaterialGlyph material={presentation.material} />
         {experience !== 'legacy' ? <span className="studio-action-identity">{title}<span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
-        {op.detail.kind === 'edit' && op.detail.hunks.length > 0 && <DiffStat hunks={op.detail.hunks} />}
+        {op.detail.kind === 'edit' && op.detail.hunks.length > 0 && !op.declined && <DiffStat hunks={op.detail.hunks} />}
         <StateMark state={so.state} op={op} />
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'plan', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {
@@ -799,6 +801,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
           }}>{expanded ? 'Close' : 'Expand'}</button>
         )}
       </header>
+      {op.declined && <DeclinedLine declined={op.declined} />}
       {!expanded && <div className="op-body">
         <OpPreview op={op} resolving={so.resolving} onSource={measureSource} />
         {op.images?.length && !(op.detail.kind === 'read' && !op.detail.excerptArtifactId) ? <OpImages images={op.images!} compact /> : null}
@@ -895,6 +898,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
 }
 
 function StateMark({ state,op }: { state: SceneOp['state'];op:Operation }) {
+  if (op.declined) return <span className="state state-declined" aria-label="declined" title={op.declined.by === 'person' ? 'You declined this action; it did not run.' : 'Claude Code’s auto mode blocked this action; it did not run.'}>⊘</span>;
   const outcome=operationOutcome({...op,status:state});
   if(outcome.tone==='returned')return <span className="state state-returned" aria-label={outcome.label} title={outcome.explanation}>{outcome.mark}</span>;
   if (state === 'running') return <span className="state state-running" aria-label="running" />;
@@ -959,7 +963,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
               {s.failures[0].message && <div className="failure-msg">{s.failures[0].message}</div>}
             </div>
           )}
-          {d.outputPreview&&<TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={op.status==='error'}/>}
+          {d.outputPreview&&<TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={operationFailed(op)}/>}
           </ResultArea>
         </div>
       );
@@ -970,7 +974,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
           <CommandText text={d.command}/>
           <ResultArea state={op.status} resolving={resolving}>
             <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
-            {d.outputPreview ? <TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={op.status === 'error'} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
+            {d.outputPreview ? <TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={operationFailed(op)} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
             {d.exitCode !== undefined && d.exitCode !== 0 && d.exitCode !== null && <div className="bad">exit {d.exitCode}</div>}
           </ResultArea>
         </div>

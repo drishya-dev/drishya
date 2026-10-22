@@ -2,6 +2,7 @@ import {operationOutcome} from '../lib/operation-outcome.ts';
 import { reasoningGap } from '../lib/reasoning-gap.ts';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Operation, Projection, RepoGraph } from '@drishya/contracts';
+import { operationFailed } from '@drishya/contracts';
 import { markers, stepOfObservation, type Scene } from '@drishya/scene';
 import { NODE_WIDTH, canvasLayout, connectorPath, type CanvasNode } from '../lib/canvas-layout.ts';
 import { agentColor, agentName } from '../lib/identity.ts';
@@ -341,7 +342,7 @@ export function CanvasWorkspace({ scene, projection, graph }: { scene: Scene; pr
 const CanvasNodeCard = memo(function CanvasNodeCard({ node, projection, selected, select }: { node: CanvasNode; projection: Projection; selected: boolean; select: (id: string) => void }) {
   const outcome=operationOutcome(node.op);
   const op = node.op, agent = projection.agents.find(a => a.id === op.agentId);
-  const tag = op.status === 'error' ? 'failed' : op.status === 'running' ? op.kind === 'read' ? 'reading' : 'running' : op.kind === 'edit' && op.status === 'ok' ? 'edited' : op.kind === 'test' && outcome.tone === 'ok' ? 'completed' : undefined;
+  const tag = op.declined ? 'declined' : op.status === 'error' ? 'failed' : op.status === 'running' ? op.kind === 'read' ? 'reading' : 'running' : op.kind === 'edit' && op.status === 'ok' ? 'edited' : op.kind === 'test' && outcome.tone === 'ok' ? 'completed' : undefined;
   const state = useRef(op.status);
   const card = useRef<HTMLElement>(null);
   const motion = useApp(s => s.motion), low = useApp(s => s.lowResource);
@@ -350,7 +351,7 @@ const CanvasNodeCard = memo(function CanvasNodeCard({ node, projection, selected
     if (before === op.status || !motion || low || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const glyph = card.current?.querySelector('.cv-state'); glyph?.animate([{ opacity: .2 }, { opacity: 1 }], { duration: 150 });
     card.current?.querySelector('.cv-node-tag')?.animate([{ transform: 'scale(.9)', opacity: .3 }, { transform: 'scale(1)', opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.16,1,.3,1)' });
-    if (op.status === 'error') card.current?.animate([{ outline: '1px solid transparent' }, { outline: '1px solid #E35FD2', offset: .3 }, { outline: '1px solid transparent' }], { duration: 400 });
+    if (operationFailed(op)) card.current?.animate([{ outline: '1px solid transparent' }, { outline: '1px solid #E35FD2', offset: .3 }, { outline: '1px solid transparent' }], { duration: 400 });
   }, [op.status, motion, low]);
   return <article ref={card} className={`cv-node cv-kind-${op.kind}${selected ? ' selected' : ''}${node.matches ? '' : ' filtered'}`} data-node-id={op.id} data-op-id={op.id} style={{ left: node.x, top: node.y, width: NODE_WIDTH, height: node.height }} aria-label={`${labels[op.kind]}: ${op.title}`}>
     <i className="cv-port cv-port-in" /><i className="cv-port cv-port-out" />{tag && <span className={`cv-node-tag cv-tag-${tag}`}>{tag}</span>}
@@ -452,6 +453,6 @@ function ExportButton() {
 }
 function CanvasLocalDigest({ projection, open }: { projection: Projection; open: (id: string) => void }) {
   const [after, setAfter] = useState(-1);
-  const groups = [{ label: 'Failures', ops: projection.operations.filter(op => op.status === 'error' && (op.endSequence ?? op.startSequence) > after) }, { label: 'Edits', ops: projection.operations.filter(op => ['edit', 'write'].includes(op.kind) && op.startSequence > after) }, { label: 'Running', ops: projection.operations.filter(op => op.status === 'running' && op.startSequence > after) }];
+  const groups = [{ label: 'Failures', ops: projection.operations.filter(op => operationFailed(op) && (op.endSequence ?? op.startSequence) > after) }, { label: 'Edits', ops: projection.operations.filter(op => ['edit', 'write'].includes(op.kind) && op.startSequence > after) }, { label: 'Running', ops: projection.operations.filter(op => op.status === 'running' && op.startSequence > after) }];
   return <div className="cv-local-digest"><p>Facts from this offline recording. The seen mark lasts until you close this view.</p>{groups.map(group => <section key={group.label}><h3>{group.label}<span>{group.ops.length}</span></h3>{group.ops.slice(0, 20).map(op => <button key={op.id} onClick={() => open(op.id)}>{op.title}<span>↗</span></button>)}</section>)}<button className="cv-primary" onClick={() => setAfter(projection.lastSequence)}>Mark all as seen</button></div>;
 }

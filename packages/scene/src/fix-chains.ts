@@ -6,6 +6,7 @@
 // elsewhere (another cwd, another agent) is still the same captured text.
 
 import type { Operation, Projection } from '@drishya/contracts';
+import { operationFailed } from '@drishya/contracts';
 import { commandIdentity } from './review-insights.ts';
 
 export interface FixChainRun {
@@ -62,8 +63,8 @@ export function fixChainFor(p: Projection, operationId: string): FixChain | unde
   };
   const links: FixChainLink[] = [];
   const before = runs[at - 1], after = runs[at + 1];
-  if (before?.status === 'error') links.push(link(before, anchor));
-  if (anchor.status === 'error' && after) links.push(link(anchor, after));
+  if (before && operationFailed(before)) links.push(link(before, anchor));
+  if (operationFailed(anchor) && after) links.push(link(anchor, after));
   if (!links.length) return undefined;
   return { operationId, command: (anchor.detail as Extract<Operation['detail'], { kind: 'shell' | 'test' }>).command.slice(0, 240), links };
 }

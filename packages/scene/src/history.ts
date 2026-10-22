@@ -1,5 +1,5 @@
 import type { Projection } from '@drishya/contracts';
-import { materialOperations } from '@drishya/contracts';
+import { materialOperations, operationFailed } from '@drishya/contracts';
 import type { ComposeInput, Marker, Scene } from './index.ts';
 
 /** Local reader API, separate from the immutable capture/event schema. */
@@ -36,5 +36,5 @@ export function historySummary(p: Projection, from = 0) {
   const tests = ops.filter((op) => op.kind === 'test');
   const last = tests.at(-1);
   const lastTest = last?.detail.kind === 'test' ? last.detail.summary ? `${last.detail.summary.passed} passed, ${last.detail.summary.failed} failed` : last.status : undefined;
-  return { edits: editedFiles.length, editedFiles, tests: tests.length, lastTest, errors: ops.filter((op) => op.status === 'error').length, agents: new Set(ops.map((op) => op.agentId)).size };
+  return { edits: editedFiles.length, editedFiles, tests: tests.length, lastTest, errors: ops.filter(operationFailed).length, agents: new Set(ops.map((op) => op.agentId)).size };
 }

@@ -16,6 +16,7 @@ import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
+import { operationFailed } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
 import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
@@ -721,7 +722,7 @@ function summarize(p: Projection, from: number) {
     editedFiles: [...new Set(edits.flatMap((e) => e.paths.map((x) => x.path)))],
     tests: tests.length,
     lastTest,
-    errors: p.operations.filter((o) => o.status === 'error' && inRange(o.startSequence)).length,
+    errors: p.operations.filter((o) => operationFailed(o) && inRange(o.startSequence)).length,
     agents: new Set(p.operations.filter((o) => inRange(o.startSequence)).map((o) => o.agentId)).size,
   };
 }
