@@ -327,6 +327,8 @@ export interface Operation {
   /** Where the tool came from: "native" or an MCP server name. */
   origin: { type: 'native'; tool: string } | { type: 'mcp'; server: string; tool: string };
   status: OperationStatus;
+  /** CONTENT-3: set when the action was stopped by a permission decision before it ran. `status` stays 'error', but it is not a failure; see operationFailed. */
+  declined?: OperationDeclined;
   startSequence: number;
   endSequence?: number;
   startTime?: string;
@@ -340,6 +342,15 @@ export interface Operation {
   /** How the kind itself was determined, e.g. a shell command classified as a test run. */
   classification: Provenance;
 }
+
+/** Who stopped an action, read from the harness's own result text; `reason` is that text's reason, when it gave one. */
+export interface OperationDeclined {
+  by: 'person' | 'auto-mode';
+  reason?: string;
+}
+
+/** An action that ran and failed. A declined action did not run, so it is not one. */
+export const operationFailed = (op: Pick<Operation, 'status' | 'declined'>): boolean => op.status === 'error' && !op.declined;
 
 export interface PathRef {
   path: string;

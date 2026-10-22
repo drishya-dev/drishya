@@ -1,5 +1,5 @@
 import type {Artifact,Operation,Projection} from '@drishya/contracts';
-import {materialOperations} from '@drishya/contracts';
+import {materialOperations,operationFailed} from '@drishya/contracts';
 import {sinceSnapshot,type SinceSnapshot} from './since.ts';
 import {operationObservations} from './operation-observations.ts';
 
@@ -67,7 +67,7 @@ export function reviewInsights(p:Projection,page=0,kind?:ReviewFinding['kind']):
   const prompts=turns.map(({item,step},index):PromptOverview=>{
     const next=turns[index+1]?.item.sequence??Infinity;while(operation<promptOperations.length&&starts.get(promptOperations[operation]!.id)!<item.sequence)operation++;
     let count=0,failures=0,checks=0,changes=0;
-    while(operation<promptOperations.length&&starts.get(promptOperations[operation]!.id)!<next){const op=promptOperations[operation++]!;count++;if(op.status==='error')failures++;if(op.kind==='test')checks++;if(op.kind==='edit'||op.kind==='write')changes++;}
+    while(operation<promptOperations.length&&starts.get(promptOperations[operation]!.id)!<next){const op=promptOperations[operation++]!;count++;if(operationFailed(op))failures++;if(op.kind==='test')checks++;if(op.kind==='edit'||op.kind==='write')changes++;}
     return {id:item.id,ordinal:index+1,step,sequence:item.sequence,time:item.time,preview:(item.prompt??'Prompt text not captured').slice(0,240),operations:count,failures,checks,changes};
   }).reverse();
   const filtered=kind?findings.filter(finding=>finding.kind===kind):findings;

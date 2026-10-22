@@ -22,6 +22,8 @@ export interface TurnLedger {
   delegations: number;
   /** Operations that ended in an error. */
   failed: number;
+  /** Actions a permission decision stopped before they ran (CONTENT-3); not failures. */
+  declined: number;
   /** Calls still without a result inside this turn. */
   open: number;
 }
@@ -39,7 +41,7 @@ export function turnLedgers(projection: Projection): TurnLedger[] {
     const head = projection.timeline[from]!;
     const ledger: TurnLedger = {
       step: from, time: head.time, operations: 0, reads: 0, searches: 0, edits: { files: 0, added: 0, removed: 0 },
-      commands: 0, tests: { runs: 0, passed: 0, failed: 0 }, web: 0, mcp: 0, delegations: 0, failed: 0, open: 0,
+      commands: 0, tests: { runs: 0, passed: 0, failed: 0 }, web: 0, mcp: 0, delegations: 0, failed: 0, declined: 0, open: 0,
     };
     const files = new Set<string>();
     let last = parse(head.time);
@@ -51,7 +53,8 @@ export function turnLedgers(projection: Projection): TurnLedger[] {
       const op = ops.get(item.operationId);
       if (!op) continue;
       ledger.operations++;
-      if (op.status === 'error') ledger.failed++;
+      if (op.declined) ledger.declined++;
+      else if (op.status === 'error') ledger.failed++;
       if (op.status === 'running') ledger.open++;
       const d = op.detail;
       switch (op.kind) {

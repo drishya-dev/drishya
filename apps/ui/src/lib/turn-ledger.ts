@@ -20,6 +20,7 @@ export function ledgerParts(ledger: TurnLedger): LedgerPart[] {
   if (ledger.mcp) parts.push({ text: n(ledger.mcp, 'MCP call') });
   if (ledger.delegations) parts.push({ text: `delegated ${ledger.delegations}` });
   if (ledger.failed) parts.push({ text: `${ledger.failed} failed`, tone: 'bad' });
+  if (ledger.declined) parts.push({ text: `${ledger.declined} declined` });
   if (parts.length && ledger.durationMs !== undefined && ledger.durationMs >= 1000) parts.push({ text: elapsed(ledger.durationMs) });
   return parts;
 }
