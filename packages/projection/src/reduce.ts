@@ -6,6 +6,11 @@ import { createHash } from 'node:crypto';
 import type {
   AdapterDescriptor,
   WebResult,
+  CommandRun,
+  BeforeTurn,
+  CheckpointPayload,
+  OperationImage,
+  Notice,
   Agent,
   Artifact,
   ArtifactKind,
@@ -36,7 +41,10 @@ import { parseTestOutput } from './tests.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 
-export const REDUCER_VERSION = 'r9';
+/** Longest changed-region snippet kept on a notice. */
+const NOTICE_SNIPPET = 10_000;
+
+export const REDUCER_VERSION = 'r16';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -72,6 +80,8 @@ interface OpState {
   scriptTool?: string;
   scriptWrapper?: boolean;
   wrapperResult?: { observation: Observation; payload: Rec };
+  /** The harness id of the prompt that opened this operation's turn (Claude: message uuid). */
+  turnMessage?: string;
 }
 
 export function reduce(recordingId: string, input: Iterable<Observation>, io: BlobIO, opts: ReduceOptions): Projection {
@@ -97,6 +107,21 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   // result does not scan every prior operation in a long session.
   const opGroups = new Map<string, string[]>();
   const prose: Prose[] = [];
+  // Reasoning recorded without text folds to one line per turn and agent (review125 S3).
+  const turnByRecording = new Map<string, string>();
+  // CONTENT-1: a prompt's turn by "<recording>|<record id>", and images seen before its text part.
+  const turnByRecord = new Map<string, TimelineItem & { type: 'turn' }>();
+  const pendingTurnImages = new Map<string, OperationImage[]>();
+  const unrecorded = new Map<string, Prose>();
+  // DATA-5: checkpoints by "<recording>|<prompt id>", then by workspace path. Order-independent:
+  // an edit is matched at snapshot time, whichever of the two was recorded first.
+  const turnMessageByRecording = new Map<string, string>();
+  // Paths stay as recorded until matching: a turn's snapshot precedes the prompt that sets the root.
+  const checkpoints = new Map<string, { raw: { path: string; at: BeforeTurn }[]; byPath?: Map<string, BeforeTurn> }>();
+  const awaitingCheckpoint = new Set<string>();
+  // DATA-6: harness notices of files changed outside its edits; identical repeats fold into one.
+  const notices: Notice[] = [];
+  const lastNotice = new Map<string, Notice>();
   const artifacts = new Map<string, Artifact>();
   const links: EvidenceLink[] = [];
   const timeline: TimelineItem[] = [];
@@ -231,8 +256,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       observationIds: [o.id],
       classification: { kind: 'captured', observationIds: [o.id] },
     };
-    const st: OpState = { op, intent, cwd, callObservationId: o.id };
+    const st: OpState = { op, intent, cwd, callObservationId: o.id, turnMessage: turnMessageByRecording.get(o.recordingId) };
     ops.set(id, st);
+    if (st.turnMessage && (intent.kind === 'edit' || intent.kind === 'write' || intent.kind === 'patch')) awaitingCheckpoint.add(id);
     dirtyOperations.add(id);
     opOrder.push(id);
     const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
@@ -392,7 +418,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           st.op.observationIds = [...new Set([...st.op.observationIds, o.id])];
           st.op.endTime = o.sourceTime;
           if (!same) { st.op.startTime = undefined; st.op.endSequence = step(); }
-          if (item.image) { st.op.title = `${item.item === 'image-view' ? 'View image' : 'Generated image'} · ${item.image.path ?? item.image.savedPath ?? 'reference'}`; st.op.detail = { kind: 'other', input: { image: item.image }, resultPreview: 'Image reference captured; image bytes not captured.' }; }
+          if (item.image) { st.op.title = `${item.item === 'image-view' ? 'View image' : 'Generated image'} · ${item.image.path ?? item.image.savedPath ?? 'reference'}`; st.op.detail = { kind: 'other', input: { image: item.image } }; }
           const output = item.mcp?.result ?? item.output ?? (item.web ? JSON.stringify(item.web) : undefined);
           completeOp(st, o, { text: output, exitCode: item.exitCode, outcome: { kind: 'other' } }, { text, rel, addArtifact, knownFull, link, fileKey });
           if (output !== undefined && item.item !== 'command') st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_out`, kind: 'output', observedAtSequence: st.op.endSequence ?? st.op.startSequence, availability: o.availability, provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: text(output) }));
@@ -408,6 +434,15 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         }
         case 'message.user': {
           const t = text(p.text) ?? '';
+          // CONTENT-1: images attached to a prompt. Claude stores them as separate parts of the
+          // prompt's record, before or after its text, so they meet the turn through that record.
+          const images = Array.isArray(p.images) && p.images.length && o.agentId === 'agent:main' ? imageRefs(p.images) : undefined;
+          if (images) {
+            const key = `${o.recordingId}|${o.source.recordId ?? o.id}`;
+            const turn = turnByRecord.get(key);
+            if (turn) (turn.images ??= []).push(...images);
+            else if (!t.trim()) pendingTurnImages.set(key, [...(pendingTurnImages.get(key) ?? []), ...images]);
+          }
           if (!t.trim()) break;
           ensureAgent(o);
           // A subagent's first "user" message is its delegation prompt, already shown on the
@@ -415,12 +450,31 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (o.agentId !== 'agent:main') break;
           if (!firstPrompt) firstPrompt = clip(t.replace(/\s+/g, ' ').trim(), 120);
           const id = `turn_${o.id}`;
-          timeline.push({ type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime });
+          turnByRecording.set(o.recordingId, id);
+          if (o.source.recordId) turnMessageByRecording.set(o.recordingId, o.source.recordId);
+          const recordKey = `${o.recordingId}|${o.source.recordId ?? o.id}`;
+          const attached = [...(pendingTurnImages.get(recordKey) ?? []), ...(images ?? [])];
+          pendingTurnImages.delete(recordKey);
+          const turn: TimelineItem & { type: 'turn' } = { type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime, ...(typeof p.permissionMode === 'string' ? { permissionMode: p.permissionMode } : {}), ...(attached.length ? { images: attached } : {}) };
+          turnByRecord.set(recordKey, turn);
+          timeline.push(turn);
           break;
         }
         case 'message.assistant':
         case 'reasoning': {
           const t = text(p.text) ?? '';
+          if (o.kind === 'reasoning' && p.exposure === 'none') {
+            const a = ensureAgent(o);
+            const key = `${turnByRecording.get(o.recordingId) ?? o.recordingId}|${a.id}`;
+            const line = unrecorded.get(key);
+            if (line) { line.count = (line.count ?? 1) + 1; line.observationIds.push(o.id); break; }
+            const reason = p.reason === 'encrypted' || p.reason === 'signature-only' ? p.reason : 'empty';
+            const pr: Prose = { id: `prose_${o.id}`, agentId: a.id, role: 'reasoning', text: '', truncated: false, exposure: 'none', count: 1, reason, sequence: step(), time: o.sourceTime, observationIds: [o.id] };
+            unrecorded.set(key, pr);
+            prose.push(pr);
+            timeline.push({ type: 'prose', id: `t_${pr.id}`, proseId: pr.id, sequence: o.receivedSequence, agentId: a.id, time: o.sourceTime });
+            break;
+          }
           if (!t.trim()) break;
           const a = ensureAgent(o);
           if (typeof p.model === 'string') a.model = p.model;
@@ -565,6 +619,36 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           link({ from: opId, to: child, relation: 'spawned', basis: p.basis === 'source-id' ? 'source-id' : 'heuristic', sourceObservationIds: [o.id], explanation: 'The harness recorded this subagent as started by this call.' });
           break;
         }
+        case 'checkpoint': {
+          if (typeof p.messageId !== 'string' || !Array.isArray(p.files)) break;
+          const key = `${o.recordingId}|${p.messageId}`;
+          const entry = checkpoints.get(key) ?? { raw: [] };
+          checkpoints.set(key, entry);
+          entry.byPath = undefined;
+          for (const f of p.files as CheckpointPayload['files']) {
+            // Claude records the path relative to its cwd and the real parent folder; join them.
+            const name = toPosix(f.path).split('/').pop()!;
+            const path = f.parentDir ? `${toPosix(f.parentDir).replace(/\/+$/, '')}/${name}` : f.path;
+            if (f.backup) entry.raw.push({ path, at: { backup: f.backup.name, ...(f.backup.version !== undefined ? { version: f.backup.version } : {}), ...(f.backup.time ? { time: f.backup.time } : {}) } });
+            else if (f.absent) entry.raw.push({ path, at: { absent: true, ...(typeof p.at === 'string' ? { time: p.at } : {}) } });
+          }
+          break;
+        }
+        case 'external.change': {
+          if (typeof p.path !== 'string') break;
+          const a = ensureAgent(o);
+          const path = rel(p.path, o.workspaceRoot);
+          const full = text(p.snippet as TextValue | undefined);
+          const key = `${o.recordingId}|${path}`;
+          const last = lastNotice.get(key);
+          if (last && last.snippet === (full === undefined ? undefined : clip(full, NOTICE_SNIPPET))) { last.repeats++; last.observationIds.push(o.id); break; }
+          const notice: Notice = { id: `notice_${o.id}`, agentId: a.id, kind: 'external-change', path, repeats: 0, sequence: step(), time: o.sourceTime, observationIds: [o.id],
+            ...(full !== undefined ? { snippet: clip(full, NOTICE_SNIPPET), ...(full.length > NOTICE_SNIPPET ? { truncated: true } : {}) } : {}) };
+          notices.push(notice);
+          lastNotice.set(key, notice);
+          timeline.push({ type: 'notice', id: `t_${notice.id}`, noticeId: notice.id, sequence: o.receivedSequence, agentId: a.id, time: o.sourceTime });
+          break;
+        }
         case 'compaction':
           ensureAgent(o);
           timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: 'compaction', time: o.sourceTime });
@@ -587,6 +671,23 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   append(obs);
 
   function snapshot(live = opts.live): Projection {
+    for (const id of awaitingCheckpoint) {
+      const st = ops.get(id)!, d = st.op.detail;
+      if (d.kind !== 'edit') { if (st.completed) awaitingCheckpoint.delete(id); continue; }
+      const recording = st.op.id.split('.')[0]!;
+      const entry = checkpoints.get(`${recording}|${st.turnMessage}`);
+      if (entry && !entry.byPath) {
+        entry.byPath = new Map();
+        // The turn-start snapshot (recorded first) wins over a later per-file delta.
+        for (const f of entry.raw) { const path = rel(f.path); if (path && !entry.byPath.has(path)) entry.byPath.set(path, f.at); }
+      }
+      const found = entry?.byPath?.get(d.path);
+      // Checkpoint records land within their turn; once a later prompt exists, stop looking.
+      if (!found) { if (turnMessageByRecording.get(recording) !== st.turnMessage) awaitingCheckpoint.delete(id); continue; }
+      d.beforeTurn = found;
+      dirtyOperations.add(id);
+      awaitingCheckpoint.delete(id);
+    }
     // Finalization works on copies: an unfinished call may complete on the next append.
     const finalAgents = new Map([...agents].map(([id, agent]) => [id, structuredClone(agent)]));
     const operations = opOrder.map((id) => {
@@ -649,6 +750,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       agents: placed.agents,
       operations: placed.operations,
       prose: [...placed.prose],
+      ...(notices.length ? { notices: notices.map((n) => ({ ...n, observationIds: [...n.observationIds] })) } : {}),
       artifacts: placed.artifacts,
       links: finalLinks,
       timeline: [...placed.timeline],
@@ -800,6 +902,32 @@ interface Ctx {
   link: (l: Omit<EvidenceLink, 'id'>) => void;
 }
 
+/** CONTENT-1: image references from captured images; bytes stay in blobs. */
+function imageRefs(raw: unknown[]): OperationImage[] {
+  return (raw as Rec[]).slice(0, 50).map((img) => ({
+    ...(isBlobText(img.data) ? { sha: img.data.$blob } : {}),
+    ...(typeof img.mime === 'string' ? { mime: img.mime } : {}),
+    ...(typeof img.bytes === 'number' ? { bytes: img.bytes } : {}),
+    ...(typeof img.width === 'number' ? { width: img.width } : {}),
+    ...(typeof img.height === 'number' ? { height: img.height } : {}),
+    ...(!isBlobText(img.data) ? { omitted: typeof img.omitted === 'string' ? img.omitted : 'unrecognised' } : {}),
+  }));
+}
+
+/** The harness's record of how a command ran. Only fields it recorded; nothing inferred. */
+function commandRun(outcome: ToolOutcome & Rec): CommandRun {
+  if (outcome.kind !== 'shell') return {};
+  const run = (outcome.run ?? {}) as Rec;
+  const out: CommandRun = {};
+  if (outcome.interrupted) out.interrupted = true;
+  if (typeof run.backgroundTaskId === 'string') out.backgroundTaskId = run.backgroundTaskId;
+  if (typeof run.timedOutAfterMs === 'number') out.timedOutAfterMs = run.timedOutAfterMs;
+  if (typeof run.exitNote === 'string') out.exitNote = clip(run.exitNote, 200);
+  const spilled = run.persistedOutput as Rec | undefined;
+  if (spilled && typeof spilled.path === 'string') out.persistedOutput = { path: spilled.path, ...(typeof spilled.bytes === 'number' ? { bytes: spilled.bytes } : {}) };
+  return out;
+}
+
 function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
   const { op } = st;
   const outcome = (p.outcome ?? { kind: 'other' }) as ToolOutcome & Rec;
@@ -807,6 +935,10 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
   const redacted = o.redactions.length > 0;
   const omitted = (s: string | undefined) => !!s && s.startsWith('[OMITTED');
   const seq = op.endSequence ?? op.startSequence;
+  const run = commandRun(outcome);
+  if (Object.keys(run).length) op.run = run;
+  // CONTENT-1: images the action returned. Only references reach the projection; bytes stay in blobs.
+  if (Array.isArray(p.images) && p.images.length) op.images = imageRefs(p.images);
 
   switch (op.detail.kind) {
     case 'read': {
@@ -949,6 +1081,10 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       const full = c.text((outcome as Rec).text as TextValue) ?? resultText ?? '';
       op.detail.resultPreview = clip(full, PREVIEW);
       op.detail.results ??= searchLinks(full);
+      if (outcome.kind === 'web') {
+        const fetch = Object.fromEntries(Object.entries({ status: outcome.status, statusText: outcome.statusText, bytes: outcome.bytes, durationMs: outcome.durationMs }).filter(([, v]) => v !== undefined && v !== null));
+        if (Object.keys(fetch).length) op.detail.fetch = fetch;
+      }
       break;
     }
     case 'spawn':
@@ -1071,6 +1207,16 @@ export function buildPassages(timeline: TimelineItem[], operations: Operation[],
         open.set(agent, p);
       }
       p.proseIds.push(it.proseId);
+      p.lastStep = i;
+    } else if (it.type === 'notice') {
+      // A notice sits with the agent's open passage and never splits it.
+      let p = open.get(it.agentId);
+      if (!p) {
+        p = { id: `psg_${it.id}`, agentId: it.agentId, operationIds: [], proseIds: [], firstStep: i, lastStep: i };
+        out.push(p);
+        open.set(it.agentId, p);
+      }
+      (p.noticeIds ??= []).push(it.noticeId);
       p.lastStep = i;
     }
   });

@@ -18,7 +18,11 @@ export interface PlanRevision {
   done: number;
   total: number;
 }
-export interface PlanThread { id: string; agentId: string; turn: number; revisions: PlanRevision[] }
+export interface PlanThread {
+  id: string; agentId: string; turn: number; revisions: PlanRevision[];
+  /** The agent the prompt went to: its list is the turn's checklist, pinned under the prompt. */
+  lead: boolean;
+}
 export interface PlanPosition { thread: PlanThread; index: number }
 
 const rank = (status: string) => (status === 'completed' ? 2 : status === 'in_progress' ? 1 : 0);
@@ -43,18 +47,40 @@ function revision(op: Operation, previous?: PlanRevision): PlanRevision {
 }
 
 /** Where every plan operation sits in its thread. Threads never cross a prompt or an agent. */
-export function planThreads(p: Projection): Map<string, PlanPosition> {
-  const turns = p.timeline.filter((item) => item.type === 'turn').map((item) => item.sequence).sort((a, b) => a - b);
+export function planThreads(p: Projection, include: (op: Operation) => boolean = () => true): Map<string, PlanPosition> {
+  const turnItems = p.timeline.filter((item) => item.type === 'turn').sort((a, b) => a.sequence - b.sequence);
+  const turns = turnItems.map((item) => item.sequence);
   const turnOf = (sequence: number) => { let n = 0; while (n < turns.length && turns[n]! <= sequence) n++; return n; };
-  const plans = p.operations.filter((o) => o.kind === 'plan' && o.detail.kind === 'plan').sort((a, b) => a.startSequence - b.startSequence || a.id.localeCompare(b.id));
+  const plans = p.operations.filter((o) => o.kind === 'plan' && o.detail.kind === 'plan' && include(o)).sort((a, b) => a.startSequence - b.startSequence || a.id.localeCompare(b.id));
   const threads = new Map<string, PlanThread>();
   const out = new Map<string, PlanPosition>();
   for (const op of plans) {
     const turn = turnOf(op.startSequence), key = `${op.agentId}/${turn}`;
     let thread = threads.get(key);
-    if (!thread) threads.set(key, thread = { id: key, agentId: op.agentId, turn, revisions: [] });
+    if (!thread) threads.set(key, thread = { id: key, agentId: op.agentId, turn, revisions: [], lead: turn > 0 && turnItems[turn - 1]!.agentId === op.agentId });
     thread.revisions.push(revision(op, thread.revisions.at(-1)));
     out.set(op.id, { thread, index: thread.revisions.length - 1 });
+  }
+  return out;
+}
+
+export interface PinnedPlan {
+  operationId: string;
+  /** 1-based number of the newest revision shown, and how many the turn has so far. */
+  revision: number;
+  revisions: number;
+  items: PlanItem[];
+  done: number;
+  total: number;
+}
+
+/** The newest list of each turn's lead agent, by turn ordinal (1 = the first prompt). Sub-agents' lists stay where they arrived. */
+export function pinnedPlans(p: Projection, include?: (op: Operation) => boolean): Map<number, PinnedPlan> {
+  const out = new Map<number, PinnedPlan>();
+  for (const { thread } of planThreads(p, include).values()) {
+    if (!thread.lead) continue;
+    const latest = thread.revisions.at(-1)!;
+    out.set(thread.turn, { operationId: latest.operationId, revision: thread.revisions.length, revisions: thread.revisions.length, items: latest.items, done: latest.done, total: latest.total });
   }
   return out;
 }

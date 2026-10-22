@@ -8,6 +8,7 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
   const started = new Set(applied.filter((item) => item.type === 'op-start').map((item) => item.operationId));
   const ended = new Set(applied.filter((item) => item.type === 'op-end').map((item) => item.operationId));
   const proseIds = new Set(applied.filter((item) => item.type === 'prose').map((item) => item.proseId));
+  const noticeIds = new Set(applied.filter((item) => item.type === 'notice').map((item) => item.noticeId));
   const parents = new Set(projection.operations.filter(op => started.has(op.id)).map(op => op.parentOperationId).filter(Boolean));
   const operations = projection.operations.filter((op) => started.has(op.id) || parents.has(op.id)).map((op) => ended.has(op.id) || parents.has(op.id) && op.endSequence !== undefined && op.endSequence < step ? op : pending(op));
   const visibleArtifacts = new Set(operations.flatMap((op) => op.artifactIds));
@@ -19,6 +20,7 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     usage: undefined,
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
+    ...(projection.notices ? { notices: projection.notices.filter((n) => noticeIds.has(n.id)) } : {}),
     artifacts: projection.artifacts.filter((a) => visibleArtifacts.has(a.id)),
     links: projection.links.filter((link) => link.sourceObservationIds.every((id) => visibleEvidence.has(id))),
     files: projection.files.filter((f) => f.firstStep < step).map((f) => ({ ...f, lastStep: Math.min(f.lastStep, step - 1) })),

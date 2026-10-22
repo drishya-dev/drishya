@@ -26,6 +26,9 @@ import type { ChangeEvent, HealthEvent } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 import { storageUsage } from './storage.ts';
+import { readPersistedOutput } from './persisted-output.ts';
+import { readCheckpointFile } from './checkpoint-file.ts';
+import { readImage, referencedImagePath } from './images.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { sessionLinks } from './git-session-links.ts';
@@ -439,6 +442,40 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         const found = await app.history.readBefore(id, subId);
         if (!found) throw new HttpError(404, 'no read-before-write facts for this operation');
         return json(res, found);
+      }
+      // DATA-4: full output Claude Code saved to a file, read only on request and redacted.
+      if (sub === 'persisted-output' && subId && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'saved output is read per recording, not for a combined view');
+        app.recording(firstId);
+        return json(res, await readPersistedOutput(app.store, firstId, subId));
+      }
+      // CONTENT-1: the current file behind an image path one of this recording's actions referenced.
+      // Needs workspace approval; it is today's file, so it is never cached.
+      if (sub === 'workspace' && subId === 'image' && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'choose one session workspace');
+        app.recording(firstId);
+        const path = referencedImagePath(app.store, firstId, url.searchParams.get('operation') ?? '');
+        if (!path) throw new HttpError(404, 'This action did not reference an image file.');
+        const image = await workspace.image(firstId, path);
+        res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline', 'x-drishya-modified-at': image.modifiedAt });
+        res.end(image.body);
+        return;
+      }
+      // CONTENT-1: an image this recording captured inline, by content hash. Immutable, so cacheable.
+      if (sub === 'images' && subId && m === 'GET') {
+        const ids = id.split('+');
+        for (const key of ids) app.recording(key);
+        const image = readImage(app.store, ids, subId);
+        if (!image) throw new HttpError(404, 'No captured image with that hash in this recording.');
+        res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'private, max-age=31536000, immutable', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline' });
+        res.end(image.body);
+        return;
+      }
+      // DATA-5: a file as Claude Code checkpointed it at the start of a turn; workspace approval required.
+      if (sub === 'checkpoint' && subId && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'checkpoints are read per recording, not for a combined view');
+        app.recording(firstId);
+        return json(res, await readCheckpointFile(app.store, firstId, subId, workspace.status(firstId).approved));
       }
       // READ-7: a failed command, the next run of the same command and the edits between them.
       if (sub === 'fix-chain' && subId && m === 'GET') {

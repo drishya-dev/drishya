@@ -67,6 +67,21 @@ describe('Claude Code adapter', () => {
     expect(o).toMatchObject({ kind: 'edit', originalFile: 'a\nb', hunks: [{ oldStart: 1 }] });
   });
 
+  it('keeps thinking saved without text as a textless marker, with the reason', () => {
+    const p = createParser(ctx);
+    const out = p.parse({ type: 'assistant', uuid: 'gaps', message: { model: 'native-model', content: [
+      { type: 'thinking', thinking: '', signature: 'SIGVALUE' },
+      { type: 'thinking', thinking: '  ' },
+      { type: 'redacted_thinking', data: 'OPAQUEDATA' },
+    ] } });
+    expect(out.map((o) => [o.kind, o.part, o.payload])).toEqual([
+      ['reasoning', 0, { text: '', exposure: 'none', reason: 'signature-only', model: 'native-model' }],
+      ['reasoning', 1, { text: '', exposure: 'none', reason: 'empty', model: 'native-model' }],
+      ['reasoning', 2, { text: '', exposure: 'none', reason: 'encrypted', model: 'native-model' }],
+    ]);
+    expect(JSON.stringify(out)).not.toMatch(/SIGVALUE|OPAQUEDATA/);
+  });
+
   it('retains thinking, prose, creations, edits, MCP calls and their paired results', () => {
     const p = createParser(ctx);
     const [thinking, prose, write, edit, mcp] = p.parse({ type: 'assistant', uuid: 'complete', message: { model: 'native-model', content: [

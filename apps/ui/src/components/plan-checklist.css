@@ -17,3 +17,9 @@
 .plan-earlier {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:2px 0;}
 .plan-delta {font:11px/1.5 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
 @media(prefers-reduced-motion:reduce){.plan-change{transition:none;}}
+/* CONTENT-4: the turn's checklist pinned under the prompt; rewritten in place, quiet at rest. */
+.history .plan-pinned {flex:1 0 100%;display:grid;gap:4px;min-width:0;margin:6px 0 0;padding-left:calc(3ch + 12px);}
+.plan-pinned .plan-list li {transition:color .15s ease;}
+.plan-pinned .plan-list li .plan-text {transition:text-decoration-color .15s ease;}
+.plan-pinned-more {justify-self:start;font:11px/1.5 var(--sans);color:var(--t3);}
+@media(prefers-reduced-motion:reduce){.plan-pinned .plan-list li,.plan-pinned .plan-list li .plan-text{transition:none;}}

@@ -3,13 +3,14 @@
 // only renders what this returns, so any paused frame can be rebuilt exactly and golden-tested.
 // Runs in both the daemon (tests, export) and the browser.
 
-import { asOfProjection, type Agent, type Operation, type OperationKind, type Projection, type Prose, type TimelineItem } from '@drishya/contracts';
+import { asOfProjection, type Agent, type Operation, type OperationImage, type OperationKind, type Projection, type Prose, type TimelineItem } from '@drishya/contracts';
+import { pinnedPlans, type PinnedPlan } from './plan-threads.ts';
 export { asOfProjection } from '@drishya/contracts';
 export { sinceBoundary, type SinceDigest, type SinceItem } from './since.ts';
 export { verificationFor, type VerificationCheck, type VerificationTrail } from './verification.ts';
 export { fixChainFor, type FixChain, type FixChainLink, type FixChainRun, type FixChainEdit } from './fix-chains.ts';
 export { readBeforeWriteFor, type ReadBeforeWrite, type ReadSpan } from './read-before-write.ts';
-export { planThreads, type PlanThread, type PlanRevision, type PlanItem, type PlanChange, type PlanPosition } from './plan-threads.ts';
+export { planThreads, pinnedPlans, type PinnedPlan, type PlanThread, type PlanRevision, type PlanItem, type PlanChange, type PlanPosition } from './plan-threads.ts';
 
 export const COMPOSER_VERSION = 'c1';
 
@@ -56,6 +57,8 @@ export interface ScenePassage {
   agentId: string;
   ops: SceneOp[];
   prose: SceneProse[];
+  /** DATA-6: harness notices recorded in this passage, as of this step. */
+  notices?: { id: string; arriving: boolean; /** Recorded before this passage's first operation, so it reads above them. */ leading?: boolean }[];
   /** Earlier passages ease back; the latest passage per agent is in front. */
   settled: boolean;
   matchesFilter: boolean;
@@ -65,6 +68,12 @@ export interface ScenePassage {
   turnTime?: string;
   /** Timeline step of that turn's prompt, to find its ledger (see turns.ts). */
   turnStep?: number;
+  /** Claude Code permission mode recorded with this prompt, only when it differs from the previous prompt's. */
+  turnPermissionMode?: string;
+  /** CONTENT-1: images the person attached to this prompt. */
+  turnImages?: OperationImage[];
+  /** CONTENT-4: the lead agent's newest todo list of this turn, as of this step; pinned under the prompt. */
+  turnPlan?: PinnedPlan;
   /**
    * Timeline step of the prompt this passage follows, on every passage of the turn (not only the one that opens it),
    * so a reader can fold a finished turn even when its opening passage is paged out.
@@ -147,14 +156,21 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const started = new Map<string, number>();
   const ended = new Map<string, number>();
   const proseAt = new Map<string, number>();
+  const noticeAt = new Map<string, number>();
   const stoppedAgents = new Set<string>();
-  const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string }[] = [];
+  const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string; modeChange?: string; images?: OperationImage[] }[] = [];
+  let lastMode: string | undefined;
   applied.forEach((it, i) => {
     if (it.type === 'op-start') started.set(it.operationId, i);
     else if (it.type === 'op-end') ended.set(it.operationId, i);
     else if (it.type === 'prose') proseAt.set(it.proseId, i);
+    else if (it.type === 'notice') noticeAt.set(it.noticeId, i);
     else if (it.type === 'agent-stop') stoppedAgents.add(it.agentId);
-    else if (it.type === 'turn') turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt,time:it.time });
+    else if (it.type === 'turn') {
+      const modeChange = it.permissionMode && it.permissionMode !== lastMode ? it.permissionMode : undefined;
+      if (it.permissionMode) lastMode = it.permissionMode;
+      turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt, time: it.time, ...(modeChange ? { modeChange } : {}), ...(it.images?.length ? { images: it.images } : {}) });
+    }
   });
 
   const stateOf = (op: Operation): OpState => {
@@ -178,6 +194,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   for (const ps of visible) latestByAgent.set(ps.agentId, ps.id);
 
   const openedTurns = new Set<number>();
+  const pins = pinnedPlans(p, (op) => started.has(op.id));
   const materialPassages: ScenePassage[] = visible.map((ps) => {
     const sceneOps: SceneOp[] = ps.operationIds
       .filter((id) => started.has(id))
@@ -220,11 +237,15 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       agentId: ps.agentId,
       ops: sceneOps,
       prose: sceneProse,
+      ...(ps.noticeIds?.some((id) => noticeAt.has(id)) ? { notices: ps.noticeIds.filter((id) => noticeAt.has(id)).map((id) => { const at = noticeAt.get(id)!, firstOp = Math.min(...ps.operationIds.map((op) => started.get(op) ?? Infinity)); return { id, arriving: at === step - 1, ...(at < firstOp ? { leading: true } : {}) }; }) } : {}),
       settled: latestByAgent.get(ps.agentId) !== ps.id,
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
       ...(opensTurn&&turn?{turnStep:turn.step}:{}),
+      ...(opensTurn&&turn?.modeChange?{turnPermissionMode:turn.modeChange}:{}),
+      ...(opensTurn&&turn?.images?{turnImages:turn.images}:{}),
+      ...(opensTurn&&turn&&pins.has(turnAt.indexOf(turn)+1)?{turnPlan:pins.get(turnAt.indexOf(turn)+1)!}:{}),
       ...(turn ? { inTurn: turn.step } : {}),
     };
   });
@@ -239,6 +260,8 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     settled: turn.step !== turnAt.at(-1)?.step,
     matchesFilter: !f || (!f.kind && !f.server && !f.tool && (!f.agentId || f.agentId === turn.agentId)),
     turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, inTurn: turn.step,
+    ...(turn.modeChange ? { turnPermissionMode: turn.modeChange } : {}),
+    ...(turn.images ? { turnImages: turn.images } : {}),
   });
   materialPassages.forEach((passage, index) => {
     while (promptIndex < promptOnly.length && promptOnly[promptIndex]!.step < visible[index]!.firstStep) appendPrompt(promptOnly[promptIndex++]!);

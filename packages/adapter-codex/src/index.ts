@@ -22,7 +22,7 @@ import {
   type ToolIntent,
   type ToolOutcome,
 } from '@drishya/capture-core';
-import { sanitize } from '@drishya/privacy';
+import { imageCandidate, sanitize } from '@drishya/privacy';
 import { typedItem } from './items.ts';
 
 export const descriptor: AdapterDescriptor = {
@@ -130,6 +130,16 @@ export function intentOf(name: string, args: Rec, namespace?: string): ToolInten
 }
 
 /** Codex shell output: JSON {output, metadata:{exit_code}} or text "Exit code: N\nWall time: …\nOutput:\n…". */
+/** CONTENT-1: `input_image` entries carrying base64 data URLs, as unchecked candidates for sanitize. Remote URLs are never fetched. */
+function dataImages(content: unknown) {
+  if (!Array.isArray(content)) return [];
+  return (content as Rec[]).flatMap((c) => {
+    const url = c?.type === 'input_image' && typeof c.image_url === 'string' ? c.image_url : '';
+    const m = /^data:image\/[a-z+.-]+;base64,/i.exec(url);
+    return m ? [imageCandidate(url.slice(m[0].length))] : [];
+  });
+}
+
 export function parseShellOutput(raw: unknown): { text?: string; exitCode?: number | null; durationMs?: number } {
   let text = typeof raw === 'string' ? raw : textOf(raw);
   if (text === undefined) return {};
@@ -247,13 +257,17 @@ export function createParser(_ctx: ParseContext): RecordParser {
         case 'message': {
           if (p.role === 'developer' || p.role === 'system') return [];
           const text = textOf(p.content) ?? '';
-          if (!text) return [];
-          if (p.role === 'user') return isInjectedUserText(text) ? [] : [{ ...base, kind: 'message.user', payload: { text }, contentKeys: ['text'] }];
+          // CONTENT-1: images the person attached to the prompt, inline as data URLs.
+          const images = p.role === 'user' ? dataImages(p.content) : [];
+          if (!text && !images.length) return [];
+          if (p.role === 'user') return text && isInjectedUserText(text) ? [] : [{ ...base, kind: 'message.user', payload: { text, ...(images.length ? { images } : {}) }, contentKeys: ['text', 'images'] }];
           return [{ ...base, kind: 'message.assistant', payload: { text }, contentKeys: ['text'] }];
         }
         case 'reasoning': {
           const text = (Array.isArray(p.summary) ? p.summary : []).map((s: Rec) => s.text).filter(Boolean).join('\n\n');
-          return text ? [{ ...base, kind: 'reasoning', payload: { text, exposure: 'summary' }, contentKeys: ['text'] }] : [];
+          if (text.trim()) return [{ ...base, kind: 'reasoning', payload: { text, exposure: 'summary' }, contentKeys: ['text'] }];
+          // Reasoning happened but only its encrypted form was saved; never decoded.
+          return [{ ...base, kind: 'reasoning', payload: { text: '', exposure: 'none', reason: p.encrypted_content ? 'encrypted' : 'empty' } }];
         }
         case 'function_call':
         case 'custom_tool_call':
@@ -275,6 +289,7 @@ export function createParser(_ctx: ParseContext): RecordParser {
           openExec.delete(id);
           const intent = call?.intent ?? { kind: 'other' as const };
           const parsed = parseShellOutput(p.output);
+          const images = dataImages(p.output);
           let outcome: ToolOutcome = { kind: 'other' };
           if (intent.kind === 'shell') outcome = { kind: 'shell', stdout: parsed.text };
           const isError = parsed.exitCode !== undefined && parsed.exitCode !== 0 ? true : /^(execution error|error:)/i.test(parsed.text ?? '');
@@ -282,9 +297,9 @@ export function createParser(_ctx: ParseContext): RecordParser {
             ...base,
             kind: 'tool.result',
             operationId: id || undefined,
-            payload: { tool: call?.tool, isError, text: parsed.text, outcome, exitCode: parsed.exitCode, durationMs: parsed.durationMs },
+            payload: { tool: call?.tool, isError, text: parsed.text, outcome, exitCode: parsed.exitCode, durationMs: parsed.durationMs, ...(images.length ? { images } : {}) },
             denyContent: touchesProtectedFile(intent),
-            contentKeys: ['text', 'outcome'],
+            contentKeys: ['text', 'outcome', 'images'],
           }];
           if (intent.kind === 'spawn' && intent.agentType && !isError) {
             // The task name is the address Codex uses for the child, so this is a captured reference.

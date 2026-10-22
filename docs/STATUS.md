@@ -31,14 +31,26 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| CONTENT-3 | @yash + Claude | `yash/content-3-questions-approvals` | 2026-10-22 | First slice: verify Codex questions and approvals on real journals, then show recorded approval requests with the exact command or diff and the outcome (reducer/projection, adapter-codex, History card + CSS, tests). Inline answering in a connected session is a later slice. Schema change only if both builders agree. |
 
 ---
 
 ## Last session
 
-### Yash with Claude (Opus 5.5) — PERF-2 interaction profile; other items resume
+### Yash with Claude — CONTENT-4 pinned checklist; CONTENT-1, DATA-4/5/6 and CONTENT-9 earlier
+- **CONTENT-4 slice:** the turn's todo list is pinned under the prompt in Modern and rewritten in place; each update in the stream is one line. Details and what stays open (TaskCreate/ExitPlanMode, Codex plan) are in TASKS CONTENT-4. Harsh's PERF-2 PR #188 merges cleanly with main (731 unit tests pass on the trial merge) but is still a draft awaiting the real-journal benchmark runs it requests.
 
-- **When:** 21 October 2026. Policy-version cache (≈ 900 ms of daemon main-thread time per probe window), map palette cache, file-tree early return; all pixel-identical. API p95 unchanged because the remaining cost is the page's render work during live bursts. Builder decision: continue other TASKS items while PERF-2 stays red (logged).
+#### Earlier the same day
+- **CONTENT-1 slice 1:** images in Claude tool results are kept under the revised D7 (signature-checked, 4 MiB each, 256 MiB per session), served lazily by hash and shown as thumbnails with a reader. Details are in TASKS CONTENT-1. Slice 2 added images pasted into prompts and Codex prompt/tool-output images. Slice 3 added path-only cards with a consented "open current file". Claim released; the acceptance gaps (real Codex ImageView, phone) are listed in TASKS CONTENT-1.
+
+- **DATA-6:** Claude Code's "file changed outside its edits" notices show as a muted line in history (snippet on click, placed in recorded order) and a ≠ mark on the file row, never attributed to a person. Details are in TASKS DATA-6. review125 S5 is now complete. **Next:** CONTENT-1 (images) with the revised D7.
+
+- **DATA-5:** each Claude edit links to its turn's checkpoint, and "Show file before this turn" reads the backup on request with workspace approval. Details are in TASKS DATA-5. **Watch out for:** never copy `node_modules` into a scratch git worktree on Windows. Removing it followed pnpm junctions and deleted this checkout's `packages/` and installed dependencies (21 Oct; restored from git plus a forced frozen-lockfile install). **Next:** DATA-6, then CONTENT-1 with the revised D7.
+
+- **DATA-4 (PR #187):** Claude command facts (interrupted, background, exit note, saved-output reference with an on-request redacted reader), WebFetch status/size/time and permission mode per prompt. Details and what stays unmapped are in TASKS DATA-4. **Next:** DATA-5 (checkpoints), DATA-6 (changed outside the agent), then CONTENT-1 with the revised D7.
+
+- **CONTENT-9 (PR #186):** Yash approved review125 S3, S5 and D7 (decision logged; D7 caps provisional). Reasoning saved without text now reads as one quiet "Reasoning not recorded by <harness>" line per turn; saved thinking and summaries are unchanged. Old recordings need a journal rescan to show it. Measured counts are in TASKS CONTENT-9 and DATA-8. **Next:** S5 (DATA-4, DATA-5, DATA-6), then CONTENT-1 with D7.
+- **When (PERF-2):** 21 October 2026. Policy-version cache (≈ 900 ms of daemon main-thread time per probe window), map palette cache, file-tree early return; all pixel-identical. API p95 unchanged because the remaining cost is the page's render work during live bursts. Builder decision: continue other TASKS items while PERF-2 stays red (logged).
 
 ### Yash with Claude (Opus 5.5) — paused 21 Oct: PERF-2 measured, TEST-2 awaiting acceptance runs
 
@@ -922,6 +934,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **21 October — Reasoning state, Claude extras and inline image bytes (review125 S3, S5, D7):** Yash approved building S3 (CONTENT-9), S5 (DATA-4/5/6) and D7 (image bytes only when already inline in the journal; paths stay references). **D7 caps revised the same day after measuring local journals:** at most 4 MiB per image, no count cap, at most 256 MiB of distinct image bytes per recording; anything over shows a placeholder; images load lazily and never travel inside history pages. The first proposal (1 MiB, 32 per recording) would have dropped 196 large Codex screenshots and most images in sessions with up to 384 distinct images (measurements in review125 §9). Harsh reviews each slice in its PR. Reason: these keep facts the journals already hold and the UI currently drops; S3 lets the UI say honestly that reasoning happened but was not saved.
 
 - **16 October — Bounded everyday reading and review:** Keep source-scoped reading locations only in memory, capped at eight sessions/64 slots with existing eight-visit evidence trails. Review continuation uses bounded pages of existing worker-owned derived snapshots, retaining global counts and tied-sequence outcomes. No whole-history browser cache or new capture schema. Real native-account acceptance is assigned to the builder by explicit request. See [81](review/81-workspace-reliability.md).
 

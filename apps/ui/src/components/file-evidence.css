@@ -7,6 +7,7 @@
 .folder-explorer .change-A { color: var(--pass); }
 .folder-explorer .change-D { color: var(--fail); }
 .folder-explorer .file-now { color: var(--t1); }
+.folder-explorer .file-outside { color: var(--t3); }
 .folder-explorer .folder-evidence i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .folder-explorer .ux-search { position: relative; }
 .folder-explorer .tree-evidence-filter { flex: 0 0 auto; margin: 0; }

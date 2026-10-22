@@ -39,6 +39,8 @@ export type ObservationKind =
   | 'capture.gap'
   | 'usage'
   | 'item.completed'
+  | 'checkpoint'
+  | 'external.change'
   | 'unknown';
 
 export interface Observation {
@@ -91,11 +93,68 @@ export interface SessionMetaPayload {
   effort?: string;
 }
 
+/** A file at the start of a turn, as the harness checkpointed it: a backup reference, or "did not exist". */
+export type BeforeTurn = { backup: string; version?: number; time?: string } | { absent: true; time?: string };
+
+/** A file backup read on request from the harness's checkpoint folder (DATA-5). */
+export type CheckpointFile =
+  | { available: true; text: string; bytes: number; truncated: boolean; redacted: boolean }
+  | { available: false; reason: 'not-recorded' | 'removed' | 'needs-workspace-approval' | 'protected' };
+
+/** An image an action returned. `sha` names stored bytes; `omitted` says why there are none. */
+export interface OperationImage { sha?: string; mime?: string; bytes?: number; width?: number; height?: number; omitted?: string }
+
+/** How a command ran, as the harness recorded it (review125 S5). */
+export interface CommandRun {
+  interrupted?: boolean;
+  backgroundTaskId?: string;
+  timedOutAfterMs?: number;
+  /** The harness's reading of a non-zero exit, e.g. "No matches found". */
+  exitNote?: string;
+  /** Full output the harness saved to a file because it was too large. Reference only; read on request. */
+  persistedOutput?: { path: string; bytes?: number };
+}
+
+/** A harness-saved full output, read on request (DATA-4). */
+export type PersistedOutput =
+  | { available: true; text: string; bytes: number; truncated: boolean; redacted: boolean }
+  | { available: false; reason: 'not-recorded' | 'removed' | 'outside-harness-folder' | 'protected' };
+
 export interface MessagePayload {
   text: TextValue;
   model?: string;
-  /** Codex exposes reasoning only as summaries; Claude as thinking text. */
-  exposure?: 'full' | 'summary';
+  /** Codex exposes reasoning only as summaries; Claude as thinking text. `none`: a reasoning block was recorded without readable text. */
+  exposure?: 'full' | 'summary' | 'none';
+  /** Claude Code's permission mode when the person sent this prompt (e.g. acceptEdits, auto). */
+  permissionMode?: string;
+  /** CONTENT-1: images attached to this prompt; see ToolResultPayload.images. */
+  images?: ToolResultPayload['images'];
+  /** Why a `none` block has no text: stored encrypted, kept only as a signature, or recorded empty. */
+  reason?: ReasoningGap;
+}
+
+export type ReasoningGap = 'encrypted' | 'signature-only' | 'empty';
+
+/**
+ * A harness checkpoint (review125 S5): which file backups it holds for one turn. References only;
+ * the backup bytes stay in the harness's folder and are read on request. `absent`: the file did
+ * not exist at the checkpoint (created in that turn).
+ */
+export interface CheckpointPayload {
+  /** The harness's id for the prompt that opens the turn (Claude: the user message uuid). */
+  messageId: string;
+  at?: string;
+  /** The harness session whose checkpoint folder holds the backups (a forked journal continues another session). */
+  session?: string;
+  files: { path: string; parentDir?: string; backup?: { name: string; version?: number; time?: string }; absent?: boolean }[];
+}
+
+/** A harness notice that a file changed on disk outside its own edit tools (review125 S5). Never attributed to a person. */
+export interface ExternalChangePayload {
+  path: string;
+  /** The changed region as the harness showed it to the model, line-numbered. */
+  snippet?: TextValue;
+  basis: 'harness-notice';
 }
 
 /** Accounting reported by a harness, never a price or missing token count inferred by Drishya. */
@@ -147,6 +206,8 @@ export interface ToolResultPayload {
   structured?: unknown;
   exitCode?: number | null;
   durationMs?: number;
+  /** CONTENT-1 (D7): images in the result, kept inline only within limits; see @drishya/privacy captureImage. */
+  images?: { kind: 'captured-image'; mime?: string; bytes?: number; width?: number; height?: number; data?: TextValue; omitted?: string }[];
 }
 
 export interface AgentSpawnPayload {
@@ -252,6 +313,10 @@ export interface Operation {
   id: string;
   parentOperationId?: string;
   durationMs?: number;
+  /** How the harness says a command ran (any command, including ones shown as reads or searches). */
+  run?: CommandRun;
+  /** CONTENT-1: images this action returned; bytes are fetched by `sha`, never carried in history pages. */
+  images?: OperationImage[];
   agentId: string;
   kind: OperationKind;
   /** Captured tool name, shown in inspection. */
@@ -292,11 +357,11 @@ export function materialOperations(operations: Operation[]): Operation[] {
 export type OperationDetail =
   | { kind: 'read'; path: string; startLine: number; lineCount: number; totalLines?: number; excerptArtifactId?: string }
   | { kind: 'search'; query: string; mode: 'text' | 'file' | 'web'; hits: SearchHit[]; total?: number }
-  | { kind: 'edit'; path: string; hunks: Hunk[]; created: boolean; /** The harness recorded this change as deleting the file. */ deleted?: boolean; reconstruction: Availability; reconstructionNote?: string }
+  | { kind: 'edit'; path: string; hunks: Hunk[]; created: boolean; /** The harness recorded this change as deleting the file. */ deleted?: boolean; reconstruction: Availability; reconstructionNote?: string; /** The harness's checkpoint of this file at the start of the turn (DATA-5). */ beforeTurn?: BeforeTurn }
   | { kind: 'shell'; command: string; exitCode?: number | null; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'test'; command: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
-  | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[] }
+  | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[]; /** What the harness recorded about a page fetch. */ fetch?: { status?: number; statusText?: string; bytes?: number; durationMs?: number } }
   | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string; /** The harness recorded the task text only in encrypted form. */ descriptionEncrypted?: boolean }
   | { kind: 'plan'; items: { text: string; status: string }[] }
   | { kind: 'other'; input: unknown; resultPreview?: string };
@@ -335,7 +400,11 @@ export interface Prose {
   role: 'assistant' | 'reasoning' | 'user';
   text: string;
   truncated: boolean;
-  exposure: 'full' | 'summary';
+  /** `none`: reasoning the harness recorded without text, folded to one line per turn and agent. */
+  exposure: 'full' | 'summary' | 'none';
+  /** For `none`: how many recorded reasoning blocks the line stands for, and why they have no text. */
+  count?: number;
+  reason?: ReasoningGap;
   sequence: number;
   time?: string;
   observationIds: string[];
@@ -406,12 +475,29 @@ export interface EvidenceLink {
 
 /** One unit of playback. The timeline is what the transport steps through. */
 export type TimelineItem =
-  | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string }
+  | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string; permissionMode?: string; /** CONTENT-1: images the person attached. */ images?: OperationImage[] }
   | { type: 'op-start'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'op-end'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'prose'; id: string; proseId: string; sequence: number; agentId: string; time?: string }
   | { type: 'agent-stop'; id: string; sequence: number; agentId: string; time?: string }
-  | { type: 'gap'; id: string; sequence: number; agentId: string; reason: string; time?: string };
+  | { type: 'gap'; id: string; sequence: number; agentId: string; reason: string; time?: string }
+  | { type: 'notice'; id: string; noticeId: string; sequence: number; agentId: string; time?: string };
+
+/** DATA-6: the harness noticed a file changed on disk outside its own edits (you, another program, or a command). */
+export interface Notice {
+  id: string;
+  agentId: string;
+  kind: 'external-change';
+  path: string;
+  /** Line-numbered changed region, as the harness recorded it; bounded. */
+  snippet?: string;
+  truncated?: boolean;
+  /** Identical notices that followed (the harness repeats one until the model reads the file). */
+  repeats: number;
+  sequence: number;
+  time?: string;
+  observationIds: string[];
+}
 
 export interface Passage {
   id: string;
@@ -420,6 +506,8 @@ export interface Passage {
   operationIds: string[];
   /** Prose emitted right after these operations, rendered beneath. */
   proseIds: string[];
+  /** Harness notices recorded in this passage (DATA-6). */
+  noticeIds?: string[];
   firstStep: number;
   lastStep: number;
 }
@@ -436,6 +524,8 @@ export interface Projection {
   agents: Agent[];
   operations: Operation[];
   prose: Prose[];
+  /** Harness notices, e.g. files changed outside the agent (DATA-6). Absent in older projections. */
+  notices?: Notice[];
   artifacts: Artifact[];
   links: EvidenceLink[];
   timeline: TimelineItem[];

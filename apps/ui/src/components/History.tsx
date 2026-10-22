@@ -2,13 +2,15 @@ import { ReadingKeys } from './ReadingKeys.tsx';
 import { CommandText } from './CommandText.tsx';
 import {commandDisplay} from '../lib/command-display.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
+import { reasoningGap } from '../lib/reasoning-gap.ts';
+import './reasoning-gap.css';
 import { ToolInput } from './ToolInput.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { ScriptDetails } from './Inspector.tsx';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Agent, Hunk, Operation, Projection, Prose } from '@drishya/contracts';
-import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
+import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
+import type { PinnedPlan, Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
@@ -29,8 +31,12 @@ import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
 import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
-import { PlanChecklist } from './PlanChecklist.tsx';
+import { PinnedPlanList, PlanChecklist } from './PlanChecklist.tsx';
 import { WebResults } from './WebResults.tsx';
+import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
+import { BeforeTurnPanel } from './BeforeTurn.tsx';
+import { NoticeLine } from './NoticeLine.tsx';
+import { OpImages, PathImage, pathOnlyImage } from './OpImages.tsx';
 import { CapturedOutcomes } from './CapturedOutcomes.tsx';
 import { firstChangeOffset } from '../lib/change-preview.ts';
 import { FlowConnections } from './FlowConnections.tsx';
@@ -156,6 +162,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
+  const notices = useMemo(() => new Map((projection.notices ?? []).map((n) => [n.id, n])), [projection]);
   const agents = useMemo(() => new Map(projection.agents.map((a) => [a.id, a])), [projection]);
 
   useLayoutEffect(() => {
@@ -597,7 +604,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
             const fold = foldOf(ps, folded);
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={measureKey(ps.id, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
-              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
+              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} notices={notices} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
             </div>;
           }),
         ])}
@@ -652,12 +659,13 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   );
 }
 
-const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, focus, foldable = false, folded = false, onFold }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; agent?: Agent; agents: Agent[]; focus: boolean; foldable?: boolean; folded?: boolean; onFold?: (id: string) => void }) {
+const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; notices: Map<string, Notice>; agent?: Agent; agents: Agent[]; focus: boolean; foldable?: boolean; folded?: boolean; onFold?: (id: string) => void }) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
     <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
           <div className="passage-head">
@@ -676,6 +684,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, agent, agents, f
         const pr = prose.get(p.id);
         return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
       })}
+      {!folded && ps.notices?.filter((n) => !n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
     </section>
   );
 });
@@ -702,6 +711,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   }, [arriving, pr.id]);
   const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   if (label && detail === 'hidden') return null;
+  if (pr.exposure === 'none') return <ReasoningGapLine pr={pr} agent={agent} />;
   return (
     <div ref={prose} data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
@@ -712,6 +722,20 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
       )}
       {open && <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />}
       {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); }}>{full ? 'Close full captured text' : 'Preview · read full captured text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
+    </div>
+  );
+}
+
+/** One quiet line where reasoning happened but its text was never saved. Never filled in. */
+function ReasoningGapLine({ pr, agent }: { pr: Prose; agent?: Agent }) {
+  const [why, setWhy] = useState(false);
+  const gap = reasoningGap(pr, agent?.harness);
+  return (
+    <div data-prose-id={pr.id} data-agent-id={pr.agentId} className="prose prose-reasoning reasoning-gap">
+      <button className="reasoning-gap-line" onClick={() => setWhy((v) => !v)} aria-expanded={why} title={gap.explain}>
+        <span>{gap.line}</span>{gap.count && <small>{gap.count}</small>}<span className="reasoning-gap-info" aria-hidden>ⓘ</span>
+      </button>
+      {why && <p className="reasoning-gap-why">{gap.explain}</p>}
     </div>
   );
 }
@@ -777,8 +801,11 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </header>
       {!expanded && <div className="op-body">
         <OpPreview op={op} resolving={so.resolving} onSource={measureSource} />
+        {op.images?.length && !(op.detail.kind === 'read' && !op.detail.excerptArtifactId) ? <OpImages images={op.images!} compact /> : null}
+        {op.detail.kind === 'other' && pathOnlyImage(op) ? <PathImage op={op} path={pathOnlyImage(op)!} /> : null}
       </div>}
       {expanded && <ExpandedOperation op={op} />}
+      {expanded && op.images?.length ? <OpImages images={op.images!} /> : null}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
       <EvidenceNote op={op} />
     </article>
@@ -804,6 +831,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.path} · captured patch{d.reconstruction !== 'complete' ? ' · after-state not verified' : ''}</div>
         <ReadBeforePanel op={op} />
+        <BeforeTurnPanel op={op} />
         {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ArtifactReader id={op.artifactIds.find(id => id.endsWith('_after'))} kind="code" path={d.path} provenance /> : <p className="muted">No source bytes or patch captured.</p>}
         <button className="material-more" onClick={() => select(op.id)}>Open provenance and file states</button>
       </div>;
@@ -812,6 +840,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         <div className="query">{d.query} · {d.total ?? d.hits.length} recorded result{(d.total ?? d.hits.length) === 1 ? '' : 's'}</div>
         {d.hits.slice(0, 50).map((hit, i) => <button type="button" className="hit search-bead" key={i} title={`Open captured match on ${hit.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(hit.path,hit.line,`${op.id}/search/${i}`);}}>{hit.path}{hit.line ? `:${hit.line}` : ''}{hit.text ? ` · ${hit.text}` : ''}</button>)}
         {d.hits.length > 50 && <div className="muted">{d.hits.length - 50} more recorded hits · open details to inspect all</div>}
+        <CommandRunNotes op={op} />
       </div>;
     case 'test':
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
@@ -821,6 +850,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
         {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
+        <CommandRunNotes op={op} />
       </div>;
     case 'shell':
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
@@ -829,6 +859,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} />
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
+        <CommandRunNotes op={op} />
         <div className="muted small">Exit {d.exitCode ?? 'not captured'}</div>
       </div>;
     case 'mcp':
@@ -841,6 +872,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
     case 'web':
       return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
+        {d.fetch && <div className="material-context">{fetchFacts(d.fetch)}</div>}
         {d.results?.length ? <><div className="material-context">{d.results.length} recorded result{d.results.length === 1 ? '' : 's'}</div><WebResults results={d.results} snippets/></> : null}
         <div className="material-context">Captured result preview</div>
         <CapturedOutcomes output={d.resultPreview}/>
@@ -885,7 +917,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'read':
       return <>
         {op.status === 'running' && <div className="request-line excerpt-range">Requested from line {d.startLine}{d.lineCount > 0 ? ` through ${d.startLine + d.lineCount - 1}` : ''} · awaiting excerpt</div>}
-        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}>{op.status === 'running' && !d.excerptArtifactId ? <PendingResult /> : pathOnlyImage(op) ? <>{op.images?.length ? <OpImages images={op.images} compact /> : null}<PathImage op={op} path={pathOnlyImage(op)!} /></> : !d.excerptArtifactId && op.images?.length ? <OpImages images={op.images!} compact /> : <ReadPreview onSource={onSource} opId={op.id} artifactId={d.excerptArtifactId} start={d.startLine} path={d.path} />}</ResultArea>
       </>;
     case 'edit':
       return <>
@@ -985,7 +1017,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
  * a single line of what it did. The newest turn waits until the agent is quiet, and replay shows no ledger,
  * so nothing here tells the future.
  */
-function TurnBlock({ prompt, step, fold }: { prompt: string; step?: number; fold?: { folded: boolean; toggle: () => void } }) {
+function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { prompt: string; step?: number; permissionMode?: string; images?: OperationImage[]; plan?: PinnedPlan; fold?: { folded: boolean; toggle: () => void } }) {
   const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
   const newest = useTurns((s) => s.lastStep === step);
   const active = useNow((s) => !!s.view?.mark);
@@ -1010,6 +1042,9 @@ function TurnBlock({ prompt, step, fold }: { prompt: string; step?: number; fold
       <span className="turn-who">You</span>
       <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
+      {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
+      {plan && <PinnedPlanList plan={plan} />}
+      {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}
       {fold ? (
         // The ledger line is the fold control: what the turn did is what stays when it folds.
         <button type="button" className="turn-ledger turn-fold" aria-expanded={!fold.folded} aria-label={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `: ${parts.map((part) => part.text).join(', ')}` : ''}`} title={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `. ${LEDGER_BASIS}` : ''}`} onClick={(e) => { e.stopPropagation(); fold.toggle(); }}>
@@ -1020,6 +1055,9 @@ function TurnBlock({ prompt, step, fold }: { prompt: string; step?: number; fold
     </div>
   );
 }
+
+/** Claude Code permission modes, in its own words where it has them. */
+const PERMISSION_MODE: Record<string, string> = { default: 'Asks before edits', acceptEdits: 'Accepts edits', auto: 'Auto mode', bypassPermissions: 'Bypasses permissions', plan: 'Plan mode' };
 
 /** Added and removed lines, counted from the captured patch. */
 function DiffStat({ hunks }: { hunks: Hunk[] }) {

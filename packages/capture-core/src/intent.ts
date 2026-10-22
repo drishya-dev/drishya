@@ -20,10 +20,21 @@ export type ToolOutcome =
   | { kind: 'read'; path?: string; content?: string; startLine?: number; numLines?: number; totalLines?: number; harnessLineNumbers?: boolean }
   | { kind: 'edit'; path?: string; originalFile?: string | null; hunks?: RawHunk[]; created?: boolean; content?: string }
   | { kind: 'search'; files?: string[]; lines?: string; total?: number }
-  | { kind: 'shell'; stdout?: string; stderr?: string; interrupted?: boolean }
-  | { kind: 'web'; url?: string; status?: number; text?: string }
+  | { kind: 'shell'; stdout?: string; stderr?: string; interrupted?: boolean; run?: ShellRun }
+  | { kind: 'web'; url?: string; status?: number; text?: string; statusText?: string; bytes?: number; durationMs?: number }
   | { kind: 'spawn'; childAgentId?: string; text?: string }
   | { kind: 'other' };
+
+/** What the harness recorded about how a command ran, beyond its output. */
+export interface ShellRun {
+  /** The harness moved the command to the background (its task id), e.g. after a timeout. */
+  backgroundTaskId?: string;
+  timedOutAfterMs?: number;
+  /** The harness's own reading of a non-zero exit, e.g. "No matches found". */
+  exitNote?: string;
+  /** Output too large for the journal, saved by the harness to a file. Reference only. */
+  persistedOutput?: { path: string; bytes?: number };
+}
 
 export interface RawHunk {
   oldStart: number;

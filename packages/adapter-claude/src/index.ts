@@ -4,7 +4,7 @@
 
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
+import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, ExternalChangePayload, Observation } from '@drishya/contracts';
 import {
   fileInfo,
   headRecords,
@@ -18,11 +18,12 @@ import {
   type RawHunk,
   type RawObservation,
   type RecordParser,
+  type ShellRun,
   type SourceSet,
   type ToolIntent,
   type ToolOutcome,
 } from '@drishya/capture-core';
-import { sanitize } from '@drishya/privacy';
+import { imageCandidate, isDeniedPath, sanitize } from '@drishya/privacy';
 
 export const descriptor: AdapterDescriptor = {
   id: 'claude-code',
@@ -45,10 +46,14 @@ export const descriptor: AdapterDescriptor = {
 };
 
 const MAIN = 'agent:main';
+/** One checkpoint lists every tracked file; bound it so an unusual session cannot bloat one observation. */
+const MAX_CHECKPOINT_FILES = 2000;
+/** Claude Code's backup file names: a content hash and a version, e.g. `306e5c83b76fd12d@v2`. */
+const BACKUP_NAME = /^[0-9a-f]{8,64}@v\d+$/;
 
 /** Bookkeeping record types that carry no agent activity. Ignored on purpose, not by accident. */
 const IGNORED = new Set([
-  'queue-operation', 'file-history-snapshot', 'file-history-delta', 'bridge-session', 'mode', 'atis-latch',
+  'queue-operation', 'bridge-session', 'mode', 'atis-latch',
   'last-prompt', 'agent-name', 'attachment', 'permission-mode', 'progress', 'frame-link',
   'artifact-autoreact-ledger', 'artifact-comment-monitor',
 ]);
@@ -99,6 +104,18 @@ export function intentOf(name: string, input: Rec): ToolIntent {
   }
 }
 
+const defined = <T extends Rec>(o: T): Partial<T> => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
+
+function shellRun(s: Rec): { run?: ShellRun } {
+  const run = defined({
+    backgroundTaskId: str(s.backgroundTaskId),
+    timedOutAfterMs: num(s.timedOutAfterMs),
+    exitNote: str(s.returnCodeInterpretation),
+    persistedOutput: str(s.persistedOutputPath) ? defined({ path: s.persistedOutputPath as string, bytes: num(s.persistedOutputSize) }) as { path: string; bytes?: number } : undefined,
+  });
+  return Object.keys(run).length ? { run } : {};
+}
+
 export function outcomeOf(intent: ToolIntent, structured: unknown, text: string | undefined): ToolOutcome {
   const s = (structured && typeof structured === 'object' ? structured : {}) as Rec;
   switch (intent.kind) {
@@ -131,9 +148,9 @@ export function outcomeOf(intent: ToolIntent, structured: unknown, text: string 
       return { kind: 'search', files: Array.isArray(s.filenames) ? s.filenames : undefined, lines: str(s.content) ?? (s.filenames ? undefined : text), total: num(s.numFiles) ?? num(s.totalMatches) };
     case 'shell':
       if (typeof structured === 'string') return { kind: 'shell', stdout: structured };
-      return { kind: 'shell', stdout: str(s.stdout) ?? text, stderr: str(s.stderr), interrupted: !!s.interrupted };
+      return { kind: 'shell', stdout: str(s.stdout) ?? text, stderr: str(s.stderr), interrupted: !!s.interrupted, ...shellRun(s) };
     case 'web':
-      return { kind: 'web', url: str(s.url), status: num(s.code), text: str(s.result) ?? text };
+      return { kind: 'web', url: str(s.url), status: num(s.code), text: str(s.result) ?? text, ...defined({ statusText: str(s.codeText), bytes: num(s.bytes), durationMs: num(s.durationMs) }) };
     case 'spawn':
       return { kind: 'spawn', childAgentId: typeof s.agentId === 'string' ? `agent:${s.agentId}` : undefined, text: textOf(s.content) ?? text };
     default:
@@ -151,6 +168,9 @@ function str(v: unknown): string | undefined {
 export function createParser(ctx: ParseContext): RecordParser {
   const calls = new Map<string, { tool: string; intent: ToolIntent }>();
   let lastCwd: string | undefined;
+  // Checkpoint rows carry no session id; a forked journal holds rows of the session it continues,
+  // whose backups live in that session's folder. Use the last session id the journal named.
+  let lastSession: string | undefined;
   const messagesWithUsage = new Set<string>();
 
   const agentOf = (r: Rec): string => {
@@ -172,7 +192,8 @@ export function createParser(ctx: ParseContext): RecordParser {
       if (!record || typeof record !== 'object') return [];
       const r = record as Rec;
       const type = String(r.type ?? '');
-      if (IGNORED.has(type)) return [];
+      if (typeof r.sessionId === 'string') lastSession = r.sessionId;
+      if (IGNORED.has(type) && !(type === 'attachment' && (r.attachment as Rec | undefined)?.type === 'edited_text_file')) return [];
       const base = {
         recordId: typeof r.uuid === 'string' ? r.uuid : undefined,
         sourceTime: typeof r.timestamp === 'string' ? r.timestamp : undefined,
@@ -182,6 +203,29 @@ export function createParser(ctx: ParseContext): RecordParser {
         harnessVersion: typeof r.version === 'string' ? r.version : undefined,
       };
       const out: RawObservation[] = [];
+
+      // DATA-5: Claude Code's checkpoints (file backups per turn), as references only.
+      if (type === 'file-history-snapshot' || type === 'file-history-delta') {
+        const files: CheckpointPayload['files'] = [];
+        const add = (path: unknown, b: Rec | undefined) => {
+          if (typeof path !== 'string' || !path || !b || files.length >= MAX_CHECKPOINT_FILES) return;
+          const name = str(b.backupFileName);
+          files.push({ path, ...(str(b.realParentDir) ? { parentDir: b.realParentDir } : {}), ...(name && BACKUP_NAME.test(name) ? { backup: { name, ...defined({ version: num(b.version), time: str(b.backupTime) }) } } : b.backupFileName === null ? { absent: true } : {}) });
+        };
+        const snap = (r.snapshot ?? {}) as Rec;
+        if (type === 'file-history-snapshot') for (const [path, b] of Object.entries((snap.trackedFileBackups ?? {}) as Record<string, Rec>)) add(path, b);
+        else add(r.trackingPath, r.backup as Rec | undefined);
+        const messageId = str(type === 'file-history-snapshot' ? r.messageId ?? snap.messageId : r.snapshotMessageId);
+        if (!messageId || !files.length) return [];
+        return [{ ...base, part: 0, kind: 'checkpoint', payload: { messageId, ...defined({ at: str(snap.timestamp) ?? str(r.timestamp), session: lastSession }), files } satisfies CheckpointPayload }];
+      }
+
+      // DATA-6: Claude Code noticed a file it had read changed on disk outside its edit tools.
+      if (type === 'attachment' && (r.attachment as Rec | undefined)?.type === 'edited_text_file') {
+        const at = r.attachment as Rec;
+        if (typeof at.filename !== 'string' || !at.filename) return [];
+        return [{ ...base, part: 0, kind: 'external.change', payload: { path: at.filename, ...(typeof at.snippet === 'string' ? { snippet: at.snippet } : {}), basis: 'harness-notice' } satisfies ExternalChangePayload, contentKeys: ['snippet'], denyContent: isDeniedPath(at.filename) }];
+      }
 
       if (type === 'cost-state') {
         const work: Record<string, number> = {};
@@ -221,8 +265,9 @@ export function createParser(ctx: ParseContext): RecordParser {
           out.push({ ...base, part: 0, kind: 'compaction', payload: { summary: textOf(content) }, contentKeys: ['summary'] });
           return out;
         }
+        const mode = typeof r.permissionMode === 'string' ? { permissionMode: r.permissionMode } : {};
         if (typeof content === 'string') {
-          if (!r.isMeta) out.push({ ...base, part: 0, kind: 'message.user', payload: { text: content }, contentKeys: ['text'] });
+          if (!r.isMeta) out.push({ ...base, part: 0, kind: 'message.user', payload: { text: content, ...mode }, contentKeys: ['text'] });
           return out;
         }
         if (!Array.isArray(content)) return out;
@@ -230,7 +275,12 @@ export function createParser(ctx: ParseContext): RecordParser {
           if (c.type === 'tool_result') {
             const call = calls.get(c.tool_use_id);
             const text = textOf(c.content);
-            const structured = r.toolUseResult;
+            // CONTENT-1 (D7): images returned to the model (Read of an image file, screenshots).
+            // Claude's toolUseResult repeats them; keep one copy, with its recorded display size.
+            const shown = (r.toolUseResult as Rec | undefined)?.file?.dimensions as Rec | undefined;
+            const images = Array.isArray(c.content) ? (c.content as Rec[]).filter((b) => b?.type === 'image' && b.source?.type === 'base64')
+              .map((b) => imageCandidate(b.source.data, shown ? { width: shown.displayWidth, height: shown.displayHeight } : undefined)) : [];
+            const structured = Array.isArray(r.toolUseResult) ? (r.toolUseResult as Rec[]).filter((b) => b?.type !== 'image') : r.toolUseResult?.type === 'image' && images.length ? { ...r.toolUseResult, file: undefined } : r.toolUseResult;
             const intent = call?.intent ?? { kind: 'other' as const };
             const outcome = outcomeOf(intent, structured, text);
             const exitMatch = /^Exit code (-?\d+)/m.exec(text ?? '');
@@ -247,15 +297,19 @@ export function createParser(ctx: ParseContext): RecordParser {
                 // Unknown tools keep their structured result (sanitized) so nothing is lost.
                 structured: outcome.kind === 'other' ? structured : undefined,
                 exitCode: intent.kind === 'shell' ? (exitMatch ? Number(exitMatch[1]) : c.is_error ? null : 0) : undefined,
+                ...(images.length ? { images } : {}),
               },
               denyContent: touchesProtectedFile(intent),
-              contentKeys: ['text', 'outcome', 'structured'],
+              contentKeys: ['text', 'outcome', 'structured', 'images'],
             });
             if (intent.kind === 'spawn' && outcome.kind === 'spawn' && outcome.childAgentId) {
               out.push({ ...base, part: 100 + i, kind: 'agent.spawn', operationId: c.tool_use_id, payload: { childAgentId: outcome.childAgentId, agentType: intent.agentType, description: intent.description, basis: 'source-id' } });
             }
           } else if (c.type === 'text' && !r.isMeta) {
-            out.push({ ...base, part: i, kind: 'message.user', payload: { text: c.text }, contentKeys: ['text'] });
+            out.push({ ...base, part: i, kind: 'message.user', payload: { text: c.text, ...mode }, contentKeys: ['text'] });
+          } else if (c.type === 'image' && !r.isMeta && c.source?.type === 'base64') {
+            // CONTENT-1: an image the person attached; it belongs to the prompt in this same record.
+            out.push({ ...base, part: i, kind: 'message.user', payload: { text: '', images: [imageCandidate(c.source.data)] }, contentKeys: ['text', 'images'] });
           } else if (c.type === 'image') {
             out.push({ ...base, part: i, kind: 'capture.gap', payload: { reason: 'unsupported-content', detail: 'image omitted by privacy policy' }, availability: 'metadata-only' });
           }
@@ -277,8 +331,12 @@ export function createParser(ctx: ParseContext): RecordParser {
         content.forEach((c: Rec, i: number) => {
           if (c.type === 'text' && c.text) {
             out.push({ ...base, part: i, kind: 'message.assistant', payload: { text: c.text, model }, contentKeys: ['text'] });
-          } else if (c.type === 'thinking' && c.thinking) {
+          } else if (c.type === 'thinking' && typeof c.thinking === 'string' && c.thinking.trim()) {
             out.push({ ...base, part: i, kind: 'reasoning', payload: { text: c.thinking, exposure: 'full', model }, contentKeys: ['text'] });
+          } else if (c.type === 'thinking' || c.type === 'redacted_thinking') {
+            // The block exists but its text was not saved; record that so the UI can say so.
+            const reason = c.type === 'redacted_thinking' ? 'encrypted' : c.signature ? 'signature-only' : 'empty';
+            out.push({ ...base, part: i, kind: 'reasoning', payload: { text: '', exposure: 'none', reason, model } });
           } else if (c.type === 'tool_use') {
             const input = (c.input ?? {}) as Rec;
             const intent = intentOf(String(c.name), input);
