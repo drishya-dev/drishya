@@ -1,4 +1,7 @@
 import { pointAtHistory } from './history-gestures.ts';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -735,4 +738,23 @@ test('paged replay retains its history and camera while the next captured page l
   } finally { release(); }
   await expect(page.locator('.viewer')).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator('.history')).toBeVisible();
+});
+
+// Exercise the actual probe: the last passage has a prompt but no operation/prose.
+test('benchmark reader update completes for a final prompt-only passage', async () => {
+  const source = join(dir, 'prompt-only-rollout.jsonl');
+  const rows = [
+    { type: 'session_meta', payload: { id: 'prompt-probe', cwd: '/synthetic' } },
+    { type: 'event_msg', payload: { type: 'user_message', message: 'Invented opening prompt' } },
+    { type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Invented prior answer' }] } },
+    { type: 'event_msg', payload: { type: 'user_message', message: 'Invented final prompt '.repeat(200) } },
+  ];
+  writeFileSync(source, rows.map((r, i) => JSON.stringify({ timestamp: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString(), ...r })).join('\n') + '\n');
+  const { stdout } = await promisify(execFile)(process.execPath, ['scripts/bench-real-journals.ts', '--worker', '--source', source, '--browser'], { timeout: 45000 });
+  const result = JSON.parse(stdout.trim());
+  expect(result.verifiedAgainstFullImport).toBe(true);
+  expect(result.rescanIdempotent).toBe(true);
+  expect(result.gaps).toBe(0);
+  expect(result.concurrentCaptured).toBe(0);
+  expect(result.ui.appendToReaderUpdateMs).toBeGreaterThan(0);
 });

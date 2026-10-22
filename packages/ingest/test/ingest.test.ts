@@ -61,12 +61,12 @@ function claudeLine(rec: Record<string, unknown>) {
 }
 
 describe('import', () => {
-  it('serves an event-loop turn between committed sub-megabyte slices without splitting records', async () => {
+  it('serves an event-loop turn between committed slices without splitting records', async () => {
     const path = join(dir, 'rollout-sliced.jsonl');
     const rows = [JSON.stringify({ type: 'session_meta', payload: { id: 'sliced', cwd: '/synthetic' } })];
     for (let i = 0; i < 10; i++) {
       rows.push(JSON.stringify({ type: 'response_item', payload: { type: 'function_call', name: 'shell_command', call_id: `slice-${i}`, arguments: '{"command":"echo invented"}' } }));
-      rows.push(JSON.stringify({ type: 'response_item', payload: { type: 'function_call_output', call_id: `slice-${i}`, output: `Invented ${i} ` + 'line\n'.repeat(i === 4 ? 60000 : 16000) } }));
+      rows.push(JSON.stringify({ type: 'response_item', payload: { type: 'function_call_output', call_id: `slice-${i}`, output: `Invented ${i} ` + 'line\n'.repeat(i === 4 ? 240000 : 16000) } }));
     }
     writeFileSync(path, rows.join('\n') + '\n');
     const through = new Set<number>(); let offset = 0;

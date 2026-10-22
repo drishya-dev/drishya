@@ -73,7 +73,7 @@ export interface IngestorOptions {
 }
 
 /** Bytes of records sealed and stored before the ingest yields to the daemon's other work. */
-const SLICE_BYTES = 256 * 1024;
+const SLICE_BYTES = 1024 * 1024;
 const MAX_RECORD_BYTES = 16 * 1024 * 1024;
 
 /** What the ingestor remembers about a recording's collection; `health()` derives the state. */
@@ -304,9 +304,8 @@ export class Ingestor extends EventEmitter {
       }
       const observedAt = this.now().toISOString();
       // Seal and store one read in slices of about SLICE_BYTES, committing the cursor after
-      // each and yielding between them. Even 1 MiB can exceed the interaction budget while
-      // redacting typed output and committing it (PERF-2). Individual records stay whole;
-      // this soft budget never changes the 16 MiB record limit or the source byte offsets.
+      // each and yielding between them. A whole 4 MiB read sealed and written at once held the
+      // daemon thread for 110-150 ms on a large Codex journal (PERF-2), stalling API requests.
       let sealed = [];
       let sliceBytes = 0;
       if (res.reset) sealed.unshift(seal({ raw: gap('source-truncated', undefined, `source ${res.reset}; reading a new generation`, src.agentId), recordingId: src.recordingId, adapter: adapter.descriptor, sourceId: src.id, generation: res.cursor.generation, byteOffset: -1, observedAt }));

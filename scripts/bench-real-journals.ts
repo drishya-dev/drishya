@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { createReadStream, createWriteStream, mkdtempSync, rmSync, statSync, openSync, readSync, closeSync } from 'node:fs';
+import { createReadStream, createWriteStream, mkdtempSync, rmSync, statSync, openSync, readSync, closeSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir, cpus, totalmem } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -12,7 +12,7 @@ import { performance } from 'node:perf_hooks';
 import { App } from '../apps/daemon/src/app.ts';
 import { startServer } from '../apps/daemon/src/server.ts';
 import { sampleRss } from './resource-probe.ts';
-import type { Page } from '@playwright/test';
+import type { CDPSession, Page } from '@playwright/test';
 import { DatabaseSync } from 'node:sqlite';
 
 const self = fileURLToPath(import.meta.url);
@@ -42,6 +42,8 @@ async function measure(source: string) {
   let server: Awaited<ReturnType<typeof startServer>>|undefined;
   let browser: { close(): Promise<void> }|undefined;
   let page: Page|undefined;
+  let profiler: CDPSession|undefined;
+  let profileBefore: unknown;
   let stopPeak: ReturnType<typeof sampleRss>|undefined;
   const stalls:number[]=[];
   let last=performance.now();
@@ -101,6 +103,15 @@ async function measure(source: string) {
         return {frameP95Ms:p95(frames),frameMaxMs:Math.max(0,...frames),apiP95Ms:p95(requests),apiMaxMs:Math.max(...requests),domNodes:document.querySelectorAll('*').length};
       }).catch(()=>({probeError:'browser probe interrupted'}));
     }
+    // CPU profiles can contain source-bearing URLs; opt in only for invented inputs.
+    const profileDir=process.env.DRISHYA_BENCH_PROFILE_DIR;
+    if(page&&profileDir){
+      mkdirSync(profileDir,{recursive:true});
+      profiler=await page.context().newCDPSession(page);
+      await profiler.send('Performance.enable');await profiler.send('Profiler.enable');
+      profileBefore=await profiler.send('Performance.getMetrics');
+      await profiler.send('Profiler.start');
+    }
     // Append only to our snapshot. Splitting through a record also tests the partial-line cursor.
     const appendAt=performance.now();
     const appendStallStart=stalls.length;
@@ -117,12 +128,19 @@ async function measure(source: string) {
       const passage=latest.loadedPassageIds.at(-1);
       if(passage)await page.waitForFunction(id=>[...document.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].some(el=>{
         const rect=el.getBoundingClientRect();
-        return el.dataset.passageId===id&&!!el.querySelector('article[data-op-id], .prose')&&rect.height>0&&rect.top<innerHeight&&rect.bottom>0;
+        return el.dataset.passageId===id&&!!el.querySelector('article[data-op-id], .prose, .turn')&&rect.height>0&&rect.top<innerHeight&&rect.bottom>0;
       }),passage,{timeout:60000});
       await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
       ui!.appendToReaderUpdateMs=performance.now()-appendAt;
       ui!.visibleUpdateBasis='final reader revision and latest material passage intersects viewport, then two animation frames';
       stage('reader-update');
+      if(profiler&&profileDir){
+        const profile=await profiler.send('Profiler.stop');
+        const metrics=await profiler.send('Performance.getMetrics');
+        writeFileSync(join(profileDir,'browser-append.cpuprofile'),JSON.stringify(profile.profile));
+        writeFileSync(join(profileDir,'browser-metrics.json'),JSON.stringify({before:profileBefore,after:metrics}));
+        await profiler.detach();profiler=undefined;
+      }
     }
     const appendEventLoopMaxMs=Math.max(0,...stalls.slice(appendStallStart));
     const stable=await app.ingest.sync(imported.recordingId,{turnBytes:16*1048576,acceptUnterminated:false});

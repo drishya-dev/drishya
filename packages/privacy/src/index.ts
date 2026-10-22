@@ -23,6 +23,8 @@ const REDACT_WINDOW_FACTOR = 4;
 interface Rule {
   id: string;
   pattern: RegExp;
+  /** Necessary condition only; failing it must imply the full pattern cannot match. */
+  possible?: (text: string) => boolean;
   /** Which capture group holds the secret. 0 = whole match. */
   group?: number;
   /** Extra check on the candidate secret, to avoid redacting placeholders and hashes. */
@@ -71,7 +73,7 @@ const RULES: Rule[] = [
   { id: 'hf-token', pattern: /\bhf_[A-Za-z0-9]{30,}\b/g },
   { id: 'jwt', pattern: /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g },
   { id: 'bearer', pattern: /\b(?:Bearer|Token)\s+([A-Za-z0-9._~+/=-]{16,})/g, group: 1, accept: looksSecret },
-  { id: 'url-credentials', pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:([^\s@/]{3,})@/gi, group: 1, accept: (s) => !PLACEHOLDER.test(s) },
+  { id: 'url-credentials', possible: text => text.includes('://'), pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:([^\s@/]{3,})@/gi, group: 1, accept: (s) => !PLACEHOLDER.test(s) },
   {
     id: 'secret-assignment',
     pattern: /\b[A-Za-z0-9_]*(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|private[_-]?key|client[_-]?secret|auth)[A-Za-z0-9_]*["']?\s*[:=]\s*(["'`]?)([^\s"'`,;]{8,})\1/gi,
@@ -108,6 +110,7 @@ export function redactText(input: string): RedactResult {
   const hits = new Map<string, number>();
   for (const rule of RULES) {
     rule.pattern.lastIndex = 0;
+    if (rule.possible && !rule.possible(text)) continue;
     text = text.replace(rule.pattern, (match: string, ...args: unknown[]) => {
       const groups = args.slice(0, -2) as (string | undefined)[];
       const secret = rule.group ? groups[rule.group - 1] : match;
