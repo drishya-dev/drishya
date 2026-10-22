@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Operation, Projection } from '@drishya/contracts';
-import { planThreads } from '../src/index.ts';
+import { pinnedPlans, planThreads } from '../src/index.ts';
 
 // CONTENT-4: repeated TodoWrite lists become one thread of revisions per agent and turn.
 const plan = (id: string, seq: number, items: [string, string][], agentId = 'a'): Operation => ({
@@ -40,5 +40,25 @@ describe('planThreads', () => {
   it('marks a list item that went backwards as reopened', () => {
     const found = planThreads(projection([plan('p1', 2, [['A', 'completed']]), plan('p2', 3, [['A', 'pending']])], [1]));
     expect(found.get('p2')!.thread.revisions[1]!.items[0]!.change).toBe('reopened');
+  });
+});
+
+describe('pinnedPlans', () => {
+  it('pins the newest list of the agent the prompt went to, per turn', () => {
+    const ops = [
+      plan('p1', 2, [['A', 'in_progress'], ['B', 'pending']]), plan('p2', 4, [['A', 'completed'], ['B', 'in_progress']]),
+      plan('s1', 5, [['Sub', 'pending']], 'sub'), plan('p3', 12, [['C', 'pending']]),
+    ];
+    const pins = pinnedPlans(projection(ops, [1, 10]));
+    expect([...pins.keys()]).toEqual([1, 2]);
+    expect(pins.get(1)).toMatchObject({ operationId: 'p2', revision: 2, revisions: 2, done: 1, total: 2 });
+    expect(pins.get(2)!.items.map((i) => i.text)).toEqual(['C']);
+  });
+
+  it('counts only the lists it is allowed to see, and leaves lists before any prompt unpinned', () => {
+    const ops = [plan('p0', 0, [['Early', 'pending']]), plan('p1', 2, [['A', 'pending']]), plan('p2', 4, [['A', 'completed']])];
+    const pins = pinnedPlans(projection(ops, [1]), (op) => op.id !== 'p2');
+    expect([...pins.keys()]).toEqual([1]);
+    expect(pins.get(1)).toMatchObject({ operationId: 'p1', revision: 1, done: 0 });
   });
 });

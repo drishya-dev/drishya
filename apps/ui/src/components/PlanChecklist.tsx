@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
-import { planThreads, type PlanPosition, type PlanRevision } from '@drishya/scene';
+import { planThreads, type PinnedPlan, type PlanPosition, type PlanRevision } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import './plan-checklist.css';
 
@@ -44,7 +44,10 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
   const revision = thread.revisions[shownIndex]!;
   const heading = <span className="plan-head"><b>Revision {shownIndex + 1}</b> · {revision.done} of {revision.total} done</span>;
 
-  if (!full && !latest) {
+  // Modern pins the lead agent's newest list under the prompt (TurnBlock), so in the stream every
+  // revision of it is one line; the retained UIs keep the list where it arrived.
+  const pinned = !full && thread.lead && typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern';
+  if (!full && (!latest || pinned)) {
     // An earlier list in the same turn: one line saying what it changed, not the list again.
     return <div className="plan-card plan-earlier">{heading}{summary(revision) && <small className="plan-delta">{summary(revision)}</small>}</div>;
   }
@@ -59,5 +62,31 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
     <Items revision={revision} limit={full ? undefined : 10} />
     {full && revision.removed.length > 0 && <small className="plan-removed">Left out of this revision: {revision.removed.join(' · ')}</small>}
     <small className="plan-basis">Captured list, compared with the revision before</small>
+  </div>;
+}
+
+const PINNED_LIMIT = 8;
+
+/**
+ * CONTENT-4: the turn's checklist, pinned under the prompt and rewritten in place as the agent updates it.
+ * It is the lead agent's newest captured list as of the viewed step; longer lists show a window around the work in progress.
+ */
+export function PinnedPlanList({ plan }: { plan: PinnedPlan }) {
+  const [all, setAll] = useState(false);
+  const long = plan.items.length > PINNED_LIMIT;
+  let items = plan.items.map((item, i) => ({ item, i }));
+  if (long && !all) {
+    const focus = Math.max(0, plan.items.findIndex((item) => item.status === 'in_progress'));
+    const from = Math.min(Math.max(0, focus - 2), plan.items.length - PINNED_LIMIT);
+    items = items.slice(from, from + PINNED_LIMIT);
+  }
+  return <div className="plan-pinned" role="group" aria-label="Plan checklist" title={`The agent's newest captured todo list, revision ${plan.revision} of ${plan.revisions}`} onClick={(e) => e.stopPropagation()}>
+    <span className="plan-head"><b>Plan</b> · {plan.done} of {plan.total} done{plan.revisions > 1 ? ` · revision ${plan.revision}` : ''}</span>
+    <ul className="plan-list">{items.map(({ item, i }) => <li key={i} className={`plan-${item.status}`}>
+      <span className="plan-mark" aria-hidden="true">{MARK[item.status] ?? '·'}</span>
+      <span className="plan-text">{item.text}</span>
+      <span className="sr-only"> ({item.status.replace('_', ' ')})</span>
+    </li>)}</ul>
+    {long && <button type="button" className="link plan-pinned-more" aria-expanded={all} onClick={() => setAll((v) => !v)}>{all ? 'Show fewer' : `Show all ${plan.items.length}`}</button>}
   </div>;
 }

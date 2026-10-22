@@ -4,12 +4,13 @@
 // Runs in both the daemon (tests, export) and the browser.
 
 import { asOfProjection, type Agent, type Operation, type OperationImage, type OperationKind, type Projection, type Prose, type TimelineItem } from '@drishya/contracts';
+import { pinnedPlans, type PinnedPlan } from './plan-threads.ts';
 export { asOfProjection } from '@drishya/contracts';
 export { sinceBoundary, type SinceDigest, type SinceItem } from './since.ts';
 export { verificationFor, type VerificationCheck, type VerificationTrail } from './verification.ts';
 export { fixChainFor, type FixChain, type FixChainLink, type FixChainRun, type FixChainEdit } from './fix-chains.ts';
 export { readBeforeWriteFor, type ReadBeforeWrite, type ReadSpan } from './read-before-write.ts';
-export { planThreads, type PlanThread, type PlanRevision, type PlanItem, type PlanChange, type PlanPosition } from './plan-threads.ts';
+export { planThreads, pinnedPlans, type PinnedPlan, type PlanThread, type PlanRevision, type PlanItem, type PlanChange, type PlanPosition } from './plan-threads.ts';
 
 export const COMPOSER_VERSION = 'c1';
 
@@ -71,6 +72,8 @@ export interface ScenePassage {
   turnPermissionMode?: string;
   /** CONTENT-1: images the person attached to this prompt. */
   turnImages?: OperationImage[];
+  /** CONTENT-4: the lead agent's newest todo list of this turn, as of this step; pinned under the prompt. */
+  turnPlan?: PinnedPlan;
   /**
    * Timeline step of the prompt this passage follows, on every passage of the turn (not only the one that opens it),
    * so a reader can fold a finished turn even when its opening passage is paged out.
@@ -191,6 +194,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   for (const ps of visible) latestByAgent.set(ps.agentId, ps.id);
 
   const openedTurns = new Set<number>();
+  const pins = pinnedPlans(p, (op) => started.has(op.id));
   const materialPassages: ScenePassage[] = visible.map((ps) => {
     const sceneOps: SceneOp[] = ps.operationIds
       .filter((id) => started.has(id))
@@ -241,6 +245,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       ...(opensTurn&&turn?{turnStep:turn.step}:{}),
       ...(opensTurn&&turn?.modeChange?{turnPermissionMode:turn.modeChange}:{}),
       ...(opensTurn&&turn?.images?{turnImages:turn.images}:{}),
+      ...(opensTurn&&turn&&pins.has(turnAt.indexOf(turn)+1)?{turnPlan:pins.get(turnAt.indexOf(turn)+1)!}:{}),
       ...(turn ? { inTurn: turn.step } : {}),
     };
   });

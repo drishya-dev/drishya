@@ -10,7 +10,7 @@ import { ToolOutput } from './ToolOutput.tsx';
 import { ScriptDetails } from './Inspector.tsx';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
-import type { Scene, SceneOp, ScenePassage } from '@drishya/scene';
+import type { PinnedPlan, Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
@@ -31,7 +31,7 @@ import { StructuredResult } from './StructuredResult.tsx';
 import { TerminalPreview } from './TerminalPreview.tsx';
 import { VerificationStrip } from './VerificationStrip.tsx';
 import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
-import { PlanChecklist } from './PlanChecklist.tsx';
+import { PinnedPlanList, PlanChecklist } from './PlanChecklist.tsx';
 import { WebResults } from './WebResults.tsx';
 import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
 import { BeforeTurnPanel } from './BeforeTurn.tsx';
@@ -664,7 +664,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, 
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
     <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
@@ -1017,7 +1017,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
  * a single line of what it did. The newest turn waits until the agent is quiet, and replay shows no ledger,
  * so nothing here tells the future.
  */
-function TurnBlock({ prompt, step, fold, permissionMode, images }: { prompt: string; step?: number; permissionMode?: string; images?: OperationImage[]; fold?: { folded: boolean; toggle: () => void } }) {
+function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { prompt: string; step?: number; permissionMode?: string; images?: OperationImage[]; plan?: PinnedPlan; fold?: { folded: boolean; toggle: () => void } }) {
   const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
   const newest = useTurns((s) => s.lastStep === step);
   const active = useNow((s) => !!s.view?.mark);
@@ -1043,6 +1043,7 @@ function TurnBlock({ prompt, step, fold, permissionMode, images }: { prompt: str
       <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
       {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
+      {plan && <PinnedPlanList plan={plan} />}
       {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}
       {fold ? (
         // The ledger line is the fold control: what the turn did is what stays when it folds.
