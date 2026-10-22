@@ -32,6 +32,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-2 | @harsh + Codex | `harsh/perf-2-responsive-ingest` | 2026-10-21 | Follow-up to merged #176; benchmark/profiling scripts and tests, ingest/store/daemon latency fixes if measured, performance report and completion docs (at most 15 files). Five-run retained-journal matrix; no schema/UI features or native turns. Claim released by Yash; coordination posted on #176. |
+| TEST-2 | @yash + Claude | `yash/test-2-flaky-specs` | 2026-10-22 | Diagnose the rotating browser-suite flakes (collection-surfaces, workspace-navigation, fresh-workspace, investigation-finishing, prompt-timeline, product-workspace). Spec fixes in `tests/browser/` first; app fixes only for real instability, each recorded in TASKS. Goal: three consecutive clean full runs or every remaining failure recorded with its cause. |
 
 ---
 
