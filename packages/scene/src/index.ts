@@ -32,6 +32,8 @@ export interface SceneOp {
   title: string;
   tool: string;
   state: OpState;
+  /** CONTENT-3: stopped by a permission decision before it ran; `state` is 'error' but this is not a failure. */
+  declined?: boolean;
   /** arriving: started on the last applied step. settled: not in the agent's latest passage. */
   phase: OpPhase;
   /** The step that completed it landed last: play the Resolve move once. */
@@ -206,6 +208,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
           title: op.title,
           tool: op.tool,
           state: stateOf(op),
+          ...(op.declined ? { declined: true } : {}),
           phase: started.get(id) === step - 1 ? 'arriving' : latestByAgent.get(ps.agentId) === ps.id ? 'present' : 'settled',
           resolving: ended.get(id) === step - 1,
           origin: originOf(op),
@@ -410,7 +413,8 @@ export function markers(p: Projection): Marker[] {
     } else if (it.type === 'op-end') {
       const op = ops.get(it.operationId)!;
       if ((op.kind === 'edit' || op.kind === 'write') && op.status === 'ok') out.push({ step, type: 'edit', label: op.title, operationId: op.id });
-      if (op.kind === 'test') out.push({ step, type: op.status === 'error' ? 'fail' : 'pass', label: op.title, operationId: op.id });
+      if (op.declined) { /* stopped before it ran: neither a pass nor a fail */ }
+      else if (op.kind === 'test') out.push({ step, type: op.status === 'error' ? 'fail' : 'pass', label: op.title, operationId: op.id });
       else if (op.status === 'error') out.push({ step, type: 'fail', label: op.title, operationId: op.id });
     } else if (it.type === 'prose') out.push({ step, type: 'prose', label: '' });
   });

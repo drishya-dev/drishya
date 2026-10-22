@@ -1,4 +1,5 @@
 import type { Operation, Projection } from '@drishya/contracts';
+import { operationFailed } from '@drishya/contracts';
 
 export interface ReadingQuery {
   kind: 'operation' | 'edit' | 'failure' | 'turn';
@@ -33,7 +34,7 @@ export function readingTarget(p: Projection, q: ReadingQuery): ReadingTarget | n
     (!q.server || op.origin.type === 'mcp' && op.origin.server === q.server) &&
     (!q.operationKind || op.kind === q.operationKind) &&
     (q.kind !== 'edit' || op.kind === 'edit' || op.kind === 'write') &&
-    (q.kind !== 'failure' || op.status === 'error' || op.detail.kind === 'test' && !!op.detail.summary?.failed));
+    (q.kind !== 'failure' || operationFailed(op) || op.detail.kind === 'test' && !!op.detail.summary?.failed));
   const rows = q.kind === 'turn' ? index.turns : operations.map(op => ({ type: 'operation' as const, id: op.id, step: op.startSequence }));
   if (q.edge === 'first') return rows[0] ?? null;
   if (q.edge === 'last') return rows.at(-1) ?? null;

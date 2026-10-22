@@ -1,0 +1,8 @@
+/* CONTENT-3: a declined or blocked action. Quiet, neutral, never red: nothing failed. */
+.declined-line {margin:6px 0 0;color:var(--t2);font:12px/1.6 var(--sans);overflow-wrap:anywhere;}
+.declined-mark {margin-right:6px;color:var(--t3);font:12px/1.6 var(--mono);}
+.declined-basis {color:var(--t3);}
+.state-declined {color:var(--t3);}
+/* A declined action's result is the harness's instruction to the model, not output; the line says what
+   happened and expanding keeps the full text. A proposed edit keeps its diff. */
+.op.st-declined:not(.op-edit):not(.op-write) .op-body .result-area {display:none;}

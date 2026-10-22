@@ -3,7 +3,7 @@
 // A boundary is an observation sequence (`receivedSequence`), stable across re-import.
 
 import type { Operation, Projection } from '@drishya/contracts';
-import { materialOperations } from '@drishya/contracts';
+import { materialOperations, operationFailed } from '@drishya/contracts';
 import {operationObservations} from './operation-observations.ts';
 
 export interface SinceItem {
@@ -102,7 +102,7 @@ export function sinceBoundary(p: Projection, after: number): SinceDigest {
     newSteps: p.timeline.filter((t) => t.sequence > after).length,
     unplacedCount:p.operations.filter(o=>position(o)===undefined).length+gaps.filter(g=>g.observation===undefined).length,
     edits,
-    failures: resolvedAfter.filter((o) => o.status === 'error').map((o) => make('failure', o)).sort(bySeq),
+    failures: resolvedAfter.filter(operationFailed).map((o) => make('failure', o)).sort(bySeq),
     tests: resolvedAfter.filter((o) => o.kind === 'test').map((o) => make('test', o)).sort(bySeq),
     unfinished: p.operations.filter((o) => o.status === 'running').map((o) => make('unfinished', o)).sort(bySeq),
     gaps: gaps
