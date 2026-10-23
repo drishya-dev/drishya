@@ -619,6 +619,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 
 - [ ] **HOME-1 · Useful rows, quieter chrome** · P1 · `home` `data`
   - **20 October, UI-only slice done:** rows no longer carry "Available locally" (health or journal-updated tags remain); titles drop continuation boilerplate and bare links for display; an "Active now" line above the library lists sessions whose journals are being followed with recent events (labelled so, since Drishya cannot tell whether the agent is alive). **Open:** harness-reported duration, files, `+/-` lines and last outcome (needs DATA-2), `custom-title` > `ai-title` preference (adapter side), moving Star on GitHub is already done (UI-3). Item stays unchecked.
+  - **23 October, scoped before starting:** the per-row stats (duration, files changed, +/- lines, last outcome) cannot come from what a Home list request reads today: `RecordingSummary` has no stats, and computing them per row from projections or observations is exactly the cost PERF-2 is fighting. They need a small per-recording aggregate kept when a recording is committed (ingest) or in the history worker, both held by the PERF-2 hold. Do this after the gate, as a stored summary, not a per-request computation. The title preference and quieter-chrome parts are not blocked.
   - **Do:**
     - Per row, harness-reported stats where recorded: duration · files changed · `+lines −lines` (Claude `cost-state`) · last outcome · live dot.
     - Remove the blue "Available locally" from every row (show only exceptions such as "missing journal").
