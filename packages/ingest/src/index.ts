@@ -74,6 +74,8 @@ export interface IngestorOptions {
 
 /** Bytes of records sealed and stored before the ingest yields to the daemon's other work. */
 const SLICE_BYTES = 1024 * 1024;
+// Scheduling budget only: complete-record commit size and hard limits stay unchanged.
+const RECORD_YIELD_MS = 8;
 const MAX_RECORD_BYTES = 16 * 1024 * 1024;
 
 /** What the ingestor remembers about a recording's collection; `health()` derives the state. */
@@ -308,6 +310,7 @@ export class Ingestor extends EventEmitter {
       // daemon thread for 110-150 ms on a large Codex journal (PERF-2), stalling API requests.
       let sealed = [];
       let sliceBytes = 0;
+      let yieldedAt = performance.now();
       if (res.reset) sealed.unshift(seal({ raw: gap('source-truncated', undefined, `source ${res.reset}; reading a new generation`, src.agentId), recordingId: src.recordingId, adapter: adapter.descriptor, sourceId: src.id, generation: res.cursor.generation, byteOffset: -1, observedAt }));
       for (let r = 0; r < res.records.length; r++) {
         const rec = res.records[r]!;
@@ -327,13 +330,23 @@ export class Ingestor extends EventEmitter {
         }
         sliceBytes += rec.bytes;
         const last = r === res.records.length - 1;
-        if (!last && sliceBytes < SLICE_BYTES) continue;
+        if (!last && sliceBytes < SLICE_BYTES) {
+          if (performance.now() - yieldedAt >= RECORD_YIELD_MS) {
+            // No transaction is open. Sealed values remain private in this slice;
+            // readers see only the prior atomic cursor/data commit. Blob writes
+            // happen later in appendObservations, never across this yield.
+            await new Promise((ok) => setImmediate(ok));
+            yieldedAt = performance.now();
+          }
+          continue;
+        }
         // Records before the last are complete lines, so the slice ends exactly after this one.
         const through = last ? res.cursor : { ...res.cursor, offset: rec.offset + rec.bytes, inOversized: false };
         added += this.store.appendObservations(src.recordingId, src.id, through, sealed).length;
         sealed = [];
         sliceBytes = 0;
         if (!last) await new Promise((ok) => setImmediate(ok));
+        yieldedAt = performance.now();
       }
       // A read with no records still moves the cursor (an oversized line being skipped, a reset).
       if (!res.records.length || sealed.length) added += this.store.appendObservations(src.recordingId, src.id, res.cursor, sealed).length;
