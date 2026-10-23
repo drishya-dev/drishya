@@ -79,10 +79,10 @@ test('diagnostics preserve the recordings response and expose only numeric timin
       expect(response.status).toBe(200);expect(await response.json()).toEqual(expected);
       await fetch(diagnostic.url+'/v1/recordings',{headers:{authorization:'Bearer '+diagnostic.token,'x-drishya-bench-id':'not-a-probe'}});
       expect(samples).toHaveLength(2);
-      expect(samples[0].probeId).toBe('7');expect(samples[1].probeId).toBeUndefined();
+      expect(samples[0]!.probeId).toBe('7');expect(samples[1]!.probeId).toBeUndefined();
       for(const s of samples){expect(s.status).toBe(200);expect(s.responseEndAtMs).toBeGreaterThanOrEqual(s.receivedAtMs);expect(s.finishedAtMs).toBeGreaterThanOrEqual(s.responseEndAtMs!);}
       expect(JSON.stringify(samples)).not.toContain('not-a-probe');
-      expect(Object.keys(samples[0]).sort()).toEqual(['finishedAtMs','probeId','receivedAtMs','responseEndAtMs','status']);
+      expect(Object.keys(samples[0]!).sort()).toEqual(['finishedAtMs','probeId','receivedAtMs','responseEndAtMs','status']);
     }finally{await diagnostic.close();}
   }finally{await plain.close();await app.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error("unsafe temp");rmSync(dir,{recursive:true,force:true});}
 });
@@ -95,9 +95,9 @@ test('phase diagnostics never invent a worker before it exists or subtract futur
     d.phase('prefix-import');const imported=await app.ingest.importSource('codex',fixture);
     d.phase('first-history-page');await app.history.page(imported.recordingId,{count:1});
     await new Promise(r=>setTimeout(r,120));d.stop();const peak=await stop();const result=await d.finish();
-    expect(result.errorCount).toBe(0);expect(result.phases[0].historyHeapSamples).toBe(0);
-    expect(result.phases[0].atRssPeak?.historyHeapObserved??false).toBe(false);
-    expect(result.phases[1].historyHeapSamples).toBeGreaterThan(0);
+    expect(result.errorCount).toBe(0);expect(result.phases[0]!.historyHeapSamples).toBe(0);
+    expect(result.phases[0]!.atRssPeak?.historyHeapObserved??false).toBe(false);
+    expect(result.phases[1]!.historyHeapSamples).toBeGreaterThan(0);
     expect(result.sqlite.main.cache_size).toBe(-8192);
     expect(result.sqlite.history).toMatchObject({fullProjectionResident:true,reducerResident:true});
     for(const phase of result.phases){if(phase.peakRssMiB!==null)expect(phase.peakRssMiB).toBeLessThanOrEqual(peak);if(phase.atRssPeak){expect(phase.atRssPeak.mainHeapLagMs).toBeGreaterThanOrEqual(0);if(phase.atRssPeak.historyHeapLagMs!==null)expect(phase.atRssPeak.historyHeapLagMs).toBeGreaterThanOrEqual(0);}}

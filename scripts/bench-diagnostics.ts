@@ -69,7 +69,7 @@ export class BenchmarkDiagnostics {
     const sqliteConfig=(db: App['store']['db'])=>Object.fromEntries(['cache_size','mmap_size','page_size','temp_store'].map(k=>[k,Object.values(db.prepare('PRAGMA '+k).get()??{})[0]??null]));
     return { basis:'RSS is process-wide and includes the Playwright client and sampler. Isolate heaps are sampled (not exact per-thread RSS). Residual is NOT SQLite-only: includes code, native stacks, allocator/slack and unmatched allocations. Heap/RSS timestamps and lags are reported; component maxima are not additive.',
       errorCount:this.errorCount,phases,playwright:this.playwright.map((point,i)=>{
-        const before=this.playwright[0].memory;
+        const before=this.playwright[0]!.memory;
         return {label:point.label,rssMiB:mib(point.memory.rss),mainHeapUsedMiB:mib(point.memory.heapUsed),mainHeapPhysicalMiB:mib(point.memory.heapPhysical),mainExternalMiB:mib(point.memory.external),rssDeltaFromBeforeImportMiB:i?mib(point.memory.rss-before.rss):0,mainHeapUsedDeltaMiB:i?mib(point.memory.heapUsed-before.heapUsed):0};
       }), sqlite:{main:sqliteConfig(this.app.store.db),history:await this.app.history.diagnosticSqlite()},
       interaction:{ basis:'Twenty original fetches; server request-received to response-end is a lower bound (excludes pre-handler event-loop queueing). Residual includes transport/queueing/page scheduling. Resource Timing is matched to the earliest same-URL resource starting inside each sequential fetch; pageAfterResponse includes body/promise delivery and page scheduling after network completion. Missing entries remain null. Long-task overlap can overlap server work and is not additive. Quantiles cannot be subtracted.',requests:api,
@@ -79,7 +79,10 @@ export class BenchmarkDiagnostics {
 }
 
 type PageData = { requests: {probeId:string;startAtMs:number;endAtMs:number;durationMs:number;resourceStartAtMs:number|null;responseStartAtMs:number|null;responseEndAtMs:number|null;pageAfterResponseMs:number|null}[];longTasks:{start:number;duration:number}[];longTasksSupported:boolean;windowMs:number;windowStartMs:number;windowEndMs:number;cdp?:Record<string,number> };
-type PageState = { start: number; end?: number; requests: PageData['requests'];longTasks:PageData['longTasks'];observer?:PerformanceObserver; supported:boolean };
+type BrowserEntry={startTime:number;duration:number};
+type BrowserObserver={observe(options:{type:string;buffered:boolean}):void;takeRecords():BrowserEntry[];disconnect():void};
+type BrowserObserverConstructor={supportedEntryTypes:string[];new(callback:(list:{getEntries():BrowserEntry[]})=>void):BrowserObserver};
+type PageState = { start: number; end?: number; requests: PageData['requests'];longTasks:PageData['longTasks'];observer?:BrowserObserver; supported:boolean };
 export class PageDiagnostics {
   private cdp?:CDPSession;
   private before:Record<string,number>={};
@@ -91,30 +94,37 @@ export class PageDiagnostics {
     await this.cdp.send('Performance.enable');
     this.before=Object.fromEntries((await this.cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));
     await this.page.evaluate(()=>{
-      const state:PageState={start:performance.now(),requests:[],longTasks:[],supported:PerformanceObserver.supportedEntryTypes.includes('longtask')};
-      if(state.supported){state.observer=new PerformanceObserver(list=>{for(const e of list.getEntries())state.longTasks.push({start:e.startTime,duration:e.duration});});state.observer.observe({type:'longtask',buffered:true});}
-      (window as unknown as {__drishyaBench:PageState}).__drishyaBench=state;
+      const Observer=(globalThis as unknown as {PerformanceObserver:BrowserObserverConstructor}).PerformanceObserver;
+      const state:PageState={start:performance.now(),requests:[],longTasks:[],supported:Observer.supportedEntryTypes.includes('longtask')};
+      if(state.supported){state.observer=new Observer(list=>{for(const e of list.getEntries())state.longTasks.push({start:e.startTime,duration:e.duration});});state.observer.observe({type:'longtask',buffered:true});}
+      (globalThis as unknown as {__drishyaBench:PageState}).__drishyaBench=state;
     });
   }
   async markAppend() {
     this.before=Object.fromEntries((await this.cdp!.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));
-    await this.page.evaluate(()=>{(window as unknown as {__drishyaBench:PageState}).__drishyaBench.start=performance.now();});
+    await this.page.evaluate(()=>{(globalThis as unknown as {__drishyaBench:PageState}).__drishyaBench.start=performance.now();});
   }
   async markReaderUpdate() {
-    await this.page.evaluate(()=>{(window as unknown as {__drishyaBench:PageState}).__drishyaBench.end=performance.now();});
+    await this.page.evaluate(()=>{(globalThis as unknown as {__drishyaBench:PageState}).__drishyaBench.end=performance.now();});
     this.after=Object.fromEntries((await this.cdp!.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));
   }
   async finish():Promise<PageData> {
     const data=await this.page.evaluate(()=>{
-      const s=(window as unknown as {__drishyaBench:PageState}).__drishyaBench,end=(window as unknown as {__drishyaBench:PageState}).__drishyaBench.end??performance.now();
+      const s=(globalThis as unknown as {__drishyaBench:PageState}).__drishyaBench,end=(globalThis as unknown as {__drishyaBench:PageState}).__drishyaBench.end??performance.now();
       for(const e of s.observer?.takeRecords()??[])s.longTasks.push({start:e.startTime,duration:e.duration});
       s.observer?.disconnect();
       return {requests:s.requests,longTasks:s.longTasks.filter(t=>t.start+t.duration>s.start&&t.start<end),longTasksSupported:s.supported,windowMs:end-s.start,windowStartMs:s.start,windowEndMs:end};
     });
     const after=this.after;
     const metrics:Record<string,number>={};
-    for(const key of ['ScriptDuration','TaskDuration','LayoutDuration','RecalcStyleDuration','LayoutCount','RecalcStyleCount'])metrics[key]=after[key]-this.before[key];
-    metrics.JSHeapUsedSize=after.JSHeapUsedSize;
+    for(const key of ['ScriptDuration','TaskDuration','LayoutDuration','RecalcStyleDuration','LayoutCount','RecalcStyleCount']) {
+      const value=after[key],before=this.before[key];
+      if(value===undefined||before===undefined)throw Error('CDP metric unavailable: '+key);
+      metrics[key]=value-before;
+    }
+    const heap=after.JSHeapUsedSize;
+    if(heap===undefined)throw Error('CDP heap metric unavailable');
+    metrics.JSHeapUsedSize=heap;
     await this.cdp!.detach();return {...data,cdp:metrics};
   }
 }
