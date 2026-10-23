@@ -116,6 +116,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
   const [measurementVersion, setMeasurementVersion] = useState(0);
   const [focusedPassageId, setFocusedPassageId] = useState<string | undefined>();
   const measurements = useRef(new Map<string, number>(memory.get('history/heights') as [string, number][] | undefined));
+  const measuredSlots = useRef(new WeakMap<HTMLElement, { key: string; context: string; width: number; height: number; content: PassageContent }>());
   const programmatic = useRef(false);
   const lastScrollTop = useRef(0);
   const userScrollUntil = useRef(0);
@@ -143,6 +144,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     if (!history) return;
     const measure = () => {
       const next = new Map<string, DOMRect>();
+      const moves: { card: HTMLElement; from: DOMRect; destination: DOMRect; scale: number }[] = [];
       const viewportBounds = history.getBoundingClientRect();
       for (const card of history.querySelectorAll<HTMLElement>('article[data-op-id]')) {
         if (card.dataset.hoverReading) continue;
@@ -151,11 +153,13 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
         const stored = new DOMRect(r.left, r.top + history.scrollTop, r.width, r.height);
         const before = materialPositions.current.get(id);
         if (before && useApp.getState().follow && performance.now()>userScrollUntil.current && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
-          moveMaterial(card, new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), 300, 'surface-Reflow');
+          moves.push({ card, from: new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), destination: r, scale: parseFloat(getComputedStyle(card).getPropertyValue('--material-scale')) || 1 });
         }
         next.set(id, stored);
         if (next.size >= 80) break;
       }
+      // Read every destination before starting any animation.
+      for (const move of moves) moveMaterial(move.card, move.from, 300, 'surface-Reflow', { destination: move.destination, scale: move.scale });
       materialPositions.current = next;
     };
     measure();
@@ -396,18 +400,35 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     // Newly mounted runs must replace their estimates in this same commit. Waiting
     // for ResizeObserver lets a frame expose their extra height, then jumps back.
     let changed = false;
+    const width = ref.current?.clientWidth ?? 0;
+    const context = JSON.stringify([theme, compareAgents, explore, expandedOp, hoveredOp, readingOp, viewport.height]);
+    const passages = new Map(scene.passages.map(ps => [ps.id, ps]));
+    const sizes: { node: HTMLElement; key: string; height: number; content: PassageContent }[] = [];
     if (!pointerFocus.current) for (const node of ref.current?.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]') ?? []) {
       if (node.dataset.unloaded === 'true' || node.dataset.folded === 'hidden') continue;
-      const height = node.getBoundingClientRect().height;
-      if (Math.abs((measurements.current.get(node.dataset.measureKey!) ?? 0) - height) > .5) {
-        measurements.current.set(node.dataset.measureKey!, height);
+      const ps = passages.get(node.dataset.passageId!);
+      if (!ps) continue;
+      const fold = foldOf(ps, folded);
+      const content: PassageContent = { ps, ops: passageItems(ps.ops, ops), prose: passageItems(ps.prose, prose), notices: passageItems(ps.notices ?? [], notices),
+        agent: agents.get(ps.agentId), agents: projection.agents, focus: scene.focus?.passageId === ps.id,
+        foldable: modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn), folded: fold === 'header', onFold: toggleFold };
+      const key = node.dataset.measureKey!;
+      const previous = measuredSlots.current.get(node);
+      // Observer sizes stay valid until material, allocation or presentation changes.
+      const reusable = previous && previous.key === key && previous.context === context && previous.width === width && samePassageContent(previous.content, content);
+      sizes.push({ node, key, height: reusable ? previous.height : node.getBoundingClientRect().height, content });
+    }
+    for (const { node, key, height, content } of sizes) {
+      measuredSlots.current.set(node, { key, context, width, height, content });
+      if (Math.abs((measurements.current.get(key) ?? 0) - height) > .5) {
+        measurements.current.set(key, height);
         changed = true;
       }
     }
     if (changed) setMeasurementVersion(n => n + 1);
     // Correct measured spacer changes before paint, using the latest user-scroll anchor.
     restoreReading(true);
-  }, [scene.passages, layout, follow, compareAgents, explore, theme, measurementVersion]);
+  }, [scene.passages, layout, follow, compareAgents, explore, theme, measurementVersion, expandedOp, hoveredOp, readingOp]);
 
   // Folding moves the work below the header: it travels from where it was, and unfolded work eases in under the header.
   useLayoutEffect(() => {
@@ -417,8 +438,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     const slots = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]:not([data-folded=hidden])')];
     const bottom = el.getBoundingClientRect().bottom;
     const easing = 'cubic-bezier(.23,1,.32,1)';
-    for (const slot of slots.slice(slots.findIndex((item) => item.dataset.passageId === moved.opener) + 1)) {
-      const top = slot.getBoundingClientRect().top;
+    const positions = slots.slice(slots.findIndex((item) => item.dataset.passageId === moved.opener) + 1).map(slot => ({ slot, top: slot.getBoundingClientRect().top }));
+    for (const { slot, top } of positions) {
       if (top > bottom) break;
       const before = moved.tops.get(slot.dataset.passageId!);
       if (before === undefined) foldAnimations.current.push(slot.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing, id: 'turn-fold' }));
@@ -440,6 +461,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
         const id = (entry.target as HTMLElement).dataset.measureKey;
         if (!id) continue;
         const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height;
+        const measured = measuredSlots.current.get(entry.target as HTMLElement);
+        if (measured) measured.height = height;
         if (Math.abs((measurements.current.get(id) ?? 0) - height) > 0.5) {
           measurements.current.set(id, height);
           changed = true;
@@ -501,15 +524,17 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     // Bring the selected action itself into view: a tall passage centred as a whole can leave
     // its first action above the viewport. Taller-than-viewport material aligns to its top.
     const selected = readingOp ? [...node.querySelectorAll<HTMLElement>('[data-op-id]')].find((n) => n.dataset.opId === readingOp) : undefined;
-    const bounds = (selected ?? node).getBoundingClientRect();
+    const nodeBounds = node.getBoundingClientRect();
+    const bounds = selected ? selected.getBoundingClientRect() : nodeBounds;
     const viewportBounds = el.getBoundingClientRect();
     const clearance = readingClearance(el);
     const available = Math.max(0, el.clientHeight - clearance);
+    const scrollBefore = el.scrollTop;
     if (bounds.top < viewportBounds.top + clearance || bounds.bottom > viewportBounds.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - clearance - Math.max(0, (available - bounds.height) / 2));
     // Anchor reading to the navigated passage itself. Passages above may still carry estimated
     // heights; anchoring to whichever slot was first visible let their measurement pull the
     // reader away from the action just opened.
-    readingAnchor.current = { id: targetId, offset: node.getBoundingClientRect().top - el.getBoundingClientRect().top };
+    readingAnchor.current = { id: targetId, offset: nodeBounds.top - viewportBounds.top - (el.scrollTop - scrollBefore) };
     if (useApp.getState().readingPassageId !== targetId) set({ readingPassageId: targetId });
     pendingNavigation.current = undefined;
   }, [intent, targetId, targetIndex, layout, readingOp]);
