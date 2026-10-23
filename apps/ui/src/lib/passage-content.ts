@@ -13,8 +13,8 @@ function sameValue(a: unknown, b: unknown): boolean {
   if (Object.is(a,b)) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) return false;
   const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
-  const keys = Object.keys(left);
-  return keys.length === Object.keys(right).length && keys.every(k => Object.hasOwn(right,k) && sameValue(left[k],right[k]));
+  const keys = Object.keys(left), rightKeys = Object.keys(right);
+  return keys.length === rightKeys.length && keys.every((k,i) => k === rightKeys[i] && sameValue(left[k],right[k]));
 }
 
 export function samePassageContent(a: PassageContent, b: PassageContent): boolean {
