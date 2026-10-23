@@ -44,11 +44,11 @@ export function useArtifact(artifactId: string | undefined, opts: { scope?: Mate
   const recordingId = useApp((s) => s.recordingId);
   const history = useContext(HistoryArtifacts);
   const historicalDescriptor = artifactId ? history?.get(artifactId) : undefined;
-  const currentDescriptor = useApp(s => historicalDescriptor ? undefined : s.projection?.artifacts.find(a => a.id === artifactId));
+  const currentDescriptor = useApp(s => !artifactId || historicalDescriptor ? undefined : s.projection?.artifacts.find(a => a.id === artifactId));
   const descriptor = historicalDescriptor ?? currentDescriptor;
   // Immutable blobs are keyed by descriptor bytes below. Subscribing them to
   // every global revision bypassed deferred history with synchronous renders.
-  const revision = useApp(s => descriptor?.blob ? undefined : recordingId?.split('+').map(id => s.renderedRevisions[id] ?? 0).join(':'));
+  const revision = useApp(s => !artifactId || descriptor?.blob ? undefined : recordingId?.split('+').map(id => s.renderedRevisions[id] ?? 0).join(':'));
   const scope = opts.scope ?? 'reader';
   const start = opts.start ?? 0;
   const count = opts.count ?? (scope === 'preview' ? 12 : 200);
