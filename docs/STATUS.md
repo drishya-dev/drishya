@@ -31,7 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| PERF-2 | @harsh + Codex | `codex/perf-2-diagnostics` (stacked separately on #188) | 2026-10-23 | Step 1 only: phase RSS/main and worker heaps/native residual, Playwright overhead, server/page latency attribution; benchmark/diagnostic helpers, scoped server/worker opt-in hooks, tests and report (<=15 files). No visual or benchmark-definition change. #188 frozen pending real non-regression rerun. Later fixes each get a separate claim-scope update, commit and PR. |
+| PERF-2 | @harsh + Codex | `codex/perf-2-diagnostics` (stacked separately on #188) | 2026-10-23 | Step 1: diagnostics #197 (phase/isolate RSS, client/server/page attribution), frozen separate diff. Step 2: `codex/perf-2-secret-scan`, keyword-first secret-assignment rule only, frozen old/new differential corpus tests and its own report/screenshots. Each PR <=15 files, no visual/animation/privacy-output/version change; record yielding is a later separate fix if still needed. #188 remains frozen pending real non-regression rerun. |
 | TEST-2 | @yash + Claude | `yash/test-2-flaky-specs` | 2026-10-22 | Diagnose the rotating browser-suite flakes (collection-surfaces, workspace-navigation, fresh-workspace, investigation-finishing, prompt-timeline, product-workspace). Spec fixes in `tests/browser/` first; app fixes only for real instability, each recorded in TASKS. Goal: three consecutive clean full runs or every remaining failure recorded with its cause. |
 
 ---
