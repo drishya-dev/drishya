@@ -91,9 +91,7 @@ describe('import', () => {
   it('yields inside a slice while readers see only atomic committed records and offsets', async () => {
     const path=join(dir,'record-yield.jsonl');
     const rows=Array.from({length:12},(_,i)=>JSON.stringify({type:'response_item',timestamp:'2026-01-01T00:00:00Z',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'invented '+i}]}}));
-    writeFileSync(path,rows.join('
-')+'
-');
+    writeFileSync(path,rows.join('\n')+'\n');
     let logicalTime=0,parsed=0;
     const turns:{parsed:number;count:number;offset:number}[]=[];
     const adapters=defaultAdapters().map(adapter=>({...adapter,createParser(context:Parameters<typeof adapter.createParser>[0]) {
