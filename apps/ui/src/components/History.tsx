@@ -8,7 +8,7 @@ import { ToolInput } from './ToolInput.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { ScriptDetails } from './Inspector.tsx';
-import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import type { PinnedPlan, Scene, SceneOp, ScenePassage } from '@drishya/scene';
@@ -62,7 +62,29 @@ function readingClearance(history: HTMLElement): number {
   return Math.max(16, top - bounds.top + 16);
 }
 
-export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
+type HistoryProps = { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> };
+
+export function History({ scene, projection, onWindow }: HistoryProps) {
+  const mode = useApp(s => s.mode);
+  const selectedOp = useApp(s => s.selectedOp);
+  const focusObservationId = useApp(s => s.focusObservationId);
+  const promptStep = useApp(s => s.promptStep);
+  const filter = useApp(s => s.filter);
+  const pair = useMemo(() => ({ scene, projection, mode, selectedOp, focusObservationId, promptStep, filter }),
+    [scene, projection, mode, selectedOp, focusObservationId, promptStep, filter]);
+  const deferred = useDeferredValue(pair);
+  // Live arrivals may render interruptibly. Scene and evidence must move together;
+  // deliberate navigation, replay, page replacement and recording changes stay immediate.
+  const liveArrival = mode === 'history' && deferred.mode === mode &&
+    projection.recordingId === deferred.projection.recordingId &&
+    scene.atEnd && deferred.scene.atEnd && scene.total > deferred.scene.total &&
+    selectedOp === deferred.selectedOp && focusObservationId === deferred.focusObservationId &&
+    promptStep === deferred.promptStep && filter === deferred.filter;
+  const shown = liveArrival ? deferred : pair;
+  return <HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} />;
+}
+
+const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: HistoryProps) {
   const mode = useApp((s) => s.mode);
   const compareAgents = useApp((s) => s.compareAgents);
   const explore = useApp((s) => s.explore);
@@ -659,7 +681,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       )}
     </>
   );
-}
+});
 
 const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; notices: Map<string, Notice>; agent?: Agent; agents: Agent[]; focus: boolean; foldable?: boolean; folded?: boolean; onFold?: (id: string) => void }) {
   const color = agentColor(agent, agents);
