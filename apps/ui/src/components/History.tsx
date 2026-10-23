@@ -7,6 +7,7 @@ import './reasoning-gap.css';
 import { ToolInput } from './ToolInput.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
+import { DelegationDetail, DelegationLine } from './DelegationDetail.tsx';
 import { ScriptDetails } from './Inspector.tsx';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
@@ -794,7 +795,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         {experience !== 'legacy' ? <span className="studio-action-identity">{title}<span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
         {op.detail.kind === 'edit' && op.detail.hunks.length > 0 && !op.declined && <DiffStat hunks={op.detail.hunks} />}
         <StateMark state={so.state} op={op} />
-        {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'plan', 'other'].includes(op.detail.kind) && (
+        {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'plan', 'spawn', 'other'].includes(op.detail.kind) && (
           <button data-expand-op={op.id} className="op-expand" aria-label={`${expanded ? 'Close' : 'Expand'} ${op.title} in history`} aria-expanded={expanded} onClick={(e) => {
             e.stopPropagation();
             set({ expandedOp: expanded ? undefined : op.id, selectedOp: undefined });
@@ -883,6 +884,8 @@ function ExpandedMaterial({ op }: { op: Operation }) {
       </div>;
     case 'plan':
       return <div className="op-expanded plan-material" onClick={(e) => e.stopPropagation()}><PlanChecklist op={op} full/></div>;
+    case 'spawn':
+      return <DelegationDetail op={op} d={d}/>;
     case 'other':
       if (op.tool === 'AskUserQuestion') return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}><QuestionCard op={op}/><div className="material-context">Captured result</div><ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for the answer' : 'No result content captured')}/></div>;
       return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
@@ -1003,6 +1006,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         <div className="spawn">
           <div className="query">{d.agentType ?? 'subagent'}</div>
           <div className="muted">{d.descriptionEncrypted ? 'Task text not recorded: Codex stored it encrypted' : d.description}</div>
+          <DelegationLine d={d}/>
         </div>
       );
     case 'plan':
