@@ -19,9 +19,9 @@ function sameValue(a: unknown, b: unknown): boolean {
 
 export function samePassageContent(a: PassageContent, b: PassageContent): boolean {
   if (a.focus !== b.focus || a.foldable !== b.foldable || a.folded !== b.folded || a.onFold !== b.onFold || !sameValue(a.ps,b.ps)) return false;
-  // PassageView/ProseView use only the rendered name, color and multi-agent flag.
+  // PassageView/ProseView use the rendered name/color, multi-agent flag and harness-specific gap explanation.
   // Sequence/status bookkeeping elsewhere must not invalidate every earlier passage.
-  if ((a.agents.length > 1) !== (b.agents.length > 1) || agentName(a.agent) !== agentName(b.agent) ||
+  if (a.agent?.harness !== b.agent?.harness || (a.agents.length > 1) !== (b.agents.length > 1) || agentName(a.agent) !== agentName(b.agent) ||
     agentColor(a.agent,a.agents) !== agentColor(b.agent,b.agents)) return false;
   return a.ps.ops.every(o => sameValue(a.ops.get(o.id),b.ops.get(o.id))) &&
     a.ps.prose.every(p => sameValue(a.prose.get(p.id),b.prose.get(p.id))) &&
