@@ -79,7 +79,8 @@ export function History({ scene, projection, onWindow }: HistoryProps) {
   // deliberate navigation, replay, page replacement and recording changes stay immediate.
   const liveArrival = mode === 'history' && deferred.mode === mode &&
     projection.recordingId === deferred.projection.recordingId &&
-    scene.atEnd && deferred.scene.atEnd && scene.total > deferred.scene.total &&
+    scene.atEnd && deferred.scene.atEnd && scene.total >= deferred.scene.total &&
+    (scene.total > deferred.scene.total || projection.observationCount > deferred.projection.observationCount) &&
     selectedOp === deferred.selectedOp && focusObservationId === deferred.focusObservationId &&
     promptStep === deferred.promptStep && filter === deferred.filter;
   const shown = liveArrival ? deferred : pair;
