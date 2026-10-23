@@ -102,16 +102,28 @@ export class Ingestor extends EventEmitter {
   private locks = new Map<string, Promise<unknown>>();
   private live = new Map<string, LiveRun>();
   private projectionCache = new Map<string, { count: number; projection: Projection }>();
+  private workerOwnedRecordings = new Set<string>();
   private healthRecords = new Map<string, HealthRecord>();
   private lastEmitted = new Map<string, string>();
   private cacheProjection(key: string, count: number, projection: Projection) {
     // Legacy callers may request a complete view; keep only a normal-sized shared workspace.
     // The paged history worker owns long-session reader state, not this capture cache.
-    if (count > 10_000) return;
+    if (count > 10_000 || key.split('\u0000')[0]!.split('+').some(id => this.workerOwnedRecordings.has(id))) { this.projectionCache.delete(key); return; }
     this.projectionCache.delete(key);
     this.projectionCache.set(key, { count, projection });
     while (this.projectionCache.size > 2 || [...this.projectionCache.values()].reduce((sum, entry) => sum + entry.count, 0) > 20_000) this.projectionCache.delete(this.projectionCache.keys().next().value!);
   }
+  /** Reader ownership is sticky for this process: explicit full reads still work,
+   * but capture must not retain another complete projection for worker-owned evidence. */
+  useHistoryWorker(viewId: string): void {
+    const ids = [...new Set(viewId.split('+').filter(Boolean))];
+    if (!ids.length || ids.length > 16 || ids.some(id => !this.store.getRecording(id))) return;
+    for (const id of ids) this.workerOwnedRecordings.add(id);
+    for (const key of this.projectionCache.keys()) {
+      if (key.split('\u0000')[0]!.split('+').some(id => this.workerOwnedRecordings.has(id))) this.projectionCache.delete(key);
+    }
+  }
+
   private closed = false;
   private readonly now: () => Date;
   private readonly idleMs: number;
@@ -559,7 +571,8 @@ export class Ingestor extends EventEmitter {
     await run?.current;
     return this.locked(recordingId, async () => {
       for (const s of this.store.getSources(recordingId)) this.parsers.delete(s.id);
-      for (const key of this.projectionCache.keys()) if (key.split('+').includes(recordingId)) this.projectionCache.delete(key);
+      for (const key of this.projectionCache.keys()) if (key.split('\u0000')[0]!.split('+').includes(recordingId)) this.projectionCache.delete(key);
+      this.workerOwnedRecordings.delete(recordingId);
       this.healthRecords.delete(recordingId);
       this.lastEmitted.delete(recordingId);
       return this.store.deleteRecording(recordingId);

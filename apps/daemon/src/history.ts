@@ -23,11 +23,14 @@ export class HistoryService {
   private pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
   private sequence = 0;
   private closed = false;
-  constructor(privateDir: string) { this.dir = privateDir; }
+  constructor(privateDir: string, onRead?: (id: string) => void) { this.dir = privateDir; this.onRead = onRead; }
+  private readonly onRead?: (id: string) => void;
   private readonly dir: string;
 
   private request<T>(method: string, args: unknown): Promise<T> {
     if (this.closed) return Promise.reject(new Error('History service is closed'));
+    const viewId = (args as { id?: unknown } | undefined)?.id;
+    if (typeof viewId === 'string' && method !== 'forget') this.onRead?.(viewId);
     if (!this.worker) {
       const extension = import.meta.url.endsWith('.mjs') ? 'mjs' : 'ts';
       const worker = new Worker(new URL(`./history-worker.${extension}`, import.meta.url), { workerData: { dir: this.dir }, resourceLimits: { maxOldGenerationSizeMb: 384, maxYoungGenerationSizeMb: 16 } });
