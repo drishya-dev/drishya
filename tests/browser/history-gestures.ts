@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /** Point at the exposed history gutter, below responsive chrome and inside native scrollbars. */
 export async function pointAtHistory(page: Page, history: Locator = page.locator('.history')) {
@@ -8,6 +8,14 @@ export async function pointAtHistory(page: Page, history: Locator = page.locator
     return { x: rect.x + el.clientWidth - 4, y: Math.min(rect.bottom - 24, Math.max(rect.top, header?.bottom ?? rect.top) + 40) };
   });
   await page.mouse.move(point.x, point.y);
+}
+
+/** Expand a history card with the keyboard. A pointer would come to rest on the card, where hover reading
+ * can engage after its dwell and move the card under the next click; follow-up actions use `press` too. */
+export async function expandCard(card: Locator) {
+  const expand = card.locator('button.op-expand');
+  await expand.press('Enter');
+  await expect(expand).toHaveAttribute('aria-expanded', 'true');
 }
 
 /** Sample every mounted material, not only the first visible item: a whole-card

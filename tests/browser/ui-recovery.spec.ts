@@ -2,6 +2,7 @@ import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from './legacy-test.ts';
+import { expandCard } from './history-gestures.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
@@ -27,8 +28,8 @@ test('map and verification failures offer local retry without replacing captured
   await expect(page.getByRole('button', { name: 'Retry repository map' })).toHaveCount(0);
   await expect(page.locator('.history')).toHaveAttribute('data-recovery-reference', firstHistory!);
   const edit = page.locator('article.op-edit').last();
-  await edit.getByRole('button', { name: /Expand/ }).click();
-  await edit.getByRole('button', { name: 'Open provenance and file states' }).click();
+  await expandCard(edit);
+  await edit.getByRole('button', { name: 'Open provenance and file states' }).press('Enter');
   const detail = page.getByRole('complementary', { name: 'Operation detail' });
   await expect(detail.getByRole('button', { name: 'Retry test verification' })).toBeVisible();
   verificationFails = false;

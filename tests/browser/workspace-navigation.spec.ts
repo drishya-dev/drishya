@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from './legacy-test.ts';
+import { expandCard } from './history-gestures.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 let dir: string, app: App, server: RunningServer;
@@ -22,8 +23,8 @@ test('keyboard navigation opens exact captured file work and keeps underlying re
   await page.keyboard.press('Escape');
   await expect(reading).toHaveCount(0);
   const op = page.locator('article.op-edit').first();
-  await op.getByRole('button', { name: /Expand/ }).click();
-  await op.getByRole('button', { name: 'Open provenance and file states' }).click();
+  await expandCard(op);
+  await op.getByRole('button', { name: 'Open provenance and file states' }).press('Enter');
   const inspector = page.getByRole('complementary', { name: 'Operation detail' });
   await expect(inspector).toBeVisible();
   await page.keyboard.press('Control+k');
