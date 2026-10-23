@@ -10,7 +10,10 @@ import { useEvidenceState } from './EvidenceNavigation.tsx';
 import './review-changes.css';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
-export function EvidenceReview({ projection, label = 'Review work', after=-1 }: { projection: Projection; label?: string;after?:number }) {
+/** Modern calls this the Changes view everywhere (UI-8); the older experiences keep "Review work". */
+const reviewName = () => document.documentElement.dataset.uiVersion === 'modern' ? 'Changes' : 'Review work';
+
+export function EvidenceReview({ projection, label = reviewName(), after=-1 }: { projection: Projection; label?: string;after?:number }) {
   const [open, setOpen] = useState(false);
   const mode = useApp(s => s.mode);
   const id = useApp(s => s.recordingId);
@@ -44,7 +47,7 @@ function ReviewContent({ projection, close, after }: { projection: Projection; c
     return () => { active = false; };
   }, [source, id, revision, projection.lastSequence, retry, page,after]);
   const groups = [['failures', 'Failures'], ['tests', 'Recorded checks'], ['unfinished', 'In progress'], ['gaps', 'Capture gaps']] as const;
-  return <ReadingDialog title="Review work" close={close} className="evidence-review">
+  return <ReadingDialog title={reviewName()} close={close} className="evidence-review">
     <div className="review-intro"><ReviewTools close={close}/><p>Start with the change. Follow the evidence.</p><span>{after<0?'Whole recording · recorded order, not test coverage':'Captured after this turn began · order, not attribution or coverage'}</span></div>
     {pageCount > 1 && <nav className="reader-pages review-pagination" aria-label="Recorded review pages"><button className="btn" aria-label="Previous review page" disabled={!page} onClick={() => setPage(n => Math.max(0, n - 1))}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>Previous</button><span aria-live="polite">Page {page + 1} of {pageCount}</span><button className="btn" aria-label="Next review page" disabled={page + 1 >= pageCount} onClick={() => setPage(n => n + 1)}>Next<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button><small>Up to 20 outcomes per group · 50 files per page</small></nav>}
     {error ? <p role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry</button></p> : !facts ? <p role="status">Opening recorded evidence…</p> : <>
