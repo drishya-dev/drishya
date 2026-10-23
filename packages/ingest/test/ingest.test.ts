@@ -61,6 +61,67 @@ function claudeLine(rec: Record<string, unknown>) {
 }
 
 describe('import', () => {
+  it('serves an event-loop turn between committed slices without splitting records', async () => {
+    const path = join(dir, 'rollout-sliced.jsonl');
+    const rows = [JSON.stringify({ type: 'session_meta', payload: { id: 'sliced', cwd: '/synthetic' } })];
+    for (let i = 0; i < 10; i++) {
+      rows.push(JSON.stringify({ type: 'response_item', payload: { type: 'function_call', name: 'shell_command', call_id: `slice-${i}`, arguments: '{"command":"echo invented"}' } }));
+      rows.push(JSON.stringify({ type: 'response_item', payload: { type: 'function_call_output', call_id: `slice-${i}`, output: `Invented ${i} ` + 'line\n'.repeat(i === 4 ? 240000 : 16000) } }));
+    }
+    writeFileSync(path, rows.join('\n') + '\n');
+    const through = new Set<number>(); let offset = 0;
+    for (const row of rows) { offset += Buffer.byteLength(row) + 1; through.add(offset); }
+    const commit = store.appendObservations.bind(store), yielded: number[] = [], cursors: number[] = [];
+    const spy = vi.spyOn(store, 'appendObservations').mockImplementation((recordingId, sourceId, cursor, observations) => {
+      const result = commit(recordingId, sourceId, cursor, observations);
+      cursors.push(cursor.offset);
+      setImmediate(() => yielded.push(store.getSources(recordingId)[0]!.cursor.offset));
+      return result;
+    });
+    const imported = await ingest.importSource('codex', path);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(imported).toMatchObject({ added: 21, gaps: 0, more: false });
+    expect(cursors.every(cursor => through.has(cursor))).toBe(true);
+    expect(yielded.some(cursor => cursor > 0 && cursor < offset)).toBe(true);
+    const ids = store.observations(imported.recordingId).map(o => o.id);
+    spy.mockRestore();
+    expect((await ingest.rescan(imported.recordingId)).added).toBe(0);
+    expect(store.observations(imported.recordingId).map(o => o.id)).toEqual(ids);
+  });
+  it('yields inside a slice while readers see only atomic committed records and offsets', async () => {
+    const path=join(dir,'record-yield.jsonl');
+    const rows=Array.from({length:12},(_,i)=>JSON.stringify({type:'response_item',timestamp:'2026-01-01T00:00:00Z',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'invented '+i}]}}));
+    writeFileSync(path,rows.join('\n')+'\n');
+    let logicalTime=0,parsed=0;
+    const turns:{parsed:number;count:number;offset:number}[]=[];
+    const adapters=defaultAdapters().map(adapter=>({...adapter,createParser(context:Parameters<typeof adapter.createParser>[0]) {
+      const parser=adapter.createParser(context);
+      return {prime:(observations:Parameters<typeof parser.prime>[0])=>parser.prime(observations),parse:(record:unknown)=>{
+        const result=parser.parse(record);parsed++;logicalTime+=20;
+        setImmediate(()=>turns.push({parsed,count:store.countObservations(context.recordingId),offset:store.getSources(context.recordingId)[0]!.cursor.offset}));
+        return result;
+      }};
+    }}));
+    await ingest.close();ingest=new Ingestor(store,adapters,{now:()=>new Date('2026-01-02T00:00:00Z')});
+    const clock=vi.spyOn(performance,'now').mockImplementation(()=>logicalTime);
+    const append=vi.spyOn(store,'appendObservations');
+    try {
+      const imported=await ingest.importSource('codex',path);
+      await new Promise(ok=>setImmediate(ok));
+      expect(imported).toMatchObject({added:12,gaps:0,more:false});
+      expect(append).toHaveBeenCalledTimes(1); // no extra SQLite commits to buy responsiveness
+      expect(turns.some(t=>t.parsed>1&&t.parsed<12&&t.count===0&&t.offset===0)).toBe(true);
+      expect(turns.every(t=>t.count===0||t.count===12)).toBe(true);
+      expect(store.getSources(imported.recordingId)[0]!.cursor.offset).toBe(statSync(path).size);
+      const observations=store.observations(imported.recordingId);
+      expect((await ingest.rescan(imported.recordingId)).added).toBe(0);
+      expect(store.observations(imported.recordingId)).toEqual(observations);
+      const freshStore=new Store(join(dir,'fresh-yield-data'));
+      const fresh=new Ingestor(freshStore,defaultAdapters(),{now:()=>new Date('2026-01-02T00:00:00Z')});
+      try {await fresh.importSource('codex',path);expect(freshStore.observations(imported.recordingId)).toEqual(observations);}
+      finally {await fresh.close();freshStore.close();}
+    } finally {clock.mockRestore();append.mockRestore();}
+  });
   it('preserves unreported process exits and does not classify quoted runner mentions as tests',async()=>{
     const path=join(dir,'wrapper-outcomes.jsonl');
     const command='text(await tools.exec_command({cmd:"rg -n \'palette|mocha|tokyo\' themes.css"}));';

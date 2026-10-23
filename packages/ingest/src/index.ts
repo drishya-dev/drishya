@@ -74,6 +74,8 @@ export interface IngestorOptions {
 
 /** Bytes of records sealed and stored before the ingest yields to the daemon's other work. */
 const SLICE_BYTES = 1024 * 1024;
+// Scheduling budget only: complete-record commit size and hard limits stay unchanged.
+const RECORD_YIELD_MS = 8;
 const MAX_RECORD_BYTES = 16 * 1024 * 1024;
 
 /** What the ingestor remembers about a recording's collection; `health()` derives the state. */
@@ -100,16 +102,28 @@ export class Ingestor extends EventEmitter {
   private locks = new Map<string, Promise<unknown>>();
   private live = new Map<string, LiveRun>();
   private projectionCache = new Map<string, { count: number; projection: Projection }>();
+  private workerOwnedRecordings = new Set<string>();
   private healthRecords = new Map<string, HealthRecord>();
   private lastEmitted = new Map<string, string>();
   private cacheProjection(key: string, count: number, projection: Projection) {
     // Legacy callers may request a complete view; keep only a normal-sized shared workspace.
     // The paged history worker owns long-session reader state, not this capture cache.
-    if (count > 10_000) return;
+    if (count > 10_000 || key.split('\u0000')[0]!.split('+').some(id => this.workerOwnedRecordings.has(id))) { this.projectionCache.delete(key); return; }
     this.projectionCache.delete(key);
     this.projectionCache.set(key, { count, projection });
     while (this.projectionCache.size > 2 || [...this.projectionCache.values()].reduce((sum, entry) => sum + entry.count, 0) > 20_000) this.projectionCache.delete(this.projectionCache.keys().next().value!);
   }
+  /** Reader ownership is sticky for this process: explicit full reads still work,
+   * but capture must not retain another complete projection for worker-owned evidence. */
+  useHistoryWorker(viewId: string): void {
+    const ids = [...new Set(viewId.split('+').filter(Boolean))];
+    if (!ids.length || ids.length > 16 || ids.some(id => !this.store.getRecording(id))) return;
+    for (const id of ids) this.workerOwnedRecordings.add(id);
+    for (const key of this.projectionCache.keys()) {
+      if (key.split('\u0000')[0]!.split('+').some(id => this.workerOwnedRecordings.has(id))) this.projectionCache.delete(key);
+    }
+  }
+
   private closed = false;
   private readonly now: () => Date;
   private readonly idleMs: number;
@@ -261,6 +275,10 @@ export class Ingestor extends EventEmitter {
           });
         }
       }
+      // A completed bulk read no longer needs its SQLite working pages. Keep
+      // cache_size unchanged for subsequent work; this asks SQLite to release
+      // unused pages rather than retaining the import's native working set.
+      if (added && !more && this.store.sourceBytes(recordingId) > 32 * 1024 * 1024) this.store.db.exec('PRAGMA shrink_memory');
       if (added) {
         const ev: ChangeEvent = { type: 'recording', recordingId, revision: cur.revision ?? 0, observationCount: cur.observationCount, added, live: cur.live };
         this.emit('change', ev);
@@ -308,6 +326,7 @@ export class Ingestor extends EventEmitter {
       // daemon thread for 110-150 ms on a large Codex journal (PERF-2), stalling API requests.
       let sealed = [];
       let sliceBytes = 0;
+      let yieldedAt = performance.now();
       if (res.reset) sealed.unshift(seal({ raw: gap('source-truncated', undefined, `source ${res.reset}; reading a new generation`, src.agentId), recordingId: src.recordingId, adapter: adapter.descriptor, sourceId: src.id, generation: res.cursor.generation, byteOffset: -1, observedAt }));
       for (let r = 0; r < res.records.length; r++) {
         const rec = res.records[r]!;
@@ -327,13 +346,23 @@ export class Ingestor extends EventEmitter {
         }
         sliceBytes += rec.bytes;
         const last = r === res.records.length - 1;
-        if (!last && sliceBytes < SLICE_BYTES) continue;
+        if (!last && sliceBytes < SLICE_BYTES) {
+          if (performance.now() - yieldedAt >= RECORD_YIELD_MS) {
+            // No transaction is open. Sealed values remain private in this slice;
+            // readers see only the prior atomic cursor/data commit. Blob writes
+            // happen later in appendObservations, never across this yield.
+            await new Promise((ok) => setImmediate(ok));
+            yieldedAt = performance.now();
+          }
+          continue;
+        }
         // Records before the last are complete lines, so the slice ends exactly after this one.
         const through = last ? res.cursor : { ...res.cursor, offset: rec.offset + rec.bytes, inOversized: false };
         added += this.store.appendObservations(src.recordingId, src.id, through, sealed).length;
         sealed = [];
         sliceBytes = 0;
         if (!last) await new Promise((ok) => setImmediate(ok));
+        yieldedAt = performance.now();
       }
       // A read with no records still moves the cursor (an oversized line being skipped, a reset).
       if (!res.records.length || sealed.length) added += this.store.appendObservations(src.recordingId, src.id, res.cursor, sealed).length;
@@ -546,7 +575,8 @@ export class Ingestor extends EventEmitter {
     await run?.current;
     return this.locked(recordingId, async () => {
       for (const s of this.store.getSources(recordingId)) this.parsers.delete(s.id);
-      for (const key of this.projectionCache.keys()) if (key.split('+').includes(recordingId)) this.projectionCache.delete(key);
+      for (const key of this.projectionCache.keys()) if (key.split('\u0000')[0]!.split('+').includes(recordingId)) this.projectionCache.delete(key);
+      this.workerOwnedRecordings.delete(recordingId);
       this.healthRecords.delete(recordingId);
       this.lastEmitted.delete(recordingId);
       return this.store.deleteRecording(recordingId);

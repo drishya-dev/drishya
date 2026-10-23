@@ -1,4 +1,7 @@
 import { expandCard, pointAtHistory } from './history-gestures.ts';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -555,11 +558,19 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     await history.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   };
   await scrollHistory(-100_000);
-  const read = history.locator('article.op-read').first();
+  // Keep the captured identity: opening material can reflow the virtual window's first read.
+  const readId = await history.locator('article.op-read').first().getAttribute('data-op-id');
+  expect(readId).toBeTruthy();
+  const read = history.locator(`article.op-read[data-op-id="${readId}"]`);
   await read.scrollIntoViewIfNeeded();
-  await read.getByRole('button', { name: /Read excerpt of/ }).click();
-  await read.locator('.source-utilities > summary').click();
-  await read.getByRole('button', { name: 'Pin range', exact: true }).click();
+  const excerpt = read.getByRole('button', { name: /Read excerpt of/ });
+  await excerpt.focus(); await page.keyboard.press('Enter');
+  const utilities = read.locator('.source-utilities');
+  await expect(utilities).toBeVisible();
+  if (await utilities.getAttribute('open') === null) { await utilities.locator('summary').focus(); await page.keyboard.press('Enter'); }
+  const pin = read.getByRole('button', { name: 'Pin range', exact: true });
+  await expect(pin).toBeVisible({ timeout: 10_000 });
+  await pin.focus(); await page.keyboard.press('Enter');
   const pinned = page.getByRole('complementary', { name: 'Pinned source reference' });
   await expect(pinned).toBeVisible();
   const pinnedLabel = (await pinned.textContent())!;
@@ -727,4 +738,23 @@ test('paged replay retains its history and camera while the next captured page l
   } finally { release(); }
   await expect(page.locator('.viewer')).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator('.history')).toBeVisible();
+});
+
+// Exercise the actual probe: the last passage has a prompt but no operation/prose.
+test('benchmark reader update completes for a final prompt-only passage', async () => {
+  const source = join(dir, 'prompt-only-rollout.jsonl');
+  const rows = [
+    { type: 'session_meta', payload: { id: 'prompt-probe', cwd: '/synthetic' } },
+    { type: 'event_msg', payload: { type: 'user_message', message: 'Invented opening prompt' } },
+    { type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Invented prior answer' }] } },
+    { type: 'event_msg', payload: { type: 'user_message', message: 'Invented final prompt '.repeat(200) } },
+  ];
+  writeFileSync(source, rows.map((r, i) => JSON.stringify({ timestamp: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString(), ...r })).join('\n') + '\n');
+  const { stdout } = await promisify(execFile)(process.execPath, ['scripts/bench-real-journals.ts', '--worker', '--source', source, '--browser'], { timeout: 45000 });
+  const result = JSON.parse(stdout.trim());
+  expect(result.verifiedAgainstFullImport).toBe(true);
+  expect(result.rescanIdempotent).toBe(true);
+  expect(result.gaps).toBe(0);
+  expect(result.concurrentCaptured).toBe(0);
+  expect(result.ui.appendToReaderUpdateMs).toBeGreaterThan(0);
 });

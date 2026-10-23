@@ -29,7 +29,11 @@ export function toolOutputText(text: string): { text: string; decoded: boolean }
     }
   };
   let decoded = false;
+  // Only an object or array can be a recognized envelope. Skipping other lines avoids a thrown
+  // JSON.parse per plain-text line, which dominated decoding long terminal output.
+  const candidate = (line: string) => /^\s*[[{]/.test(line);
   const convert = (line: string) => {
+    if (!candidate(line)) return line;
     try { const result = unwrap(JSON.parse(line),0); if (result !== undefined) { decoded = true; return result; } } catch { /* Incomplete JSON and literal source remain untouched. */ }
     return line;
   };

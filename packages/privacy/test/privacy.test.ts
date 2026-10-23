@@ -167,3 +167,27 @@ describe('sanitize', () => {
     expect(r.omitted).toBe(true);
   });
 });
+
+describe('necessary-condition redaction fast paths', () => {
+  it.each(['password', 'passwd', 'pwd', 'secret', 'token', 'api_key', 'api-key', 'apikey', 'access_key', 'access-key', 'accesskey', 'private_key', 'private-key', 'privatekey', 'client_secret', 'client-secret', 'clientsecret', 'auth'])('preserves assignment detection for %s within identifiers and mixed case', key => {
+    const value = rnd(40);
+    const assignment = 'PREFIX_' + key.toUpperCase() + '_SUFFIX="' + value + '"';
+    const input = 'Invented harmless output.\n'.repeat(300) + assignment + '\nAfter';
+    const result = redactText(input);
+    expect(result.text).not.toContain(value);
+    expect(result.text).toContain('[REDACTED:secret-assignment]');
+    expect(result.hits).toContainEqual({ rule: 'secret-assignment', count: 1 });
+  });
+  it('preserves URL credentials after a long prefix and other token replacements', () => {
+    const value = rnd(32);
+    const input = GH + '\n' + 'Invented harmless output.\n'.repeat(300) + 'Custom+Proto://user:' + value + '@host/path';
+    const result = redactText(input);
+    expect(result.text).not.toContain(value);
+    expect(result.text).not.toContain(GH);
+    expect(result.hits).toEqual([{ rule: 'github-token', count: 1 }, { rule: 'url-credentials', count: 1 }]);
+  });
+  it('retains harmless long material byte for byte', () => {
+    const input = 'Invented operation: alpha beta gamma delta.\n'.repeat(3000);
+    expect(redactText(input)).toEqual({ text: input, hits: [] });
+  });
+});

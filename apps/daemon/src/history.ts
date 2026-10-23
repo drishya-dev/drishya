@@ -19,18 +19,23 @@ import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store
 /** One worker owns the derived history index. Capture's SQLite writer remains the ingestor. */
 export class HistoryService {
   private worker?: Worker;
+  private onlineWorker?: Worker;
   private pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
   private sequence = 0;
   private closed = false;
-  constructor(privateDir: string) { this.dir = privateDir; }
+  constructor(privateDir: string, onRead?: (id: string) => void) { this.dir = privateDir; this.onRead = onRead; }
+  private readonly onRead?: (id: string) => void;
   private readonly dir: string;
 
   private request<T>(method: string, args: unknown): Promise<T> {
     if (this.closed) return Promise.reject(new Error('History service is closed'));
+    const viewId = (args as { id?: unknown } | undefined)?.id;
+    if (typeof viewId === 'string' && method !== 'forget') this.onRead?.(viewId);
     if (!this.worker) {
       const extension = import.meta.url.endsWith('.mjs') ? 'mjs' : 'ts';
       const worker = new Worker(new URL(`./history-worker.${extension}`, import.meta.url), { workerData: { dir: this.dir }, resourceLimits: { maxOldGenerationSizeMb: 384, maxYoungGenerationSizeMb: 16 } });
       this.worker = worker;
+      worker.once('online', () => { if (this.worker === worker) this.onlineWorker = worker; });
       worker.on('message', (message: { id: number; value?: unknown; error?: string }) => {
         const task = this.pending.get(message.id);
         if (!task) return;
@@ -42,7 +47,7 @@ export class HistoryService {
         if (this.worker !== worker) return; // an old worker's exit must not reject its replacement's requests
         for (const task of this.pending.values()) task.reject(error);
         this.pending.clear();
-        if (this.worker === worker) this.worker = undefined;
+        if (this.worker === worker) { this.worker = undefined; this.onlineWorker = undefined; }
       };
       worker.on('error', fail);
       worker.on('exit', (code) => fail(new Error(`History worker exited (${code})`)));
@@ -55,7 +60,20 @@ export class HistoryService {
     return result;
   }
 
+  /** No worker is created for diagnostics; this samples the existing isolate only. */
+  async diagnosticHeap() {
+    const worker = this.worker;
+    if (!worker || this.onlineWorker !== worker) return undefined;
+    const heap = await worker.getHeapStatistics();
+    return { threadId: worker.threadId, heapUsed: heap.used_heap_size, heapPhysical: heap.total_physical_size, external: heap.external_memory };
+  }
+  diagnosticSqlite() {
+    return this.worker ? this.request<Record<string, unknown>>('diagnostic-sqlite', {}) : Promise.resolve(undefined);
+  }
+
   page(id: string, query: HistoryQuery = {}) { return this.request<HistoryPage>('page', { id, query }); }
+  /** HTTP callers receive worker-encoded bytes, avoiding a second full page on the daemon heap. */
+  pageBytes(id: string, query: HistoryQuery = {}) { return this.request<Uint8Array<ArrayBuffer>>('page-bytes', { id, query }); }
   findingMembers(id:string,key:string,page=0,q='') {return this.request<FindingMembers>('finding-members',{id,key,page,q});}
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}

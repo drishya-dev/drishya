@@ -3,6 +3,7 @@ import { fileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import {reviewInsights,findingMembers} from '../../../packages/scene/src/review-insights.ts';
 import {commandPage} from '../../../packages/scene/src/commands.ts';
 import { parentPort, workerData } from 'node:worker_threads';
+import { createHash } from 'node:crypto';
 import { sinceSnapshot } from '../../../packages/scene/src/since.ts';
 import { verificationFor } from '../../../packages/scene/src/verification.ts';
 import { fixChainFor } from '../../../packages/scene/src/fix-chains.ts';
@@ -11,7 +12,7 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { ArtifactSlice, Observation, Operation, Projection } from '@drishya/contracts';
-import { asOfProjection } from '@drishya/contracts';
+import { asOfProjection, isBlobText } from '@drishya/contracts';
 import { defaultAdapters } from '@drishya/ingest';
 import { createReducer, orderObservations, reduce, REDUCER_VERSION } from '@drishya/projection';
 import { compose, dwellFor, markers, stepOfObservation, type Marker } from '@drishya/scene';
@@ -43,7 +44,24 @@ db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys
 // that directory is disposable and every view is rebuilt under the new HISTORY_VERSION.
 rmSync(join(dir, 'blobs'), { recursive: true, force: true });
 const blobs = new SqliteBlobStore(db, join(dir, 'blobs'));
-const io = { get: (sha: string) => source.blobs.get(sha) ?? blobs.get(sha), put: (text: string) => blobs.put(text) };
+// A global hash match alone is not ownership: forgetting another recording may remove it.
+// Reuse only references held by observations of this view, which source-store GC preserves.
+const capturedBlobs = new Set<string>();
+function rememberCapturedBlobs(value: unknown): void {
+  if (isBlobText(value)) { capturedBlobs.add(value.$blob); return; }
+  if (Array.isArray(value)) { for (const child of value) rememberCapturedBlobs(child); }
+  else if (value && typeof value === 'object') for (const child of Object.values(value)) rememberCapturedBlobs(child);
+}
+const io = {
+  get: (sha: string) => source.blobs.get(sha) ?? blobs.get(sha),
+  put: (text: string) => {
+    // Most long typed/wrapper output already lives in the captured blob store. Its exact
+    // hash can serve the artifact too; duplicating those bytes in index.db adds writes and
+    // temporary SQLite buffers on every cold history build, without adding evidence.
+    const sha = createHash('sha256').update(text).digest('hex');
+    return capturedBlobs.has(sha) && source.blobs.has(sha) ? { sha, bytes: Buffer.byteLength(text) } : blobs.put(text);
+  },
+};
 const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.id, a.descriptor]));
 const HISTORY_VERSION = 'h2-4096';
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
@@ -60,6 +78,7 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
     });
     if (valid) {
       const ordered = orderObservations(added);
+      for (const o of ordered) rememberCapturedBlobs(o.payload);
       incremental.reducer.append(ordered);
       if (ordered.length) incremental.clock = new Date(ordered.at(-1)!.sourceTime!).toISOString();
       incremental.sequence = Math.max(incremental.sequence, ...added.map((o) => o.receivedSequence));
@@ -67,8 +86,10 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
     }
   }
   incremental = undefined;
+  capturedBlobs.clear();
   if (ids.length !== 1) {
-    const projection = reduce(id, source.orderedObservations(ids), io, { adapters, live, ordered: true, maxProseChars: 4096, maxInputChars: 4096 });
+    const ordered = { *[Symbol.iterator]() { for (const o of source.orderedObservations(ids)) { rememberCapturedBlobs(o.payload); yield o; } } };
+    const projection = reduce(id, ordered, io, { adapters, live, ordered: true, maxProseChars: 4096, maxInputChars: 4096 });
     const roots = ids.map((key) => {
       const root = source.getRecording(key)?.workspaceRoot?.replace(/\\/g, '/').replace(/\/+$/, '');
       return root && /^[A-Za-z]:\//.test(root) ? root.toLowerCase() : root;
@@ -80,6 +101,7 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
   const roots = new Set<string>();
   const ordered = source.orderedObservations(ids[0]!);
   const tracked = { *[Symbol.iterator]() { for (const o of ordered) {
+    rememberCapturedBlobs(o.payload);
     if (o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime))) clock = new Date(o.sourceTime).toISOString();
     if (o.workspaceRoot) roots.add(o.workspaceRoot);
     const cwd = (o.payload as { cwd?: unknown }).cwd;
@@ -95,6 +117,7 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
 function current(id: string) {
   const ids = [...new Set(id.split('+').filter(Boolean))];
   if (!ids.length || ids.length > 16) throw new Error('Choose between one and sixteen recordings');
+  let releaseWorkingSet = false;
   source.db.exec('BEGIN');
   try {
     const recordings = ids.map((key) => { const rec = source.getRecording(key); if (!rec) throw new Error('Recording not found'); return rec; });
@@ -132,8 +155,17 @@ function current(id: string) {
       } catch (error) { db.exec('ROLLBACK'); throw error; }
     }
     cached = { id, revision, projection, revisions };
+    releaseWorkingSet = ids.some(key => source.sourceBytes(key) > 32 * 1024 * 1024);
     return cached;
-  } finally { source.db.exec('COMMIT'); }
+  } finally {
+    source.db.exec('COMMIT');
+    if (releaseWorkingSet) {
+      // Full projection/reducer state remains available for warm reads and
+      // incremental append. Release only unused SQLite bulk-read/write pages.
+      source.db.exec('PRAGMA shrink_memory');
+      db.exec('PRAGMA shrink_memory');
+    }
+  }
 }
 
 function page(id: string, query: HistoryQuery): HistoryPage {
@@ -214,11 +246,16 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
   try {
     const a = message.args;
     let value: unknown;
-    if (message.method === 'search-library') value = source.searchLibrary(a.query);
+    if (message.method === 'diagnostic-sqlite') {
+      const config = (connection: DatabaseSync) => Object.fromEntries(['cache_size', 'mmap_size', 'page_size', 'temp_store'].map(key => [key, Object.values(connection.prepare('PRAGMA ' + key).get() ?? {})[0] ?? null]));
+      value = { captured: config(source.db), derived: config(db), fullProjectionResident: !!cached, reducerResident: !!incremental };
+    }
+    else if (message.method === 'search-library') value = source.searchLibrary(a.query);
     else if(message.method==='finding-members')value=findingMembers(current(a.id).projection,a.key,a.page,a.q);
     else if(message.method==='review-insights')value=reviewInsights(current(a.id).projection,a.page,a.kind);
     else if (message.method === 'commands') value=commandPage(current(a.id).projection.operations,a.query);
     else if (message.method === 'page') value = page(a.id, a.query);
+    else if (message.method === 'page-bytes') value = new TextEncoder().encode(JSON.stringify(page(a.id, a.query)));
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
@@ -258,6 +295,9 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
       for (const sha of [...blobs.shas()]) if (!referenced.has(sha)) blobs.delete(sha);
     } else if (message.method === 'close') { cached = undefined; db.close(); source.close(); }
     else throw new Error('Unknown history request');
-    parentPort!.postMessage({ id: message.id, value });
+    // The encoder owns this exact-sized buffer; transfer it instead of cloning the
+    // page's object graph and re-encoding it on capture's event loop.
+    if (message.method === 'page-bytes') parentPort!.postMessage({ id: message.id, value }, [(value as Uint8Array<ArrayBuffer>).buffer]);
+    else parentPort!.postMessage({ id: message.id, value });
   } catch (error) { parentPort!.postMessage({ id: message.id, error: sanitize(error instanceof Error ? error.message : 'History request failed').value }); }
 });
