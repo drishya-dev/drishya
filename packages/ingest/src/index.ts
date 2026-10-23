@@ -261,6 +261,10 @@ export class Ingestor extends EventEmitter {
           });
         }
       }
+      // A completed bulk read no longer needs its SQLite working pages. Keep
+      // cache_size unchanged for subsequent work; this asks SQLite to release
+      // unused pages rather than retaining the import's native working set.
+      if (added && !more && this.store.sourceBytes(recordingId) > 32 * 1024 * 1024) this.store.db.exec('PRAGMA shrink_memory');
       if (added) {
         const ev: ChangeEvent = { type: 'recording', recordingId, revision: cur.revision ?? 0, observationCount: cur.observationCount, added, live: cur.live };
         this.emit('change', ev);

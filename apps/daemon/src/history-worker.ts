@@ -117,6 +117,7 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
 function current(id: string) {
   const ids = [...new Set(id.split('+').filter(Boolean))];
   if (!ids.length || ids.length > 16) throw new Error('Choose between one and sixteen recordings');
+  let releaseWorkingSet = false;
   source.db.exec('BEGIN');
   try {
     const recordings = ids.map((key) => { const rec = source.getRecording(key); if (!rec) throw new Error('Recording not found'); return rec; });
@@ -154,8 +155,17 @@ function current(id: string) {
       } catch (error) { db.exec('ROLLBACK'); throw error; }
     }
     cached = { id, revision, projection, revisions };
+    releaseWorkingSet = ids.some(key => source.sourceBytes(key) > 32 * 1024 * 1024);
     return cached;
-  } finally { source.db.exec('COMMIT'); }
+  } finally {
+    source.db.exec('COMMIT');
+    if (releaseWorkingSet) {
+      // Full projection/reducer state remains available for warm reads and
+      // incremental append. Release only unused SQLite bulk-read/write pages.
+      source.db.exec('PRAGMA shrink_memory');
+      db.exec('PRAGMA shrink_memory');
+    }
+  }
 }
 
 function page(id: string, query: HistoryQuery): HistoryPage {

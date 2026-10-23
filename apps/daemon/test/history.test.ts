@@ -1,7 +1,8 @@
+import { generateLargeJournal } from '../../../scripts/make-large-journal.ts';
 import { appendFileSync, copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { compose } from '@drishya/scene';
 import { App } from '../src/app.ts';
 import { SqliteBlobStore } from '@drishya/store';
@@ -13,6 +14,25 @@ let dir: string;
 afterEach(async () => { await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 describe('worker-owned history pages', () => {
+  it('releases bulk SQLite working pages without changing warm/restarted history or cache configuration', async () => {
+    dir=mkdtempSync(join(tmpdir(),'drishya-sqlite-working-set-'));
+    const journal=join(dir,'invented.jsonl');generateLargeJournal(journal,33);
+    app=new App(join(dir,'data'));
+    const exec=vi.spyOn(app.store.db,'exec');
+    const {recordingId,gaps}=await app.ingest.importSource('codex',journal);
+    expect(gaps).toBe(0);expect(exec.mock.calls.some(([sql])=>sql==='PRAGMA shrink_memory')).toBe(true);
+    exec.mockRestore();
+    const first=await app.history.page(recordingId,{count:2});
+    expect(await app.history.page(recordingId,{count:2})).toEqual(first);
+    const settings=await app.history.diagnosticSqlite();
+    expect(settings).toMatchObject({captured:{cache_size:-8192,mmap_size:0},derived:{cache_size:-8192,mmap_size:0},fullProjectionResident:true,reducerResident:true});
+    const ids=app.store.observations(recordingId).map(o=>o.id);
+    expect((await app.ingest.rescan(recordingId)).added).toBe(0);
+    expect(app.store.observations(recordingId).map(o=>o.id)).toEqual(ids);
+    await app.close();app=new App(join(dir,'data'));
+    expect(await app.history.page(recordingId,{count:2})).toEqual(first);
+    expect(app.store.db.prepare('PRAGMA cache_size').get()).toMatchObject({cache_size:-8192});
+  },30000);
   it('keeps derived material after forgetting another recording with coincidentally identical bytes', async () => {
     dir = mkdtempSync(join(tmpdir(), 'drishya-history-ownership-'));
     app = new App(join(dir, 'data'));
