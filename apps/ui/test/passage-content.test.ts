@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { samePassageContent, type PassageContent } from '../src/lib/passage-content.ts';
+import { passageItems, samePassageContent, type PassageContent } from '../src/lib/passage-content.ts';
 
 const content=()=>({
   ps:{id:'passage',agentId:'agent',ops:[{id:'op'}],prose:[{id:'prose'}],notices:[{id:'notice'}],settled:true,matchesFilter:true},
@@ -34,4 +34,13 @@ test('every referenced captured field and passage presentation change invalidate
 test('sibling changes preserve the existing agent color contract',()=>{
   const a=content();a.agent!.parentId='parent';a.agents=[a.agent!,{...a.agent!,id:'sibling'}];
   const b=copy(a);b.agents.reverse();expect(samePassageContent(a,b)).toBe(false);
+});
+
+test('memo props retain only the passage evidence, never an entire older page',()=>{
+  const selected={id:'selected'},unrelated={id:'other'};
+  const page=new Map([['selected',selected],['other',unrelated]]);
+  const scoped=passageItems([{id:'selected'},{id:'missing'}],page);
+  expect([...scoped]).toEqual([['selected',selected]]);
+  expect(scoped.get('selected')).toBe(selected);
+  expect(scoped).not.toBe(page);
 });

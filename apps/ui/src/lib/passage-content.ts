@@ -27,3 +27,10 @@ export function samePassageContent(a: PassageContent, b: PassageContent): boolea
     a.ps.prose.every(p => sameValue(a.prose.get(p.id),b.prose.get(p.id))) &&
     (a.ps.notices ?? []).every(n => sameValue(a.notices.get(n.id),b.notices.get(n.id)));
 }
+
+/** A memoized passage must not retain an entire older page through its maps. */
+export function passageItems<T>(items: {id: string}[], values: Map<string,T>): Map<string,T> {
+  const result = new Map<string,T>();
+  for (const item of items) { const value=values.get(item.id); if(value!==undefined) result.set(item.id,value); }
+  return result;
+}
