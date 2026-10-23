@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import { passageItems, samePassageContent, type PassageContent } from '../src/lib/passage-content.ts';
 
 const content=()=>({
+  artifacts:new Map([['artifact',{id:'artifact',blob:'old'}]]),
   ps:{id:'passage',agentId:'agent',ops:[{id:'op'}],prose:[{id:'prose'}],notices:[{id:'notice'}],settled:true,matchesFilter:true},
   ops:new Map([['op',{id:'op',detail:{kind:'shell',command:'invented command'},status:'ok',artifactIds:['artifact']}]]),
   prose:new Map([['prose',{id:'prose',text:'invented prose'}]]),notices:new Map([['notice',{id:'notice',snippet:'invented notice'}]]),
@@ -22,6 +23,7 @@ test('every referenced captured field and passage presentation change invalidate
   const edits:((b:PassageContent)=>void)[]=[
     b=>{b.ps.id='different';},b=>{b.ps.settled=false;},b=>{b.ps.matchesFilter=false;},
     b=>{b.ps.ops.push({id:'new'} as never);},b=>{b.ops.get('op')!.status='error';},
+    b=>{b.artifacts.get('artifact')!.blob='changed';},b=>{b.artifacts.delete('artifact');},
     b=>{b.ops.get('op')!.artifactIds.push('changed');},b=>{b.ops.delete('op');},
     b=>{b.prose.get('prose')!.text='changed';},b=>{b.notices.get('notice')!.snippet='changed';},
     b=>{b.focus=true;},b=>{b.folded=true;},b=>{b.foldable=false;},b=>{b.onFold=()=>{};},

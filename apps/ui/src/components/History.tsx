@@ -1,4 +1,4 @@
-import { passageItems, samePassageContent, type PassageContent } from '../lib/passage-content.ts';
+import { passageArtifacts, passageItems, samePassageContent, type PassageContent } from '../lib/passage-content.ts';
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import { ReadingKeys } from './ReadingKeys.tsx';
 import { CommandText } from './CommandText.tsx';
@@ -188,6 +188,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
   }, [motion, lowResource, follow]);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
+  const artifacts = useMemo(() => new Map(projection.artifacts.map(a => [a.id, a])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
   const notices = useMemo(() => new Map((projection.notices ?? []).map((n) => [n.id, n])), [projection]);
   const agents = useMemo(() => new Map(projection.agents.map((a) => [a.id, a])), [projection]);
@@ -631,7 +632,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
             const fold = foldOf(ps, folded);
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={measureKey(ps.id, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
-              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
+              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
             </div>;
           }),
         ])}
@@ -686,11 +687,11 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
   );
 });
 
-const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: PassageContent) {
+const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: PassageContent) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
-    <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
+    <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
       {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
@@ -712,7 +713,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, 
         return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
       })}
       {!folded && ps.notices?.filter((n) => !n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
-    </section>
+    </section></HistoryArtifacts.Provider>
   );
 }, samePassageContent);
 
