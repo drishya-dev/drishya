@@ -412,7 +412,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
       const ps = passages.get(node.dataset.passageId!);
       if (!ps) continue;
       const fold = foldOf(ps, folded);
-      const content: PassageContent = { ps, ops: passageItems(ps.ops, ops), prose: passageItems(ps.prose, prose), notices: passageItems(ps.notices ?? [], notices),
+      const content: PassageContent = { ps, artifacts: passageArtifacts(ps, ops, artifacts), ops: passageItems(ps.ops, ops), prose: passageItems(ps.prose, prose), notices: passageItems(ps.notices ?? [], notices),
         agent: agents.get(ps.agentId), agents: projection.agents, focus: scene.focus?.passageId === ps.id,
         foldable: modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn), folded: fold === 'header', onFold: toggleFold };
       const key = node.dataset.measureKey!;
