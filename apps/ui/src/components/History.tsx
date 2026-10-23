@@ -1,3 +1,4 @@
+import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import { ReadingKeys } from './ReadingKeys.tsx';
 import { CommandText } from './CommandText.tsx';
 import {commandDisplay} from '../lib/command-display.ts';
@@ -81,7 +82,8 @@ export function History({ scene, projection, onWindow }: HistoryProps) {
     selectedOp === deferred.selectedOp && focusObservationId === deferred.focusObservationId &&
     promptStep === deferred.promptStep && filter === deferred.filter;
   const shown = liveArrival ? deferred : pair;
-  return <HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} />;
+  const artifacts = useMemo(() => new Map(shown.projection.artifacts.map(a => [a.id, a])), [shown.projection.artifacts]);
+  return <HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider>;
 }
 
 const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: HistoryProps) {
