@@ -142,7 +142,7 @@ function GitReader({ close }: { close: () => void }) {
           </aside>
           <section>{file && <>
             <header className={modern ? 'git-selected-file-header' : undefined}><strong title={file.path}>{file.path}</strong><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button>{!modern && <button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button>}</header>
-            <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} /></div>
+            <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} openRecorded={(path, key) => { close(); useApp.getState().set({ filePanel: path, filePanelFocus: 'change', filePanelEvidence: key }); }} /></div>
             {file.status !== '??' && <footer>
               <label><input type="checkbox" disabled={busy || checking} checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label>
               <textarea aria-label="Local review note" disabled={busy || checking} placeholder="Review note (local, separate from agent evidence)" maxLength={2000} value={exact ? mark?.note ?? '' : ''} onChange={e => update({ note: e.target.value })} />
