@@ -1,3 +1,4 @@
+import { samePassageContent, type PassageContent } from '../lib/passage-content.ts';
 import { ReadingKeys } from './ReadingKeys.tsx';
 import { CommandText } from './CommandText.tsx';
 import {commandDisplay} from '../lib/command-display.ts';
@@ -683,7 +684,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
   );
 });
 
-const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; notices: Map<string, Notice>; agent?: Agent; agents: Agent[]; focus: boolean; foldable?: boolean; folded?: boolean; onFold?: (id: string) => void }) {
+const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: PassageContent) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
@@ -711,7 +712,7 @@ const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, 
       {!folded && ps.notices?.filter((n) => !n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
     </section>
   );
-});
+}, samePassageContent);
 
 function openCapturedFile(path:string,line?:number,evidence?:string) {
   const state=useApp.getState(),reference=prosePath(path,state.recording?.workspaceRoot,true);
