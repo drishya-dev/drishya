@@ -36,7 +36,7 @@ test('worker ownership includes combined cache keys with workspace suffixes',asy
 
 test('a warm index switch releases the previous view reducer without changing pages or later append identities',async()=>{
   const {app:original,a,b}=setup();const one=(await original.ingest.importSource('codex',a)).recordingId,two=(await original.ingest.importSource('codex',b)).recordingId;
-  const warm=await original.history.page(two,{count:2});await original.close();
+  const warm=await original.history.page(two,{count:2});await original.close();apps.splice(apps.indexOf(original),1);
   const app=new App(join(dir!,'data'));apps.push(app);
   await app.history.page(one,{count:2});expect(await app.history.diagnosticSqlite()).toMatchObject({reducerResident:true});
   expect(JSON.stringify(await app.history.page(two,{count:2}))).toBe(JSON.stringify(warm));
