@@ -4,6 +4,9 @@ import {commandCursor} from '../../../packages/scene/src/commands.ts';
 // Zero runtime dependencies on purpose: `node:http` + Server-Sent Events for change notices.
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -346,7 +349,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (body.pinnedPassageIds !== undefined && (!Array.isArray(body.pinnedPassageIds) || body.pinnedPassageIds.length > 3 || body.pinnedPassageIds.some((pin: unknown) => typeof pin !== 'string' || pin.length > 512))) throw new HttpError(400, 'invalid passage pins');
         if (body.filter !== undefined && (!body.filter || typeof body.filter !== 'object' || Array.isArray(body.filter))) throw new HttpError(400, 'invalid filter');
         if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');
-        return json(res, await app.history.page(id, body));
+        return historyJson(res, await app.history.pageBytes(id, body));
       }
       if(sub==='finding-members'&&m==='GET') {
         for(const part of id.split('+'))app.recording(part);
@@ -667,6 +670,19 @@ function json(res: ServerResponse, body: unknown, status = 200) {
   const s = JSON.stringify(body);
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   res.end(s);
+}
+
+/** Bound socket work per turn too: a single multi-megabyte end() still stalls capture. */
+async function historyJson(res: ServerResponse, bytes: Uint8Array) {
+  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'content-length': bytes.byteLength });
+  async function* chunks() {
+    for (let offset = 0; offset < bytes.byteLength; offset += 64 * 1024) {
+      yield bytes.subarray(offset, offset + 64 * 1024);
+      await nextTurn();
+    }
+  }
+  try { await pipeline(Readable.from(chunks()), res); }
+  catch { if (!res.destroyed) res.destroy(); } // A disconnected reader must not produce a second JSON response.
 }
 
 async function readJson(req: IncomingMessage, limit = 1024 * 1024): Promise<Record<string, unknown>> {

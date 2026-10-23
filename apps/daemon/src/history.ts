@@ -72,6 +72,8 @@ export class HistoryService {
   }
 
   page(id: string, query: HistoryQuery = {}) { return this.request<HistoryPage>('page', { id, query }); }
+  /** HTTP callers receive worker-encoded bytes, avoiding a second full page on the daemon heap. */
+  pageBytes(id: string, query: HistoryQuery = {}) { return this.request<Uint8Array<ArrayBuffer>>('page-bytes', { id, query }); }
   findingMembers(id:string,key:string,page=0,q='') {return this.request<FindingMembers>('finding-members',{id,key,page,q});}
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}

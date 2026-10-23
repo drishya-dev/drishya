@@ -258,6 +258,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if(message.method==='review-insights')value=reviewInsights(current(a.id).projection,a.page,a.kind);
     else if (message.method === 'commands') value=commandPage(current(a.id).projection.operations,a.query);
     else if (message.method === 'page') value = page(a.id, a.query);
+    else if (message.method === 'page-bytes') value = new TextEncoder().encode(JSON.stringify(page(a.id, a.query)));
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
@@ -297,6 +298,9 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
       for (const sha of [...blobs.shas()]) if (!referenced.has(sha)) blobs.delete(sha);
     } else if (message.method === 'close') { cached = undefined; db.close(); source.close(); }
     else throw new Error('Unknown history request');
-    parentPort!.postMessage({ id: message.id, value });
+    // The encoder owns this exact-sized buffer; transfer it instead of cloning the
+    // page's object graph and re-encoding it on capture's event loop.
+    if (message.method === 'page-bytes') parentPort!.postMessage({ id: message.id, value }, [(value as Uint8Array<ArrayBuffer>).buffer]);
+    else parentPort!.postMessage({ id: message.id, value });
   } catch (error) { parentPort!.postMessage({ id: message.id, error: sanitize(error instanceof Error ? error.message : 'History request failed').value }); }
 });
