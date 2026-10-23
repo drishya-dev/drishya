@@ -76,7 +76,7 @@ const RULES: Rule[] = [
   { id: 'url-credentials', possible: text => text.includes('://'), pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:([^\s@/]{3,})@/gi, group: 1, accept: (s) => !PLACEHOLDER.test(s) },
   {
     id: 'secret-assignment',
-    pattern: /\b[A-Za-z0-9_]*(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|private[_-]?key|client[_-]?secret|auth)[A-Za-z0-9_]*["']?\s*[:=]\s*(["'`]?)([^\s"'`,;]{8,})\1/gi,
+    pattern: /password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|private[_-]?key|client[_-]?secret|auth/gi,
     group: 2,
     accept: looksSecret,
   },
@@ -105,13 +105,65 @@ export interface RedactResult {
   hits: { rule: string; count: number }[];
 }
 
+// Search for the rare keyword first. The old greedy identifier prefix retried the
+// alternation at every character of long harmless identifiers (notably shell output).
+// The sticky suffix, ASCII boundaries and consumed rejected matches preserve replace's
+// exact matching/replacement behavior, including keywords embedded in identifiers.
+function replaceAssignments(text: string, keywords: RegExp, replace: (match: string, ...args: unknown[]) => string): string {
+  const tail = /["']?\s*[:=]\s*(["'`]?)([^\s"'`,;]{8,})\1/y;
+  const word = (at: number) => {
+    const c = text.charCodeAt(at);
+    return c >= 48 && c <= 57 || c >= 65 && c <= 90 || c === 95 || c >= 97 && c <= 122;
+  };
+  const segments: { start: number; end: number }[] = [];
+  const segment = (at: number) => {
+    const known = segments.find(s => at >= s.start && at < s.end);
+    if (known) return known;
+    let start = at;
+    let end = at + 1;
+    while (start > 0 && word(start - 1)) start--;
+    while (end < text.length && word(end)) end++;
+    const found = { start, end };
+    segments.push(found);
+    if (segments.length > 2) segments.shift();
+    return found;
+  };
+  let suffixAt = -1;
+  let suffix: RegExpExecArray | null = null;
+  let consumed = 0;
+  let copied = 0;
+  const parts: string[] = [];
+  for (let keyword = keywords.exec(text); keyword; keyword = keywords.exec(text)) {
+    const start = segment(keyword.index).start;
+    const end = segment(keyword.index + keyword[0].length - 1).end;
+    if (start < consumed) continue;
+    if (suffixAt !== end) {
+      tail.lastIndex = end;
+      suffix = tail.exec(text);
+      suffixAt = end;
+    }
+    if (!suffix) continue;
+    consumed = end + suffix[0].length;
+    keywords.lastIndex = consumed;
+    const match = text.slice(start, consumed);
+    const replacement = replace(match, suffix[1], suffix[2], start, text);
+    if (replacement !== match) {
+      parts.push(text.slice(copied, start), replacement);
+      copied = consumed;
+    }
+  }
+  if (!parts.length) return text;
+  parts.push(text.slice(copied));
+  return parts.join('');
+}
+
 export function redactText(input: string): RedactResult {
   let text = input;
   const hits = new Map<string, number>();
   for (const rule of RULES) {
     rule.pattern.lastIndex = 0;
     if (rule.possible && !rule.possible(text)) continue;
-    text = text.replace(rule.pattern, (match: string, ...args: unknown[]) => {
+    const replace = (match: string, ...args: unknown[]) => {
       const groups = args.slice(0, -2) as (string | undefined)[];
       const secret = rule.group ? groups[rule.group - 1] : match;
       if (!secret) return match;
@@ -121,7 +173,10 @@ export function redactText(input: string): RedactResult {
       if (!rule.group) return marker;
       const at = match.lastIndexOf(secret);
       return match.slice(0, at) + marker + match.slice(at + secret.length);
-    });
+    };
+    text = rule.id === 'secret-assignment'
+      ? replaceAssignments(text, rule.pattern, replace)
+      : text.replace(rule.pattern, replace);
   }
   return { text, hits: [...hits].map(([rule, count]) => ({ rule, count })) };
 }

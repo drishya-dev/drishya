@@ -1,3 +1,5 @@
+import { passageArtifacts, passageItems, samePassageContent, type PassageContent } from '../lib/passage-content.ts';
+import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import { ReadingKeys } from './ReadingKeys.tsx';
 import { CommandText } from './CommandText.tsx';
 import {commandDisplay} from '../lib/command-display.ts';
@@ -8,7 +10,7 @@ import { ToolInput } from './ToolInput.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { ScriptDetails } from './Inspector.tsx';
-import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import type { PinnedPlan, Scene, SceneOp, ScenePassage } from '@drishya/scene';
@@ -62,7 +64,31 @@ function readingClearance(history: HTMLElement): number {
   return Math.max(16, top - bounds.top + 16);
 }
 
-export function History({ scene, projection, onWindow }: { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> }) {
+type HistoryProps = { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> };
+
+export function History({ scene, projection, onWindow }: HistoryProps) {
+  const mode = useApp(s => s.mode);
+  const selectedOp = useApp(s => s.selectedOp);
+  const focusObservationId = useApp(s => s.focusObservationId);
+  const promptStep = useApp(s => s.promptStep);
+  const filter = useApp(s => s.filter);
+  const pair = useMemo(() => ({ scene, projection, mode, selectedOp, focusObservationId, promptStep, filter }),
+    [scene, projection, mode, selectedOp, focusObservationId, promptStep, filter]);
+  const deferred = useDeferredValue(pair);
+  // Live arrivals may render interruptibly. Scene and evidence must move together;
+  // deliberate navigation, replay, page replacement and recording changes stay immediate.
+  const liveArrival = mode === 'history' && deferred.mode === mode &&
+    projection.recordingId === deferred.projection.recordingId &&
+    scene.atEnd && deferred.scene.atEnd && scene.total >= deferred.scene.total &&
+    (scene.total > deferred.scene.total || projection.observationCount > deferred.projection.observationCount) &&
+    selectedOp === deferred.selectedOp && focusObservationId === deferred.focusObservationId &&
+    promptStep === deferred.promptStep && filter === deferred.filter;
+  const shown = liveArrival ? deferred : pair;
+  const artifacts = useMemo(() => new Map(shown.projection.artifacts.map(a => [a.id, a])), [shown.projection.artifacts]);
+  return <HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider>;
+}
+
+const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: HistoryProps) {
   const mode = useApp((s) => s.mode);
   const compareAgents = useApp((s) => s.compareAgents);
   const explore = useApp((s) => s.explore);
@@ -93,6 +119,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   const [measurementVersion, setMeasurementVersion] = useState(0);
   const [focusedPassageId, setFocusedPassageId] = useState<string | undefined>();
   const measurements = useRef(new Map<string, number>(memory.get('history/heights') as [string, number][] | undefined));
+  const measuredSlots = useRef(new WeakMap<HTMLElement, { key: string; context: string; width: number; height: number; content: PassageContent }>());
   const programmatic = useRef(false);
   const lastScrollTop = useRef(0);
   const userScrollUntil = useRef(0);
@@ -120,6 +147,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     if (!history) return;
     const measure = () => {
       const next = new Map<string, DOMRect>();
+      const moves: { card: HTMLElement; from: DOMRect; destination: DOMRect; scale: number }[] = [];
       const viewportBounds = history.getBoundingClientRect();
       for (const card of history.querySelectorAll<HTMLElement>('article[data-op-id]')) {
         if (card.dataset.hoverReading) continue;
@@ -128,11 +156,13 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         const stored = new DOMRect(r.left, r.top + history.scrollTop, r.width, r.height);
         const before = materialPositions.current.get(id);
         if (before && useApp.getState().follow && performance.now()>userScrollUntil.current && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !materialIsMoving(card) && r.bottom > viewportBounds.top && r.top < viewportBounds.bottom && [stored.x - before.x, stored.y - before.y, stored.width - before.width, stored.height - before.height].some(delta => Math.abs(delta) > 1)) {
-          moveMaterial(card, new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), 300, 'surface-Reflow');
+          moves.push({ card, from: new DOMRect(before.x, before.y - history.scrollTop, before.width, before.height), destination: r, scale: parseFloat(getComputedStyle(card).getPropertyValue('--material-scale')) || 1 });
         }
         next.set(id, stored);
         if (next.size >= 80) break;
       }
+      // Read every destination before starting any animation.
+      for (const move of moves) moveMaterial(move.card, move.from, 300, 'surface-Reflow', { destination: move.destination, scale: move.scale });
       materialPositions.current = next;
     };
     measure();
@@ -163,6 +193,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
   }, [motion, lowResource, follow]);
 
   const ops = useMemo(() => new Map(projection.operations.map((o) => [o.id, o])), [projection]);
+  const artifacts = useMemo(() => new Map(projection.artifacts.map(a => [a.id, a])), [projection]);
   const prose = useMemo(() => new Map(projection.prose.map((p) => [p.id, p])), [projection]);
   const notices = useMemo(() => new Map((projection.notices ?? []).map((n) => [n.id, n])), [projection]);
   const agents = useMemo(() => new Map(projection.agents.map((a) => [a.id, a])), [projection]);
@@ -373,18 +404,35 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // Newly mounted runs must replace their estimates in this same commit. Waiting
     // for ResizeObserver lets a frame expose their extra height, then jumps back.
     let changed = false;
+    const width = ref.current?.clientWidth ?? 0;
+    const context = JSON.stringify([theme, compareAgents, explore, expandedOp, hoveredOp, readingOp, viewport.height]);
+    const passages = new Map(scene.passages.map(ps => [ps.id, ps]));
+    const sizes: { node: HTMLElement; key: string; height: number; content: PassageContent }[] = [];
     if (!pointerFocus.current) for (const node of ref.current?.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]') ?? []) {
       if (node.dataset.unloaded === 'true' || node.dataset.folded === 'hidden') continue;
-      const height = node.getBoundingClientRect().height;
-      if (Math.abs((measurements.current.get(node.dataset.measureKey!) ?? 0) - height) > .5) {
-        measurements.current.set(node.dataset.measureKey!, height);
+      const ps = passages.get(node.dataset.passageId!);
+      if (!ps) continue;
+      const fold = foldOf(ps, folded);
+      const content: PassageContent = { ps, artifacts: passageArtifacts(ps, ops, artifacts), ops: passageItems(ps.ops, ops), prose: passageItems(ps.prose, prose), notices: passageItems(ps.notices ?? [], notices),
+        agent: agents.get(ps.agentId), agents: projection.agents, focus: scene.focus?.passageId === ps.id,
+        foldable: modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn), folded: fold === 'header', onFold: toggleFold };
+      const key = node.dataset.measureKey!;
+      const previous = measuredSlots.current.get(node);
+      // Observer sizes stay valid until material, allocation or presentation changes.
+      const reusable = previous && previous.key === key && previous.context === context && previous.width === width && samePassageContent(previous.content, content);
+      sizes.push({ node, key, height: reusable ? previous.height : node.getBoundingClientRect().height, content });
+    }
+    for (const { node, key, height, content } of sizes) {
+      measuredSlots.current.set(node, { key, context, width, height, content });
+      if (Math.abs((measurements.current.get(key) ?? 0) - height) > .5) {
+        measurements.current.set(key, height);
         changed = true;
       }
     }
     if (changed) setMeasurementVersion(n => n + 1);
     // Correct measured spacer changes before paint, using the latest user-scroll anchor.
     restoreReading(true);
-  }, [scene.passages, layout, follow, compareAgents, explore, theme, measurementVersion]);
+  }, [scene.passages, layout, follow, compareAgents, explore, theme, measurementVersion, expandedOp, hoveredOp, readingOp]);
 
   // Folding moves the work below the header: it travels from where it was, and unfolded work eases in under the header.
   useLayoutEffect(() => {
@@ -394,8 +442,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     const slots = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]:not([data-folded=hidden])')];
     const bottom = el.getBoundingClientRect().bottom;
     const easing = 'cubic-bezier(.23,1,.32,1)';
-    for (const slot of slots.slice(slots.findIndex((item) => item.dataset.passageId === moved.opener) + 1)) {
-      const top = slot.getBoundingClientRect().top;
+    const positions = slots.slice(slots.findIndex((item) => item.dataset.passageId === moved.opener) + 1).map(slot => ({ slot, top: slot.getBoundingClientRect().top }));
+    for (const { slot, top } of positions) {
       if (top > bottom) break;
       const before = moved.tops.get(slot.dataset.passageId!);
       if (before === undefined) foldAnimations.current.push(slot.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing, id: 'turn-fold' }));
@@ -417,6 +465,8 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
         const id = (entry.target as HTMLElement).dataset.measureKey;
         if (!id) continue;
         const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height;
+        const measured = measuredSlots.current.get(entry.target as HTMLElement);
+        if (measured) measured.height = height;
         if (Math.abs((measurements.current.get(id) ?? 0) - height) > 0.5) {
           measurements.current.set(id, height);
           changed = true;
@@ -478,15 +528,17 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
     // Bring the selected action itself into view: a tall passage centred as a whole can leave
     // its first action above the viewport. Taller-than-viewport material aligns to its top.
     const selected = readingOp ? [...node.querySelectorAll<HTMLElement>('[data-op-id]')].find((n) => n.dataset.opId === readingOp) : undefined;
-    const bounds = (selected ?? node).getBoundingClientRect();
+    const nodeBounds = node.getBoundingClientRect();
+    const bounds = selected ? selected.getBoundingClientRect() : nodeBounds;
     const viewportBounds = el.getBoundingClientRect();
     const clearance = readingClearance(el);
     const available = Math.max(0, el.clientHeight - clearance);
+    const scrollBefore = el.scrollTop;
     if (bounds.top < viewportBounds.top + clearance || bounds.bottom > viewportBounds.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - clearance - Math.max(0, (available - bounds.height) / 2));
     // Anchor reading to the navigated passage itself. Passages above may still carry estimated
     // heights; anchoring to whichever slot was first visible let their measurement pull the
     // reader away from the action just opened.
-    readingAnchor.current = { id: targetId, offset: node.getBoundingClientRect().top - el.getBoundingClientRect().top };
+    readingAnchor.current = { id: targetId, offset: nodeBounds.top - viewportBounds.top - (el.scrollTop - scrollBefore) };
     if (useApp.getState().readingPassageId !== targetId) set({ readingPassageId: targetId });
     pendingNavigation.current = undefined;
   }, [intent, targetId, targetIndex, layout, readingOp]);
@@ -606,7 +658,7 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
             const fold = foldOf(ps, folded);
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={measureKey(ps.id, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
-              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} ops={ops} prose={prose} notices={notices} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
+              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
             </div>;
           }),
         ])}
@@ -659,13 +711,13 @@ export function History({ scene, projection, onWindow }: { scene: Scene; project
       )}
     </>
   );
-}
+});
 
-const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: { ps: ScenePassage; ops: Map<string, Operation>; prose: Map<string, Prose>; notices: Map<string, Notice>; agent?: Agent; agents: Agent[]; focus: boolean; foldable?: boolean; folded?: boolean; onFold?: (id: string) => void }) {
+const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: PassageContent) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
-    <section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
+    <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
       {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
@@ -687,9 +739,9 @@ const PassageView = memo(function PassageView({ ps, ops, prose, notices, agent, 
         return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
       })}
       {!folded && ps.notices?.filter((n) => !n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
-    </section>
+    </section></HistoryArtifacts.Provider>
   );
-});
+}, samePassageContent);
 
 function openCapturedFile(path:string,line?:number,evidence?:string) {
   const state=useApp.getState(),reference=prosePath(path,state.recording?.workspaceRoot,true);

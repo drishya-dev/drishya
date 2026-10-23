@@ -10,14 +10,14 @@ export function materialRect(element: HTMLElement): DOMRect {
     rect.width / Math.max(.001, matrix.m11), rect.height / Math.max(.001, matrix.m22));
 }
 
-export function moveMaterial(element: HTMLElement, from: DOMRect, duration: number, name: string): Animation {
+export function moveMaterial(element: HTMLElement, from: DOMRect, duration: number, name: string, measured?: { destination: DOMRect; scale: number }): Animation {
   active.get(element)?.cancel();
-  let destination = materialRect(element);
-  const frames = (source: DOMRect, target: DOMRect): Keyframe[] => [
-    { transform: materialTransform(source,target,parseFloat(getComputedStyle(element).getPropertyValue('--material-scale'))||1), clipPath: 'none' },
+  let destination = measured?.destination ?? materialRect(element);
+  const frames = (source: DOMRect, target: DOMRect, scale?: number): Keyframe[] => [
+    { transform: materialTransform(source,target,scale ?? (parseFloat(getComputedStyle(element).getPropertyValue('--material-scale'))||1)), clipPath: 'none' },
     { transform: 'translate(0px,0px) scale(1,1)', clipPath: 'none' },
   ];
-  const animation = element.animate(frames(from, destination), { duration, easing: 'cubic-bezier(.22,.65,.18,1)', fill: 'both' });
+  const animation = element.animate(frames(from, destination, measured?.scale), { duration, easing: 'cubic-bezier(.22,.65,.18,1)', fill: 'both' });
   animation.id = name; active.set(element, animation);
   const deadline = performance.now() + duration;
   let frame = 0;
