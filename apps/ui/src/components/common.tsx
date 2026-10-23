@@ -1,5 +1,6 @@
+import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import {outputPathNodes} from './CapturedPath.tsx';
-import { useEffect, useState, type ReactNode, type Ref } from 'react';
+import { useContext, useEffect, useState, type ReactNode, type Ref } from 'react';
 import type { Artifact, ArtifactSlice, Hunk, Provenance } from '@drishya/contracts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
 import { materialCache, type MaterialScope } from '../lib/artifact-cache.ts';
@@ -41,9 +42,13 @@ export function viewOf(s: ArtifactSlice): ArtifactView {
 export function useArtifact(artifactId: string | undefined, opts: { scope?: MaterialScope; start?: number; count?: number; retry?: number } = {}): ArtifactView {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
-  const revisions = useApp((s) => s.renderedRevisions);
-  const descriptor = useApp((s) => s.projection?.artifacts.find((a) => a.id === artifactId));
-  const revision = recordingId?.split('+').map((id) => revisions[id] ?? 0).join(':');
+  const history = useContext(HistoryArtifacts);
+  const historicalDescriptor = artifactId ? history?.get(artifactId) : undefined;
+  const currentDescriptor = useApp(s => !artifactId || historicalDescriptor ? undefined : s.projection?.artifacts.find(a => a.id === artifactId));
+  const descriptor = historicalDescriptor ?? currentDescriptor;
+  // Immutable blobs are keyed by descriptor bytes below. Subscribing them to
+  // every global revision bypassed deferred history with synchronous renders.
+  const revision = useApp(s => !artifactId || descriptor?.blob ? undefined : recordingId?.split('+').map(id => s.renderedRevisions[id] ?? 0).join(':'));
   const scope = opts.scope ?? 'reader';
   const start = opts.start ?? 0;
   const count = opts.count ?? (scope === 'preview' ? 12 : 200);

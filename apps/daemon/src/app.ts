@@ -30,7 +30,7 @@ export class App {
   constructor(dir = dataDir(), opts: { memory?: boolean; graphProbeMs?: number } = {}) {
     this.store = new Store(dir, opts);
     this.ingest = new Ingestor(this.store);
-    this.history = new HistoryService(dir);
+    this.history = new HistoryService(dir, id => this.ingest.useHistoryWorker(id));
     this.graphProbeMs = opts.graphProbeMs ?? 15_000;
   }
 

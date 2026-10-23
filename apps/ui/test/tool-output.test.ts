@@ -22,4 +22,9 @@ describe('structured tool output display', () => {
   it('does not reinterpret code, JSON data, cut-off envelopes or Windows paths', () => {
     for(const text of ['const separator = "\\n";', 'C:\\new\\repo\\thing', '{"output":"one\\ntwo"}', '{"chunk_id":"x","output":"one\\n', JSON.stringify({content:[{type:'image',data:'unchanged'}],isError:false})]) expect(toolOutputText(text)).toEqual({text,decoded:false});
   });
+  it('leaves JSON primitives and plain lines as written while still decoding envelopes among them', () => {
+    const envelope=JSON.stringify({output:'ran',exit_code:0});
+    for (const line of ['"quoted"','42','-1','true','null','  plain text','']) expect(toolOutputText(line)).toEqual({text:line,decoded:false});
+    expect(toolOutputText(['start','  '+envelope,'42'].join('\n'))).toEqual({text:['start','ran\nExit code: 0','42'].join('\n'),decoded:true});
+  });
 });
