@@ -17,7 +17,7 @@ it('transfers the exact history JSON bytes and streams complete Unicode across s
   const query={count:200}, expected=Buffer.from(JSON.stringify(await app.history.page(recordingId,query)));
   expect(expected.byteLength).toBeGreaterThan(64*1024);
   expect(Buffer.from(await app.history.pageBytes(recordingId,query)).equals(expected)).toBe(true);
-  for(const query of [{count:1,start:0},{count:2,step:2},{count:1,filter:{kind:'read'}}]) {
+  for(const query of [{count:1,start:0},{count:2,step:2},{count:1,filter:{kind:'read' as const}}]) {
     expect(Buffer.from(await app.history.pageBytes(recordingId,query)).toString('utf8')).toBe(JSON.stringify(await app.history.page(recordingId,query)));
   }
   server=await startServer({app,port:0}); const headers={authorization:`Bearer ${server.token}`,'content-type':'application/json'};
