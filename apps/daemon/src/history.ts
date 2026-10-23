@@ -55,6 +55,17 @@ export class HistoryService {
     return result;
   }
 
+  /** No worker is created for diagnostics; this samples the existing isolate only. */
+  async diagnosticHeap() {
+    const worker = this.worker;
+    if (!worker) return undefined;
+    const heap = await worker.getHeapStatistics();
+    return { threadId: worker.threadId, heapUsed: heap.used_heap_size, heapPhysical: heap.total_physical_size, external: heap.external_memory };
+  }
+  diagnosticSqlite() {
+    return this.worker ? this.request<Record<string, unknown>>('diagnostic-sqlite', {}) : Promise.resolve(undefined);
+  }
+
   page(id: string, query: HistoryQuery = {}) { return this.request<HistoryPage>('page', { id, query }); }
   findingMembers(id:string,key:string,page=0,q='') {return this.request<FindingMembers>('finding-members',{id,key,page,q});}
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}

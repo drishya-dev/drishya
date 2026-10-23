@@ -236,7 +236,11 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
   try {
     const a = message.args;
     let value: unknown;
-    if (message.method === 'search-library') value = source.searchLibrary(a.query);
+    if (message.method === 'diagnostic-sqlite') {
+      const config = (connection: DatabaseSync) => Object.fromEntries(['cache_size', 'mmap_size', 'page_size', 'temp_store'].map(key => [key, Object.values(connection.prepare('PRAGMA ' + key).get() ?? {})[0] ?? null]));
+      value = { captured: config(source.db), derived: config(db), fullProjectionResident: !!cached, reducerResident: !!incremental };
+    }
+    else if (message.method === 'search-library') value = source.searchLibrary(a.query);
     else if(message.method==='finding-members')value=findingMembers(current(a.id).projection,a.key,a.page,a.q);
     else if(message.method==='review-insights')value=reviewInsights(current(a.id).projection,a.page,a.kind);
     else if (message.method === 'commands') value=commandPage(current(a.id).projection.operations,a.query);

@@ -36,7 +36,17 @@ import { HarnessController } from './controller.ts';
 import {sessionSegments} from './session-segments.ts';
 import { readWorkingLocations, saveWorkingLocations } from './working-locations.ts';
 
+export interface RecordingsTiming {
+  probeId?: string;
+  receivedAtMs: number;
+  responseEndAtMs?: number;
+  finishedAtMs: number;
+  status: number;
+}
+
 export interface ServerOptions {
+  /** In-process benchmark observer only; no endpoint, headers or persistence are added. */
+  recordingsTiming?: (sample: RecordingsTiming) => void;
   port?: number;
   host?: string;
   dataDir?: string;
@@ -202,7 +212,17 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       else res.end();
     }
   };
+  const timings = opts.recordingsTiming ? new WeakMap<ServerResponse, Omit<RecordingsTiming, 'finishedAtMs' | 'status'>>() : undefined;
   const server = createServer((req, res) => {
+    if (timings && req.method === 'GET' && req.url?.split('?')[0] === '/v1/recordings') {
+      const raw = req.headers['x-drishya-bench-id'];
+      const sample = { receivedAtMs: performance.now(), probeId: typeof raw === 'string' && /^\d{1,4}$/.test(raw) ? raw : undefined, responseEndAtMs: undefined as number | undefined };
+      timings.set(res, sample);
+      res.once('finish', () => {
+        // An observer failure must never affect the request being measured.
+        try { opts.recordingsTiming!({ ...sample, finishedAtMs: performance.now(), status: res.statusCode }); } catch {}
+      });
+    }
     const request = handleRequest(req, res);
     inFlight.add(request);
     void request.finally(() => inFlight.delete(request));
@@ -261,7 +281,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (body.live) app.ingest.startLive(r.recordingId);
       return json(res, { ...r, recording: app.store.getRecording(r.recordingId) });
     }
-    if (a === 'recordings' && !id && m === 'GET') return json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, sourceBytes: app.store.sourceBytes(r.id), live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
+    if (a === 'recordings' && !id && m === 'GET') {
+      const result = json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, sourceBytes: app.store.sourceBytes(r.id), live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
+      const sample = timings?.get(res);
+      if (sample) sample.responseEndAtMs = performance.now();
+      return result;
+    }
 
     if (a === 'recordings' && id) {
       const firstId = id.split('+')[0]!;
