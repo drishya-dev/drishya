@@ -46,3 +46,9 @@ test('memo props retain only the passage evidence, never an entire older page',(
   expect(scoped.get('selected')).toBe(selected);
   expect(scoped).not.toBe(page);
 });
+
+test('captured object-key order remains part of rendered content identity',()=>{
+  const a=content();a.ops.get('op')!.detail={kind:'other',input:{first:1,second:2}};
+  const b=copy(a);b.ops.get('op')!.detail={kind:'other',input:{second:2,first:1}};
+  expect(samePassageContent(a,b)).toBe(false);
+});
