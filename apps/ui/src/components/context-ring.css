@@ -1,0 +1,6 @@
+/* LIVE-4: a 12 px ring in the session line. Neutral until the context is nearly full; no motion. */
+.context-ring {flex:none;width:12px;height:12px;overflow:visible;}
+.context-ring circle {fill:none;stroke-width:1.6;}
+.context-ring-track {stroke:var(--line-2);}
+.context-ring-fill {stroke:var(--t2);}
+.context-ring[data-high=true] .context-ring-fill {stroke:var(--edited);}

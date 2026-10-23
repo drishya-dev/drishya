@@ -9,6 +9,7 @@ import {SavedMomentsEntry} from './SavedMoments.tsx';
 import {CapturedCommands} from './CapturedCommands.tsx';
 import { NativeReturn } from './NativeReturn.tsx';
 import { UsagePeek } from './RecordedUsage.tsx';
+import { ContextRing } from './ContextRing.tsx';
 import {SessionSegments} from "./SessionSegments.tsx";
 import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
@@ -258,7 +259,7 @@ function SessionLine({ projection }: { projection: Projection }) {
   const stateText = state === 'working' ? 'Agent working now' : state === 'watching' ? 'Watching the journal; the agent is quiet' : undefined;
   return <div className="session-line" title={[title, meta, stateText].filter(Boolean).join('\n')}>
     <span className="session-line-title">{title}</span>
-    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}{meta}</span>
+    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}<ContextRing usage={projection.usage} />{meta}</span>
   </div>;
 }
 
