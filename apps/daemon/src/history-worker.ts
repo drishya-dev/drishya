@@ -121,6 +121,9 @@ function current(id: string) {
   source.db.exec('BEGIN');
   try {
     const recordings = ids.map((key) => { const rec = source.getRecording(key); if (!rec) throw new Error('Recording not found'); return rec; });
+    // Loading a warm disk view must not keep another recording's reducer alive.
+    // The active view retains its own append state; switching views bounds residency.
+    if (incremental?.id !== id) { incremental = undefined; capturedBlobs.clear(); }
     const revisions = Object.fromEntries(recordings.map((r) => [r.id, r.revision ?? 0]));
     const revision = JSON.stringify(recordings.map((r) => [r.id, r.revision, r.live, REDUCER_VERSION, HISTORY_VERSION]));
     if (cached?.id === id && cached.revision === revision) return cached;
