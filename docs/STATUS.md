@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
-| GIT-4 | @yash + Claude | `yash/git-4-commit-hunks` | 2026-10-24 | Follow-up slice: the same per-hunk "Recorded work" action for commit hunks in Git history (`apps/ui/src/components/GitHistory.tsx`, one handler, plus a browser journey). Reuses the merged matcher; UI only; no `History.tsx`, schema, ingest or server change. |
 
 
 ---
@@ -41,6 +40,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ## Last session
 
 ### Yash with Claude (Sonnet 5.5) — UI-8 Changes rename
+- **GIT-4 commit hunks:** the per-hunk "Recorded work" action now also appears on a commit's file patch in the Git graph; details in TASKS GIT-4.
 - **UI-8 slice:** Modern's review dialog and ⋯ entry are now **Changes** (the header button already was). Classic and Canvas unchanged. The rest of UI-8 stays open; see TASKS.
 
 ### Yash with Claude (Sonnet 5.5) — GIT-4 per-hunk recorded work; UI-1 corner overlap checked
