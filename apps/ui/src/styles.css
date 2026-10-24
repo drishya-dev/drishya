@@ -192,7 +192,7 @@ code, kbd, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
 .op:hover { border-color: var(--line-3); transform: translateY(-2px); z-index: 60 !important; opacity: 1 !important; }
 .op.expanded { grid-column: 1 / -1; max-height: none; transform: none; border-color: var(--line-3); }
 .op.expanded:hover { transform: none; }
-.op-expand { flex: none; color: var(--t3); font: 11px var(--mono); padding: 3px 5px; border: 1px solid transparent; border-radius: var(--r-sm); }
+.op-expand { flex: none; color: var(--t3); font: 12px var(--mono); padding: 3px 5px; border: 1px solid transparent; border-radius: var(--r-sm); }
 .op-expand:hover, .op-expand:focus-visible { color: var(--t1); border-color: var(--line-3); }
 .op-expanded { max-height: min(62vh, 660px); overflow: auto; padding: 10px 14px 16px; border-top: 1px solid var(--line); cursor: text; }
 .op-expanded .code { font-size: 12.5px; }

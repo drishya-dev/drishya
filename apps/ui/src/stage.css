@@ -114,7 +114,7 @@
 .connected-workspace .folder-tree { flex: 0 1 auto; }
 .connected-workspace .workspace-bar { position: absolute; top: calc(var(--crown-h) + 8px); left: 12px; right: auto; width: auto; height: 28px; padding: 0 7px; background: var(--s1); border: 1px solid var(--line); border-radius: 7px; gap: 5px; }
 .connected-workspace .workspace-toggles { gap: 8px; }
-.connected-workspace .workspace-bar .btn { font-size: 9px; padding: 3px; }
+.connected-workspace .workspace-bar .btn { font-size: 12px; padding: 3px; }
 .connected-workspace .crown { grid-template-columns: 1fr minmax(0, 2fr) 1fr; grid-template-rows: 40px; padding: 6px 18px 8px; }
 .connected-workspace.multi-agent .crown { grid-template-rows: 40px 24px; }
 .connected-workspace .crown-title { display: block; }
@@ -271,7 +271,7 @@
 .connected-workspace .history .turn-text, .connected-workspace .history .prose { font-size: 15px; line-height: 1.75; }
 .connected-workspace .history .turn { max-width: min(76ch, 88%); margin-left: auto; padding: 8px 12px; border-left: 0; border-right: 2px solid color-mix(in srgb, var(--session-color) 65%, var(--t1)); background: linear-gradient(to left, var(--s1), transparent); }
 .connected-workspace .history .prose { max-width: 76ch; }
-.captured-time { display: inline-flex; align-items: baseline; color: var(--t3); font-size: 10px; white-space: nowrap; }
+.captured-time { display: inline-flex; align-items: baseline; color: var(--t3); font-size: 11px; white-space: nowrap; }
 .captured-clock { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; transition: max-width 240ms var(--ease), opacity 240ms var(--ease); }
 .captured-time:hover .captured-clock, .captured-time:focus .captured-clock { max-width: 16ch; opacity: 1; }
 .connected-workspace .map-tools { top: auto; bottom: max(72px, calc(var(--composer-gap, 60px) + 12px)); left: 50%; transform: translateX(-50%); }
@@ -519,9 +519,9 @@
 .connected-workspace .prompt-composer.open { overflow: visible; }
 .prompt-composer form { position: static; }
 .native-turn-details { z-index: 1; }
-.connected-workspace > .workspace-bar button { min-height: 30px; font-size: 11px; }
+.connected-workspace > .workspace-bar button { min-height: 30px; font-size: 12px; }
 
-.connected-workspace > .workspace-bar .btn { min-height: 30px; font-size: 11px; }
+.connected-workspace > .workspace-bar .btn { min-height: 30px; font-size: 12px; }
 
 @media (max-width: 820px) {
   .connected-workspace .catalog-toggle { bottom: 52px; right: 12px; }
