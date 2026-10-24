@@ -33,12 +33,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
-| UI-2 | @yash + Claude | `yash/ui-2-modern-metadata` | 2026-10-24 | Slice: the Modern session surface's remaining metadata under 11 px and controls under 12 px (found by a runtime scan, not a stylesheet count), CSS values only in the existing rules (`stage.css`, `product.css`, `atelier.css`, `p1.css`, `studio.css`, `styles.css`, `reliability.css`, `modern/*.css`, `components/captured-outcomes.css`), plus a permanent `tests/browser/session-typography.spec.ts`. No component, schema, ingest, history-worker or `History.tsx` change. Other surfaces stay open. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — UI-2 Modern session-surface typography
+- **UI-2 slice:** the Modern session surface now keeps metadata at 11 px and controls at 12 px, with a permanent guard spec across all seven palettes. Method (runtime scan, not a stylesheet count), the exact list and the deliberate 11 px exception (the turn-ledger fold line) are in TASKS UI-2. Other surfaces remain open.
 
 ### Yash with Claude (Sonnet 5.5) — UI-8 Changes rename
 - **GIT-4 commit hunks:** the per-hunk "Recorded work" action now also appears on a commit's file patch in the Git graph; details in TASKS GIT-4.

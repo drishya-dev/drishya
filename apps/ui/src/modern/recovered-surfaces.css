@@ -98,7 +98,7 @@
 :root[data-ui-version=modern] .modern-session-header .studio-session-label { font-size:9px; color:var(--t3); letter-spacing:.025em; text-transform:none; }
 :root[data-ui-version=modern] .modern-session-header .studio-actions { gap:5px; justify-self:end; }
 :root[data-ui-version=modern] .modern-session-header .studio-actions :is(.btn,.workspace-menu>summary) { min-height:30px; height:30px; border:0; background:none; border-radius:7px; box-shadow:none; }
-:root[data-ui-version=modern] .modern-session-header .search-open { padding:5px 8px; gap:7px; font-size:11px; }
+:root[data-ui-version=modern] .modern-session-header .search-open { padding:5px 8px; gap:7px; font-size:12px; }
 :root[data-ui-version=modern] .modern-session-header .settings-open { width:30px; padding:6px; }
 :root[data-ui-version=modern] .modern-session-header .workspace-menu>summary { width:30px; }
 @media(hover:hover) and (pointer:fine) { .modern-attachment:hover,.modern-toolbox button:hover,.modern-toolbox summary:hover,:root[data-ui-version=modern] .modern-review-control .git-open:hover,:root[data-ui-version=modern] .modern-session-header .studio-actions :is(.btn,.workspace-menu>summary):hover { background:var(--s2); color:var(--t1); } }

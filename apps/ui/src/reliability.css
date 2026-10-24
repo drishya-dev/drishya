@@ -15,7 +15,7 @@
 
 .native-options-menu > small { overflow-wrap: anywhere; min-width: 0; }
 
-.tool-input-fields { margin:0; }.tool-input-fields>div { padding:7px 0; border-bottom:1px solid var(--line); }.tool-input-fields dt { font:10px/1.5 var(--sans); color:var(--t3); margin-bottom:4px; }.tool-input-fields dd { margin:0; min-width:0; }.tool-input-fields pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }.tool-input-fields .tool-input-fields { padding-left:12px; border-left:1px solid var(--line); }
+.tool-input-fields { margin:0; }.tool-input-fields>div { padding:7px 0; border-bottom:1px solid var(--line); }.tool-input-fields dt { font:11px/1.5 var(--sans); color:var(--t3); margin-bottom:4px; }.tool-input-fields dd { margin:0; min-width:0; }.tool-input-fields pre { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }.tool-input-fields .tool-input-fields { padding-left:12px; border-left:1px solid var(--line); }
 
 /* Rich outcomes/arguments need reading width; short receipts keep their compact allocation. */
 :root[data-experience=classic] .connected-workspace .history .op:is(.k-test,.k-mcp,.k-other) { flex-basis:min(var(--reading-width,380px),100%); min-width:min(320px,100%); }

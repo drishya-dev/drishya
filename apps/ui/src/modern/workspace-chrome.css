@@ -87,7 +87,7 @@
  :root[data-ui-version=modern][data-experience=classic] .workspace-leading { left:12px;max-width:calc(50% - 15px); }
  :root[data-ui-version=modern][data-experience=classic] .workspace-secondary { right:12px;max-width:calc(50% - 15px);gap:3px; }
  :root[data-ui-version=modern][data-experience=classic] .workspace-toggles button { padding-inline:6px;gap:4px; }
- :root[data-ui-version=modern][data-experience=classic] .workspace-secondary>button,:root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control .git-open { padding-inline:6px;gap:4px;font-size:11px; }
+ :root[data-ui-version=modern][data-experience=classic] .workspace-secondary>button,:root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control .git-open { padding-inline:6px;gap:4px;font-size:12px; }
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner { padding-top:calc(var(--workspace-tools-bottom,125px) + 12px); }
 }
 
