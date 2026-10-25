@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, Projection } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import { fileEvidence, type FileEvidence } from '../lib/file-evidence.ts';
+import { fileTimeline, timelineStep } from '../lib/file-timeline.ts';
 import { agentName, KIND_LABEL } from '../lib/identity.ts';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -118,6 +119,21 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const first = leftKey?choices.find(item=>item.key===leftKey):choices.find(item => item.key === preferred) ?? referenced ?? (focusChange ? choices.find(item => item.patch) ?? choices.find(item => item.operation.kind === 'write' || item.operation.kind === 'edit') : undefined) ?? choices[0];
   const second = rightKey?choices.find(item=>item.key===rightKey):choices.at(-1);
   useEffect(() => { if (!leftKey && first) setLeft(first); }, [leftKey, first]);
+  // Steps follow the loaded action page, in its recorded order; retained or clicked extras never reorder them.
+  const steps = useMemo(() => fileTimeline(page?.operations ?? [], path), [page, path]);
+  const stepper = timelineStep(steps, first);
+  const previousStep = useRef<HTMLButtonElement>(null), nextStep = useRef<HTMLButtonElement>(null);
+  const stepped = useRef<'previous' | 'next' | undefined>(undefined);
+  const stepTo = (side: 'previous' | 'next') => { const target = stepper[side]; if (!target) return; stepped.current = side; setLeft(target); };
+  useEffect(() => {
+    const side = stepped.current;
+    if (!side) return;
+    stepped.current = undefined;
+    // Reaching either end disables the button that was pressed; keep keyboard focus on the one that still works.
+    const here = side === 'previous' ? previousStep.current : nextStep.current;
+    if (here?.disabled) (side === 'previous' ? nextStep.current : previousStep.current)?.focus();
+    trail.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [first?.key]);
   const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
   return <ReadingDialog title={`Work on ${path}`} windowId={explore||canvas?undefined:'Captured file'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||canvas||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${windowWidth}px,calc(100vw - 28px))`}} resizeControl={explore||canvas||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth} minimum={640} maximum={1800} change={setWindowWidth} reset={()=>setWindowWidth(1700)} label="Resize captured file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore || canvas}>
     <div className="file-reading-context"><EvidenceNavigation compact={modern} />
@@ -144,6 +160,11 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
       <section ref={reading} className="file-evidence-reading" aria-label="File evidence">
         <div className="file-evidence-toolbar">{!modern && <strong>Historical evidence</strong>}{!canvas && source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.getState().set({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}{!modern && <button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>}<button className="btn" aria-label={compare ? 'Single evidence' : 'Compare evidence'} aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{modern ? (compare ? 'Single view' : 'Compare') : (compare ? 'Single evidence' : 'Compare evidence')}</button>{modern && <WorkspaceOptions label="Captured file actions"><button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>{!canvas && <div onClick={event=>event.stopPropagation()}><ImportContext path={path} /></div>}</WorkspaceOptions>}</div>
 
+        {!compare && stepper.total > 1 && <div className="file-timeline-steps" role="group" aria-label="Step through captured reads and edits of this file">
+          <button ref={previousStep} className="btn ghost" disabled={!stepper.previous} onClick={() => stepTo('previous')}>Previous change</button>
+          <span role="status" className="muted small" title={page && page.total > page.operations.length ? 'Steps through the recorded actions loaded in this page of the list' : undefined}>{stepper.position ?? '–'} of {stepper.total}</span>
+          <button ref={nextStep} className="btn ghost" disabled={!stepper.next} onClick={() => stepTo('next')}>Next change</button>
+        </div>}
         {!canvas && !modern && <ImportContext path={path} />}
         {diskError && <p className="bad" role="alert">{diskError}</p>}
         {choices.length > 0 ? <div className={`file-evidence-columns${compare ? ' paired' : ''}`}>

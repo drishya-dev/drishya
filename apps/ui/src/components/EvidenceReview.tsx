@@ -2,7 +2,7 @@ import {InterfaceGlyph} from './InterfaceGlyph.tsx';
 import {ReviewTools} from './ReviewInsights.tsx';
 import { useEffect, useState } from 'react';
 import type { Projection } from '@drishya/contracts';
-import { sinceSnapshot, type SinceSnapshot } from '../../../../packages/scene/src/since.ts';
+import { sinceSnapshot, type SinceFileStat, type SinceSnapshot } from '../../../../packages/scene/src/since.ts';
 import { useApp } from '../state.ts';
 import { ReadingDialog } from './ProductShell.tsx';
 import { FileIcon } from './FileIcon.tsx';
@@ -54,7 +54,7 @@ function ReviewContent({ projection, close, after }: { projection: Projection; c
       <div className="review-counts"><span><strong>{facts.editedFileCount.toLocaleString()}</strong> {facts.editedFileCount === 1 ? 'file' : 'files'} with change inputs</span><span><strong>{facts.counts.failures.toLocaleString()}</strong> failed {facts.counts.failures === 1 ? 'operation' : 'operations'}</span><span><strong>{facts.counts.tests.toLocaleString()}</strong> test {facts.counts.tests === 1 ? 'run' : 'runs'}</span></div>
       {!!facts.unplacedCount&&<p className="review-note">{facts.unplacedCount} entries lack captured observation positions. They cannot be placed after a reading boundary; inspect them in whole-recording review.</p>}
       <div className="review-layout"><section className="review-files" aria-label="Files with captured changes"><h3>Changed files</h3>
-        {facts.editedFiles.length ? facts.editedFiles.map(path => <div className="review-file-entry" key={path}><button onClick={() => { useApp.getState().set({ filePanel: path, filePanelFocus: 'change', currentFile: undefined, explore: false }); close(); }}><FileIcon path={path} /><span>{path}</span><span aria-hidden="true">↗</span></button>{facts.fileStats?.[path]&&<small className="review-file-stat" title="Counted from captured patches; turn is the prompt turn of the last captured edit"><b className="add">+{facts.fileStats[path]!.added}</b> <b className="del">−{facts.fileStats[path]!.removed}</b>{facts.fileStats[path]!.turn?` · turn ${facts.fileStats[path]!.turn}`:''}</small>}<button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={()=>{close();useApp.setState({mapVisible:true,explore:true,developerWorkspace:false,selectedOp:undefined,expandedOp:undefined,filePanel:undefined,currentFile:undefined,mapFocusPath:path});}}><InterfaceGlyph name="map"/></button></div>) : <p className="muted">{facts.editedFileCount ? 'No more changed files on this page.' : 'No change inputs recorded.'}</p>}
+        {facts.editedFiles.length ? facts.editedFiles.map(path => <div className="review-file" key={path}><div className="review-file-entry"><button onClick={() => { useApp.getState().set({ filePanel: path, filePanelFocus: 'change', currentFile: undefined, explore: false }); close(); }}><FileIcon path={path} /><span>{path}</span><span aria-hidden="true">↗</span></button>{facts.fileStats?.[path]&&<small className="review-file-stat" title="Counted from captured patches; turn is the prompt turn of the last captured edit"><b className="add">+{facts.fileStats[path]!.added}</b> <b className="del">−{facts.fileStats[path]!.removed}</b>{facts.fileStats[path]!.turn?` · turn ${facts.fileStats[path]!.turn}`:''}</small>}<button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={()=>{close();useApp.setState({mapVisible:true,explore:true,developerWorkspace:false,selectedOp:undefined,expandedOp:undefined,filePanel:undefined,currentFile:undefined,mapFocusPath:path});}}><InterfaceGlyph name="map"/></button></div><FileEdits stat={facts.fileStats?.[path]} close={close}/></div>) : <p className="muted">{facts.editedFileCount ? 'No more changed files on this page.' : 'No change inputs recorded.'}</p>}
         {facts.editedFileCount > facts.editedFiles.length && <p className="muted">Showing {facts.editedFiles.length} of {facts.editedFileCount} files on page {page + 1}. Use review pages for the rest.</p>}
         <p className="review-note">Captured patches can be proposed or reconstructed. Open a file to inspect its actual evidence and later checks.</p>
       </section><div className="review-outcomes">{groups.map(([key, title]) => <section key={key} aria-label={title}><h3>{title} <span>{facts.counts[key]}</span></h3>
@@ -63,4 +63,17 @@ function ReviewContent({ projection, close, after }: { projection: Projection; c
       </section>)}</div></div>
     </>}
   </ReadingDialog>;
+}
+
+const outcomeMark = { passed: '✓', failed: '✗', unknown: '?' } as const;
+const outcomeWord = { passed: 'passed', failed: 'failed', unknown: 'outcome not recorded' } as const;
+
+/** READ-5: one line per captured edit. The turn is the edit's own position; a test run is linked only when one was recorded after it in the same turn. */
+function FileEdits({ stat, close }: { stat?: SinceFileStat; close: () => void }) {
+  if (!stat?.fileEdits?.length) return null;
+  const open = (operationId: string) => { useApp.getState().select(operationId); close(); };
+  return <ol className="review-file-edits" aria-label="Captured edits of this file">{stat.fileEdits.map(edit => <li key={edit.operationId}>
+    <button className="review-edit" title="Open this captured edit" onClick={() => open(edit.operationId)}>{edit.turn ? `turn ${edit.turn}` : <span title="No captured position for this edit, so its turn is not claimed">unattributed</span>} · <b className="add">+{edit.added}</b> <b className="del">−{edit.removed}</b></button>
+    {edit.nextTest && <button className={`review-edit-test ${edit.nextTest.outcome}`} title="The first test run recorded after this edit in the same turn; recorded order, not a verdict on the edit" aria-label={`Next test run in this turn: ${outcomeWord[edit.nextTest.outcome]}`} onClick={() => open(edit.nextTest!.operationId)}>→ next test run <span aria-hidden="true">{outcomeMark[edit.nextTest.outcome]}</span></button>}
+  </li>)}{stat.edits > stat.fileEdits.length && <li className="muted">{stat.edits - stat.fileEdits.length} more captured {stat.edits - stat.fileEdits.length === 1 ? 'edit' : 'edits'}</li>}</ol>;
 }
