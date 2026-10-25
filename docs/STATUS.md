@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-2 | @yash + Codex | `codex/content-2-search-acceptance` | 2026-10-25 | Existing web-search result correctness/acceptance only: owning web result component/helper and focused unit/browser tests plus docs (at most 6 files). No browser strip/new feature, capture/contracts/projection/DATA-3, History/PERF-2 or shared CSS. Actual captured results; safe click-only links and complete raw access. |
 | UI-2 | @yash + Claude | `yash/ui-2-composer` | 2026-10-25 | Typography floor, composer slice only; Home is another session. Modern composer CSS rules raised in place, new `tests/browser/composer-typography.spec.ts`, TASKS/STATUS (≤6 files). No component/layout/behaviour change, History, PERF-2, schema. |
 | FILES-1 | @yash + Codex | `codex/files-1-deletion-acceptance` | 2026-10-25 | Finish existing deletion-evidence acceptance: `packages/scene/test/file-evidence.test.ts`, new focused browser spec and docs; scene `file-evidence.ts` only if an actual correctness defect is reproduced (≤6 files). No History/PERF-2, new explorer UI, shared CSS, capture/contracts/projection or DATA-3 edits. |
 | CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
@@ -45,6 +44,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — CONTENT-2 search reading correctness
+
+- **25 October 2026, PR #224:** expanded recorded web results now wrap full supplied titles; compact previews stay compact. Offline unsupported/malformed URLs remain literal and inert; only valid absolute HTTP(S) links navigate on explicit click/Enter. No automatic fetching. [Evidence](review/content-2-search-acceptance.md).
+- **Verified:** five focused browser checks, six actual Codex/Claude journeys at 1440/390/320 px, 795 whole units, both types and build. Actual phone frame inspected; native journals unchanged and uncommitted. CONTENT-2 remains open for its browser strip/new-source acceptance; own narrow claim released.
+- **Gate:** History/PERF-2 stays paused by the builder. No shared CSS, capture, schema or new feature. #224 ready for focused review, not automatic merge through TEST-2. Earlier independent #214/#219/#220/#221 remain pending builder review; their own reports define completion scope.
+
 
 ### Yash with Claude (Sonnet 5.5) — GIT-4 Recorded work picker
 - **GIT-4 picker:** when several captured edits wrote the same Git hunk lines, "Recorded work · N edits" in Git review and the Git graph now opens a small keyboard menu (turn + operation title, newest first); one match is unchanged and the matching rule is untouched. Turn labels are counted from the edit's own agent's captured prompts, or omitted when none is captured. Details and what stays open (Classic, other repo roots) are in TASKS GIT-4.
@@ -121,14 +127,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Yash with Claude (Opus 5.5) — PERF-2 profiled after DATA-1/2 (claim held, fixes tomorrow)
 
 - **When:** 20 October 2026. Merged DATA-2 (#149), DATA-1 (#151), TEST-2 (#175) and Codex PERF-1 (#171). Re-measured the 564 MB journal with typed items (26,593 observations): first history page ≈ 6.6 s, append+browser RSS 531–545 MiB, API p95 139–214 ms. The cold build's largest cost is ≈ 2.7 s of per-file derived blob writes (≈ 4,400 new files, 90 MB); then ≈ 1.8 s reducer logic and 0.66 s ordered read; live sync turns block the event loop 110–150 ms. Ordered plan for the fixes is under PERF-2 in TASKS. The performance gate stays red, so feature items wait.
-
-### Yash with Codex — PERF-1 measured; PERF-2 gate open, ready for Claude review
-
-- **When:** 20 October2026. PR **#171**, `codex/perf-1-large-journals`. Claimed the first independent dependency-ready item after DATA-3…6 overlapped Harsh's DATA-1/2 files. Adds opt-in isolated real-journal benchmark and a regression for partial writes/source preservation. Native journals stay read-only; normal/error completion removes snapshots and redacted stores. [Report](review/perf-1-large-journals.md).
-- **Result:** five complete-import and five append/browser runs per166/347/564MB actual source. Zero capture gaps; every append result matches full-import observation IDs/order; repeated sync adds nothing. The biggest journal exceeds the512MiB reference screening budget and shows API stalls. PERF-1 measurement is complete; **PERF-2 remains open and new feature work is gated pending restoration or an explicitly agreed narrower support range**. No green scale/release claim.
-- **Validation and limits:** 679 integrated unit tests plus36 focused JSONL/ingest/probe checks; both project types and direct script typecheck. Installed Edge on the reference Windows machine; uncontrolled background development load, warm OS cache, headless frame/API proxies, physical/human acceptance unmeasured. Rerun after DATA-1/2 retention changes. No runtime/schema/dependency changes, native turn or hosted CI.
-- **Merge signal:** **#171 READY FOR CLAUDE REVIEW / SQUASH** after final numeric matrix and local checks. Own claim removed only in this finishing PR. Main #172 TodoWrite and subsequent EXPLAIN priority change integrated; other claims and dependency order preserved.
-
 
 ### Yash with Claude (Opus 5.5) — TEST-2 flaky specs (main cause fixed) and DATA-1/DATA-2 merged
 
