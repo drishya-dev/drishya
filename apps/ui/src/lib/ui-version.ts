@@ -1,15 +1,25 @@
 export type UIVersion = 'canvas' | 'classic' | 'modern';
 const key = 'drishya-ui-version';
-export function resolveUIVersion(search: string, saved?: string | null): string {
+const devKey = 'drishya-dev-ui-versions';
+/**
+ * Modern is the only version a person can choose (UI-4, 25 Oct). Legacy, Canvas and the chooser stay in the code
+ * behind this developer switch: `?versions` in the URL, or `localStorage['drishya-dev-ui-versions'] = '1'`.
+ */
+export function versionChoiceEnabled(search: string = location.search): boolean {
+  if (new URLSearchParams(search).has('versions')) return true;
+  try { return localStorage.getItem(devKey) === '1'; } catch { return false; }
+}
+/** An explicit `?experience=` always wins (tests and links). A saved Legacy/Canvas choice applies only with the developer switch on. */
+export function resolveUIVersion(search: string, saved?: string | null, developerChoice = false): string {
   const explicit = new URLSearchParams(search).get('experience');
   if (explicit) return explicit === 'fresh' ? 'modern' : explicit;
   if (saved === 'fresh' || saved === 'modern') return 'modern';
-  return saved === 'canvas' || saved === 'classic' ? saved : 'modern';
+  return developerChoice && (saved === 'canvas' || saved === 'classic') ? saved : 'modern';
 }
 export function selectedUIVersion(): string {
   let saved: string | null = null;
   try { saved = localStorage.getItem(key) ?? localStorage.getItem('drishya-experience-v4'); } catch { /* URL selection works without storage. */ }
-  return resolveUIVersion(location.search, saved);
+  return resolveUIVersion(location.search, saved, versionChoiceEnabled());
 }
 export function versionURL(href: string, version: UIVersion): string {
   const url = new URL(href); url.searchParams.set('experience', version);

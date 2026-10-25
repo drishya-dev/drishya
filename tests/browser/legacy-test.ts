@@ -4,7 +4,8 @@ import { test as base, expect } from '@playwright/test';
  * The default observation canvas has its own acceptance journeys. */
 export const test = base.extend({
   page: async ({ page }, use) => {
-    await page.addInitScript(() => localStorage.setItem('drishya-experience-v4', 'classic'));
+    // UI-4: a saved Legacy choice applies only with the developer switch (Modern is the only product choice).
+    await page.addInitScript(() => { localStorage.setItem('drishya-experience-v4', 'classic'); localStorage.setItem('drishya-dev-ui-versions', '1'); });
     // Each browser journey begins with its own reading locations. The daemon is
     // deliberately shared by tests, whereas real users intentionally share recovery.
     // Keep reloads within a journey intact; fresh-workspace covers recovery explicitly.

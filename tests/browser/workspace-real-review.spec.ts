@@ -95,6 +95,7 @@ test('actual product surfaces keep evidence, current source, review and map navi
   }
 });
 test('actual session palette and settings survey keeps readable controls at desktop and phone sizes',async({page})=>{
+  await page.addInitScript(() => { try { localStorage.setItem('drishya-dev-ui-versions', '1'); } catch { /* the URL switch works without storage */ } });
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(ids[0]!)}`);

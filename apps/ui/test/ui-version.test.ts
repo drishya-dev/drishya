@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveUIVersion, versionURL } from '../src/lib/ui-version';
+import { resolveUIVersion, versionChoiceEnabled, versionURL } from '../src/lib/ui-version';
 
 describe('UI version navigation', () => {
   it('lets explicit links override the saved version and rejects unknown saved choices', () => {
@@ -8,12 +8,22 @@ describe('UI version navigation', () => {
     expect(resolveUIVersion('?experience=fresh')).toBe('modern');
     expect(resolveUIVersion('')).toBe('modern');
     expect(resolveUIVersion('', 'modern')).toBe('modern');
-    expect(resolveUIVersion('', 'canvas')).toBe('canvas');
+    expect(resolveUIVersion('', 'canvas', true)).toBe('canvas');
     expect(resolveUIVersion('?experience=canvas', 'modern')).toBe('canvas');
     expect(resolveUIVersion('?experience=modern', 'canvas')).toBe('modern');
-    expect(resolveUIVersion('', 'classic')).toBe('classic');
+    expect(resolveUIVersion('', 'classic', true)).toBe('classic');
     expect(resolveUIVersion('', 'unknown')).toBe('modern');
     expect(resolveUIVersion('?experience=studio', 'fresh')).toBe('studio');
+  });
+  it('makes Modern the only product choice: a saved Legacy or Canvas choice is ignored unless the developer switch is on', () => {
+    expect(resolveUIVersion('', 'classic')).toBe('modern');
+    expect(resolveUIVersion('', 'canvas')).toBe('modern');
+    expect(resolveUIVersion('', 'classic', false)).toBe('modern');
+    expect(resolveUIVersion('', 'classic', true)).toBe('classic');
+    expect(resolveUIVersion('?experience=classic', 'modern')).toBe('classic');
+    expect(versionChoiceEnabled('?versions')).toBe(true);
+    expect(versionChoiceEnabled('?experience=classic&versions=all')).toBe(true);
+    expect(versionChoiceEnabled('?experience=classic')).toBe(false);
   });
   it('drops presentation-specific subviews when changing shells', () => {
     expect(new URL(versionURL('http://localhost/?experience=modern#/r/recording/settings', 'classic')).hash).toBe('#/r/recording');
