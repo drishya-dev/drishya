@@ -39,13 +39,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — FILES-4 shared draft and current-file correctness
+### Yash with Codex — CONTENT-7 numeric evidence fidelity
 
-- **25 October 2026, PR #226:** shared editor updates map into the existing CodeMirror state without focus/selection/undo loss. Current files omitted by a capped or explicitly stale map now pass one-path index eligibility rather than an automatic refusal; complete unchanged maps still reject missing nodes. [Evidence and remaining scope](review/files-4-shared-draft.md).
-- **Verified:** 836 whole units, both types/build, twelve focused browser cases; 23 new index/Workspace guards preserve exclusions, consent, redaction and revocation. Actual Drishya Claude Blueprint and root README reading/drafts at desktop/390 px, current disk unchanged. Root README remains outside its 5,000-node map but now opens normally. No repository rescan, native submission, project write, History/PERF-2, CSS or capture/schema change.
-- **Handoff:** expanded same FILES-4 claim before backend work; ten changed files within its twelve-file budget. Own claim released here. Broader reader acceptance remains open. Other builders' claims retained; History/PERF-2 remains paused. #226 ready for focused builder review, no automatic merge through TEST-2.
-
-
+- **25 October 2026, PR #228:** existing JSON reader rounded large IDs, decimals, overflow and underflow. Primitive source tokens now remain numeric leaves through tree/table/search and nested Copy value; Copy original is unchanged. Unsupported source-context parsing leaves exact Original available. [Report](review/content-7-number-fidelity.md).
+- **Checks:** eight guards fail before fix; 16 model units, six browser checks, four actual Codex/Claude desktop/phone journeys. Real samples have canonical numbers only; synthetic fixtures establish precision edge cases. After main #226 integration: 847 units, both types/build pass. No capture/schema/persistence, CSS, native-control or History/PERF-2 change.
+- **Handoff:** own claim released; broader CONTENT-7 and physical/human compatibility remain open. #228 ready for focused builder review. #226 has landed on main. Read-only REL-1 recurrence evidence is in audit38 and remains unproven as a cure; paused History/PERF-2 stays untouched.
 
 
 ### Yash with Codex — REL-1 bounded read-only recurrence check
