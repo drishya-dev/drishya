@@ -1,9 +1,25 @@
 export interface DataNode {pointer:string;parent?:string;key:string;depth:number;value:unknown;size:number;container:boolean}
 export interface StructuredData {value:unknown;nodes:DataNode[];table?:{rows:Record<string,unknown>[];columns:string[];pointer:string}}
-const record=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
+const numberSource=Symbol('captured JSON number');
+interface NumberToken {[numberSource]:string}
+const numberToken=(value:unknown):value is NumberToken=>!!value&&typeof value==='object'&&numberSource in value;
+const record=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value)&&!numberToken(value);
+/** Serialize a selected captured value without rounding numeric literals or changing their type. */
+export function dataText(value:unknown):string{
+ if(numberToken(value))return value[numberSource];
+ if(Array.isArray(value))return `[${value.map(dataText).join(',')}]`;
+ if(record(value))return `{${Object.entries(value).map(([key,item])=>`${JSON.stringify(key)}:${dataText(item)}`).join(',')}}`;
+ return JSON.stringify(value)??'Unavailable';
+}
 export const pointerKey=(key:string)=>key.replaceAll('~','~0').replaceAll('/','~1');
 export function structuredData(text:string):StructuredData|undefined{
- if(text.length>262144||new TextEncoder().encode(text).byteLength>262144)return;let value:unknown;try{value=JSON.parse(text);}catch{return;}
+ if(text.length>262144||new TextEncoder().encode(text).byteLength>262144)return;let value:unknown;try{value=JSON.parse(text,(_key,value,context?:{source?:string})=>{
+  if(typeof value!=='number')return value;
+  // Source-aware parsing keeps large ids, under/overflow and decimal spelling literal.
+  // Older parsers must leave inspection unavailable rather than silently round evidence.
+  if(typeof context?.source!=='string')throw new Error('Lossless number source unavailable');
+  return JSON.stringify(value)===context.source?value:{[numberSource]:context.source};
+ });}catch{return;}
  if(!record(value)&&!Array.isArray(value))return;
  const nodes:DataNode[]=[],pending:Array<{value:unknown;pointer:string;key:string;depth:number;parent:string|undefined}>=[{value,pointer:'',key:'$',depth:0,parent:undefined}];
  while(pending.length){const item=pending.pop()!;if(nodes.length>=25000||item.depth>80)return;
@@ -19,9 +35,9 @@ export function structuredData(text:string):StructuredData|undefined{
 }
 export function visibleDataNodes(nodes:DataNode[],expanded:Set<string>,query=''):DataNode[]{
  const needle=query.trim().toLowerCase();
- if(needle)return nodes.filter(node=>`${node.pointer} ${node.key} ${node.container?'':String(node.value)}`.toLowerCase().includes(needle)).slice(0,500);
+ if(needle)return nodes.filter(node=>`${node.pointer} ${node.key} ${node.container?'':dataLabel(node.value)}`.toLowerCase().includes(needle)).slice(0,500);
  const visible:DataNode[]=[];let hidden:number|undefined;
  for(const node of nodes){if(hidden!==undefined&&node.depth>hidden)continue;hidden=undefined;visible.push(node);if(node.container&&!expanded.has(node.pointer))hidden=node.depth;}
  return visible;
 }
-export function dataLabel(value:unknown):string{return value===null?'null':Array.isArray(value)?`Array · ${value.length}`:record(value)?`Object · ${Object.keys(value).length}`:typeof value==='string'?value:JSON.stringify(value)??'Unavailable';}
+export function dataLabel(value:unknown):string{return value===null?'null':Array.isArray(value)?`Array · ${value.length}`:record(value)?`Object · ${Object.keys(value).length}`:typeof value==='string'?value:dataText(value);}
