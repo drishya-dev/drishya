@@ -2,7 +2,7 @@
 //
 // Every TodoWrite call carries the whole list again. Showing each as its own card repeats the
 // list; here consecutive calls by one agent in one turn become a thread of revisions, and each
-// revision says what changed since the one before it. Changes are matched by item text, so a
+// revision says what changed since the one before it. Changes are matched by unique item text, so a
 // reworded item is reported as removed plus added, never as the same item edited.
 
 import type { Operation, Projection } from '@drishya/contracts';
@@ -27,15 +27,26 @@ export interface PlanPosition { thread: PlanThread; index: number }
 
 const rank = (status: string) => (status === 'completed' ? 2 : status === 'in_progress' ? 1 : 0);
 
+/** Repeated labels do not identify individual tasks; their literal states stay readable. */
+function repeatedLabels(items: readonly { text: string }[]): Set<string> {
+  const seen = new Set<string>(), repeated = new Set<string>();
+  for (const { text } of items) {
+    if (seen.has(text)) repeated.add(text);
+    seen.add(text);
+  }
+  return repeated;
+}
+
 function revision(op: Operation, previous?: PlanRevision): PlanRevision {
   const items = op.detail.kind === 'plan' ? op.detail.items : [];
   const before = new Map((previous?.items ?? []).map((item) => [item.text, item.status]));
   const now = new Set(items.map((item) => item.text));
+  const ambiguous = new Set([...repeatedLabels(previous?.items ?? []), ...repeatedLabels(items)]);
   const marked = items.map((item): PlanItem => {
     if (!previous) return { text: item.text, status: item.status };
     const was = before.get(item.text);
     if (was === undefined) return { text: item.text, status: item.status, change: 'added' };
-    if (was === item.status) return { text: item.text, status: item.status };
+    if (ambiguous.has(item.text) || was === item.status) return { text: item.text, status: item.status };
     const change: PlanChange = item.status === 'completed' ? 'completed' : item.status === 'in_progress' ? 'started' : rank(item.status) < rank(was) ? 'reopened' : 'started';
     return { text: item.text, status: item.status, change };
   });
