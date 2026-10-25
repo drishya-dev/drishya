@@ -1,8 +1,8 @@
 /* GIT-4 picker: a short list of the captured edits that wrote a Git hunk's lines. Controls 12 px, metadata 11 px. */
 .recorded-work-menu{position:relative;flex:none}
-.recorded-work-menu>summary{display:inline-flex;align-items:center;min-height:32px;font-size:12px;padding:5px 8px;cursor:pointer;list-style:none}
+.recorded-work-menu>summary{display:inline-flex;white-space:nowrap;align-items:center;min-height:32px;font-size:12px;padding:5px 8px;cursor:pointer;list-style:none}
 .recorded-work-menu>summary::-webkit-details-marker{display:none}
-.recorded-work-menu>summary::after{content:"";width:5px;height:5px;margin-left:7px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-1px) rotate(45deg);transition:transform .14s ease}
+.recorded-work-menu>summary::after{content:"";flex:none;box-sizing:content-box;width:5px;height:5px;margin-left:7px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-1px) rotate(45deg);transition:transform .14s ease}
 .recorded-work-menu[open]>summary::after{transform:translateY(1px) rotate(-135deg)}
 .recorded-work-menu[open]>summary{color:var(--t1);background:var(--s2);border-color:var(--line)}
 .recorded-work-menu .desk-options-body{width:min(280px,var(--menu-inline-space,calc(100vw - 40px)))}
