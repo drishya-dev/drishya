@@ -147,7 +147,7 @@
 .native-questions {margin:10px 0 0;border-top:1px solid var(--line);padding-top:10px;min-width:0;}
 .native-questions>header,.native-questions>footer {display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;}
 .native-questions>header strong {color:var(--t1);font:500 12px/1.5 var(--sans);}
-.native-questions>header span {color:var(--t3);font:10px/1.5 var(--sans);}
+.native-questions>header span {color:var(--t3);font:11px/1.5 var(--sans);}
 .native-question-list {max-height:min(340px,36dvh);overflow:auto;}
 .native-question-list fieldset {border:0;margin:0;padding:10px 0;min-width:0;}
 .native-question-list legend {padding:0;color:var(--t1);font:500 12px/1.6 var(--sans);overflow-wrap:anywhere;}

@@ -258,7 +258,7 @@
 .prompt-composer form, .prompt-composer .composer-actions, .prompt-composer textarea { min-width: 0; max-width: 100%; }
 .prompt-composer .composer-actions { flex-wrap: wrap; }
 .prompt-attachments { display: flex; flex-wrap: wrap; gap: 5px; max-height: 88px; overflow: auto; padding: 3px 5px; }
-.attachment-chip { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 220px; padding: 3px 6px; border: 1px solid var(--line-2); border-radius: 6px; font-size: 11px; background: var(--s2); }
+.attachment-chip { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 220px; padding: 3px 6px; border: 1px solid var(--line-2); border-radius: 6px; font-size: 12px; background: var(--s2); }
 .attachment-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attachment-chip img { width: 28px; height: 28px; object-fit: contain; border-radius: 3px; }
 .attachment-chip button { flex: none; padding: 2px 4px; }
@@ -502,9 +502,9 @@
 .native-options-menu { position: absolute; bottom: calc(100% + 8px); left: 0; width: min(310px, 75vw); padding: 12px; background: var(--s1); border: 1px solid var(--line-2); border-radius: 10px; color: var(--t2); display: grid; gap: 10px; z-index: 12; }
 .native-options-menu label { display: grid; gap: 4px; }
 .native-options-menu select { width: 100%; min-width: 0; padding: 6px; font-size: 12px; }
-.native-options-menu small { line-height: 1.5; overflow-wrap: anywhere; }
+.native-options-menu small { font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .send-confirmation { position: absolute; bottom: calc(100% + 10px); right: 0; padding: 12px; width: min(340px, 100%); background: var(--s1); border: 1px solid var(--line-2); border-radius: 9px; font-size: 12px; box-shadow: 0 12px 32px #0005; }
-.send-confirmation label { display: flex; align-items: center; gap: 6px; }.send-confirmation small { display: block; margin: 8px 0; color: var(--t3); }.send-confirmation button { padding: 5px 8px; }
+.send-confirmation label { display: flex; align-items: center; gap: 6px; }.send-confirmation small { display: block; margin: 8px 0; font-size: 11px; color: var(--t3); }.send-confirmation button { padding: 5px 8px; }
 .native-turn-details { position: absolute; bottom: calc(100% + 12px); left: 0; right: 0; max-height: 38dvh; overflow: auto; background: var(--s1); border-radius: 8px; }
 .native-turn-details:empty { display: none; }.native-turn-details .controller-receipt { margin: 0; font-size: 10px; }.native-turn-details summary { padding: 7px 10px; cursor: pointer; }.native-turn-details pre { padding: 8px 12px; font-size: 11px; overflow-wrap: anywhere; white-space: pre-wrap; }
 .cli-setup { font-size: 11px; max-height: 180px; overflow: auto; }.cli-setup code { display: block; user-select: all; margin: 6px 0; }.cli-setup p code { display: inline; }
