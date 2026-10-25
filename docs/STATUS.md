@@ -40,12 +40,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | CONTENT-1 | @yash + Codex | `codex/content-1-image-reader-acceptance` | 2026-10-25 | Existing image-reader phone/keyboard/refusal acceptance: new focused browser spec and report; image-reader component only if a demonstrated bug needs it (≤6 files). No History, PERF-2, DATA-3, shared dialog typography CSS or existing TEST-2 specs. Keep real Codex ImageView acceptance open without a genuine sample. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
-| UI-2 | @yash + Claude | `yash/ui-2-home` | 2026-10-25 | Home slice only; the composer is another session. Modern Home and whole-page surfaces reached from it (Search sessions dialog, empty/first-run): governing Home CSS rules raised in place, one new `tests/browser/home-floor-typography.spec.ts`, TASKS/STATUS notes (≤6 files). No component/layout/behaviour change; not History, common.tsx, PERF-2 files, schema. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — UI-2 Home / Search evidence typography (PR #223)
+- **UI-2 slice 3:** Modern Home was already at the 11 px / 12 px floor in every state reached (desktop and phone); the Search evidence dialog's filter inputs/selects and result path line are raised in place, with a seven-palette guard spec. Details and what was not reached in TASKS UI-2.
 
 ### Yash with Claude (Sonnet 5.5) — GIT-4 Recorded work picker
 - **GIT-4 picker:** when several captured edits wrote the same Git hunk lines, "Recorded work · N edits" in Git review and the Git graph now opens a small keyboard menu (turn + operation title, newest first); one match is unchanged and the matching rule is untouched. Turn labels are counted from the edit's own agent's captured prompts, or omitted when none is captured. Details and what stays open (Classic, other repo roots) are in TASKS GIT-4.
