@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | READ-5 | @yash + Claude | `yash/read-5-edit-turns` | 2026-10-25 | First slice only: per-file edit list in the Changes view (`turn N · +a −b → next test run ✓/✗`). `packages/scene/src/since.ts` + test, `apps/ui/src/components/EvidenceReview.tsx`, its review CSS, new `tests/browser/file-edit-turns.spec.ts`, docs (≤15 files). No worker, schema, History, PERF-2 or ingest files. |
-| READ-8 | @yash + Claude Sonnet 5.5 | `yash/read-8-file-steps` | 2026-10-25 | First slice: Previous change / Next change stepper with an n of N label in the file evidence panel. `apps/ui/src/components/FileHistory.tsx`, `file-reader-controls.css`, `apps/ui/src/lib/` helper + unit test, new `tests/browser/file-timeline-steps.spec.ts` (≤8 files). No History, common, PERF-2 files or contracts. |
 | GIT-4 | @yash + Claude | `yash/git-4-picker` | 2026-10-25 | Picker slice: the several-edits "Recorded work · N edits" action becomes a small keyboard-operable menu (turn + operation title, newest first) in `apps/ui/src/components/GitPatchReader.tsx`, `apps/ui/src/lib/hunk-evidence.ts`, its unit test, patch-controls CSS, and the two `git-*hunk-recorded-work` browser specs (≤15 files). Matching rule unchanged; no History/PERF-2 files, no schema. |
 | CONTENT-4 | @yash + Codex | `codex/content-4-ambiguous-plan-labels` | 2026-10-25 | Existing TodoWrite comparison correctness only: `packages/scene/src/plan-threads.ts`, its unit test, one new browser guard and docs (≤6 files). Duplicate labels must not invent task identity/status transitions. No History, PERF-2, DATA-3/contracts/projection, shared CSS or new plan sources. |
 | CONTENT-1 | @yash + Codex | `codex/content-1-image-reader-acceptance` | 2026-10-25 | Existing image-reader phone/keyboard/refusal acceptance: new focused browser spec and report; image-reader component only if a demonstrated bug needs it (≤6 files). No History, PERF-2, DATA-3, shared dialog typography CSS or existing TEST-2 specs. Keep real Codex ImageView acceptance open without a genuine sample. |
@@ -43,6 +42,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — READ-8 file stepper, slice 1 (PR #217, draft)
+- **READ-8 slice 1:** the file evidence panel steps through a file's captured reads and edits with Previous change / Next change and an "n of N" label (within the loaded action page; ends disable, focus moves to the working button, hidden in compare). Page-crossing and a whole-session count remain open, so READ-8 stays unticked; details in TASKS READ-8.
 
 ### Yash with Claude (Sonnet 5.5) — UI-2 dialogs slice; b2-live regression found
 - **UI-2 slice 2:** Git review, Git graph and the Developer Workspace now keep metadata at 11 px and controls at 12 px on all seven palettes, desktop and phone, with a guard spec; details in TASKS UI-2.

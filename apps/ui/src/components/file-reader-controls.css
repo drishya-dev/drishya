@@ -15,6 +15,9 @@
 :root[data-ui-version=modern] :is(.file-evidence-toolbar,.desk-document) .desk-options .import-context { margin:0;padding:6px 0;border:0; }
 :root[data-ui-version=modern] :is(.file-evidence-toolbar,.desk-document) .desk-options .import-context button { font-size:12px; }
 :root[data-ui-version=modern] .file-evidence-choice .captured-source-comparison [role=alert] { max-width:280px;font-size:12px; }
+.file-timeline-steps { display:flex;align-items:center;gap:6px;margin-bottom:6px; }
+:root[data-ui-version=modern] .file-timeline-steps .btn { font-size:12px;min-height:32px; }
+:root[data-ui-version=modern] .file-timeline-steps>span { font-size:11px;min-width:5ch;text-align:center;font-variant-numeric:tabular-nums; }
 @media(max-width:600px) {
  :root[data-ui-version=modern] .file-reading-context { gap:4px 10px;padding:6px 12px; }
  :root[data-ui-version=modern] .file-evidence-toolbar>strong { flex-basis:100%; }
