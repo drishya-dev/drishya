@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | CONTENT-7 | @yash + Codex | `codex/content-7-resource-acceptance` | 2026-10-25 | Existing structured-resource reader correctness/acceptance only: `apps/ui/src/lib/captured-resources.ts`, existing resource unit test, focused new browser spec and report/TASKS/STATUS (at most 6 files). No new views/features, capture/contracts/projection/DATA-3, History/PERF-2, shared CSS or other claimed files. |
 | CONTENT-2 | @yash + Codex | `codex/content-2-search-acceptance` | 2026-10-25 | Existing web-search result correctness/acceptance only: owning web result component/helper and focused unit/browser tests plus docs (at most 6 files). No browser strip/new feature, capture/contracts/projection/DATA-3, History/PERF-2 or shared CSS. Actual captured results; safe click-only links and complete raw access. |
-| UI-2 | @yash + Claude | `yash/ui-2-composer` | 2026-10-25 | Typography floor, composer slice only; Home is another session. Modern composer CSS rules raised in place, new `tests/browser/composer-typography.spec.ts`, TASKS/STATUS (≤6 files). No component/layout/behaviour change, History, PERF-2, schema. |
 | FILES-1 | @yash + Codex | `codex/files-1-deletion-acceptance` | 2026-10-25 | Finish existing deletion-evidence acceptance: `packages/scene/test/file-evidence.test.ts`, new focused browser spec and docs; scene `file-evidence.ts` only if an actual correctness defect is reproduced (≤6 files). No History/PERF-2, new explorer UI, shared CSS, capture/contracts/projection or DATA-3 edits. |
 | CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
 | CONTENT-4 | @yash + Codex | `codex/content-4-ambiguous-plan-labels` | 2026-10-25 | Existing TodoWrite comparison correctness only: `packages/scene/src/plan-threads.ts`, its unit test, one new browser guard and docs (≤6 files). Duplicate labels must not invent task identity/status transitions. No History, PERF-2, DATA-3/contracts/projection, shared CSS or new plan sources. |
@@ -45,6 +44,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — UI-2 composer slice
+- **UI-2 slice 4:** the Modern composer keeps metadata at 11 px and controls at 12 px in every state reachable with synthetic data (menus, attachments, confirmation, approval, stop, question, failed send), desktop and phone, all seven palettes, with a guard spec; details and the states not reached are in TASKS UI-2. UI-2 stays open (Home is its own session).
 
 ### Yash with Claude (Sonnet 5.5) — UI-2 Home / Search evidence typography (PR #223)
 - **UI-2 slice 3:** Modern Home was already at the 11 px / 12 px floor in every state reached (desktop and phone); the Search evidence dialog's filter inputs/selects and result path line are raised in place, with a seven-palette guard spec. Details and what was not reached in TASKS UI-2.
