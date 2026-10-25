@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import type { Operation, Projection, ReplayBundle } from '@drishya/contracts';
 import { sinceSnapshot } from '../src/since.ts';
-import { fileEvidence, touchedFiles } from '../src/file-evidence.ts';
+import { fileEvidence, touchedFiles, evidencePath } from '../src/file-evidence.ts';
 const base = (JSON.parse(readFileSync(new URL('../../../apps/ui/public/demo/bundle.json', import.meta.url), 'utf8')) as ReplayBundle).projection;
 const op = (path: string, kind: Operation['kind']='read', status: Operation['status']='ok', created=false): Operation => ({ ...base.operations[0]!, id: path, kind, status, paths: [{path, role:kind==='read'?'read':'write',basis:'captured'}], detail: kind==='read'?{kind:'read',path,startLine:1,lineCount:1}:{kind:'edit',path,hunks:[],created,reconstruction:'unavailable'} });
 const projection = (operations: Operation[]) => ({...base,operations});
@@ -48,6 +48,14 @@ describe('file evidence',()=>{
     const paths=p.operations.flatMap(operation=>operation.paths.map(ref=>ref.path));
     expect(fileEvidence(p,paths).filter(file=>file.change).map(file=>file.path).sort()).toEqual(sinceSnapshot(p,-1).editedFiles.sort());
   });
+  it('matches all paged Review files within the repository scope, not only the first fifty',()=>{
+    const p=projection([...Array.from({length:120},(_,i)=>op(`src/file-${i}.ts`,'edit')),op('/outside/root.ts','edit')]);
+    const pages=Array.from({length:3},(_,page)=>sinceSnapshot(p,-1,page).editedFiles).flat();
+    expect(sinceSnapshot(p,-1).editedFileCount).toBe(121);
+    expect(fileEvidence(p,pages).filter(e=>e.change).map(e=>e.path).sort()).toEqual(pages.filter(evidencePath).sort());
+    expect(fileEvidence(p,pages).filter(e=>e.change)).toHaveLength(120);
+  });
+
   it('aggregates distinct touched files, excludes mentions and unsafe/unresolved locations',()=>{
     const file=(path:string,roles:Projection['files'][number]['roles'])=>({path,roles,firstStep:0,lastStep:1});
     const result=touchedFiles([file('src/a.ts',['read']),file('src/a.ts',['write']),file('src/nested/b.ts',['search-hit']),file('notes.md',['mentioned']),file('/outside.ts',['read']),file('../private',['write'])]);
