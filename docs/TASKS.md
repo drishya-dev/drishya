@@ -703,6 +703,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 
 
 - [ ] **REL-1 · Managed-runtime update vs antivirus** · P2 — verify that a supported idle-time update resolves the recurring AV conflict; never interrupt active work or change antivirus protection (review 38).
+  - **25 October, read-only recurrence check:** supplied McAfee log has 39 records and still ends 17 October 07:51:57 UTC. Selected native Codex is 0.164.0-alpha.11.1; the old managed 0.160.0 process is absent from the current snapshot. Managed-daemon version query refused its socket connection, so its status/version is unknown. No update, restart, AV/config change or submission. Controlled idle-time remediation/recurrence acceptance remains open; [review38](review/38-windows-antivirus-audit.md).
 - [ ] **REL-2 · Physical platform acceptance** · P2 — lower-resource and lower-core machines; Windows, macOS and Linux; memory, large-repo and long-session performance; real phones and input devices; GPU fallback.
   - **19 October progress (107):** Windows reference-machine synthetic/resource/package checks in107. Emulated low-resource/4x CPU does not certify physical low-RAM/lower-core or other platforms.
 - [ ] **REL-3 · Human acceptance** · P2 — keyboard, browser zoom, assistive technology; human freeze/truth/ten-minute reading; preference and adoption.
