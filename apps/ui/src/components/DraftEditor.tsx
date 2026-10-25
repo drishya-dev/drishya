@@ -1,5 +1,5 @@
 import { useId, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
-import { Compartment, EditorState } from '@codemirror/state';
+import { Annotation, Compartment, EditorState, Transaction } from '@codemirror/state';
 import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, syntaxHighlighting } from '@codemirror/language';
@@ -21,6 +21,7 @@ function language(path:string) {
   if(ext==='md'||ext==='mdx')return markdown();
   return [];
 }
+const syncedDraft = Annotation.define<boolean>();
 const colors=HighlightStyle.define([
   {tag:[tags.keyword,tags.typeName],color:'var(--syntax-keyword,var(--external))'},
   {tag:[tags.string,tags.special(tags.string)],color:'var(--syntax-string,var(--pass))'},
@@ -37,6 +38,7 @@ export default function DraftEditor({path,text,change,error,hidden,ref}: {
   const keys=useId();
   const host=useRef<HTMLDivElement>(null),view=useRef<EditorView>(null);
   const callbacks=useRef({change,error});callbacks.current={change,error};
+  const latestText=useRef(text);
   const [position,setPosition]=useState({line:1,column:1}),[wrap,setWrap]=useState(false);
   const wrapping=useRef(new Compartment());
   // A uniform CRLF/CR file must not be normalized by editing a single character.
@@ -61,7 +63,10 @@ export default function DraftEditor({path,text,change,error,hidden,ref}: {
         return transaction;
       }),
       EditorView.updateListener.of(update=>{
-        if(update.docChanged)callbacks.current.change(update.state.sliceDoc());
+        if(update.docChanged) {
+          const value=update.state.sliceDoc();latestText.current=value;
+          if(update.transactions.some(transaction=>transaction.docChanged&&!transaction.annotation(syncedDraft)))callbacks.current.change(value);
+        }
         if(update.selectionSet||update.docChanged) {
           const head=update.state.selection.main.head,line=update.state.doc.lineAt(head);
           setPosition({line:line.number,column:head-line.from+1});
@@ -71,8 +76,18 @@ export default function DraftEditor({path,text,change,error,hidden,ref}: {
     view.current=editor;
     if(!hidden&&host.current?.closest('.desk-pane.active'))editor.focus();
     return ()=>{view.current=null;editor.destroy();};
-    // The document owns edits after mounting. React must not replace it on every keystroke.
+    // Keep the real editor mounted; shared draft updates below map into its existing state.
   },[path]);
+  // Another pane or explicit recovery can update this same retained draft. Map one
+  // minimal change into this view rather than remounting or replacing its selection/undo.
+  useLayoutEffect(()=>{
+    const editor=view.current;if(!editor||latestText.current===text)return;
+    const next=editor.state.toText(text);if(editor.state.doc.eq(next)){latestText.current=text;return;}
+    const before=editor.state.doc.toString(),after=next.toString();let from=0,endBefore=before.length,endAfter=after.length;
+    while(from<endBefore&&from<endAfter&&before[from]===after[from])from++;
+    while(endBefore>from&&endAfter>from&&before[endBefore-1]===after[endAfter-1]){endBefore--;endAfter--;}
+    editor.dispatch({changes:{from,to:endBefore,insert:next.slice(from,endAfter)},annotations:[syncedDraft.of(true),Transaction.addToHistory.of(false)]});
+  },[text,path]);
   useLayoutEffect(()=>{if(!hidden)view.current?.requestMeasure();},[hidden]);
   return <div className="draft-code-editor" hidden={hidden}>
     <div className="draft-editor-host" ref={host}/>
