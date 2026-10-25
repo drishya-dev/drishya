@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-7 | @yash + Codex | `codex/content-7-delimited-acceptance` | 2026-10-25 | Existing CSV/TSV reader correctness and acceptance only: owning delimited helper/component if a reproduced defect requires it, focused unit/browser tests, report/TASKS/STATUS (at most 8 files). No new reader, shared CSS, History/PERF-2, native control, capture/schema/projection/DATA-3 or persistence. |
 | FILES-5 | @yash + Codex | `codex/files-5-recovery-correctness` | 2026-10-25 | Existing opt-in recovery correctness/acceptance: owning draft recovery helper/component, focused unit/browser guards and report/TASKS/STATUS (at most 8 files). No autosave/new persistence, native writes, History/PERF-2, capture/contracts/projection/DATA-3 or shared CSS. Preserve explicit encryption/download/restore and newer unsaved drafts. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
@@ -45,11 +44,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **UI-4 slice 2:** the Canvas experience is deleted (about 1,000 lines plus its spec) and Legacy is documented as frozen. Details, what was kept (the shared map, all Legacy sheets Modern stands on) and what UI-4 still has open are in TASKS UI-4; the policy is in docs/CODEBASE.md.
 - **Also merged:** #228 (CONTENT-7 exact numbers in JSON readers, Codex), verified on current main first.
 
-### Yash with Codex — CONTENT-7 numeric evidence fidelity
+### Yash with Codex — CONTENT-7 delimited-reader acceptance
 
-- **25 October 2026, PR #228:** existing JSON reader rounded large IDs, decimals, overflow and underflow. Primitive source tokens now remain numeric leaves through tree/table/search and nested Copy value; Copy original is unchanged. Unsupported source-context parsing leaves exact Original available. [Report](review/content-7-number-fidelity.md).
-- **Checks:** eight guards fail before fix; 16 model units, six browser checks, four actual Codex/Claude desktop/phone journeys. Real samples have canonical numbers only; synthetic fixtures establish precision edge cases. After main #226 integration: 847 units, both types/build pass. No capture/schema/persistence, CSS, native-control or History/PERF-2 change.
-- **Handoff:** own claim released; broader CONTENT-7 and physical/human compatibility remain open. #228 ready for focused builder review. #226 has landed on main. Read-only REL-1 recurrence evidence is in audit38 and remains unproven as a cure; paused History/PERF-2 stays untouched.
+- **25 October 2026, PR #231:** existing explicit CSV/TSV reader passes terminal/empty/missing/Unicode/quoted values, exact limits and block/header/filter/copy states. No production change. [Evidence and source qualification](review/content-7-delimited-acceptance.md).
+- **Verified:** 10 model units, 5 browser checks, 4 actual Codex/Claude desktop/phone journeys; 847 whole units, both types/build. Actual samples are comma-bearing tool text chosen explicitly, not claimed schema-defined CSV. Preview/full-artifact input mismatch identified during diagnostics; final samples match their supplied text.
+- **Handoff:** own CONTENT-7 claim released, parent remains open for genuine datasets/broader documents and platform/human acceptance. #231 ready for builder review. Independent #229 recovery correctness also ready: 852 integrated units/two browser checks/actual Claude, scoped report in review/files-5-recovery-identity.md. DATA-3 ownership preserved, History/PERF-2 paused and no automatic merge through TEST-2.
 
 
 ### Yash with Codex — REL-1 bounded read-only recurrence check
