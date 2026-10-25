@@ -1,5 +1,5 @@
 import { Children, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { selectedUIVersion, switchUIVersion, type UIVersion } from '../lib/ui-version';
+import { selectedUIVersion, switchUIVersion, versionChoiceEnabled, type UIVersion } from '../lib/ui-version';
 import './ui-versions.css';
 
 const versions: { id: UIVersion; name: string; note: string; available: boolean }[] = [
@@ -26,6 +26,8 @@ export function SettingsSections({ children, categories }: { children: ReactNode
   const id = useId();
   const modern = selected === 'modern' && categories;
   const sections = Children.toArray(children);
+  // Modern is the only product choice (UI-4): the chooser shows only behind the developer switch, or to someone already on another version so they can get back.
+  const choose = versionChoiceEnabled() || selected !== 'modern';
   const versionPanel = <VersionPanel current={current} />;
   if (modern) return <div className="modern-settings-layout">
     <div className="modern-settings-nav" role="tablist" aria-label="Settings sections" aria-orientation={narrow ? 'horizontal' : 'vertical'} onKeyDown={event => {
@@ -33,8 +35,8 @@ export function SettingsSections({ children, categories }: { children: ReactNode
       const index = buttons.indexOf(event.target as HTMLButtonElement);
       const next = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? (index + 1) % buttons.length : event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? (index + buttons.length - 1) % buttons.length : event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : undefined;
       if (next !== undefined) { event.preventDefault(); buttons[next]?.click(); buttons[next]?.focus(); }
-    }}><span>Workspace</span>{[...categories, 'UI versions'].map((label, index) => <button key={label} id={`${id}-tab-${index}`} role="tab" tabIndex={category === index ? 0 : -1} aria-selected={category === index} aria-controls={`${id}-panel`} onClick={() => setCategory(index)}><SectionGlyph index={index}/>{label}</button>)}<small>Local preferences<br />Saved on this browser</small></div>
-    <div ref={panel} id={`${id}-panel`} role="tabpanel" tabIndex={0} aria-labelledby={`${id}-tab-${category}`} className="modern-settings-content">{category === categories.length ? versionPanel : sections[category]}</div>
+    }}><span>Workspace</span>{[...categories, ...(choose ? ['UI versions'] : [])].map((label, index) => <button key={label} id={`${id}-tab-${index}`} role="tab" tabIndex={category === index ? 0 : -1} aria-selected={category === index} aria-controls={`${id}-panel`} onClick={() => setCategory(index)}><SectionGlyph index={index}/>{label}</button>)}<small>Local preferences<br />Saved on this browser</small></div>
+    <div ref={panel} id={`${id}-panel`} role="tabpanel" tabIndex={0} aria-labelledby={`${id}-tab-${category}`} className="modern-settings-content">{choose && category === categories.length ? versionPanel : sections[category]}</div>
   </div>;
   return <div className="dv-settings">
     <div role="tablist" aria-label="Settings sections" className="dv-tabs">

@@ -36,7 +36,7 @@ test('Modern source keeps reading controls compact and Copy reachable by keyboar
 });
 
 test('Legacy retains its visible Copy and descriptive search counter',async({page})=>{
- await page.addInitScript(()=>localStorage.setItem('drishya-experience-v4','classic'));
+ await page.addInitScript(()=>{localStorage.setItem('drishya-experience-v4','classic');localStorage.setItem('drishya-dev-ui-versions','1');});
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=classic#/r/${id}`);
  await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
  const desk=page.getByRole('region',{name:'Developer workspace',exact:true}),grant=desk.getByRole('button',{name:'Approve workspace reading'});await grant.or(desk.getByRole('tablist')).waitFor();if(await grant.isVisible())await grant.click();

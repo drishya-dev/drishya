@@ -21,6 +21,10 @@ test.beforeAll(async () => {
   server = await startServer({ app, port: 0, token: 'canvas-synthetic-only' });
 });
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); } });
+// UI-4: Modern is the only product choice; these journeys exercise the retained versions, so they turn the developer switch on.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('drishya-dev-ui-versions', '1'); } catch { /* the URL switch works without storage */ } });
+});
 const url = (extra = '') => new URL(`/?demo&experience=canvas&motion=0${extra}`, server.launchUrl).href;
 
 test('Modern is the default and explicit retained-version choices survive a launch without a version query', async ({ page }) => {

@@ -11,6 +11,8 @@ test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-settings-type-')
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 
 async function openSettings(page:Page){
+ // UI-4: the UI versions panel is a developer switch; this guard keeps it readable too.
+ await page.addInitScript(() => { try { localStorage.setItem('drishya-dev-ui-versions', '1'); } catch { /* the URL switch works without storage */ } });
  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
  await expect(page.getByRole('dialog',{name:'Workspace settings'})).toBeVisible();
