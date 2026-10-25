@@ -43,6 +43,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — CONTENT-3 literal answers and selected-preview attribution
+
+- **25 October2026, PR220:** correct existing AskUserQuestion parsing: exact complete choice tokens, intact typed words/quotes/punctuation, conservative ambiguous labels, malformed-question guard and recognized selected-preview boundary. Full result remains readable. [Cause, source evidence and limits](review/content-3-literal-answers.md).
+- **Checks:**12 parser units and three browser cases pass;795 integrated units, both types/build. Actual Drishya Claude store512 observations/one answered question: now marks the offered choice instead of calling its preview user speech; verified at1440/390px with phone frame inspected. No raw source committed.
+- **Scope/handoff:** CONTENT-3 stays open for Codex/approvals/connected answering. Own claim released in this PR; other claims retained. No native controls, schema, CSS, History or paused PERF-2 changes. Focused review ready, not automatic merge through known TEST-2. PR214 image recovery and PR219 duplicate plan labels remain independent reviewed increments.
+
 ### Yash with Codex — CONTENT-7 resource acceptance
 
 - **25 October 2026, PR #225:** no production change. Existing resource reader passes empty/absent/repeated-body identity, strict incomplete JSON and UTF-8/traversal boundaries, exact copying, keyboard/filter/focus and original mixed/bounded-out output checks. [Evidence](review/content-7-resource-acceptance.md).
