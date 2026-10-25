@@ -2,3 +2,11 @@
 .review-file-stat {flex:none;font:11px/1.5 var(--mono);color:var(--t3);white-space:nowrap;}
 .review-file-stat .add {font-weight:400;color:var(--pass);}.review-file-stat .del {font-weight:400;color:var(--fail);}
 .review-gap-group {display:flex;align-items:baseline;gap:8px;}.review-gap-group>small {font:11px/1.5 var(--mono);color:var(--t3);}
+/* READ-5: captured edits of a file as quiet mono lines under the file row; the group owns the hairline. */
+.review-file:has(.review-file-edits)>.review-file-entry {border-bottom:0;}
+.review-file-edits {list-style:none;margin:0;padding:0 0 10px 26px;border-bottom:1px solid var(--line);display:grid;gap:2px;}
+.review-file-edits li {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font:11px/1.6 var(--mono);color:var(--t3);}
+.review-file-edits button {font:inherit;color:var(--t2);text-align:left;padding:2px 0;}
+.review-file-edits button:hover {color:var(--source);}.review-file-edits button:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
+.review-file-edits .add {font-weight:400;color:var(--pass);}.review-file-edits .del {font-weight:400;color:var(--fail);}
+.review-edit-test.passed>span {color:var(--pass);}.review-edit-test.failed>span {color:var(--fail);}
