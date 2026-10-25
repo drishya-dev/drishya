@@ -3,7 +3,6 @@ import { selectedUIVersion, switchUIVersion, versionChoiceEnabled, type UIVersio
 import './ui-versions.css';
 
 const versions: { id: UIVersion; name: string; note: string; available: boolean }[] = [
-  { id: 'canvas', name: 'Canvas', note: 'Read-only observation, connected actions and an independent evidence reader.', available: true },
   { id: 'classic', name: 'Legacy', note: 'The established continuous canvas, spatial map and full reading tools.', available: true },
   { id: 'modern', name: 'Modern', note: 'Legacy’s full agent visualization, with a modern explorer, tools and prompt workspace.', available: true },
 ];
@@ -18,7 +17,7 @@ function SectionGlyph({ index }: { index: number }) {
 export function SettingsSections({ children, categories }: { children: ReactNode; categories?: string[] }) {
   const [tab, setTab] = useState<'general' | 'versions'>('general');
   const selected = selectedUIVersion();
-  const current = selected === 'classic' && document.documentElement.dataset.experience === 'canvas' ? 'canvas' : selected;
+  const current = selected;
   const [category, setCategory] = useState(0);
   const panel = useRef<HTMLDivElement>(null);
   const narrow = useSyncExternalStore(subscribeLayout, () => matchMedia(narrowSettings).matches, () => false);

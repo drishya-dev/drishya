@@ -10,13 +10,11 @@ import { timestamp } from '../lib/home-groups.ts';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { ModernSessions } from '../modern/ModernSessions.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
-import { useExperience } from '../lib/experience.ts';
 import { SessionHome } from '../modern/SessionHome.tsx';
 
 const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
 
 export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
-  const canvas = useExperience() === 'canvas';
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const source = useApp((s) => s.source);
   const recordings = useApp((s) => s.recordings);
@@ -104,8 +102,8 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
         <button className="btn ghost home-settings" onClick={() => set({ settingsOpen: true })}><SettingsGlyph />Settings</button>
       </header>
       <div className="home-intro">
-        <div className="home-intro-copy"><h1>{canvas || modern ? 'Sessions' : 'Your agent workspace.'}</h1><p>Return to a session. Follow the source, changes and results.</p></div>
-        <div className="home-intro-actions"><button className="btn" onClick={() => openDemo(true)}><InterfaceGlyph name="play" />Watch the live demo</button><button className={`btn ${canvas ? '' : 'primary'}`} disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}><InterfaceGlyph name="refresh" />Refresh local sessions</button>{canvas && <button className="btn primary cv-home-import" onClick={() => { const section = document.getElementById('local-session-import'); section?.scrollIntoView({ behavior: 'instant', block: 'start' }); section?.querySelector<HTMLButtonElement>('.row-actions button')?.focus({ preventScroll: true }); }}>Import<span className="cv-import-icon" aria-hidden="true">+</span></button>}</div>
+        <div className="home-intro-copy"><h1>{modern ? 'Sessions' : 'Your agent workspace.'}</h1><p>Return to a session. Follow the source, changes and results.</p></div>
+        <div className="home-intro-actions"><button className="btn" onClick={() => openDemo(true)}><InterfaceGlyph name="play" />Watch the live demo</button><button className="btn primary" disabled={!!busy} onClick={() => refresh().catch((e) => setErr(e.message))}><InterfaceGlyph name="refresh" />Refresh local sessions</button></div>
       </div>
       <div className="home-overview" aria-label="Local session inventory">
         <span><strong>{sessionCount}</strong> {modern ? 'session' : 'recording'}{sessionCount === 1 ? '' : 's'}</span>

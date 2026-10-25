@@ -40,6 +40,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude (Sonnet 5.5) — UI-4 slice 2: the Canvas experience is retired
+- **UI-4 slice 2:** the Canvas experience is deleted (about 1,000 lines plus its spec) and Legacy is documented as frozen. Details, what was kept (the shared map, all Legacy sheets Modern stands on) and what UI-4 still has open are in TASKS UI-4; the policy is in docs/CODEBASE.md.
+- **Also merged:** #228 (CONTENT-7 exact numbers in JSON readers, Codex), verified on current main first.
+
 ### Yash with Codex — CONTENT-7 numeric evidence fidelity
 
 - **25 October 2026, PR #228:** existing JSON reader rounded large IDs, decimals, overflow and underflow. Primitive source tokens now remain numeric leaves through tree/table/search and nested Copy value; Copy original is unchanged. Unsupported source-context parsing leaves exact Original available. [Report](review/content-7-number-fidelity.md).

@@ -16,7 +16,6 @@ import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 import { CodeView, Output } from './common.tsx';
 import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
-import { useExperience } from '../lib/experience.ts';
 
 /** Global bounded file history; the loaded passage window is never mistaken for the whole session. */
 export function FileHistory({ projection }: { projection: Projection }) {
@@ -30,7 +29,6 @@ export function FileHistory({ projection }: { projection: Projection }) {
 }
 
 function FileWorkspace({ path, projection }: { path: string; projection: Projection }) {
-  const canvas = useExperience() === 'canvas';
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const focusChange = useApp(s => s.filePanelFocus === 'change');
   const preferred = useApp(s => s.filePanelEvidence);
@@ -135,7 +133,7 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
     trail.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [first?.key]);
   const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
-  return <ReadingDialog title={`Work on ${path}`} windowId={explore||canvas?undefined:'Captured file'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||canvas||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${windowWidth}px,calc(100vw - 28px))`}} resizeControl={explore||canvas||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth} minimum={640} maximum={1800} change={setWindowWidth} reset={()=>setWindowWidth(1700)} label="Resize captured file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore || canvas}>
+  return <ReadingDialog title={`Work on ${path}`} windowId={explore?undefined:'Captured file'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${windowWidth}px,calc(100vw - 28px))`}} resizeControl={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth} minimum={640} maximum={1800} change={setWindowWidth} reset={()=>setWindowWidth(1700)} label="Resize captured file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore}>
     <div className="file-reading-context"><EvidenceNavigation compact={modern} />
     {recoveryError&&<p role="status" className="file-workspace-intro">{recoveryError}</p>}
     <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}{requestedLine !== undefined && ` · Referenced line ${requestedLine} · captured ranges only`}</span></div></div>
@@ -158,14 +156,14 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
         {page && page.total > 24 && <div className="file-pagination"><button className="btn" disabled={start === 0} onClick={() => { setLeft(first); setStart(Math.max(0, start - 24)); }}>Previous</button><span>{start + 1}–{Math.min(start + 24, page.total)} / {page.total}</span><button className="btn" disabled={start + 24 >= page.total} onClick={() => { setLeft(first); setStart(start + 24); }}>Next</button></div>}
       </nav>
       <section ref={reading} className="file-evidence-reading" aria-label="File evidence">
-        <div className="file-evidence-toolbar">{!modern && <strong>Historical evidence</strong>}{!canvas && source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.getState().set({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}{!modern && <button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>}<button className="btn" aria-label={compare ? 'Single evidence' : 'Compare evidence'} aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{modern ? (compare ? 'Single view' : 'Compare') : (compare ? 'Single evidence' : 'Compare evidence')}</button>{modern && <WorkspaceOptions label="Captured file actions"><button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>{!canvas && <div onClick={event=>event.stopPropagation()}><ImportContext path={path} /></div>}</WorkspaceOptions>}</div>
+        <div className="file-evidence-toolbar">{!modern && <strong>Historical evidence</strong>}{source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.getState().set({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}{!modern && <button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>}<button className="btn" aria-label={compare ? 'Single evidence' : 'Compare evidence'} aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{modern ? (compare ? 'Single view' : 'Compare') : (compare ? 'Single evidence' : 'Compare evidence')}</button>{modern && <WorkspaceOptions label="Captured file actions"><button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>{<div onClick={event=>event.stopPropagation()}><ImportContext path={path} /></div>}</WorkspaceOptions>}</div>
 
         {!compare && stepper.total > 1 && <div className="file-timeline-steps" role="group" aria-label="Step through captured reads and edits of this file">
           <button ref={previousStep} className="btn ghost" disabled={!stepper.previous} onClick={() => stepTo('previous')}>Previous change</button>
           <span role="status" className="muted small" title={page && page.total > page.operations.length ? 'Steps through the recorded actions loaded in this page of the list' : undefined}>{stepper.position ?? '–'} of {stepper.total}</span>
           <button ref={nextStep} className="btn ghost" disabled={!stepper.next} onClick={() => stepTo('next')}>Next change</button>
         </div>}
-        {!canvas && !modern && <ImportContext path={path} />}
+        {!modern && <ImportContext path={path} />}
         {diskError && <p className="bad" role="alert">{diskError}</p>}
         {choices.length > 0 ? <div className={`file-evidence-columns${compare ? ' paired' : ''}`}>
           <EvidenceColumn choices={choices} value={first} choose={(key) => setLeft(choices.find((item) => item.key === key))} label="First evidence" path={path} requestedLine={requestedLine} />
