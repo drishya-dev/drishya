@@ -29,6 +29,14 @@ describe('file evidence',()=>{
     const p=projection([op('gone.ts','edit'),del('gone.ts'),del('back.ts'),op('back.ts','write','ok',true),op('brief.ts','write','ok',true),del('brief.ts')]);
     expect(fileEvidence(p,['gone.ts','back.ts','brief.ts']).map(e=>[e.path,e.change])).toEqual([['gone.ts','D'],['back.ts','A'],['brief.ts','D']]);
   });
+  it('does not turn failed, pending or empty replacement edits into deletion marks',()=>{
+    const del=(path:string,status:Operation['status'])=>{const o=op(path,'edit',status);return {...o,detail:{...(o.detail as Extract<Operation['detail'],{kind:'edit'}>),deleted:true}} as Operation;};
+    const p=projection([op('kept.ts','write','ok',true),del('kept.ts','error'),del('failed.ts','error'),del('pending.ts','running'),op('empty.ts','edit')]);
+    expect(fileEvidence(p,['kept.ts','failed.ts','pending.ts','empty.ts']).map(e=>[e.path,e.change,e.now])).toEqual([
+      ['kept.ts','A',false],['failed.ts',undefined,false],['pending.ts',undefined,true],['empty.ts','E',false],
+    ]);
+  });
+
   it('keeps revisions isolated and bounds rows independently of full-session counts',()=>{
     const p=projection(Array.from({length:250},()=>op('old.ts')));
     expect(fileEvidence(p,['old.ts','old.ts'])).toEqual([{path:'old.ts',readCalls:250,now:false}]);
