@@ -656,7 +656,7 @@
 .git-review-layout aside button { display: flex; align-items: center; gap: 8px; padding: 10px 8px; width: 100%; text-align: left; border-radius: 5px; }
 .git-review-layout aside button[aria-pressed=true] { background: var(--s2); }
 .git-review-layout aside button > span { flex: 1; overflow-wrap: anywhere; font: 11px var(--mono); }
-.git-review-layout aside small { color: var(--t2); font-size: 10px; }
+.git-review-layout aside small { color: var(--t2); font-size: 11px; }
 .git-review-layout section { min-width: 0; }
 .git-review-layout section > header, .git-review-layout footer { padding: 12px 18px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .git-review-layout header strong { flex: 1; overflow-wrap: anywhere; font: 12px var(--mono); }
