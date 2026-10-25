@@ -8,6 +8,7 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
   const raw = (input as { questions?: unknown } | null)?.questions;
   if (!Array.isArray(raw)) return [];
   const questions = raw.slice(0, 6).flatMap((item): AskQuestion[] => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
     const entry = item as { question?: unknown; header?: unknown; multiSelect?: unknown; options?: unknown };
     const question = text(entry.question, 800);
     if (!question || !Array.isArray(entry.options)) return [];
@@ -25,12 +26,20 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
   const marks = questions.map((q) => ({ q, at: result.indexOf(`"${q.question}"="`) })).filter((m) => m.at >= 0).sort((a, b) => a.at - b.at);
   marks.forEach((mark, index) => {
     const start = mark.at + mark.q.question.length + 4, end = marks[index + 1]?.at ?? result.length;
-    const answer = result.slice(start, end).replace(/[",.\s]+$/, '').replace(/^"/, '').trim();
+    const answer = result.slice(start, end).replace(/"\s*(?:,\s*|\.\s*)?$/, '').trim();
     if (!answer) return;
     mark.q.answer = answer;
-    mark.q.chosen = mark.q.options.filter((option) => answer === option.label || mark.q.multiSelect && answer.split(/,\s*/).includes(option.label) || answer.includes(option.label) && mark.q.multiSelect).map((option) => option.label);
-    const rest = mark.q.chosen.reduce((left, label) => left.replace(label, ''), answer).replace(/^[,\s]+|[,\s]+$/g, '');
-    if (rest && !mark.q.chosen.length) mark.q.typed = answer; else if (rest) mark.q.typed = rest;
+    const parts = answer.split(',').map((part) => part.trim());
+    const counts = new Map<string, number>();
+    for (const option of mark.q.options) counts.set(option.label, (counts.get(option.label) ?? 0) + 1);
+    // This protocol has answer text, not stable selected-option ids. Comma-bearing or
+    // repeated labels cannot be distinguished reliably; retain them as literal words.
+    const ambiguous = mark.q.multiSelect && mark.q.options.some((option) => option.label.includes(',') && answer.includes(option.label));
+    mark.q.chosen = ambiguous ? [] : mark.q.options.filter((option) => counts.get(option.label) === 1 &&
+      (mark.q.multiSelect ? parts.includes(option.label) : answer === option.label)).map((option) => option.label);
+    const chosen = new Set(mark.q.chosen);
+    const rest = mark.q.multiSelect && chosen.size ? parts.filter((part) => !chosen.has(part)).join(', ') : chosen.size ? '' : answer;
+    if (rest) mark.q.typed = rest;
   });
   return questions;
 }
