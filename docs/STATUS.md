@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-4 | @yash + Codex | `codex/files-4-reader-correctness` | 2026-10-25 | Reader correctness: shared `DraftEditor.tsx`; current-file refusal outside a truncated/stale map in `apps/daemon/src/workspace.ts` and index eligibility helper in `packages/indexer/src/index.ts`; focused unit/browser tests and report/TASKS/STATUS (at most 12 files). Preserve root approval, denied/ignored paths, symlink/size/redaction checks. No new features, History/PERF-2, native writes, capture/contracts/projection/DATA-3 or UI-4 files. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 | UI-4 | @yash + Claude | `yash/ui-4-modern-only` | 2026-10-25 | Slice 1: make Modern the only product choice. A saved Legacy/Canvas choice stops applying, and the Settings "UI versions" tab is hidden unless a developer flag is set; `?experience=` and every other experience stay in code and tests. `apps/ui/src/lib/ui-version.ts`, `apps/ui/src/components/UIVersions.tsx`, `apps/ui/test/ui-version.test.ts`, the four browser specs that use the tab. No component removal, no CSS change, no `History.tsx`, schema or ingest change. |
@@ -41,13 +40,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — FILES-4 shared draft correctness
+### Yash with Codex — FILES-4 shared draft and current-file correctness
 
-- **25 October 2026, PR #226:** opening one local draft in both panes left stale editor text and risked overwriting newer work. Existing CodeMirror views now map shared text through one minimal non-user/non-undo transaction; local keystrokes skip the synchronization pass. Real editor, selection, undo and hidden comparison state stay mounted. [Report](review/files-4-shared-draft.md).
-- **Checks:** 813 whole units, both types/build, eleven focused browser cases (four new plus seven retained), actual Drishya Claude Blueprint draft at desktop/390 px with original disk bytes unchanged. No native submission, project write, History/PERF-2, CSS, schema or capture change. Own FILES-4 claim released in this finishing PR; parent stays open.
-- **Remaining:** actual current Files can list a path omitted from the bounded 5,000-node graph and the reader refuses it. Recorded under FILES-4, not silently bypassed or bundled into the editor change. History/PERF-2 remains paused. The prior six acceptance PRs have landed on main; stale completed claims were cleared before this work. #226 ready for focused builder review.
-
-
+- **25 October 2026, PR #226:** shared editor updates map into the existing CodeMirror state without focus/selection/undo loss. Current files omitted by a capped or explicitly stale map now pass one-path index eligibility rather than an automatic refusal; complete unchanged maps still reject missing nodes. [Evidence and remaining scope](review/files-4-shared-draft.md).
+- **Verified:** 836 whole units, both types/build, twelve focused browser cases; 23 new index/Workspace guards preserve exclusions, consent, redaction and revocation. Actual Drishya Claude Blueprint and root README reading/drafts at desktop/390 px, current disk unchanged. Root README remains outside its 5,000-node map but now opens normally. No repository rescan, native submission, project write, History/PERF-2, CSS or capture/schema change.
+- **Handoff:** expanded same FILES-4 claim before backend work; ten changed files within its twelve-file budget. Own claim released here. Broader reader acceptance remains open. Other builders' claims retained; History/PERF-2 remains paused. #226 ready for focused builder review, no automatic merge through TEST-2.
 
 
 ### Yash with Codex — CONTENT-2 search reading correctness
