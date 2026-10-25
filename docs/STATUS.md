@@ -31,14 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-2 | @yash + Claude | `yash/ui-2-composer` | 2026-10-25 | Typography floor, composer slice only; Home is another session. Modern composer CSS rules raised in place, new `tests/browser/composer-typography.spec.ts`, TASKS/STATUS (≤6 files). No component/layout/behaviour change, History, PERF-2, schema. |
+| CONTENT-7 | @yash + Codex | `codex/content-7-resource-acceptance` | 2026-10-25 | Existing structured-resource reader correctness/acceptance only: `apps/ui/src/lib/captured-resources.ts`, existing resource unit test, focused new browser spec and report/TASKS/STATUS (at most 6 files). No new views/features, capture/contracts/projection/DATA-3, History/PERF-2, shared CSS or other claimed files. |
 | FILES-1 | @yash + Codex | `codex/files-1-deletion-acceptance` | 2026-10-25 | Finish existing deletion-evidence acceptance: `packages/scene/test/file-evidence.test.ts`, new focused browser spec and docs; scene `file-evidence.ts` only if an actual correctness defect is reproduced (≤6 files). No History/PERF-2, new explorer UI, shared CSS, capture/contracts/projection or DATA-3 edits. |
 | CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
 | CONTENT-4 | @yash + Codex | `codex/content-4-ambiguous-plan-labels` | 2026-10-25 | Existing TodoWrite comparison correctness only: `packages/scene/src/plan-threads.ts`, its unit test, one new browser guard and docs (≤6 files). Duplicate labels must not invent task identity/status transitions. No History, PERF-2, DATA-3/contracts/projection, shared CSS or new plan sources. |
 | CONTENT-1 | @yash + Codex | `codex/content-1-image-reader-acceptance` | 2026-10-25 | Existing image-reader phone/keyboard/refusal acceptance: new focused browser spec and report; image-reader component only if a demonstrated bug needs it (≤6 files). No History, PERF-2, DATA-3, shared dialog typography CSS or existing TEST-2 specs. Keep real Codex ImageView acceptance open without a genuine sample. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
-| UI-2 | @yash + Claude | `yash/ui-2-home` | 2026-10-25 | Home slice only; the composer is another session. Modern Home and whole-page surfaces reached from it (Search sessions dialog, empty/first-run): governing Home CSS rules raised in place, one new `tests/browser/home-floor-typography.spec.ts`, TASKS/STATUS notes (≤6 files). No component/layout/behaviour change; not History, common.tsx, PERF-2 files, schema. |
 
 
 ---
@@ -51,6 +50,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Verified:** five focused browser checks, six actual Codex/Claude journeys at 1440/390/320 px, 795 whole units, both types and build. Actual phone frame inspected; native journals unchanged and uncommitted. CONTENT-2 remains open for its browser strip/new-source acceptance; own narrow claim released.
 - **Gate:** History/PERF-2 stays paused by the builder. No shared CSS, capture, schema or new feature. #224 ready for focused review, not automatic merge through TEST-2. Earlier independent #214/#219/#220/#221 remain pending builder review; their own reports define completion scope.
 
+
+
+### Yash with Claude (Sonnet 5.5) — UI-2 composer slice
+- **UI-2 slice 4:** the Modern composer keeps metadata at 11 px and controls at 12 px in every state reachable with synthetic data (menus, attachments, confirmation, approval, stop, question, failed send), desktop and phone, all seven palettes, with a guard spec; details and the states not reached are in TASKS UI-2. UI-2 stays open (Home is its own session).
+
+### Yash with Claude (Sonnet 5.5) — UI-2 Home / Search evidence typography (PR #223)
+- **UI-2 slice 3:** Modern Home was already at the 11 px / 12 px floor in every state reached (desktop and phone); the Search evidence dialog's filter inputs/selects and result path line are raised in place, with a seven-palette guard spec. Details and what was not reached in TASKS UI-2.
 
 ### Yash with Claude (Sonnet 5.5) — GIT-4 Recorded work picker
 - **GIT-4 picker:** when several captured edits wrote the same Git hunk lines, "Recorded work · N edits" in Git review and the Git graph now opens a small keyboard menu (turn + operation title, newest first); one match is unchanged and the matching rule is untouched. Turn labels are counted from the edit's own agent's captured prompts, or omitted when none is captured. Details and what stays open (Classic, other repo roots) are in TASKS GIT-4.
@@ -127,6 +133,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Yash with Claude (Opus 5.5) — PERF-2 profiled after DATA-1/2 (claim held, fixes tomorrow)
 
 - **When:** 20 October 2026. Merged DATA-2 (#149), DATA-1 (#151), TEST-2 (#175) and Codex PERF-1 (#171). Re-measured the 564 MB journal with typed items (26,593 observations): first history page ≈ 6.6 s, append+browser RSS 531–545 MiB, API p95 139–214 ms. The cold build's largest cost is ≈ 2.7 s of per-file derived blob writes (≈ 4,400 new files, 90 MB); then ≈ 1.8 s reducer logic and 0.66 s ordered read; live sync turns block the event loop 110–150 ms. Ordered plan for the fixes is under PERF-2 in TASKS. The performance gate stays red, so feature items wait.
+
 
 ### Yash with Claude (Opus 5.5) — TEST-2 flaky specs (main cause fixed) and DATA-1/DATA-2 merged
 

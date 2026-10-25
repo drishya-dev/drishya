@@ -6,12 +6,13 @@
 .library-search-filters summary {cursor:pointer;color:var(--t2);font-size:12px;}
 .library-search-filters>div {display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;padding-top:12px;}
 .library-search-filters label {display:flex;flex-direction:column;gap:6px;min-width:0;font-size:11px;color:var(--t2);}
+.library-search-filters :is(input,select) {font-size:12px;}
 .library-search .library-search-scope {font-size:11px;line-height:1.6;color:var(--t3);margin:0;}
 .library-search-results {flex:1;min-height:100px;max-height:50dvh;overflow:auto;overscroll-behavior:contain;}
 .library-search-results>button {display:block;width:100%;text-align:left;padding:14px;border:0;border-bottom:1px solid var(--line);border-radius:8px;background:none;color:var(--t1);font:13px/1.6 var(--sans);overflow-wrap:anywhere;}
 .library-search-results>button:hover,.library-search-results>button:focus-visible {background:var(--s2);}
 .library-search-results>button>span {margin-left:10px;font-size:11px;color:var(--t2);}
-.library-search-results>button>small {display:block;color:var(--t3);}
+.library-search-results>button>small {display:block;font-size:11px;color:var(--t3);}
 .library-search-results>button>p {margin:6px 0 0;color:var(--t2);white-space:pre-wrap;}
 .library-search footer {display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:12px;}
 .library-search footer>span {margin-right:auto;font-size:11px;color:var(--t3);}
