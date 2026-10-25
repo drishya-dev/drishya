@@ -4,6 +4,7 @@ import { open, lstat, realpath } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { MAX_IMAGE_BYTES, isDeniedPath, redactText, sniffImage } from '@drishya/privacy';
 import { App, HttpError } from './app.ts';
+import { isIndexableFile } from '@drishya/indexer';
 
 export class WorkspaceAccess {
   private grants = new Map<string, string>();
@@ -86,7 +87,9 @@ export class WorkspaceAccess {
       if ((await lstat(cursor)).isSymbolicLink()) throw new HttpError(403, 'linked files are not readable');
     }
     const graph = await this.app.graph(id);
-    if (!graph.nodes.some(n => n.path === path)) throw new HttpError(403, 'file is outside the indexed workspace');
+    // A bounded or explicitly stale map is not a complete list of eligible current files.
+    // Check only this path under the same index rules; content permission stays separate.
+    if (!graph.nodes.some(n => n.path === path) && (!(graph.truncated || graph.stale) || !await isIndexableFile(root, path))) throw new HttpError(403, 'file is outside the indexed workspace');
     const handle = await open(file, 'r');
     try {
       if (await realpath(file) !== file) throw new HttpError(403, 'file location changed');
