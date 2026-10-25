@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-5 | @yash + Codex | `codex/files-5-recovery-correctness` | 2026-10-25 | Existing opt-in recovery correctness/acceptance: owning draft recovery helper/component, focused unit/browser guards and report/TASKS/STATUS (at most 8 files). No autosave/new persistence, native writes, History/PERF-2, capture/contracts/projection/DATA-3 or shared CSS. Preserve explicit encryption/download/restore and newer unsaved drafts. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 
@@ -44,11 +43,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **UI-4 slice 2:** the Canvas experience is deleted (about 1,000 lines plus its spec) and Legacy is documented as frozen. Details, what was kept (the shared map, all Legacy sheets Modern stands on) and what UI-4 still has open are in TASKS UI-4; the policy is in docs/CODEBASE.md.
 - **Also merged:** #228 (CONTENT-7 exact numbers in JSON readers, Codex), verified on current main first.
 
-### Yash with Codex — CONTENT-7 numeric evidence fidelity
+### Yash with Codex — FILES-5 recovery correctness
 
-- **25 October 2026, PR #228:** existing JSON reader rounded large IDs, decimals, overflow and underflow. Primitive source tokens now remain numeric leaves through tree/table/search and nested Copy value; Copy original is unchanged. Unsupported source-context parsing leaves exact Original available. [Report](review/content-7-number-fidelity.md).
-- **Checks:** eight guards fail before fix; 16 model units, six browser checks, four actual Codex/Claude desktop/phone journeys. Real samples have canonical numbers only; synthetic fixtures establish precision edge cases. After main #226 integration: 847 units, both types/build pass. No capture/schema/persistence, CSS, native-control or History/PERF-2 change.
-- **Handoff:** own claim released; broader CONTENT-7 and physical/human compatibility remain open. #228 ready for focused builder review. #226 has landed on main. Read-only REL-1 recurrence evidence is in audit38 and remains unproven as a cure; paused History/PERF-2 stays untouched.
+- **25 October 2026, PR #229:** old Windows path aliases could bypass newer unsaved-draft conflicts. Recovery now preflights all aliases atomically, preserves identical live slots and POSIX case distinctions. Scoped dialog spacing/reachable phone exit and stale-success reset. [Report](review/files-5-recovery-identity.md).
+- **Verified after main #230 integration:** 852 units, both TypeScript projects/build and two recovery browser journeys. Actual Claude session (1,138 observations), desktop/phone: newer draft retained, disk bytes unchanged, no page errors. Initial regressions reproduced baseline failures; no native turn or persistence added.
+- **Handoff:** own claim released; parent FILES-5 remains open for real filesystem/platform/human acceptance. #229 ready for builder review. DATA-3 ownership preserved; History/PERF-2 remains paused, and no automatic merge through known TEST-2 failures. Numeric fidelity #228 and shared-draft repair #226 already landed.
 
 
 ### Yash with Codex — REL-1 bounded read-only recurrence check
