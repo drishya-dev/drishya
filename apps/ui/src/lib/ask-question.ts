@@ -26,7 +26,13 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
   const marks = questions.map((q) => ({ q, at: result.indexOf(`"${q.question}"="`) })).filter((m) => m.at >= 0).sort((a, b) => a.at - b.at);
   marks.forEach((mark, index) => {
     const start = mark.at + mark.q.question.length + 4, end = marks[index + 1]?.at ?? result.length;
-    const answer = result.slice(start, end).replace(/"\s*(?:,\s*|\.\s*)?$/, '').trim();
+    const segment = result.slice(start, end);
+    // Newer Claude results append the selected option's preview outside the answer's
+    // closing quote. That is harness/option material, never words the person typed.
+    const previewAt = segment.indexOf('" selected preview:');
+    const hasPreview = previewAt >= 0 && mark.q.options.some((option) => option.label === segment.slice(0, previewAt));
+    const framed = hasPreview ? segment.slice(0, previewAt + 1) : segment;
+    const answer = framed.replace(/"\s*(?:,\s*|\.\s*)?$/, '').trim();
     if (!answer) return;
     mark.q.answer = answer;
     const parts = answer.split(',').map((part) => part.trim());

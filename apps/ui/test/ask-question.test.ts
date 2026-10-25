@@ -75,3 +75,18 @@ it('does not guess between a comma-bearing option and multiple option names', ()
   const q=askQuestions(input,'The user answered: "Choose?"="A, B".')[0]!;
   expect(q.chosen).toEqual([]);expect(q.typed).toBe('A, B');
 });
+
+
+it('does not attribute an offered selected preview or harness follow-up to the person', () => {
+  const input={questions:[{question:'Name?',options:[{label:'Alpha'},{label:'Beta'}]}]};
+  const result='Your questions have been answered: "Name?"="Alpha" selected preview:\nexample command\n"captured reference"\nexample.dev. You can now continue with these answers in mind.';
+  const q=askQuestions(input,result)[0]!;
+  expect(q.answer).toBe('Alpha');expect(q.chosen).toEqual(['Alpha']);expect(q.typed).toBeUndefined();
+});
+
+it('keeps preview wording when it is part of a typed answer rather than an offered option', () => {
+  const input={questions:[{question:'Next?',options:[{label:'Continue'}]}]};
+  const literal='This " selected preview: remains my answer.';
+  const q=askQuestions(input,`The user answered: "Next?"="${literal}". You can now continue.`)[0]!;
+  expect(q.answer).toBe(literal);expect(q.typed).toBe(literal);expect(q.chosen).toEqual([]);
+});

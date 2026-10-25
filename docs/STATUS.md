@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | READ-5 | @yash + Claude | `yash/read-5-edit-turns` | 2026-10-25 | First slice only: per-file edit list in the Changes view (`turn N · +a −b → next test run ✓/✗`). `packages/scene/src/since.ts` + test, `apps/ui/src/components/EvidenceReview.tsx`, its review CSS, new `tests/browser/file-edit-turns.spec.ts`, docs (≤15 files). No worker, schema, History, PERF-2 or ingest files. |
 | GIT-4 | @yash + Claude | `yash/git-4-picker` | 2026-10-25 | Picker slice: the several-edits "Recorded work · N edits" action becomes a small keyboard-operable menu (turn + operation title, newest first) in `apps/ui/src/components/GitPatchReader.tsx`, `apps/ui/src/lib/hunk-evidence.ts`, its unit test, patch-controls CSS, and the two `git-*hunk-recorded-work` browser specs (≤15 files). Matching rule unchanged; no History/PERF-2 files, no schema. |
-| CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
 | CONTENT-4 | @yash + Codex | `codex/content-4-ambiguous-plan-labels` | 2026-10-25 | Existing TodoWrite comparison correctness only: `packages/scene/src/plan-threads.ts`, its unit test, one new browser guard and docs (≤6 files). Duplicate labels must not invent task identity/status transitions. No History, PERF-2, DATA-3/contracts/projection, shared CSS or new plan sources. |
 | CONTENT-1 | @yash + Codex | `codex/content-1-image-reader-acceptance` | 2026-10-25 | Existing image-reader phone/keyboard/refusal acceptance: new focused browser spec and report; image-reader component only if a demonstrated bug needs it (≤6 files). No History, PERF-2, DATA-3, shared dialog typography CSS or existing TEST-2 specs. Keep real Codex ImageView acceptance open without a genuine sample. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
@@ -43,6 +42,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — CONTENT-3 literal answers and selected-preview attribution
+
+- **25 October2026, PR220:** correct existing AskUserQuestion parsing: exact complete choice tokens, intact typed words/quotes/punctuation, conservative ambiguous labels, malformed-question guard and recognized selected-preview boundary. Full result remains readable. [Cause, source evidence and limits](review/content-3-literal-answers.md).
+- **Checks:**12 parser units and three browser cases pass;795 integrated units, both types/build. Actual Drishya Claude store512 observations/one answered question: now marks the offered choice instead of calling its preview user speech; verified at1440/390px with phone frame inspected. No raw source committed.
+- **Scope/handoff:** CONTENT-3 stays open for Codex/approvals/connected answering. Own claim released in this PR; other claims retained. No native controls, schema, CSS, History or paused PERF-2 changes. Focused review ready, not automatic merge through known TEST-2. PR214 image recovery and PR219 duplicate plan labels remain independent reviewed increments.
 
 ### Yash with Claude (Sonnet 5.5) — READ-8 file stepper, slice 1 (PR #217, draft)
 - **READ-8 slice 1:** the file evidence panel steps through a file's captured reads and edits with Previous change / Next change and an "n of N" label (within the loaded action page; ends disable, focus moves to the working button, hidden in compare). Page-crossing and a whole-session count remain open, so READ-8 stays unticked; details in TASKS READ-8.
@@ -113,13 +118,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Yash with Claude (Opus 5.5) — PERF-2 profiled after DATA-1/2 (claim held, fixes tomorrow)
 
 - **When:** 20 October 2026. Merged DATA-2 (#149), DATA-1 (#151), TEST-2 (#175) and Codex PERF-1 (#171). Re-measured the 564 MB journal with typed items (26,593 observations): first history page ≈ 6.6 s, append+browser RSS 531–545 MiB, API p95 139–214 ms. The cold build's largest cost is ≈ 2.7 s of per-file derived blob writes (≈ 4,400 new files, 90 MB); then ≈ 1.8 s reducer logic and 0.66 s ordered read; live sync turns block the event loop 110–150 ms. Ordered plan for the fixes is under PERF-2 in TASKS. The performance gate stays red, so feature items wait.
-
-### Yash with Codex — PERF-1 measured; PERF-2 gate open, ready for Claude review
-
-- **When:** 20 October2026. PR **#171**, `codex/perf-1-large-journals`. Claimed the first independent dependency-ready item after DATA-3…6 overlapped Harsh's DATA-1/2 files. Adds opt-in isolated real-journal benchmark and a regression for partial writes/source preservation. Native journals stay read-only; normal/error completion removes snapshots and redacted stores. [Report](review/perf-1-large-journals.md).
-- **Result:** five complete-import and five append/browser runs per166/347/564MB actual source. Zero capture gaps; every append result matches full-import observation IDs/order; repeated sync adds nothing. The biggest journal exceeds the512MiB reference screening budget and shows API stalls. PERF-1 measurement is complete; **PERF-2 remains open and new feature work is gated pending restoration or an explicitly agreed narrower support range**. No green scale/release claim.
-- **Validation and limits:** 679 integrated unit tests plus36 focused JSONL/ingest/probe checks; both project types and direct script typecheck. Installed Edge on the reference Windows machine; uncontrolled background development load, warm OS cache, headless frame/API proxies, physical/human acceptance unmeasured. Rerun after DATA-1/2 retention changes. No runtime/schema/dependency changes, native turn or hosted CI.
-- **Merge signal:** **#171 READY FOR CLAUDE REVIEW / SQUASH** after final numeric matrix and local checks. Own claim removed only in this finishing PR. Main #172 TodoWrite and subsequent EXPLAIN priority change integrated; other claims and dependency order preserved.
 
 
 ### Yash with Claude (Opus 5.5) — TEST-2 flaky specs (main cause fixed) and DATA-1/DATA-2 merged
