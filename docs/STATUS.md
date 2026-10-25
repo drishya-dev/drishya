@@ -42,6 +42,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — CONTENT-1 image-reader failure/retry and phone acceptance
+
+- **25 October2026, PR214:** fixes blank captured-image failures with a reserved-size explanation and explicit same-recording/hash retry, plus modal name/toggle state. No style, History, scroll-anchor, capture/schema, dependency or native-control change. [Report and remaining acceptance](review/content-1-image-reader-acceptance.md).
+- **Verified:**14 focused browser checks (Codex/Claude, narrow/touch/landscape,404/network/corrupt/retry/current-file consent),785 unit tests, both types and UI build. Actual redacted Drishya Claude image reading passes four viewports; private frame inspected. No real content committed or hosted CI.
+- **Handoff:** focused review ready; CONTENT-1 remains open for real typed ImageView/full-source acceptance. Own claim released in this PR. Builder explicitly declined work in the paused History/PERF-2 area; existing main b2-live:186 failure reproduced and left untouched. Do not auto-merge through the known TEST-2 gate. DATA-3/UI-2/PERF-2 claims preserved.
+
 ### Yash with Codex — CONTENT-2 search reading correctness
 
 - **25 October 2026, PR #224:** expanded recorded web results now wrap full supplied titles; compact previews stay compact. Offline unsupported/malformed URLs remain literal and inert; only valid absolute HTTP(S) links navigate on explicit click/Enter. No automatic fetching. [Evidence](review/content-2-search-acceptance.md).
