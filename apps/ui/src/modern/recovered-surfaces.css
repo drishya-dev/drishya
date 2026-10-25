@@ -10,7 +10,7 @@
 .modern-composer-identity svg { width:14px; height:14px; fill:none; stroke:var(--focus); stroke-width:1.5; }
 .modern-composer-state { font-size:11px; color:var(--t2); min-width:0; max-width:110px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-options { position:static; margin:0 0 0 auto; max-width:none; }
-:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-options>summary { display:flex;align-items:center;gap:5px;font-size:10px; padding:4px 0 4px 6px; }
+:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-options>summary { display:flex;align-items:center;gap:5px;font-size:12px; padding:4px 0 4px 6px; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-options-menu { position:absolute; right:8px; left:auto; bottom:calc(100% - 4px); width:min(350px,calc(100vw - 40px)); max-height:min(430px,55dvh); padding:15px; overflow:auto; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer form { padding:0; margin:0; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer textarea { padding:12px 15px 8px; min-height:52px; border:0; border-radius:0; background:none; font:13px/1.7 var(--sans); }
@@ -18,8 +18,8 @@
 .modern-composer-input-tools { display:flex; gap:6px; align-items:center; min-width:0; }
 .modern-attachment { display:grid; place-items:center; flex:none; width:28px; height:28px; padding:5px; border:0; border-radius:7px; background:none; color:var(--t3); }
 .modern-attachment svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
-.modern-native-model { font:10px/1.6 var(--sans); color:var(--t3); margin-left:4px; max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .composer-actions :is(.send-prompt,.stop-turn) { width:auto; min-width:70px; height:29px; min-height:29px; padding:4px 10px; display:flex; align-items:center; justify-content:center; gap:7px; border-radius:8px!important; font:11px/1.5 var(--sans); flex:none; }
+.modern-native-model { font:11px/1.6 var(--sans); color:var(--t3); margin-left:4px; max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .composer-actions :is(.send-prompt,.stop-turn) { width:auto; min-width:70px; height:29px; min-height:29px; padding:4px 10px; display:flex; align-items:center; justify-content:center; gap:7px; border-radius:8px!important; font:12px/1.5 var(--sans); flex:none; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .send-prompt svg { width:14px; height:14px; transform:rotate(90deg); }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .stop-turn svg { width:13px; height:13px; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .prompt-attachments { padding:8px 15px 0; margin:0; }
@@ -112,14 +112,14 @@
  :root[data-ui-version=modern] .modern-session-header .studio-actions { gap:4px; }
  :root[data-ui-version=modern] .modern-session-header .search-open { width:31px; padding:7px; }
  :root[data-ui-version=modern] .modern-session-header .search-open>span,:root[data-ui-version=modern] .modern-session-header .search-open>kbd { display:none; }
- .modern-composer-top { gap:6px; padding-inline:12px; }.modern-composer-identity { font-size:11px; }.modern-composer-state {display:block;font-size:10px;max-width:82px;flex:none;}.modern-native-composer .native-options>summary>span {display:none;}.modern-native-composer .native-options-glyph {width:18px;height:18px;}
+ .modern-composer-top { gap:6px; padding-inline:12px; }.modern-composer-identity { font-size:11px; }.modern-composer-state {display:block;font-size:11px;max-width:82px;flex:none;}.modern-native-composer .native-options>summary>span {display:none;}.modern-native-composer .native-options-glyph {width:18px;height:18px;}
  .modern-git-context { padding:10px 14px 0; }.modern-git-context small { font-size:11px; }
  .modern-review-control { right:14px!important; }
 }
 @media(prefers-reduced-motion:reduce) { :root[data-ui-version=modern] .workspace-header, :root[data-ui-version=modern] .modern-session-header { backdrop-filter:none!important; } }
 :root[data-ui-version=modern][data-low-resource] .workspace-header, :root[data-ui-version=modern][data-low-resource] .modern-session-header { backdrop-filter:none!important; }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer textarea { padding:12px 15px 8px; font:13px/1.7 var(--sans); }
-.modern-composer-input-tools select { border:1px solid var(--line); border-radius:6px; background:var(--s1); color:var(--t2); font:10px/1.5 var(--sans); padding:4px 6px; min-width:0; max-width:135px; }
+.modern-composer-input-tools select { border:1px solid var(--line); border-radius:6px; background:var(--s1); color:var(--t2); font:12px/1.5 var(--sans); padding:4px 6px; min-width:0; max-width:135px; }
 .modern-composer-input-tools .modern-effort-select { max-width:100px; }
 @media(max-width:500px) { .modern-composer-input-tools select { max-width:100px; }.modern-composer-input-tools .modern-effort-select { max-width:80px; } }
 
