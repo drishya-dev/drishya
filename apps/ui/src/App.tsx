@@ -10,7 +10,6 @@ import { growingSample } from './lib/sample-source.ts';
 import { setMotion, useApp } from './state.ts';
 import { localPreviewId } from './lib/local-preview.ts';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation.tsx';
-import { useExperience } from './lib/experience.ts';
 import { restoreWorkingLocations, useWorkingRecovery } from './lib/working-recovery.ts';
 import { workspaceMemory } from './lib/workspace-memory.ts';
 
@@ -38,7 +37,6 @@ async function openBundle(url: string, growing = false) {
 }
 
 export function App() {
-  const experience = useExperience();
   const screen = useApp((s) => s.screen);
   const error = useApp((s) => s.error);
 
@@ -129,7 +127,7 @@ export function App() {
     if (screen === 'home') return <Home openDemo={(growing = false) => openBundle(DEMO_URL, growing).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
     return <Viewer />;
   };
-  return <ProductShell>{render()}<LibrarySearch/><ConnectionNotice />{experience !== 'canvas' && <WorkspaceNavigation />}</ProductShell>;
+  return <ProductShell>{render()}<LibrarySearch/><ConnectionNotice /><WorkspaceNavigation /></ProductShell>;
 }
 
 function ConnectionNotice() {

@@ -6,7 +6,6 @@ import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, se
 import { useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { SettingsSections } from './UIVersions.tsx';
-import { useExperience } from '../lib/experience.ts';
 import {useReadingWindow} from './ReadingWindow.tsx';
 import { useNotify, setNotifications } from '../lib/notifications.ts';
 
@@ -67,7 +66,6 @@ export function ReadingDialog({ title, close, children, className = '', modeless
 export function ProductShell({ children }: { children: ReactNode }) {
   const [readingHelp,setReadingHelp]=useState(false);
   useEffect(()=>{const open=()=>setReadingHelp(true);window.addEventListener('drishya-reading-help',open);return()=>window.removeEventListener('drishya-reading-help',open);},[]);
-  const experience = useExperience();
   useDismissMenus();
   useEffect(()=>document.documentElement.dataset.uiVersion==='modern'?installScrollbarActivity():undefined,[]);
   const motion = useApp(s => s.motion);
@@ -89,16 +87,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
     preference.addEventListener('change', apply);
     return () => preference.removeEventListener('change', apply);
   }, [theme]);
-  return <>{children}{open && (experience === 'canvas' ? <CanvasSettings /> : <Settings />)}{readingHelp && <ReadingDialog title="Reading shortcuts" className="reading-shortcuts" close={()=>setReadingHelp(false)}><p>Navigate captured work in Modern without opening the inspector. Reading keys detach Follow; capture continues.</p><dl>{READING_SHORTCUTS.map(([keys,action])=><div key={keys}><dt><kbd>{keys}</kbd></dt><dd>{action}</dd></div>)}</dl><p className="muted small">Disabled in inputs, editors, menus and readers. Replay keeps its transport controls. Copy uses a selection or the material’s existing copy action; otherwise it copies the card preview.</p></ReadingDialog>}</>;
-}
-
-function CanvasSettings() {
-  const theme = useApp(s => s.theme), motion = useApp(s => s.motion), low = useApp(s => s.lowResource);
-  return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog cv-settings">
-    <SettingsSections><section><h3>Appearance</h3><p>Choose how this local workspace looks.</p><div className="cv-appearance" aria-label="Colour theme">{(['dark', 'light', 'system'] as const).map(value => <button key={value} aria-pressed={theme === value || value === 'dark' && theme === 'midnight'} onClick={() => setTheme(value)}><i className={`cv-theme-preview cv-theme-${value}`} /><span>{value[0]!.toUpperCase() + value.slice(1)}</span></button>)}</div></section>
-    <section><h3>Motion and resources</h3><label className="setting-row"><span>Motion<small>Finite arrivals, state changes and camera transitions.</small></span><input type="checkbox" checked={motion && !low} disabled={low} onChange={event => setMotion(event.target.checked)} /></label><label className="setting-row"><span>Low resource mode<small>Turns motion off, reduces cached material and limits mounted nodes.</small></span><input type="checkbox" checked={low} onChange={event => setLowResource(event.target.checked)} /></label><p className="muted small">Your system’s reduced-motion setting always takes precedence.</p></section>
-    <section><h3>Keyboard shortcuts</h3><dl className="shortcut-list"><div><dt>/</dt><dd>Search actions, files and commands</dd></div><div><dt>F · E</dt><dd>Next failure · next edit</dd></div><div><dt>← · →</dt><dd>Previous · next action</dd></div><div><dt>Esc</dt><dd>Close the reader</dd></div><div><dt>+ · − · 0</dt><dd>Zoom in · out · fit</dd></div><div><dt>Space + drag</dt><dd>Pan the canvas</dd></div></dl></section><section><h3>Local by design</h3><p>Read-only observation. Captured sessions stay on this machine. No telemetry, remote fonts or external model calls.</p></section></SettingsSections>
-  </ReadingDialog>;
+  return <>{children}{open && <Settings />}{readingHelp && <ReadingDialog title="Reading shortcuts" className="reading-shortcuts" close={()=>setReadingHelp(false)}><p>Navigate captured work in Modern without opening the inspector. Reading keys detach Follow; capture continues.</p><dl>{READING_SHORTCUTS.map(([keys,action])=><div key={keys}><dt><kbd>{keys}</kbd></dt><dd>{action}</dd></div>)}</dl><p className="muted small">Disabled in inputs, editors, menus and readers. Replay keeps its transport controls. Copy uses a selection or the material’s existing copy action; otherwise it copies the card preview.</p></ReadingDialog>}</>;
 }
 
 const THEMES = [

@@ -8,8 +8,9 @@ describe('UI version navigation', () => {
     expect(resolveUIVersion('?experience=fresh')).toBe('modern');
     expect(resolveUIVersion('')).toBe('modern');
     expect(resolveUIVersion('', 'modern')).toBe('modern');
-    expect(resolveUIVersion('', 'canvas', true)).toBe('canvas');
-    expect(resolveUIVersion('?experience=canvas', 'modern')).toBe('canvas');
+    // Canvas was retired (UI-4 slice 2): saved choices and old links open Legacy, or Modern when the developer switch is off.
+    expect(resolveUIVersion('', 'canvas', true)).toBe('classic');
+    expect(resolveUIVersion('?experience=canvas', 'modern')).toBe('classic');
     expect(resolveUIVersion('?experience=modern', 'canvas')).toBe('modern');
     expect(resolveUIVersion('', 'classic', true)).toBe('classic');
     expect(resolveUIVersion('', 'unknown')).toBe('modern');
