@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-7 | @yash + Codex | `codex/content-7-resource-acceptance` | 2026-10-25 | Existing structured-resource reader correctness/acceptance only: `apps/ui/src/lib/captured-resources.ts`, existing resource unit test, focused new browser spec and report/TASKS/STATUS (at most 6 files). No new views/features, capture/contracts/projection/DATA-3, History/PERF-2, shared CSS or other claimed files. |
 | CONTENT-2 | @yash + Codex | `codex/content-2-search-acceptance` | 2026-10-25 | Existing web-search result correctness/acceptance only: owning web result component/helper and focused unit/browser tests plus docs (at most 6 files). No browser strip/new feature, capture/contracts/projection/DATA-3, History/PERF-2 or shared CSS. Actual captured results; safe click-only links and complete raw access. |
 | CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
 | CONTENT-4 | @yash + Codex | `codex/content-4-ambiguous-plan-labels` | 2026-10-25 | Existing TodoWrite comparison correctness only: `packages/scene/src/plan-threads.ts`, its unit test, one new browser guard and docs (≤6 files). Duplicate labels must not invent task identity/status transitions. No History, PERF-2, DATA-3/contracts/projection, shared CSS or new plan sources. |
@@ -43,6 +42,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — CONTENT-7 resource acceptance
+
+- **25 October 2026, PR #225:** no production change. Existing resource reader passes empty/absent/repeated-body identity, strict incomplete JSON and UTF-8/traversal boundaries, exact copying, keyboard/filter/focus and original mixed/bounded-out output checks. [Evidence](review/content-7-resource-acceptance.md).
+- **Verification:** nine focused units, four browser journeys, three real Codex desktop/phone checks; 799 whole units, both types and build. Phone frame inspected. Sampled Claude has no resource-bearing outputs, so no genuine Claude body acceptance is claimed. Native journals remain read-only/local.
+- **Scope:** CONTENT-7 remains open for broader document/structured acceptance; own narrow claim released. History/PERF-2 stays paused. No new features or automatic merge through TEST-2. Earlier #214/#219/#220/#221/#224 are independent focused-review increments with their own evidence and remaining scopes.
 
 ### Yash with Codex — FILES-1 remaining acceptance complete
 
