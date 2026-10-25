@@ -1,5 +1,7 @@
 # FILES-1 — captured evidence in the existing file tree
 
+**25 October amendment:** the explicit deletion and legacy-enrichment acceptance below is now complete under DATA-1; [PR221 completion report](files-1-deletion-acceptance.md) records actual replay/live/recreate, full eligible Review parity and rescan checks. The20 October no-D statements below are historical, not the current gate.
+
 20 October 2026 · `codex/files-1-evidence-tree` · PR #139
 
 **READY FOR CLAUDE REVIEW / MERGE.** This is the supported-evidence increment; FILES-1 remains unchecked for explicit deletion evidence after DATA-1. Claims were pushed on main before implementation, then clarified before adding the small read-only history query. Integrated main through cefb2ca; no manual conflicts with READ-9 or UI-1. Final changes stay within 14 files and four branch commits including the integration merge.
