@@ -44,7 +44,6 @@ import { GitReviewEntry } from './GitReview.tsx';
 import { ReviewQuestionsEntry } from './ReviewQuestions.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry } from './Workbench.tsx';
-import { CanvasWorkspace } from './CanvasWorkspace.tsx';
 import { ago } from '../lib/git-commit-rows.ts';
 import './search-context.css';
 import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
@@ -176,7 +175,6 @@ function WorkspaceViewer() {
   // A backward seek must conceal later evidence until its as-of page arrives.
   const awaitingEarlierPage = !!historyPage && scene.step > step;
 
-  if (experience === 'canvas') return <><CapturedCommands/><ReviewInsights/><GitHistory/><div inert={awaitingEarlierPage} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined }}><CanvasWorkspace key={recordingId} scene={scene} projection={historical} graph={graph} /><FileHistory projection={historical} /></div>{awaitingEarlierPage && <div className="center notice" role="status">Opening the earlier captured page…</div>}</>;
 
   return (
     <><CapturedCommands/><ReviewInsights/><GitHistory/>

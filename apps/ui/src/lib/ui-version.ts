@@ -1,4 +1,4 @@
-export type UIVersion = 'canvas' | 'classic' | 'modern';
+export type UIVersion = 'classic' | 'modern';
 const key = 'drishya-ui-version';
 const devKey = 'drishya-dev-ui-versions';
 /**
@@ -12,9 +12,10 @@ export function versionChoiceEnabled(search: string = location.search): boolean 
 /** An explicit `?experience=` always wins (tests and links). A saved Legacy/Canvas choice applies only with the developer switch on. */
 export function resolveUIVersion(search: string, saved?: string | null, developerChoice = false): string {
   const explicit = new URLSearchParams(search).get('experience');
-  if (explicit) return explicit === 'fresh' ? 'modern' : explicit;
+  // The Canvas experience was retired (UI-4 slice 2): an old ?experience=canvas link opens Legacy.
+  if (explicit) return explicit === 'fresh' ? 'modern' : explicit === 'canvas' ? 'classic' : explicit;
   if (saved === 'fresh' || saved === 'modern') return 'modern';
-  return developerChoice && (saved === 'canvas' || saved === 'classic') ? saved : 'modern';
+  return developerChoice && (saved === 'canvas' || saved === 'classic') ? 'classic' : 'modern';
 }
 export function selectedUIVersion(): string {
   let saved: string | null = null;
