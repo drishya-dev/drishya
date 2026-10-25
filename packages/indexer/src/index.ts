@@ -6,7 +6,7 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { lstat, readdir, readFile, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import type { GraphEdge, GraphNode, RepoGraph } from '@drishya/contracts';
 import { isDeniedPath } from '@drishya/privacy';
@@ -18,6 +18,7 @@ const SKIP_DIRS = new Set([
   'coverage', 'vendor', 'target', '__pycache__', '.venv', 'venv', 'env', '.tox', '.mypy_cache', '.pytest_cache',
   '.idea', '.vscode', '.drishya', 'playwright-report', 'test-results', '.gradle', 'Pods', 'DerivedData',
 ]);
+const DEFAULT_MAX_FILE_BYTES = 512 * 1024;
 const BINARY = /\.(png|jpe?g|gif|webp|ico|bmp|tiff?|svgz|pdf|zip|gz|tgz|bz2|xz|7z|rar|jar|war|class|so|dylib|dll|exe|bin|o|a|lib|wasm|woff2?|ttf|otf|eot|mp[34]|mov|avi|webm|ogg|wav|flac|db|sqlite3?|lock|pyc|pyd|node)$/i;
 const LANG: Record<string, string> = {
   '.ts': 'typescript', '.tsx': 'typescript', '.mts': 'typescript', '.cts': 'typescript',
@@ -43,7 +44,7 @@ interface FileEntry {
 /** The files a map would include: the shared first step of building and of probing freshness. */
 async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntry[]; skipped: number; truncated: boolean }> {
   const maxFiles = opts.maxFiles ?? 5000;
-  const maxBytes = opts.maxFileBytes ?? 512 * 1024;
+  const maxBytes = opts.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const ignore = readGitignore(root);
   const files: FileEntry[] = [];
   let skipped = 0;
@@ -85,6 +86,24 @@ async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntr
   };
   await walk(root, '');
   return { files, skipped, truncated };
+}
+
+/** Check one map-eligible file without scanning the repository or applying the map's
+ * file-count cap. This is membership only; callers still enforce content consent/privacy. */
+export async function isIndexableFile(root: string, path: string): Promise<boolean> {
+  const parts = path.split('/');
+  if (path.includes('\\') || parts.some(part => !part || part === '.' || part === '..' || part.includes(':'))) return false;
+  const ignore = readGitignore(root);
+  let cursor = root;
+  for (let index = 0; index < parts.length; index++) {
+    const name = parts[index]!, directory = index < parts.length - 1;
+    if (directory ? SKIP_DIRS.has(name) || ignore(parts.slice(0, index + 1).join('/'), true) : BINARY.test(name) || ignore(path, false)) return false;
+    cursor = join(cursor, name);
+    const info = await lstat(cursor).catch(() => undefined);
+    if (!info || info.isSymbolicLink()) return false;
+    if (directory ? !info.isDirectory() : !info.isFile() || info.size > DEFAULT_MAX_FILE_BYTES) return false;
+  }
+  return true;
 }
 
 /** Identity of a file set: changes when any file is added, removed, resized or touched. */
