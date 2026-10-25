@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | CONTENT-2 | @yash + Codex | `codex/content-2-search-acceptance` | 2026-10-25 | Existing web-search result correctness/acceptance only: owning web result component/helper and focused unit/browser tests plus docs (at most 6 files). No browser strip/new feature, capture/contracts/projection/DATA-3, History/PERF-2 or shared CSS. Actual captured results; safe click-only links and complete raw access. |
 | CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
-| CONTENT-4 | @yash + Codex | `codex/content-4-ambiguous-plan-labels` | 2026-10-25 | Existing TodoWrite comparison correctness only: `packages/scene/src/plan-threads.ts`, its unit test, one new browser guard and docs (≤6 files). Duplicate labels must not invent task identity/status transitions. No History, PERF-2, DATA-3/contracts/projection, shared CSS or new plan sources. |
 | CONTENT-1 | @yash + Codex | `codex/content-1-image-reader-acceptance` | 2026-10-25 | Existing image-reader phone/keyboard/refusal acceptance: new focused browser spec and report; image-reader component only if a demonstrated bug needs it (≤6 files). No History, PERF-2, DATA-3, shared dialog typography CSS or existing TEST-2 specs. Keep real Codex ImageView acceptance open without a genuine sample. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
@@ -42,6 +41,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — CONTENT-4 honest duplicate-label comparison
+
+- **25 October2026, PR219:** repeated TodoWrite labels are ambiguous task identities; unchanged duplicates no longer get an invented reopened/started/completed marker. Literal rows/states/counts, genuine additions and unique comparisons remain intact. [Cause, verification and limits](review/content-4-ambiguous-plan-labels.md).
+- **Checks:** five new regressions fail on baseline; ten plan-thread units and three browser journeys pass (desktop/phone, pinned/expanded/revision reading).790 integrated units, both types and production build pass. No History, PERF-2, CSS, contracts/projection/schema or native-control edits.
+- **Scope:** recent bounded Claude journal scan finds no real plan tool uses, so the regression fixture is synthetic; parent CONTENT-4 stays open for real sources and DATA-7. Own scoped claim released in this PR, other claims retained. Focused review ready; do not merge through the known TEST-2 jump or resume the builder-paused area. PR214 image-reader acceptance remains separately ready.
 
 ### Yash with Codex — CONTENT-3 literal answers and selected-preview attribution
 

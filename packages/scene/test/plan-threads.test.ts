@@ -28,6 +28,42 @@ describe('planThreads', () => {
     expect(found.get('p1')!.thread.revisions[0]!.items.every((i) => i.change === undefined)).toBe(true);
   });
 
+  it('does not claim an unchanged duplicate label was reopened', () => {
+    const items: [string,string][] = [['Run tests','pending'],['Run tests','completed']];
+    const found = planThreads(projection([plan('p1',2,items),plan('p2',4,items)], [1]));
+    const last = found.get('p2')!.thread.revisions[1]!;
+    expect(last.items.map(item=>item.change)).toEqual([undefined,undefined]);
+    expect(last.items.map(({text,status})=>({text,status}))).toEqual(items.map(([text,status])=>({text,status})));
+    expect(last).toMatchObject({done:1,total:2,removed:[]});
+  });
+
+  it.each(['previous','current','both'])('keeps ambiguous %s labels literal while comparing unique neighbors', where => {
+    const duplicates: [string,string][] = [['Repeat','pending'],['Repeat','completed']];
+    const first = where === 'current' ? [['Repeat','completed']] as [string,string][] : duplicates;
+    const second = where === 'previous' ? [['Repeat','pending']] as [string,string][] : [...duplicates].reverse();
+    const found = planThreads(projection([
+      plan('p1',2,[...first,['Unique','pending']]),
+      plan('p2',4,[...second,['Unique','completed']]),
+    ],[1]));
+    const items=found.get('p2')!.thread.revisions[1]!.items;
+    expect(items.filter(item=>item.text==='Repeat').every(item=>item.change===undefined)).toBe(true);
+    expect(items.find(item=>item.text==='Unique')!.change).toBe('completed');
+    expect(items).toHaveLength(second.length+1);
+  });
+
+  it('marks genuinely new duplicate labels as added and resumes unique comparisons later', () => {
+    const found=planThreads(projection([
+      plan('p1',2,[['Existing','pending']]),
+      plan('p2',4,[['New','pending'],['New','completed']]),
+      plan('p3',6,[['New','pending']]),
+      plan('p4',8,[['New','completed']]),
+    ],[1]));
+    const revisions=found.get('p4')!.thread.revisions;
+    expect(revisions[1]!.items.map(item=>item.change)).toEqual(['added','added']);
+    expect(revisions[2]!.items[0]!.change).toBeUndefined();
+    expect(revisions[3]!.items[0]!.change).toBe('completed');
+  });
+
   it('starts a new thread for a new prompt and for another agent', () => {
     const found = planThreads(projection([
       plan('p1', 2, [['A', 'pending']]), plan('p2', 12, [['A', 'completed']]), plan('p3', 13, [['B', 'pending']], 'b'),
