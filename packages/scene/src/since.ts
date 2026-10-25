@@ -36,8 +36,18 @@ export interface SinceDigest {
 }
 
 export type SinceGroup = 'failures' | 'edits' | 'tests' | 'unfinished' | 'gaps';
+/** READ-5: one captured edit of a file, attributed only by its own captured position. */
+export interface SinceFileEdit {
+  operationId: string;
+  /** 1-based prompt turn of the editing agent at this edit's own captured position; absent when that position was not captured (unattributed). */
+  turn?: number;
+  added: number;
+  removed: number;
+  /** The first recorded test run by the same agent after this edit and before its next prompt; absent when none is recorded (never inferred). */
+  nextTest?: { operationId: string; outcome: 'passed' | 'failed' | 'unknown' };
+}
 /** Captured patch size of one edited file, and the prompt turn of the last captured edit to it. */
-export interface SinceFileStat { added: number; removed: number; edits: number; /** 1-based turn of the agent's prompts at the last captured edit. */ turn?: number }
+export interface SinceFileStat { added: number; removed: number; edits: number; /** 1-based turn of the agent's prompts at the last captured edit. */ turn?: number; /** Captured edits in capture order, at most `FILE_EDIT_LIMIT`; `edits` is the full count. */ fileEdits?: SinceFileEdit[] }
 export interface SinceSnapshot extends SinceDigest {
   counts: Record<SinceGroup, number>;
   editedFileCount: number;
@@ -47,19 +57,39 @@ export interface SinceSnapshot extends SinceDigest {
   gapGroups?: { title: string; count: number }[];
 }
 
-/** Per-file +/- from captured hunks and the turn of the latest edit, in capture order. */
+/** Edits listed per file; the rest are counted in `SinceFileStat.edits`. */
+export const FILE_EDIT_LIMIT = 20;
+
+/** Per-file +/- from captured hunks and each edit's turn and next test run, in capture order. */
 export function sinceFileStats(p: Projection, edits: SinceItem[], paths: string[]): Record<string, SinceFileStat> {
   const wanted = new Set(paths), ops = new Map(p.operations.map((o) => [o.id, o])), stats: Record<string, SinceFileStat> = {};
-  const turnsByAgent = new Map<string, number[]>();
+  const { starts, ends } = operationObservations(p);
+  const turnsByAgent = new Map<string, number[]>(), testsByAgent = new Map<string, { start: number; op: Operation }[]>();
   for (const item of p.timeline) if (item.type === 'turn') (turnsByAgent.get(item.agentId) ?? turnsByAgent.set(item.agentId, []).get(item.agentId)!).push(item.sequence);
+  for (const op of p.operations) {
+    const start = starts.get(op.id);
+    if (op.kind === 'test' && !op.declined && start !== undefined) (testsByAgent.get(op.agentId) ?? testsByAgent.set(op.agentId, []).get(op.agentId)!).push({ start, op });
+  }
+  for (const list of testsByAgent.values()) list.sort((a, b) => a.start - b.start);
   for (const edit of [...edits].sort((a, b) => a.sequence - b.sequence)) {
     const op = edit.operationId ? ops.get(edit.operationId) : undefined;
     if (!op || op.detail.kind !== 'edit' || !wanted.has(op.detail.path)) continue;
     const stat = stats[op.detail.path] ??= { added: 0, removed: 0, edits: 0 };
-    for (const hunk of op.detail.hunks) for (const line of hunk.lines) { if (line.startsWith('+')) stat.added++; else if (line.startsWith('-')) stat.removed++; }
-    stat.edits++;
-    const turns = turnsByAgent.get(op.agentId)?.filter((sequence) => sequence <= op.startSequence).length;
-    if (turns) stat.turn = turns;
+    let added = 0, removed = 0;
+    for (const hunk of op.detail.hunks) for (const line of hunk.lines) { if (line.startsWith('+')) added++; else if (line.startsWith('-')) removed++; }
+    stat.added += added; stat.removed += removed; stat.edits++;
+    // Operation sequences are timeline offsets; only the op-start observation compares with turn sequences.
+    const position = starts.get(op.id), turns = turnsByAgent.get(op.agentId) ?? [];
+    const turn = position === undefined ? undefined : turns.filter((sequence) => sequence <= position).length || undefined;
+    if (turn) stat.turn = turn;
+    if (stat.edits > FILE_EDIT_LIMIT) continue;
+    const entry: SinceFileEdit = { operationId: op.id, turn, added, removed };
+    if (position !== undefined && turn) {
+      const after = ends.get(op.id) ?? position, turnEnd = turns.find((sequence) => sequence > position) ?? Infinity;
+      const test = testsByAgent.get(op.agentId)?.find((t) => t.start > after && t.start < turnEnd);
+      if (test) entry.nextTest = { operationId: test.op.id, outcome: test.op.status === 'ok' ? 'passed' : operationFailed(test.op) ? 'failed' : 'unknown' };
+    }
+    (stat.fileEdits ??= []).push(entry);
   }
   return stats;
 }

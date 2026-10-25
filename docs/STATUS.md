@@ -31,12 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| READ-5 | @yash + Claude | `yash/read-5-edit-turns` | 2026-10-25 | First slice only: per-file edit list in the Changes view (`turn N · +a −b → next test run ✓/✗`). `packages/scene/src/since.ts` + test, `apps/ui/src/components/EvidenceReview.tsx`, its review CSS, new `tests/browser/file-edit-turns.spec.ts`, docs (≤15 files). No worker, schema, History, PERF-2 or ingest files. |
-| READ-8 | @yash + Claude Sonnet 5.5 | `yash/read-8-file-steps` | 2026-10-25 | First slice: Previous change / Next change stepper with an n of N label in the file evidence panel. `apps/ui/src/components/FileHistory.tsx`, `file-reader-controls.css`, `apps/ui/src/lib/` helper + unit test, new `tests/browser/file-timeline-steps.spec.ts` (≤8 files). No History, common, PERF-2 files or contracts. |
-| GIT-4 | @yash + Claude | `yash/git-4-picker` | 2026-10-25 | Picker slice: the several-edits "Recorded work · N edits" action becomes a small keyboard-operable menu (turn + operation title, newest first) in `apps/ui/src/components/GitPatchReader.tsx`, `apps/ui/src/lib/hunk-evidence.ts`, its unit test, patch-controls CSS, and the two `git-*hunk-recorded-work` browser specs (≤15 files). Matching rule unchanged; no History/PERF-2 files, no schema. |
+| UI-2 | @yash + Claude | `yash/ui-2-composer` | 2026-10-25 | Typography floor, composer slice only; Home is another session. Modern composer CSS rules raised in place, new `tests/browser/composer-typography.spec.ts`, TASKS/STATUS (≤6 files). No component/layout/behaviour change, History, PERF-2, schema. |
+| CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
 | CONTENT-1 | @yash + Codex | `codex/content-1-image-reader-acceptance` | 2026-10-25 | Existing image-reader phone/keyboard/refusal acceptance: new focused browser spec and report; image-reader component only if a demonstrated bug needs it (≤6 files). No History, PERF-2, DATA-3, shared dialog typography CSS or existing TEST-2 specs. Keep real Codex ImageView acceptance open without a genuine sample. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
+| UI-2 | @yash + Claude | `yash/ui-2-home` | 2026-10-25 | Home slice only; the composer is another session. Modern Home and whole-page surfaces reached from it (Search sessions dialog, empty/first-run): governing Home CSS rules raised in place, one new `tests/browser/home-floor-typography.spec.ts`, TASKS/STATUS notes (≤6 files). No component/layout/behaviour change; not History, common.tsx, PERF-2 files, schema. |
 
 
 ---
@@ -48,6 +48,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **25 October2026, PR219:** repeated TodoWrite labels are ambiguous task identities; unchanged duplicates no longer get an invented reopened/started/completed marker. Literal rows/states/counts, genuine additions and unique comparisons remain intact. [Cause, verification and limits](review/content-4-ambiguous-plan-labels.md).
 - **Checks:** five new regressions fail on baseline; ten plan-thread units and three browser journeys pass (desktop/phone, pinned/expanded/revision reading).790 integrated units, both types and production build pass. No History, PERF-2, CSS, contracts/projection/schema or native-control edits.
 - **Scope:** recent bounded Claude journal scan finds no real plan tool uses, so the regression fixture is synthetic; parent CONTENT-4 stays open for real sources and DATA-7. Own scoped claim released in this PR, other claims retained. Focused review ready; do not merge through the known TEST-2 jump or resume the builder-paused area. PR214 image-reader acceptance remains separately ready.
+
+
+### Yash with Claude (Sonnet 5.5) — GIT-4 Recorded work picker
+- **GIT-4 picker:** when several captured edits wrote the same Git hunk lines, "Recorded work · N edits" in Git review and the Git graph now opens a small keyboard menu (turn + operation title, newest first); one match is unchanged and the matching rule is untouched. Turn labels are counted from the edit's own agent's captured prompts, or omitted when none is captured. Details and what stays open (Classic, other repo roots) are in TASKS GIT-4.
+
+### Yash with Claude (Sonnet 5.5) — READ-5 slice 1: edits by turn in Changes
+- **READ-5 slice 1:** each file in the Changes view lists its captured edits as `turn N · +a −b → next test run ✓/✗`; each entry opens that edit. Attribution is exact or "unattributed", details in TASKS READ-5. READ-5 stays open (line-level blame and hunks are not done).
+
+### Yash with Claude (Sonnet 5.5) — READ-8 file stepper, slice 1 (PR #217, draft)
+- **READ-8 slice 1:** the file evidence panel steps through a file's captured reads and edits with Previous change / Next change and an "n of N" label (within the loaded action page; ends disable, focus moves to the working button, hidden in compare). Page-crossing and a whole-session count remain open, so READ-8 stays unticked; details in TASKS READ-8.
 
 ### Yash with Claude (Sonnet 5.5) — UI-2 dialogs slice; b2-live regression found
 - **UI-2 slice 2:** Git review, Git graph and the Developer Workspace now keep metadata at 11 px and controls at 12 px on all seven palettes, desktop and phone, with a guard spec; details in TASKS UI-2.

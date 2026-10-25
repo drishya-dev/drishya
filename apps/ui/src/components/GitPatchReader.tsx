@@ -7,6 +7,7 @@ import { gitPatchSections } from '../lib/git-patch.ts';
 import { DiffReader } from './ArtifactReader.tsx';
 import { CodeView } from './common.tsx';
 import { useEvidenceState } from './EvidenceNavigation.tsx';
+import { RecordedWorkMenu } from './RecordedWorkMenu.tsx';
 
 /** `openRecorded` opens the captured patch of an edit; without it (or without matches) no per-hunk action appears. */
 export function GitPatchReader({ file, openRecorded }: { file: GitFile; openRecorded?: (path: string, evidenceKey: string) => void }) {
@@ -14,7 +15,9 @@ export function GitPatchReader({ file, openRecorded }: { file: GitFile; openReco
   const hunkAction = openRecorded && operations ? (hunk: Hunk) => {
     const matches = recordedEditsForHunk(hunk, file.path, operations);
     const latest = matches.at(-1);
-    return latest ? <button className="btn ghost small hunk-recorded" title={matches.length > 1 ? `${matches.length} captured edits wrote exactly these added lines; opens the latest` : 'Open the captured edit that wrote exactly these added lines'} onClick={() => openRecorded(file.path, patchEvidenceKey(latest))}>Recorded work{matches.length > 1 ? ` · ${matches.length} edits` : ''}</button> : null;
+    if (!latest) return null;
+    if (matches.length > 1) return <RecordedWorkMenu matches={matches} open={key => openRecorded(file.path, key)} />;
+    return <button className="btn ghost small hunk-recorded" title="Open the captured edit that wrote exactly these added lines" onClick={() => openRecorded(file.path, patchEvidenceKey(latest))}>Recorded work</button>;
   } : undefined;
   const sections = useMemo(() => gitPatchSections(file.patch), [file.patch]);
   const key = `git/${file.path}/${file.fingerprint}`;
