@@ -17,3 +17,7 @@
 - **847 whole units / 151 files**, both TypeScript projects and production UI build pass on main #230 plus the CONTENT-7 test claim. PR #229 recovery changes are independent and not yet part of this branch. Local checks only, no hosted CI.
 
 No production source, CSS, animation, capture/contracts/projection, persistence, native controls or paused History/PERF-2 change. Installed emil-design-eng guidance informs containment/readability review; no motion changed. Physical/platform/human acceptance remains REL-2/REL-3. Parent CONTENT-7 is not closed by these bounded checks.
+
+## Combined review handoff
+
+PR #229 plus this branch were temporarily combined without publishing or merging either PR into main: **855 whole units, seven focused browser checks, both TypeScript projects and build pass**. No production/test conflict; only STATUS has a documentation conflict because both PRs replace the latest Codex handoff and release their own claim. Keep both completion reports/handoff evidence, remove both completed own claims, and preserve DATA-3 and paused PERF-2 rows. TASKS additions merge automatically. The temporary verification merge was aborted after checking; branches remain independent and require builder review. #229 was updated against main's newer CONTENT-7 claim before this probe.

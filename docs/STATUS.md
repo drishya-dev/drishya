@@ -48,6 +48,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **25 October 2026, PR #231:** existing explicit CSV/TSV reader passes terminal/empty/missing/Unicode/quoted values, exact limits and block/header/filter/copy states. No production change. [Evidence and source qualification](review/content-7-delimited-acceptance.md).
 - **Verified:** 10 model units, 5 browser checks, 4 actual Codex/Claude desktop/phone journeys; 847 whole units, both types/build. Actual samples are comma-bearing tool text chosen explicitly, not claimed schema-defined CSV. Preview/full-artifact input mismatch identified during diagnostics; final samples match their supplied text.
+- **Combined compatibility:** temporary combination with #229 passes 855 units, seven focused browser checks, both types/build; only STATUS documentation needs reconciliation. Verification merge aborted; source branches remain independent.
 - **Handoff:** own CONTENT-7 claim released, parent remains open for genuine datasets/broader documents and platform/human acceptance. #231 ready for builder review. Independent #229 recovery correctness also ready: 852 integrated units/two browser checks/actual Claude, scoped report in review/files-5-recovery-identity.md. DATA-3 ownership preserved, History/PERF-2 paused and no automatic merge through TEST-2.
 
 
