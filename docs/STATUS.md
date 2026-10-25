@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| GIT-4 | @yash + Claude | `yash/git-4-picker` | 2026-10-25 | Picker slice: the several-edits "Recorded work · N edits" action becomes a small keyboard-operable menu (turn + operation title, newest first) in `apps/ui/src/components/GitPatchReader.tsx`, `apps/ui/src/lib/hunk-evidence.ts`, its unit test, patch-controls CSS, and the two `git-*hunk-recorded-work` browser specs (≤15 files). Matching rule unchanged; no History/PERF-2 files, no schema. |
 | CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
 | CONTENT-4 | @yash + Codex | `codex/content-4-ambiguous-plan-labels` | 2026-10-25 | Existing TodoWrite comparison correctness only: `packages/scene/src/plan-threads.ts`, its unit test, one new browser guard and docs (≤6 files). Duplicate labels must not invent task identity/status transitions. No History, PERF-2, DATA-3/contracts/projection, shared CSS or new plan sources. |
 | CONTENT-1 | @yash + Codex | `codex/content-1-image-reader-acceptance` | 2026-10-25 | Existing image-reader phone/keyboard/refusal acceptance: new focused browser spec and report; image-reader component only if a demonstrated bug needs it (≤6 files). No History, PERF-2, DATA-3, shared dialog typography CSS or existing TEST-2 specs. Keep real Codex ImageView acceptance open without a genuine sample. |
@@ -42,6 +41,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — GIT-4 Recorded work picker
+- **GIT-4 picker:** when several captured edits wrote the same Git hunk lines, "Recorded work · N edits" in Git review and the Git graph now opens a small keyboard menu (turn + operation title, newest first); one match is unchanged and the matching rule is untouched. Turn labels are counted from the edit's own agent's captured prompts, or omitted when none is captured. Details and what stays open (Classic, other repo roots) are in TASKS GIT-4.
 
 ### Yash with Claude (Sonnet 5.5) — READ-5 slice 1: edits by turn in Changes
 - **READ-5 slice 1:** each file in the Changes view lists its captured edits as `turn N · +a −b → next test run ✓/✗`; each entry opens that edit. Attribution is exact or "unattributed", details in TASKS READ-5. READ-5 stays open (line-level blame and hunks are not done).

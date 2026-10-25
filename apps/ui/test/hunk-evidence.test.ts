@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Hunk, Operation } from '@drishya/contracts';
-import { patchEvidenceKey, recordedEditsForHunk } from '../src/lib/hunk-evidence.ts';
+import type { Hunk, Operation, TimelineItem } from '@drishya/contracts';
+import { patchEvidenceKey, recordedEditsForHunk, recordedPicks } from '../src/lib/hunk-evidence.ts';
 
 const hunk = (...lines: string[]): Hunk => ({ oldStart: 1, oldLines: 1, newStart: 1, newLines: lines.length, lines });
-const edit = (id: string, path: string, hunks: Hunk[], status: Operation['status'] = 'ok'): Operation => ({ id, kind: 'edit', status, detail: { kind: 'edit', path, hunks } } as unknown as Operation);
+const edit = (id: string, path: string, hunks: Hunk[], status: Operation['status'] = 'ok', extra: Partial<Operation> = {}): Operation => ({ id, kind: 'edit', status, title: `Edited ${path}`, agentId: 'main', startSequence: 0, detail: { kind: 'edit', path, hunks }, ...extra } as unknown as Operation);
+const turn = (sequence: number, agentId = 'main'): TimelineItem => ({ type: 'turn', id: `t${sequence}`, sequence, agentId });
 
 const body = ['+export const total = (cart: Cart) => {', '+  return cart.items.reduce((sum, item) => sum + item.price, 0);', '+};'];
 
@@ -28,5 +29,23 @@ describe('recorded edits for a Git hunk', () => {
     const braces = edit('b', 'f.ts', [hunk('+}', '+}')]);
     expect(recordedEditsForHunk(hunk('+}', '+}'), 'f.ts', [braces])).toEqual([]);
     expect(recordedEditsForHunk(hunk(' only context', '-gone'), 'f.ts', [braces])).toEqual([]);
+  });
+});
+
+describe('recorded work picker entries', () => {
+  const a = edit('a', 'f.ts', [hunk(...body)], 'ok', { startSequence: 5 }), b = edit('b', 'f.ts', [hunk(...body)], 'ok', { startSequence: 12 });
+  it('lists the newest edit first and counts turns from the edit agent captured prompts', () => {
+    const picks = recordedPicks([a, b], [turn(1), turn(10), turn(20)]);
+    expect(picks.map(pick => [pick.key, pick.turn, pick.label])).toEqual([['b/patch', 2, 'Turn 2 · Edited f.ts'], ['a/patch', 1, 'Turn 1 · Edited f.ts']]);
+    expect(picks.some(pick => pick.twin)).toBe(false);
+  });
+  it('labels by title alone when no prompt of that agent precedes the edit', () => {
+    const sub = edit('s', 'f.ts', [hunk(...body)], 'ok', { startSequence: 7, agentId: 'sub' });
+    expect(recordedPicks([sub], [turn(1)]).map(pick => [pick.turn, pick.label])).toEqual([[undefined, 'Edited f.ts']]);
+    expect(recordedPicks([a], [turn(9)]).map(pick => pick.label)).toEqual(['Edited f.ts']);
+  });
+  it('marks entries that read identically so the menu can add their captured time', () => {
+    const picks = recordedPicks([a, b], [turn(1)]);
+    expect(picks.map(pick => pick.twin)).toEqual([true, true]);
   });
 });
