@@ -8,3 +8,7 @@
 .web-title {font:12.5px/1.5 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .web-snippet {margin:0;font:11.5px/1.5 var(--sans);color:var(--t2);overflow-wrap:anywhere;}
 .web-more {font:11px/1.5 var(--sans);color:var(--t3);}
+
+/* Reading mode preserves the full supplied title; the compact preview keeps one-line rows. */
+.web-results-full .web-title {white-space:normal;overflow-wrap:anywhere;overflow:visible;}
+.web-reference {display:grid;gap:1px;min-width:0;}

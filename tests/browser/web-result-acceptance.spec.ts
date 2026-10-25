@@ -1,0 +1,33 @@
+import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve,sep} from 'node:path';
+import {test,expect} from '@playwright/test';
+import {App} from '../../apps/daemon/src/app.ts';
+import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+let dir:string,app:App,server:RunningServer;
+test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-web-accept-'));app=new App(join(dir,'data'));server=await startServer({app,port:0});});
+test.afterAll(async()=>{await server?.close();await app?.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});});
+const title='A long recorded result title that must stay readable after expanding the card: '+ 'full title words '.repeat(7);
+for(const width of [320,390,1440])test(`expanded recorded web results show full supplied titles and original output at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ const links=Array.from({length:9},(_,i)=>({title:i===0?title:`Recorded result ${i}`,url:`https://example.invalid/result/${i}`}));
+ const output=`Web search results for query: "synthetic result acceptance"\n\nLinks: ${JSON.stringify(links)}\n\nA literal recorded sibling.`;
+ const base={timestamp:'2026-10-25T00:00:00Z',sessionId:`web-${width}`,cwd:dir};
+ const rows=[{...base,type:'user',uuid:'p',message:{role:'user',content:'Look at the recorded web results'}},{...base,type:'assistant',uuid:'a',message:{id:'m',role:'assistant',content:[{type:'tool_use',id:'w',name:'WebSearch',input:{query:'synthetic result acceptance'}}]}},{...base,type:'user',uuid:'r',message:{role:'user',content:[{type:'tool_result',tool_use_id:'w',content:output}]}}];
+ const source=join(dir,`web-${width}.jsonl`);writeFileSync(source,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('claude-code',source)).recordingId;
+ let fetched=0;await page.context().route('https://example.invalid/**',route=>{fetched++;return route.fulfill({body:'Explicit current page'});});
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+ const card=page.locator('article.op').filter({hasText:'synthetic result acceptance'}).first();await expect(card.locator('.web-results li')).toHaveCount(5);await expect(card.locator('.web-more')).toHaveText('4 more results');
+ const expand=card.locator('button.op-expand');await expand.focus();await expand.press('Enter');const full=card.locator('.op-expanded .web-results');await expect(full.locator('li')).toHaveCount(9);
+ const first=full.locator('.web-title').first();await expect(first).toHaveText(title.slice(0,200));expect(await first.evaluate(el=>el.scrollWidth>el.clientWidth+1 || el.scrollHeight>el.clientHeight+1)).toBe(false);
+ await expect(card.locator('.op-expanded')).toContainText('A literal recorded sibling.');
+ expect(await full.evaluate(el=>el.scrollWidth>el.clientWidth+1)).toBe(false);expect(fetched).toBe(0);
+ const link=full.locator('a').first();await expect(link).toHaveAttribute('rel','noopener noreferrer');await link.focus();await expect(link).toBeFocused();
+ const popup=page.waitForEvent('popup');await link.press('Enter');const opened=await popup;await expect(opened).toHaveURL('https://example.invalid/result/0');expect(fetched).toBe(1);await opened.close();
+});
+test('offline result URLs outside valid HTTP(S) stay literal and inert',async({page})=>{
+ const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));const op=sample.projection.operations.find((x:{kind:string})=>x.kind==='mcp');sample.projection.operations=[op];sample.projection.prose=[];sample.projection.timeline=sample.projection.timeline.filter((t:{operationId?:string})=>t.operationId===op.id);sample.projection.passages=[{id:'web-only',agentId:op.agentId,operationIds:[op.id],proseIds:[],firstStep:1,lastStep:2}];op.kind='web';op.origin={type:'native',tool:'web'};op.artifactIds=[];
+ op.detail={kind:'web',query:'synthetic offline link validation',resultPreview:'Exact recorded output remains available',results:['javascript:alert(1)','data:text/html,<h1>wrong</h1>','file:///private.txt','//example.invalid/relative','https://','https://example.invalid/good'].map((url,i)=>({url,title:`Recorded reference ${i}`,domain:'captured domain'}))};
+ await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.locator('button.op-expand').click();const full=card.locator('.op-expanded .web-results');await expect(full.locator('li')).toHaveCount(6);await expect(full.locator('a')).toHaveCount(1);await expect(full).toContainText('Recorded reference 0');await expect(full).toContainText('javascript:alert(1)');
+});

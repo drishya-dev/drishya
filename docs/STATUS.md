@@ -42,6 +42,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — CONTENT-2 search reading correctness
+
+- **25 October 2026, PR #224:** expanded recorded web results now wrap full supplied titles; compact previews stay compact. Offline unsupported/malformed URLs remain literal and inert; only valid absolute HTTP(S) links navigate on explicit click/Enter. No automatic fetching. [Evidence](review/content-2-search-acceptance.md).
+- **Verified:** five focused browser checks, six actual Codex/Claude journeys at 1440/390/320 px, 795 whole units, both types and build. Actual phone frame inspected; native journals unchanged and uncommitted. CONTENT-2 remains open for its browser strip/new-source acceptance; own narrow claim released.
+- **Gate:** History/PERF-2 stays paused by the builder. No shared CSS, capture, schema or new feature. #224 ready for focused review, not automatic merge through TEST-2. Earlier independent #214/#219/#220/#221 remain pending builder review; their own reports define completion scope.
+
 ### Yash with Codex — CONTENT-4 honest duplicate-label comparison
 
 - **25 October2026, PR219:** repeated TodoWrite labels are ambiguous task identities; unchanged duplicates no longer get an invented reopened/started/completed marker. Literal rows/states/counts, genuine additions and unique comparisons remain intact. [Cause, verification and limits](review/content-4-ambiguous-plan-labels.md).
