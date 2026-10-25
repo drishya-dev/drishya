@@ -1,4 +1,4 @@
-import type { Hunk, Operation } from '@drishya/contracts';
+import type { Hunk, Operation, TimelineItem } from '@drishya/contracts';
 
 const added = (hunks: Hunk[]) => hunks.flatMap(h => h.lines.filter(line => line.startsWith('+')).map(line => line.slice(1)));
 
@@ -23,3 +23,24 @@ export function recordedEditsForHunk(hunk: Hunk, path: string, operations: Opera
 
 /** The file panel selects an edit's captured patch by this key. */
 export const patchEvidenceKey = (op: Operation) => `${op.id}/patch`;
+
+export interface RecordedPick {
+  op: Operation;
+  key: string;
+  /** 1-based prompt count for the edit's own agent at the time of the edit; absent when none is captured before it. */
+  turn?: number;
+  label: string;
+  /** Another entry reads identically, so the menu adds the captured time to tell them apart. */
+  twin: boolean;
+}
+
+/** One entry per matching edit for the picker, newest first. The turn is counted from captured prompts, never guessed. */
+export function recordedPicks(matches: Operation[], timeline: TimelineItem[]): RecordedPick[] {
+  const prompts = new Map<string, number[]>();
+  for (const item of timeline) if (item.type === 'turn') (prompts.get(item.agentId) ?? prompts.set(item.agentId, []).get(item.agentId)!).push(item.sequence);
+  const picks = [...matches].sort((a, b) => b.startSequence - a.startSequence).map(op => {
+    const turn = prompts.get(op.agentId)?.filter(sequence => sequence <= op.startSequence).length || undefined;
+    return { op, key: patchEvidenceKey(op), ...(turn ? { turn } : {}), label: turn ? `Turn ${turn} · ${op.title}` : op.title };
+  });
+  return picks.map(pick => ({ ...pick, twin: picks.some(other => other !== pick && other.label === pick.label) }));
+}

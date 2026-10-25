@@ -116,3 +116,39 @@ it('reads nine identical capture gaps as one grouped line', () => {
   expect(snapshot.counts.gaps).toBe(9);
   expect(snapshot.gapGroups).toEqual([{ title: expect.stringContaining('source truncated'), count: 9 }]);
 });
+
+describe('READ-5 per-file edits by turn', () => {
+  const edit = (id: string, path: string, lines: string[]) => ({ ...p.operations.find((o) => o.kind === 'edit')!, id, agentId: 'a', status: 'ok' as const, paths: [{ path, role: 'write' as const, basis: 'captured' as const }], detail: { kind: 'edit' as const, path, hunks: [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines }], created: false, reconstruction: 'available' as const } });
+  const test = (id: string, status: 'ok' | 'error' | 'running', declined = false) => ({ ...tests()[0]!, id, agentId: 'a', status, declined: declined ? ({} as never) : undefined });
+  const tl = (type: 'op-start' | 'op-end', operationId: string, sequence: number) => ({ type, id: `${type}-${operationId}`, operationId, sequence, agentId: 'a' });
+  const turn = (sequence: number) => ({ type: 'turn' as const, id: `turn-${sequence}`, sequence, agentId: 'a' });
+  // Operation start/end offsets are deliberately wrong: only observation sequences may place an edit.
+  const build = () => {
+  const ops = [edit('e1', 'a.ts', ['+x', '+y', '-z']), test('t1', 'error'), edit('e2', 'a.ts', ['+q']), test('t-declined', 'ok', true), edit('e3', 'a.ts', ['-w']), test('t-late', 'ok'), edit('lost', 'a.ts', ['+l'])].map((o) => ({ ...o, startSequence: 0, endSequence: 0 }));
+  const q = { ...p, gaps: [], lastSequence: 40, operations: ops, timeline: [turn(1), tl('op-start', 'e1', 2), tl('op-end', 'e1', 3), tl('op-start', 't1', 4), tl('op-end', 't1', 5), tl('op-start', 'e2', 6), tl('op-end', 'e2', 7), tl('op-start', 't-declined', 8), turn(10), tl('op-start', 'e3', 11), tl('op-end', 'e3', 12), turn(20), tl('op-start', 't-late', 21), tl('op-end', 't-late', 22), tl('op-end', 'lost', 30)] } as unknown as Projection;
+  return q;
+  };
+  const stat = () => sinceSnapshot(build(), -1).fileStats!['a.ts']!;
+
+  it('attributes each edit to its own turn with its recorded +/-', () => {
+    expect(stat().fileEdits!.slice(0, 3).map((e) => [e.operationId, e.turn, e.added, e.removed])).toEqual([['e1', 1, 2, 1], ['e2', 1, 1, 0], ['e3', 2, 0, 1]]);
+    expect(stat()).toMatchObject({ added: 4, removed: 2, edits: 4 });
+  });
+  it('links the next test run only when it is recorded in the same turn after the edit', () => {
+    const [e1, e2, e3] = stat().fileEdits!;
+    expect(e1!.nextTest).toEqual({ operationId: 't1', outcome: 'failed' });
+    expect(e2!.nextTest).toBeUndefined(); // the only later test in this turn was declined, so it never ran
+    expect(e3!.nextTest).toBeUndefined(); // t-late belongs to the next prompt
+  });
+  it('shows an edit with no captured start position as unattributed', () => {
+    const lost = stat().fileEdits!.find((e) => e.operationId === 'lost')!;
+    expect(lost.turn).toBeUndefined();
+    expect(lost.nextTest).toBeUndefined();
+  });
+  it('lists at most the edit limit but counts every edit', () => {
+    const many = Array.from({ length: 25 }, (_, i) => edit(`m${i}`, 'm.ts', ['+a']));
+    const r = { ...build(), operations: many, timeline: [turn(1), ...many.map((o, i) => tl('op-start', o.id, 2 + i))] } as unknown as Projection;
+    const s = sinceSnapshot(r, -1).fileStats!['m.ts']!;
+    expect(s.edits).toBe(25); expect(s.fileEdits).toHaveLength(20); expect(s.added).toBe(25);
+  });
+});
