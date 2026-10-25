@@ -26,10 +26,7 @@ export function OpImages({ images, compact = false }: { images: OperationImage[]
       const src = url(img);
       const label = `Captured image${img.width && img.height ? ` · ${img.width}×${img.height}` : ''}${img.bytes ? ` · ${size(img.bytes)}` : ''}`;
       return src
-        ? <button type="button" key={i} className="op-image" title={`${label} · open`} aria-label={`Open ${label.toLowerCase()}`} onClick={() => setOpen(img)}
-            style={img.width && img.height ? { aspectRatio: `${img.width} / ${img.height}` } : undefined}>
-            <img src={src} alt="" loading="lazy" decoding="async" width={img.width} height={img.height} />
-          </button>
+        ? <ImageThumbnail key={`${i}:${src}`} src={src} image={img} label={label} onOpen={() => setOpen(img)} />
         : <div key={i} className="op-image-missing" title={label}>Image {img.omitted ? `not kept: ${WHY[img.omitted] ?? img.omitted}` : 'not available here'}{img.bytes ? ` · ${size(img.bytes)}` : ''}</div>;
     })}
     {compact && images.length > 3 && <span className="op-images-more">+{images.length - 3} more</span>}
@@ -37,18 +34,36 @@ export function OpImages({ images, compact = false }: { images: OperationImage[]
   </div>;
 }
 
+/** Keep the reserved thumbnail size even when bytes have expired or the request fails. */
+function ImageThumbnail({ src, image, label, onOpen }: { src: string; image: OperationImage; label: string; onOpen: () => void }) {
+  const [failed, setFailed] = useState(false);
+  return <button type="button" className="op-image" title={`${label} · open`} aria-label={`Open ${label.toLowerCase()}`} onClick={onOpen}
+    style={image.width && image.height ? { aspectRatio: `${image.width} / ${image.height}` } : undefined}>
+    {failed ? <span className="op-image-missing">Image could not be loaded · open to retry</span>
+      : <img src={src} alt="" loading="lazy" decoding="async" width={image.width} height={image.height} onError={() => setFailed(true)} />}
+  </button>;
+}
+
 /** The whole image: fitted first, actual pixels on click; Escape or the backdrop closes it. */
 function ImageReader({ src, image, onClose }: { src: string; image: OperationImage; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [actual, setActual] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
+  // Explicit retry bypasses a cached failed response without changing the image's hash/owner.
+  const imageSrc = retry ? `${src}${src.includes('?') ? '&' : '?'}retry=${retry}` : src;
   useEffect(() => { dialog.current?.showModal(); }, []);
-  return <dialog ref={dialog} className="image-reader" onClose={onClose} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
+  return <dialog ref={dialog} className="image-reader" aria-label="Captured image reader" onClose={onClose} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
     <div className="image-reader-bar">
       <span>Captured image{image.width && image.height ? ` · ${image.width}×${image.height}` : ''}{image.bytes ? ` · ${size(image.bytes)}` : ''}</span>
-      <button type="button" onClick={() => setActual((v) => !v)}>{actual ? 'Fit' : 'Actual size'}</button>
+      <button type="button" disabled={failed} aria-pressed={actual} onClick={() => setActual((v) => !v)}>{actual ? 'Fit' : 'Actual size'}</button>
       <button type="button" onClick={() => dialog.current?.close()}>Close</button>
     </div>
-    <div className={`image-reader-stage${actual ? ' actual' : ''}`}><img src={src} alt="Captured image" onClick={() => setActual((v) => !v)} /></div>
+    <div className={`image-reader-stage${actual ? ' actual' : ''}`}>
+      {failed ? <div className="op-image-missing"><p role="status">Captured image could not be loaded. It may no longer be available.</p>
+        <button type="button" className="btn ghost" onClick={() => { setFailed(false); setRetry((value) => value + 1); }}>Retry image</button></div>
+        : <img key={retry} src={imageSrc} alt="Captured image" onError={() => setFailed(true)} onClick={() => setActual((v) => !v)} />}
+    </div>
   </dialog>;
 }
 
