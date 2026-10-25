@@ -1,5 +1,18 @@
 # Windows antivirus attribution audit
 
+## 25 October — bounded recurrence and runtime recheck
+
+Read-only check at **16:21 UTC / 21:51 IST**. The supplied `C:/ProgramData/McAfee/wps/detection.log` contains **39 JSON detection records**; its newest event remains **17 October 2026, 07:51:57.150 UTC / 13:21:57.150 IST**, `Real Protect-PSFL!DC98AC2364A0`, a 136,350-byte in-memory PowerShell target with no payload hash. No record dated after 17 October is present in this file. This establishes the supplied file's contents, not that all antivirus sensors are active or that the underlying compatibility issue is cured.
+
+`Get-Command codex` now selects the standalone native binary under `%LOCALAPPDATA%/OpenAI/Codex/bin/2993767bd1dfb009/`; `codex --version` reports **0.164.0-alpha.11.1**. The separately installed npm package still reports 0.163.0 and is not the selected PATH executable. Two current `codex.exe` processes use the standalone path, one identified as app-server; their command metadata is readable and neither has the earlier `pid-update-loop` classifier. The old managed 0.160.0 process is absent from this bounded snapshot. No new alert/process-parent trace was available, so the earlier updater attribution is neither extended to an unseen new event nor retracted.
+
+The installed native CLI still lists `app-server daemon version` as diagnostic and warns that `daemon update` may interrupt running work. The **version query failed to connect to the local app-server-control socket (10061/refused)**. It therefore supplies no running managed-daemon version/status; a separately visible app-server process must not be mistaken for a successful control-socket query. No start/restart/bootstrap/update or alternative installer path was attempted.
+
+The [official troubleshooting page](https://learn.chatgpt.com/docs/reference/troubleshooting) confirms that desktop/CLI versions may differ, documents `codex --version`, and asks people to review logs for sensitive information before sharing. The [official CLI reference](https://learn.chatgpt.com/docs/cli/reference) was also checked; exact managed-daemon subcommand availability here is established by the installed help, not inferred from that page. No downloaded script was executed or submitted.
+
+**REL-1 remains open.** The current observation is reassuring but is not a controlled idle-time update/recurrence test or a verified false-positive verdict. Active work is not interrupted for that test. No antivirus/security/configuration change, persistent monitor, native file mutation or external submission was made. If an alert recurs, retain its new time and actual process-parent evidence; do not attribute it to Drishya or the old updater from the signature alone.
+
+
 ## 17 October10:21 — fresh updater parent attribution captured
 
 A bounded read-only process sampler captured Windows PowerShell PID14144 at **10:21:41.823 IST**, parent PID22268. The parent is the managed0.160.0 `codex.exe`; its command arguments include **`app-server daemon pid-update-loop`**. The child command matches the exact stdin/`Invoke-Expression` wrapper. Windows PowerShell event400 independently records PID14144 at10:21:41. McAfee appends `Real Protect-PSFL!DC98AC2364A0` at **10:21:43.503 IST**, with the same136,350-byte in-memory target and no backing file/hash.

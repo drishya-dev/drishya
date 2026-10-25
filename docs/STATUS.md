@@ -47,6 +47,15 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Handoff:** expanded same FILES-4 claim before backend work; ten changed files within its twelve-file budget. Own claim released here. Broader reader acceptance remains open. Other builders' claims retained; History/PERF-2 remains paused. #226 ready for focused builder review, no automatic merge through TEST-2.
 
 
+
+
+### Yash with Codex — REL-1 bounded read-only recurrence check
+
+- **25 October 2026:** supplied McAfee log still ends 17 October (39 records); selected native Codex is 0.164.0-alpha.11.1. Old managed 0.160.0 process absent from the current readable process snapshot. No fresh event/parent trace or verified antivirus cure claimed. [Audit38 updated](review/38-windows-antivirus-audit.md).
+- **Diagnostic limit:** managed-daemon version command returned connection refused, so its version/status is unknown. No restart/update/install, protection/configuration change, monitor or external report. REL-1 remains open for controlled idle-time acceptance; own diagnostic claim released.
+- **Product handoff:** PR #226 now includes both shared draft synchronization and one-path eligibility for files omitted by a capped/stale map: 836 units, both types/build, twelve focused browser cases and actual Blueprint/README desktop/phone acceptance. Main retains the FILES-4 claim until its finishing PR lands. UI-4/DATA-3/PERF-2 ownership preserved; History/PERF-2 remains paused.
+
+
 ### Yash with Codex — CONTENT-2 search reading correctness
 
 - **25 October 2026, PR #224:** expanded recorded web results now wrap full supplied titles; compact previews stay compact. Offline unsupported/malformed URLs remain literal and inert; only valid absolute HTTP(S) links navigate on explicit click/Enter. No automatic fetching. [Evidence](review/content-2-search-acceptance.md).
