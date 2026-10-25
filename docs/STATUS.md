@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-1 | @yash + Codex | `codex/content-1-image-reader-acceptance` | 2026-10-25 | Existing image-reader phone/keyboard/refusal acceptance: new focused browser spec and report; image-reader component only if a demonstrated bug needs it (≤6 files). No History, PERF-2, DATA-3, shared dialog typography CSS or existing TEST-2 specs. Keep real Codex ImageView acceptance open without a genuine sample. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 | UI-2 | @yash + Claude | `yash/ui-2-dialogs` | 2026-10-25 | Slice 2: dialog surfaces outside History's scroll area: Git review and Git graph, Developer Workspace, search and library dialogs, at desktop and phone widths. Same method (runtime scan, CSS values in existing rules, guard spec). No component, schema, ingest, history-worker or `History.tsx` change; nothing that changes history card heights. Remaining surfaces stay open. |
@@ -40,6 +39,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — CONTENT-1 image-reader failure/retry and phone acceptance
+
+- **25 October2026, PR214:** fixes blank captured-image failures with a reserved-size explanation and explicit same-recording/hash retry, plus modal name/toggle state. No style, History, scroll-anchor, capture/schema, dependency or native-control change. [Report and remaining acceptance](review/content-1-image-reader-acceptance.md).
+- **Verified:**14 focused browser checks (Codex/Claude, narrow/touch/landscape,404/network/corrupt/retry/current-file consent),785 unit tests, both types and UI build. Actual redacted Drishya Claude image reading passes four viewports; private frame inspected. No real content committed or hosted CI.
+- **Handoff:** focused review ready; CONTENT-1 remains open for real typed ImageView/full-source acceptance. Own claim released in this PR. Builder explicitly declined work in the paused History/PERF-2 area; existing main b2-live:186 failure reproduced and left untouched. Do not auto-merge through the known TEST-2 gate. DATA-3/UI-2/PERF-2 claims preserved.
 
 ### Yash with Claude (Sonnet 5.5) — UI-2 Modern session-surface typography
 - **UI-2 slice:** the Modern session surface now keeps metadata at 11 px and controls at 12 px, with a permanent guard spec across all seven palettes. Method (runtime scan, not a stylesheet count), the exact list and the deliberate 11 px exception (the turn-ledger fold line) are in TASKS UI-2. Other surfaces remain open.
@@ -103,13 +108,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Yash with Claude (Opus 5.5) — PERF-2 profiled after DATA-1/2 (claim held, fixes tomorrow)
 
 - **When:** 20 October 2026. Merged DATA-2 (#149), DATA-1 (#151), TEST-2 (#175) and Codex PERF-1 (#171). Re-measured the 564 MB journal with typed items (26,593 observations): first history page ≈ 6.6 s, append+browser RSS 531–545 MiB, API p95 139–214 ms. The cold build's largest cost is ≈ 2.7 s of per-file derived blob writes (≈ 4,400 new files, 90 MB); then ≈ 1.8 s reducer logic and 0.66 s ordered read; live sync turns block the event loop 110–150 ms. Ordered plan for the fixes is under PERF-2 in TASKS. The performance gate stays red, so feature items wait.
-
-### Yash with Codex — PERF-1 measured; PERF-2 gate open, ready for Claude review
-
-- **When:** 20 October2026. PR **#171**, `codex/perf-1-large-journals`. Claimed the first independent dependency-ready item after DATA-3…6 overlapped Harsh's DATA-1/2 files. Adds opt-in isolated real-journal benchmark and a regression for partial writes/source preservation. Native journals stay read-only; normal/error completion removes snapshots and redacted stores. [Report](review/perf-1-large-journals.md).
-- **Result:** five complete-import and five append/browser runs per166/347/564MB actual source. Zero capture gaps; every append result matches full-import observation IDs/order; repeated sync adds nothing. The biggest journal exceeds the512MiB reference screening budget and shows API stalls. PERF-1 measurement is complete; **PERF-2 remains open and new feature work is gated pending restoration or an explicitly agreed narrower support range**. No green scale/release claim.
-- **Validation and limits:** 679 integrated unit tests plus36 focused JSONL/ingest/probe checks; both project types and direct script typecheck. Installed Edge on the reference Windows machine; uncontrolled background development load, warm OS cache, headless frame/API proxies, physical/human acceptance unmeasured. Rerun after DATA-1/2 retention changes. No runtime/schema/dependency changes, native turn or hosted CI.
-- **Merge signal:** **#171 READY FOR CLAUDE REVIEW / SQUASH** after final numeric matrix and local checks. Own claim removed only in this finishing PR. Main #172 TodoWrite and subsequent EXPLAIN priority change integrated; other claims and dependency order preserved.
 
 
 ### Yash with Claude (Opus 5.5) — TEST-2 flaky specs (main cause fixed) and DATA-1/DATA-2 merged
