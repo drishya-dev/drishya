@@ -31,7 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-4 | @yash + Codex | `codex/files-4-reader-correctness` | 2026-10-25 | Existing peek/Workspace reading and draft correctness only: `DeveloperWorkspace.tsx` / `DraftEditor.tsx`, owning reader helper and focused unit/browser tests if needed, report/TASKS/STATUS (at most 8 files). Empty/long material, tab/find/wrap and unsaved-state acceptance. No new editor features, History/PERF-2, native writes, capture/contracts/projection/DATA-3 or shared CSS. Prior CONTENT-1/2/3 claim rows removed because #214/#224/#220 have merged. |
+| FILES-4 | @yash + Codex | `codex/files-4-reader-correctness` | 2026-10-25 | Reader correctness: shared `DraftEditor.tsx`; current-file refusal outside a truncated/stale map in `apps/daemon/src/workspace.ts` and index eligibility helper in `packages/indexer/src/index.ts`; focused unit/browser tests and report/TASKS/STATUS (at most 12 files). Preserve root approval, denied/ignored paths, symlink/size/redaction checks. No new features, History/PERF-2, native writes, capture/contracts/projection/DATA-3 or UI-4 files. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 
@@ -40,6 +40,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — REL-1 bounded read-only recurrence check
+
+- **25 October 2026:** supplied McAfee log still ends 17 October (39 records); selected native Codex is 0.164.0-alpha.11.1. Old managed 0.160.0 process absent from the current readable process snapshot. No fresh event/parent trace or verified antivirus cure claimed. [Audit38 updated](review/38-windows-antivirus-audit.md).
+- **Diagnostic limit:** managed-daemon version command returned connection refused, so its version/status is unknown. No restart/update/install, protection/configuration change, monitor or external report. REL-1 remains open for controlled idle-time acceptance; own diagnostic claim released.
+- **Product handoff:** PR #226 now includes both shared draft synchronization and one-path eligibility for files omitted by a capped/stale map: 836 units, both types/build, twelve focused browser cases and actual Blueprint/README desktop/phone acceptance. Main retains the FILES-4 claim until its finishing PR lands. UI-4/DATA-3/PERF-2 ownership preserved; History/PERF-2 remains paused.
+
 ### Yash with Claude (Sonnet 5.5) — Modern-only product choice; six Codex PRs merged
 - **UI-4 slice 1:** Modern is the only version a person can choose; Legacy and Canvas stay in the code behind a developer switch. See TASKS UI-4 and the 25 October decision.
 - **Codex PRs merged after checking each on current main:** #221 (FILES-1 deletion acceptance), #225 (CONTENT-7 resources), #220 (CONTENT-3 literal answers), #219 (CONTENT-4 plan labels), #224 (CONTENT-2 web results), #214 (CONTENT-1 images). Full gate on the combined main: 349 passed, 26 skipped, 2 failed (the known `b2-live` reading-position pair, Harsh's PERF-2 area).
@@ -47,9 +53,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Yash with Codex — CONTENT-1 image-reader failure/retry and phone acceptance
 
-- **25 October2026, PR214:** fixes blank captured-image failures with a reserved-size explanation and explicit same-recording/hash retry, plus modal name/toggle state. No style, History, scroll-anchor, capture/schema, dependency or native-control change. [Report and remaining acceptance](review/content-1-image-reader-acceptance.md).
-- **Verified:**14 focused browser checks (Codex/Claude, narrow/touch/landscape,404/network/corrupt/retry/current-file consent),785 unit tests, both types and UI build. Actual redacted Drishya Claude image reading passes four viewports; private frame inspected. No real content committed or hosted CI.
-- **Handoff:** focused review ready; CONTENT-1 remains open for real typed ImageView/full-source acceptance. Own claim released in this PR. Builder explicitly declined work in the paused History/PERF-2 area; existing main b2-live:186 failure reproduced and left untouched. Do not auto-merge through the known TEST-2 gate. DATA-3/UI-2/PERF-2 claims preserved.
 
 ### Yash with Codex — CONTENT-2 search reading correctness
 
