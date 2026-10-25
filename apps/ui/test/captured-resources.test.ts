@@ -24,3 +24,19 @@ it('bounds bytes, references and traversal; malformed entries do not manufacture
  expect(capturedResources(JSON.stringify([{type:'resource_link'},{type:'resource',resource:{text:'orphan body'}},{type:'resource_link',uri:5}]))).toBeUndefined();
  let nested:unknown={type:'resource_link',uri:'https://example.org'};for(let n=0;n<12;n++)nested={status:'fulfilled',value:nested};expect(capturedResources(JSON.stringify(nested))).toBeUndefined();
 });
+
+it('keeps empty captured text distinct from absent text and retains repeated URI identities',()=>{
+ const raw=JSON.stringify({content:[null,{type:'resource',resource:{uri:'resource://same',title:'First',text:''}},{type:'resource',resource:{uri:'resource://same',title:'Second',text:'literal second body'}},{type:'resource_link',uri:'resource://same',title:'Reference only'}]});
+ const items=capturedResources(raw)!.items;expect(items.map(i=>i.field)).toEqual(['/content/1/resource','/content/2/resource','/content/3']);expect(items.map(i=>i.text)).toEqual(['','literal second body',undefined]);
+});
+it('rejects incomplete JSON as a whole instead of inventing partial resource bodies',()=>{
+ const raw=JSON.stringify({content:[{type:'resource',resource:{uri:'resource://complete',text:'literal body'}}]});
+ for(const incomplete of [raw.slice(0,-1),raw.slice(0,-8),raw+' trailing bytes'])expect(capturedResources(incomplete)).toBeUndefined();
+});
+it('enforces the UTF-8 byte limit at its boundary without changing literal text',()=>{
+ const prefix=JSON.stringify({type:'resource',resource:{uri:'resource://unicode',text:'界'}}),room=262144-new TextEncoder().encode(prefix).length;
+ const raw=prefix.slice(0,-3)+'x'.repeat(room)+prefix.slice(-3);expect(new TextEncoder().encode(raw).length).toBe(262144);expect(capturedResources(raw)!.items[0]!.text).toBe('界'+'x'.repeat(room));expect(capturedResources(raw+' ')).toBeUndefined();
+});
+it('marks a traversal cutoff while preserving earlier whole references and source order',()=>{
+ const first={type:'resource_link',uri:'resource://first'};const value={content:[first,...Array.from({length:63},()=>Array.from({length:64},()=>null))]};const selection=capturedResources(JSON.stringify(value))!;expect(selection.items).toEqual([{field:'/content/0',uri:'resource://first',title:'resource://first'}]);expect(selection.limited).toBe(true);
+});
