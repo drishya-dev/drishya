@@ -134,6 +134,10 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
     await expect(page.locator('.attachment-preview-dialog')).toBeVisible();
     await everyPalette(page, `${width} attachment preview`);
     await page.keyboard.press('Escape'); await expect(page.locator('.attachment-preview-dialog')).toHaveCount(0);
+    // The field stops at 65,536 characters but the limit is 64 KiB of UTF-8, so multi-byte text is how a draft goes over it.
+    await input.fill('é'.repeat(40_000));
+    await expect(composer.getByRole('alert').filter({ hasText: 'Prompt exceeds 64 KiB' })).toBeVisible();
+    await everyPalette(page, `${width} over-limit prompt`);
     // The session-access confirmation that stands between a prompt and the native harness.
     await input.fill('Review the attachments'); await input.press('Enter');
     await expect(composer.getByRole('group', { name: 'Confirm session access' })).toBeVisible();

@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-2 | @yash + Claude | `yash/ui-2-composer` | 2026-10-25 | Typography floor, composer slice only; Home is another session. Modern composer CSS rules raised in place, new `tests/browser/composer-typography.spec.ts`, TASKS/STATUS (≤6 files). No component/layout/behaviour change, History, PERF-2, schema. |
 | FILES-1 | @yash + Codex | `codex/files-1-deletion-acceptance` | 2026-10-25 | Finish existing deletion-evidence acceptance: `packages/scene/test/file-evidence.test.ts`, new focused browser spec and docs; scene `file-evidence.ts` only if an actual correctness defect is reproduced (≤6 files). No History/PERF-2, new explorer UI, shared CSS, capture/contracts/projection or DATA-3 edits. |
 | CONTENT-3 | @yash + Codex | `codex/content-3-literal-answers` | 2026-10-25 | Existing captured AskUserQuestion parsing correctness: `apps/ui/src/lib/ask-question.ts`, its unit test, one new browser guard, report/TASKS/STATUS (≤6 files). No new answering controls/native requests, History, PERF-2, DATA-3, contracts/projection or shared CSS. Preserve literal answers; do not infer chosen options from substrings. |
 | CONTENT-4 | @yash + Codex | `codex/content-4-ambiguous-plan-labels` | 2026-10-25 | Existing TodoWrite comparison correctness only: `packages/scene/src/plan-threads.ts`, its unit test, one new browser guard and docs (≤6 files). Duplicate labels must not invent task identity/status transitions. No History, PERF-2, DATA-3/contracts/projection, shared CSS or new plan sources. |
@@ -44,6 +43,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — UI-2 composer slice
+- **UI-2 slice 3:** the Modern composer keeps metadata at 11 px and controls at 12 px in every state reachable with synthetic data (menus, attachments, confirmation, approval, stop, question, failed send), desktop and phone, all seven palettes, with a guard spec; details and the states not reached are in TASKS UI-2. UI-2 stays open (Home is its own session).
 
 ### Yash with Claude (Sonnet 5.5) — GIT-4 Recorded work picker
 - **GIT-4 picker:** when several captured edits wrote the same Git hunk lines, "Recorded work · N edits" in Git review and the Git graph now opens a small keyboard menu (turn + operation title, newest first); one match is unchanged and the matching rule is untouched. Turn labels are counted from the edit's own agent's captured prompts, or omitted when none is captured. Details and what stays open (Classic, other repo roots) are in TASKS GIT-4.
