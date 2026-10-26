@@ -44,3 +44,28 @@ test('visible text keeps 4.5:1 on every palette on the expanded demo session', a
     expect(await measure(page), palette).toEqual([]);
   }
 });
+
+// UI-7 slice 2: the overlays people open on top of the session, on the same seven palettes.
+test('overlays keep 4.5:1 on every palette', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
+  await expect(page.locator('.viewer')).toBeVisible();
+  const palettes = ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox'];
+  const settle = () => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
+  const overlays: [string, () => Promise<void>, () => Promise<void>][] = [
+    ['Settings', async () => { await page.getByRole('button', { name: 'Workspace settings', exact: true }).click(); await expect(page.getByRole('dialog', { name: 'Workspace settings' })).toBeVisible(); }, () => page.keyboard.press('Escape')],
+    ['Navigator', async () => { await page.keyboard.press('Control+k'); await expect(page.getByRole('dialog', { name: 'Navigate workspace' })).toBeVisible(); }, () => page.keyboard.press('Escape')],
+    ['Search', async () => { await page.getByRole('button', { name: 'Search', exact: true }).click(); await expect(page.getByRole('dialog', { name: 'Search this recording' })).toBeVisible(); }, () => page.keyboard.press('Escape')],
+    ['Shortcuts', async () => { await page.locator('.history').focus(); await page.keyboard.press('?'); await expect(page.getByRole('dialog', { name: 'Reading shortcuts', exact: true })).toBeVisible(); }, () => page.keyboard.press('Escape')],
+  ];
+  const found: string[] = [];
+  for (const [name, show, hide] of overlays) {
+    await show();
+    for (const palette of palettes) {
+      await page.evaluate(v => { document.documentElement.dataset.palette = v; }, palette); await settle();
+      for (const line of await measure(page)) found.push(`${name} / ${palette}: ${line}`);
+    }
+    await hide(); await settle();
+  }
+  expect(found).toEqual([]);
+});
