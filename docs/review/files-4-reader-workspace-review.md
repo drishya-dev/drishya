@@ -43,3 +43,7 @@ Each regression was reproduced before its corresponding repair. No capture, cont
 The actual-source run uses a private copy of the existing redacted store. The file-open events are the same product handoffs used by Files; the actual repository's bounded/virtual Files inventory contains many matching worktree paths, so the real check directly addresses an existing relative path after explicit workspace-reading consent. Ordinary Files row selection is covered by the synthetic journeys. No real source/draft text or screenshots are committed or quoted.
 
 The copied Codex store references a native segment journal that is no longer present. Its optional session-segment request logs ENOENT; stored history, current readers and captured-file material remain available and pass. This does not establish native resume, missing-journal recovery, or fresh capture acceptance. No native turn, project-file write, hosted gate, physical-device or human assistive-technology acceptance is claimed. All newly authored checks use desktop widths of at least 600px.
+
+## Combined handoff verification
+
+Root independently reviewed the source and combined this branch with CONTENT-1 owned repairs and the unintegrated CONTENT-2 components: 852 units in 149 files, both TypeScript projects, production build and 17 image/Reader browser checks pass. Seven browser-story checks explicitly wait for Claude’s History integration; they are not counted as passing. An additional independent source review found no actionable issues. No hosted checks.
