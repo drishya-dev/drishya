@@ -32,13 +32,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
-| READ-4 | @yash + Claude Sonnet 5.5 | `claude/read-4-guard` | 2026-10-26 | Measure passage wrap and arrow geometry at 1024/1280/1440/1920; `tests/browser/passage-layout.spec.ts` guard; TASKS/STATUS docs. Held files (History.tsx etc.) are not edited; any defect there is recorded in TASKS READ-4. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — READ-4: passage layout measured and guarded
+- **Result:** at 1024/1280/1440/1920 px on the two fixtures and a 12-tool synthetic passage, reading order is row-major, no card is orphaned, every consecutive pair has a wire from card edge to card edge, and no wire crosses a card (0 of 28 wires at each width). New `passage-layout.spec.ts` keeps it (12 tests; fails when order, gap or the wire obstruction test is broken). No app code changed.
+- **Open (TASKS READ-4), both visible changes:** wide diff cards do not start a row at 1920 px, and stacked cards' wires leave the left edge instead of the bottom edge. Waiting for a builder choice; acceptance on three real sessions is a builder-run check.
 
 ### Yash with Claude (Sonnet 5.5) — CLEAN-1: desktop-only scope, unmounted code removed
 - **Decision (Yash):** Drishya is a local desktop tool, so phone widths are out of scope everywhere. The rule is in AGENTS.md and TASKS; UI-6 is deleted and PR #244 closed unmerged; narrowest supported window 600 px.
