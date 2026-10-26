@@ -2,7 +2,7 @@ import {useEffect,useLayoutEffect,useMemo,useRef,useState,type RefObject} from '
 import {Highlighted,langOf} from '../lib/highlight.tsx';
 
 /** Complete current text, with only the visible source rows mounted. */
-export function WholeSource({text,path,viewport,wrap,activeLine,revealLine,matches}:{text:string;path:string;viewport:RefObject<HTMLDivElement|null>;wrap:boolean;activeLine?:number;revealLine?:number;matches?:Set<number>}) {
+export function WholeSource({text,path,viewport,wrap,activeLine,revealLine,revealRequest,matches}:{text:string;path:string;viewport:RefObject<HTMLDivElement|null>;wrap:boolean;activeLine?:number;revealLine?:number;revealRequest?:number;matches?:Set<number>}) {
   const lines=useMemo(()=>text.split('\n'),[text]),lang=langOf(path);
   const [size,setSize]=useState({top:0,height:600,width:800}),[revision,measure]=useState(0);
   const measured=useRef(new Map<number,number>()),root=useRef<HTMLDivElement>(null);
@@ -26,7 +26,7 @@ export function WholeSource({text,path,viewport,wrap,activeLine,revealLine,match
     const index=Math.max(0,Math.min(lines.length-1,revealLine-1));
     viewport.current.scrollTop=Math.max(0,offsets[index]!-viewport.current.clientHeight/3);
     viewport.current.dispatchEvent(new Event('scroll'));
-  },[revealLine,text,path]);
+  },[revealLine,revealRequest,text,path]);
   useLayoutEffect(()=>{
     const node=root.current;if(!node)return;
     const observer=new ResizeObserver(entries=>{let changed=false;for(const entry of entries){const index=Number((entry.target as HTMLElement).dataset.index),height=entry.target.getBoundingClientRect().height;if(height>0&&Math.abs((measured.current.get(index)??0)-height)>.5){measured.current.set(index,height);changed=true;}}if(changed)measure(n=>n+1);});
