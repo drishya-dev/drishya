@@ -2,6 +2,7 @@ import {collectionBounds} from '../lib/collection-bounds.ts';
 import './collection-surfaces.css';
 import {openGitHistory} from './GitHistory.tsx';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { redactText } from '../../../../packages/privacy/src/index.ts';
 import { workspaceApi } from '../api.ts';
 import type { GitSnapshot } from '../../../daemon/src/git-types.ts';
@@ -25,12 +26,14 @@ function GitBranchGlyph() {
   return <svg className="git-branch-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="6" cy="19" r="2.5" /><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6" /></svg>;
 }
 
-export function GitReviewEntry({ icon = false }: { icon?: boolean }) {
+/** `slot`: render the button into that element (the header cluster) while the dialog stays mounted here. */
+export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: Element | null }) {
   const [open, setOpen] = useWorkspaceState('git/open',false);
   useEffect(()=>{const close=()=>setOpen(false);window.addEventListener('drishya-git-history',close);return()=>window.removeEventListener('drishya-git-history',close);},[setOpen]);
   const id = useApp(s => s.recordingId);
   const eligible = useApp(s => s.source?.kind === 'daemon' && !s.recordingId?.includes('+'));
-  return eligible ? <><button className="btn ghost git-open" aria-label="Git review" aria-expanded={open} onClick={() => setOpen(value => !value)}>{icon && <GitBranchGlyph />}Git review</button>{open && <GitReader key={id} close={() => setOpen(false)} />}</> : null;
+  const button = <button className="btn ghost git-open" aria-label="Git review" aria-expanded={open} onClick={() => setOpen(value => !value)}>{icon && <GitBranchGlyph />}Git review</button>;
+  return eligible ? <>{slot ? createPortal(button, slot) : button}{open && <GitReader key={id} close={() => setOpen(false)} />}</> : null;
 }
 
 function GitReader({ close }: { close: () => void }) {

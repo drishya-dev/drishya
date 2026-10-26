@@ -28,7 +28,7 @@ test('bottom-anchored prompt timeline scrolls independently and the page scrollb
     await page.getByRole('button',{name,exact:true}).click();
     await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
   }
-  const geometry=await rail.evaluate(el=>{const r=el.getBoundingClientRect(),work=document.querySelector('.workspace-secondary')!.getBoundingClientRect(),h=document.querySelector('.history')!.getBoundingClientRect();return {top:r.top,bottom:r.bottom,workBottom:work.bottom,historyRight:h.right,viewport:innerWidth,transform:getComputedStyle(el).transform};});
+  const geometry=await rail.evaluate(el=>{const r=el.getBoundingClientRect(),work=document.querySelector('.studio-actions')!.getBoundingClientRect(),h=document.querySelector('.history')!.getBoundingClientRect();return {top:r.top,bottom:r.bottom,workBottom:work.bottom,historyRight:h.right,viewport:innerWidth,transform:getComputedStyle(el).transform};});
   expect(geometry.historyRight).toBe(geometry.viewport);expect(geometry.transform).toBe('none');expect(geometry.top-geometry.workBottom).toBeGreaterThanOrEqual(13);expect(960-geometry.bottom).toBe(48);
   await expect(rail.getByRole('button').last()).toHaveAttribute('data-prompt-ordinal','160');
   const mainTop=await history.evaluate(el=>el.scrollTop),railTop=await rail.evaluate(el=>el.scrollTop);

@@ -961,7 +961,7 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await total.locator('.desk-code').focus();
   await page.keyboard.press('Home'); await page.keyboard.press('ArrowRight');
   await expect(desk).toBeVisible();
-  await expect(page.locator('.workspace-secondary')).toBeHidden();
+  await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toHaveAttribute('aria-pressed','true');
   await total.getByRole('button',{name:'Wrap',exact:true}).click();
   await total.getByRole('searchbox',{name:'Find in src/cart/total.ts'}).fill('total');
   await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/discount.ts');
@@ -1242,8 +1242,8 @@ test('Modern navigation keeps independent edge actions readable and outside the 
     await page.setViewportSize({width,height:900});
     const buttons=['Show files','Explore repository map','Open developer workspace','Git review','Git graph'];
     const boxes=[];
-    for(const name of buttons) {const node=page.getByRole('button',{name,exact:true});await expect(node).toBeVisible();const box=(await node.boundingBox())!;expect(box.height).toBeGreaterThanOrEqual(38);expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);boxes.push(box);}
-    expect(boxes[0]!.x).toBeLessThan(30);expect(Math.max(...boxes.map(box=>box.x+box.width))).toBeGreaterThan(width-30);
+    for(const name of buttons) {const node=page.getByRole('button',{name,exact:true});await expect(node).toBeVisible();const box=(await node.boundingBox())!;expect(box.height).toBeGreaterThanOrEqual(width>600&&['Open developer workspace','Git review','Git graph'].includes(name)?34:38);expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);boxes.push(box);}
+    expect(boxes[0]!.x).toBeLessThan(30);const cluster=(await page.locator('.studio-actions').boundingBox())!;expect(width>600?cluster.x+cluster.width:Math.max(...boxes.map(box=>box.x+box.width))).toBeGreaterThan(width-30);
     if(width===1280)await page.screenshot({path:resolve('.local/modern-navigation-edges.png')});
     for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i]!,b=boxes[j]!;expect(Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y))).toBeLessThan(1);}
     const history=(await page.locator('.history').boundingBox())!;
@@ -1340,9 +1340,9 @@ test('whole-file Workspace search and line navigation reach distant source with 
   await reader.getByRole('button',{name:'Go',exact:true}).click();
   await expect(reader.locator('[data-source-line="10000"]')).toBeVisible();
   await expect(reader.getByRole('button',{name:'Previous',exact:true})).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toBeHidden();
+  await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toHaveAttribute('aria-pressed','true');
   await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toHaveAttribute('aria-pressed','false');
 });
 
 test('Workspace creates an unsent file draft and forwards large contents as a native attachment',async({page})=>{
@@ -1871,7 +1871,7 @@ test('Files single click replaces preview and double click keeps a file without 
  await page.setViewportSize({width:390,height:844});const show=page.getByRole('button',{name:'Show files',exact:true});if(await show.getAttribute('aria-pressed')==='false')await show.click();await files.locator('[data-spine-path="README.md"]').click();await expect(reader.locator('header h2')).toHaveText('README.md');await expect(files).toHaveCount(0);
  await page.setViewportSize({width:1440,height:900});await reader.getByRole('button',{name:'Open in Workspace',exact:true}).click();
  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk).toBeVisible();
- await expect(page.locator('.workspace-secondary')).toBeHidden();
+ await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toHaveAttribute('aria-pressed','true');
  const leading=(await page.locator('.workspace-leading').boundingBox())!,deskBox=(await desk.boundingBox())!;expect(deskBox.y).toBeLessThanOrEqual(leading.y+leading.height+16);await expect(page.locator('.modern-tool-station')).toBeHidden();
  await page.screenshot({path:resolve('.local/workspace-right-stack.png')});
 
@@ -1888,7 +1888,7 @@ test('restored Explorer preview stays beside history and above prompt across win
    await openComposer(page);
    if(collapsed)await page.locator('.prompt-composer').getByRole('button',{name:'Minimize prompt',exact:true}).click();
    await expect.poll(async()=>{const r=(await reader.boundingBox())!,p=(await page.locator('.prompt-composer').boundingBox())!;return r.y+r.height-p.y;}).toBeLessThanOrEqual(-8);
-   const r=(await reader.boundingBox())!,controls=(await page.locator('.workspace-secondary').boundingBox())!,h=(await page.locator('.history').boundingBox())!;
+   const r=(await reader.boundingBox())!,controls=(await page.locator('.studio-actions').boundingBox())!,h=(await page.locator('.history').boundingBox())!;
    expect(r.x).toBeGreaterThanOrEqual(width*.48-1);expect(r.x+r.width).toBeLessThanOrEqual(width-47);expect(r.y).toBeGreaterThanOrEqual(controls.y+controls.height+8);expect(h.x+h.width).toBeLessThanOrEqual(r.x+1);
    if(collapsed)await page.locator('.prompt-composer').getByRole('button',{name:'Expand prompt',exact:true}).click();
   }
@@ -1906,7 +1906,7 @@ test('Explorer preview defaults to a compact right reader with title-bar keyboar
  for(const width of [1920,1440]){
   await page.setViewportSize({width,height:960});await reader.getByRole('button',{name:'Reset File reader window layout',exact:true}).click();
   await expect.poll(async()=>Math.abs((await reader.boundingBox())!.width-width*.28)).toBeLessThan(2);
-  const box=(await reader.boundingBox())!,prompt=(await page.locator('.prompt-composer').boundingBox())!,controls=(await page.locator('.workspace-secondary').boundingBox())!;
+  const box=(await reader.boundingBox())!,prompt=(await page.locator('.prompt-composer').boundingBox())!,controls=(await page.locator('.studio-actions').boundingBox())!;
   expect(box.x+box.width).toBeCloseTo(width-48,0);expect(box.height).toBeGreaterThan(450);expect(box.y).toBeGreaterThan(controls.y+controls.height);expect(box.y+box.height).toBeLessThan(prompt.y-8);
   expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('0.9');
  }
