@@ -120,9 +120,27 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   // Steps follow the loaded action page, in its recorded order; retained or clicked extras never reorder them.
   const steps = useMemo(() => fileTimeline(page?.operations ?? [], path), [page, path]);
   const stepper = timelineStep(steps, first);
+  const pageSize = 24, moreBefore = start > 0, moreAfter = !!page && start + pageSize < page.total;
+  const paged = !!page && page.total > pageSize;
+  // Crossing onto a neighbouring page of the action list: choose its first or last step once that page has loaded.
+  const pendingStep = useRef<'first' | 'last' | undefined>(undefined);
   const previousStep = useRef<HTMLButtonElement>(null), nextStep = useRef<HTMLButtonElement>(null);
   const stepped = useRef<'previous' | 'next' | undefined>(undefined);
-  const stepTo = (side: 'previous' | 'next') => { const target = stepper[side]; if (!target) return; stepped.current = side; setLeft(target); };
+  const stepTo = (side: 'previous' | 'next') => {
+    const target = stepper[side];
+    if (target) { stepped.current = side; setLeft(target); return; }
+    if (side === 'next' && moreAfter) { pendingStep.current = 'first'; setStart(start + pageSize); }
+    else if (side === 'previous' && moreBefore) { pendingStep.current = 'last'; setStart(Math.max(0, start - pageSize)); }
+  };
+  useEffect(() => {
+    const want = pendingStep.current;
+    if (!want || !page) return;
+    if (steps.length) { pendingStep.current = undefined; stepped.current = want === 'first' ? 'next' : 'previous'; setLeft(want === 'first' ? steps[0] : steps.at(-1)); }
+    // A page of searches or other actions holds no read or edit of this file: keep going in the same direction.
+    else if (want === 'first' && moreAfter) setStart(start + pageSize);
+    else if (want === 'last' && moreBefore) setStart(Math.max(0, start - pageSize));
+    else pendingStep.current = undefined;
+  }, [page, steps]);
   useEffect(() => {
     const side = stepped.current;
     if (!side) return;
@@ -158,10 +176,10 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
       <section ref={reading} className="file-evidence-reading" aria-label="File evidence">
         <div className="file-evidence-toolbar">{!modern && <strong>Historical evidence</strong>}{source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.getState().set({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}{!modern && <button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>}<button className="btn" aria-label={compare ? 'Single evidence' : 'Compare evidence'} aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{modern ? (compare ? 'Single view' : 'Compare') : (compare ? 'Single evidence' : 'Compare evidence')}</button>{modern && <WorkspaceOptions label="Captured file actions"><button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>{<div onClick={event=>event.stopPropagation()}><ImportContext path={path} /></div>}</WorkspaceOptions>}</div>
 
-        {!compare && stepper.total > 1 && <div className="file-timeline-steps" role="group" aria-label="Step through captured reads and edits of this file">
-          <button ref={previousStep} className="btn ghost" disabled={!stepper.previous} onClick={() => stepTo('previous')}>Previous change</button>
-          <span role="status" className="muted small" title={page && page.total > page.operations.length ? 'Steps through the recorded actions loaded in this page of the list' : undefined}>{stepper.position ?? '–'} of {stepper.total}</span>
-          <button ref={nextStep} className="btn ghost" disabled={!stepper.next} onClick={() => stepTo('next')}>Next change</button>
+        {!compare && (stepper.total > 1 || moreBefore || moreAfter) && <div className="file-timeline-steps" role="group" aria-label="Step through captured reads and edits of this file">
+          <button ref={previousStep} className="btn ghost" disabled={!stepper.previous && !moreBefore} onClick={() => stepTo('previous')}>Previous change</button>
+          <span role="status" className="muted small" title={paged ? 'Steps through the reads and edits on this page of the recorded actions; Previous and Next continue onto the neighbouring page' : undefined}>{stepper.position ?? '–'} of {stepper.total}{paged && ` · page ${Math.floor(start / pageSize) + 1} of ${Math.ceil(page!.total / pageSize)}`}</span>
+          <button ref={nextStep} className="btn ghost" disabled={!stepper.next && !moreAfter} onClick={() => stepTo('next')}>Next change</button>
         </div>}
         {!modern && <ImportContext path={path} />}
         {diskError && <p className="bad" role="alert">{diskError}</p>}
