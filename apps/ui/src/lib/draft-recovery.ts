@@ -4,7 +4,10 @@ import {utf8Bytes} from './prompt-files.ts';
 
 export interface RecoverySnapshot {version:1;recordingId:string;root:string;drafts:{path:string;draft:WorkspaceDraft}[]}
 const MAX_BYTES=4*1024*1024,encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
-const rootKey=(root:string)=>/^[a-z]:/i.test(root)?root.replaceAll('\\','/').toLowerCase():root;
+const windowsRoot=(root:string)=>/^[a-z]:/i.test(root)||root.startsWith('\\\\')||root.startsWith('//');
+const rootKey=(root:string)=>windowsRoot(root)?root.replaceAll('\\','/').toLowerCase():root;
+const pathKey=(path:string,root:string)=>windowsRoot(root)?path.toLowerCase():path;
+const sameDraft=(a:WorkspaceDraft,b:WorkspaceDraft)=>a.base===b.base&&a.text===b.text&&a.modifiedAt===b.modifiedAt&&!!a.creation===!!b.creation;
 const encode=(data:Uint8Array)=>{let binary='';for(let i=0;i<data.length;i+=8192)binary+=String.fromCharCode(...data.subarray(i,i+8192));return btoa(binary);};
 function decode(value:unknown,max:number) {if(typeof value!=='string'||value.length>max*1.4+8)throw new Error('Invalid recovery file.');const data=Uint8Array.from(atob(value),c=>c.charCodeAt(0));if(data.length>max)throw new Error('Recovery file exceeds its limit.');return data;}
 function validate(value:unknown):RecoverySnapshot {
@@ -12,8 +15,8 @@ function validate(value:unknown):RecoverySnapshot {
   if(!data||data.version!==1||typeof data.recordingId!=='string'||data.recordingId.length>512||typeof data.root!=='string'||data.root.length>4096||!Array.isArray(data.drafts)||!data.drafts.length||data.drafts.length>8)throw new Error('Invalid recovery snapshot.');
   const paths=new Set<string>();
   for(const item of data.drafts){const {path,draft}=item??{};
-    if(typeof path!=='string'||!path||path.length>500||path.includes('\\')||path.startsWith('/')||path.startsWith('.local/')||path.split('/').some(part=>!part||part==='.'||part==='..'||part.toLowerCase()==='.git'||part.includes(':'))||/[\x00-\x1f]/.test(path)||isDeniedPath(path)||paths.has(path.toLowerCase()))throw new Error('Recovery contains an unsupported or duplicate path.');
-    paths.add(path.toLowerCase());
+    if(typeof path!=='string'||!path||path.length>500||path.includes('\\')||path.startsWith('/')||path.startsWith('.local/')||path.split('/').some(part=>!part||part==='.'||part==='..'||part.toLowerCase()==='.git'||part.includes(':'))||/[\x00-\x1f]/.test(path)||isDeniedPath(path)||paths.has(pathKey(path,data.root)))throw new Error('Recovery contains an unsupported or duplicate path.');
+    paths.add(pathKey(path,data.root));
     if(!draft||typeof draft.base!=='string'||typeof draft.text!=='string'||typeof draft.modifiedAt!=='string'||draft.modifiedAt.length>80||(draft.creation!==undefined&&typeof draft.creation!=='boolean')||draft.creation&&draft.base!==''||utf8Bytes(draft.base)>WORKSPACE_DRAFT_BYTES||utf8Bytes(draft.text)>WORKSPACE_DRAFT_BYTES||draft.text.split('\n').length>5000||draft.base.split('\n').length>5000)throw new Error('Recovery contains an unsupported draft.');
   }
   // Refuse changed text rather than quietly restoring redacted code as an exact draft.
@@ -53,7 +56,14 @@ export function restoreRecovery(store:WorkspaceDrafts,snapshot:RecoverySnapshot,
   if(safe.recordingId!==id||rootKey(safe.root)!==rootKey(root))throw new Error('Recovery belongs to a different recording or workspace. Open its original recording first.');
   const next=new WorkspaceDrafts();
   for(const item of store.entries())next.set(item.id,item.path,store.get(item.id,item.path)!);
-  for(const {path,draft} of safe.drafts){const existing=next.get(id,path);if(existing&&JSON.stringify(existing)!==JSON.stringify(draft))throw new Error(`A live draft already exists for ${path}. Download or discard it before restoring. No drafts were replaced.`);next.create(id,path,draft);}
-  for(const {path,draft} of safe.drafts)store.create(id,path,draft);
+  const additions:RecoverySnapshot['drafts']=[];
+  for(const {path,draft} of safe.drafts){
+    // A Windows spelling alias names the same file, not another slot for old text.
+    // Check every existing alias before mutating the actual draft store.
+    const aliases=next.entries().filter(item=>item.id===id&&pathKey(item.path,root)===pathKey(path,root));
+    if(aliases.some(item=>!sameDraft(next.get(id,item.path)!,draft)))throw new Error(`A live draft already exists for ${path}. Download or discard it before restoring. No drafts were replaced.`);
+    if(!aliases.length){next.create(id,path,draft);additions.push({path,draft});}
+  }
+  for(const {path,draft} of additions)store.create(id,path,draft);
   return safe.drafts.map(item=>item.path);
 }

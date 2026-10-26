@@ -1,0 +1,10 @@
+.product-dialog.draft-recovery-dialog>header {position:sticky;top:0;z-index:2;}
+.draft-recovery-dialog .draft-recovery-body {display:grid;gap:14px;min-width:0;padding:16px;overflow-wrap:anywhere;}
+.draft-recovery-dialog .draft-recovery-body p,.draft-recovery-dialog .draft-recovery-body h3 {margin:0;}
+.draft-recovery-dialog .draft-recovery-body p {color:var(--t2);font:13px/1.7 var(--sans);}
+.draft-recovery-dialog .draft-recovery-body label {display:grid;gap:6px;min-width:0;margin:0;}
+.draft-recovery-dialog .draft-recovery-body input {box-sizing:border-box;width:100%;min-width:0;max-width:100%;}
+.draft-recovery-dialog .draft-recovery-body>button,.draft-recovery-dialog .draft-recovery-body section>button {justify-self:start;max-width:100%;white-space:normal;}
+.draft-recovery-dialog .draft-recovery-body hr {width:100%;margin:0;border:0;border-top:1px solid var(--line);}
+.draft-recovery-dialog .draft-recovery-body section {display:grid;gap:12px;min-width:0;}
+.draft-recovery-dialog .draft-recovery-body ul {margin:0;padding-inline-start:20px;}
