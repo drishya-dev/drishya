@@ -37,7 +37,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | DATA-9 | @yash + Claude | `claude/data-9-hooks` | 2026-10-26 | Research and docs only: `docs/review/data-9-hooks-otel.md`, TASKS DATA-9 result, research-ledger H1–H3 rows, STATUS. No code under apps/, packages/ or tests/. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
-| CONTENT-1 | @yash + Codex image agent | `codex/parallel-image-evidence` | 2026-10-26 | Independent image-reader source acceptance/correctness: OpImages.tsx, lib image helper(s), op-images.css only if measured, focused image tests and unique review/content-1-parallel.md (at most 8 files). No History/common/SessionWorkspace, capture/schema/DATA-3, map/composer/Files/Modern shared CSS; no native turn. Parent docs integrated centrally. |
 | CONTENT-7 | @yash + Codex structured-reader agent | `codex/parallel-structured-evidence` | 2026-10-26 | Structured/resource reader completeness/correctness: StructuredDataReader.tsx, CapturedResources.tsx, their owning lib helpers/scoped structured-data.css if measured, focused new tests and unique review/content-7-parallel.md (at most 8 files). No other reader owners, History/common, capture/schema/DATA-3, Modern/shared CSS or other claims. Parent docs integrated centrally. |
 
 
@@ -101,7 +100,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Codex PRs merged after checking each on current main:** #221 (FILES-1 deletion acceptance), #225 (CONTENT-7 resources), #220 (CONTENT-3 literal answers), #219 (CONTENT-4 plan labels), #224 (CONTENT-2 web results), #214 (CONTENT-1 images). Full gate on the combined main: 349 passed, 26 skipped, 2 failed (the known `b2-live` reading-position pair, Harsh's PERF-2 area).
 - **Also merged by parallel sessions, verified here:** READ-8 stepper (#217), READ-5 edits by turn (#216), GIT-4 picker (#218), UI-2 composer (#222) and Home/Search (#223).
 
-### Yash with Codex — CONTENT-1 image-reader failure/retry and phone acceptance
+### Yash with Codex image agent — current-image recovery
+
+- **26 October, PR #240:** current-file image refusals and later load/decode failures now explain themselves and allow explicit retry without reload; old responses cannot replace a newer recording/path. Two baseline failures reproduced; 18 focused image browser checks pass. [Evidence](review/content-1-parallel.md).
+- **Real source:** 596 typed ImageView items in four current journals. A bounded redacted genuine excerpt passes metadata/refusal/retry at desktop/phone. Its file: URL exists but protected/unsupported current access stays refused; no byte recovery or full-session/native success claim.
+- **Combined handoff:** three independent content sources combine cleanly; 857 units, both types/build and nine new browser cases pass. Own claim released, parent CONTENT-1 remains open for remaining source/device acceptance. Question/structured reports are separate; all other builders' claims preserved. No capture/schema/controller/shared CSS or History/common/worker/PERF-2/3 change.
 
 
 ### Yash with Codex — CONTENT-2 search reading correctness
