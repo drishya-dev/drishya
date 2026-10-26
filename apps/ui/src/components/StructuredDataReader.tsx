@@ -1,5 +1,5 @@
 import {DelimitedInspection} from './DelimitedDataReader.tsx';
-import {useMemo,useRef,useState} from 'react';
+import {useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {ReadingDialog} from './ProductShell.tsx';
 import {dataLabel,dataText,pointerKey,structuredData,visibleDataNodes} from '../lib/structured-data.ts';
 import './structured-data.css';
@@ -18,10 +18,20 @@ function DataReader({text,close}:{text:string;close:()=>void}){
  const data=useMemo(()=>structuredData(text),[text]);
  const [mode,setMode]=useState<'tree'|'table'|'original'>(data?.table?'table':'tree');
  const [expanded,setExpanded]=useState(new Set([''])),[query,setQuery]=useState(''),[top,setTop]=useState(0),[selected,setSelected]=useState(''),[copied,setCopied]=useState('');
- const viewport=useRef<HTMLDivElement>(null);
+ const viewport=useRef<HTMLDivElement>(null),treeFocus=useRef<string|undefined>(undefined);
  const nodes=useMemo(()=>data?visibleDataNodes(data.nodes,expanded,query):[],[data,expanded,query]);
  const current=data?.nodes.find(node=>node.pointer===selected);
  const start=Math.max(0,Math.floor(top/32)-4),end=start+28;
+ // An explicit table-to-tree handoff must focus the destination after virtualization mounts it.
+ useLayoutEffect(()=>{
+  if(mode!=='tree'||treeFocus.current===undefined||!viewport.current)return;
+  const index=nodes.findIndex(node=>node.pointer===treeFocus.current),host=viewport.current;
+  if(index<0){treeFocus.current=undefined;return;}
+  host.scrollTop=Math.max(0,index*32-32);
+  if(host.scrollTop!==top){setTop(host.scrollTop);return;}
+  const row=host.querySelector<HTMLElement>(`[data-tree-index="${index}"]`);
+  if(row){row.focus({preventScroll:true});treeFocus.current=undefined;}
+ },[mode,nodes,top]);
  const reset=()=>{setTop(0);if(viewport.current)viewport.current.scrollTop=0;};
  const copy=async(value:string)=>{try{await navigator.clipboard.writeText(value);setCopied('Copied');}catch{setCopied('Copy unavailable · select the text instead');}};
  const toggle=(pointer:string)=>setExpanded(previous=>{const next=new Set(previous);if(next.has(pointer))next.delete(pointer);else next.add(pointer);return next;});
@@ -48,7 +58,7 @@ function DataReader({text,close}:{text:string;close:()=>void}){
     </div>}
    </div>}
    {data&&mode!=='original'&&<div className="material-context">{mode==='tree'?`${nodes.length} visible values${query?' · search shows up to 500 matches':''}`:`${data.table?.rows.length} records · ${data.table?.columns.length} fields`} · scroll to inspect</div>}
-   {data&&mode!=='original'&&current&&<section className="data-selection" aria-label="Selected data value"><div><code>{current.pointer||'Root'}</code><button type="button" onClick={()=>void copy(typeof current.value==='string'?current.value:dataText(current.value))}>Copy value</button></div><pre tabIndex={0}>{current.container?dataLabel(current.value):typeof current.value==='string'?current.value:dataText(current.value)}</pre>{typeof current.value==='string'&&<DelimitedInspection text={current.value}/>} {current.container&&<button type="button" onClick={()=>{const ancestors=data.nodes.filter(node=>node.container&&(current.pointer===node.pointer||current.pointer.startsWith(`${node.pointer}/`)));const next=new Set([...expanded,...ancestors.map(node=>node.pointer)]);setExpanded(next);setMode('tree');setQuery('');reset();requestAnimationFrame(()=>{const index=visibleDataNodes(data.nodes,next).findIndex(node=>node.pointer===current.pointer);if(viewport.current){viewport.current.scrollTop=Math.max(0,index*32-32);setTop(viewport.current.scrollTop);}});}}>Explore in tree</button>}</section>}
+   {data&&mode!=='original'&&current&&<section className="data-selection" aria-label="Selected data value"><div><code>{current.pointer||'Root'}</code><button type="button" onClick={()=>void copy(typeof current.value==='string'?current.value:dataText(current.value))}>Copy value</button></div><pre tabIndex={0}>{current.container?dataLabel(current.value):typeof current.value==='string'?current.value:dataText(current.value)}</pre>{typeof current.value==='string'&&<DelimitedInspection text={current.value}/>} {current.container&&<button type="button" onClick={()=>{const ancestors=data.nodes.filter(node=>node.container&&(current.pointer===node.pointer||current.pointer.startsWith(`${node.pointer}/`)));const next=new Set([...expanded,...ancestors.map(node=>node.pointer)]);treeFocus.current=current.pointer;setExpanded(next);setMode('tree');setQuery('');reset();}}>Explore in tree</button>}</section>}
    <div role="status" className="material-context">{copied}</div>
   </div>
  </ReadingDialog>;
