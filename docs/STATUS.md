@@ -44,6 +44,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Yash with Claude (Sonnet 5.5) — task-list honesty pass and lanes
 - **Closed:** LIVE-4, CONTENT-5, GIT-4, UI-2 and UI-4, each with its leftovers named in the entry. Three leftovers became their own items so the open count means real remaining work: LIVE-4b (P3, waits on data no harness records), CONTENT-5b and UI-4b (P2). Overall 45 of 98.
 - **Reordered:** P1 now runs PERF-2, DATA-3, READ-4, HOME-1, UI-1, then the Codex-lane CONTENT-1…4 items that need real samples. P2 starts with READ-5/8 and GIT-2; the final UI passes stay last. A "Lanes" paragraph in TASKS says who takes what, so Claude, Codex and Harsh stop colliding.
+- **PERF-2 decision (Yash, 26 Oct):** fix the reading-position jump first, re-measure, and only then decide option 2 (visible: fewer diff lines while a card arrives) or option 3 (change the 16 MiB instant-append probe). Posted to Harsh on #208. Reason: the jump is a real bug neither option fixes, and choosing a trade-off before re-measuring would spend a visual or gate change on a number that may move.
 - **Tests:** Yash runs the full browser gates himself from now on; Claude does not start the 14-minute run unless asked. Docs only; nothing else changed.
 
 ### Yash with Claude (Sonnet 5.5) — UI-4 slice 2: the Canvas experience is retired
