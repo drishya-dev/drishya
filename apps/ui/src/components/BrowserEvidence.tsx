@@ -18,7 +18,7 @@ export function BrowserEvidence({ op, full = false }: { op: Operation; full?: bo
   const step = browserStep(op);
   if (!step) return null;
   return <div className="browser-evidence">
-    <div className="browser-address">{step.url ? <RecordedUrl url={step.url}/> : <span className="muted">Page URL not captured for this step</span>}</div>
+    <div className="browser-address">{step.url ? <RecordedUrl url={step.url}/> : <span className="muted">No URL in captured input</span>}</div>
     <div className="browser-action"><span>{step.action}</span>{step.tab !== undefined && <small>tab {step.tab}</small>}<small>{op.status === 'running' ? 'Running' : op.status === 'error' ? 'Failed' : op.status === 'ok' ? 'Returned' : 'Outcome not captured'}</small></div>
     {step.batch?.length ? <ol className="browser-batch">{step.batch.map((item, i) => <li key={i}><span>{item.name ?? 'Recorded action'}{item.action ? ` · ${item.action}` : ''}</span>{item.url && <RecordedUrl url={item.url}/>}</li>)}{step.batchCount! > step.batch.length && <li className="muted">{step.batchCount! - step.batch.length} more actions · expand for captured input</li>}</ol> : null}
     {step.query && <div className="browser-query">{step.query}</div>}
@@ -36,7 +36,7 @@ export function WebEvidence({ op, full = false }: { op: Operation; full?: boolea
     {d.fetch && fetchFacts(d.fetch) && <div className="browser-action">{fetchFacts(d.fetch)}</div>}
     {d.results?.length ? <WebResults results={d.results} snippets={full} limit={full ? undefined : 5}/> : null}
     {full && <CapturedOutcomes output={d.resultPreview}/>}
-    {(full || !d.results?.length) && <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Captured web result excerpt"><ToolOutput text={d.resultPreview ?? (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/></div>}
+    {(full || !d.results?.length) && <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Captured web result excerpt"><ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/></div>}
   </div>;
 }
 

@@ -17,7 +17,7 @@
 
 The ordinary static history begins at the first step. Active live/replay following starts at the newest available step and advances when new steps arrive. Scrubbing detaches follow without pausing replay. Exact selected/expanded action IDs and observation navigation choose the corresponding step once; subsequent manual scrubbing remains possible. Hover reading uses the existing one-card owner; step replacement leaves no placeholder.
 
-No new animation: frequent keyboard scrubbing changes selectable content immediately. Existing original-card motion/hover remains in its owner. Emil composition and the animate skill were applied; nothing is typed, scanned or generated. Safe absolute HTTP(S) URLs open only on explicit clicks with `noopener noreferrer`; credential-bearing/unsupported URLs stay literal. Browser URL text comes only from captured input; no previous-step URL is copied onto a later step. Captured results are excerpts, not generated summaries. Web result list behavior and expanded CapturedOutcomes are retained.
+No new animation: frequent keyboard scrubbing changes selectable content immediately. Existing original-card motion/hover remains in its owner. Emil composition and the animate skill were applied; nothing is typed, scanned or generated. Safe absolute HTTP(S) URLs open only on explicit clicks with `noopener noreferrer`; credential-bearing/unsupported URLs stay literal. Browser URL text comes only from captured input; the absence message explicitly says "No URL in captured input", because an output may mention several tabs without identifying the current page; no previous-step URL is copied onto a later step. Captured results are excerpts, not generated summaries. Web result list behavior and expanded CapturedOutcomes are retained.
 
 ## Local verification
 
@@ -41,7 +41,7 @@ pnpm --filter @drishya/ui typecheck
 pnpm ui:build
 ```
 
-`browser-evidence.spec.ts` explicitly skips with **Requires Claude CONTENT-2 History integration** while the dedicated component import is absent from History. It automatically enables when Claude applies the import below. Helper units do not skip. A skipped dependency is not product acceptance.
+`browser-evidence.spec.ts` explicitly skips with **Requires Claude CONTENT-2 History integration** while the dedicated component import is absent from History. It automatically enables when Claude applies the import below. Helper units do not skip. A skipped dependency is not product acceptance. After restoring History, UI types/build passed on the unintegrated tree and all seven dependent journeys reported that explicit skip. The final temporary-patch rerun passed all seven new journeys and all six helper units; connector assertions wait for the existing material-layout animation-frame measurement rather than sampling stale endpoints synchronously.
 
 ## Real-source matrix
 
