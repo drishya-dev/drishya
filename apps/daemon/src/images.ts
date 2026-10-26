@@ -24,6 +24,8 @@ export function referencedImagePath(store: Store, recordingId: string, operation
     const image = (store.observationById(recordingId, native.slice(5))?.payload as { image?: { path?: unknown; savedPath?: unknown } } | undefined)?.image;
     const path = image?.path ?? image?.savedPath;
     if (typeof path !== 'string') return undefined;
+    // Do not ask realpath to contact a network share, even behind a deliberate current-file read.
+    if (/^[\\/]{2}/.test(path)) return undefined;
     // Native Codex ImageView records use file: URLs. Decode exactly once, then let the
     // workspace reader apply its normal approval, root, protected-path and symlink checks.
     if (/^file:/i.test(path)) {
@@ -36,5 +38,5 @@ export function referencedImagePath(store: Store, recordingId: string, operation
   }
   const call = store.operationObservations(recordingId, native).find((o) => o.kind === 'tool.call');
   const intent = (call?.payload as { intent?: { kind?: string; path?: unknown } } | undefined)?.intent;
-  return intent?.kind === 'read' && typeof intent.path === 'string' && /\.(png|jpe?g|gif|webp)$/i.test(intent.path) ? intent.path : undefined;
+  return intent?.kind === 'read' && typeof intent.path === 'string' && !/^[\\/]{2}/.test(intent.path) && /\.(png|jpe?g|gif|webp)$/i.test(intent.path) ? intent.path : undefined;
 }
