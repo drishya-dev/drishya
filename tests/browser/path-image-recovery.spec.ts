@@ -9,7 +9,7 @@ const ids:Record<string,string>={};
 const PNG='iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAEElEQVR4nGP4z8DA8B9IAAAc+gT8Xdw8fQAAAABJRU5ErkJggg==';
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-path-recovery-'));app=new App(join(dir,'data'));server=await startServer({app,port:0});
- for(const name of ['consent','missing','corrupt']){
+ for(const name of ['consent','missing','corrupt','late']){
   const root=join(dir,name);mkdirSync(root);writeFileSync(join(root,'mockup.png'),Buffer.from(PNG,'base64'));
   const base={timestamp:'2026-10-26T00:00:00Z',cwd:root,sessionId:name},source=join(dir,name+'.jsonl');
   writeFileSync(source,[{...base,type:'user',uuid:'p',message:{role:'user',content:'Compare the image'}},{...base,type:'assistant',uuid:'a',message:{id:'m',role:'assistant',content:[{type:'tool_use',id:'read',name:'Read',input:{file_path:join(root,'mockup.png')}}]}},{...base,type:'user',uuid:'r',message:{role:'user',content:[{type:'tool_result',tool_use_id:'read',content:'Image path only, bytes not retained.'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');ids[name]=(await app.ingest.importSource('claude-code',source)).recordingId;
@@ -29,4 +29,15 @@ for(const kind of ['missing','corrupt'])test(`a current image ${kind} after the 
  const path=await open(page,ids[kind]!);await approve(page,ids[kind]!);await path.getByRole('button',{name:'Open current file',exact:true}).click();await expect(path.getByRole('status')).toContainText('could not be loaded');await expect(path.locator('figure')).toHaveCount(0);const before=requests;await page.waitForTimeout(150);expect(requests).toBe(before);
  available=true;await path.getByRole('button',{name:'Retry current file',exact:true}).click();await expect.poll(()=>path.locator('img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBe(2);await expect(path.getByRole('status')).toHaveCount(0);await expect(path.locator('figcaption')).toContainText('Current file');await expect(path).toContainText('image bytes not captured');
  await page.setViewportSize({width:390,height:844});expect(await path.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/path-image-${kind}-phone.png`)});
+});
+
+test('a delayed current-image refusal cannot replace a newer recording image',async({page})=>{
+ const previous=await open(page,ids.late!);await approve(page,ids.late!);
+ let release!:()=>void,entered!:()=>void;const waiting=new Promise<void>(resolve=>{entered=resolve;});
+ await page.route(`**/recordings/${ids.late}/workspace/image?*`,async route=>{await new Promise<void>(resolve=>{release=resolve;entered();});try{await route.fulfill({status:403,contentType:'text/plain',body:'approve workspace reading'});}catch{/* A navigation may already have cancelled the old request. */}});
+ await previous.getByRole('button',{name:'Open current file',exact:true}).click();await waiting;await expect(previous).toContainText('Opening the current file');
+ await page.evaluate(id=>{location.hash=`#/r/${id}`;},ids.consent!);
+ const nextOperation=app.projection(ids.consent!).operations.find(op=>op.detail.kind==='read')!;
+ const current=page.locator(`article[data-op-id="${nextOperation.id}"] .path-image`);await expect(current).toBeVisible();await approve(page,ids.consent!);await current.getByRole('button',{name:'Open current file',exact:true}).click();await expect.poll(()=>current.locator('img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBe(2);
+ release();await expect(current.locator('figcaption')).toContainText('It may differ from what the agent saw');await expect(current.getByRole('status')).toHaveCount(0);await expect(current.getByRole('button',{name:'Retry current file',exact:true})).toHaveCount(0);
 });
