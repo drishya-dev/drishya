@@ -144,10 +144,11 @@ const GOLDEN: Record<Recording, Record<number, string[]>> = {
 for (const recording of ['claude', 'codex', 'wrap'] as const) for (const width of WIDTHS) test(`${recording} @${width}: wrap, order and wires hold`, async ({ page }) => {
   await open(page, recording, width);
   // Wires are measured on a timer and after layout settles; poll until the frame is complete, then it must be clean.
-  await expect.poll(async () => violations(await snapshot(page)), { timeout: 12_000, intervals: [250, 250, 500, 1000] }).toEqual([]);
+  // The row structure is polled with the violations: under load the first clean-looking frame can still be a half-arrived one.
+  const frame = async () => { const s = await snapshot(page); return { found: violations(s), rows: s.passages.map(p => rowsOf(p.cards).map(r => r.length).join('/')) }; };
+  await expect.poll(frame, { timeout: 15_000, intervals: [250, 250, 500, 1000] }).toEqual({ found: [], rows: GOLDEN[recording][width] });
   const { passages, wires } = await snapshot(page);
   const pairs = passages.reduce((n, p) => n + Math.max(0, p.cards.length - 1), 0);
   expect(pairs).toBeGreaterThan(0);
   expect(wires).toHaveLength(pairs);
-  expect(passages.map(p => rowsOf(p.cards).map(r => r.length).join('/'))).toEqual(GOLDEN[recording][width]);
 });
