@@ -55,7 +55,7 @@ for (const width of WIDTHS) {
 }
 
 // A long session title truncates inside the identity pill; it must never run under the cluster.
-for (const width of [601, 640, 700, 701, 820, 1024]) {
+for (const width of [320, 360, 390, 430, 600, 601, 640, 700, 701, 820, 1024]) {
   test(`a long session title stays clear of the navigation cluster at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`${server.url}/?experience=modern&motion=0#token=${server.token}`); await expect(page.locator('.home')).toBeVisible();
