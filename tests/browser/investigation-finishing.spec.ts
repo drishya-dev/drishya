@@ -29,7 +29,15 @@ test.beforeEach(async({page})=>{
 });
 async function open(page:Page) {await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();}
 async function command(page:Page,name:string) {await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(name);await nav.getByRole('option').filter({hasText:name}).click();}
-async function selectAction(page:Page) {const op=page.locator(`article[data-op-id="${operationId}"]`);await op.scrollIntoViewIfNeeded();await op.locator('.op-head .op-kind').click();await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toBeVisible();}
+// The history list re-mounts a card while it settles, which detaches the element between scroll and click: retry the whole gesture, and never click again once the detail is open (a second click would close it).
+async function selectAction(page:Page) {
+  const detail=page.getByRole('complementary',{name:'Operation detail',exact:true});
+  await expect(async()=>{
+    if(await detail.isVisible())return;
+    const op=page.locator(`article[data-op-id="${operationId}"]`);await op.scrollIntoViewIfNeeded({timeout:3000});await op.locator('.op-head .op-kind').click({timeout:3000});
+    await expect(detail).toBeVisible({timeout:2000});
+  }).toPass({timeout:20_000});
+}
 async function desk(page:Page) {
   await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();const workspace=page.getByRole('region',{name:'Developer workspace',exact:true});
   const grant=workspace.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(workspace.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();
