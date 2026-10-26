@@ -37,3 +37,31 @@ describe('explicit encrypted draft recovery',()=>{
     await expect(unsealRecovery('{}',password)).rejects.toThrow('Unsupported');
   });
 });
+
+it('refuses a Windows path alias of newer live work atomically',()=>{
+ const source=new WorkspaceDrafts();source.set('one','other.ts',draft);source.set('one','src/shared.ts',draft);const snapshot=recoverySnapshot(source,'one','C:/synthetic/project');const live=new WorkspaceDrafts();live.set('one','SRC/SHARED.ts',{...draft,text:'newer unsaved work'});
+ expect(()=>restoreRecovery(live,snapshot,'one','c:\\synthetic\\project')).toThrow('live draft');expect(live.entries()).toHaveLength(1);expect(live.get('one','other.ts')).toBeUndefined();expect(live.get('one','SRC/SHARED.ts')!.text).toBe('newer unsaved work');
+});
+it('does not create a second Windows draft for an identical differently-cased path',()=>{
+ const source=new WorkspaceDrafts();source.set('one','src/shared.ts',draft);const snapshot=recoverySnapshot(source,'one','C:/synthetic/project');const live=new WorkspaceDrafts();live.set('one','SRC/SHARED.ts',draft);restoreRecovery(live,snapshot,'one','C:/synthetic/project');expect(live.entries()).toEqual([{id:'one',path:'SRC/SHARED.ts'}]);
+});
+it('preserves genuinely distinct path case in a POSIX recovery snapshot',()=>{
+ const source=new WorkspaceDrafts();source.set('one','src/Readme.md',draft);source.set('one','src/README.md',{...draft,text:'different POSIX file'});const snapshot=recoverySnapshot(source,'one','/synthetic/project');const live=new WorkspaceDrafts();restoreRecovery(live,snapshot,'one','/synthetic/project');expect(live.entries()).toHaveLength(2);expect(live.get('one','src/README.md')!.text).toBe('different POSIX file');
+});
+
+it('compares draft fields independently of object key order and explicit false creation',()=>{
+ const source=new WorkspaceDrafts();source.set('one','file.ts',draft);const snapshot=recoverySnapshot(source,'one','/original');const live=new WorkspaceDrafts();live.set('one','file.ts',{text:draft.text,modifiedAt:draft.modifiedAt,base:draft.base,creation:false});expect(()=>restoreRecovery(live,snapshot,'one','/original')).not.toThrow();expect(live.entries()).toHaveLength(1);
+});
+it('keeps recording ownership distinct while matching Windows path aliases',()=>{
+ const source=new WorkspaceDrafts();source.set('one','file.ts',draft);const snapshot=recoverySnapshot(source,'one','C:/original');const live=new WorkspaceDrafts();live.set('other','FILE.ts',{...draft,text:'other recording draft'});restoreRecovery(live,snapshot,'one','C:/original');expect(live.get('other','FILE.ts')!.text).toBe('other recording draft');expect(live.get('one','file.ts')).toEqual(draft);
+});
+it('checks all Windows aliases instead of accepting the first identical one',()=>{
+ const source=new WorkspaceDrafts();source.set('one','file.ts',draft);const snapshot=recoverySnapshot(source,'one','C:/original');const live=new WorkspaceDrafts();live.set('one','FILE.ts',draft);live.set('one','File.ts',{...draft,text:'another newer alias'});expect(()=>restoreRecovery(live,snapshot,'one','C:/original')).toThrow('live draft');expect(live.entries()).toHaveLength(2);
+});
+
+it('applies Windows alias protection to UNC roots and separator/case variants',()=>{
+ const source=new WorkspaceDrafts();source.set('one','src/file.ts',draft);const snapshot=recoverySnapshot(source,'one',String.raw`\\server\share\project`);const live=new WorkspaceDrafts();live.set('one','SRC/FILE.ts',{...draft,text:'newer UNC work'});expect(()=>restoreRecovery(live,snapshot,'one','//SERVER/SHARE/PROJECT')).toThrow('live draft');expect(live.entries()).toHaveLength(1);
+});
+it('does not consume a ninth slot for an already retained Windows alias',()=>{
+ const source=new WorkspaceDrafts();source.set('one','file.ts',draft);const snapshot=recoverySnapshot(source,'one','C:/original');const live=new WorkspaceDrafts();live.set('one','FILE.ts',draft);for(let n=0;n<7;n++)live.set('one',`other${n}.ts`,draft);expect(()=>restoreRecovery(live,snapshot,'one','C:/original')).not.toThrow();expect(live.entries()).toHaveLength(8);
+});
