@@ -94,7 +94,7 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 - **Harsh:** the reading-position jump, then DATA-3 and HOME-1 once he confirms the 26 Oct decision. PERF-2 is a final pass; REL-2 physical runs.
 - **Claude (Yash's sessions):** READ-4/5/8, GIT-2, UI-1 once Yash has chosen the header, and the final UI passes. Verifies and merges its own PRs.
 - **Codex (`yashdoke7`):** acceptance of the CONTENT-1…4 and CONTENT-7 readers, FILES-3/4/5, DATA-7/8/9 research, REVIEW-4. These need real samples or a native account, so they sit last in P1 rather than blocking the rows above them.
-- **Held until the PERF-2 gate is green:** `History.tsx`, `common.tsx`, the History libraries, and the daemon history/worker files. No feature touches them.
+- **26 October hold lifted:** both builders confirmed deferring PERF-2/3; feature work in History/common/ingest/worker may proceed while preserving measured budgets (STATUS decisions). Active claims still apply: DATA-3 owns the turn ledger integration in `History.tsx`; coordinate that file before editing it. PERF-2/3 themselves remain deferred.
 
 ---
 
