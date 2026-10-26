@@ -49,7 +49,7 @@ export function typedItem(value: unknown, commandText: (v: unknown) => string): 
       return { payload: { ...base, item: 'image-view', image: { path: v.path, origin: 'agent-viewed', availability: 'metadata-only' } } };
     case 'Extension':
       if (v.kind === 'web.search') return { payload: { ...base, item: 'web-search', web: { query: str(v.query), results: Array.isArray(v.results) ? v.results.filter((r: Rec) => r && typeof r.url === 'string').map((r: Rec) => ({ url: r.url, title: str(r.title), domain: str(r.domain), snippet: str(r.snippet) })) : undefined } } };
-      if (v.kind === 'image.generation') return { payload: { ...base, item: 'image-generation', image: { savedPath: str(v.savedPath), revisedPrompt: str(v.revisedPrompt), origin: 'generated', availability: 'metadata-only' } } };
+      if (v.kind === 'image.generation' || v.kind === 'image_gen.generation') return { payload: { ...base, item: 'image-generation', image: { savedPath: str(v.savedPath), revisedPrompt: str(v.revisedPrompt), origin: 'generated', availability: 'metadata-only' } } };
       return undefined;
     default: return undefined;
   }

@@ -76,7 +76,9 @@ it('decodes genuine Codex file URLs once without widening current-file access', 
   const paths = [pathToFileURL(image).href, pathToFileURL(protectedPath).href, pathToFileURL(outside).href,
     'file://remote.invalid/share/image.png', 'https://example.invalid/image.png',
     pathToFileURL(image).href + '?alternate=1', pathToFileURL(image).href + '#fragment',
-    'file:///invalid%2Fpath.png', pathToFileURL(join(root, 'docs', '%20.png')).href];
+    'file:///invalid%2Fpath.png', pathToFileURL(join(root, 'docs', '%20.png')).href,
+    'file://user:password@localhost/image.png', '\\\\remote.invalid\\share\\image.png',
+    pathToFileURL(image).href.replace('file:///', 'file://localhost/')];
   const rows = [{ timestamp: '2026-10-26T00:00:00Z', type: 'session_meta', payload: { id: 'codex-file-urls', cwd: root } },
     ...paths.map((path, i) => ({ timestamp: '2026-10-26T00:00:01Z', type: 'event_msg', payload: { type: 'item_completed', item: { type: 'ImageView', id: `image-${i}`, path } } }))];
   const journal = join(dir, 'urls.jsonl');
@@ -92,4 +94,25 @@ it('decodes genuine Codex file URLs once without widening current-file access', 
   for (const i of [1, 2, 3, 4, 5, 6, 7]) await expect(access.image(id, referenced(i))).rejects.toMatchObject({ status: 403 });
   expect(referenced(8)).toBe(join(root, 'docs', '%20.png'));
   await expect(access.image(id, referenced(8))).rejects.toMatchObject({ status: 404 });
+  await expect(access.image(id, referenced(9))).rejects.toMatchObject({ status: 403 });
+  expect(referenced(10)).toBeUndefined();
+  // URL normalisation treats localhost as this machine; the same root/approval checks still apply.
+  expect(referenced(11)).toBe(image);
+  expect((await access.image(id, referenced(11))).body.equals(Buffer.from(PNG_1x1, 'base64'))).toBe(true);
+});
+
+it('retains native generated-image aliases as metadata-only references', async () => {
+  const path = join(root, 'generated.png');
+  const rows = [{ timestamp: '2026-10-26T00:00:00Z', type: 'session_meta', payload: { id: 'generated-images', cwd: root } },
+    ...['image.generation', 'image_gen.generation'].map((kind, i) => ({ timestamp: '2026-10-26T00:00:01Z', type: 'event_msg', payload: { type: 'item_completed', item: { type: 'Extension', id: `generated-${i}`, kind, savedPath: path, revisedPrompt: 'A synthetic diagram' } } }))];
+  const journal = join(dir, 'generated.jsonl');
+  writeFileSync(journal, rows.map(r => JSON.stringify(r)).join('\n') + '\n');
+  const id = (await app.ingest.importSource('codex', journal)).recordingId;
+  const ops = app.projection(id).operations;
+  expect(ops).toHaveLength(2);
+  for (const op of ops) {
+    expect(op.detail).toMatchObject({ kind: 'other', input: { image: { savedPath: path, origin: 'generated', availability: 'metadata-only' } } });
+    expect(op.images).toBeUndefined();
+    expect(referencedImagePath(app.store, id, op.id)).toBe(path);
+  }
 });
