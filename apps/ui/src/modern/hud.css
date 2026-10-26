@@ -50,12 +50,21 @@
 :root[data-ui-version=modern] .modern-session-header::after {content:none;}
 :root[data-ui-version=modern] .modern-session-header .studio-actions {display:flex;align-items:center;gap:3px;padding:5px;}
 :root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.btn,
+:root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.workspace-view-slot>.btn,
 :root[data-ui-version=modern][data-experience=classic] .modern-session-header .workspace-menu>summary {display:grid;place-items:center;width:34px;height:34px;min-height:34px;padding:0;margin:0;line-height:1;list-style:none;}
 :root[data-ui-version=modern] .modern-session-header .workspace-menu {align-self:center;height:34px;}
 :root[data-ui-version=modern] .modern-session-header .workspace-menu>summary::-webkit-details-marker {display:none;}
-:root[data-ui-version=modern] .modern-session-header .studio-actions>.btn::after {content:none!important;}
+:root[data-ui-version=modern] .modern-session-header .studio-actions>.btn::after,
+:root[data-ui-version=modern] .modern-session-header .studio-actions>.workspace-view-slot>.btn::after {content:none!important;}
+:root[data-ui-version=modern] .modern-session-header .workspace-view-slot {display:contents;}
+/* The wrapper stays mounted (it owns the Git dialog) but, with its buttons in the header, takes no box of its own. */
+:root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control.in-header {display:contents;}
 :root[data-ui-version=modern] .modern-session-header .studio-actions :is(svg,.modern-utility-glyph) {display:block;width:18px;height:18px;flex:none;margin:0;}
 :root[data-ui-version=modern] .modern-session-header .search-open :is(span,kbd) {display:none;}
+/* The Changes entry is a word, not an icon: it keeps the label's width instead of spilling out of a 34 px square. */
+:root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.review-open {width:auto;min-width:34px;padding:0 9px;}
+/* UI-1: Workspace, Git review and Git graph join the one navigation cluster as icons; their names stay in aria-label and title. */
+:root[data-ui-version=modern] .modern-session-header .workspace-view-slot>:is(.git-open,.workspace-open) {font-size:0;gap:0;}
 :root[data-ui-version=modern] .modern-native-composer:not(.composer-minimized) .modern-composer-top {padding-right:42px;}
 :root[data-ui-version=modern] .connected-workspace .workspace-header::after {content:none;}
 :root[data-ui-version=modern] .modern-session-header .studio-session-label {display:none;}

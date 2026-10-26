@@ -29,7 +29,8 @@ test.beforeAll(async()=>{
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();restore?.();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary directory');rmSync(dir,{recursive:true,force:true});}});
 
 // Any neutral spot closes a popover menu; the modern header carries no title to click anymore.
-const clickOutside=async(page:import('@playwright/test').Page)=>{const box=(await page.locator('.modern-session-header').boundingBox())!;await page.mouse.click(box.x+box.width/2,box.y+box.height/2);};
+// The header's top-left corner is empty at every width; its centre now holds the navigation cluster on phones.
+const clickOutside=async(page:import('@playwright/test').Page)=>{const box=(await page.locator('.modern-session-header').boundingBox())!;await page.mouse.click(box.x+4,box.y+4);};
 
 test('native segment lookup is authenticated, read-only, and explicit navigation opens newer work',async({page,request})=>{
   const endpoint=`${server.url}/v1/recordings/${parentId}/segments`;

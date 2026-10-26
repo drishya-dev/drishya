@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-1 | @yash + Claude | `claude/ui-1-header-c` | 2026-10-26 | Header option C (chosen by Yash 26 Oct): identity pill plus one navigation cluster, Git graph inside Git, branch in the identity line. Modern header/shell components and CSS only, a new overlap guard spec, TASKS/STATUS. No History, daemon, contracts or schema changes (branch in the identity line waits if it needs the projection). |
 | UI-6 | @yash + Claude | `claude/ui-6-phones` | 2026-10-26 | Phone density and occlusion: measure at 320/360/390/430 and 844x390, fix only measured defects in the Files overlay, map import drawer, composer/Follow/toolbox bottom edge and returning-user Home; new `tests/browser/phone-density.spec.ts`; Modern non-header CSS/components, TASKS UI-6, STATUS. Not the header, identity pill, Files\|Repository bar or Git/Workspace navigation (UI-1); no History, daemon or schema changes. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
@@ -40,6 +39,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — UI-1: header option C
+- **Built:** Workspace, Git review and Git graph join the header's one navigation cluster (icons, between Changes and Search) at 601 px and up; the row under the header is gone there, so the top holds three outlines instead of eight. Files|Repository stay at the left (they toggle the docked Files panel); phones keep the separate row. A portal keeps the controls' owner mounted so an open Git review survives a resize across 600 px (a regression the old Recorded-work phone spec caught). Fixed on the way: the "Changes" label spilled out of a 34 px box.
+- **Checks:** new `header-cluster.spec.ts` (nine widths, long titles at six, hit targets, label fit); seven older specs that encoded the old row now reference the cluster; the 23 specs touching the header and navigation pass (the remaining failures were load flakes that pass alone). Branch in the identity line stays open (needs a contracts change).
 
 ### Yash with Claude (Sonnet 5.5) — DATA-9: hook and OTel enrichment researched
 - **Result:** [data-9-hooks-otel](review/data-9-hooks-otel.md). The journals already hold nearly everything hooks and OpenTelemetry carry. The one thing neither journal records is the agent waiting on you (a permission prompt or question open), so that is the one signal recommended for building (new TASKS DATA-11, after CONTENT-3); `SessionEnd`/`Stop` liveness and Claude OTel `tool_decision` are deferred; the rest is rejected as duplicate and content-heavy.

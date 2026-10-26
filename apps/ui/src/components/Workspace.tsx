@@ -3,11 +3,13 @@ import { GitReviewEntry } from './GitReview.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useApp } from '../state.ts';
 import { useExperience } from '../lib/experience.ts';
 import { agentColor, agentName } from '../lib/identity.ts';
-import { useNarrowWorkspace } from '../lib/responsive-workspace.ts';
+import { useNarrowWorkspace, usePhoneHeader } from '../lib/responsive-workspace.ts';
+import { useHeaderSlot } from '../lib/header-slot.ts';
+import { createPortal } from 'react-dom';
 
 export function WorkspaceBar() {
   const bar = useRef<HTMLElement>(null);
@@ -42,8 +44,28 @@ export function WorkspaceBar() {
     {(source?.sample === 'recorded' || source?.sample === 'growing' && !recording?.live) && <button className="btn ghost sample-watch" onClick={() => { const next = new URL(location.href); next.searchParams.set('demo', 'live'); next.searchParams.delete('at'); next.hash = ''; location.assign(next.href); }}>{source.sample === 'growing' ? 'Watch demo again' : 'Watch live demo'}</button>}
     {filter && <button className="btn ghost clear-workspace-filter" onClick={() => useApp.getState().setFilter(undefined)}>Clear focus</button>}
     </div>
-    <div className="workspace-secondary">{experience === 'classic' && <button aria-label="Open developer workspace" aria-pressed={developerWorkspace} disabled={source?.kind !== 'daemon' || mode !== 'history' || !!recording?.id.includes('+')} title={source?.kind!=='daemon'?'Workspace needs a local session; this bundle contains captured evidence only.':mode!=='history'?'Leave replay to open current files and local drafts in Workspace.':recording?.id.includes('+')?'Open a single session to use Workspace.':'Workspace: current files, split views and local drafts; return to the agent when ready.'} onClick={() => { const state=useApp.getState(),path=modern?state.currentFile:undefined; state.set({ developerWorkspace: !developerWorkspace, explore: false, currentFile: path, filePanel: undefined, follow: false, held: true, foldersHidden: false }); if(!developerWorkspace&&path)window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:path})); }}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>Workspace</button>}{modern && <div className="modern-review-control"><GitReviewEntry icon /><button className="btn ghost git-open git-graph-open" aria-label="Git graph" title="Explore local branches, commits and changes" disabled={source?.kind!=='daemon'||mode!=='history'||!!recording?.id.includes('+')} onClick={openGitHistory}><svg className="git-branch-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h5l4-10h9M8 17l4-5h9"/><circle cx="8" cy="17" r="2"/><circle cx="12" cy="7" r="2"/><circle cx="19" cy="12" r="2"/></svg>Git graph</button></div>}</div>
+    <div className="workspace-secondary"><WorkspaceViewActions /></div>
   </nav>;
+}
+
+/**
+ * Workspace, Git review and Git graph (UI-1, option C). On a desktop-width Modern screen they sit in the header's one
+ * navigation cluster as icons (a portal into the header's slot); on phones, and outside Modern, they keep their own row
+ * under the header (`WorkspaceBar`). This component is mounted once, in the bar, so the Git dialogs never open twice.
+ */
+export function WorkspaceViewActions() {
+  const experience = useExperience();
+  const modern = document.documentElement.dataset.uiVersion === 'modern';
+  const developerWorkspace = useApp(s => s.developerWorkspace);
+  const source = useApp(s => s.source);
+  const mode = useApp(s => s.mode);
+  const recording = useApp(s => s.recording);
+  const phone = usePhoneHeader();
+  const slot = useHeaderSlot();
+  // The owner stays here; only the buttons move into the header cluster, so an open Git dialog survives a resize.
+  const target = modern && !phone ? slot : null;
+  const put = (node: ReactNode) => target ? createPortal(node, target) : node;
+  return <>{experience === 'classic' && put(<button className={target ? 'btn ghost workspace-open' : undefined} aria-label="Open developer workspace" aria-pressed={developerWorkspace} disabled={source?.kind !== 'daemon' || mode !== 'history' || !!recording?.id.includes('+')} title={source?.kind!=='daemon'?'Workspace needs a local session; this bundle contains captured evidence only.':mode!=='history'?'Leave replay to open current files and local drafts in Workspace.':recording?.id.includes('+')?'Open a single session to use Workspace.':'Workspace: current files, split views and local drafts; return to the agent when ready.'} onClick={() => { const state=useApp.getState(),path=modern?state.currentFile:undefined; state.set({ developerWorkspace: !developerWorkspace, explore: false, currentFile: path, filePanel: undefined, follow: false, held: true, foldersHidden: false }); if(!developerWorkspace&&path)window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:path})); }}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>Workspace</button>)}{modern && <div className={target ? 'modern-review-control in-header' : 'modern-review-control'}><GitReviewEntry icon slot={target} />{put(<button className="btn ghost git-open git-graph-open" aria-label="Git graph" title="Explore local branches, commits and changes" disabled={source?.kind!=='daemon'||mode!=='history'||!!recording?.id.includes('+')} onClick={openGitHistory}><svg className="git-branch-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h5l4-10h9M8 17l4-5h9"/><circle cx="8" cy="17" r="2"/><circle cx="12" cy="7" r="2"/><circle cx="19" cy="12" r="2"/></svg>Git graph</button>)}</div>}</>;
 }
 
 /** Uses only the current evidence boundary. Counts describe shown work, never a paged session total. */
