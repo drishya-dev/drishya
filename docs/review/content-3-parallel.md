@@ -17,3 +17,7 @@
 ## Boundaries
 
 Only NativeQuestions production code changes. No composer layout, CSS, controller/protocol, schema/capture, persistence, native policy or History/common/worker/PERF-2/3 change. No new controls or animation. Installed emil-design-eng guidance informs preserving the person's composed answer and matching the label to interaction. Parent CONTENT-3 is not marked complete by a supported mock journey; raw source/screenshots remain local. No hosted CI/full browser gate.
+
+## Combined integration
+
+Parent verified all three independent content increments together: 857 whole units /152 files, both TypeScript projects and production build pass; eight initial new browser cases plus the added late-image guard pass (nine distinct cases). Source changes merge without conflicts. Temporary verification merge was aborted; separate PRs remain for builder review. The existing pending-form waiting/status strip at phone width remains a UI-6 layout concern, not changed by this answer-composition fix.
