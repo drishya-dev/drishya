@@ -3,6 +3,7 @@
 // the bytes carry, never the journal's claim.
 import { sniffImage } from '@drishya/privacy';
 import type { Store } from '@drishya/store';
+import { fileURLToPath } from 'node:url';
 
 export function readImage(store: Store, recordingIds: string[], sha: string): { mime: string; body: Buffer } | undefined {
   if (!/^[0-9a-f]{64}$/.test(sha) || !recordingIds.some((id) => store.imageShas(id).has(sha))) return undefined;
@@ -22,7 +23,16 @@ export function referencedImagePath(store: Store, recordingId: string, operation
   if (native.startsWith('item:')) {
     const image = (store.observationById(recordingId, native.slice(5))?.payload as { image?: { path?: unknown; savedPath?: unknown } } | undefined)?.image;
     const path = image?.path ?? image?.savedPath;
-    return typeof path === 'string' ? path : undefined;
+    if (typeof path !== 'string') return undefined;
+    // Native Codex ImageView records use file: URLs. Decode exactly once, then let the
+    // workspace reader apply its normal approval, root, protected-path and symlink checks.
+    if (/^file:/i.test(path)) {
+      try {
+        const url = new URL(path);
+        if (!url.host && !url.search && !url.hash) return fileURLToPath(url);
+      } catch { /* Leave malformed/remote references to the native-path refusal below. */ }
+    }
+    return path;
   }
   const call = store.operationObservations(recordingId, native).find((o) => o.kind === 'tool.call');
   const intent = (call?.payload as { intent?: { kind?: string; path?: unknown } } | undefined)?.intent;

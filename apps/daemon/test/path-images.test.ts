@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { App } from '../src/app.ts';
 import { referencedImagePath } from '../src/images.ts';
@@ -62,4 +63,33 @@ it('resolves a Codex image item to its recorded path', async () => {
   const op = app.projection(id).operations.find((o) => o.title.startsWith('View image'))!;
   expect(op.detail).toMatchObject({ kind: 'other', input: { image: { path } } });
   expect(referencedImagePath(app.store, id, op.id)).toBe(path);
+});
+
+it('decodes genuine Codex file URLs once without widening current-file access', async () => {
+  const image = join(root, 'docs', 'space and # mark.png');
+  writeFileSync(image, Buffer.from(PNG_1x1, 'base64'));
+  mkdirSync(join(root, '.local'));
+  const protectedPath = join(root, '.local', 'private.png');
+  writeFileSync(protectedPath, Buffer.from(PNG_1x1, 'base64'));
+  const outside = join(dir, 'outside.png');
+  writeFileSync(outside, Buffer.from(PNG_1x1, 'base64'));
+  const paths = [pathToFileURL(image).href, pathToFileURL(protectedPath).href, pathToFileURL(outside).href,
+    'file://remote.invalid/share/image.png', 'https://example.invalid/image.png',
+    pathToFileURL(image).href + '?alternate=1', pathToFileURL(image).href + '#fragment',
+    'file:///invalid%2Fpath.png', pathToFileURL(join(root, 'docs', '%20.png')).href];
+  const rows = [{ timestamp: '2026-10-26T00:00:00Z', type: 'session_meta', payload: { id: 'codex-file-urls', cwd: root } },
+    ...paths.map((path, i) => ({ timestamp: '2026-10-26T00:00:01Z', type: 'event_msg', payload: { type: 'item_completed', item: { type: 'ImageView', id: `image-${i}`, path } } }))];
+  const journal = join(dir, 'urls.jsonl');
+  writeFileSync(journal, rows.map(r => JSON.stringify(r)).join('\n') + '\n');
+  const id = (await app.ingest.importSource('codex', journal)).recordingId;
+  const operations = app.projection(id).operations;
+  const referenced = (i: number) => referencedImagePath(app.store, id, operations[i]!.id)!;
+  expect(referenced(0)).toBe(image);
+  const access = new WorkspaceAccess(app);
+  await expect(access.image(id, referenced(0))).rejects.toMatchObject({ status: 403 });
+  await access.approve(id);
+  expect((await access.image(id, referenced(0))).body.equals(Buffer.from(PNG_1x1, 'base64'))).toBe(true);
+  for (const i of [1, 2, 3, 4, 5, 6, 7]) await expect(access.image(id, referenced(i))).rejects.toMatchObject({ status: 403 });
+  expect(referenced(8)).toBe(join(root, 'docs', '%20.png'));
+  await expect(access.image(id, referenced(8))).rejects.toMatchObject({ status: 404 });
 });
