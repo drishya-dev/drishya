@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-7 | @yash + Claude | `claude/ui-7-overlays` | 2026-10-26 | Slice 2: contrast of overlays (Settings, Ctrl+K navigator, Search, shortcut sheet, composer menus) on all seven palettes: second test in `tests/browser/palette-contrast.spec.ts`; CSS only for a measured failure. No History, daemon or contracts changes. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 
@@ -39,6 +38,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — UI-7 slice 2: overlay contrast guarded; header option C chosen
+- **UI-7 slice 2:** with Settings, the Ctrl+K navigator, Search and the reading-shortcuts sheet open, no text is below 4.5:1 on any of the seven palettes, so no CSS changed; a second test in `palette-contrast.spec.ts` guards it.
+- **UI-1:** Yash chose header option C (identity pill plus one navigation cluster). Building it next.
 
 ### Yash with Claude (Sonnet 5.5) — UI-7 slice 1: palette contrast measured and guarded
 - **Result:** on the expanded demo session no visible text is below 4.5:1 on any of the seven palettes (lowest 5.3:1, Paper), so no CSS changed. A new guard spec keeps it (fails at 2.5:1 when a colour is forced down). Menus, popovers, the editor, translucent compositing and the light-theme judgement stay open in TASKS UI-7.
