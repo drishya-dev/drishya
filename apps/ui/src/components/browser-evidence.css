@@ -9,10 +9,15 @@
 .browser-excerpt .output{white-space:pre-wrap;overflow-wrap:anywhere}
 .browser-evidence details{font-size:11px;color:var(--t3)}
 .browser-evidence summary{cursor:pointer}
-.browser-strip{min-width:0;max-width:100%;display:flex;flex-direction:column;align-self:flex-start;gap:5px}
-.browser-strip>.op{margin:0}
+.browser-strip{flex:0 1 380px;width:min(380px,100%);min-width:0;max-width:100%;display:flex;flex-direction:column;align-self:flex-start;gap:5px}
+:root .connected-workspace .history .browser-strip>article.op{margin:0;flex:0 0 auto;width:100%;max-width:100%}
 .browser-scrubber{display:flex;align-items:center;gap:7px;padding:0 5px;color:var(--t3);font:11px/1.5 var(--sans)}
 .browser-scrubber input{min-width:48px;flex:1;accent-color:var(--t1);height:18px}
 .browser-scrubber button{border:1px solid var(--line-2);background:transparent;color:var(--t1);border-radius:4px;width:24px;height:24px;cursor:pointer}
 .browser-scrubber button:disabled{opacity:.35;cursor:default}
 .browser-scrubber :focus-visible,.browser-url:focus-visible{outline:1px solid var(--t1);outline-offset:3px}
+
+.browser-batch{margin:0;padding-left:18px;display:grid;gap:5px;font:11px/1.5 var(--mono)}
+.browser-batch li{overflow-wrap:anywhere}
+
+.browser-strip:has(.op.expanded){flex-basis:100%;width:100%}

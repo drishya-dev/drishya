@@ -13,21 +13,27 @@ export function safeWebUrl(value: string): boolean {
 export function browserStep(op: Operation) {
   const d = op.detail;
   if (d.kind !== 'mcp' || !/(?:browser|chrome|playwright)/i.test(d.server) || !tools.has(d.tool)) return;
-  const input = object(d.input);
+  let value = d.input;
+  if (typeof value === 'string' && value.length <= 131072) { try { value = JSON.parse(value); } catch { /* Incomplete or literal input stays in the raw reader. */ } }
+  const input = object(value);
+  const actions = Array.isArray(input?.actions) ? input.actions : undefined;
+  const batch = actions?.slice(0, 12).map(item => { const entry = object(item), fields = object(entry?.input); return { name: text(entry?.name), action: text(fields?.action), url: text(fields?.url) }; });
   const action = text(input?.action) ?? d.tool.replace(/^browser_/, '').replace(/_/g, ' ');
   const query = text(input?.query) ?? text(input?.text);
-  return { server: d.server, action, url: text(input?.url), query, tab: text(input?.tabId) ?? (typeof input?.tabId === 'number' ? String(input.tabId) : undefined), excerpt: d.resultPreview };
+  return { server: d.server, action, batch, batchCount: actions?.length, url: text(input?.url), query, tab: text(input?.tabId) ?? (typeof input?.tabId === 'number' ? String(input.tabId) : undefined), excerpt: d.resultPreview };
 }
 
 /** A passage already defines captured order and prose boundaries; do not group across it. */
-export function groupBrowserSteps<T extends { id: string }>(items: readonly T[], ops: ReadonlyMap<string, Operation>): T[][] {
+export function groupBrowserSteps<T extends { id: string; matchesFilter?: boolean }>(items: readonly T[], ops: ReadonlyMap<string, Operation>): T[][] {
   const groups: T[][] = [];
   let previous: Operation | undefined;
+  let previousMatches: boolean | undefined;
   for (const item of items) {
     const op = ops.get(item.id), step = op && browserStep(op), prior = previous && browserStep(previous);
-    if (step && prior && op!.agentId === previous!.agentId && step.server === prior.server) groups[groups.length - 1]!.push(item);
+    if (step && prior && op!.agentId === previous!.agentId && step.server === prior.server && item.matchesFilter === previousMatches) groups[groups.length - 1]!.push(item);
     else groups.push([item]);
     previous = op;
+    previousMatches = item.matchesFilter;
   }
   return groups;
 }
