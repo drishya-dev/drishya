@@ -65,6 +65,12 @@ If an animation carries no information about where something came from, what it 
 
 ---
 
+## Scope: desktop only
+
+Drishya runs on a laptop or PC against local sessions; it is not a cloud or mobile product. **Do not design, fix, measure or write tests for phone widths, landscape phones or touch input.** The narrowest supported window is 600 px (a half-width laptop window); do not open items for anything smaller. Builder decision, 26 October.
+
+---
+
 ## Non-negotiable constraints
 
 Violating any of these is a bug, not a tradeoff.

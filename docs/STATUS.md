@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CLEAN-1 | @yash + Claude | `claude/clean-1` | 2026-10-26 | AGENTS.md/TASKS desktop-only rule, delete UI-6, phone-only browser tests, 30 unmounted UI source files and their orphan unit tests. No History, daemon or contracts changes. |
 | UI-6 | @yash + Claude | `claude/ui-6-phones` | 2026-10-26 | Phone density and occlusion: measure at 320/360/390/430 and 844x390, fix only measured defects in the Files overlay, map import drawer, composer/Follow/toolbox bottom edge and returning-user Home; new `tests/browser/phone-density.spec.ts`; Modern non-header CSS/components, TASKS UI-6, STATUS. Not the header, identity pill, Files\|Repository bar or Git/Workspace navigation (UI-1); no History, daemon or schema changes. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
@@ -40,6 +39,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — CLEAN-1: desktop-only scope, unmounted code removed
+- **Decision (Yash):** Drishya is a local desktop tool, so phone widths are out of scope everywhere. The rule is in AGENTS.md and TASKS; UI-6 is deleted and PR #244 closed unmerged; narrowest supported window 600 px.
+- **Removed:** five phone-only browser tests, the phone widths in `header-cluster`, four orphan unit tests and 30 source files nothing mounts (the old `fresh/` app and unused `modern/` pieces). Phone CSS and the phone steps in mixed tests stay (they work and cost nothing); delete them when touching the surface.
 
 ### Yash with Claude (Sonnet 5.5) — UI-1: header option C
 - **Built:** Workspace, Git review and Git graph join the header's one navigation cluster (icons, between Changes and Search) at 601 px and up; the row under the header is gone there, so the top holds three outlines instead of eight. Files|Repository stay at the left (they toggle the docked Files panel); phones keep the separate row. A portal keeps the controls' owner mounted so an open Git review survives a resize across 600 px (a regression the old Recorded-work phone spec caught). Fixed on the way: the "Changes" label spilled out of a 34 px box.

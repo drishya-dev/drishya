@@ -197,25 +197,6 @@ test('workspace destinations leave the previous owner and reveal the requested v
   await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();await expect(desk).toBeVisible();
   await go('Return to latest activity');await expect(desk).toHaveCount(0);await expect(page.locator('.history')).toBeVisible();await expect(page.locator('.map-tools')).toHaveCount(0);
 });
-
-test('Home prioritizes sessions and its compact phone workspace chooser dismisses and recovers',async({page})=>{
-  await page.setViewportSize({width:390,height:844});await page.goto(server.launchUrl);
-  const about=page.getByRole('button',{name:'About Drishya',exact:true}),picker=page.getByRole('button',{name:'Choose workspace',exact:true});
-  await expect(about).toHaveAttribute('aria-expanded','false');
-  expect((await page.locator('.mh-session-list').boundingBox())!.height).toBeGreaterThan(350);
-  await about.click();await expect(about).toHaveAttribute('aria-expanded','true');await expect(page.locator('#home-introduction')).toBeVisible();
-  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('home/intro');
-  await page.reload();await expect(about).toHaveAttribute('aria-expanded','true');await about.click();
-  await picker.click();await expect(picker).toHaveAttribute('aria-expanded','true');
-  await page.keyboard.press('Escape');await expect(picker).toHaveAttribute('aria-expanded','false');await expect(picker).toBeFocused();
-  await picker.click();await page.getByRole('heading',{name:'Your sessions.',exact:true}).click();await expect(picker).toHaveAttribute('aria-expanded','false');
-  await picker.click();const option=page.locator('.mh-workspace-options .mh-workspace').nth(1);await expect(option).toBeVisible();const name=await option.locator('strong').innerText();await option.click();
-  await expect(picker).toHaveAttribute('aria-expanded','false');await expect(picker).toContainText(name);await expect(picker).toBeFocused();
-  await expect(page.locator('.mh-results>header h2')).toHaveText(name);
-  for(const width of [320,390,844]){await page.setViewportSize({width,height:844});expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/home-session-priority-${width}.png`)});}
-  await page.setViewportSize({width:320,height:844});await about.click();expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
-});
-
 test('Home dense sessions remain reachable through virtualization and responsive resizing',async({page})=>{
   const base=app.store.getRecording(ids.codex!)!;
   const recordings=Array.from({length:160},(_,index)=>({...base,id:`density-${index}`,title:`Session ${String(index).padStart(3,'0')} · ${index%3===0?'Review a long workspace path and its complete captured verification — परीक्षण 🚀':'Read changes'}`,workspaceRoot:index%2===0?'/work/alpha':'/work/beta',lastSourceTime:new Date(Date.now()-index*3600000).toISOString()}));
@@ -1130,40 +1111,6 @@ test('Workspace editor indents, undoes and preserves exact line endings without 
     await file.getByRole('button',{name:'Discard draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Discard draft',exact:true}).click();
   }
 });
-
-test('phone Workspace file chooser preserves its header, dismisses normally and focuses the chosen file',async({page})=>{
-  await page.setViewportSize({width:390,height:844});
-  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
-  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
-  const desk=page.getByRole('region',{name:'Developer workspace',exact:true}), explorer=page.getByRole('complementary',{name:'Repository files'});
-  const approve=explorer.getByRole('button',{name:/^Enable workspace reading/});
-  await expect(approve.or(desk.getByRole('tablist',{name:'Open workspace files'}))).toBeVisible();
-  if(await approve.isVisible())await approve.click();
-  const trigger=desk.getByRole('button',{name:'Choose workspace file',exact:true});
-  await expect(trigger).toHaveAttribute('aria-expanded','true');
-  const search=explorer.getByRole('textbox',{name:'Find repository files',exact:true});
-  await expect(search).toBeFocused();
-  expect(await search.evaluate(element=>getComputedStyle(element).outlineStyle)).toBe('none');
-  expect(await explorer.locator('.ux-search').evaluate(element=>getComputedStyle(element).outlineStyle)).toBe('solid');
-  const header=await desk.locator(':scope>header').boundingBox(), panel=await explorer.boundingBox();
-  expect(panel!.y).toBeGreaterThanOrEqual(header!.y+header!.height+7);
-  await page.screenshot({path:resolve('.local/workspace-phone-files-chooser.png')});
-  await explorer.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/total.ts');
-  await explorer.locator('[data-spine-path="src/cart/total.ts"]').click();
-  await expect(explorer).toHaveCount(0);
-  const document=desk.getByRole('region',{name:'Workspace file src/cart/total.ts',exact:true});
-  await expect(document).toBeFocused();await expect(document.locator('.code')).toContainText('42');
-  await trigger.click();await expect(explorer).toBeVisible();
-  await page.keyboard.press('Escape');await expect(explorer).toHaveCount(0);await expect(desk).toBeVisible();await expect(trigger).toBeFocused();
-  await trigger.click();await desk.getByLabel('Workspace layout actions',{exact:true}).click();await desk.getByRole('button',{name:'＋ New file',exact:true}).click();
-  await expect(explorer).toHaveCount(0);await expect(desk.getByRole('textbox',{name:'New workspace file path'})).toBeVisible();
-  await desk.getByRole('button',{name:'Cancel',exact:true}).click();
-  await trigger.click();await desk.getByRole('button',{name:'Back to agent',exact:true}).focus();
-  await expect(explorer).toHaveCount(0);await expect(desk).toBeVisible();
-  await page.screenshot({path:resolve('.local/workspace-phone-files-selected.png')});
-});
-
 test('Files control tracks the responsive default without changing an explicit preference',async({page})=>{
   await page.setViewportSize({width:1440,height:960});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
@@ -1178,30 +1125,6 @@ test('Files control tracks the responsive default without changing an explicit p
   await page.setViewportSize({width:390,height:844});await page.setViewportSize({width:1440,height:960});
   await expect(trigger).toHaveAttribute('aria-pressed','false');await expect(page.locator('.folder-explorer')).toHaveCount(0);
 });
-
-test('touch file chooser keeps readable inputs and touch-sized dismissal without disabling zoom',async({browser})=>{
-  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
-  const page=await context.newPage();
-  try {
-    await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
-    expect(await page.getByRole('textbox',{name:'Find sessions',exact:true}).evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);
-    const refresh=await page.getByRole('button',{name:'Refresh sessions',exact:true}).boundingBox();
-    expect(refresh!.width).toBeGreaterThanOrEqual(44);expect(refresh!.height).toBeGreaterThanOrEqual(44);
-    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-    await openComposer(page);
-    expect(await page.getByRole('textbox',{name:'Prompt for selected harness session',exact:true}).evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);
-    await page.getByRole('button',{name:'Open developer workspace',exact:true}).tap();
-    const explorer=page.getByRole('complementary',{name:'Repository files'});
-    await expect(explorer).toBeVisible();
-    expect(await explorer.getByRole('textbox',{name:'Find repository files',exact:true}).evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
-    const close=explorer.getByRole('button',{name:'Minimize files',exact:true}), bounds=await close.boundingBox();
-    expect(bounds!.width).toBeGreaterThanOrEqual(44);expect(bounds!.height).toBeGreaterThanOrEqual(44);
-    expect(await page.locator('meta[name=viewport]').getAttribute('content')).not.toMatch(/user-scalable\s*=\s*no|maximum-scale\s*=\s*1/);
-    await close.tap();await expect(explorer).toHaveCount(0);
-    await expect(page.getByRole('region',{name:'Developer workspace',exact:true})).toBeVisible();
-  } finally {await context.close();}
-});
-
 test('Files width is adjustable without covering Workspace or moving history on minimize',async({page})=>{
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();

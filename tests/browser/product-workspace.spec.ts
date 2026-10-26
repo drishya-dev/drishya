@@ -49,19 +49,6 @@ test('completed evidence links keep full history and the chosen live-demo design
   await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
   await expect(page).toHaveURL(/experience=classic/);
 });
-
-test('Studio phone history starts below the header and floating workspace controls', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${demoUrl()}&experience=studio`);
-  await expect(page.locator('article.op-test').last()).toBeVisible();
-  const history = (await page.locator('.history').boundingBox())!;
-  const header = (await page.locator('.workspace-header').boundingBox())!;
-  const views = (await page.getByRole('navigation', { name: 'Workspace views' }).boundingBox())!;
-  expect(history.y).toBeGreaterThanOrEqual(header.y + header.height);
-  expect(history.y).toBeGreaterThanOrEqual(views.y + views.height);
-  expect(history.height).toBeGreaterThan(300);
-});
-
 test('map file labels are keyboard reading targets beneath header clearance', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(`${demoUrl()}&experience=studio`);
