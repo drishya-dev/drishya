@@ -50,7 +50,7 @@ test('search dismisses outside without swallowing the click, toggles, and restor
   await expect(page.locator('.turn-text').filter({ hasText: "Free orders don't reach checkout" })).toBeInViewport();
 });
 
-test('search has a finite entrance and stays contained with reduced motion on mobile', async ({ page }) => {
+test('search has a finite entrance and keeps no motion with reduced motion', async ({ page }) => {
   await page.goto(new URL('/?demo', server.launchUrl).href);
   const panel = page.getByRole('dialog', { name: 'Search this recording' });
   await page.getByRole('button', { name: 'Search', exact: true }).click();
@@ -63,11 +63,6 @@ test('search has a finite entrance and stays contained with reduced motion on mo
   await expect(panel).toHaveCSS('animation-name', 'none');
   await page.keyboard.press('Escape');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(panel).toHaveCSS('animation-name', 'none');
-  const box = (await panel.boundingBox())!;
-  expect(box.x).toBeGreaterThanOrEqual(0);
-  expect(box.x + box.width).toBeLessThanOrEqual(390);
-  await page.screenshot({ path: resolve('.local/search-mobile.png') });
 });

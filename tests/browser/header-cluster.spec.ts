@@ -6,14 +6,15 @@ import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
 // UI-1, header option C: on desktop widths Workspace, Git review and Git graph join the header's one navigation
-// cluster (icons, names in aria-label); on phones they keep their own row. Nothing overlaps at any width.
+// cluster (icons, names in aria-label); at the narrowest supported window (600 px) they keep their own row. Nothing overlaps at any width.
 let dir: string, app: App, server: RunningServer, longId: string;
 const LONG_TITLE = 'Make the checkout guard reject a missing total, keep the free-order path working and explain the remaining payment risk in plain language';
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-header-')); const root = join(dir, 'repo'); mkdirSync(root, { recursive: true }); const journal = join(dir, 'long.jsonl'); writeFileSync(journal, JSON.stringify({ type: 'user', uuid: 'u', sessionId: '66666666-6666-4666-8666-666666666666', cwd: root, message: { role: 'user', content: LONG_TITLE } }) + '\n'); app = new App(join(dir, 'store')); longId = (await app.ingest.importSource('claude-code', journal)).recordingId; server = await startServer({ app, port: 0, token: 'synthetic-header' }); });
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); } });
 
 const url = () => `${server.url}/?demo&experience=modern&motion=0#token=${server.token}`;
-const WIDTHS = [320, 390, 600, 601, 700, 820, 900, 1024, 1440];
+// Desktop windows only (CLEAN-1): 600 px is the narrowest supported width, where the controls keep their own row.
+const WIDTHS = [600, 601, 700, 820, 900, 1024, 1440];
 
 for (const width of WIDTHS) {
   test(`header controls sit in one cluster and never overlap at ${width}px`, async ({ page }) => {
@@ -55,7 +56,7 @@ for (const width of WIDTHS) {
 }
 
 // A long session title truncates inside the identity pill; it must never run under the cluster.
-for (const width of [320, 360, 390, 430, 600, 601, 640, 700, 701, 820, 1024]) {
+for (const width of [600, 601, 640, 700, 701, 820, 1024]) {
   test(`a long session title stays clear of the navigation cluster at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`${server.url}/?experience=modern&motion=0#token=${server.token}`); await expect(page.locator('.home')).toBeVisible();
