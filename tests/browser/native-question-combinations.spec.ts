@@ -1,0 +1,28 @@
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve,sep} from 'node:path';
+import {expect,test} from '@playwright/test';
+import {App} from '../../apps/daemon/src/app.ts';
+import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+let dir:string,root:string,id:string,app:App,server:RunningServer;
+test.beforeAll(async()=>{
+ dir=mkdtempSync(join(tmpdir(),'drishya-question-combinations-'));root=join(dir,'repo');mkdirSync(root);const journal=join(dir,'session.jsonl'),timestamp='2026-10-26T00:00:00Z';writeFileSync(journal,[{timestamp,type:'session_meta',payload:{id:'native-question-combinations',cwd:root,cli_version:'synthetic'}},{timestamp,type:'event_msg',payload:{type:'user_message',message:'Synthetic connected-input acceptance'}}].map(row=>JSON.stringify(row)).join('\n')+'\n');app=new App(join(dir,'data'));id=(await app.ingest.importSource('codex',journal)).recordingId;server=await startServer({app,port:0});
+});
+test.afterAll(async()=>{await server?.close();await app?.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});});
+
+for(const width of [1440,390])test(`multi-select keeps explicit options and additional literal text through submission and retry at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ const question={id:'q0',header:'Checks',question:'Which checks?',multiple:true,allowText:true,options:[{id:'o0',label:'Unit tests',description:'Focused checks'},{id:'o1',label:'Typecheck',description:'Validate types'}]};
+ let state:any={available:true,harness:'claude-code',state:'approval',runId:'question-run',output:'',tools:[],inventory:'runtime',approvals:[],inputRequests:[{id:'first-request',questions:[question]}]},answers:any[]=[];let fail=true,release:(()=>void)|undefined,prompts=0;
+ await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));await page.route('**/controller',route=>route.fulfill({json:state}));await page.route('**/controller/prompt',route=>{prompts++;return route.abort();});
+ await page.route('**/controller/answer',async route=>{answers.push(route.request().postDataJSON());if(fail){fail=false;return route.fulfill({status:409,json:{error:'Synthetic retryable answer refusal'}});}await new Promise<void>(done=>{release=done;});state={...state,state:'completed',inputRequests:[]};await route.fulfill({json:state});});
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);const form=page.getByRole('form',{name:'Agent needs your input',exact:true}),text=form.getByRole('textbox',{name:'Answer: Which checks?',exact:true}),send=form.getByRole('button',{name:'Send answer',exact:true});await expect(form).toBeVisible();await expect(send).toBeDisabled();
+ await form.getByRole('checkbox',{name:/Unit tests/}).check();const literal='  Also check "@decorator", tabs\tand punctuation...\nnext line  ';await text.fill(literal);await expect(form.getByRole('checkbox',{name:/Unit tests/})).toBeChecked();await form.getByRole('checkbox',{name:/Typecheck/}).check();await expect(text).toHaveValue(literal);await form.getByRole('checkbox',{name:/Unit tests/}).uncheck();await expect(text).toHaveValue(literal);await expect(send).toBeEnabled();await send.click();
+ await expect.poll(()=>answers.length).toBe(1);await expect(send).toBeEnabled();await expect(text).toHaveValue(literal);await expect(form.getByRole('checkbox',{name:/Typecheck/})).toBeChecked();await send.click();await expect.poll(()=>answers.length).toBe(2);await expect(send).toBeDisabled();await expect(text).toBeDisabled();expect(answers).toEqual(Array(2).fill({runId:'question-run',requestId:'first-request',answers:{q0:{options:['o1'],text:literal}}}));release!();await expect(form).toHaveCount(0);expect(prompts).toBe(0);
+ state={...state,state:'approval',inputRequests:[{id:'second-request',questions:[{...question,question:'Next checks?'}]}]};await expect(form).toBeVisible();await expect(form.getByRole('textbox',{name:'Answer: Next checks?',exact:true})).toHaveValue('');await expect(form.getByRole('checkbox',{name:/Typecheck/})).not.toBeChecked();await expect(form.getByRole('button',{name:'Send answer',exact:true})).toBeDisabled();await page.screenshot({path:resolve(`.local/native-question-combinations-${width}.png`)});
+});
+
+test('single-choice text stays exclusive from selected options',async({page})=>{
+ const state={available:true,harness:'codex',state:'approval',runId:'single-run',output:'',tools:[],inventory:'runtime',approvals:[],inputRequests:[{id:'single-request',questions:[{id:'q0',header:'Approach',question:'Which approach?',multiple:false,allowText:true,options:[{id:'o0',label:'Small patch',description:'Focused'}]}]}]};
+ await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));await page.route('**/controller',route=>route.fulfill({json:state}));await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);const form=page.getByRole('form',{name:'Agent needs your input',exact:true}),text=form.getByRole('textbox',{name:'Answer: Which approach?',exact:true}),radio=form.getByRole('radio',{name:/Small patch/});await radio.check();await text.fill('Other approach');await expect(radio).not.toBeChecked();await radio.check();await expect(text).toHaveValue('');
+});
