@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | UI-1 | @yash + Claude | `claude/ui-1-header-c` | 2026-10-26 | Header option C (chosen by Yash 26 Oct): identity pill plus one navigation cluster, Git graph inside Git, branch in the identity line. Modern header/shell components and CSS only, a new overlap guard spec, TASKS/STATUS. No History, daemon, contracts or schema changes (branch in the identity line waits if it needs the projection). |
-| UI-7 | @yash + Claude | `claude/ui-7-menus` | 2026-10-26 | Slice 3: third test in `tests/browser/palette-contrast.spec.ts` (composer and its menus, toolbox menus, Workspace editor, Git review dialog, header edge veil); Modern CSS only if a contrast failure is measured; TASKS/STATUS. No header/identity/navigation CSS (UI-1). |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 
@@ -40,6 +39,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — UI-7 slice 3: composer, toolbox, editor, Git review and header contrast guarded
+- **Result:** on all seven palettes, no text falls below 4.5:1 in the composer states and menus, the toolbox menus, the Workspace editor and draft comparison, the Git review dialog, or the header over the map and over passing cards. Lowest 4.71:1 (line numbers on Paper); no CSS changed. Four new tests in `palette-contrast.spec.ts` keep it, each shown to fail when text is forced to the background colour. PR #242.
+- **Test speed:** the colour walk made a canvas per ancestor per text; it now reuses one, so the existing tests drop from 50 s (the overlay test timed out at 90 s here) to under 3 s with the same numbers.
+- **Open (TASKS UI-7):** the 18 px header edge veil, browser-drawn select popups, real recorded sessions, and the human judgement of light-theme balance on Paper.
 
 ### Yash with Claude (Sonnet 5.5) — UI-7 slice 2: overlay contrast guarded; header option C chosen
 - **UI-7 slice 2:** with Settings, the Ctrl+K navigator, Search and the reading-shortcuts sheet open, no text is below 4.5:1 on any of the seven palettes, so no CSS changed; a second test in `palette-contrast.spec.ts` guards it.
