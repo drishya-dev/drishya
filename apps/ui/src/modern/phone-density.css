@@ -1,0 +1,69 @@
+/* UI-6: phone density and occlusion. Every rule sits behind a phone media query, so desktop pixels do not change.
+   Measured by tests/browser/phone-density.spec.ts at 320, 360, 390, 430 and 844x390. The header groups are UI-1's: these rules
+   only read their measured bottom (--workspace-tools-bottom) so the surfaces below them start clear of them. */
+:root[data-ui-version=modern][data-experience=classic] {
+  --phone-band: max(96px, calc(var(--composer-gap, 0px) + 48px));
+}
+
+@media (max-width: 820px) {
+  /* The toolbox and the Files overlay start below the header's wrapped controls, not under them, and end above Tools. */
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .workbench-station.modern-tool-station { top: max(calc(var(--workspace-header-h, 62px) + 62px), var(--workspace-tools-bottom, 0px)); bottom: var(--phone-band); }
+}
+@media (max-width: 650px) {
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer { top: max(var(--workspace-leading-bottom, 0px), var(--workspace-tools-bottom, 0px)); }
+
+  /* Map controls sit in their own band above the Tools button, and give way to the import drawer. */
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(:has(.prompt-composer)) .map-zoom { bottom: calc(var(--phone-band) + 8px); }
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .map-legend { max-width: calc(100% - 172px); }
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .map:has(> .map-connections) :is(.map-zoom, .map-legend) { display: none; }
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .map:has(> .map-connections) .map-matches { max-height: 40px; }
+}
+
+/* Short landscape phones: the map controls move to the left, away from the search panel and the toolbox. */
+@media (max-height: 520px) and (max-width: 950px) {
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .map-zoom { right: auto; left: 16px; bottom: 12px; }
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .map-legend { bottom: 66px; }
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .map:has(> .map-connections) :is(.map-zoom, .map-legend) { display: none; }
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:has(.modern-tool-station:not(.toolbox-minimized)) .prompt-composer.open { width: min(680px, calc(100vw - 348px)); }
+  /* The toolbox starts below the wrapped header controls and scrolls inside what is left. */
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .workbench-station.modern-tool-station { top: var(--workspace-tools-bottom, 0px); transform: none; max-height: calc(100% - var(--workspace-tools-bottom, 0px) - 56px); overflow-y: auto; }
+  /* A drafted prompt scrolls inside two lines, and its menu fits what is left above it. */
+  :root[data-ui-version=modern] .prompt-composer textarea { max-height: 64px; }
+  :root[data-ui-version=modern] .prompt-composer .native-options-menu { max-height: max(120px, calc(100dvh - var(--composer-gap, 150px) - 8px)); overflow-y: auto; }
+}
+
+/* 32 px targets on phones (touch devices already get 44 px from the coarse-pointer rules). */
+@media (max-width: 650px), (max-height: 520px) and (max-width: 950px) {
+  :root[data-ui-version=modern] .modern-native-composer>.composer-minimize { width: 32px; height: 32px; }
+  :root[data-ui-version=modern] .modern-attachment { min-width: 32px; min-height: 32px; }
+  :root[data-ui-version=modern] .prompt-composer .native-options>summary { display: inline-flex; align-items: center; min-width: 32px; min-height: 32px; }
+  :root[data-ui-version=modern] .folder-explorer .tree-evidence-filter>summary { width: 32px; height: 32px; }
+  :root[data-ui-version=modern] .folder-explorer .ux-search input { box-sizing: border-box; min-height: 32px; margin-block: -7px; height: 32px; }
+  :root[data-ui-version=modern] :is(.folder-explorer, .map-connections, .mh-home) .icon-btn { min-width: 32px; min-height: 32px; }
+  :root[data-ui-version=modern] .modern-tool-station>.toolbox-collapse { width: 32px; height: 32px; }
+  :root[data-ui-version=modern] :is(.map-tools, .map-connections, .map-zoom) :is(button, .btn) { min-height: 32px; }
+  :root[data-ui-version=modern] .mh-row-end button { width: 32px; height: 32px; }
+}
+
+/* Home rows: a wrapped second line of tags is shown whole. */
+@media (max-width: 650px) {
+  .mh-session-open>span { row-gap: 0; max-height: 40px; }
+  .mh-results>header { padding: 8px 16px 2px; }
+  .mh-footer { padding-block: 6px; }
+}
+/* A short window (landscape, or a small phone) scrolls the page instead of squeezing the list to a sliver:
+   the library takes the screen below the sticky header once the introduction has scrolled away. */
+.mh-home { --mh-header-h: 68px; }
+@media (max-width: 650px) { .mh-home { --mh-header-h: 62px; } }
+@media (max-width: 650px) and (max-height: 760px), (max-height: 520px) and (max-width: 950px) {
+  .mh-home { overflow-y: auto; }
+  .mh-header { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+  .mh-library { flex: none; height: calc(100dvh - var(--mh-header-h) - 12px); }
+}
+@media (max-height: 520px) and (max-width: 950px) {
+  .mh-results>header>div { flex: none; }
+  .mh-active { flex: 1; flex-wrap: nowrap; overflow-x: auto; }
+  .mh-active>button { flex: none; }
+  .mh-filters { padding-block: 8px; }
+  .mh-results>header { padding-block: 6px 4px; }
+}
