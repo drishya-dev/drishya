@@ -292,7 +292,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
 }
 
 export function CurrentFileReader() {
-  const path=useApp(s=>s.currentFile),id=useApp(s=>s.recordingId),explore=useApp(s=>s.explore);
+  const path=useApp(s=>s.currentFile),id=useApp(s=>s.recordingId),explore=useApp(s=>s.explore),inWorkspace=useApp(s=>s.developerWorkspace);
   const modern=document.documentElement.dataset.uiVersion==='modern';
   const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]}),[error,setError]=useState('');
   const tabs=useMemo(()=>filePeekState(saved),[saved]);
@@ -303,7 +303,8 @@ export function CurrentFileReader() {
     const receive=(event:Event)=>{const request=(event as CustomEvent<{path:string;pin?:boolean}>).detail;if(!modern||!id||!request||typeof request.path!=='string')return;open(request.path,request.pin);};
     window.addEventListener('drishya-preview-file',receive);return()=>window.removeEventListener('drishya-preview-file',receive);
   },[modern,id,tabs]);
-  if(!path||!id)return null;
+  // Keep the selected peek location while the full Workspace owns the screen.
+  if(!path||!id||inWorkspace)return null;
   const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setSaved(next);setError('');if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};
   return <CurrentDocument key={id} id={id} path={path} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
 }
@@ -350,7 +351,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
     catch { setCopied('Copy unavailable · select the text to copy.'); }
   };
   const peek=modern&&!explore;
-  const fileActions=<><button className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, currentFile: undefined, filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title="Open in Workspace">{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Recorded work on this file" title="Recorded work on this file" onClick={() => useApp.getState().set({ currentFile: undefined, filePanel: path })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button></>;
+  const fileActions=<><button className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, ...(peek?{}:{currentFile:undefined}), filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title="Open this current file in Workspace for split views and local drafts">{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Recorded work on this file" title="Recorded work on this file" onClick={() => useApp.getState().set({ currentFile: undefined, filePanel: path })}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button></>;
   const lineControls=<form className="source-go" onSubmit={e=>{e.preventDefault();go();}}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e=>{setLineInput(e.target.value);setLineError(undefined);}}/><button className="btn ghost small" aria-label="Go to line" disabled={!file}>Go</button><button type="button" className="btn ghost small" aria-label="Wrap lines" aria-pressed={wrap} onClick={()=>setWrap(!wrap)}>Wrap</button><span role="status">{lineError}</span></form>;
   const phoneOptions=<details className="desk-options current-reader-options" onKeyDown={event=>{if(event.key!=='Escape'||!event.currentTarget.open)return;event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector<HTMLElement>(':scope>summary')?.focus({preventScroll:true});}}><summary aria-label="Reading options" title="Reading options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 3v6M15 9v6M9 15v6"/></svg></summary><div>
    <span className="reader-source-context">{file?`${current.candidate?'Retained snapshot':'On disk'} · ${file.totalLines} lines${file.redacted?' · secrets redacted':''}`:'Current file not loaded'}</span>
