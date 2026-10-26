@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, OperationImage } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import './op-images.css';
@@ -89,10 +89,21 @@ export function pathOnlyImage(op: Operation): string | undefined {
 export function PathImage({ op, path }: { op: Operation; path: string }) {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
-  const [state, setState] = useState<{ url: string; modified?: string } | { error: string } | 'loading'>();
+  type Status = { url: string; modified?: string; request: number } | { error: string } | 'loading';
+  // An older request or image error must not replace a different file/source's view.
+  const owner = useMemo(() => ({}), [source, recordingId, op.id, path]);
+  const latestOwner = useRef(owner); latestOwner.current = owner;
+  const request = useRef(0);
+  const [result, setResult] = useState<{ owner: object; value: Status }>();
+  const state = result?.owner === owner ? result.value : undefined;
+  useEffect(() => () => { request.current++; }, [owner]);
   const canOpen = !!source?.currentImageUrl && !!recordingId && !recordingId.includes('+');
   const open = async () => {
-    setState('loading');
+    if (!canOpen) return;
+    const currentRequest = ++request.current;
+    const current = () => latestOwner.current === owner && request.current === currentRequest && useApp.getState().source === source && useApp.getState().recordingId === recordingId;
+    const update = (value: Status) => { if (current()) setResult({ owner, value }); };
+    update('loading');
     try {
       const url = source!.currentImageUrl!(recordingId!, op.id);
       // Checked first so a refusal can be explained; the image then loads from the same address
@@ -100,23 +111,23 @@ export function PathImage({ op, path }: { op: Operation; path: string }) {
       const response = await fetch(url);
       if (!response.ok) {
         const reason = response.status === 403 && /approve/.test(await response.text()) ? 'Allow workspace reading for this session to open the current file.' : response.status === 404 ? 'The file is no longer there.' : response.status === 415 ? 'The current file is not a PNG, JPEG, GIF or WebP image.' : response.status === 413 ? 'The current file is larger than 4 MB.' : 'The current file could not be opened here.';
-        setState({ error: reason });
+        update({ error: reason });
         return;
       }
       await response.arrayBuffer();
-      setState({ url, modified: response.headers.get('x-drishya-modified-at') ?? undefined });
-    } catch { setState({ error: 'The current file could not be opened here.' }); }
+      update({ url, modified: response.headers.get('x-drishya-modified-at') ?? undefined, request: currentRequest });
+    } catch { update({ error: 'The current file could not be opened here.' }); }
   };
   return <div className="path-image" onClick={(e) => e.stopPropagation()}>
     <div className="path-image-line">
       <span className="path-image-path">{path}</span>
       <span>image bytes not captured</span>
-      {canOpen && state === undefined && <button type="button" className="path-image-open" onClick={() => void open()}>Open current file</button>}
+      {canOpen && (state === undefined || typeof state === 'object' && 'error' in state) && <button type="button" className="path-image-open" onClick={() => void open()}>{state ? 'Retry current file' : 'Open current file'}</button>}
     </div>
     {state === 'loading' && <div className="path-image-line">Opening the current file…</div>}
-    {state && typeof state === 'object' && 'error' in state && <div className="path-image-line">{state.error}</div>}
+    {state && typeof state === 'object' && 'error' in state && <div className="path-image-line" role="status">{state.error}</div>}
     {state && typeof state === 'object' && 'url' in state && <figure className="path-image-current">
-      <img src={state.url} alt="Current file" />
+      <img src={state.url} alt="Current file" onError={() => { if (latestOwner.current === owner && request.current === state.request) setResult({ owner, value: { error: 'The current file could not be loaded. It may have changed or become unavailable.' } }); }} />
       <figcaption>Current file{state.modified ? `, modified ${new Date(state.modified).toLocaleString()}` : ''}. It may differ from what the agent saw.</figcaption>
     </figure>}
   </div>;

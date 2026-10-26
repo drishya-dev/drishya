@@ -31,6 +31,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+
+| UI-6 | @yash + Claude | `claude/ui-6-phones` | 2026-10-26 | Phone density and occlusion: measure at 320/360/390/430 and 844x390, fix only measured defects in the Files overlay, map import drawer, composer/Follow/toolbox bottom edge and returning-user Home; new `tests/browser/phone-density.spec.ts`; Modern non-header CSS/components, TASKS UI-6, STATUS. Not the header, identity pill, Files\|Repository bar or Git/Workspace navigation (UI-1); no History, daemon or schema changes. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 
@@ -42,6 +44,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Yash with Claude (Sonnet 5.5) — UI-1: header option C
 - **Built:** Workspace, Git review and Git graph join the header's one navigation cluster (icons, between Changes and Search) at 601 px and up; the row under the header is gone there, so the top holds three outlines instead of eight. Files|Repository stay at the left (they toggle the docked Files panel); phones keep the separate row. A portal keeps the controls' owner mounted so an open Git review survives a resize across 600 px (a regression the old Recorded-work phone spec caught). Fixed on the way: the "Changes" label spilled out of a 34 px box.
 - **Checks:** new `header-cluster.spec.ts` (nine widths, long titles at six, hit targets, label fit); seven older specs that encoded the old row now reference the cluster; the 23 specs touching the header and navigation pass (the remaining failures were load flakes that pass alone). Branch in the identity line stays open (needs a contracts change).
+
+### Yash with Claude (Sonnet 5.5) — DATA-9: hook and OTel enrichment researched
+- **Result:** [data-9-hooks-otel](review/data-9-hooks-otel.md). The journals already hold nearly everything hooks and OpenTelemetry carry. The one thing neither journal records is the agent waiting on you (a permission prompt or question open), so that is the one signal recommended for building (new TASKS DATA-11, after CONTENT-3); `SessionEnd`/`Stop` liveness and Claude OTel `tool_decision` are deferred; the rest is rejected as duplicate and content-heavy.
+- **Measured (Claude Code 2.1.282, Windows, harness-side only):** a blocking command hook adds about 75 ms per event, an async one about 18 ms; an async hook added about 1.5 s to `claude -p` exit (interactive not measured). Process spawn: Node 52 ms, PowerShell 236 ms.
+- **Not verified:** nothing ran against a model (the CLI's OAuth session had expired; credentials untouched); Codex hooks and OTel are docs-only (no binary here, per-event OTel attributes not found). Ledger H1/H3 updated, H8/H9 added. Suggestion left in TASKS: show the harness's own recorded hook activity.
+
+### Yash with Claude (Sonnet 5.5) — UI-7 slice 3: composer, toolbox, editor, Git review and header contrast guarded
+- **Result:** on all seven palettes, no text falls below 4.5:1 in the composer states and menus, the toolbox menus, the Workspace editor and draft comparison, the Git review dialog, or the header over the map and over passing cards. Lowest 4.71:1 (line numbers on Paper); no CSS changed. Four new tests in `palette-contrast.spec.ts` keep it, each shown to fail when text is forced to the background colour. PR #242.
+- **Test speed:** the colour walk made a canvas per ancestor per text; it now reuses one, so the existing tests drop from 50 s (the overlay test timed out at 90 s here) to under 3 s with the same numbers.
+- **Open (TASKS UI-7):** the 18 px header edge veil, browser-drawn select popups, real recorded sessions, and the human judgement of light-theme balance on Paper.
 
 ### Yash with Claude (Sonnet 5.5) — UI-7 slice 2: overlay contrast guarded; header option C chosen
 - **UI-7 slice 2:** with Settings, the Ctrl+K navigator, Search and the reading-shortcuts sheet open, no text is below 4.5:1 on any of the seven palettes, so no CSS changed; a second test in `palette-contrast.spec.ts` guards it.
@@ -99,7 +111,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Codex PRs merged after checking each on current main:** #221 (FILES-1 deletion acceptance), #225 (CONTENT-7 resources), #220 (CONTENT-3 literal answers), #219 (CONTENT-4 plan labels), #224 (CONTENT-2 web results), #214 (CONTENT-1 images). Full gate on the combined main: 349 passed, 26 skipped, 2 failed (the known `b2-live` reading-position pair, Harsh's PERF-2 area).
 - **Also merged by parallel sessions, verified here:** READ-8 stepper (#217), READ-5 edits by turn (#216), GIT-4 picker (#218), UI-2 composer (#222) and Home/Search (#223).
 
-### Yash with Codex — CONTENT-1 image-reader failure/retry and phone acceptance
+### Yash with Codex image agent — current-image recovery
+
+- **26 October, PR #240:** current-file image refusals and later load/decode failures now explain themselves and allow explicit retry without reload; old responses cannot replace a newer recording/path. Two baseline failures reproduced; 18 focused image browser checks pass. [Evidence](review/content-1-parallel.md).
+- **Real source:** 596 typed ImageView items in four current journals. A bounded redacted genuine excerpt passes metadata/refusal/retry at desktop/phone. Its file: URL exists but protected/unsupported current access stays refused; no byte recovery or full-session/native success claim.
+- **Combined handoff:** three independent content sources combine cleanly; 857 units, both types/build and nine new browser cases pass. Own claim released, parent CONTENT-1 remains open for remaining source/device acceptance. Question/structured reports are separate; all other builders' claims preserved. No capture/schema/controller/shared CSS or History/common/worker/PERF-2/3 change.
 
 
 ### Yash with Codex — CONTENT-2 search reading correctness
@@ -114,17 +130,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Checks:** five new regressions fail on baseline; ten plan-thread units and three browser journeys pass (desktop/phone, pinned/expanded/revision reading).790 integrated units, both types and production build pass. No History, PERF-2, CSS, contracts/projection/schema or native-control edits.
 - **Scope:** recent bounded Claude journal scan finds no real plan tool uses, so the regression fixture is synthetic; parent CONTENT-4 stays open for real sources and DATA-7. Own scoped claim released in this PR, other claims retained. Focused review ready; do not merge through the known TEST-2 jump or resume the builder-paused area. PR214 image-reader acceptance remains separately ready.
 
-### Yash with Codex — CONTENT-3 literal answers and selected-preview attribution
+### Yash with Codex question agent — connected multi-select repair
 
-- **25 October2026, PR220:** correct existing AskUserQuestion parsing: exact complete choice tokens, intact typed words/quotes/punctuation, conservative ambiguous labels, malformed-question guard and recognized selected-preview boundary. Full result remains readable. [Cause, source evidence and limits](review/content-3-literal-answers.md).
-- **Checks:**12 parser units and three browser cases pass;795 integrated units, both types/build. Actual Drishya Claude store512 observations/one answered question: now marks the offered choice instead of calling its preview user speech; verified at1440/390px with phone frame inspected. No raw source committed.
-- **Scope/handoff:** CONTENT-3 stays open for Codex/approvals/connected answering. Own claim released in this PR; other claims retained. No native controls, schema, CSS, History or paused PERF-2 changes. Focused review ready, not automatic merge through known TEST-2. PR214 image recovery and PR219 duplicate plan labels remain independent reviewed increments.
+- **26 October, PR #239:** multi-select no longer discards selected options when typing, or text when selecting. Existing API supports both; single-choice stays exclusive. Root completed verification after agent model capacity. [Report](review/content-3-parallel.md).
+- **Verified:** original browser failure reproduced; 16 focused units/four browser cases pass, covering exact HTTP payload, failure/retry, busy state and next-request reset. Native-account/source acceptance remains open; no genuine turn submitted.
+- **Combined handoff:** all three independent content sources merge cleanly; 857 units, both types/build and nine new browser cases pass. Own narrow claim released; parent CONTENT-3 stays open. Preserve image/structured agents and other builders' claims; History/common/worker/PERF-2/3 unchanged. UI-6 owns pending phone layout concerns.
 
-### Yash with Codex — CONTENT-7 resource acceptance
 
-- **25 October 2026, PR #225:** no production change. Existing resource reader passes empty/absent/repeated-body identity, strict incomplete JSON and UTF-8/traversal boundaries, exact copying, keyboard/filter/focus and original mixed/bounded-out output checks. [Evidence](review/content-7-resource-acceptance.md).
-- **Verification:** nine focused units, four browser journeys, three real Codex desktop/phone checks; 799 whole units, both types and build. Phone frame inspected. Sampled Claude has no resource-bearing outputs, so no genuine Claude body acceptance is claimed. Native journals remain read-only/local.
-- **Scope:** CONTENT-7 remains open for broader document/structured acceptance; own narrow claim released. History/PERF-2 stays paused. No new features or automatic merge through TEST-2. Earlier #214/#219/#220/#221/#224 are independent focused-review increments with their own evidence and remaining scopes.
+### Yash with Codex structured-reader agent — selected JSON focus
+
+- **26 October, PR #238:** Explore in tree now focuses the selected virtualized row after mounting, instead of leaving keyboard focus on the old action. Baseline row503 regression reproduced. [Evidence](review/content-7-parallel.md).
+- **Verified:** 12 focused browser checks, 25 units and four actual Codex/Claude desktop/phone journeys pass; exact Original and bounded DOM retained. Parent established workspace confirms both typechecks/build, 857 whole units and nine combined new browser cases; no source conflicts.
+- **Handoff:** own scoped claim released; broader CONTENT-7 remains open. Image/question PRs have separate owners/reports, and all other builders' claims preserved. No CSS, schema, native-control, History/common/worker or PERF-2/3 change; no full browser gate/hosted CI.
+
 
 ### Yash with Codex — FILES-1 remaining acceptance complete
 
