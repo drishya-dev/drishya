@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| READ-8 | @yash + Claude | `claude/read-8-pages` | 2026-10-26 | Slice 2: the per-file stepper crosses list pages (`FileHistory.tsx`, `lib/file-timeline.ts`, a new `tests/browser/file-timeline-pages.spec.ts`, TASKS/STATUS). No History, daemon, contracts or CSS changes. |
 | CONTENT-7 | @yash + Codex | `codex/content-7-delimited-acceptance` | 2026-10-25 | Existing CSV/TSV reader correctness and acceptance only: owning delimited helper/component if a reproduced defect requires it, focused unit/browser tests, report/TASKS/STATUS (at most 8 files). No new reader, shared CSS, History/PERF-2, native control, capture/schema/projection/DATA-3 or persistence. |
 | FILES-5 | @yash + Codex | `codex/files-5-recovery-correctness` | 2026-10-25 | Existing opt-in recovery correctness/acceptance: owning draft recovery helper/component, focused unit/browser guards and report/TASKS/STATUS (at most 8 files). No autosave/new persistence, native writes, History/PERF-2, capture/contracts/projection/DATA-3 or shared CSS. Preserve explicit encryption/download/restore and newer unsaved drafts. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
