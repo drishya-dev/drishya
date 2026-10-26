@@ -85,6 +85,8 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 **Desktop only (Yash, 26 Oct).** Drishya runs on a laptop or PC against local sessions. Do not design, fix, measure or write tests for phone widths, landscape phones or touch input. The narrowest supported window is 600 px (a half-width laptop window); below it nothing is promised, and no item may be opened for it. Desktop-only also means no cloud, remote or multi-device surface.
 
+**Real sessions, not only the demo (Yash, 26 Oct).** A change that affects what a card, reader, header, list or projection shows is checked on real local sessions of both harnesses that contain the case, as well as the fixture; record session id prefixes, sizes and counts only, keep screenshots in `.local/`, and say what could not be checked. The full rule is in AGENTS.md.
+
 **Final passes wait (Yash, 26 Oct).** MOTION-1, MOTION-3, UI-3 (the Uiverse/component pass), UI-4/UI-4b, UI-7 and UI-8 start only when every feature item above them is done, and each is a whole pass over the finished product: look at what the content is by then, and only then decide what to change. Do not start, claim or schedule them earlier (MOTION-1 and UI-4b were started too early on 26 Oct and stopped).
 
 **Lanes (26 Oct).** Three agents work this list at once, so each takes from its own lane first; a claim still decides, and `node scripts/claims.ts` is the first command of a session.

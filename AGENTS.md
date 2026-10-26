@@ -71,6 +71,12 @@ Drishya runs on a laptop or PC against local sessions; it is not a cloud or mobi
 
 ---
 
+## Verify on real sessions, not only the demo
+
+The demo and the synthetic fixtures have one shape. Real sessions bring cases they never do: images arrive as a user prompt attachment, as an agent tool's result (Read, a screenshot, a browser or MCP tool), as a file a shell command wrote, or as a path with no bytes; plans, questions and approvals take different forms per harness; outputs can be huge, encrypted or missing; sub-agents, gaps and very large diffs appear. **Before a change that affects what a card, reader, header, list or projection shows is called done**, check it against real local sessions of both harnesses (Claude Code and Codex), picking sessions that actually contain the case, **plus** the fixture. Record what was checked as session id prefixes, sizes and counts only. Screenshots of real sessions stay in `.local/` (never committed, quoted or sent anywhere), and real journal content is never printed. In the PR, say which real sessions and which cases were checked and what could not be: if no real session contains the case, say so and do not claim it. A change checked only on the demo is *demo-checked*, not done. Builder decision, 26 October.
+
+---
+
 ## Non-negotiable constraints
 
 Violating any of these is a bug, not a tradeoff.
