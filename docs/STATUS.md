@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| DATA-7 | @yash + Codex | `codex/data-7-plan-diff-evidence` | 2026-10-26 | Read-only verification of current Codex journal plan/turn-diff shapes plus official App Server documentation; report/TASKS/STATUS and minimal redacted shape fixtures only if genuine examples exist (at most 5 files). No adapter/contracts/projection/DATA-3, daemon, native turn/configuration, History/common/worker or performance changes. |
 | FILES-3 | @yash + Codex | `codex/files-3-navigation` | 2026-10-26 | Navigation clarity for current Files, beside-agent peek, full Workspace and repository map: Workspace.tsx, SessionWorkspace.tsx (CurrentFileReader only), DeveloperWorkspace.tsx and own navigation helper if needed, focused browser tests, report/TASKS/STATUS (at most 9 files). No FileHistory/file-timeline/READ-8, Viewer/History/common/history libraries, ingest/worker/schema/DATA-3, shared CSS or new resident controls. Existing consent/read-only/draft/native boundaries preserved. |
 | READ-8 | @yash + Claude | `claude/read-8-pages` | 2026-10-26 | Slice 2: the per-file stepper crosses list pages (`FileHistory.tsx`, `lib/file-timeline.ts`, a new `tests/browser/file-timeline-pages.spec.ts`, TASKS/STATUS). No History, daemon, contracts or CSS changes. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
@@ -41,6 +40,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — DATA-7 read-only protocol verification
+
+- **26 October 2026:** official App Server docs plus installed 0.164.0-alpha.11.1 schemas distinguish checklist notifications, aggregate turn diffs and proposed-plan text. Existing update_plan tool mapping remains separate; no guessed journal parser added. [Report](review/data-7-plan-diff-verification.md).
+- **Snapshot:** only four current local Codex journals; 620,978,553 bytes /30,561 records, zero target notifications or update_plan calls. No source content committed and no native turn, configuration or runtime/schema change. Fresh CLI/App Server observation remains explicitly pending; DATA-7 stays open, own narrow research claim released.
+- **Handoff:** FILES-3 navigation PR #233 is ready (855 units, ten focused browser regressions, four actual journeys; final five cases after #229 integration). #229 and #231 landed. Preserve READ-8 and DATA-3 ownership; held History/common/worker and PERF-2/3 untouched. No full browser gate or hosted CI.
+
 
 ### Yash with Claude (Sonnet 5.5) — task-list honesty pass and lanes
 - **Closed:** LIVE-4, CONTENT-5, GIT-4, UI-2 and UI-4, each with its leftovers named in the entry. Three leftovers became their own items so the open count means real remaining work: LIVE-4b (P3, waits on data no harness records), CONTENT-5b and UI-4b (P2). Overall 45 of 98.
