@@ -20,3 +20,7 @@
 Only `StructuredDataReader.tsx`, the new focused browser spec and this report change. No CSS, new controls, limits, captured data, numeric serialization, resource parsing, persistence, native controls, capture/contracts/projection/schema or daemon change. No History/common/worker or PERF-2/3 changes, and no source owned by the other parallel agents. Installed emil-design-eng guidance informed the explicit destination-focus repair; existing animations remain unchanged. No hosted CI or full browser gate.
 
 The source fix and report are ready for root integration; shared TASKS/STATUS completion and claim release are intentionally left to the parent to avoid concurrent documentation edits. Parent CONTENT-7 remains unchecked for its broader acceptance scope. Physical/browser-version/assistive-technology acceptance remains REL-2/3.
+
+## Parent integration result
+
+All three independent content repairs were combined in the established parent worktree: **857 whole units /152 files, both TypeScript projects, production build and nine distinct new browser cases pass**. This resolves the new-worktree module-identity typecheck limitation above for the source increment. No source conflicts; temporary verification merge aborted. TASKS/STATUS finishing and own claim release included in this PR; broader CONTENT-7 remains open.

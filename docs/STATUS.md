@@ -39,7 +39,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
 | CONTENT-1 | @yash + Codex image agent | `codex/parallel-image-evidence` | 2026-10-26 | Independent image-reader source acceptance/correctness: OpImages.tsx, lib image helper(s), op-images.css only if measured, focused image tests and unique review/content-1-parallel.md (at most 8 files). No History/common/SessionWorkspace, capture/schema/DATA-3, map/composer/Files/Modern shared CSS; no native turn. Parent docs integrated centrally. |
 | CONTENT-3 | @yash + Codex question agent | `codex/parallel-question-evidence` | 2026-10-26 | Existing question/connected-reply correctness: NativeQuestions.tsx, QuestionCard.tsx, lib/ask-question.ts, focused question tests and unique review/content-3-parallel.md (at most 8 files). No SessionWorkspace/controller/schema/projection, History/common, shared CSS, composer layout or other claimed files; no native turn. Parent docs integrated centrally. |
-| CONTENT-7 | @yash + Codex structured-reader agent | `codex/parallel-structured-evidence` | 2026-10-26 | Structured/resource reader completeness/correctness: StructuredDataReader.tsx, CapturedResources.tsx, their owning lib helpers/scoped structured-data.css if measured, focused new tests and unique review/content-7-parallel.md (at most 8 files). No other reader owners, History/common, capture/schema/DATA-3, Modern/shared CSS or other claims. Parent docs integrated centrally. |
 
 
 ---
@@ -123,11 +122,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Checks:**12 parser units and three browser cases pass;795 integrated units, both types/build. Actual Drishya Claude store512 observations/one answered question: now marks the offered choice instead of calling its preview user speech; verified at1440/390px with phone frame inspected. No raw source committed.
 - **Scope/handoff:** CONTENT-3 stays open for Codex/approvals/connected answering. Own claim released in this PR; other claims retained. No native controls, schema, CSS, History or paused PERF-2 changes. Focused review ready, not automatic merge through known TEST-2. PR214 image recovery and PR219 duplicate plan labels remain independent reviewed increments.
 
-### Yash with Codex — CONTENT-7 resource acceptance
+### Yash with Codex structured-reader agent — selected JSON focus
 
-- **25 October 2026, PR #225:** no production change. Existing resource reader passes empty/absent/repeated-body identity, strict incomplete JSON and UTF-8/traversal boundaries, exact copying, keyboard/filter/focus and original mixed/bounded-out output checks. [Evidence](review/content-7-resource-acceptance.md).
-- **Verification:** nine focused units, four browser journeys, three real Codex desktop/phone checks; 799 whole units, both types and build. Phone frame inspected. Sampled Claude has no resource-bearing outputs, so no genuine Claude body acceptance is claimed. Native journals remain read-only/local.
-- **Scope:** CONTENT-7 remains open for broader document/structured acceptance; own narrow claim released. History/PERF-2 stays paused. No new features or automatic merge through TEST-2. Earlier #214/#219/#220/#221/#224 are independent focused-review increments with their own evidence and remaining scopes.
+- **26 October, PR #238:** Explore in tree now focuses the selected virtualized row after mounting, instead of leaving keyboard focus on the old action. Baseline row503 regression reproduced. [Evidence](review/content-7-parallel.md).
+- **Verified:** 12 focused browser checks, 25 units and four actual Codex/Claude desktop/phone journeys pass; exact Original and bounded DOM retained. Parent established workspace confirms both typechecks/build, 857 whole units and nine combined new browser cases; no source conflicts.
+- **Handoff:** own scoped claim released; broader CONTENT-7 remains open. Image/question PRs have separate owners/reports, and all other builders' claims preserved. No CSS, schema, native-control, History/common/worker or PERF-2/3 change; no full browser gate/hosted CI.
+
 
 ### Yash with Codex — FILES-1 remaining acceptance complete
 
