@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-3 | @yash + Codex | `codex/files-3-navigation` | 2026-10-26 | Navigation clarity for current Files, beside-agent peek, full Workspace and repository map: Workspace.tsx, SessionWorkspace.tsx (CurrentFileReader only), DeveloperWorkspace.tsx and own navigation helper if needed, focused browser tests, report/TASKS/STATUS (at most 9 files). No FileHistory/file-timeline/READ-8, Viewer/History/common/history libraries, ingest/worker/schema/DATA-3, shared CSS or new resident controls. Existing consent/read-only/draft/native boundaries preserved. |
 | READ-8 | @yash + Claude | `claude/read-8-pages` | 2026-10-26 | Slice 2: the per-file stepper crosses list pages (`FileHistory.tsx`, `lib/file-timeline.ts`, a new `tests/browser/file-timeline-pages.spec.ts`, TASKS/STATUS). No History, daemon, contracts or CSS changes. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
@@ -51,12 +50,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **UI-4 slice 2:** the Canvas experience is deleted (about 1,000 lines plus its spec) and Legacy is documented as frozen. Details, what was kept (the shared map, all Legacy sheets Modern stands on) and what UI-4 still has open are in TASKS UI-4; the policy is in docs/CODEBASE.md.
 - **Also merged:** #228 (CONTENT-7 exact numbers in JSON readers, Codex), verified on current main first.
 
-### Yash with Codex — CONTENT-7 delimited-reader acceptance
+### Yash with Codex — FILES-3 navigation complete
 
-- **25 October 2026, PR #231:** existing explicit CSV/TSV reader passes terminal/empty/missing/Unicode/quoted values, exact limits and block/header/filter/copy states. No production change. [Evidence and source qualification](review/content-7-delimited-acceptance.md).
-- **Verified:** 10 model units, 5 browser checks, 4 actual Codex/Claude desktop/phone journeys; 847 whole units, both types/build. Actual samples are comma-bearing tool text chosen explicitly, not claimed schema-defined CSV. Preview/full-artifact input mismatch identified during diagnostics; final samples match their supplied text.
-- **Combined compatibility:** temporary combination with #229 passes 855 units, seven focused browser checks, both types/build; only STATUS documentation needs reconciliation. Verification merge aborted; source branches remain independent.
-- **Handoff:** own CONTENT-7 claim released, parent remains open for genuine datasets/broader documents and platform/human acceptance. #231 ready for builder review. Independent #229 recovery correctness also ready: 852 integrated units/two browser checks/actual Claude, scoped report in review/files-5-recovery-identity.md. DATA-3 ownership preserved, History/PERF-2 paused and no automatic merge through TEST-2.
+- **26 October 2026, PR #233:** full Workspace no longer loses the beside-agent current file. Return restores its selected tab; general Workspace entry carries it too. Existing controls explain destinations and source/mode limits without more resident chrome. [Evidence](review/files-3-navigation.md).
+- **Verified:** baseline regression fails before fix; desktop/phone joined Files → peek → Workspace → Back → Repository → captured/current routes pass, plus ten focused browser regressions and four actual Codex/Claude journeys with file bytes unchanged/no page errors. After main #229/#231 integration: 855 units, both types/build and five final navigation/recovery browser cases pass. No full browser gate or native turn.
+- **Handoff:** FILES-3 checked, own claim released; FILES-4/REVIEW-4/native and physical acceptance remain separate. #233 ready for builder review. #229/#231 have landed. Preserve Claude READ-8 and DATA-3 claims; History/worker/common and PERF-2/3 remain untouched under the 26 October narrowed-range decision. Missing retained Codex journal remains NATIVE-1's known follow-up.
+
 
 ### Yash with Codex — FILES-5 recovery correctness
 
