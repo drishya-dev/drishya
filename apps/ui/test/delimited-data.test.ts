@@ -34,3 +34,24 @@ it('does not decode code escapes or fetch paths and bounds field suggestions',()
  expect(delimitedBlocks('a,b\\n1,2')).toEqual([]);expect(delimitedBlocks('/tmp/report.csv')).toEqual([]);
  const blocks=Array.from({length:20},(_,i)=>({type:'text',text:`a,b\n${i},v`}));expect(delimitedBlocks(JSON.stringify({content:blocks}))).toHaveLength(8);
 });
+it('retains trailing empty records and fields without inventing a record after a terminal line ending',()=>{
+ for(const end of ['\n','\r','\r\n']){
+  expect(delimitedData(`a,b${end}${end}`,',').data?.rows).toEqual([['a','b'],['']]);
+  expect(delimitedData(`a,b${end},`,',').data?.rows).toEqual([['a','b'],['','']]);
+  expect(delimitedData(`a,b${end}""`,',').data?.rows).toEqual([['a','b'],['']]);
+ }
+});
+it('accepts exact byte and cell boundaries and refuses an extra field without partial data',()=>{
+ const exact='x'.repeat(262144);expect(delimitedData(exact,',').data?.rows).toEqual([[exact]]);
+ expect(delimitedData(exact+'x',',').data).toBeUndefined();
+ const row=Array(10).fill('x').join(','),text=Array(5000).fill(row).join('\n');
+ expect(delimitedData(text,',').data?.rows).toHaveLength(5000);
+ expect(delimitedData(text+',',',').data).toBeUndefined();
+});
+it('round trips literal Unicode, formula-like text, leading zeroes and multiline cells for both explicit formats',()=>{
+ const records=[['name','name',''],['00042','1e400','-0'],['=SUM(A1:A2)','+cmd','@call'],['a,b','a\tb','"quoted"'],['line\r\nnext','दृश्य','👁️'],['','','']];
+ for(const delimiter of [',','\t'] as const){
+  const raw=records.map(row=>row.map(cell=>`"${cell.replaceAll('"','""')}"`).join(delimiter)).join('\r\n');
+  expect(delimitedData(raw,delimiter).data).toEqual({rows:records,columns:3});
+ }
+});
