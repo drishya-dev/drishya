@@ -27,3 +27,7 @@ A clearly labelled **two-record real-source excerpt** (original metadata plus or
 ## Handoff
 
 Only `OpImages.tsx`, the dedicated browser regression and this report changed. Parent integrates TASKS/STATUS centrally to avoid parallel docs collisions. No History/common/SessionWorkspace, capture/schema/adapter/projection/DATA-3, controller, backend, shared/Modern CSS or other claimed surface changed. PERF-2/3 remain deferred. Root may mark this bounded correctness/typed-reference acceptance checked; successful allowed current-image recovery from a genuine typed file URL, all remaining source permutations and physical-phone acceptance remain separate open scope.
+
+## Parent combined verification
+
+Parent combined the three independent image/question/structured-reader increments without source conflicts: **857 whole units /152 files, both TypeScript projects and build pass; eight initial new browser cases plus the later image-source guard pass (nine distinct cases)**. Source remained unchanged after its first fix commit; later image commits add verification/report only. The temporary verification merge was aborted; PRs remain separate for builder review. Shared task completion and scoped claim release are included here; broad CONTENT-1 remains open for the qualifications above.
