@@ -37,8 +37,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | DATA-9 | @yash + Claude | `claude/data-9-hooks` | 2026-10-26 | Research and docs only: `docs/review/data-9-hooks-otel.md`, TASKS DATA-9 result, research-ledger H1–H3 rows, STATUS. No code under apps/, packages/ or tests/. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
-| CONTENT-1 | @yash + Codex image agent | `codex/parallel-image-evidence` | 2026-10-26 | Independent image-reader source acceptance/correctness: OpImages.tsx, lib image helper(s), op-images.css only if measured, focused image tests and unique review/content-1-parallel.md (at most 8 files). No History/common/SessionWorkspace, capture/schema/DATA-3, map/composer/Files/Modern shared CSS; no native turn. Parent docs integrated centrally. |
-| CONTENT-3 | @yash + Codex question agent | `codex/parallel-question-evidence` | 2026-10-26 | Existing question/connected-reply correctness: NativeQuestions.tsx, QuestionCard.tsx, lib/ask-question.ts, focused question tests and unique review/content-3-parallel.md (at most 8 files). No SessionWorkspace/controller/schema/projection, History/common, shared CSS, composer layout or other claimed files; no native turn. Parent docs integrated centrally. |
 
 
 ---
@@ -101,7 +99,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Codex PRs merged after checking each on current main:** #221 (FILES-1 deletion acceptance), #225 (CONTENT-7 resources), #220 (CONTENT-3 literal answers), #219 (CONTENT-4 plan labels), #224 (CONTENT-2 web results), #214 (CONTENT-1 images). Full gate on the combined main: 349 passed, 26 skipped, 2 failed (the known `b2-live` reading-position pair, Harsh's PERF-2 area).
 - **Also merged by parallel sessions, verified here:** READ-8 stepper (#217), READ-5 edits by turn (#216), GIT-4 picker (#218), UI-2 composer (#222) and Home/Search (#223).
 
-### Yash with Codex — CONTENT-1 image-reader failure/retry and phone acceptance
+### Yash with Codex image agent — current-image recovery
+
+- **26 October, PR #240:** current-file image refusals and later load/decode failures now explain themselves and allow explicit retry without reload; old responses cannot replace a newer recording/path. Two baseline failures reproduced; 18 focused image browser checks pass. [Evidence](review/content-1-parallel.md).
+- **Real source:** 596 typed ImageView items in four current journals. A bounded redacted genuine excerpt passes metadata/refusal/retry at desktop/phone. Its file: URL exists but protected/unsupported current access stays refused; no byte recovery or full-session/native success claim.
+- **Combined handoff:** three independent content sources combine cleanly; 857 units, both types/build and nine new browser cases pass. Own claim released, parent CONTENT-1 remains open for remaining source/device acceptance. Question/structured reports are separate; all other builders' claims preserved. No capture/schema/controller/shared CSS or History/common/worker/PERF-2/3 change.
 
 
 ### Yash with Codex — CONTENT-2 search reading correctness
@@ -116,11 +118,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - **Checks:** five new regressions fail on baseline; ten plan-thread units and three browser journeys pass (desktop/phone, pinned/expanded/revision reading).790 integrated units, both types and production build pass. No History, PERF-2, CSS, contracts/projection/schema or native-control edits.
 - **Scope:** recent bounded Claude journal scan finds no real plan tool uses, so the regression fixture is synthetic; parent CONTENT-4 stays open for real sources and DATA-7. Own scoped claim released in this PR, other claims retained. Focused review ready; do not merge through the known TEST-2 jump or resume the builder-paused area. PR214 image-reader acceptance remains separately ready.
 
-### Yash with Codex — CONTENT-3 literal answers and selected-preview attribution
+### Yash with Codex question agent — connected multi-select repair
 
-- **25 October2026, PR220:** correct existing AskUserQuestion parsing: exact complete choice tokens, intact typed words/quotes/punctuation, conservative ambiguous labels, malformed-question guard and recognized selected-preview boundary. Full result remains readable. [Cause, source evidence and limits](review/content-3-literal-answers.md).
-- **Checks:**12 parser units and three browser cases pass;795 integrated units, both types/build. Actual Drishya Claude store512 observations/one answered question: now marks the offered choice instead of calling its preview user speech; verified at1440/390px with phone frame inspected. No raw source committed.
-- **Scope/handoff:** CONTENT-3 stays open for Codex/approvals/connected answering. Own claim released in this PR; other claims retained. No native controls, schema, CSS, History or paused PERF-2 changes. Focused review ready, not automatic merge through known TEST-2. PR214 image recovery and PR219 duplicate plan labels remain independent reviewed increments.
+- **26 October, PR #239:** multi-select no longer discards selected options when typing, or text when selecting. Existing API supports both; single-choice stays exclusive. Root completed verification after agent model capacity. [Report](review/content-3-parallel.md).
+- **Verified:** original browser failure reproduced; 16 focused units/four browser cases pass, covering exact HTTP payload, failure/retry, busy state and next-request reset. Native-account/source acceptance remains open; no genuine turn submitted.
+- **Combined handoff:** all three independent content sources merge cleanly; 857 units, both types/build and nine new browser cases pass. Own narrow claim released; parent CONTENT-3 stays open. Preserve image/structured agents and other builders' claims; History/common/worker/PERF-2/3 unchanged. UI-6 owns pending phone layout concerns.
+
 
 ### Yash with Codex structured-reader agent — selected JSON focus
 
