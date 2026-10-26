@@ -35,6 +35,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 | READ-4 | @yash + Claude Sonnet 5.5 | `claude/read-4-guard` | 2026-10-26 | Measure passage wrap and arrow geometry at 1024/1280/1440/1920; `tests/browser/passage-layout.spec.ts` guard; TASKS/STATUS docs. Held files (History.tsx etc.) are not edited; any defect there is recorded in TASKS READ-4. |
 | DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | First slice: Codex `task_complete` timing/error, `turn_context` settings (model, effort, approval, sandbox, collaboration) on the turn observations, `session_meta` policies; S1 of docs/review/125 (additive optional fields, `CONTRACT_VERSION` bump), `packages/adapter-codex`, `packages/contracts`, `packages/projection` (`Projection.turns`, reducer bump), tests. No UI; TURN-1 and CONTENT-5 consume it. Schema change per S1: Harsh reviews in the PR. |
+| UI-4b | @yash + Claude Sonnet 5.5 | `claude/ui-4b-dead-css` | 2026-10-26 | Dead-CSS removal only (token-sheet move is out of scope): new `tests/browser/css-pixels.spec.ts` + helper, `apps/ui/src/**/*.css`, `docs/TASKS.md` (UI-4b), `docs/STATUS.md`. Touches no History/common/PERF-2 files. |
 
 
 ---
