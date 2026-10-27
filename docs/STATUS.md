@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TEST-2 | @harsh + Codex | `harsh/test-2-reading-jump` | 2026-10-27 | `History.tsx` (reading-anchor and height-measurement code only), plus tests. |
 | CONTENT-1 | @yash + Codex image agent | `codex/whole-images` | 2026-10-26 | Whole remaining image acceptance: OpImages/current-image helpers/routes, Inspector OperationMaterial (exact captured parent-script images), image tests/report and genuine Codex/Claude desktop sources. Yash explicitly authorized two isolated Codex adapter fixes on 26 Oct: image_gen.generation alias and remote-image omission; no schema or other DATA-3 changes. Up to 15 files; no History/common edits. |
 | CONTENT-2 | @yash + Codex browser agent | `codex/whole-browser` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. Up to 15 files; no adapter/contracts/projection or READ-4 test. |
 | FILES-4 | @yash + Codex reader agent | `codex/whole-readers` | 2026-10-26 | Whole Reader/Workspace review: type/syntax/Markdown, paths/tabs/panes/toolbars, copy/find/wrap/line, resize/scroll and long/empty cases; CurrentFileReader/SessionWorkspace/DeveloperWorkspace and dedicated styles/helpers/tests/report. Up to 15 files; no History/common/image or capture/schema changes. |
@@ -43,6 +42,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — TEST-2 reading-position jump (27 October)
+
+- **Candidate:** reconcile a reading anchor with the browser's attained scroll after a boundary clamp; a later append no longer replays the remaining 95 px correction. Measured-height reuse and rendering stay unchanged. With Harsh's approval, the long-history spec selects the card with Enter instead of clicking its nested file-reader button; all assertions remain intact.
+- **Checks:** typechecks and 844 units pass; isolated `b2-live:186` passes 5/5 and the full file passes 3/3. Package verification passes. Full browser suite: 393 passed, 26 skipped, one `product-workspace:764` disposed-response failure; it passes alone on clean main, so this run does not establish an existing-main failure.
+- **Performance/limits:** three alternating invented-journal pairs (183,012,440 bytes) give median peak RSS 467.00 -> 449.13 MiB and append event-loop max 33.89 -> 30.39 ms; pair results vary, no broad gate pass claimed. The requested `3075f34` apps/packages comparison also fails here (+94 px); the prior baseline-pass attribution is not confirmed. Real-session acceptance and the remaining TEST-2 full-suite failure are not verified/resolved; TEST-2 stays open.
 
 ### Yash with Claude (Sonnet 5.5) — READ-4: passage layout measured and guarded
 - **Result:** at 1024/1280/1440/1920 px on the two fixtures and a 12-tool synthetic passage, reading order is row-major, no card is orphaned, every consecutive pair has a wire from card edge to card edge, and no wire crosses a card (0 of 28 wires at each width). New `passage-layout.spec.ts` keeps it (12 tests; fails when order, gap or the wire obstruction test is broken). No app code changed.
