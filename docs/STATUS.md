@@ -87,6 +87,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Yash with Claude (Sonnet 5.5) — READ-8 slice 2: the file stepper crosses pages
 - **Change:** in "Work on <path>", Previous/Next change continue onto the neighbouring page of the action list and the label names the page (`24 of 24 · page 1 of 2`). One component (`FileHistory.tsx`), no daemon, History, contracts or CSS change. Left open and why: the whole-session count needs a daemon count (held with History). Guard spec fails on the old component; the five file-timeline specs pass. Full gate is Yash's to run.
+### Yash with Codex — CONTENT-7 and DATA-8 complete; selector follows
+
+- **27 October:** PR #255 verifies native reasoning persistence with 13 fresh Codex/Claude sessions, zero tools, version/surface-specific results and PowerShell-safe guidance. [Methods and limits](review/data-8-reasoning-persistence.md).
+- **CONTENT-7, PR #253:** document/resource readers, exact originals, binary/reference distinctions and retained context; 28 actual desktop journeys across both harnesses. Missing genuine typed Claude resources and CSV/table datasets are explicitly fixture-qualified. [Acceptance matrix](review/content-7-document-finish.md). Reader APIs land before #254 activates shared selector and historical-page consumers.
+- **Combined checks:** 856 units, both TypeScript checks, production build and 14 new desktop browser cases pass. No History, schema, current-file regeneration or hosted checks. CONTENT-6 bookkeeping follows; all other claims preserved, PERF-2/3 deferred. Prior image/browser History handoffs remain Claude's responsibility.
+
 ### Yash with Codex — DATA-8 fresh native persistence verification
 
 - **27 October, PR #255 complete:** 13 new isolated native sessions (7 Codex, 6 Claude), all zero tools. Codex summary settings retained exposed summaries under the tested conditions; Claude interactive opt-in retained text in 2/2 controls, while defaults and headless comparison remained signature-only. [Counts-only methods and limits](review/data-8-reasoning-persistence.md).

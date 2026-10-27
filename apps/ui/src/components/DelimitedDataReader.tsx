@@ -3,12 +3,12 @@ import {ReadingDialog} from './ProductShell.tsx';
 import {delimitedBlocks,delimitedData,type DelimitedBlock,type Delimiter} from '../lib/delimited-data.ts';
 import './structured-data.css';
 
-export function DelimitedInspection({text,candidates}:{text:string;candidates?:DelimitedBlock[]}){
- const blocks=useMemo(()=>candidates??delimitedBlocks(text),[text,candidates]),[opened,setOpened]=useState<DelimitedBlock[]>();
+export function DelimitedInspection({text,candidates,context}:{text:string;candidates?:DelimitedBlock[];context?:string}){
+ const blocks=useMemo(()=>candidates??delimitedBlocks(text),[text,candidates]),[opened,setOpened]=useState<{blocks:DelimitedBlock[];context?:string}>();
  if(!blocks.length&&!opened)return null;
- return <div className="data-inspection" onClick={event=>event.stopPropagation()}>{blocks.length>0&&<button type="button" onClick={()=>setOpened(blocks)}>Inspect delimited text</button>}{opened&&<DelimitedReader blocks={opened} close={()=>setOpened(undefined)}/>}</div>;
+ return <div className="data-inspection" onClick={event=>event.stopPropagation()}>{blocks.length>0&&<button type="button" onClick={()=>setOpened({blocks,context})}>Inspect delimited text</button>}{opened&&<DelimitedReader blocks={opened.blocks} context={opened.context} close={()=>setOpened(undefined)}/>}</div>;
 }
-function DelimitedReader({blocks,close}:{blocks:DelimitedBlock[];close:()=>void}){
+function DelimitedReader({blocks,context,close}:{blocks:DelimitedBlock[];context?:string;close:()=>void}){
  const [block,setBlock]=useState(0),[delimiter,setDelimiter]=useState<Delimiter>(),[original,setOriginal]=useState(true),[header,setHeader]=useState(false),[query,setQuery]=useState(''),[top,setTop]=useState(0),[selected,setSelected]=useState<{row:number;column:number}>(),[copied,setCopied]=useState('');
  const viewport=useRef<HTMLDivElement>(null),text=blocks[block]!.text;
  const result=useMemo(()=>delimiter?delimitedData(text,delimiter):undefined,[text,delimiter]),data=result?.data;
@@ -19,7 +19,7 @@ function DelimitedReader({blocks,close}:{blocks:DelimitedBlock[];close:()=>void}
  const selectedRow=selected&&data?.rows[selected.row],present=!!selected&&!!selectedRow&&selected.column<selectedRow.length;
  const template=data?`48px repeat(${data.columns},minmax(160px,1fr))`:'';
  return <ReadingDialog title="Captured delimited text" className="structured-data-dialog delimited-data-dialog" close={close}>
-  <div className="data-reader-body">
+  <div className="data-reader-body">{context&&<p className="material-context">{context}</p>}
    <div className="data-reader-toolbar"><div role="group" aria-label="Delimited text format"><button aria-pressed={original} onClick={()=>{setOriginal(true);reset();}}>Original</button>{([',','\t'] as const).map(value=><button key={value} aria-pressed={!original&&delimiter===value} onClick={()=>{setDelimiter(value);setOriginal(false);reset();}}>{value===','?'CSV':'TSV'}</button>)}</div><button onClick={()=>void copy(text)}>Copy original</button></div>
    <p className="delimited-note">Choose CSV or TSV. Values remain literal; captured text may be partial.</p>
    {blocks.length>1&&<label className="data-find">Captured field<select aria-label="Captured text block" value={block} onChange={event=>{setBlock(Number(event.target.value));setOriginal(true);setDelimiter(undefined);setHeader(false);setQuery('');reset();}}>{blocks.map((item,index)=><option key={item.field+index} value={index}>{item.field}</option>)}</select></label>}
