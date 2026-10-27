@@ -27,6 +27,31 @@ export async function headRecords(path: string, maxBytes = 256 * 1024, maxRecord
   }
 }
 
+/** Bounded journal tail for discovery metadata; the first clipped record is never parsed. */
+export async function tailRecords(path: string, maxBytes = 64 * 1024): Promise<unknown[]> {
+  const fh = await open(path, 'r');
+  try {
+    const { size } = await fh.stat();
+    const start = Math.max(0, size - maxBytes);
+    const buf = Buffer.alloc(size - start);
+    const { bytesRead } = await fh.read(buf, 0, buf.length, start);
+    let text = buf.subarray(0, bytesRead).toString('utf8');
+    if (start > 0) {
+      const firstBreak = text.indexOf('\n');
+      if (firstBreak < 0) return [];
+      text = text.slice(firstBreak + 1);
+    }
+    const out: unknown[] = [];
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      try { out.push(JSON.parse(line)); } catch { /* Cut or malformed records tell discovery nothing. */ }
+    }
+    return out;
+  } finally {
+    await fh.close();
+  }
+}
+
 export async function listFiles(dir: string, match: (name: string) => boolean, depth = 0, maxDepth = 4): Promise<string[]> {
   let entries;
   try {

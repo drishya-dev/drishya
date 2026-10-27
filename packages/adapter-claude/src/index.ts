@@ -8,6 +8,7 @@ import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, ExternalCh
 import {
   fileInfo,
   headRecords,
+  tailRecords,
   listFiles,
   parseMcpName,
   textOf,
@@ -376,9 +377,18 @@ async function discover(): Promise<DiscoveredSource[]> {
     if (!info || info.bytes === 0) continue;
     const head = (await headRecords(path)) as Rec[];
     const cwd = head.find((r) => typeof r.cwd === 'string')?.cwd as string | undefined;
-    const titled = head.find((r) => r.type === 'custom-title' || r.type === 'summary');
+    let titled: string | undefined;
+    let titleRank = 0;
+    // Match imported metadata: the latest title at the highest recorded rank wins.
+    // Tail records contribute titles only; workspace and first prompt still come from the head.
+    for (const r of [...head, ...await tailRecords(path)] as Rec[]) {
+      if (!r || typeof r !== 'object') continue;
+      const rank = r.type === 'custom-title' ? 3 : r.type === 'summary' ? 2 : r.type === 'ai-title' ? 1 : 0;
+      const value = str(r.customTitle) ?? str(r.summary) ?? str(r.aiTitle) ?? str(r.title);
+      if (rank && value && rank >= titleRank) { titled = value; titleRank = rank; }
+    }
     const firstPrompt = head.find((r) => r.type === 'user' && typeof r.message?.content === 'string' && !r.isMeta && !String(r.message.content).startsWith('<'));
-    const rawTitle = titled?.customTitle ?? titled?.summary ?? firstPrompt?.message?.content;
+    const rawTitle = titled ?? firstPrompt?.message?.content;
     const set = await sourceSet(path);
     out.push({
       adapterId: descriptor.id,

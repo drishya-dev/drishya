@@ -6,9 +6,14 @@ it('drops continuation boilerplate and bare links but keeps what the person aske
   expect(cleanSessionTitle('Check https://example.com/a/b?x=1 and the cart')).toBe('Check and the cart');
   expect(cleanSessionTitle('  Plain   title ')).toBe('Plain title');
 });
-it('never leaves a row empty, and keeps a lone link readable', () => {
+it('never leaves a row empty, and replaces a lone link with an untitled label', () => {
   expect(cleanSessionTitle('This session is being continued from a previous conversation that ran out of context.')).toBe('Continued session');
-  expect(cleanSessionTitle('https://example.com/only')).toBe('https://example.com/only');
+  expect(cleanSessionTitle('https://example.com/only')).toBe('Untitled session');
   expect(cleanSessionTitle('')).toBe('Untitled session');
   expect(cleanSessionTitle('x'.repeat(300))).toHaveLength(160);
+});
+
+it('does not restore URL-only material after removing links or continuation text', () => {
+  expect(cleanSessionTitle('https://example.com/a https://example.com/b')).toBe('Untitled session');
+  expect(cleanSessionTitle('This session is being continued from a previous conversation. https://example.com/only')).toBe('Untitled session');
 });
