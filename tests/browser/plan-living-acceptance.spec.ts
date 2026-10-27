@@ -129,3 +129,63 @@ test('unknown and empty captured states use a neutral mark, retain literal acces
   const expand = last.locator('button.op-expand'); await expand.focus(); await expand.press('Enter');
   await expect(last.locator('.plan-material .plan-change')).toHaveCount(0);
 });
+
+for (const width of [600, 1440]) test(`native task results update one checklist and preserve duplicate labels at ${width}px`, async ({ page }) => {
+ await page.setViewportSize({ width, height: 960 });
+ const session = `native-tasks-${width}`, source = join(dir, session + '.jsonl');
+ const base = {cwd:dir,sessionId:session,timestamp:'2026-10-27T00:00:00Z'};
+ let ordinal=0;
+ const pair=(tool:string,input:unknown,result:unknown)=>{
+  const id=`native-task-${ordinal++}`;
+  return [{...base,type:'assistant',uuid:`a-${id}`,message:{id:`m-${id}`,role:'assistant',content:[{type:'tool_use',id,name:tool,input}]}},
+   {...base,type:'user',uuid:`r-${id}`,toolUseResult:result,message:{role:'user',content:[{type:'tool_result',tool_use_id:id,content:'Synthetic confirmed task result'}]}}];
+ };
+ const first=pair('TaskCreate',{subject:'Same label'},{task:{id:'1',subject:'Same label'}});
+ const second=pair('TaskCreate',{subject:'Same label'},{task:{id:'2',subject:'Same label'}});
+ writeFileSync(source,serialize([planPrompt(dir,session),...first,...second]));
+ const id=(await app.ingest.importSource('claude-code',source)).recordingId;
+ await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page,id);
+ const pinned=page.locator('.turn .plan-pinned'); await expect(pinned).toHaveCount(1);
+ await expect(pinned.locator('li')).toHaveCount(2); await expect(pinned.locator('.plan-mark')).toHaveText(['·','·']);
+ await pinned.evaluate(el=>el.setAttribute('data-stable-native','yes'));
+ for(let revision=0;revision<12;revision++){
+  const taskId=String(revision%2+1),status=revision<10?'in_progress':'completed';
+  appendFileSync(source,serialize(pair('TaskUpdate',{taskId,status,...(revision===10?{subject:'Renamed checkpoint'}:{})},
+   {success:true,taskId,updatedFields:revision===10?['status','subject']:['status'],statusChange:{from:'in_progress',to:status}})));
+  await app.ingest.sync(id);
+  await expect(pinned).toContainText(`revision ${revision+3}`);
+  await expect(pinned).toHaveAttribute('data-stable-native','yes');
+ }
+ await expect(pinned).toContainText('2 of 2 done'); await expect(pinned).toContainText('Renamed checkpoint');
+ await expect(pinned.locator('li')).toHaveCount(2);
+ await expect(page.locator('article.op-plan .plan-list')).toHaveCount(0);
+ const receipt=page.locator('article.op-plan').first();
+ await expect(receipt).toHaveCSS('border-top-width','0px');
+ await expect(receipt.locator('button.op-expand')).toBeVisible();
+ const path='C:/Synthetic/.claude/plans/captured.md',body='# Native plan file\n\n- Verify captured content';
+ appendFileSync(source,serialize(pair('Write',{file_path:path,content:body},{type:'create',filePath:path,content:body})));
+ await app.ingest.sync(id);
+ const planFile=page.getByRole('region',{name:'Captured plan file'});
+ await expect(planFile.getByRole('heading',{name:'Native plan file'})).toBeVisible();
+ if(width===1440) expect((await planFile.locator('xpath=ancestor::article[1]').boundingBox())!.width).toBeGreaterThan(320);
+ expect(await planFile.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+ await expect(pinned).toHaveCount(1);
+ await page.screenshot({path:`.local/content4-native/synthetic-native-${width}.png`});
+});
+for (const width of [600,1440]) test(`Codex explicit proposal renders Markdown without checklist completion at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:960});
+ const source=join(dir,`proposal-${width}.jsonl`);
+ writeFileSync(source,serialize([
+  {type:'session_meta',payload:{id:`proposal-${width}`,cwd:dir}},
+  {type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Prepare a synthetic proposal'}]}},
+  {type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'<proposed_plan>\n# Captured proposal\n\n1. Read the source\n2. Verify the result\n</proposed_plan>'}]}},
+ ]));
+ const id=(await app.ingest.importSource('codex',source)).recordingId;
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await open(page,id);
+ const proposal=page.getByRole('region',{name:'Proposed plan'});
+ await expect(proposal.getByRole('heading',{name:'Captured proposal'})).toBeVisible();
+ await expect(proposal.locator('ol li')).toHaveCount(2);
+ await expect(proposal).toContainText('Captured proposal · not an approval');
+ await expect(page.locator('.plan-pinned')).toHaveCount(0);
+ await expect(page.locator('.prose')).toHaveCount(0);
+});

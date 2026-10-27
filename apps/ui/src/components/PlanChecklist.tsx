@@ -3,6 +3,8 @@ import type { Operation, Projection } from '@drishya/contracts';
 import { planThreads, type PinnedPlan, type PlanPosition, type PlanRevision } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import './plan-checklist.css';
+import { Markdown } from '../lib/markdown.tsx';
+import { ArtifactReader } from './ArtifactReader.tsx';
 
 const threadCache = new WeakMap<Projection, Map<string, PlanPosition>>();
 const threadsOf = (projection: Projection) => {
@@ -17,10 +19,10 @@ const WORD = { added: 'added', started: 'started', completed: 'completed', reope
 function Items({ revision, limit }: { revision: PlanRevision; limit?: number }) {
   const shown = limit ? revision.items.slice(0, limit) : revision.items;
   return <>
-    <ul className="plan-list">{shown.map((item, i) => <li key={i} className={`plan-${item.status}`} data-change={item.change}>
+    <ul className="plan-list">{shown.map((item, i) => <li key={item.id ?? i} className={`plan-${item.status}`} data-change={item.change}>
       <span className="plan-mark" aria-hidden="true">{MARK[item.status] ?? '·'}</span>
       <span className="plan-text">{item.text}</span>
-      <span className="sr-only"> ({item.status.replace('_', ' ')}{item.change ? `, ${WORD[item.change]} in this revision` : ''})</span>
+      <span className="sr-only"> ({item.status ? item.status.replace('_', ' ') : 'status not recorded'}{item.change ? `, ${WORD[item.change]} in this revision` : ''})</span>
       {item.change && <small className="plan-change" aria-hidden="true">{WORD[item.change]}</small>}
     </li>)}</ul>
     {limit && revision.items.length > limit && <small className="plan-more">{revision.items.length - limit} more items</small>}
@@ -37,12 +39,17 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
   const projection = useApp((s) => s.projection);
   const position = useMemo(() => (projection ? threadsOf(projection).get(op.id) : undefined), [projection, op.id]);
   const [at, setAt] = useState<number>();
-  if (!position) return <ul className="plan-list">{(op.detail.kind === 'plan' ? op.detail.items : []).slice(0, full ? 50 : 8).map((item, i) => <li key={i} className={`plan-${item.status}`}><span className="plan-mark" aria-hidden="true">{MARK[item.status] ?? '·'}</span><span className="plan-text">{item.text}</span></li>)}</ul>;
+  if (op.detail.kind === 'plan' && op.detail.document) {
+    const doc = op.detail.document;
+    return <section className="plan-card plan-document" aria-label={doc.source === 'file' ? 'Captured plan file' : 'Proposed plan'}><small className="plan-basis">{doc.source === 'file' ? 'Captured file · plan-path convention' : 'Captured proposal'} · not an approval</small>{doc.truncated ? <ArtifactReader id={doc.artifactId} kind="output" fallback={doc.text} /> : <Markdown text={doc.text} document />}</section>;
+  }
+  if (!position && op.detail.kind === 'plan' && op.detail.scope && op.endSequence === undefined) return <small className="plan-basis">Waiting for the recorded task result</small>;
+  if (!position) return <ul className="plan-list">{(op.detail.kind === 'plan' ? op.detail.items : []).slice(0, full ? undefined : 8).map((item, i) => <li key={item.id ?? i} className={`plan-${item.status}`}><span className="plan-mark" aria-hidden="true">{MARK[item.status] ?? '·'}</span><span className="plan-text">{item.text}</span></li>)}</ul>;
   const { thread, index } = position;
   const latest = index === thread.revisions.length - 1;
-  const shownIndex = full ? Math.min(at ?? index, thread.revisions.length - 1) : index;
+  const shownIndex = full ? Math.min(at ?? index, index, thread.revisions.length - 1) : index;
   const revision = thread.revisions[shownIndex]!;
-  const heading = <span className="plan-head"><b>Revision {shownIndex + 1}</b> · {revision.done} of {revision.total} done</span>;
+  const heading = <span className="plan-head"><b>Revision {shownIndex + 1}</b> · {revision.done} of {revision.total}{revision.omittedItems ? ' shown' : ''} done</span>;
 
   // Modern pins the lead agent's newest list under the prompt (TurnBlock), so in the stream every
   // revision of it is one line; the retained UIs keep the list where it arrived.
@@ -60,8 +67,9 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
       </span>}
     </div>
     <Items revision={revision} limit={full ? undefined : 10} />
+    {!!revision.omittedItems && <small className="plan-basis">{revision.omittedItems} additional tasks outside the bounded list; recorded result retained in details.</small>}
     {full && revision.removed.length > 0 && <small className="plan-removed">Left out of this revision: {revision.removed.join(' · ')}</small>}
-    <small className="plan-basis">Captured list, compared with the revision before</small>
+    <small className="plan-basis">Captured task facts, compared with the revision before</small>
   </div>;
 }
 
@@ -81,12 +89,13 @@ export function PinnedPlanList({ plan }: { plan: PinnedPlan }) {
     items = items.slice(from, from + PINNED_LIMIT);
   }
   return <div className="plan-pinned" role="group" aria-label="Plan checklist" title={`The agent's newest captured todo list, revision ${plan.revision} of ${plan.revisions}`} onClick={(e) => e.stopPropagation()}>
-    <span className="plan-head"><b>Plan</b> · {plan.done} of {plan.total} done{plan.revisions > 1 ? ` · revision ${plan.revision}` : ''}</span>
-    <ul className="plan-list">{items.map(({ item, i }) => <li key={i} className={`plan-${item.status}`}>
+    <span className="plan-head"><b>Plan</b> · {plan.done} of {plan.total}{plan.omittedItems ? ' shown' : ''} done{plan.revisions > 1 ? ` · revision ${plan.revision}` : ''}</span>
+    <ul className="plan-list">{items.map(({ item, i }) => <li key={item.id ?? i} className={`plan-${item.status}`}>
       <span className="plan-mark" aria-hidden="true">{MARK[item.status] ?? '·'}</span>
       <span className="plan-text">{item.text}</span>
-      <span className="sr-only"> ({item.status.replace('_', ' ')})</span>
+      <span className="sr-only"> ({item.status ? item.status.replace('_', ' ') : 'status not recorded'})</span>
     </li>)}</ul>
+    {!!plan.omittedItems && <small className="plan-basis">{plan.omittedItems} additional tasks outside the bounded list; recorded result retained in details.</small>}
     {long && <button type="button" className="link plan-pinned-more" aria-expanded={all} onClick={() => setAll((v) => !v)}>{all ? 'Show fewer' : `Show all ${plan.items.length}`}</button>}
   </div>;
 }
