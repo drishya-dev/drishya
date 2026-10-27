@@ -1,12 +1,12 @@
 # DATA-8 — fresh reasoning-summary persistence verification
 
-27 October 2026. Documentation and native-session research only. **Codex CLI verified under the conditions below; Claude Code's fresh model test is blocked by absent authentication. DATA-8 remains open for that check.** No adapter, event schema, projection, controller or UI change.
+27 October 2026. Documentation and native-session research only. **Fresh Codex CLI and Claude Code interactive CLI persistence verified under the conditions below. Claude headless behavior was checked separately.** No adapter, event schema, projection, controller or UI change.
 
 ## Result and evidence boundary
 
 On this machine, fresh Codex CLI sessions with explicit `model_reasoning_summary` values `auto`, `concise` and `detailed` retained readable, exposed summaries in their normal native journals. Two `none` sessions retained encrypted reasoning items with empty summary arrays. This supports a narrow opt-in command in README. It does not establish complete reasoning capture, a summary on every turn, or identical behavior in the desktop app, interactive TUI or a connected App Server turn.
 
-Claude Code has a directly relevant setting, `showThinkingSummaries`; it should be tested before recommending it as a verified persistence solution. Neither enabling thinking nor increasing effort alone establishes readable journal retention. Private reasoning is outside this research: encrypted content is never decoded, and exposed summaries are never described as the complete internal reasoning.
+On Claude Code, the interactive `showThinkingSummaries: true` setting retained exposed summary text in a fresh native journal, while the default retained a signature-only block. Headless `-p` sessions retained only signature-only blocks both with and without that setting. Neither enabling thinking nor increasing effort alone establishes readable journal retention. Private reasoning is outside this research: encrypted content is never decoded, and exposed summaries are never described as the complete internal reasoning.
 
 ## Sources and installed capabilities
 
@@ -19,8 +19,8 @@ Local native executable help and declarations were checked, without invoking an 
 | Installed Codex bundled model catalog | Configured `gpt-5.6-terra` advertises medium default effort and `default_reasoning_summary: none` | Bundled defaults are not effective per-turn settings |
 | [Official Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference) | `model_reasoning_summary` selects summary detail; `model_supports_reasoning_summaries` affects reasoning metadata; `hide_agent_reasoning` and `show_raw_agent_reasoning` concern output visibility | No support-forcing or raw-content option was enabled. Display controls are not established storage switches |
 | [Official OpenAI reasoning guide](https://developers.openai.com/api/docs/guides/reasoning#reasoning-summaries) | Exposed summaries are opt-in; available summary levels depend on the model; encrypted content is separate | API documentation alone does not prove a Codex journal shape |
-| Installed Claude binary's embedded settings declaration and native `--help` | `showThinkingSummaries` exists locally; `--settings` accepts a per-invocation JSON override | No fresh Claude model turn reached; presence is not persistence verification |
-| [Claude settings reference](https://code.claude.com/docs/en/settings-reference#showthinkingsummaries) | `showThinkingSummaries: true` requests visible summaries for interactive sessions; default `false` uses API-redacted blocks | Documentation, not a local authenticated result |
+| Installed Claude binary's embedded settings declaration and native `--help` | `showThinkingSummaries` exists locally; `--settings` accepts a per-invocation JSON override | Declaration alone is not persistence verification; actual tests are below |
+| [Claude settings reference](https://code.claude.com/docs/en/settings-reference#showthinkingsummaries) | `showThinkingSummaries: true` requests visible summaries for interactive sessions; default `false` uses API-redacted blocks | Interactive scope matters; it is not a blanket promise about every CLI output mode |
 | [Claude model configuration](https://code.claude.com/docs/en/model-config#extended-thinking) | Thinking generation controls differ from summary visibility; Ctrl+O expands available material | Interactive display does not prove text was written to the journal |
 
 The Claude settings reference was fetched as its official Markdown page because the browser retrieval of the full HTML exceeded its size limit. Both the setting's documentation and the installed embedded declaration were checked. No third-party documentation was used. Official pages were fetched on the test date; later version/model changes require retesting.
@@ -71,16 +71,37 @@ Two cautions are material:
 
 There was one preliminary harness launch that failed configuration validation before a session/model turn: the local probe initially targeted a nested MCP environment table instead of its server table. The argument generation was corrected; that failed launch is excluded from the seven successful sessions. It changed no saved configuration.
 
-## Claude dependency and remaining acceptance
+## Fresh Claude procedure and evidence
 
-Native `claude auth status` returned **`loggedIn: false`, `authMethod: none`, `apiProvider: firstParty`**. The dependent model test stopped there. No sign-in flow was opened, no credential inspected or changed, and no model call or new Claude journal is claimed. Existing historical journals from review 123 and TASKS' 21 October survey are observational context, not substitutes for this missing test.
+The initial native status check was signed out, so model tests initially stopped. The builder then signed in locally; the one requested read-only recheck reported **`loggedIn: true`, `authMethod: claude.ai`, `apiProvider: firstParty`**. The agent never opened a sign-in flow or inspected/changed credentials. The authenticated native tests reported **Claude Code 2.1.282 / `claude-opus-5-5`**.
 
-Once the builder has authenticated Claude Code normally, use fresh isolated **interactive** sessions to compare the default with the supported per-session candidate:
+Interactive sessions were launched through the already-installed local Windows PTY library using an argument array, fresh explicit UUIDs and empty isolated workspaces. The same benign combinatorics prompt as the headless control prohibited all tools, browsing, file inspection and subagents. No existing conversation was resumed. Every successful session used `--permission-mode plan`, an empty `--tools` list, empty strict MCP configuration, disabled slash commands and invocation-scoped `disableAllHooks: true` / `autoMemoryEnabled: false` settings. Nonessential traffic, telemetry, error reporting, auto-updates, marketplace auto-install and auto-memory were disabled through supported invocation [environment variables](https://code.claude.com/docs/en/env-vars). The probe did not directly edit any native configuration file.
+
+Native interactive startup required consent for the repository's external `CLAUDE.md` import; an outside-repository temporary workspace instead required workspace trust. A `--safe-mode` attempt still presented the import consent. **None of these prompts was answered; none reached a model turn or wrote the requested session journal.** The first two attempts timed out around 101 seconds; the safe-mode attempt stopped at the detected prompt after about five seconds. They are excluded from the successful-session counts.
+
+The successful isolation used the supported invocation-only [`claudeMdExcludes` setting](https://code.claude.com/docs/en/settings-reference#claudemdexcludes) to exclude the exact, unrelated repository-root `CLAUDE.md` for this no-tools task. This avoided requesting the external import. Managed policy memory cannot be excluded by that setting; the existing permission policy was not weakened. The workspace was a fresh empty ignored directory beneath the already trusted checkout. The successful runs did **not** use safe mode, bypass permissions or answer any approval/consent prompt. Each reached a recorded `end_turn` and then exited its own fresh process.
+
+The opt-in added `showThinkingSummaries: true` to the invocation's JSON settings; controls left it unset. The standalone user-facing command is:
 
 ```bash
 claude --settings '{"showThinkingSummaries":true}'
 ```
 
-Use the same benign no-tools prompt, preserve the user's permission policy, and compare the native journal's actual nonempty `thinking` text with signature-only / `redacted_thinking` counts. Record version/model, effective setting, session prefixes, bytes and counts only. Check the corresponding interactive expansion separately. A headless `-p` test alone would not establish the documented interactive-default redaction behavior. Do not claim older journals gain missing text, that `alwaysThinkingEnabled` is a persistence option, or that unavailable summaries can be reconstructed.
+Headless controls used separate empty OS-temporary workspaces and the same isolation settings, `--print --verbose --output-format stream-json`. They succeeded with zero error results. This is a separate surface, not a substitute for the interactive test.
 
-Also unmeasured: other models/accounts/providers, saved-config edits, desktop/TUI Codex model turns, connected App Server model turns, hooks, long sessions, and any display/adapter changes. No Drishya rendering behavior changed, so fixture/browser/full-suite reruns would not validate this documentation-only research and were not run. README links and document diff were checked. Root coordination retains the Claude acceptance dependency in TASKS/STATUS; this report does not open a parallel work queue.
+| Surface / requested setting | Session ID prefix | Journal bytes | Records | Thinking blocks | Signature-only blocks | Nonempty thinking blocks | Thinking characters |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Headless, unset | `99b38b42-1977-4324` | 26,405 | 17 | 1 | 1 | 0 | 0 |
+| Headless, `true` | `4802d78e-fa77-4ca4` | 26,233 | 17 | 1 | 1 | 0 | 0 |
+| Interactive, unset | `efca7305-c6dc-4142` | 73,280 | 24 | 1 | 1 | 0 | 0 |
+| Interactive, `true` | `02b798e4-d5b6-4549` | 74,519 | 25 | 1 | 0 | 1 | 501 |
+| Interactive, unset, repeat | `e420428e-ea51-4030` | 73,587 | 24 | 1 | 1 | 0 | 0 |
+| Interactive, `true`, repeat | `bdcdb372-2b7d-48b9` | 73,447 | 24 | 1 | 0 | 1 | 519 |
+
+Total: **6 successful Claude sessions, 347,471 bytes, 131 records, 6 thinking blocks, 4 signature-only blocks, 2 nonempty blocks / 1,020 thinking characters**. The readable material was in a native assistant message's `content` block with `type: thinking` and a nonempty `thinking` string. Its text and signature are deliberately omitted. All successful journals had **zero tool-use blocks, zero malformed records and zero `redacted_thinking` blocks**; the absent-text form was a `thinking` block with a signature. Permission metadata remained `plan`. A signature-only block is not an absence of model reasoning. Existing historical samples from review 123 and TASKS' 21 October survey remain observational context, not fresh controls.
+
+## Limits and validation
+
+The tested commands opt in to summaries the harness exposes; no setting recovers old missing text or guarantees a summary on every future turn. Longer `detailed` output, private reasoning access, all-model/provider support and saved-config mutation were not tested or claimed. The Claude interactive test establishes **journal retention**; the Ctrl+O expansion gesture and Drishya rendering of these fresh sessions were not exercised. The headless result specifically prevents recommending this setting as a general `-p` persistence solution.
+
+Also unmeasured: other models/accounts/providers, Codex desktop/TUI model turns, connected App Server model turns, hooks and long sessions. No Drishya rendering behavior changed, so fixture/browser/full-suite reruns would not validate this documentation-only research and were not run. README links, journal prefix/size consistency and document diff were checked. Root coordination owns TASKS/STATUS updates; this report does not open a parallel work queue.

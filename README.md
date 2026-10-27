@@ -51,7 +51,13 @@ codex exec -c 'model_reasoning_summary="auto"' "your task"
 
 Fresh local sessions used a read-only sandbox and a no-tools prompt. They retained a summary with `auto`, `concise` and `detailed`; two `none` runs retained none. This is a small, model-specific verification, not a guarantee for every turn or Codex surface. `detailed` also worked, but did not establish a longer summary. Keep your normal sandbox and approval policy. See the [official configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference#model_reasoning_summary) and [tested conditions and counts](docs/review/data-8-reasoning-persistence.md). Drishya never changes the setting for you.
 
-**Claude Code: fresh persistence verification blocked.** This machine's Claude Code 2.1.282 was signed out. No Claude persistence setting is recommended as tested; the report records the documented interactive-summary candidate and the remaining authenticated check. DATA-8 remains open for that check.
+**Claude Code interactive CLI: tested on 2.1.282 with `claude-opus-5-5`.** Opt in for a new interactive session with:
+
+```bash
+claude --settings '{"showThinkingSummaries":true}'
+```
+
+Two fresh interactive opt-in runs retained exposed summary text in the native journals; two default runs retained signature-only blocks. Both headless `-p` comparisons retained signature-only blocks, including with this setting, so this is **interactive guidance**. Tests used plan mode with tools disabled. This follows the documented [`showThinkingSummaries` scope](https://code.claude.com/docs/en/settings-reference#showthinkingsummaries); it does not make effort or thinking budgets persistence controls. See the report for versions, isolation and limits.
 
 ---
 
