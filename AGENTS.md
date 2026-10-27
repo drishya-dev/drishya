@@ -71,6 +71,12 @@ Drishya runs on a laptop or PC against local sessions; it is not a cloud or mobi
 
 ---
 
+## Verify on real sessions, not only the demo
+
+The demo and the synthetic fixtures have one shape. Real sessions bring cases they never do: images arrive as a user prompt attachment, as an agent tool's result (Read, a screenshot, a browser or MCP tool), as a file a shell command wrote, or as a path with no bytes; plans, questions and approvals take different forms per harness; outputs can be huge, encrypted or missing; sub-agents, gaps and very large diffs appear. **Before a change that affects what a card, reader, header, list or projection shows is called done**, check it against real local sessions of both harnesses (Claude Code and Codex), picking sessions that actually contain the case, **plus** the fixture. Record what was checked as session id prefixes, sizes and counts only. Screenshots of real sessions stay in `.local/` (never committed, quoted or sent anywhere), and real journal content is never printed. In the PR, say which real sessions and which cases were checked and what could not be: if no real session contains the case, say so and do not claim it. A change checked only on the demo is *demo-checked*, not done. Builder decision, 26 October.
+
+---
+
 ## Non-negotiable constraints
 
 Violating any of these is a bug, not a tradeoff.
@@ -122,6 +128,7 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 - **The event schema changes only by agreement between both builders.** It is the seam between capture and rendering.
 - **Golden tests from the first composer commit.**
 - **No new feature while a performance gate is red, unless the builder explicitly narrows the supported range and records the decision.** Current status: the builder resumed B4 and reference-machine long-session probes now pass their measured gates. Physical low-resource/lower-core and platform acceptance remain release checks. Preserve the paged projection/data-source boundary; do not claim broad release or unmeasured workload readiness. See `docs/review/08-b4-history-reader.md`, [`docs/STATUS.md`](docs/STATUS.md) and [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §7.
+- **Never share `node_modules` between checkouts or worktrees** (no junction, symlink or copy); each runs its own `corepack pnpm install --frozen-lockfile`. Shared links made `@drishya/*` resolve to another tree and broke verification, 27 October.
 - **Fixtures decouple the work.** If rendering is blocked on capture, the fixture corpus is too small — grow it. Only synthetic or redacted fixtures are committed; `.gitignore` refuses `*.jsonl` outside `fixtures/redacted/`.
 
 **Commits by agents** end with a `Co-Authored-By:` trailer naming the agent, so the history shows who wrote what.

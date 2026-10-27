@@ -66,6 +66,18 @@ export function classifyShell(command: string): ShellClass {
 }
 
 /** Parse "path:line:text" or "path:text" hit lines from search output. */
+/**
+ * A text-parsed search hit is registered as a file only if it could be one (BUG-8). Everything before `:NN:` used to
+ * count as a path, so a grep over test output (`ok 146 tests/a.spec.ts:12:1 › title`, `[270/408] tests/a.spec.ts:…`,
+ * `1) tests/a.spec.ts:…`) invented files and folders. A relative path has no whitespace; an absolute path may.
+ */
+export function plausibleHitPath(path: string): boolean {
+  const p = path.trim();
+  if (!p || p !== path) return false;
+  if (/^(?:[a-zA-Z]:[\\/]|[\\/]|~[\\/])/.test(p)) return !/[\r\n\t]/.test(p);
+  return !/\s/.test(p);
+}
+
 export function parseHitLines(output: string, max = 200): { path: string; line?: number; text?: string }[] {
   const hits: { path: string; line?: number; text?: string }[] = [];
   for (const raw of output.split('\n')) {

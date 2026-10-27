@@ -2,6 +2,7 @@ import {CapturedPath,openCapturedPath} from './CapturedPath.tsx';
 import {prosePath} from '../lib/prose-path.ts';
 import { ToolInput } from './ToolInput.tsx';
 import {StructuredResult} from './StructuredResult.tsx';
+import { OpImages } from './OpImages.tsx';
 import { useEffect, useMemo, useState } from 'react';
 import type { EvidenceLink, Operation, Projection } from '@drishya/contracts';
 import { stepOfOperation } from '@drishya/scene';
@@ -82,6 +83,12 @@ export function ScriptDetails({ op, projection }: { op: Operation; projection: P
 }
 
 function OperationMaterial({ op, projection }: { op: Operation; projection: Projection }) {
+  // Script parents keep their own result images: a child relationship never identifies which
+  // returned image belongs to which nested call. Read them here under the exact parent evidence.
+  return <><OperationTextMaterial op={op} projection={projection} />{op.images?.length ? <OpImages key={op.id} images={op.images} /> : null}</>;
+}
+
+function OperationTextMaterial({ op, projection }: { op: Operation; projection: Projection }) {
   const d = op.detail;
   const set = useApp((s) => s.set);
   const artifacts = projection.artifacts.filter((a) => op.artifactIds.includes(a.id));

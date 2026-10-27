@@ -36,7 +36,7 @@ import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
 import { literalPatch, touchesProtectedFile } from '@drishya/capture-core';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks } from './patch.ts';
 import { inWorkspace, relativize, toPosix } from './paths.ts';
-import { classifyShell, parseHitLines, SHELL_RULE } from './shell.ts';
+import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
 import { TurnAccumulator } from './turns.ts';
 import { UsageAccumulator } from './usage.ts';
@@ -1054,6 +1054,8 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       for (const h of hits) {
         if (seen.has(h.path)) continue;
         seen.add(h.path);
+        // The hit stays in the card as captured text; only a plausible path becomes a file reference (BUG-8).
+        if (!plausibleHitPath(h.path)) continue;
         op.paths.push({ path: h.path, role: 'search-hit', basis: op.classification.kind === 'derived' ? 'derived' : 'captured', lines: h.line ? { start: h.line, end: h.line } : undefined });
         c.link({ from: op.id, to: `file:${h.path}`, relation: 'explicit-reference', basis: 'captured-reference', sourceObservationIds: [o.id], explanation: 'This file appears in the search result.' });
       }

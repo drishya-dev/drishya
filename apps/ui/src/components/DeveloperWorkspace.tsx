@@ -79,6 +79,11 @@ export function DeveloperWorkspace() {
     if (primary === path) setPrimary(next[0] ?? '');
     if (secondary === path) setSecondary(next.find(file => file !== primary) ?? '');
     // Closing a view never discards its local draft.
+    requestAnimationFrame(() => {
+      const target=desk.current?.querySelector<HTMLElement>('[role=tab][aria-selected=true], .desk-pane.active .desk-empty button');
+      target?.focus({preventScroll:true});
+      target?.scrollIntoView({block:'nearest',inline:'nearest'});
+    });
   };
   const choose = (path: string) => { if (pane === 1 && split) setSecondary(path); else setPrimary(path); };
   const moveTab=(path:string,target:string)=>{
@@ -138,7 +143,8 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
   const setQuery = (value:string) => setReading(old=>({...old,query:value}));
   const setLine = (value:string) => setReading(old=>({...old,line:value}));
   const setWrap = (value:boolean) => setReading(old=>({...old,wrap:value}));
-  const setActiveLine = (value:number|undefined) => { pendingLine.current=value; setReading(old=>({...old,activeLine:value})); };
+  const [revealRequest,setRevealRequest] = useState(0);
+  const setActiveLine = (value:number|undefined) => { pendingLine.current=value; setReading(old=>({...old,activeLine:value})); if(value!==undefined)setRevealRequest(request=>request+1); };
   const current=useCurrentSource(id,path,!drafts.get(id,path)?.creation),file=current.shown;
   const [error,setError] = useState(''),[preparing,setPreparing]=useState(false);
   const [compareSource,setCompareSource]=useState(false),[compareDisk,setCompareDisk]=useState(false);
@@ -165,6 +171,9 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
     const position = memory.get(`${locationKey}/scroll/${formatted?'document':start}`) as {top:number;left:number}|undefined;
     if(position) { body.current.scrollTop=position.top; body.current.scrollLeft=position.left; }
   },[file,previewDocument,formatted,memory,locationKey,start,editing]);
+  // A line request belongs to this render. Returning from the editor restores
+  // the later reading position, rather than replaying an old navigation request.
+  useLayoutEffect(() => { pendingLine.current=undefined; },[revealRequest]);
   useEffect(() => { if(!draft) { setEditing(false); setComparing(false); } },[draft]);
   const matches = query && file ? file.text.split('\n').flatMap((text,index) => text.toLowerCase().includes(query.toLowerCase()) ? [index+1] : []) : [];
   const edit = async () => {
@@ -208,7 +217,7 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
       {markdown && <div className="desk-document-views" role="group" aria-label="Markdown presentation"><button className="btn ghost" aria-pressed={formatted} onClick={()=>setReading(old=>({...old,formatted:true}))}>Document</button><button className="btn ghost" aria-pressed={!formatted} onClick={()=>setReading(old=>({...old,formatted:false}))}>Source</button></div>}
       {formatted ? <><div className="desk-markdown" ref={body} onScroll={e=>memory.set(`${locationKey}/scroll/document`,{top:e.currentTarget.scrollTop,left:e.currentTarget.scrollLeft})} tabIndex={0} aria-label={`Rendered document ${path}`}>{previewDocument ? <Markdown text={previewDocument.text} document /> : documentError ? <p role="alert">{documentError}<button className="btn ghost" onClick={()=>setReading(old=>({...old,formatted:false}))}>Read source</button></p> : <p role="status">Rendering document…</p>}</div><footer><span>{current.candidate?'Retained reading':'Current disk'}{previewDocument?` · ${previewDocument.totalLines} lines${previewDocument.redacted?' · redacted':''}`:''}</span><button className="btn ghost" disabled={current.busy} onClick={()=>void current.refresh()}>Refresh</button></footer></> : <>
       <div className="desk-source-tools"><SourceFind query={query} change={value => {setQuery(value);setActiveLine(undefined);}} matches={matches} activeLine={activeLine} move={direction => { if(matches.length) { const index=matches.indexOf(activeLine ?? -1); setActiveLine(matches[index<0 ? direction>0 ? 0 : matches.length-1 : (index+direction+matches.length)%matches.length]); } }} label={`Find in ${path}`} idleLabel="" scopeLabel="this file" compact={modern} /><form onSubmit={e => { e.preventDefault(); const n=Number(line); if(!file || !/^\d+$/.test(line) || !Number.isSafeInteger(n) || n<1 || n>file.totalLines) {setError('Enter an existing line number.');return;} setError('');setActiveLine(n); }}><input aria-label={`Go to line in ${path}`} inputMode="numeric" placeholder="Line" value={line} onChange={e => setLine(e.target.value)} /><button className="btn ghost" disabled={!file}>Go</button></form><button className="btn ghost" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap</button>{!modern && copyFileAction}</div>
-      {file ? <div ref={body} onScroll={e => { const node=e.currentTarget; memory.set(`${locationKey}/scroll/${start}`,{top:node.scrollTop,left:node.scrollLeft}); }} className={`desk-code source-reading${wrap?' wrap-source':''}`} tabIndex={0} aria-label={`Source ${path}`}><WholeSource text={file.text} path={path} viewport={body} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={pendingLine.current}/></div> : !error && <p role="status" className="desk-loading">Reading current source…</p>}
+      {file ? <div ref={body} onScroll={e => { const node=e.currentTarget; memory.set(`${locationKey}/scroll/${start}`,{top:node.scrollTop,left:node.scrollLeft}); }} className={`desk-code source-reading${wrap?' wrap-source':''}`} tabIndex={0} aria-label={`Source ${path}`}><WholeSource text={file.text} path={path} viewport={body} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={pendingLine.current} revealRequest={revealRequest}/></div> : !error && <p role="status" className="desk-loading">Reading current source…</p>}
       <footer><span>{file ? `${current.candidate?'Retained reading':'Current disk'} · ${file.totalLines} lines${file.redacted?' · redacted':''}`:'Current disk'}</span><button className="btn ghost" disabled={current.busy} onClick={() => void current.refresh()}>Refresh</button>{draft && <small>Draft retained</small>}<span role="status">{copied}</span></footer></>}
     </>}
     {current.error&&<p className="desk-error" role="alert">{current.error}<button className="btn ghost" onClick={()=>void current.refresh()}>Retry source</button></p>}
