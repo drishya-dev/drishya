@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import {useTurns} from '../lib/turns-store.ts';
-import {ledgerParts,LEDGER_BASIS} from '../lib/turn-ledger.ts';
+import {ledgerBasis,ledgerParts} from '../lib/turn-ledger.ts';
 import './prompt-rail-evidence.css';
 
 export interface PromptChapter { id: string; label: string; index: number; time?:string; turnStep?:number }
@@ -82,6 +82,6 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
         })}
       </div>
     </nav>
-    {preview && chapters[preview.ordinal] && createPortal(<div className="prompt-rail-preview prompt-evidence-preview" style={{ position: 'fixed', top: preview.top, left: preview.left, right: 'auto', opacity: 1, visibility: 'visible', transform: 'none', zIndex: 80 }}><small>Prompt {preview.ordinal + 1} of {chapters.length}</small>{chapters[preview.ordinal]!.time&&<time dateTime={chapters[preview.ordinal]!.time}>{new Date(chapters[preview.ordinal]!.time!).toLocaleString()}</time>}<span>{chapters[preview.ordinal]!.label}</span>{previewLedger&&<div className="prompt-rail-ledger" title={LEDGER_BASIS}><small>{previewLedger.operations} captured operations{previewLedger.open?` · ${previewLedger.open} awaiting results`:null}</small>{ledgerParts(previewLedger).map((part,index)=><span key={index} className={part.tone}>{part.text}</span>)}</div>}</div>, document.body)}
+    {preview && chapters[preview.ordinal] && createPortal(<div className="prompt-rail-preview prompt-evidence-preview" style={{ position: 'fixed', top: preview.top, left: preview.left, right: 'auto', opacity: 1, visibility: 'visible', transform: 'none', zIndex: 80 }}><small>Prompt {preview.ordinal + 1} of {chapters.length}</small>{chapters[preview.ordinal]!.time&&<time dateTime={chapters[preview.ordinal]!.time}>{new Date(chapters[preview.ordinal]!.time!).toLocaleString()}</time>}<span>{chapters[preview.ordinal]!.label}</span>{previewLedger&&<div className="prompt-rail-ledger" title={ledgerBasis(previewLedger)}><small>{previewLedger.operations} captured operations{previewLedger.open?` · ${previewLedger.open} awaiting results`:null}</small>{ledgerParts(previewLedger).map((part,index)=><span key={index} className={part.tone}>{part.text}</span>)}</div>}</div>, document.body)}
   </>;
 }

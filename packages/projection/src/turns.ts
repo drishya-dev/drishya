@@ -25,7 +25,7 @@ export class TurnAccumulator {
     if (o.kind !== 'turn.start' && o.kind !== 'turn.end' && o.kind !== 'turn.detail') return;
     const turnId = (o.payload as { turnId?: unknown }).turnId;
     if (typeof turnId !== 'string' || !turnId) return;
-    const entry = this.entry(turnId, o.agentId);
+    const entry = this.entry(turnId, `${o.recordingId}.${o.agentId}`);
     if (o.kind === 'turn.start') entry.turn.startSequence = Math.min(entry.turn.startSequence ?? Infinity, o.receivedSequence);
     else if (o.kind === 'turn.end') entry.turn.endSequence = Math.max(entry.turn.endSequence ?? -Infinity, o.receivedSequence);
     else entry.details.push(o);
