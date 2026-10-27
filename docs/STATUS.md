@@ -89,7 +89,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **27 October:** PR #255 verifies native reasoning persistence with 13 fresh Codex/Claude sessions, zero tools, version/surface-specific results and PowerShell-safe guidance. [Methods and limits](review/data-8-reasoning-persistence.md).
 - **CONTENT-7, PR #253:** document/resource readers, exact originals, binary/reference distinctions and retained context; 28 actual desktop journeys across both harnesses. Missing genuine typed Claude resources and CSV/table datasets are explicitly fixture-qualified. [Acceptance matrix](review/content-7-document-finish.md). Reader APIs land before #254 activates shared selector and historical-page consumers.
-- **Combined checks:** 856 units, both TypeScript checks, production build and 14 new desktop browser cases pass. No History, schema, current-file regeneration or hosted checks. CONTENT-6 shared selector and captured historical-page wiring are complete in PR #254, with 14 actual checks across both harnesses; all other claims preserved, PERF-2/3 deferred. Prior image/browser History handoffs remain Claude's responsibility.
+- **Combined current-main checks:** 860 units, both TypeScript checks, production build and 31 selector/document/Reader/image desktop browser cases pass. No History, schema, current-file regeneration or hosted checks. CONTENT-6 shared selector and captured historical-page wiring are complete in PR #254, with 14 actual checks across both harnesses; all other claims preserved, PERF-2/3 deferred. Prior image/browser History handoffs remain Claude's responsibility.
 
 ### Yash with Codex — DATA-8 fresh native persistence verification
 

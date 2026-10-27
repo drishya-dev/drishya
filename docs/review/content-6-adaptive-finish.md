@@ -55,3 +55,13 @@ The sampled Claude result previews do not contain sealed resource/document/neste
 Human freeze/truth/ten-minute judgment, physical lower-resource/platform acceptance and native account journeys remain the repository's release gates; this change does not claim those gates or unmeasured workload readiness.
 
 Root combined verification: 856 units, both TypeScript projects, production build and all 14 new selector/document/artifact desktop browser cases passed. The three additional retained folded-JSON cases passed in the agent's 17-case run. Merge order: #255 documentation, #253 reader APIs, then #254 consumer activation.
+
+## Current-main integration follow-up
+
+The current-main browser gate exposed an intermittent long-reader disclosure gesture failure. A trace captured the same connected, initially closed `details` node after Playwright's pointer click resolved, with no click or toggle event delivered to that node. Successful gestures delivered a summary click and a native open toggle. This was a test gesture failure, not evidence that captured document bytes or the selector API regressed; the exact frame/layout mechanism behind the missed pointer target was not established.
+
+The historical-page test now retries the complete native summary gesture only while the disclosure remains closed, verifies the native `open` attribute, and never toggles an already open disclosure. It forces no DOM state and retains all exact-content, page-range and provenance assertions. The helper is used for both initial and later-page handoffs. No production source changed. Ten isolated repetitions and the complete 17-case focused reader gate pass after this test repair.
+
+Current-main integration after Reader/image PR #251: 858 units, both TypeScript checks and build pass. An older parent-script image test now targets its own direct-child summary, since nested format disclosures are valid and must remain available. Final combined desktop browser gate: all 31 selector, document/artifact, Reader/Workspace and image-source cases passed together (33.6 seconds). The source-label API refinement belongs to CONTENT-7; this PR stays within 15 files.
+
+After #255/#253 and BUG-8 #256 merged, the selector was rebased onto main 7de82ec. The root/UI shared dependency junctions were removed without following their targets, then this checkout ran its own corepack pnpm frozen offline install. Final independent gate: 860 units / 148 files, both TypeScript projects, normal pnpm production build and all 31 desktop browser cases passed (46.4 seconds). Bundle identity is unchanged; this supersedes earlier-baseline counts for final merge readiness.

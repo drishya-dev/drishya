@@ -8,6 +8,17 @@ import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 let dir:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-documents-'));app=new App(dir);server=await startServer({app,port:0,token:'synthetic-document'});});
 test.afterAll(async()=>{await server.close();await app.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('unsafe path');rmSync(dir,{recursive:true,force:true});});
+/** A resolved pointer gesture can miss the disclosure while the long reader settles. */
+async function openReadingFormats(reader:import('@playwright/test').Locator){
+ const formats=reader.locator('details.result-original');
+ await expect(async()=>{
+  // Never toggle an already open disclosure when retrying the whole gesture.
+  if(await formats.getAttribute('open')!==null)return;
+  await formats.locator(':scope > summary').click();
+  await expect(formats).toHaveAttribute('open','',{timeout:500});
+ }).toPass({timeout:5000,intervals:[100,250,500]});
+ return formats;
+}
 for(const kind of ['mcp','shell'] as const)test(`${kind} document reading retains exact source, mixed original and bounded format handoffs`,async({page})=>{
  await page.addInitScript(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(value:string)=>{(window as any).copied=value;}}});});
  let remote=0;await page.context().route('https://example.invalid/**',route=>{remote++;return route.abort();});
@@ -35,7 +46,7 @@ for(const basis of ['captured','derived','generated','unavailable'] as const)tes
  if(basis==='unavailable'){await expect(expanded).toContainText(/not captured/i);await expect(expanded.locator('.captured-result-views')).toHaveCount(0);return;}
  const reader=expanded.locator('.artifact-reader.source-reading');await expect(reader.locator('[data-source-line="1"]')).toBeAttached();
  if(basis!=='captured'){await expect(reader.locator('.captured-result-views')).toHaveCount(0);await expect(reader).toContainText(basis==='derived'?'Derived page':'Generated page');return;}
- const formats=reader.locator('details.result-original');await formats.locator('summary').click();await formats.getByRole('button',{name:'Inspect documents · 1',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Captured documents',exact:true});await expect(dialog).toContainText('source lines 1–200');await expect(dialog).toContainText('supplied page only');await expect(dialog.locator('.resource-source')).toHaveText(text.split('\n').slice(0,200).join('\n'));await dialog.getByRole('button',{name:'Read as Markdown',exact:true}).click();await expect(dialog.getByRole('heading',{name:'Stored document',exact:true})).toBeVisible();await dialog.locator('.document-material').focus();await page.keyboard.press('Escape');await reader.getByRole('button',{name:'Next lines',exact:true}).click();await expect(reader.locator('[data-source-line="201"]')).toBeAttached();await reader.locator('details.result-original > summary').click();await reader.locator('details.result-original').getByRole('button',{name:'Inspect documents · 1',exact:true}).click();await expect(dialog).toContainText('source lines 201–400');await expect(dialog.locator('.resource-source')).toHaveText(text.split('\n').slice(200,400).join('\n'));
+ const formats=await openReadingFormats(reader);await formats.getByRole('button',{name:'Inspect documents · 1',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Captured documents',exact:true});await expect(dialog).toContainText('source lines 1–200');await expect(dialog).toContainText('supplied page only');await expect(dialog.locator('.resource-source')).toHaveText(text.split('\n').slice(0,200).join('\n'));await dialog.getByRole('button',{name:'Read as Markdown',exact:true}).click();await expect(dialog.getByRole('heading',{name:'Stored document',exact:true})).toBeVisible();await dialog.locator('.document-material').focus();await page.keyboard.press('Escape');await reader.getByRole('button',{name:'Next lines',exact:true}).click();await expect(reader.locator('[data-source-line="201"]')).toBeAttached();await openReadingFormats(reader);await reader.locator('details.result-original').getByRole('button',{name:'Inspect documents · 1',exact:true}).click();await expect(dialog).toContainText('source lines 201–400');await expect(dialog.locator('.resource-source')).toHaveText(text.split('\n').slice(200,400).join('\n'));
 });
 for(const basis of ['captured','derived'] as const)test(`stored output ${basis} forwards page limits without relabelling derived material`,async({page})=>{
  const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8')),op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp'),artifact=sample.projection.artifacts.find((a:{kind:string})=>a.kind==='excerpt');
