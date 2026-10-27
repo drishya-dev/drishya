@@ -2,10 +2,11 @@ import {CapturedResultViews} from './CapturedResultViews.tsx';
 import { useMemo, useState } from 'react';
 import { Output } from './common';
 import { toolOutputText } from '../lib/tool-output';
+import type {CapturedContentEvidence} from '../lib/captured-content.ts';
 
 /** This display projection never changes stored bytes, source line addresses or copy/search input. */
-export function ToolOutput({text,inspect=true}:{text:string;inspect?:boolean}){
- return <><ToolOutputBody text={text}/>{inspect&&<CapturedResultViews text={text}/>}</>;
+export function ToolOutput({text,inspect=true,evidence}:{text:string;inspect?:boolean;evidence?:CapturedContentEvidence}){
+ return <><ToolOutputBody text={text}/>{inspect&&<CapturedResultViews text={text} evidence={evidence}/>}</>;
 }
 function ToolOutputBody({text}:{text:string}) {
   const formatted = useMemo(() => toolOutputText(text), [text]);
