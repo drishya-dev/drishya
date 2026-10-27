@@ -47,7 +47,7 @@ function revision(op: Operation, previous?: PlanRevision): PlanRevision {
     if (!previous) return { text: item.text, status: item.status };
     const was = before.get(item.text);
     if (was === undefined) return { text: item.text, status: item.status, change: 'added' };
-    // A missing or unfamiliar state supplies no evidence for a canonical state transition.
+    // An empty or unfamiliar state supplies no evidence for a canonical state transition.
     if (ambiguous.has(item.text) || was === item.status || !knownStates.has(was) || !knownStates.has(item.status)) return { text: item.text, status: item.status };
     const change: PlanChange = item.status === 'completed' ? 'completed' : item.status === 'in_progress' ? 'started' : rank(item.status) < rank(was) ? 'reopened' : 'started';
     return { text: item.text, status: item.status, change };

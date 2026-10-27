@@ -4,6 +4,8 @@ import { join, resolve, sep } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Store } from '@drishya/store';
 import { Ingestor } from '@drishya/ingest';
+import { intentOf as claudeIntent } from '../../adapter-claude/src/index.ts';
+import { intentOf as codexIntent } from '../../adapter-codex/src/index.ts';
 import type { Projection } from '@drishya/contracts';
 import { asOfProjection, compose, pinnedPlans, planThreads } from '../src/index.ts';
 import { PLAN_ITEMS, PLAN_REVISIONS, planItems, planPrompt, planRows } from '../../../tests/fixtures/plan-living.ts';
@@ -27,6 +29,12 @@ afterAll(() => {
 });
 
 describe('CONTENT-4 living checklist acceptance', () => {
+  it('receives omitted native item statuses as empty strings at the existing adapter boundary', () => {
+    const expected = { kind: 'plan', items: [{ text: 'Literal item', status: '' }] };
+    expect(claudeIntent('TodoWrite', { todos: [{ content: 'Literal item' }] })).toEqual(expected);
+    expect(codexIntent('update_plan', { plan: [{ step: 'Literal item' }] })).toEqual(expected);
+  });
+
   it('keeps all thirteen captured lists reachable in one thread and pins only the latest', () => {
     const positions = planThreads(projection);
     expect(positions.size).toBe(PLAN_REVISIONS);
