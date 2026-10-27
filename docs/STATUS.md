@@ -31,8 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-
-| DATA-7 | @yash + Codex native verification agent | `codex/fresh-plan-diff-verification` | 2026-10-27 | Whole fresh CLI/App Server plan/diff verification, as the prerequisite to completing CONTENT-4: ignored bounded native probes and counts-only existing report/minimal synthetic shape fixtures if observed. Up to 15 files; no adapter/contracts/projection/History or schema changes. Fresh scratch sessions only, native-owned file changes, no approvals answered, no native configuration/credential/journal mutation. Coordinate concrete commands and sandbox before model calls; source absence alone is not the stopping condition. |
 | CONTENT-4 | @yash + Codex | `codex/whole-plan-acceptance` | 2026-10-27 | User resumed whole integration 27 Oct: result-confirmed native task projection and identity, plan/checklist scene/UI and Codex proposed-plan material, focused fixtures/tests and real acceptance/report. Proposed contract changes stay draft for other-builder agreement before merge. No History, adapter-claude (HOME-1), question mapping (CONTENT-3), PERF-2/3 or native model calls. Up to 15 files, consolidate existing review commits to keep about five. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | HOME-1 | @harsh + Codex | `harsh/home-1-titles-running` | 2026-10-27 | `apps/ui/src/modern/SessionHome.tsx`, `apps/ui/src/lib/session-title.ts`, Home stylesheets (`session-home.css`, `home-active.css`), session-discovery title code in `packages/adapter-claude/src/index.ts`, bounded-tail helper in `packages/capture-core/src/discover.ts` (64 KiB selected by the 27 Oct counts-only survey; Harsh authorized), plus tests. No contracts/ingest/store yet. |
@@ -45,6 +43,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex native verification agent - whole DATA-7 complete
+
+- **27 October, PR #259:** four fresh native turns verify proposed-plan and individual-file-change persistence, stream/journal schema differences and connected-only aggregate diffs. Both authorized fixtures changed exactly alpha to beta; no shell calls or approval answers. [Exact shapes, counts and limits](review/data-7-plan-diff-verification.md).
+- **Compatibility finding:** native exec records forced approval never despite invocation on-request; App Server retained the requested on-request policy. This is an observed native surface boundary, not product-controller or NATIVE-1 approval acceptance. No workaround/retry or saved-policy change; sandbox roots stayed limited to the authorized scratch folders.
+- **Whole-task order:** READ-4 is complete in predecessor #260; DATA-7 research now complete. CONTENT-4 mapping is now implemented in draft #258 and awaits D10 contract review plus its explicit native acceptance gates; main still has the old generic projection. CONTENT-8 stays draft behind upstream dependencies. Other claims preserved; no runtime/schema change from this report.
 
 ### Yash with Codex passage agent - READ-4 complete
 
