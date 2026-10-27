@@ -5,16 +5,16 @@ import {dataLabel,dataText,pointerKey,structuredData,visibleDataNodes} from '../
 import './structured-data.css';
 
 /** Parsing and indexing happen only after an explicit reading request. */
-export function DataInspection({text,available,label='Inspect data',context}:{text:string;available?:boolean;label?:string;context?:string}){
- const [opened,setOpened]=useState<{text:string;context?:string}>();
+export function DataInspection({text,available,label='Inspect data',context,sourceLabel='Original'}:{text:string;available?:boolean;label?:string;context?:string;sourceLabel?:string}){
+ const [opened,setOpened]=useState<{text:string;context?:string;sourceLabel:string}>();
  const eligible=available??(text.length<=262144&&/^\s*[\[{]/.test(text));
  if(!eligible&&opened===undefined)return null;
  return <div className="data-inspection" onClick={event=>event.stopPropagation()}>
-  {eligible&&<button type="button" onClick={()=>setOpened({text,context})}>{label}</button>}
-  {opened!==undefined&&<DataReader text={opened.text} context={opened.context} close={()=>setOpened(undefined)}/>}
+  {eligible&&<button type="button" onClick={()=>setOpened({text,context,sourceLabel})}>{label}</button>}
+  {opened!==undefined&&<DataReader text={opened.text} context={opened.context} sourceLabel={opened.sourceLabel} close={()=>setOpened(undefined)}/>}
  </div>;
 }
-function DataReader({text,context,close}:{text:string;context?:string;close:()=>void}){
+function DataReader({text,context,sourceLabel,close}:{text:string;context?:string;sourceLabel:string;close:()=>void}){
  const data=useMemo(()=>structuredData(text),[text]);
  const [mode,setMode]=useState<'tree'|'table'|'original'>(data?.table?'table':'tree');
  const [expanded,setExpanded]=useState(new Set([''])),[query,setQuery]=useState(''),[top,setTop]=useState(0),[selected,setSelected]=useState(''),[copied,setCopied]=useState('');
@@ -37,7 +37,7 @@ function DataReader({text,context,close}:{text:string;context?:string;close:()=>
  const toggle=(pointer:string)=>setExpanded(previous=>{const next=new Set(previous);if(next.has(pointer))next.delete(pointer);else next.add(pointer);return next;});
  return <ReadingDialog title="Captured data" className="structured-data-dialog" close={close}>
   <div className="data-reader-body">{context&&<p className="material-context">{context}</p>}
-   <div className="data-reader-toolbar"><div role="group" aria-label="Data view">{(data?.table?['table','tree','original']:['tree','original']).map(view=><button key={view} type="button" aria-pressed={mode===view} onClick={()=>{setMode(view as typeof mode);reset();}}>{view==='tree'?'Tree':view==='table'?'Table':'Original'}</button>)}</div><button type="button" onClick={()=>void copy(text)}>Copy original</button></div>
+   <div className="data-reader-toolbar"><div role="group" aria-label="Data view">{(data?.table?['table','tree','original']:['tree','original']).map(view=><button key={view} type="button" aria-pressed={mode===view} onClick={()=>{setMode(view as typeof mode);reset();}}>{view==='tree'?'Tree':view==='table'?'Table':sourceLabel}</button>)}</div><button type="button" onClick={()=>void copy(text)}>Copy {sourceLabel.toLowerCase()}</button></div>
    {!data&&<p className="material-context">Tree unavailable: requires complete JSON with lossless number support within 256 KiB, fewer than 25,000 values and 80 levels. Original captured text remains available.</p>}
    {data&&mode==='tree'&&<label className="data-find">Find key or value<input value={query} onChange={event=>{setQuery(event.target.value);reset();}} placeholder="Search captured data…"/></label>}
    {(mode==='original'||!data)?<pre className="data-original" tabIndex={0}>{text}</pre>:<div ref={viewport} className="data-viewport" tabIndex={0} onScroll={event=>setTop(event.currentTarget.scrollTop)}>

@@ -48,3 +48,9 @@ it('inline result fields and argument fields retain large numbers, negative zero
  for(const Component of [StructuredResult,(props:{text:string})=>createElement(ToolInput,{value:props.text})]){const html=renderToStaticMarkup(createElement(Component,{text:raw}));for(const literal of ['9007199254740993','-0','1.2300','1e999'])expect(html).toContain(literal);expect(html).not.toContain('9007199254740992');}
  const html=renderToStaticMarkup(createElement(StructuredResult,{text:`[${raw}]`}));expect(html).toContain('<td>9007199254740993</td>');expect(html).toContain('<td>-0</td>');
 });
+it('uses supplied captured MIME before syntax hints and retains empty typed document text',()=>{
+ expect(capturedContent('# Captured\n\nExact source',{mime:'text/markdown; charset=utf-8'}).documents?.items).toEqual([{field:'Supplied captured text',text:'# Captured\n\nExact source',mime:'text/markdown'}]);
+ expect(capturedContent('',{mime:'text/plain'}).documents?.items[0]?.text).toBe('');
+ expect(capturedContent('界'.repeat(90000),{mime:'text/plain'}).documents).toBeUndefined();
+ expect(capturedContent('missing.pdf',{mime:'application/pdf'}).documents).toBeUndefined();
+});
