@@ -8,6 +8,7 @@ import { reasoningGap } from '../lib/reasoning-gap.ts';
 import './reasoning-gap.css';
 import { ToolInput } from './ToolInput.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
+import { isQuestionTool } from '../lib/ask-question.ts';
 import { ToolOutput } from './ToolOutput.tsx';
 import { DelegationDetail, DelegationLine } from './DelegationDetail.tsx';
 import { ScriptDetails } from './Inspector.tsx';
@@ -939,7 +940,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
     case 'spawn':
       return <DelegationDetail op={op} d={d}/>;
     case 'other':
-      if (op.tool === 'AskUserQuestion') return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}><QuestionCard op={op}/><div className="material-context">Captured result</div><ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for the answer' : 'No result content captured')}/></div>;
+      if (isQuestionTool(op.tool)) return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}><QuestionCard op={op}/><div className="material-context">Captured result</div><ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for the answer' : 'No result content captured')}/></div>;
       return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">Captured input</div>
         <ToolInput value={d.input}/>
@@ -1064,7 +1065,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'plan':
       return <PlanChecklist op={op}/>;
     default:
-      if (op.tool === 'AskUserQuestion') return <QuestionCard op={op}/>;
+      if (isQuestionTool(op.tool)) return <QuestionCard op={op}/>;
       return <>
         <ToolInput value={d.input}/>
         <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : undefined}</ResultArea>
