@@ -102,6 +102,23 @@ Total: **6 successful Claude sessions, 347,471 bytes, 131 records, 6 thinking bl
 
 ## Limits and validation
 
+README command quoting was checked separately with a benign native Node executable that printed only received setting arguments. No model prompt, model call, native configuration write or `--help` parse assumption was involved. The actual shells were **Windows PowerShell 5.1.26100.9711** and **PowerShell 7.6.7**:
+
+| Shell / argument form | Received Codex setting argument | Received Claude settings argument | Consequence |
+| --- | --- | --- | --- |
+| Windows PowerShell 5.1, Bash-style single-quoted literals | `model_reasoning_summary=auto` | `{showThinkingSummaries:true}` | Embedded quotes were removed; the Claude value is not valid JSON |
+| Windows PowerShell 5.1, README's `--%` variants | `model_reasoning_summary="auto"` | `{"showThinkingSummaries":true}` | Both exact setting strings preserved, including when invoking a quoted full native executable path with `&` |
+| PowerShell 7.6.7, original single-quoted literals | `model_reasoning_summary="auto"` | `{"showThinkingSummaries":true}` | Both exact setting strings preserved |
+
+The tested Windows PowerShell 5.1 commands are:
+
+```powershell
+codex.exe --% exec -c model_reasoning_summary=\"auto\" "your task"
+claude.exe --% --settings "{\"showThinkingSummaries\":true}"
+```
+
+The probe substituted Node for the native harness and omitted the prompt; the actual native argument-array sessions already established that those exact setting values are accepted. The `--%` variants are deliberately documented for Windows PowerShell 5.1 only: they did not preserve the same arguments in the observed PowerShell 7.6.7 host. Native executable resolution is separate from quoting; use the installed `.exe` path rather than assuming an npm PowerShell shim behaves identically. No shim, encoded command, installer or shell-interpolated model prompt was used.
+
 The tested commands opt in to summaries the harness exposes; no setting recovers old missing text or guarantees a summary on every future turn. Longer `detailed` output, private reasoning access, all-model/provider support and saved-config mutation were not tested or claimed. The Claude interactive test establishes **journal retention**; the Ctrl+O expansion gesture and Drishya rendering of these fresh sessions were not exercised. The headless result specifically prevents recommending this setting as a general `-p` persistence solution.
 
 Also unmeasured: other models/accounts/providers, Codex desktop/TUI model turns, connected App Server model turns, hooks and long sessions. No Drishya rendering behavior changed, so fixture/browser/full-suite reruns would not validate this documentation-only research and were not run. README links, journal prefix/size consistency and document diff were checked. Root coordination owns TASKS/STATUS updates; this report does not open a parallel work queue.
