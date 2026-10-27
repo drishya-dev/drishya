@@ -1,0 +1,28 @@
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve,sep} from 'node:path';
+import {expect,test} from './legacy-test.ts';
+import {pointAtHistory} from './history-gestures.ts';
+import {App} from '../../apps/daemon/src/app.ts';
+import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+let dir:string,app:App,server:RunningServer;
+test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-documents-'));app=new App(dir);server=await startServer({app,port:0,token:'synthetic-document'});});
+test.afterAll(async()=>{await server.close();await app.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('unsafe path');rmSync(dir,{recursive:true,force:true});});
+for(const kind of ['mcp','shell'] as const)test(`${kind} document reading retains exact source, mixed original and bounded format handoffs`,async({page})=>{
+ await page.addInitScript(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(value:string)=>{(window as any).copied=value;}}});});
+ let remote=0;await page.context().route('https://example.invalid/**',route=>{remote++;return route.abort();});
+ const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8')),op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.kind=kind;op.artifactIds=[];if(kind==='shell')op.origin={type:'native',tool:'shell_command'};
+ const markdown='# Captured document\r\n\r\n| Item | Value |\r\n| --- | --- |\r\n| Literal | 42 |\r\n\r\n<img src="https://example.invalid/image">\r\n\r\n[External](https://example.invalid/current)';
+ const payload={content:[{type:'text',mimeType:'text/markdown',text:markdown},{type:'resource',resource:{uri:'resource://data',mimeType:'application/json',text:'{"items":[{"value":42},{"value":43}]}'}},{type:'text',text:'literal\r\n'.repeat(5001)},{type:'resource_link',uri:'https://example.invalid/report',mimeType:'application/pdf'},{type:'opaque',body:'Unknown mixed sibling remains exact'}]};
+ const raw=kind==='shell'?JSON.stringify({output:JSON.stringify(payload),exit_code:0}):JSON.stringify(payload);op.detail=kind==='shell'?{kind:'shell',command:'read captured document',outputPreview:raw,exitCode:0}:{kind:'mcp',server:'documents',tool:'arbitrary',input:{},resultPreview:raw};
+ await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();const trigger=card.getByRole('button',{name:'Inspect documents · 3',exact:true});await trigger.click();
+ const dialog=page.getByRole('dialog',{name:'Captured documents',exact:true});await expect(dialog.locator('.resource-source')).toHaveText(markdown);await dialog.getByRole('button',{name:'Copy captured text',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe(markdown);
+ await dialog.getByRole('button',{name:'Document',exact:true}).click();await expect(dialog.getByRole('heading',{name:'Captured document',exact:true})).toBeVisible();await expect(dialog.getByRole('table')).toBeVisible();expect(await dialog.locator('img,iframe,script,a').count()).toBe(0);expect(remote).toBe(0);
+ await dialog.getByRole('button',{name:'Original result',exact:true}).click();await expect(dialog.locator('.resource-source')).toHaveText(raw);await dialog.getByRole('button',{name:'Copy original result',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe(raw);
+ await dialog.getByRole('combobox',{name:'Captured document'}).selectOption('1');await dialog.getByRole('button',{name:'Inspect data',exact:true}).click();const nested=page.getByRole('dialog',{name:'Captured data',exact:true});await expect(nested).toBeVisible();await page.keyboard.press('Escape');await expect(nested).toHaveCount(0);await expect(dialog).toBeVisible();await expect(dialog.getByRole('button',{name:'Inspect data',exact:true})).toBeFocused();
+ await dialog.getByRole('combobox',{name:'Captured document'}).selectOption('2');await expect(dialog.getByRole('button',{name:'Read as Markdown',exact:true})).toHaveCount(0);await expect(dialog).toContainText('Complete supplied Source remains available');await expect(dialog.locator('.resource-source')).toHaveText(payload.content[2]!.text!);
+ for(const width of [1440,600]){await page.setViewportSize({width,height:900});await dialog.getByRole('combobox',{name:'Captured document'}).selectOption('0');await dialog.getByRole('button',{name:'Document',exact:true}).click();const box=(await dialog.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/document-${kind}-${width}.png`)});}
+ await dialog.locator('.document-material').focus();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();expect(remote).toBe(0);
+ await card.getByRole('button',{name:'Inspect resources · 2',exact:true}).click();const resources=page.getByRole('dialog',{name:'Captured resources',exact:true});await resources.getByRole('button',{name:'Original result',exact:true}).click();await expect(resources.locator('.resource-original')).toHaveText(raw);await resources.getByRole('button',{name:'Copy original result',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe(raw);
+});

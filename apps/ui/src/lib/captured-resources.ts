@@ -27,6 +27,7 @@ export function capturedResources(text:string):ResourceSelection|undefined{
   if(Array.isArray(value.content))visit(value.content,`${field}/content`,depth+1);
   if(Array.isArray(value.results)){if(value.results.length>64)limited=true;for(let i=0;i<Math.min(value.results.length,64);i++){const item=value.results[i];if(record(item))push(item,`${field}/results/${i}`,item.url);}}
   if(value.status==='fulfilled')visit(value.value,`${field}/value`,depth+1);
+  if(record(value.result)||Array.isArray(value.result))visit(value.result,`${field}/result`,depth+1);
   const embedded=value.type==='text'&&typeof value.text==='string'?{text:value.text,path:`${field}/text (JSON)`}:typeof value.output==='string'&&['exit_code','wall_time_seconds','chunk_id','session_id'].some(key=>key in value)?{text:value.output,path:`${field}/output (JSON)`}:undefined;
   if(embedded){let nested:unknown;try{nested=JSON.parse(embedded.text);}catch{return;}visit(nested,embedded.path,depth+1);}
  };
@@ -56,6 +57,7 @@ export function capturedDocuments(text:string):DocumentSelection|undefined{
   else if(value.type==='text'||(depth===0&&typeof value.mimeType==='string'))push(value,`${field}/text`);
   if(Array.isArray(value.content))visit(value.content,`${field}/content`,depth+1);
   if(value.status==='fulfilled')visit(value.value,`${field}/value`,depth+1);
+  if(record(value.result)||Array.isArray(value.result))visit(value.result,`${field}/result`,depth+1);
   const nested=value.type==='text'&&typeof value.text==='string'?{text:value.text,path:`${field}/text (JSON)`}:typeof value.output==='string'&&['exit_code','wall_time_seconds','chunk_id','session_id'].some(key=>key in value)?{text:value.output,path:`${field}/output (JSON)`}:undefined;
   if(nested){let parsed:unknown;try{parsed=JSON.parse(nested.text);}catch{return;}visit(parsed,nested.path,depth+1);}
  };

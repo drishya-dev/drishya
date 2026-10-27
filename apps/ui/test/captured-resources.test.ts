@@ -56,3 +56,7 @@ it('distinguishes captured binary resources and reported sizes from absent bodie
  expect(capturedResources(JSON.stringify({type:'resource',resource:{uri:'resource://pdf',mimeType:'application/pdf',blob:'YWJj',size:3}}))?.items[0]).toEqual({field:'/resource',uri:'resource://pdf',title:'resource://pdf',mime:'application/pdf',binary:true,size:3});
  expect(capturedResources(JSON.stringify({type:'resource_link',uri:'resource://pdf',size:-1}))?.items[0]?.size).toBeUndefined();
 });
+it('follows native result wrappers without losing resource and document field identity',()=>{
+ const raw=JSON.stringify({status:'fulfilled',value:{result:{content:[{type:'resource',resource:{uri:'resource://guide',mimeType:'text/markdown',text:'# Exact'}}]}}});
+ expect(capturedResources(raw)?.items[0]?.field).toBe('/value/result/content/0/resource');expect(capturedDocuments(raw)?.items[0]).toMatchObject({field:'/value/result/content/0/resource/text',text:'# Exact'});
+});
