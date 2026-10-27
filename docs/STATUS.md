@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| BUG-8 | @yash + Claude | `claude/bug-8-fake-paths` | 2026-10-27 | `packages/projection/src/shell.ts` (`parseHitLines`) plus its tests and a reducer version bump; TASKS/STATUS. No History, daemon, contracts or UI changes. |
 | CONTENT-6 | @yash + Codex selector agent | `codex/adaptive-content-finish` | 2026-10-27 | Whole shared adaptive selection: captured-content helper, CapturedResultViews, ToolInput/ToolOutput/StructuredResult and necessary terminal integration plus ArtifactReader captured historical-page selector wiring, dedicated tests/report. Metadata/blocks/artifact evidence, mixed/raw/limits/unavailable and live/replay/Legacy-backed Modern acceptance. Up to 15 files; no History, Inspector, adapters/contracts/projection or CONTENT-7 reader internals. |
 | CONTENT-7 | @yash + Codex document agent | `codex/structured-document-finish` | 2026-10-27 | Whole structured/document finish: StructuredDataReader, DelimitedDataReader, CapturedResources, their dedicated libs/styles/tests/report; safe resource/document/artifact handoffs, raw/source provenance and selected numeric evidence only. Up to 15 files; no captured-content/CapturedResultViews/ToolInput/ToolOutput/StructuredResult/common, History, Inspector, capture/schema or FILES-4 readers. Coordinate shared helper APIs with CONTENT-6; provide artifact acceptance/patch, while its consumer wiring lands in CONTENT-6 to avoid a circular PR dependency. |
 | DATA-8 | @yash + Codex research agent | `codex/reasoning-persistence-verification` | 2026-10-27 | Whole reasoning-persistence research: installed native capabilities, fresh isolated sessions if signed in, safe config overrides only (no native config/credential edits), counts-only actual evidence and tested README guidance/report. No runtime/schema/frontend changes, no resumed existing session or answering approvals. Up to 15 files. |
@@ -46,6 +45,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — BUG-8: fake file paths from search output
+- **Cause and fix:** `parseHitLines` took everything before `:NN:` as a path, so a grep over test-runner output invented files and folders (`ok 146 tests`, `[270`, `1) tests`) in the Files tree, file counts, timeline and link graph. Only plausible paths now become file references (reducer r18); the hit text stays in the card. Real sessions: 31 fake paths removed from an 83 MB Claude session, real hits unchanged.
+- **Also found (environment):** Codex worktrees share `node_modules` with the main checkout by junction, so `@drishya/*` links point at whichever tree relinked last; typecheck and unit tests in the main checkout were running against another worktree's packages. Verification now runs in an isolated worktree with its own install. See STATUS decisions.
 
 ### Yash with Claude (Sonnet 5.5) — READ-4: passage layout measured and guarded
 - **Result:** at 1024/1280/1440/1920 px on the two fixtures and a 12-tool synthetic passage, reading order is row-major, no card is orphaned, every consecutive pair has a wire from card edge to card edge, and no wire crosses a card (0 of 28 wires at each width). New `passage-layout.spec.ts` keeps it (12 tests; fails when order, gap or the wire obstruction test is broken). No app code changed.
