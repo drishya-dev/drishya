@@ -1,4 +1,7 @@
-/** Claude's AskUserQuestion, read from its captured input and result text. Display only; unknown shapes return nothing. */
+/** The tools that put a question to the person: Claude's AskUserQuestion and Codex's request_user_input_async. */
+export const isQuestionTool = (tool: unknown) => tool === 'AskUserQuestion' || tool === 'request_user_input_async';
+
+/** A question read from its captured input and result text (Claude's AskUserQuestion, Codex's request_user_input_async). Display only; unknown shapes return nothing. */
 export interface AskOption { label: string; description?: string }
 export interface AskQuestion { question: string; header?: string; multiSelect: boolean; options: AskOption[]; /** The captured answer text, when the result names this question. */ answer?: string; chosen: string[]; /** Answer words that are not one of the offered options (the person typed their own). */ typed?: string }
 
@@ -9,10 +12,15 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
   if (!Array.isArray(raw)) return [];
   const questions = raw.slice(0, 6).flatMap((item): AskQuestion[] => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
-    const entry = item as { question?: unknown; header?: unknown; multiSelect?: unknown; options?: unknown };
-    const question = text(entry.question, 800);
-    if (!question || !Array.isArray(entry.options)) return [];
-    const options = entry.options.slice(0, 8).flatMap((option): AskOption[] => {
+    // Codex names the question `title` and lists options as plain strings, or none at all; Claude uses `question` and {label, description}.
+    const entry = item as { question?: unknown; title?: unknown; header?: unknown; multiSelect?: unknown; options?: unknown };
+    const question = text(entry.question ?? entry.title, 800);
+    if (!question) return [];
+    const offered = Array.isArray(entry.options) ? entry.options : [];
+    if (!Array.isArray(entry.options) && entry.question !== undefined) return [];
+    const options = offered.slice(0, 8).flatMap((option): AskOption[] => {
+      // A capture that summarised a deep option leaves `{…}`; that is a placeholder, not an offered choice.
+      if (typeof option === 'string') return option && !/^[{[]…[}\]]$/.test(option) ? [{ label: option.slice(0, 200) }] : [];
       const label = text((option as { label?: unknown })?.label, 200);
       return label ? [{ label, ...(text((option as { description?: unknown }).description) ? { description: text((option as { description?: unknown }).description) } : {}) }] : [];
     });
@@ -48,4 +56,13 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
     if (rest) mark.q.typed = rest;
   });
   return questions;
+}
+
+/** What Codex recorded as the result of a question: only whether it was accepted (`{"accepted":true}`), never the answer. */
+export function questionAcceptance(result?: string): boolean | undefined {
+  if (!result) return undefined;
+  try {
+    const parsed = JSON.parse(result) as { accepted?: unknown };
+    return typeof parsed?.accepted === 'boolean' ? parsed.accepted : undefined;
+  } catch { return undefined; }
 }

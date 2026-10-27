@@ -39,13 +39,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TEST-2 | @harsh + Codex | `harsh/test-2-reading-jump` | 2026-10-27 | `History.tsx` (reading-anchor and height-measurement code only), plus tests. |
 | CONTENT-1 | @yash + Codex image agent | `codex/whole-images` | 2026-10-26 | Whole remaining image acceptance: OpImages/current-image helpers/routes, Inspector OperationMaterial (exact captured parent-script images), image tests/report and genuine Codex/Claude desktop sources. Yash explicitly authorized two isolated Codex adapter fixes on 26 Oct: image_gen.generation alias and remote-image omission; no schema or other DATA-3 changes. Up to 15 files; no History/common edits. |
 | CONTENT-2 | @yash + Codex browser agent | `codex/whole-browser` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. Up to 15 files; no adapter/contracts/projection or READ-4 test. |
-| CONTENT-3 | @yash + Claude Sonnet 5.5 | `claude/content-3-codex-questions` | 2026-10-27 | Codex question operations (`request_user_input` and agent questions) as the same first-class question card Claude has, checked on real recordings `4b5ca5b1`/`4d842553`; approvals card review. Files: `packages/projection` (question mapping only), `apps/ui` question view, tests; no schema change. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — CONTENT-3: Codex question cards
+- **Result:** Codex questions (`request_user_input_async`) render as the Claude question card with their offered options and an honest note that Codex recorded only "accepted", never the answer. Checked on two real Codex sessions and one Claude session (counts in TASKS CONTENT-3).
+- **Open:** CONTENT-3 stays open for pending Codex questions in a connected session, `AgentMessage.questions` and approvals (no local samples). Separately: TEST-2 (#252) still fails `b2-live` `:139`/`:186` on this machine in 2 of 3 whole-file runs, with the original 169 px jump; commented on the PR.
 
 ### Yash with Claude (Sonnet 5.5) — DATA-3: recorded turn facts in the turn chapter
 - **Result:** the ledger under each Codex prompt uses the duration Codex recorded, names an interrupted turn or a recorded error, and a quiet line shows the settings the turn ran under (all on the agent's first turn, then only changes). Claude Code is unchanged. Reducer r19 (agent ids on `Projection.turns` now match the timeline). Checked on six real Codex journals and a 16-prompt session in the UI; numbers in TASKS DATA-3.
