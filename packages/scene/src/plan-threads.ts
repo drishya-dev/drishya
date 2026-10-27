@@ -26,6 +26,7 @@ export interface PlanThread {
 export interface PlanPosition { thread: PlanThread; index: number }
 
 const rank = (status: string) => (status === 'completed' ? 2 : status === 'in_progress' ? 1 : 0);
+const knownStates = new Set(['pending', 'in_progress', 'completed']);
 
 /** Repeated labels do not identify individual tasks; their literal states stay readable. */
 function repeatedLabels(items: readonly { text: string }[]): Set<string> {
@@ -46,7 +47,8 @@ function revision(op: Operation, previous?: PlanRevision): PlanRevision {
     if (!previous) return { text: item.text, status: item.status };
     const was = before.get(item.text);
     if (was === undefined) return { text: item.text, status: item.status, change: 'added' };
-    if (ambiguous.has(item.text) || was === item.status) return { text: item.text, status: item.status };
+    // A missing or unfamiliar state supplies no evidence for a canonical state transition.
+    if (ambiguous.has(item.text) || was === item.status || !knownStates.has(was) || !knownStates.has(item.status)) return { text: item.text, status: item.status };
     const change: PlanChange = item.status === 'completed' ? 'completed' : item.status === 'in_progress' ? 'started' : rank(item.status) < rank(was) ? 'reopened' : 'started';
     return { text: item.text, status: item.status, change };
   });
