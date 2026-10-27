@@ -14,3 +14,9 @@
 .resource-list>button:focus-visible,.resource-actions :is(a,button):focus-visible,.resource-modes button:focus-visible{outline:1px solid var(--t2);outline-offset:-2px}
 @media(max-width:650px){.resource-reader{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.resource-reader-body{padding:12px;height:min(680px,76dvh)}.resource-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(70px,150px) minmax(0,1fr);gap:10px}.resource-list{border-right:0;border-bottom:1px solid var(--line);padding:0 0 6px}}
 @media(pointer:coarse){.resource-actions :is(a,button),.resource-modes button{min-height:44px}}
+
+.resource-original,.document-material{flex:1;min-height:0;overflow:auto;margin:0}
+.resource-reader-body>.resource-modes{margin:0;flex:none}
+.document-selection{display:flex;gap:12px;align-items:center;font:12px/1.5 var(--sans);color:var(--t2)}
+.document-selection select{min-width:0;flex:1;padding:6px;background:var(--s2);color:var(--t1);border:1px solid var(--line);border-radius:6px;font:12px/1.5 var(--sans)}
+.document-handoffs{display:flex;gap:8px;flex-wrap:wrap}

@@ -40,3 +40,19 @@ it('enforces the UTF-8 byte limit at its boundary without changing literal text'
 it('marks a traversal cutoff while preserving earlier whole references and source order',()=>{
  const first={type:'resource_link',uri:'resource://first'};const value={content:[first,...Array.from({length:63},()=>Array.from({length:64},()=>null))]};const selection=capturedResources(JSON.stringify(value))!;expect(selection.items).toEqual([{field:'/content/0',uri:'resource://first',title:'resource://first'}]);expect(selection.limited).toBe(true);
 });
+import {capturedDocuments} from '../src/lib/captured-resources.ts';
+it('selects sealed document bodies in order without guessing a current file or decoding binary',()=>{
+ const raw=JSON.stringify({content:[{type:'text',text:'# Guide\r\n\r\nLiteral **text**'},{type:'resource',resource:{uri:'resource://notes',mimeType:'text/markdown',text:''}},{type:'resource',resource:{uri:'resource://pdf',mimeType:'application/pdf',blob:'YWJj'}},{type:'image',text:'not a document'}],unknown:{mimeType:'text/markdown',text:'not selected'}});
+ expect(capturedDocuments(raw)).toEqual({items:[{field:'/content/0/text',text:'# Guide\r\n\r\nLiteral **text**'},{field:'/content/1/resource/text',mime:'text/markdown',text:''}],limited:false});
+ for(const raw of ['# arbitrary prose','{"text":"untyped"}','{"mimeType":"application/pdf","text":"not decoded"}'])expect(capturedDocuments(raw)).toBeUndefined();
+});
+it('preserves document wrapper provenance, duplicate fields, raw limits and source boundaries',()=>{
+ const document={type:'text',text:'literal'};const raw=JSON.stringify([{status:'fulfilled',value:{output:JSON.stringify({content:[document,document]}),exit_code:0}}]);
+ expect(capturedDocuments(raw)?.items.map(item=>item.field)).toEqual(['/0/value/output (JSON)/content/0/text','/0/value/output (JSON)/content/1/text']);
+ const many=capturedDocuments(JSON.stringify({content:Array.from({length:10},()=>document)}))!;expect(many.items).toHaveLength(8);expect(many.limited).toBe(true);
+ expect(capturedDocuments(raw.slice(0,-1))).toBeUndefined();expect(capturedDocuments(JSON.stringify({type:'text',text:'界'.repeat(90000)}))).toBeUndefined();
+});
+it('distinguishes captured binary resources and reported sizes from absent bodies',()=>{
+ expect(capturedResources(JSON.stringify({type:'resource',resource:{uri:'resource://pdf',mimeType:'application/pdf',blob:'YWJj',size:3}}))?.items[0]).toEqual({field:'/resource',uri:'resource://pdf',title:'resource://pdf',mime:'application/pdf',binary:true,size:3});
+ expect(capturedResources(JSON.stringify({type:'resource_link',uri:'resource://pdf',size:-1}))?.items[0]?.size).toBeUndefined();
+});
