@@ -5,7 +5,7 @@
 .captured-data-sources>summary{cursor:pointer;padding:4px 0}
 .captured-data-sources[open]{flex-basis:100%}
 .captured-result-views>.data-inspection{margin:0}
-.captured-result-views>.data-inspection>button{min-height:24px;padding:2px 6px;font-size:11px}
+.captured-result-views>.data-inspection>button{min-height:24px;padding:2px 6px;font-size:12px}
 .captured-result-views.captured-result-views{gap:3px 2px;margin-block:3px 6px}
 .captured-result-views>details[hidden]{display:none}
 .structured-tool-output>.structured-output-controls{gap:6px;margin:2px 0 4px}
