@@ -5,7 +5,7 @@ import { toolOutputText } from '../lib/tool-output.ts';
 import { ToolOutput } from './ToolOutput.tsx';
 import {dataLabel,isDataRecord,parseCapturedJson} from '../lib/structured-data.ts';
 /** Render only the captured preview. React escapes every value; no remote HTML or execution. */
-export function StructuredResult({text}:{text:string}){const decoded=useMemo(()=>toolOutputText(text).decoded,[text]);return <><CapturedOutcomes output={text}/><ResultBody text={text} decoded={decoded}/><CapturedResultViews text={text}/></>;}
+export function StructuredResult({text}:{text:string}){const decoded=useMemo(()=>toolOutputText(text).decoded,[text]);return <><CapturedOutcomes output={text}/><CapturedResultViews text={text}/><ResultBody text={text} decoded={decoded}/></>;}
 function ResultBody({ text,decoded }: { text: string;decoded:boolean }) {
   if(decoded) return <ToolOutput text={text} inspect={false}/>;
   let value: unknown;
