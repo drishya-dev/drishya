@@ -50,3 +50,5 @@ Selected actual passages contain multiple actions and prioritize captured edit e
 - Motion review: approve. This changes static allocation and route preference only. Existing finite arrivals, hover reading, bounded connector scheduling, reduced motion and interruption behavior remain unchanged.
 
 No held History/scroll file was edited. No new measurement fix or blocker was needed for the bounded pinned-list reproduction. Root owns the shared TASKS/STATUS completion update.
+
+Root integration gate on independent frozen worktree dependencies: 874 units / 149 files, both TypeScript projects, production build, all twelve fixed-width browser goldens and the final pinned-list/rapid-scroll browser case pass. All gates were repeated on the merged DATA-3 baseline. The actual-session run also repeated: 15/15 measured frames, identical card/wire/diff counts, zero violations or retries. Whole READ-4 checkbox and claim release are included in this PR; no unrelated task is marked complete.

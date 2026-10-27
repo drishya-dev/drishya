@@ -73,4 +73,3 @@ export function violations({ passages, wires }: Snapshot): string[] {
     if (crosses(wire.pts[k - 1]!, wire.pts[k]!, card)) found.push(`wire ${wire.key} crosses ${card.id}`);
   return found;
 }
-

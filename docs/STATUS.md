@@ -31,7 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| READ-4 | @yash + Codex passage agent | `codex/passage-layout-finish` | 2026-10-27 | PR #260 review follow-up: preserve full-row wide edits and restore bounded hover width expansion in `apps/ui/src/lib/hover-reading.ts` (geometry only); existing product-workspace assertion stays unchanged. Whole passage layout refinement: `apps/ui/src/lib/flow-route.ts`, only the actual wrap/shape CSS rules, dedicated golden/browser tests and actual three-session acceptance report. Up to 15 files; preserve wrap plus arrows and accepted material hover/arrival. No History.tsx or measurement/scroll-anchor changes, no adapters/contracts/projection, no HOME styles, no final theme/chrome pass. Builder delegated completing whole tasks; verify current running behavior before deciding the remaining row/stack routing rules. |
+
 | DATA-7 | @yash + Codex native verification agent | `codex/fresh-plan-diff-verification` | 2026-10-27 | Whole fresh CLI/App Server plan/diff verification, as the prerequisite to completing CONTENT-4: ignored bounded native probes and counts-only existing report/minimal synthetic shape fixtures if observed. Up to 15 files; no adapter/contracts/projection/History or schema changes. Fresh scratch sessions only, native-owned file changes, no approvals answered, no native configuration/credential/journal mutation. Coordinate concrete commands and sandbox before model calls; source absence alone is not the stopping condition. |
 | CONTENT-4 | @yash + Codex | `codex/whole-plan-acceptance` | 2026-10-27 | User resumed whole integration 27 Oct: result-confirmed native task projection and identity, plan/checklist scene/UI and Codex proposed-plan material, focused fixtures/tests and real acceptance/report. Proposed contract changes stay draft for other-builder agreement before merge. No History, adapter-claude (HOME-1), question mapping (CONTENT-3), PERF-2/3 or native model calls. Up to 15 files, consolidate existing review commits to keep about five. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
@@ -45,6 +45,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex passage agent - READ-4 complete
+
+- **27 October, PR #260:** full passage-row and order-wire acceptance complete. Modern wide edits start a full row; stacks connect bottom to top while collision-tested fallbacks preserve wrap. 13 browser cases, five route units, both types/build; three actual sessions across five desktop widths with zero routing/order violations. [Criterion matrix](review/read-4-passage-finish.md).
+- **Root gate:** 874 whole-repository units on the merged DATA-3 baseline, both types, build and the 12 four-width goldens passed; final pinned-list case also covered by the focused acceptance. No History, FlowConnections, scroll measurement, schema, capture, hover timing or theme changes. General human/physical release gates remain separate. Own claim removed; other owners untouched.
 
 ### Yash with Claude (Sonnet 5.5) — CONTENT-3: Codex question cards
 - **Result:** Codex questions (`request_user_input_async`) render as the Claude question card with their offered options and an honest note that Codex recorded only "accepted", never the answer. Checked on two real Codex sessions and one Claude session (counts in TASKS CONTENT-3).
@@ -98,7 +103,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **27 October:** PR #255 verifies native reasoning persistence with 13 fresh Codex/Claude sessions, zero tools, version/surface-specific results and PowerShell-safe guidance. [Methods and limits](review/data-8-reasoning-persistence.md).
 - **CONTENT-7, PR #253:** document/resource readers, exact originals, binary/reference distinctions and retained context; 28 actual desktop journeys across both harnesses. Missing genuine typed Claude resources and CSV/table datasets are explicitly fixture-qualified. [Acceptance matrix](review/content-7-document-finish.md). Reader APIs land before #254 activates shared selector and historical-page consumers.
-- **Combined current-main checks:** 860 units, both TypeScript checks, production build and 31 selector/document/Reader/image desktop browser cases pass. No History, schema, current-file regeneration or hosted checks. CONTENT-6 shared selector and captured historical-page wiring are complete in PR #254, with 14 actual checks across both harnesses; all other claims preserved, PERF-2/3 deferred. Prior image/browser History handoffs remain Claude's responsibility.
+- **Combined current-main checks:** 874 units, both TypeScript checks, production build and 31 selector/document/Reader/image desktop browser cases pass. No History, schema, current-file regeneration or hosted checks. CONTENT-6 shared selector and captured historical-page wiring are complete in PR #254, with 14 actual checks across both harnesses; all other claims preserved, PERF-2/3 deferred. Prior image/browser History handoffs remain Claude's responsibility.
 
 ### Yash with Codex — DATA-8 fresh native persistence verification
 
