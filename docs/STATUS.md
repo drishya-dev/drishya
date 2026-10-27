@@ -38,13 +38,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TEST-2 | @harsh + Codex | `harsh/test-2-reading-jump` | 2026-10-27 | `History.tsx` (reading-anchor and height-measurement code only), plus tests. |
 | CONTENT-1 | @yash + Codex image agent | `codex/whole-images` | 2026-10-26 | Whole remaining image acceptance: OpImages/current-image helpers/routes, Inspector OperationMaterial (exact captured parent-script images), image tests/report and genuine Codex/Claude desktop sources. Yash explicitly authorized two isolated Codex adapter fixes on 26 Oct: image_gen.generation alias and remote-image omission; no schema or other DATA-3 changes. Up to 15 files; no History/common edits. |
 | CONTENT-2 | @yash + Codex browser agent | `codex/whole-browser` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. Up to 15 files; no adapter/contracts/projection or READ-4 test. |
-| DATA-3 | @yash + Claude | `yash/data-3-codex-turn-metadata` | 2026-10-23 | Draft #206 stays unmerged until the turn data is cleanly integrated in the UI and both builders agree (Yash, 26 Oct). Next: the turn ledger/prompt block use the recorded duration and show settings when they change (`History.tsx` is no longer held), then Harsh reviews the schema. Files: `packages/{adapter-codex,contracts,projection}`, `apps/ui` turn ledger, tests. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — DATA-3: recorded turn facts in the turn chapter
+- **Result:** the ledger under each Codex prompt uses the duration Codex recorded, names an interrupted turn or a recorded error, and a quiet line shows the settings the turn ran under (all on the agent's first turn, then only changes). Claude Code is unchanged. Reducer r19 (agent ids on `Projection.turns` now match the timeline). Checked on six real Codex journals and a 16-prompt session in the UI; numbers in TASKS DATA-3.
+- **Open:** #206 stays unmerged until Yash and Harsh agree it reads well in the UI; Harsh confirms the `turn.detail` schema. Prompts that share one recorded turn (mid-turn steering) keep the derived duration by design.
 
 ### Yash with Claude (Sonnet 5.5) — BUG-8: fake file paths from search output
 - **Cause and fix:** `parseHitLines` took everything before `:NN:` as a path, so a grep over test-runner output invented files and folders (`ok 146 tests`, `[270`, `1) tests`) in the Files tree, file counts, timeline and link graph. Only plausible paths now become file references (reducer r18); the hit text stays in the card. Real sessions: 31 fake paths removed from an 83 MB Claude session, real hits unchanged.
