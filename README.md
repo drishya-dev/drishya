@@ -39,6 +39,35 @@ pnpm serve
 
 Data lives in `~/.drishya` (override with `DRISHYA_HOME`). The code map is [`docs/CODEBASE.md`](docs/CODEBASE.md).
 
+### Recorded reasoning summaries
+
+Drishya shows exposed summaries or thinking text only when the harness records them. Encrypted content and signature-only blocks cannot supply readable reasoning; these settings do not reveal private reasoning or recover missing text from old sessions.
+
+**Codex CLI: tested on 0.164.0-alpha.11.1 with `gpt-5.6-terra`, medium effort.** For a new one-run session, opt in with this Bash command:
+
+```bash
+codex exec -c 'model_reasoning_summary="auto"' "your task"
+```
+
+Fresh local sessions used a read-only sandbox and a no-tools prompt. They retained a summary with `auto`, `concise` and `detailed`; two `none` runs retained none. This is a small, model-specific verification, not a guarantee for every turn or Codex surface. `detailed` also worked, but did not establish a longer summary. Keep your normal sandbox and approval policy. See the [official configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference#model_reasoning_summary) and [tested conditions and counts](docs/review/data-8-reasoning-persistence.md). Drishya never changes the setting for you.
+
+**Claude Code interactive CLI: tested on 2.1.282 with `claude-opus-5-5`.** Opt in for a new interactive session with this Bash command:
+
+```bash
+claude --settings '{"showThinkingSummaries":true}'
+```
+
+Two fresh interactive opt-in runs retained exposed summary text in the native journals; two default runs retained signature-only blocks. Both headless `-p` comparisons retained signature-only blocks, including with this setting, so this is **interactive guidance**. Tests used plan mode with tools disabled. This follows the documented [`showThinkingSummaries` scope](https://code.claude.com/docs/en/settings-reference#showthinkingsummaries); it does not make effort or thinking budgets persistence controls. See the report for versions, isolation and limits.
+
+**Windows PowerShell 5.1:** use these variants with the native `.exe` files; supply their full installed paths if they are not on `PATH`. The variants below were checked on Windows PowerShell 5.1; use them only for that shell:
+
+```powershell
+codex.exe --% exec -c model_reasoning_summary=\"auto\" "your task"
+claude.exe --% --settings "{\"showThinkingSummaries\":true}"
+```
+
+An argument-only native Node probe verified that these preserve the exact setting strings. The Bash-style Claude command loses JSON quotes in Windows PowerShell 5.1. Shell quoting checks made no model calls; the native argument-array model tests above establish setting acceptance and persistence.
+
 ---
 
 ## The problem
