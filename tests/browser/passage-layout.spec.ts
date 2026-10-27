@@ -1,4 +1,4 @@
-import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { appendFileSync, copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -15,7 +15,7 @@ import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts
 const WIDTHS = [1024, 1280, 1440, 1920] as const;
 type Recording = 'claude' | 'codex' | 'wrap';
 
-let dir: string, app: App, server: RunningServer; const ids = {} as Record<Recording, string>;
+let dir: string, app: App, server: RunningServer, pinnedId: string; const ids = {} as Record<Recording, string>;
 test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-passage-layout-'));
   app = new App(join(dir, 'data'));
@@ -44,7 +44,46 @@ test.beforeAll(async () => {
   row({ type: 'user', message: { role: 'user', content: results } });
   row({ type: 'assistant', message: { id: 'wrap-b', role: 'assistant', content: [{ type: 'text', text: 'Done with the wrap passage.' }] } });
   ids.wrap = (await app.ingest.importSource('claude-code', wrap)).recordingId;
+  // A longer captured checklist changes the prompt allocation without changing card sizes.
+  const todos = Array.from({length: 12}, (_, i) => ({content: `Captured task ${i + 1}`, status: i ? 'pending' : 'in_progress'}));
+  const pinned = join(dir, 'pinned-wrap.jsonl');
+  const pinnedRows = [
+    {type:'user',message:{role:'user',content:'Review the captured work'}},
+    {type:'assistant',message:{id:'pin-a',role:'assistant',content:[{type:'tool_use',id:'pin',name:'TodoWrite',input:{todos}},...uses]}},
+    {type:'user',message:{role:'user',content:[{type:'tool_result',tool_use_id:'pin',content:'Updated'},...results]}},
+  ];
+  writeFileSync(pinned,pinnedRows.map((r,i)=>JSON.stringify({...base,timestamp:new Date(at+i*1000).toISOString(),uuid:`pin-${i}`,...r})).join('\n')+'\n');
+  pinnedId = (await app.ingest.importSource('claude-code', pinned)).recordingId;
   server = await startServer({ app, port: 0, token: 'synthetic-passage-layout' });
+});
+
+test('pinned checklist expansion and rapid history scrolling retain wire geometry', async ({page}) => {
+  await page.setViewportSize({width:1280,height:1000});
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${pinnedId}`);
+  await expect(page.locator('.history .op .skeleton')).toHaveCount(0);
+  await page.evaluate(()=>document.fonts.ready);
+  const more=page.locator('.turn .plan-pinned-more');
+  await expect(more).toBeVisible();
+  // Let the finite arrival observer finish before causing a position-only reflow.
+  await page.waitForTimeout(1900);
+  await more.click();
+  await expect.poll(async()=>violations(await snapshot(page))).toEqual([]);
+  const history=page.locator('.history');
+  await history.evaluate(el=>{el.scrollTop=el.scrollHeight;el.scrollTop=0;});
+  await expect.poll(async()=>violations(await snapshot(page))).toEqual([]);
+  const frame=await snapshot(page); expect(frame.wires.length).toBeGreaterThan(0);
+  const collisions=await page.evaluate(()=>{
+    const pins=[...document.querySelectorAll('.turn .plan-pinned')].map(el=>el.getBoundingClientRect());
+    let count=0;
+    for(const path of document.querySelectorAll('[data-flow-link]')){
+      const pts=[...(path.getAttribute('d')??'').matchAll(/[ML] (\S+) (\S+)/g)].map(m=>({x:+m[1]!,y:+m[2]!}));
+      for(let i=1;i<pts.length;i++){const a=pts[i-1]!,b=pts[i]!;
+        if(pins.some(r=>a.x===b.x?a.x>r.left+1&&a.x<r.right-1&&Math.max(a.y,b.y)>r.top+1&&Math.min(a.y,b.y)<r.bottom-1:a.y>r.top+1&&a.y<r.bottom-1&&Math.max(a.x,b.x)>r.left+1&&Math.min(a.x,b.x)<r.right-1))count++;
+      }
+    }return count;
+  });
+  expect(collisions).toBe(0);
 });
 test.afterAll(async () => {
   if (server) await server.close(); if (app) await app.close();
