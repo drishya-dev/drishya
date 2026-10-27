@@ -53,6 +53,8 @@ interface UsagePayload {
 }
 ```
 
+**Implementation note (DATA-3, 23 Oct): the carrier is a new kind, `turn.detail`.** Putting the fields on `turn.start`/`turn.end` payloads would not work: an observation id comes from the source offset and `part`, so a re-import cannot change an existing observation, and a second `turn.start` would count the turn twice. `turn.detail` is emitted at part 1 of the same Codex records, carries the same `TurnPayload` fields plus `trigger`, `parentTurnId`, `initiatingAgentPath` and `outcome`, and `TurnAccumulator` merges it into `Projection.turns` by turn id in journal order. Harsh to confirm in the PR, since this is the one place the build departs from the text above.
+
 **Projection changes.** `Projection.turns: Turn[]` = `{ id, agentId, startSequence, endSequence?, startTime?, endTime?, durationMs?, timeToFirstTokenMs?, promptProseId?, error?, settings?, basis }`. `Projection.usage?: { latest?: UsagePayload; byTurn: Record<turnId, UsagePayload> }` (last point per turn only, so a 120-point Codex session stays small).
 
 **Notes.** Codex `rate_limits` also contains `credits.balance`, `limit_id` and account-level fields: **not stored** (D6). Cost is the harness's own estimate and is never summed across sessions.

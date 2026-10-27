@@ -26,7 +26,7 @@ import { CodeView, DiffView, Output, CapturedTime, useArtifact } from './common.
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf, readingWidth } from '../lib/presentation.ts';
 import { diffStat, evidenceNotes, isProse } from '../lib/card-evidence.ts';
-import { ledgerParts, LEDGER_BASIS } from '../lib/turn-ledger.ts';
+import { ledgerBasis, ledgerParts, settingsLine } from '../lib/turn-ledger.ts';
 import { useTurns } from '../lib/turns-store.ts';
 import { useNow } from '../lib/now-store.ts';
 import { Origins } from './Origins.tsx';
@@ -1097,6 +1097,8 @@ function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { promp
   // The chapter treatment belongs to Modern; the retained UIs keep their original prompt block.
   if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn"><span className="turn-who">You</span><div className="turn-text">{prompt}</div></div>;
   const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
+  const basis = ledgerBasis(ledger);
+  const settings = ledger?.recorded?.settingsChange && mode === 'history' ? settingsLine(ledger.recorded.settingsChange) : undefined;
   return (
     <div className="turn">
       <span className="turn-who">You</span>
@@ -1105,13 +1107,14 @@ function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { promp
       {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
       {plan && <PinnedPlanList plan={plan} />}
       {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}
+      {settings && <div className="turn-mode" title={settings.title}>{settings.text}</div>}
       {fold ? (
         // The ledger line is the fold control: what the turn did is what stays when it folds.
-        <button type="button" className="turn-ledger turn-fold" aria-expanded={!fold.folded} aria-label={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `: ${parts.map((part) => part.text).join(', ')}` : ''}`} title={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `. ${LEDGER_BASIS}` : ''}`} onClick={(e) => { e.stopPropagation(); fold.toggle(); }}>
+        <button type="button" className="turn-ledger turn-fold" aria-expanded={!fold.folded} aria-label={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `: ${parts.map((part) => part.text).join(', ')}` : ''}`} title={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `. ${basis}` : ''}`} onClick={(e) => { e.stopPropagation(); fold.toggle(); }}>
           <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
           {parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}
         </button>
-      ) : parts.length > 0 && <div className="turn-ledger" title={LEDGER_BASIS}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
+      ) : parts.length > 0 && <div className="turn-ledger" title={basis}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
     </div>
   );
 }

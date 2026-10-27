@@ -38,6 +38,7 @@ import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, p
 import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
+import { TurnAccumulator } from './turns.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 import { declinedFrom } from './declined.ts';
@@ -45,7 +46,7 @@ import { declinedFrom } from './declined.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r18';
+export const REDUCER_VERSION = 'r19';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -97,6 +98,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   let observationCount = 0;
   let lastSequence = -1;
   const usage = new UsageAccumulator();
+  const turnRecords = new TurnAccumulator();
   const itemReceipts = new Map<string, number>();
 
   const agents = new Map<string, Agent>();
@@ -274,6 +276,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       observationCount++;
       lastSequence = Math.max(lastSequence, o.receivedSequence);
       usage.add(o);
+      turnRecords.add(o);
       currentRecording = o.recordingId;
       if (o.source?.adapterId) {
         const d = opts.adapters[o.source.adapterId];
@@ -298,6 +301,16 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (typeof p.effort === 'string') a.effort = p.effort;
           if (typeof p.forkedFromId === 'string') a.forkedFromId = p.forkedFromId;
           if (typeof p.parentThreadId === 'string') a.parentId = `${o.recordingId}.agent:${p.parentThreadId}`;
+          if (typeof p.threadSource === 'string') a.threadSource = p.threadSource;
+          if (typeof p.startedBy === 'string') a.startedBy = p.startedBy;
+          if (typeof p.spawnDepth === 'number') a.spawnDepth = p.spawnDepth;
+          if (typeof p.agentRole === 'string') a.role = p.agentRole;
+          break;
+        }
+        case 'turn.detail': {
+          // The most recent turn's effort is the agent's current one; the per-turn history stays in Projection.turns.
+          const effort = (p.settings as { effort?: unknown } | undefined)?.effort;
+          if (typeof effort === 'string') ensureAgent(o).effort = effort;
           break;
         }
         case 'item.completed': {
@@ -741,6 +754,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     }
 
     const accounting = usage.snapshot();
+    const turns = turnRecords.snapshot();
     return {
       reducerVersion: REDUCER_VERSION,
       recordingId,
@@ -761,6 +775,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       gaps: [...gaps],
       capabilities: { ...capabilities },
       ...(accounting ? { usage: accounting } : {}),
+      ...(turns ? { turns } : {}),
     };
   }
   return { append, snapshot };
