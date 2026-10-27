@@ -23,10 +23,17 @@ export function parityFixture(surface:ParitySurface){
   case 'question':op.tool='AskUserQuestion';detail={kind:'other',input:{questions:[{header:'Scope',question:'Which captured area should be checked?',multiSelect:false,options:[{label:'Captured source',description:'Keep the recorded source range'},{label:'Captured tests',description:'Keep the recorded test outcome'}]}]}};break;
   case 'process':op.tool='exec';detail={kind:'shell',command:'fixture process',outputPreview:JSON.stringify({output:'Captured process started\nStill waiting for a recorded outcome',session_id:731,exit_code:null,chunk_id:'synthetic-progress'})};break;
   case 'unknown-mcp':detail={kind:'mcp',server:'unrecognized',tool:'opaque_records',input:{literal:'input'},resultPreview:JSON.stringify({content:[{type:'text',text:'Captured mixed sibling'},{type:'resource_link',uri:'https://example.invalid/report',name:'Captured reference'},{type:'opaque',payload:'Unknown sibling retained'}],structuredContent:{records:[{id:1,amount:2},{id:2,amount:3}]}})};break;
-  case 'orchestration':detail={kind:'shell',command:'literal captured orchestration',exitCode:1,outputPreview:JSON.stringify([{status:'fulfilled',value:{output:'{"items":[{"literal":42}]}',exit_code:0}},{status:'rejected',reason:'Captured sibling failed'}])};break;
+  case 'orchestration':op.tool='exec';detail={kind:'shell',command:'literal captured orchestration',outputPreview:JSON.stringify([{status:'fulfilled',value:{output:'{"items":[{"literal":42}]}',exit_code:0}},{status:'rejected',reason:'Captured sibling failed'}])};break;
   case 'truncated':detail={kind:'other',input:{literal:'input'},resultPreview:'{"items":[{"literal":"captured incomplete source"'};break;
   case 'missing':detail={kind:'other',input:{literal:'input'}};break;
  }
- op.detail=detail;op.kind=detail.kind;
+ op.detail=detail;op.kind=detail.kind;op.origin=detail.kind==='mcp'?{type:'mcp',server:detail.server,tool:detail.tool}:{type:'native',tool:op.tool};
  return {bundle,opId:op.id,surface};
+}
+export function parityExchange(form:'mcp'|'native',balance:'large-input'|'large-output'|'error'|'empty'){
+ const fixture=parityFixture('unknown-mcp'),op=fixture.bundle.projection.operations.find(op=>op.id===fixture.opId)!;
+ const input=balance==='large-input'?JSON.stringify(Object.fromEntries(Array.from({length:95},(_,i)=>[`field_${i}`,`Literal captured argument ${i} ${'x'.repeat(80)}`])),null,2):'{"limit":1200}';
+ const output=balance==='large-output'?JSON.stringify({items:Array.from({length:1200},(_,i)=>({id:i,label:`captured-record-${i}`,nested:{literal:true},...(i===1199?{late:'last captured field'}:{})}))}):balance==='error'?'Captured error result\nAssertionError: literal failure':balance==='empty'?'':'SHORT CAPTURED RESULT';
+ op.status=balance==='error'?'error':'ok';op.kind=form==='mcp'?'mcp':'other';op.tool=form==='mcp'?'mcp__unknown__opaque':'fixture_native';op.origin=form==='mcp'?{type:'mcp',server:'unknown',tool:'opaque'}:{type:'native',tool:op.tool};op.detail=form==='mcp'?{kind:'mcp',server:'unknown',tool:'opaque',input,resultPreview:output}:{kind:'other',input,resultPreview:output};
+ return {...fixture,input,output};
 }
