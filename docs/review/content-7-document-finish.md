@@ -49,3 +49,5 @@ No genuine captured CSV dataset body or JSON record-table dataset was present in
 - Existing exact JSON/CSV/number/tree repairs were preserved. No runtime dependency, new capture, schema change, current-file fetch, remote automatic load or chart generation was added.
 
 Root integration performs whole-repository checks and task/claim bookkeeping. This report does not substitute fixture acceptance for unavailable genuine source cases or claim platform/physical release acceptance.
+
+Final root integration: 856 whole-repository units, both TypeScript projects, production build and all 14 new selector/document/artifact desktop browser cases passed together. Merge #255 (documentation), #253 (reader APIs), then #254 (consumer activation); this PR does not claim the later consumers are independently activated.
