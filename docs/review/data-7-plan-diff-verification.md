@@ -32,3 +32,11 @@ Under DATA-7, retain these pending checks in TASKS rather than a competing queue
 4. Re-evaluate CONTENT-4 and READ-5 only after that source evidence is available. Their current plan/edit readers are not certified for unobserved notification shapes by this research.
 
 Verification: native version/schema commands succeeded; generated JSON declarations inspected and matched the official event methods. No production or tests changed, so no browser/full-test rerun or hosted CI was launched. No changes in the held History/common/worker/ingest/PERF-2/3 area or DATA-3 files. Generated schemas and raw journals remain uncommitted. OpenAI Docs skill used for official source order; all claims above separate documentation, local declaration, observed absence and pending acceptance.
+
+## 27 October fresh-native preflight (in progress)
+
+The previously missing fresh-turn verification is now claimed as the dependency for CONTENT-4. The installed native binary still reports `0.164.0-alpha.11.1`. New scratch directories outside the repository contain only a neutral six-byte fixture. No existing session was resumed, no project file was edited, and no saved configuration, credential or journal was directly mutated.
+
+A no-model-call App Server initialization plus `config/read` showed configured model `gpt-5.6-terra`, effort `medium`, unset sandbox/approval fields and zero enabled MCP servers after invocation-only MCP disabling. A separate fresh `thread/start`, without policy overrides or any `turn/start`, established the effective defaults: **approval `on-request`; sandbox `{type: readOnly, networkAccess: false}`**. Declared settings and effective thread policy must not be conflated.
+
+The planned bounded CLI and App Server turns will preserve those policies and normal hooks/rules. Genuine plan capture is possible under read-only policy; a successful native-owned file edit and aggregate diff require an explicit permitted sandbox/approval selection. No bypass, forced sandbox change or approval answer has been made. This is a concrete preflight boundary, not completion of the fresh-turn research. Raw source and protocol payloads remain ignored/private.
