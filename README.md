@@ -39,6 +39,20 @@ pnpm serve
 
 Data lives in `~/.drishya` (override with `DRISHYA_HOME`). The code map is [`docs/CODEBASE.md`](docs/CODEBASE.md).
 
+### Recorded reasoning summaries
+
+Drishya shows exposed summaries or thinking text only when the harness records them. Encrypted content and signature-only blocks cannot supply readable reasoning; these settings do not reveal private reasoning or recover missing text from old sessions.
+
+**Codex CLI: tested on 0.164.0-alpha.11.1 with `gpt-5.6-terra`, medium effort.** For a new one-run session, opt in with:
+
+```bash
+codex exec -c 'model_reasoning_summary="auto"' "your task"
+```
+
+Fresh local sessions used a read-only sandbox and a no-tools prompt. They retained a summary with `auto`, `concise` and `detailed`; two `none` runs retained none. This is a small, model-specific verification, not a guarantee for every turn or Codex surface. `detailed` also worked, but did not establish a longer summary. Keep your normal sandbox and approval policy. See the [official configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference#model_reasoning_summary) and [tested conditions and counts](docs/review/data-8-reasoning-persistence.md). Drishya never changes the setting for you.
+
+**Claude Code: fresh persistence verification blocked.** This machine's Claude Code 2.1.282 was signed out. No Claude persistence setting is recommended as tested; the report records the documented interactive-summary candidate and the remaining authenticated check. DATA-8 remains open for that check.
+
 ---
 
 ## The problem
