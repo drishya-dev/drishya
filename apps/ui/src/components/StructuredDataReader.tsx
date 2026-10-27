@@ -5,16 +5,16 @@ import {dataLabel,dataText,pointerKey,structuredData,visibleDataNodes} from '../
 import './structured-data.css';
 
 /** Parsing and indexing happen only after an explicit reading request. */
-export function DataInspection({text,available,label='Inspect data'}:{text:string;available?:boolean;label?:string}){
- const [opened,setOpened]=useState<string>();
+export function DataInspection({text,available,label='Inspect data',context}:{text:string;available?:boolean;label?:string;context?:string}){
+ const [opened,setOpened]=useState<{text:string;context?:string}>();
  const eligible=available??(text.length<=262144&&/^\s*[\[{]/.test(text));
  if(!eligible&&opened===undefined)return null;
  return <div className="data-inspection" onClick={event=>event.stopPropagation()}>
-  {eligible&&<button type="button" onClick={()=>setOpened(text)}>{label}</button>}
-  {opened!==undefined&&<DataReader text={opened} close={()=>setOpened(undefined)}/>}
+  {eligible&&<button type="button" onClick={()=>setOpened({text,context})}>{label}</button>}
+  {opened!==undefined&&<DataReader text={opened.text} context={opened.context} close={()=>setOpened(undefined)}/>}
  </div>;
 }
-function DataReader({text,close}:{text:string;close:()=>void}){
+function DataReader({text,context,close}:{text:string;context?:string;close:()=>void}){
  const data=useMemo(()=>structuredData(text),[text]);
  const [mode,setMode]=useState<'tree'|'table'|'original'>(data?.table?'table':'tree');
  const [expanded,setExpanded]=useState(new Set([''])),[query,setQuery]=useState(''),[top,setTop]=useState(0),[selected,setSelected]=useState(''),[copied,setCopied]=useState('');
@@ -36,7 +36,7 @@ function DataReader({text,close}:{text:string;close:()=>void}){
  const copy=async(value:string)=>{try{await navigator.clipboard.writeText(value);setCopied('Copied');}catch{setCopied('Copy unavailable · select the text instead');}};
  const toggle=(pointer:string)=>setExpanded(previous=>{const next=new Set(previous);if(next.has(pointer))next.delete(pointer);else next.add(pointer);return next;});
  return <ReadingDialog title="Captured data" className="structured-data-dialog" close={close}>
-  <div className="data-reader-body">
+  <div className="data-reader-body">{context&&<p className="material-context">{context}</p>}
    <div className="data-reader-toolbar"><div role="group" aria-label="Data view">{(data?.table?['table','tree','original']:['tree','original']).map(view=><button key={view} type="button" aria-pressed={mode===view} onClick={()=>{setMode(view as typeof mode);reset();}}>{view==='tree'?'Tree':view==='table'?'Table':'Original'}</button>)}</div><button type="button" onClick={()=>void copy(text)}>Copy original</button></div>
    {!data&&<p className="material-context">Tree unavailable: requires complete JSON with lossless number support within 256 KiB, fewer than 25,000 values and 80 levels. Original captured text remains available.</p>}
    {data&&mode==='tree'&&<label className="data-find">Find key or value<input value={query} onChange={event=>{setQuery(event.target.value);reset();}} placeholder="Search captured data…"/></label>}
@@ -58,7 +58,7 @@ function DataReader({text,close}:{text:string;close:()=>void}){
     </div>}
    </div>}
    {data&&mode!=='original'&&<div className="material-context">{mode==='tree'?`${nodes.length} visible values${query?' · search shows up to 500 matches':''}`:`${data.table?.rows.length} records · ${data.table?.columns.length} fields`} · scroll to inspect</div>}
-   {data&&mode!=='original'&&current&&<section className="data-selection" aria-label="Selected data value"><div><code>{current.pointer||'Root'}</code><button type="button" onClick={()=>void copy(typeof current.value==='string'?current.value:dataText(current.value))}>Copy value</button></div><pre tabIndex={0}>{current.container?dataLabel(current.value):typeof current.value==='string'?current.value:dataText(current.value)}</pre>{typeof current.value==='string'&&<DelimitedInspection text={current.value}/>} {current.container&&<button type="button" onClick={()=>{const ancestors=data.nodes.filter(node=>node.container&&(current.pointer===node.pointer||current.pointer.startsWith(`${node.pointer}/`)));const next=new Set([...expanded,...ancestors.map(node=>node.pointer)]);treeFocus.current=current.pointer;setExpanded(next);setMode('tree');setQuery('');reset();}}>Explore in tree</button>}</section>}
+   {data&&mode!=='original'&&current&&<section className="data-selection" aria-label="Selected data value"><div><code>{current.pointer||'Root'}</code><button type="button" onClick={()=>void copy(typeof current.value==='string'?current.value:dataText(current.value))}>Copy value</button></div><pre tabIndex={0}>{current.container?dataLabel(current.value):typeof current.value==='string'?current.value:dataText(current.value)}</pre>{typeof current.value==='string'&&<DelimitedInspection text={current.value} context={context}/>} {current.container&&<button type="button" onClick={()=>{const ancestors=data.nodes.filter(node=>node.container&&(current.pointer===node.pointer||current.pointer.startsWith(`${node.pointer}/`)));const next=new Set([...expanded,...ancestors.map(node=>node.pointer)]);treeFocus.current=current.pointer;setExpanded(next);setMode('tree');setQuery('');reset();}}>Explore in tree</button>}</section>}
    <div role="status" className="material-context">{copied}</div>
   </div>
  </ReadingDialog>;

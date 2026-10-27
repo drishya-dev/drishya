@@ -20,3 +20,11 @@
 .document-selection{display:flex;gap:12px;align-items:center;font:12px/1.5 var(--sans);color:var(--t2)}
 .document-selection select{min-width:0;flex:1;padding:6px;background:var(--s2);color:var(--t1);border:1px solid var(--line);border-radius:6px;font:12px/1.5 var(--sans)}
 .document-handoffs{display:flex;gap:8px;flex-wrap:wrap}
+.resource-document table{border-collapse:collapse;width:100%;font-size:12px}
+.resource-document :is(th,td){text-align:left;vertical-align:top;padding:8px 12px;border:1px solid var(--line)}
+.resource-document th{background:var(--s2);color:var(--t1)}
+.resource-document :is(h1,h2,h3,h4,h5,h6){line-height:1.4;color:var(--t1);margin:1.4em 0 .7em;font-weight:600}
+.resource-document h1{font-size:26px}.resource-document h2{font-size:21px}.resource-document h3{font-size:17px}
+.resource-document p{margin:0 0 1em}.resource-document blockquote{margin:18px 0;padding:2px 16px;border-left:2px solid var(--line);color:var(--t2)}
+.resource-document hr{border:0;border-top:1px solid var(--line);margin:24px 0}
+.resource-document :not(pre)>code{font:12px/1.6 var(--mono);background:var(--s2);padding:2px 5px;border-radius:4px}
