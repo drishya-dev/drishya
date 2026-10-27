@@ -46,6 +46,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — CONTENT-4 native plan integration
+
+- **27 October, draft #258:** implemented the proposed D10 projection seam, result-confirmed task snapshots and stable identity, replay guards and captured plan Markdown. Existing native sources now reach the UI: six tasks/eighteen revisions, six desktop frames across two Claude captures and one Codex capture, zero browser errors/external requests. 895 units, both types and build pass; focused browser checks include the merged Codex question journeys.
+- **Review gate:** optional contract changes await the other builder's agreement; no Harsh approval is inferred. ExitPlanMode remains absent from both tested native inventories, so genuine approval/accepted-plan interaction stays unverified. Parent CONTENT-4 is open with concrete gates in TASKS. No new native model calls, History/question/Claude adapter or paused PERF edits. [Current report](review/content-4-living-plan-acceptance.md).
+
+
 ### Yash with Claude (Sonnet 5.5) — CONTENT-3: Codex question cards
 - **Result:** Codex questions (`request_user_input_async`) render as the Claude question card with their offered options and an honest note that Codex recorded only "accepted", never the answer. Checked on two real Codex sessions and one Claude session (counts in TASKS CONTENT-3).
 - **Open:** CONTENT-3 stays open for pending Codex questions in a connected session, `AgentMessage.questions` and approvals (no local samples). Separately: TEST-2 (#252) still fails `b2-live` `:139`/`:186` on this machine in 2 of 3 whole-file runs, with the original 169 px jump; commented on the PR.

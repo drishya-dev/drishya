@@ -1,5 +1,42 @@
 # CONTENT-4 — living-checklist acceptance and genuine-source gate
 
+## 27 October integration — current state (supersedes the earlier blocker notes below)
+
+The builder explicitly resumed the whole integration. Draft PR #258 now contains the proposed D10 projection contract and implementation, rebased after DATA-3 and CONTENT-3. **Implementation is complete for the captured forms; merge remains gated on the other builder's contract review.** No History, Claude adapter, question mapping, controller, native policy or paused PERF area was edited. No new native/model calls were made during integration; existing genuine captures were read through normal redaction.
+
+### Proposed D10 contract for review
+
+Observations and their stable IDs remain unchanged. Optional projected plan rows carry native `id`; `scope` is a **derived isolation boundary**, not a claimed native task-list ID. It includes recording/agent/source generation, an explicit result list ID when present, conservative identity discontinuities and the recorded prompt boundary. Internal task facts survive prompts; their per-turn presentation remains separate. Successful duplicate creation of an existing ID starts a new isolated boundary rather than silently replacing a different task. An input-only list ID is not trusted.
+
+TaskCreate/Get use structured result identity/subject, with absent status kept unknown; partial Get preserves known status. TaskUpdate requires success and result-confirmed changes, preserves unrelated fields, and does not fabricate a title for an unresolved task. Rename follows stable ID even with duplicate labels; deletion and full valid list replacement have dedicated adversarial checks. Failed, malformed and text-only results remain generic. Derived snapshots cite current field authority plus their boundary; a 500-update regression bounds provenance instead of accumulating every preceding update in every snapshot. The exact sanitized structured result is also retained as a captured artifact. Two thousand displayed task rows is an explicit bound; omission metadata follows each historical revision and pinned list, with shown-only counts and a disclosure.
+
+`document` carries a bounded Markdown preview and full captured artifact reference. Codex's complete, unique `<proposed_plan>` wrapper becomes one proposal material, without duplicate prose, fabricated checklist progress or approval. Original wrapper bytes remain in its artifact; display trims wrapper whitespace. Ordinary headings, fenced examples, incomplete/nested/repeated wrappers stay prose. A successful Claude Write to the **recorded `.claude/plans/*.md` path convention** displays its existing captured after-snapshot as Markdown, retains its write path and artifacts, and is explicitly labelled **plan-path convention**, not proof of native plan identity or approval. Ordinary Markdown writes remain edits. Other/custom plan paths fall back to their ordinary captured write; no filesystem lookup or heading heuristic is used.
+
+Result-dependent lists/documents and their blobs remain hidden before operation completion. Native task revisions are ordered by completed result, preserve unknown states and use stable identity for comparisons. Paged timeline offsets are recovered from known operation positions; missing prompt context does not combine different native task scopes. Proposal-first partial journals also establish their agent/model.
+
+### Validation
+
+- 895 local tests across 151 files; both TypeScript projects and production build pass on the CONTENT-3 merged baseline.
+- Focused native-plan projection and scene guards cover 28 cases, including all prior 13-revision live/replay checks, unknown states, immutable append snapshots, result-boundary rewind, identity isolation, renames/duplicates/failure/deletion/list replacement, bounded metadata/provenance and literal original proposal bytes.
+- Browser acceptance includes the existing TodoWrite checklist, thirteen live revisions at 600/1440 px, unfamiliar states, twelve genuine-shaped task updates at both widths, duplicate labels and rename, Markdown file/proposal views, readable document width and overflow containment. Existing Codex question journeys run alongside to guard the merged integration.
+- **Real Claude `749f365d`**: 118,711 journal bytes/82 records; redacting import yields 58 observations. Eighteen task revisions, six IDs, final six completed; one pinned list in the full worker scene. All 47 replay boundaries checked for future-result leakage. The captured plan-file snapshot remains 1,883 bytes.
+- **Real Claude `ca6027cb`**: 34,705 bytes/23 records; captured 1,115-byte plan-file Write rendered as Markdown.
+- **Real Codex `01a17c46`**: 199,990 journal bytes/18 records; import yields 15 observations. One captured explicit proposal, 353 characters after display trimming, with original wrapped bytes preserved and zero fabricated checklist tasks.
+- These three recordings pass six browser frames at 600/1440 px, zero page errors or external requests. Real screenshots/content remain ignored/private. A reading frame disables Follow before scrolling to the earlier pinned prompt; initial follow positioning is not treated as missing material.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Native task structured results stopped before the UI | Result-confirmed, stable-ID checklist revisions | Keeps actual task state and identity visible without parsing prose |
+| A pending task could expose a future result snapshot | Result facts/blobs hidden until completion | Replay remains an account of what was known then |
+| Plan Markdown used a compact checklist-sized card | Documents receive up to 620 px and restrained heading sizes | Readable plan material; compact revision receipts retain their allocation |
+| Each revision still looked like a separate tool box | One pinned list plus borderless, expandable revision receipts | Retains every earlier list without repeating resident card chrome |
+| Path convention could imply native plan identity | Explicit convention label, derived classification and retained write path | Distinguishes captured bytes from inferred presentation |
+
+### Remaining acceptance gates — not falsely marked done
+
+D10 optional projection fields require the other builder's review/agreement before merge; the user's resume authorizes the implementation, not an invented Harsh sign-off. Genuine TodoWrite and Codex checklist events were unavailable in the tested current catalogs/local sources; their existing forms are fixture-verified. ExitPlanMode was absent from both tested native inventories: no pending/approved plan interaction or native surface acceptance is claimed. That unavailable native interaction remains a concrete acceptance dependency, not a reason to fabricate an approval or repeat model calls. Synthetic reset/rename/delete/Get/List adversarial coverage is not described as real-session coverage. General physical/human release and ten-minute checks remain separate.
+
+
 27 October 2026. **The existing TodoWrite checklist passes the expanded synthetic live/replay checks below. Whole CONTENT-4 remains open.** After the initial inventory found no genuine task tools, an explicitly authorized fresh Claude session captured six TaskCreate calls, twelve TaskUpdate calls and one native-plan Markdown Write. Their structured task results survive redacted ingestion but are discarded by the current generic-operation projection. ExitPlanMode was unavailable in that print-mode tool inventory. This report updates the existing task's evidence; it is not a second work queue.
 
 ## Source inventory before implementation
