@@ -133,10 +133,10 @@ export function intentOf(name: string, args: Rec, namespace?: string): ToolInten
 /** CONTENT-1: `input_image` entries carrying base64 data URLs, as unchecked candidates for sanitize. Remote URLs are never fetched. */
 function dataImages(content: unknown) {
   if (!Array.isArray(content)) return [];
-  return (content as Rec[]).flatMap((c) => {
+  return (content as Rec[]).flatMap<ReturnType<typeof imageCandidate> | { kind: 'captured-image'; omitted: 'remote' }>((c) => {
     const url = c?.type === 'input_image' && typeof c.image_url === 'string' ? c.image_url : '';
     const m = /^data:image\/[a-z+.-]+;base64,/i.exec(url);
-    return m ? [imageCandidate(url.slice(m[0].length))] : [];
+    return m ? [imageCandidate(url.slice(m[0].length))] : /^https?:\/\//i.test(url) ? [{ kind: 'captured-image', omitted: 'remote' }] : [];
   });
 }
 
