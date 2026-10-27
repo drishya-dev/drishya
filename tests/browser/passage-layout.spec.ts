@@ -1,4 +1,4 @@
-import { appendFileSync, copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, copyFileSync, readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -123,4 +123,26 @@ for (const recording of ['claude', 'codex', 'wrap'] as const) for (const width o
   expect(pairs).toBeGreaterThan(0);
   expect(wires).toHaveLength(pairs);
   if (recording === 'wrap' && width === 1920) await page.screenshot({path:resolve(`.local/read4-${process.env.READ4_PHASE??'after'}-1920.png`)});
+});
+
+for (const width of [1024, 1440]) test(`full-row wide edit still grows into bounded hover reading and returns at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({width,height:900});
+  const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+  const op=[...bundle.projection.operations].reverse().find(item=>item.detail.kind==='edit');
+  op.detail.hunks=[{oldStart:1,oldLines:1,newStart:1,newLines:76,lines:[' const unchanged = true;',...Array.from({length:75},(_,n)=>`+export const capturedChange${n+1} = ${n+1};`)]}];
+  await page.route('**/demo/bundle.json',route=>route.fulfill({json:bundle}));
+  await page.goto(new URL('/?demo&experience=modern',server.launchUrl).href);
+  const card=page.locator(`article[data-op-id="${op.id}"]`);
+  await card.scrollIntoViewIfNeeded();
+  await expect.poll(()=>card.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length)).toBe(0);
+  const before=(await card.boundingBox())!, viewport=(await page.locator('.history').boundingBox())!;
+  await card.locator('.op-title').hover();await expect(card).toHaveAttribute('data-hover-reading','focused');
+  await expect.poll(()=>card.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length)).toBe(0);
+  const after=(await card.boundingBox())!;
+  expect(after.width).toBeGreaterThan(before.width);expect(after.height).toBeGreaterThan(before.height+20);
+  expect(after.x).toBeGreaterThanOrEqual(viewport.x+7);expect(after.x+after.width).toBeLessThanOrEqual(viewport.x+viewport.width-7);
+  await card.locator('.op-body').evaluate(el=>el.scrollTop=el.scrollHeight);
+  await expect(card.locator('.ln-tx').last()).toBeInViewport();
+  await page.mouse.move(5,5);await expect(card).not.toHaveAttribute('data-hover-reading',/.+/);
+  await expect.poll(async()=>Math.abs((await card.boundingBox())!.width-before.width)).toBeLessThan(1);
 });

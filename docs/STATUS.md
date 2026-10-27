@@ -48,6 +48,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Yash with Codex passage agent - READ-4 complete
 
+- **PR review follow-up:** preserved full-row wide edits and restored bounded two-dimension hover growth; the original product-workspace test is unchanged and passes three times per design. New viewport/return guards and hover-fit/passage checks pass 17/17; 877 units, both types/build pass. Actual Claude hover and stationary three-session checks rerun; a selected Codex replay hover refusal also reproduces on clean main, explicitly not certified. No History/measurement changes.
+
 - **27 October, PR #260:** full passage-row and order-wire acceptance complete. Modern wide edits start a full row; stacks connect bottom to top while collision-tested fallbacks preserve wrap. 13 browser cases, five route units, both types/build; three actual sessions across five desktop widths with zero routing/order violations. [Criterion matrix](review/read-4-passage-finish.md).
 - **Root gate:** 874 whole-repository units on the merged DATA-3 baseline, both types, build and the 12 four-width goldens passed; final pinned-list case also covered by the focused acceptance. No History, FlowConnections, scroll measurement, schema, capture, hover timing or theme changes. General human/physical release gates remain separate. Own claim removed; other owners untouched.
 

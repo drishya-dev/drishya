@@ -1,5 +1,21 @@
 # READ-4 passage layout finish
 
+## 27 October PR review follow-up — hover width regression
+
+The review correctly reproduced `product-workspace.spec.ts:71` failing for Modern on this branch while clean main passed. Full-row width exposed an existing target rule, `max(currentWidth, 520)`, that supplies no growth for an already wide card. The assertion was **not** weakened or changed.
+
+Modern wide edits now target 8% width growth, bounded by the history viewport with an 8 px inset; other card types and retained designs keep their existing rule. Full-row resting allocation and bottom-to-top wires remain. The same real article still travels from its measured rectangle, using the existing 400/350 ms interruptible arrive/return and reduced-motion behavior. No History, measurement, timing or transport change.
+
+| Before | After | Why |
+| --- | --- | --- |
+| A full-row wide Edit rested and hovered at the same width | Bounded deliberate reading width growth | Retains the approved row layout and the accepted two-dimension hover interaction |
+| The row regression lacked a hover/return guard | 1024/1440 px guards assert growth, viewport containment, scrolling to the last line and restored width | A layout change must preserve the actual reading interaction |
+
+**Verification after review:** reproduced the unchanged Modern failure before editing. Its unchanged Classic/Studio/Modern cases now pass three consecutive times each (9/9). All passage goldens/pinned reflow plus the two new width/height/bounds/return cases and hover-fit checks pass (17/17). Both TypeScript projects, build and 877 units/149 files pass on current main plus this PR. Original `product-workspace` and `workspace-toolbar` specs are unchanged; the unrelated mixed-suite toolbar flake is not claimed fixed.
+
+Actual stationary layout acceptance was rerun on the three recorded sessions/five desktop widths below: 15 final measured frames pass. One Claude 1024 px locator detached before measurement; its single bounded retry passes. One actual Claude `c8e5c9c8` full replay bundle at 1440 px also entered hover, grew by 69.9 px, stayed bounded and returned; 10,466 observations/2,215 operations, zero page errors/external requests. The chosen earlier Codex `4b5ca5b1` replay frame declined hover on **both clean-main UI and this UI**; it is not counted as successful native hover acceptance and is outside the introduced full-row width regression. Its real layout frame remains covered by the stationary matrix. No native sessions or native files were changed.
+
+
 27 October 2026 · PR #260 · Modern running application · desktop only
 
 ## Before | After | Why
