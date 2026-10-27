@@ -10,7 +10,7 @@ export function TerminalPreview({ text, failed = false, artifactId }: { text: st
   const encoded = /\\[rn]/.test(text);
   const complete = useArtifact(encoded ? artifactId : undefined, { scope: 'preview', count: 200 });
   const full = complete.text && !complete.hasMore && toolOutputText(complete.text).decoded ? complete.text : text;
-  return <div className="terminal-preview"><TerminalBody text={full} failed={failed}/><CapturedResultViews text={full}/></div>;
+  return <div className="terminal-preview"><CapturedResultViews text={full} evidence={{partial:complete.partial,unavailable:complete.unavailable??complete.error}}/><TerminalBody text={full} failed={failed}/></div>;
 }
 function TerminalBody({text,failed}:{text:string;failed:boolean}){
   const [open,setOpen]=useState(false);
