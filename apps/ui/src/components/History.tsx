@@ -1,3 +1,5 @@
+import { BrowserEvidence, BrowserStrip, WebEvidence } from './BrowserEvidence.tsx';
+import { browserStep, groupBrowserSteps } from '../lib/browser-evidence.ts';
 import { passageArtifacts, passageItems, samePassageContent, type PassageContent } from '../lib/passage-content.ts';
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import { ReadingKeys } from './ReadingKeys.tsx';
@@ -38,8 +40,7 @@ import { VerificationStrip } from './VerificationStrip.tsx';
 import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
 import { PinnedPlanList, PlanChecklist } from './PlanChecklist.tsx';
 import { DeclinedLine } from './DeclinedLine.tsx';
-import { WebResults } from './WebResults.tsx';
-import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
+import { CommandRunNotes } from './CommandRun.tsx';
 import { BeforeTurnPanel } from './BeforeTurn.tsx';
 import { NoticeLine } from './NoticeLine.tsx';
 import { OpImages, PathImage, pathOnlyImage } from './OpImages.tsx';
@@ -735,9 +736,13 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
             {first?.startTime && <CapturedTime iso={first.startTime} />}
           </div>
           <div className="ops-row">
-            {ps.ops.map((o, i) => {
-              const op = ops.get(o.id);
-              return op ? <OpCard key={o.id} so={o} op={op} index={i} /> : null;
+            {groupBrowserSteps(ps.ops, ops).map((group) => {
+              const first = group[0]!;
+              const op = ops.get(first.id);
+              if (!op) return null;
+              if (group.length === 1) return <OpCard key={first.id} so={first} op={op} index={ps.ops.indexOf(first)} />;
+              const grouped = group.map(item => ops.get(item.id)!).filter(Boolean);
+              return <BrowserStrip key={first.id} operations={grouped} renderOperation={(chosen) => <OpCard key={chosen.id} so={group.find(item => item.id === chosen.id)!} op={chosen} index={ps.ops.findIndex(item => item.id === chosen.id)} />} />;
             })}
           </div>
         </>
@@ -884,6 +889,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
   const d = op.detail;
   const select = useApp((s) => s.select);
   const input = op.artifactIds.find((id) => id.endsWith('_input'));
+  if (browserStep(op)) return <div className="op-expanded mcp-material" onClick={e => e.stopPropagation()}><BrowserEvidence op={op} full/></div>;
   switch (d.kind) {
     case 'read':
       return <div className="op-expanded read-material" onClick={(e) => e.stopPropagation()}>
@@ -933,14 +939,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         <StructuredResult text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')} />
       </div>;
     case 'web':
-      return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
-        {d.fetch && <div className="material-context">{fetchFacts(d.fetch)}</div>}
-        {d.results?.length ? <><div className="material-context">{d.results.length} recorded result{d.results.length === 1 ? '' : 's'}</div><WebResults results={d.results} snippets/></> : null}
-        <div className="material-context">Captured result preview</div>
-        <CapturedOutcomes output={d.resultPreview}/>
-        <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
-      </div>;
+      return <div className="op-expanded web-material" onClick={e => e.stopPropagation()}><WebEvidence op={op} full/></div>;
     case 'plan':
       return <div className="op-expanded plan-material" onClick={(e) => e.stopPropagation()}><PlanChecklist op={op} full/></div>;
     case 'spawn':
@@ -979,6 +978,7 @@ function ResultArea({ state, resolving, children }: { state: Operation['status']
 function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: boolean; onSource?: (text: string) => void }) {
   const d = op.detail;
   const set = useApp((s) => s.set);
+  if (browserStep(op)) return <BrowserEvidence op={op}/>;
   switch (d.kind) {
     case 'read':
       return <>
@@ -1052,14 +1052,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         </div>
       );
     case 'web':
-      return (
-        <div className="web">
-          <div className="query">{d.url ?? d.query}</div>
-          <ResultArea state={op.status} resolving={resolving}>
-            {d.results?.length ? <WebResults results={d.results} limit={5}/> : d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
-          </ResultArea>
-        </div>
-      );
+      return <WebEvidence op={op}/>;
     case 'spawn':
       return (
         <div className="spawn">

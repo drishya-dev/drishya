@@ -10,3 +10,20 @@
 .review-file-edits button:hover {color:var(--source);}.review-file-edits button:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
 .review-file-edits .add {font-weight:400;color:var(--pass);}.review-file-edits .del {font-weight:400;color:var(--fail);}
 .review-edit-test.passed>span {color:var(--pass);}.review-edit-test.failed>span {color:var(--fail);}
+
+.review-net {padding:0 0 10px 26px;}
+.review-net-toggle {display:flex;gap:8px;align-items:center;font:11px/1.6 var(--mono);color:var(--t2);padding:4px 0;text-align:left;}
+.review-net-toggle>span {color:var(--t3);}
+.review-net-note {margin:4px 0 10px 26px;font:11px/1.6 var(--sans);color:var(--t3);}
+.review-net>.review-net-note {margin-left:0;}
+.review-net-lines {max-height:55vh;overflow:auto;min-width:0;}
+.review-net-line {display:grid;grid-template-columns:4ch minmax(0,1fr) auto;gap:8px;padding:3px 8px;font:11px/1.6 var(--mono);}
+.review-net-line.add {background:color-mix(in srgb,var(--pass) 7%,transparent);}
+.review-net-line.remove {background:color-mix(in srgb,var(--fail) 7%,transparent);}
+.review-net-line code {font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--t1);}
+.review-net-number {color:var(--t3);text-align:right;user-select:none;}
+.review-net-source {display:flex;gap:8px;flex-wrap:wrap;align-self:start;max-width:160px;}
+.review-net-source button {font:inherit;color:var(--t2);text-align:left;}
+.review-net-source button:hover,.review-net-toggle:hover {color:var(--source);}
+.review-net-source .passed {color:var(--pass);}.review-net-source .failed {color:var(--fail);}
+.review-net button:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
