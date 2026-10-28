@@ -264,6 +264,7 @@ function SessionLine({ projection }: { projection: Projection }) {
 
 /** A task-oriented shell; evidence and native capabilities stay in shared functional readers. */
 function StudioHeader({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const liveMetadata = useApp(s=>s.mode==='history');
   const recording = useApp(s => s.recording);
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
@@ -281,7 +282,7 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
     {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Recorded agent shortcuts">{scene.agents.map(state => {
       const agent = projection.agents.find(a => a.id === state.id);
       const parent = projection.agents.find(a => a.id === state.parentId);
-      return <button key={state.id} data-origin-agent={state.id} role="switch" aria-checked={filter?.agentId === state.id} aria-label={`Focus ${agentName(agent)} from agent bar`} title={`${agentName(agent)} · ${state.state}${parent ? ` · child of ${agentName(parent)}` : ''}`} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}</span><small>{state.state}</small></button>;
+      return <button key={state.id} data-origin-agent={state.id} role="switch" aria-checked={filter?.agentId === state.id} aria-label={`Focus ${agentName(agent)} from agent bar`} title={`${agentName(agent)} · ${state.state}${liveMetadata&&agent?.model ? ` · ${agent.model}` : ''}${liveMetadata&&agent?.effort ? ` · ${agent.effort} effort` : ''}${parent ? ` · child of ${agentName(parent)}` : ''}`} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}</span><small>{[state.state,liveMetadata&&agent?.model,liveMetadata&&agent?.effort&&`${agent.effort} effort`].filter(Boolean).join(' · ')}</small></button>;
     })}</div>}
   </header>;
 }
@@ -300,6 +301,7 @@ function StudioDock({ scene }: { scene: Scene }) {
 }
 
 function Crown({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const liveMetadata = useApp(s=>s.mode==='history');
   const recording = useApp((s) => s.recording);
   const recordingId = useApp((s) => s.recordingId);
   const connection = useApp((s) => s.connection);
@@ -341,7 +343,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
               title={`${agentName(agent)} — ${a.state}${a.activeOperationIds.length ? `, ${a.activeOperationIds.length} call in flight` : ''}. Click to follow only this agent.`}
             >
               <span className="agent-dot" />
-              {agentName(agent)}<small className="agent-harness">{agent?.harness}</small>
+              {agentName(agent)}<small className="agent-harness">{[liveMetadata&&agent?.model||agent?.harness,liveMetadata&&agent?.effort&&`${agent.effort} effort`].filter(Boolean).join(' · ')}</small>
               {a.state === 'active' && a.activeOperationIds.length > 0 && <span className="orbit" />}
             </button>
           );

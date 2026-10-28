@@ -17,6 +17,7 @@ import type { ReadBeforeWrite } from '../../../packages/scene/src/read-before-wr
 import type { ModelConfig, Prepared } from '@drishya/explain';
 import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store/src/search-types.ts';
 import type {GitSessionQuery,GitSessionEvidence} from './git-session-evidence.ts';
+import type {DelegationThread} from './delegation-types.ts';
 
 /** One worker owns the derived history index. Capture's SQLite writer remains the ingestor. */
 export class HistoryService {
@@ -80,6 +81,7 @@ export class HistoryService {
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
   gitSessionEvidence(id:string,query:GitSessionQuery) {return this.request<GitSessionEvidence>('git-session-evidence',{id,query});}
+  delegationThread(id:string,operationId:string,start=0,step?:number,taskStart=0) {return this.request<DelegationThread|null>('delegation-thread',{id,operationId,start,step,taskStart});}
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   readingTarget(id: string, query: ReadingQuery) { return this.request<ReadingTarget | null>('reading-target', { id, query }); }

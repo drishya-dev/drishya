@@ -6,3 +6,14 @@
 .delegation-facts dd {margin:0;color:var(--t1);font:12px/1.5 var(--mono);overflow-wrap:anywhere;}
 .delegation-task {color:var(--t1);font:13px/1.6 var(--sans);overflow-wrap:anywhere;}
 .delegation-scope {margin-top:8px;color:var(--t3);font:11px/1.5 var(--sans);}
+.delegation-thread{margin:10px 0;font:12px/1.5 var(--sans);color:var(--t2)}
+.delegation-thread>summary{cursor:pointer;width:fit-content;color:var(--t2)}
+.delegation-thread>summary:focus-visible{outline:1px solid var(--t2);outline-offset:4px;border-radius:3px}
+.delegation-thread ol{list-style:none;margin:10px 0;padding:0;max-height:280px;overflow:auto}
+.delegation-thread li{display:flex;gap:10px;position:relative;padding:0 0 12px 2px;min-width:0}
+.delegation-thread li:not(:last-child):before{content:'';position:absolute;left:4px;top:10px;bottom:0;width:1px;background:var(--line)}
+.delegation-step-dot{width:5px;height:5px;flex:none;border-radius:50%;background:var(--t3);margin-top:7px}
+.delegation-thread li>div{min-width:0;overflow-wrap:anywhere}
+.delegation-thread li .btn{padding:0;text-align:left;white-space:normal;font-size:12px}
+.delegation-thread time,.delegation-thread li small{margin-left:8px;color:var(--t3);font-size:11px}
+.delegation-thread nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}

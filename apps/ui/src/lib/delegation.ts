@@ -13,7 +13,7 @@ export function delegationReply(d: SpawnDetail): { text?: string; acknowledgemen
   if (raw.startsWith('{')) {
     try {
       const keys = Object.keys(JSON.parse(raw) as Record<string, unknown>);
-      if (keys.length === 1 && keys[0] === 'task_name') return { acknowledgementOnly: true };
+      if (keys.length>0&&keys.every(key=>['task_name','agent_id','nickname','agent_nickname'].includes(key))&&keys.some(key=>key==='task_name'||key==='agent_id')) return { acknowledgementOnly: true };
     } catch { /* not JSON: a normal reply */ }
   }
   return { text: d.resultPreview };

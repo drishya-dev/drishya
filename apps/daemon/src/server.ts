@@ -463,6 +463,13 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (!trail) throw new HttpError(404, 'not a captured change in this recording');
         return json(res, trail);
       }
+      if(sub==='delegation-thread'&&subId&&m==='GET'){
+        if(id.includes('+'))throw new HttpError(400,'Choose one recording for a delegation thread.');
+        app.recording(id);
+        const value=await app.history.delegationThread(id,subId,intParam(url,'start',0,0,10_000_000),url.searchParams.has('step')?intParam(url,'step',0,0,10_000_000):undefined,intParam(url,'taskStart',0,0,10_000_000));
+        if(!value)throw new HttpError(404,'No captured delegation at this position.');
+        return json(res,value);
+      }
       // READ-6: which lines of a file the agent had read, as recorded, before one edit.
       if (sub === 'read-before' && subId && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'read-before-write is computed per recording, not for a combined view');
