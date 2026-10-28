@@ -1,3 +1,4 @@
+import {fileTreeOrigin} from '../lib/file-tree-origin.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
 import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -160,7 +161,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
       path.style.stroke = getComputedStyle(target).getPropertyValue(move === 'Surface' ? '--agent' : '--material').trim() || colour('--focus');
       path.setAttribute('d', `M${x1},${y1} C${x1 + bend * sign},${y1} ${x2 - bend * sign},${y2} ${x2},${y2}`);
       path.setAttribute('data-origin-type', label);
-      path.setAttribute('data-origin-renderer', origin instanceof HTMLElement ? origin.dataset.originRenderer ?? (label === 'Repository node' ? 'world' : 'reference') : 'reference');
+      path.setAttribute('data-origin-renderer', origin instanceof HTMLElement ? origin.dataset.originRenderer ?? (label === 'File tree row' ? 'tree' : label === 'Repository node' ? 'world' : 'reference') : 'reference');
       if (move) {
         const repositoryNode = label === 'Repository node';
         const ignition = node(repositoryNode ? 'circle' : 'rect', 'origin-instrument', move);
@@ -231,19 +232,23 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
         let label: string;
         if (op.origin.type === 'map') {
           const path = op.origin.path;
-          origin = mapVisible ? [...viewer.querySelectorAll<HTMLElement>('[data-origin-file]')].find((el) => {
-            if (el.dataset.originFile !== path || el.dataset.originVisible !== 'true') return false;
-            const r = el.getBoundingClientRect();
-            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-            const overview = el.dataset.originRenderer === 'overview' && hit?.closest('.repo-lens-world');
-            return visible(el, false) && !!hit && (overview || !hit.closest('.op, .prose, .turn, .passage-head, .spine, .dock, .crown, .inspector, .sheet, .file-panel, .map-legend, .map-tip'));
-          }) : undefined;
-          label = origin ? 'Repository node' : 'File reference';
-          origin ??= [...viewer.querySelectorAll<HTMLElement>('[data-spine-path]')].find((el) => {
-            if (el.dataset.spinePath !== path) return false;
-            const r = el.getBoundingClientRect(); const tree = el.closest('.folder-tree')?.getBoundingClientRect();
-            return r.width > 0 && r.height > 0 && (!tree || r.top >= tree.top && r.bottom <= tree.bottom);
-          });
+          // The visible Files row is the real developer-facing home of read/edit
+          // material. Prefer it over an aesthetic map node, but never expand,
+          // scroll or reveal the tree just to manufacture an animation origin.
+          origin = ['read', 'edit', 'write'].includes(op.kind) ? fileTreeOrigin(viewer, path) : undefined;
+          label = origin ? 'File tree row' : 'File reference';
+          if (!origin) {
+            origin = mapVisible ? [...viewer.querySelectorAll<HTMLElement>('[data-origin-file]')].find((el) => {
+              if (el.dataset.originFile !== path || el.dataset.originVisible !== 'true') return false;
+              const r = el.getBoundingClientRect();
+              const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              const overview = el.dataset.originRenderer === 'overview' && hit?.closest('.repo-lens-world');
+              return visible(el, false) && !!hit && (overview || !hit.closest('.op, .prose, .turn, .passage-head, .spine, .dock, .crown, .inspector, .sheet, .file-panel, .map-legend, .map-tip'));
+            }) : undefined;
+            label = origin ? 'Repository node' : 'File reference';
+            origin ??= fileTreeOrigin(viewer, path);
+            if (origin && label !== 'Repository node') label = 'File tree row';
+          }
         } else if (op.origin.type === 'mcp') {
           const server = op.origin.server;
           const operation = projection.operations.find((item) => item.id === op.id);
