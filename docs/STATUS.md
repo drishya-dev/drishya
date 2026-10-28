@@ -36,7 +36,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TEST-2 | @harsh + Codex | `harsh/test-2-wheel-end` | 2026-10-28 | `apps/ui/src/components/History.tsx` wheel/scroll handling and reading-anchor/height code only; tests only with Harsh's explicit yes. No `hover-reading.ts` or `flow-route.ts` edits. |
 | CONTENT-1 | @yash + Codex image agent | `codex/whole-images` | 2026-10-26 | Whole remaining image acceptance: OpImages/current-image helpers/routes, Inspector OperationMaterial (exact captured parent-script images), image tests/report and genuine Codex/Claude desktop sources. Yash explicitly authorized two isolated Codex adapter fixes on 26 Oct: image_gen.generation alias and remote-image omission; no schema or other DATA-3 changes. Up to 15 files; no History/common edits. |
 | CONTENT-2 | @yash + Codex browser agent | `codex/whole-browser` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. Up to 15 files; no adapter/contracts/projection or READ-4 test. |
-| CONTENT-4b | @yash + Claude Sonnet 5.5 | `claude/content-4b-plan-mode` | 2026-10-28 | Map Claude `ExitPlanMode`/`EnterPlanMode` and the desktop `update_plan` checklist as plan material (real shapes captured 28 Oct). Files: `packages/projection/src/plans.ts`, `reduce.ts` (plan mapping only), `packages/scene/src/plan-threads.ts`, `apps/ui` plan card, tests. No new schema fields beyond the agreed D10 ones. |
 | CONTENT-10 | @yash + Claude Sonnet 5.5 | `claude/content-10-direct-reading` | 2026-10-28 | Show the selector's detected reading directly; remove the resident `Inspect…` / `Choose reading format` row from command and output cards. Files: the adaptive reader/captured-content components and `captured-content.css`, `tests/browser` reader specs. Does not touch History.tsx integration (CONTENT-2 #250 owns it); coordinates with parked #257. |
 | PERF-2 | @harsh + Claude Opus 5.5 | paused (no branch) | 2026-10-24 | **Paused for a Harsh + Yash decision** on the remaining page-side cost: fewer diff lines while a card arrives (visual change) or revisiting the 16 MiB instant-append probe. No files held; ask Harsh before starting PERF-2 work. |
 
@@ -44,6 +43,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude (Sonnet 5.5) — CONTENT-4b: plan mode and the desktop checklist
+- **Result:** Claude's `ExitPlanMode` shows its plan text as one captured proposal (no inferred approval) and the desktop app's `update_plan` checklist becomes one evolving list per prompt, hidden until each result is recorded. Real shapes came from this session's own journal; counts in TASKS. Reducer r21. Also merged today: #252 (TEST-2 reading jump), #263 (UI-11), #258 (CONTENT-4), #262 (HOME-1 titles), and `package:verify`'s expected observation count after DATA-3.
+- **Open:** CONTENT-4b stays open for what has no real sample here: genuine `TodoWrite`, long `TaskCreate`/`TaskUpdate` lists and Codex `update_plan` (Codex captures and comments on the PR); a rejected `ExitPlanMode` on a real session. TEST-2 stays open: `b2-live:139` fails whenever the machine is under heavy load, on clean main too.
 
 ### Yash with Codex — CONTENT-4 native plan integration
 

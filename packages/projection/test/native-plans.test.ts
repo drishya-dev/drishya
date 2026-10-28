@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { asOfProjection, type Observation } from '@drishya/contracts';
 import { pinnedPlans, planThreads } from '../../scene/src/plan-threads.ts';
 import { createReducer, reduce } from '../src/reduce.ts';
-import { proposedPlan, TaskPlans } from '../src/plans.ts';
+import { DesktopChecklists, exitPlanText, proposedPlan, TaskPlans } from '../src/plans.ts';
 
 const obs = (sequence: number, kind = 'tool.result', payload: unknown = {}, overrides: Partial<Observation> = {}): Observation => ({
  id: `o${sequence}`, recordingId: 'r', agentId: 'agent:main', receivedSequence: sequence,
@@ -110,5 +110,87 @@ describe('explicit Codex proposal', () => {
  it('leaves headings, quoted/fenced examples, incomplete and repeated wrappers as ordinary prose', () => {
   for (const text of ['# Plan\nRead','```xml\n<proposed_plan>x</proposed_plan>\n```','<proposed_plan>x','<proposed_plan>x</proposed_plan><proposed_plan>y</proposed_plan>']) expect(proposedPlan(codex,text)).toBeUndefined();
   expect(proposedPlan(obs(1,'message.assistant'),'<proposed_plan>x</proposed_plan>')).toBeUndefined();
+ });
+});
+
+// CONTENT-4b: shapes recorded by a genuine Claude Code session (28 October 2026).
+function planModeRows() {
+ const rows = [obs(0, 'message.user', { text: 'Plan the change' })];
+ let n = 1;
+ const call = (tool: string, input: unknown, text: string, isError = false) => {
+  const operationId = `call${n}`;
+  rows.push(obs(n++, 'tool.call', { tool, input, intent: { kind: 'other' } }, { operationId }));
+  rows.push(obs(n++, 'tool.result', { text, isError, outcome: { kind: 'other' } }, { operationId }));
+ };
+ return { rows, call };
+}
+describe('Claude plan mode', () => {
+ it('shows the plan text from ExitPlanMode as one captured proposal, with no invented approval', () => {
+  const { rows, call } = planModeRows();
+  call('EnterPlanMode', {}, 'Entered plan mode.');
+  call('ExitPlanMode', { plan: '# Plan\n\n1. Read the guard\n2. Fix the total', planFilePath: '/home/me/.claude/plans/x.md' }, 'User has approved your plan. You can now start coding.');
+  const p = reduce('r', rows, memory(), options);
+  const enter = p.operations.find(o => o.tool === 'EnterPlanMode')!, exit = p.operations.find(o => o.tool === 'ExitPlanMode')!;
+  expect(enter.kind).toBe('other');
+  expect(exit.kind).toBe('plan');
+  expect(exit.detail).toMatchObject({ kind: 'plan', items: [], document: { text: '# Plan\n\n1. Read the guard\n2. Fix the total', truncated: false, source: 'proposal' } });
+  expect(exit.classification).toMatchObject({ kind: 'derived', observationIds: expect.arrayContaining(['o3', 'o4']) });
+  expect(JSON.stringify(exit)).not.toMatch(/approved/i);
+ });
+ it('leaves a declined or failed ExitPlanMode as the generic declined call', () => {
+  const { rows, call } = planModeRows();
+  call('ExitPlanMode', { plan: '# Plan' }, "The user doesn't want to proceed with this tool use. The tool use was rejected.", true);
+  const exit = reduce('r', rows, memory(), options).operations.find(o => o.tool === 'ExitPlanMode')!;
+  expect(exit.kind).toBe('other');
+  expect(exit.declined).toMatchObject({ by: 'person' });
+  expect(exitPlanText({ plan: '   ' })).toBeUndefined();
+  expect(exitPlanText({})).toBeUndefined();
+ });
+ it('hides the plan until the result is recorded at every replay step', () => {
+  const { rows, call } = planModeRows();
+  call('ExitPlanMode', { plan: '# Secret future plan' }, 'ok');
+  const p = reduce('r', rows, memory(), options);
+  for (let step = 0; step <= p.timeline.length; step++) {
+   const past = asOfProjection(p, step), visible = new Set(p.timeline.slice(0, step).filter(i => i.type === 'op-end').map(i => i.operationId));
+   for (const op of past.operations) if (op.kind === 'plan' && !visible.has(op.id)) expect(JSON.stringify(op.detail)).not.toContain('Secret future plan');
+  }
+ });
+});
+
+describe('desktop app checklist (update_plan)', () => {
+ const tool = 'mcp__ccd_turn__update_plan';
+ const item = (content: string, status: string) => ({ content, status });
+ it('rebuilds each recorded list, applying advance, done and start to the previous list', () => {
+  const { rows, call } = planModeRows();
+  call(tool, { items: [item('Read', 'in_progress'), item('Fix', 'pending'), item('Test', 'pending')], scope: 'first_task' }, 'Plan shown (3 steps).');
+  call(tool, { advance: true }, 'Plan advanced.');
+  call(tool, { done: [2], start: 3 }, 'Plan updated.');
+  const p = reduce('r', rows, memory(), options);
+  const plans = p.operations.filter(o => o.kind === 'plan');
+  expect(plans).toHaveLength(3);
+  const statuses = (i: number) => (plans[i]!.detail as { items: { status: string }[] }).items.map(x => x.status);
+  expect(statuses(0)).toEqual(['in_progress', 'pending', 'pending']);
+  expect(statuses(1)).toEqual(['completed', 'in_progress', 'pending']);
+  expect(statuses(2)).toEqual(['completed', 'completed', 'in_progress']);
+  expect(plans[1]!.classification).toMatchObject({ kind: 'derived' });
+  const lead = planThreads(p).get(plans[2]!.id)!.thread;
+  expect(lead.revisions).toHaveLength(3);
+ });
+ it('keeps a change with nothing to apply, or with an index outside the list, as a generic call', () => {
+  const { rows, call } = planModeRows();
+  call(tool, { advance: true }, 'Plan advanced.');
+  call(tool, { items: [item('Only', 'pending')] }, 'Plan shown.');
+  call(tool, { done: [5] }, 'Plan updated.');
+  call(tool, { items: [{ content: 7, status: 'pending' }] }, 'Plan shown.');
+  const p = reduce('r', rows, memory(), options);
+  expect(p.operations.filter(o => o.kind === 'plan')).toHaveLength(1);
+ });
+ it('does not apply a change to another agent or an errored call', () => {
+  const checklists = new DesktopChecklists();
+  const first = obs(1, 'tool.call', {}, { agentId: 'agent:a' }), other = obs(2, 'tool.call', {}, { agentId: 'agent:b' });
+  expect(checklists.apply(first, tool, { items: [item('A', 'pending')] })).toBeDefined();
+  expect(checklists.apply(other, tool, { advance: true })).toBeUndefined();
+  expect(checklists.apply(first, tool, { advance: true })).toBeDefined();
+  expect(checklists.apply(obs(3, 'tool.call', {}, { source: { adapterId: 'codex', adapterVersion: 't', sourceId: 's', generation: 0, byteOffset: 0, part: 0 } }), tool, { items: [item('A', 'pending')] })).toBeUndefined();
  });
 });
