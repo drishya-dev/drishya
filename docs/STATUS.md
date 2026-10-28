@@ -45,6 +45,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex parallel lane — FILES-5 available acceptance complete; external gates remain
+
+- **PR #273:** real Windows filesystem identity checks and both-harness recovery acceptance; test/report only, no product-code change. Ordinary Windows aliases are protected atomically; distinct case-sensitive Windows paths and Unicode lowercase collisions are safely refused, not supported. Filesystem-aware identity support needs a separate product decision outside this acceptance task.
+- **Evidence:** 18 focused units with the explicit empty-temporary-directory case-sensitivity probe, both types/build and the encrypted recovery browser journey pass. Actual Codex `rec_4b5ca5b1` (44,016,822 bytes/1,530 observations) and Claude `rec_024517cd` (6,516,417 bytes/2,112 observations) pass synthetic new-file recovery at 600 and 1440 px. Existing-file acceptance remains fixture/filesystem evidence, not a native existing-file positive. [Report](review/files-5-whole-acceptance.md).
+- **External handoff:** parent FILES-5 remains unchecked. Claude/the other builder must run macOS/Linux and case-insensitive POSIX-volume recovery, a permitted file-symlink positive and physical/human recovery checks, recording platform/filesystem, session prefixes/counts and observed failures. No new native calls are required for these recovery checks. Claim released; ready for other-builder review under the whole-task rule's named external-blocker exception. No merge or release certification.
+
 ### Yash with Codex parallel lane — CONTENT-5b complete
 
 - **PR #271:** one collapsible delegation thread joins the captured task, exact child activity/messages and parent result. Source-clock ordering, replay cutoffs, captured model/effort, exact imported-child links and bounded complete task/step paging; unavailable, encrypted and unresolved cases stay explicit. No History, reducer, schema, adapter or native writes.
