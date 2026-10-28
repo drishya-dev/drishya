@@ -727,7 +727,7 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
     <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {!!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
@@ -1095,14 +1095,14 @@ function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { promp
     return () => observer.disconnect();
   }, [prompt, expanded]);
   // The chapter treatment belongs to Modern; the retained UIs keep their original prompt block.
-  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn"><span className="turn-who">You</span><div className="turn-text">{prompt}</div></div>;
+  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn"><span className="turn-who">You</span>{prompt && <div className="turn-text">{prompt}</div>}{images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}</div>;
   const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
   const basis = ledgerBasis(ledger);
   const settings = ledger?.recorded?.settingsChange && mode === 'history' ? settingsLine(ledger.recorded.settingsChange) : undefined;
   return (
     <div className="turn">
       <span className="turn-who">You</span>
-      <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>
+      {prompt && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>}
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
       {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
       {plan && <PinnedPlanList plan={plan} />}

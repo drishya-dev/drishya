@@ -174,7 +174,7 @@ test('long history mounts only nearby work while selected evidence and live upda
   // Detached reading must not auto-follow those late measurements.
   await expect.poll(async () => {
     await page.mouse.wheel(0, 100_000);
-    await history.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     return history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop));
   }, { message: 'Deliberate wheel navigation reaches the measured history end' }).toBeLessThan(2);
   await expect.poll(() => history.locator('[data-passage-id]').count()).toBeLessThan(80);
