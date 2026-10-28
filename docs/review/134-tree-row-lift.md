@@ -40,7 +40,8 @@ Each successful row below was checked separately at both widths. A passing Lift 
 
 | Genuine capture | Material case | 600 px | 1440 px |
 | --- | --- | --- | --- |
-| Codex `4b5ca5b1` | Edit | Pass | Pass |
+| Freshly imported Codex `7f72dcb0` | Edit | Pass | Pass |
+| Retained Codex `4b5ca5b1` | Edit | Pass | Pass |
 | Codex `4b5ca5b1` | Write | Pass | Pass |
 | Claude Code `c8e5c9c8` | Native `Read` tool | Pass | Pass |
 | Claude Code `c8e5c9c8` | Edit | Pass | Pass |
@@ -65,8 +66,9 @@ The last case is deliberate truth preservation: Files is closed, the tool statio
 ### Capture and verification boundary
 
 - Codex capture: 1,530 observations, 542 operations, **44,016,822 imported source-cursor bytes**. The original native journal is no longer present. Actual rendering uses the retained genuine, previously redacted observations in a new ignored scratch home and the current reducer; this is explicitly cached-capture UI acceptance, not a fresh Codex ingest claim.
+- An additional **current native Codex** capture `7f72dcb0` was freshly imported: 1,981,961 bytes, 156 observations, 38 operations and five eligible relative-path Edits. Its genuine Edit arrival passes at both 600 and 1440 px using the same natural replay/Files interaction. All 30 currently discoverable Codex journals were passively imported/scanned into the scratch home; none provided a current eligible relative-path Write operation. Retained genuine Write captures remain the explicitly qualified replay case, not a fabricated replacement.
 - Claude capture: 10,466 observations, 2,215 operations, **82,859,509 source-cursor bytes**. The native journal still exists and was freshly imported into a separate scratch Drishya home. Its current operations, timeline and file metadata match the already-redacted browser capture exactly; the comparison emitted only a boolean and counts.
-- Ten applicable visible-tree checks plus four hidden-tree checks completed on actual captured operations. The two unavailable Codex native-Read cells are expressly excluded from the pass count.
+- Twelve applicable visible-tree checks plus four hidden-tree checks completed on actual captured operations. The two unavailable Codex native-Read cells are expressly excluded from the pass count.
 - Actual screenshots at each width and private bounded drivers stay in ignored `.local/`. No journal contents, paths, titles, screenshots or private drivers are committed or attached to a PR.
 - `check:real --list` was inspected; its current cases do not include visible file-origin motion, so this UI-only audit uses private scratch capture/browser checks. There is no production test-runner change in this follow-up.
 - This is an acceptance report only: no product source, animation timing, History measurement, hover, schema or harness policy changed. No fresh model turn was needed. No full gate is repeated for this docs-only follow-up; the root's once-per-batch gate remains separate. Existing fixture regression results above remain guards, not substitutes for these real checks.
