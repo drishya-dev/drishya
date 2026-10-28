@@ -27,17 +27,17 @@ test('tree filters captured activity, preserves navigation and updates open call
   const explorer=page.locator('.folder-explorer'),find=explorer.getByRole('textbox',{name:'Find repository files'});
   await explorer.getByRole('button',{name:/Enable workspace reading/}).click();
   await find.fill('src/');const row=explorer.locator('[data-spine-path="src/read.ts"]');
-  await expect(row.getByLabel('2 captured read calls',{exact:true})).toBeVisible();
+  await expect(row).toHaveAttribute('aria-description',/2 captured read calls/);await expect(explorer.locator('.file-reads,.folder-evidence')).toHaveCount(0);
   await expect(explorer.locator('[data-spine-path="src/untouched.ts"]')).toBeVisible();
   await explorer.getByLabel('File filters',{exact:true}).click();await explorer.getByRole('button',{name:'Touched',exact:true}).click();
   await expect(explorer.locator('[data-spine-path="src/untouched.ts"]')).toHaveCount(0);await expect(row).toBeVisible();
   await explorer.getByLabel('File filters',{exact:true}).click();await page.keyboard.press('Escape');await expect(explorer.locator('.tree-evidence-filter')).not.toHaveAttribute('open');await expect(explorer.getByLabel('File filters',{exact:true})).toBeFocused();
   await explorer.getByLabel('File filters',{exact:true}).click();await page.locator('.folder-root').click();await expect(explorer.locator('.tree-evidence-filter')).not.toHaveAttribute('open');
-  await find.fill('');await expect(explorer.getByLabel('1 file with captured activity',{exact:true})).toBeVisible();
+  await find.fill('');await expect(explorer.locator('[aria-description="1 file with captured activity"]')).toBeVisible();
   await find.fill('src/read.ts');await row.click();await expect(page.locator('.current-file-reader')).toBeVisible();await page.getByRole('button',{name:'Close src/read.ts',exact:true}).last().click();
   await app.ingest.startLive('claude-code',journal);await page.reload();await expect(explorer).toBeVisible();await find.fill('src/read.ts');
   appendFileSync(journal,read(2,false));await app.ingest.importSource('claude-code',journal);
-  await expect(row.getByLabel('3 captured read calls',{exact:true})).toBeVisible();await expect(row.getByLabel('Open captured tool call',{exact:true})).toBeVisible();
+  await expect(row).toHaveAttribute('aria-description',/3 captured read calls/);await expect(row.getByLabel('Open captured tool call',{exact:true})).toBeVisible();
   appendFileSync(journal,JSON.stringify({...base,cwd:dir,type:'user',uuid:'r2',message:{role:'user',content:[{type:'tool_result',tool_use_id:'read2',content:'1\texport const value = 1;'}]}})+'\n');await app.ingest.importSource('claude-code',journal);
   await expect(row.getByLabel('Open captured tool call',{exact:true})).toHaveCount(0);
   await page.screenshot({path:resolve('.local/files1-live.png')});
@@ -58,7 +58,7 @@ test('actual dense Codex and Claude sessions show whole-session counts without c
     }
     await explorer.getByRole('textbox',{name:'Find repository files'}).fill(target.path);
     const row=explorer.locator(`[data-spine-path=${JSON.stringify(target.path)}]`);await expect(row).toBeVisible();
-    if(target!.readCalls)await expect(row.getByLabel(`${target!.readCalls} captured read calls`,{exact:true})).toBeVisible();
+    if(target!.readCalls)await expect(row).toHaveAttribute('aria-description',new RegExp(`${target!.readCalls} captured read calls`));
     if(target!.change)await expect(row.locator('.file-change')).toHaveText(target!.change);
     expect(await row.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
     await page.screenshot({path:resolve(`.local/files1-${recordingId}.png`)});
