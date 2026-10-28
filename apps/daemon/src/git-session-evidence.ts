@@ -3,7 +3,7 @@ import type {GitSessionLink} from './git-types.ts';
 
 export interface GitSessionQuery {
   commits: {hash:string; committedAt:string; paths:string[]}[];
-  working: {path:string; patch:string}[];
+  working: {path:string; patch:string; created?:boolean}[];
 }
 export interface GitWorkingMatch {path:string; links:GitSessionLink[]}
 export interface GitSessionEvidence {links:Record<string,GitSessionLink>; working:GitWorkingMatch[]}
@@ -39,12 +39,13 @@ const cached=new WeakMap<Projection,{commands:Operation[]; edits:Map<string,Oper
 export function commandAtWorkspace(observations:Observation[],root:string|undefined):boolean {
   if(!root)return false;
   const canonical=(path:string)=>{const p=path.replace(/\\/g,'/').replace(/\/$/,'');return /^[A-Za-z]:\//.test(p)?p.toLowerCase():p;};
-  const call=observations.find(o=>o.kind==='tool.call');if(!call||canonical(call.workspaceRoot??'')!==canonical(root))return false;
+  const call=observations.find(o=>o.kind==='tool.call');if(!call||call.workspaceRoot&&canonical(call.workspaceRoot)!==canonical(root))return false;
   const input=(call.payload as {input?:unknown}).input;
+  if(typeof input==='string')return !!call.workspaceRoot;
   if(!input||typeof input!=='object'||Array.isArray(input))return false;
   const args=input as Record<string,unknown>,cwd=args.workdir??args.cwd;
   // An explicitly captured override must be the same absolute root; no relative cwd inference.
-  return cwd===undefined||typeof cwd==='string'&&canonical(cwd)===canonical(root);
+  return cwd===undefined?!!call.workspaceRoot:typeof cwd==='string'&&canonical(cwd)===canonical(root);
 }
 /** Runs inside the existing history worker; never transfers a complete projection to the daemon. */
 export function gitSessionEvidence(projection:Projection,query:GitSessionQuery,atWorkspace:(op:Operation)=>boolean=()=>false):GitSessionEvidence {
@@ -87,7 +88,14 @@ export function gitSessionEvidence(projection:Projection,query:GitSessionQuery,a
   for(const file of query.working.slice(0,50)){
     const wanted=patchDelta(file.patch);
     if(wanted.join('').replace(/\s/g,'').length<12||file.patch.includes('[REDACTED:'))continue;
-    const matches=(index.edits.get(file.path)??[]).filter(op=>op.detail.kind==='edit'&&same(delta(op.detail.hunks),wanted));
+    const matches=(index.edits.get(file.path)??[]).filter(op=>{
+      if(!atWorkspace(op)||op.detail.kind!=='edit')return false;
+      const captured=delta(op.detail.hunks);
+      // Full Write snapshots retain split('\n')'s final empty token. Git's added-line
+      // records do not: that token is the preceding line's terminator, not a blank line.
+      if(file.created&&op.detail.reconstruction==='complete'&&op.detail.hunks.every(h=>h.oldLines===0)&&captured.at(-1)==='+')captured.pop();
+      return same(captured,wanted);
+    });
     if(matches.length)working.push({path:file.path,links:matches.slice(-20).reverse().map(op=>link(op,'working-patch'))});
   }
   return {links,working};

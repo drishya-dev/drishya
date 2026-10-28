@@ -4,7 +4,7 @@ import { lstat, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { redactText } from '@drishya/privacy';
 import {safeGitPath as safe,gitDiffFlags as diffFlags} from './git-paths.ts';
-import {gitHistory,gitCommit,type GitHistoryQuery} from './git-history.ts';
+import {gitHistory,gitCommit,verifyGitHistoryGeneration,type GitHistoryQuery} from './git-history.ts';
 import { HttpError } from './app.ts';
 import type { WorkspaceAccess } from './workspace.ts';
 
@@ -89,11 +89,11 @@ export class GitReview {
   history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,async git=>{
     const page=await gitHistory(git,query);
     if(!this.historyService||id.includes('+'))return page;
-    const context=await gitSessionContext(git,page.commits.map(commit=>commit.hash));
+    const context=await gitSessionContext(git,page.commits.map(commit=>commit.hash),page.start===0,path=>this.workspace.read(id,path,0,5001));
     const evidence=await this.historyService.gitSessionEvidence(id,context.query);
     // Check refs again after reading patches and captured evidence.
-    await gitHistory(git,{...query,generation:page.generation});
-    return {...page,sessionLinks:evidence.links,workingTree:{files:evidence.working,omitted:context.omitted}};
+    await verifyGitHistoryGeneration(git,page.generation);
+    return {...page,sessionLinks:evidence.links,...(page.start===0?{workingTree:{files:evidence.working,omitted:context.omitted}}:{})};
   });}
   commit(id:string,hash:string,parent=0,start=0,generation?:string) {return this.readHistory(id,git=>gitCommit(git,hash,parent,start,generation));}
   async snapshot(id: string, start = 0): Promise<GitSnapshot> {
