@@ -11,6 +11,7 @@ describe('delegation card facts', () => {
   });
   it('does not present Codex’s task acknowledgement as a reply', () => {
     expect(delegationReply(spawn({ resultPreview: '{"task_name":"review"}' }))).toEqual({ acknowledgementOnly: true });
+    expect(delegationReply(spawn({resultPreview:'{"agent_id":"child-id","nickname":"Reviewer"}'}))).toEqual({acknowledgementOnly:true});
     expect(delegationReply(spawn({ resultPreview: '{"task_name":"review","answer":"yes"}' })).text).toContain('answer');
     expect(delegationReply(spawn({ resultPreview: '{"broken' })).text).toBe('{"broken');
     expect(delegationReply(spawn())).toEqual({});

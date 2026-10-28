@@ -262,7 +262,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     }
     else if(message.method==='delegation-thread'){
       const projection=current(a.id).projection;
-      value=delegationThread(source,a.step===undefined?projection:asOfProjection(projection,a.step),a.operationId,a.start,a.step);
+      value=delegationThread(source,projection,a.operationId,a.start,a.step);
     }
     else if (message.method === 'page') value = page(a.id, a.query);
     else if (message.method === 'page-bytes') value = new TextEncoder().encode(JSON.stringify(page(a.id, a.query)));
