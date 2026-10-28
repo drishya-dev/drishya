@@ -15,7 +15,7 @@ beforeAll(()=>{directory=mkdtempSync(join(tmpdir(),'drishya-files5-filesystem-')
 afterAll(()=>{if(!resolve(directory).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary directory');rmSync(directory,{recursive:true,force:true});});
 
 it('round trips opt-in encrypted drafts with exact Unicode spelling and leaves real disk bytes unchanged',async()=>{
- const paths=['composed-é.ts','decomposed-e\u0301.ts','日本語.ts','emoji-🧠.ts'];
+ const paths=['résumé.ts','re\u0301sume\u0301.ts','日本語.ts','emoji-🧠.ts'];
  for(const path of paths)writeFileSync(join(root,path),base);
  expect(sameFile(join(root,paths[0]!),join(root,paths[1]!))).toBe(false);
  const source=new WorkspaceDrafts();for(const path of paths)source.set('synthetic',path,draft);
