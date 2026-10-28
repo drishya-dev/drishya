@@ -46,20 +46,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-<<<<<<< HEAD
 ### Yash with Codex parallel lane — READ-5 complete
 
 - **PR #267:** captured session net diffs, exact changed-line edit/turn links, reversions and subsequent recorded commands/checks. No History, API, reducer or schema changes; other claims preserved.
 - **Acceptance:** 29 focused units, both types/build, three desktop browser checks, actual Claude/Codex reading and independent 300-chain composition verification. Missing/gapped material stays unavailable; no independent disk-state or final-newline claim. [Report](review/133-session-net-attribution.md).
 
-### Yash with Claude (Sonnet 5.5) — CONTENT-4b: plan mode and the desktop checklist
-- **Result:** Claude's `ExitPlanMode` shows its plan text as one captured proposal (no inferred approval) and the desktop app's `update_plan` checklist becomes one evolving list per prompt, hidden until each result is recorded. Real shapes came from this session's own journal; counts in TASKS. Reducer r21. Also merged today: #252 (TEST-2 reading jump), #263 (UI-11), #258 (CONTENT-4), #262 (HOME-1 titles), and `package:verify`'s expected observation count after DATA-3.
-- **Open:** CONTENT-4b stays open for what has no real sample here: genuine `TodoWrite`, long `TaskCreate`/`TaskUpdate` lists and Codex `update_plan` (Codex captures and comments on the PR); a rejected `ExitPlanMode` on a real session. TEST-2 stays open: `b2-live:139` fails whenever the machine is under heavy load, on clean main too.
-=======
 ### Yash with Claude (Sonnet 5.5) — CONTENT-10: no resident Inspect row
 - **Result:** the `Inspect data` / `Inspect delimited text` / `Choose reading format` row no longer takes a line above result material. The readings are one small chip on the card's corner (hover or keyboard focus; on an inline reading it sits at the bottom corner). A result that is one complete JSON value with no resource, document or CSV candidate is read in the card itself (tree or table, Original, Open larger); short record tables and flat field lists keep their existing compact layout. Checked: 917 units, 447 browser cases, `package:verify`; one real Claude Code session (id prefix `31c2a507`, 7 mounted cards, 1 inline reading, 0 Inspect buttons); a Codex session (`f7311cff`, 4 cards) has JSON only in shell output, so it showed the chip, not an inline reading.
 - **Open:** CONTENT-10 stays open: delimited text keeps its explicit CSV/TSV choice (delimiters are never inferred), and shell/terminal JSON and MCP envelopes keep their text with the chip because a collapsed tree read worse there (four browser cases proved it). Decide whether any of those should open in place. Codex inline JSON is unverified on a real session.
->>>>>>> origin/main
 
 ### Yash with Codex — CONTENT-4 native plan integration
 
