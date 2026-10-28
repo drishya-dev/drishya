@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { tailRecords } from '../src/discover.ts';
 
 let dir: string;
@@ -31,4 +31,22 @@ it('does not parse a record larger than the tail budget', async () => {
 it('handles empty journals without manufacturing metadata', async () => {
   writeFileSync(file, '');
   expect(await tailRecords(file)).toEqual([]);
+});
+
+it('skips non-title lines without parsing while retaining title record order', async () => {
+  const records = [
+    { type: 'custom-title', customTitle: 'Earlier custom' },
+    { type: 'queue-operation', padding: 'Non-title payload' },
+    { type: 'summary', summary: 'Later summary' },
+    { type: 'ai-title', aiTitle: 'Later AI' },
+    { type: 'custom-title', customTitle: 'Latest custom' },
+  ];
+  const lines = records.map(record => JSON.stringify(record));
+  writeFileSync(file, lines.join('\n') + '\n');
+  const parse = vi.spyOn(JSON, 'parse');
+  try {
+    expect(await tailRecords(file)).toEqual([records[0], records[2], records[3], records[4]]);
+    expect(parse).not.toHaveBeenCalledWith(lines[1]);
+    expect(parse).toHaveBeenCalledTimes(4);
+  } finally { parse.mockRestore(); }
 });

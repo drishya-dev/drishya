@@ -381,7 +381,8 @@ async function discover(): Promise<DiscoveredSource[]> {
     let titleRank = 0;
     // Match imported metadata: the latest title at the highest recorded rank wins.
     // Tail records contribute titles only; workspace and first prompt still come from the head.
-    for (const r of [...head, ...await tailRecords(path)] as Rec[]) {
+    const tail = info.bytes > 256 * 1024 ? await tailRecords(path) : [];
+    for (const r of [...head, ...tail] as Rec[]) {
       if (!r || typeof r !== 'object') continue;
       const rank = r.type === 'custom-title' ? 3 : r.type === 'summary' ? 2 : r.type === 'ai-title' ? 1 : 0;
       const value = str(r.customTitle) ?? str(r.summary) ?? str(r.aiTitle) ?? str(r.title);

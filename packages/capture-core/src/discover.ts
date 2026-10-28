@@ -27,7 +27,7 @@ export async function headRecords(path: string, maxBytes = 256 * 1024, maxRecord
   }
 }
 
-/** Bounded journal tail for discovery metadata; the first clipped record is never parsed. */
+/** Bounded title records; non-title lines and the first clipped record are never parsed. */
 export async function tailRecords(path: string, maxBytes = 64 * 1024): Promise<unknown[]> {
   const fh = await open(path, 'r');
   try {
@@ -43,7 +43,7 @@ export async function tailRecords(path: string, maxBytes = 64 * 1024): Promise<u
     }
     const out: unknown[] = [];
     for (const line of text.split('\n')) {
-      if (!line.trim()) continue;
+      if (!line.includes('custom-title') && !line.includes('summary') && !line.includes('ai-title')) continue;
       try { out.push(JSON.parse(line)); } catch { /* Cut or malformed records tell discovery nothing. */ }
     }
     return out;

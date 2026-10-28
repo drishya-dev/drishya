@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { claudeAdapter } from '../src/index.ts';
 
 let dir: string;
@@ -64,4 +64,22 @@ it('ignores empty and unknown title records and retains the first prompt and wor
 it('sanitizes the chosen title before discovery publishes it', async () => {
   const source = await titleFrom([], [{ type: 'custom-title', customTitle: 'fixture AKIA0000000000000000' }]);
   expect(source?.title).not.toContain('AKIA0000000000000000');
+});
+
+it('parses short journals once and preserves highest-rank latest-wins titles', async () => {
+  const records = [
+    { type: 'user', cwd: '/synthetic/workspace', message: { content: 'Clean first prompt' } },
+    { type: 'custom-title', customTitle: 'Earlier custom' },
+    { type: 'custom-title', customTitle: 'Latest custom' },
+    { type: 'summary', summary: 'Later summary' },
+    { type: 'ai-title', aiTitle: 'Later AI' },
+  ];
+  const lines = records.map(record => JSON.stringify(record));
+  writeFileSync(join(dir, 'projects', 'synthetic', 'fixture.jsonl'), lines.join('\n') + '\n');
+  const parse = vi.spyOn(JSON, 'parse');
+  try {
+    const source = (await claudeAdapter.discover())[0];
+    expect(source?.title).toBe('Latest custom');
+    for (const line of lines) expect(parse.mock.calls.filter(([text]) => text === line)).toHaveLength(1);
+  } finally { parse.mockRestore(); }
 });
