@@ -1,4 +1,5 @@
 import { BrowserEvidence, BrowserStrip, WebEvidence } from './BrowserEvidence.tsx';
+import { injectedLine, injectedMessage } from '../lib/injected-messages.ts';
 import { browserStep, groupBrowserSteps } from '../lib/browser-evidence.ts';
 import { passageArtifacts, passageItems, samePassageContent, type PassageContent } from '../lib/passage-content.ts';
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
@@ -693,7 +694,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
         setExtentFloor(floor=>Math.max(floor,extentTotal.current));
         setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
       }}/>
-      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
+      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const note = injectedMessage(ps.turnPrompt!); return note ? injectedLine(note) : ps.turnPrompt!; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.
           if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));
@@ -1094,15 +1095,21 @@ function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { promp
     observer.observe(el);
     return () => observer.disconnect();
   }, [prompt, expanded]);
+  // Claude Code writes some notices in the user role (a finished background task, a command echo); those are not the person's words.
+  const injected = injectedMessage(prompt);
+  const who = injected ? <span className="turn-who turn-source" title={`Written into the journal by Claude Code, not typed by you${injected.hover ? ` · ${injected.hover}` : ''}`}>Claude Code · {injected.label}</span> : <span className="turn-who">You</span>;
+  const shown = injected ? injected.detail : prompt;
+  const captured = injected ? <details className="turn-captured"><summary>Captured text</summary><pre className="output">{prompt}</pre></details> : null;
   // The chapter treatment belongs to Modern; the retained UIs keep their original prompt block.
-  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn"><span className="turn-who">You</span>{prompt && <div className="turn-text">{prompt}</div>}{images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}</div>;
+  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn">{who}{shown && <div className="turn-text">{shown}</div>}{captured}{images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}</div>;
   const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
   const basis = ledgerBasis(ledger);
   const settings = ledger?.recorded?.settingsChange && mode === 'history' ? settingsLine(ledger.recorded.settingsChange) : undefined;
   return (
     <div className="turn">
-      <span className="turn-who">You</span>
-      {prompt && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>}
+      {who}
+      {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
+      {captured}
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
       {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
       {plan && <PinnedPlanList plan={plan} />}
