@@ -38,12 +38,11 @@ export function fileEvidenceDescription(evidence?: FileEvidence, count?: number)
 
 const outsideLabel = (n: number) => `Changed on disk outside Claude Code’s edits${n > 1 ? ` (${n} times)` : ''}: by you, another program or a command`;
 
-export function FileEvidenceMarks({ evidence, count }: { evidence?: FileEvidence; count?: number }) {
-  if (count) return <span className="file-evidence folder-evidence" title={`${count} file${count===1?'':'s'} with captured activity`} aria-label={`${count} file${count===1?'':'s'} with captured activity`}><i aria-hidden="true"/>{count}</span>;
-  if (!evidence || !evidence.change && !evidence.readCalls && !evidence.now && !evidence.outside) return null;
+/** UI-13: only what happened to the file shows on its row (E/A/D, changed outside, now). Read and folder counts live in the row's description. */
+export function FileEvidenceMarks({ evidence }: { evidence?: FileEvidence }) {
+  if (!evidence || !evidence.change && !evidence.now && !evidence.outside) return null;
   const change = evidence.change === 'A' ? 'creation' : evidence.change === 'D' ? 'deletion' : 'edit/write';
   return <span className="file-evidence">
-    {!!evidence.readCalls && <span className="file-reads" title={`${evidence.readCalls} captured read calls`} aria-label={`${evidence.readCalls} captured read calls`}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z"/><circle cx="10" cy="10" r="2"/></svg>{evidence.readCalls}</span>}
     {evidence.change && <span className={`file-change change-${evidence.change}`} title={`Captured ${change}${evidence.changeStatus === 'unknown' ? ' · outcome not reported' : ''}`} aria-label={`Captured ${change}${evidence.changeStatus === 'unknown' ? ', outcome not reported' : ''}`}>{evidence.change}</span>}
     {!!evidence.outside && <span className="file-outside" title={outsideLabel(evidence.outside)} aria-label={outsideLabel(evidence.outside)}>≠</span>}
     {evidence.now && <span className="file-now" title="Open captured tool call" aria-label="Open captured tool call">now</span>}
