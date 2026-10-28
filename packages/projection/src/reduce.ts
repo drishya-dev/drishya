@@ -47,7 +47,7 @@ import { DESKTOP_PLAN_TOOL, DesktopChecklists, TaskPlans, exitPlanText, proposed
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r21';
+export const REDUCER_VERSION = 'r22';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -120,7 +120,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const turnByRecording = new Map<string, string>();
   // CONTENT-1: a prompt's turn by "<recording>|<record id>", and images seen before its text part.
   const turnByRecord = new Map<string, TimelineItem & { type: 'turn' }>();
-  const pendingTurnImages = new Map<string, OperationImage[]>();
+  // `first` is the record's first image part: an image-only prompt keeps that position and id.
+  const pendingTurnImages = new Map<string, { images: OperationImage[]; first: Observation }>();
   const unrecorded = new Map<string, Prose>();
   // DATA-5: checkpoints by "<recording>|<prompt id>", then by workspace path. Order-independent:
   // an edit is matched at snapshot time, whichever of the two was recorded first.
@@ -277,8 +278,25 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     return st;
   };
 
+  // CONTENT-1: a prompt record whose images never met a text part is still a prompt, with no invented words.
+  const imageOnlyTurn = ({ images, first }: { images: OperationImage[]; first: Observation }): TimelineItem & { type: 'turn' } =>
+    ({ type: 'turn', id: `turn_${first.id}`, sequence: first.receivedSequence, agentId: agentKey(first), prompt: '', time: first.sourceTime, images });
+  function flushImageOnlyTurns(except?: string) {
+    for (const [key, held] of [...pendingTurnImages]) {
+      if (key === except) continue;
+      pendingTurnImages.delete(key);
+      ensureAgent(held.first);
+      const turn = imageOnlyTurn(held);
+      turnByRecording.set(held.first.recordingId, turn.id);
+      if (held.first.source.recordId) turnMessageByRecording.set(held.first.recordingId, held.first.source.recordId);
+      turnByRecord.set(key, turn);
+      timeline.push(turn);
+    }
+  }
+
   function append(batch: Iterable<Observation>) {
     for (const o of batch) {
+      if (pendingTurnImages.size) flushImageOnlyTurns(`${o.recordingId}|${o.source?.recordId ?? o.id}`);
       observationCount++;
       lastSequence = Math.max(lastSequence, o.receivedSequence);
       usage.add(o);
@@ -461,7 +479,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             const key = `${o.recordingId}|${o.source.recordId ?? o.id}`;
             const turn = turnByRecord.get(key);
             if (turn) (turn.images ??= []).push(...images);
-            else if (!t.trim()) pendingTurnImages.set(key, [...(pendingTurnImages.get(key) ?? []), ...images]);
+            else if (!t.trim()) { const held = pendingTurnImages.get(key); pendingTurnImages.set(key, { images: [...(held?.images ?? []), ...images], first: held?.first ?? o }); }
           }
           if (!t.trim()) break;
           ensureAgent(o);
@@ -473,7 +491,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           turnByRecording.set(o.recordingId, id);
           if (o.source.recordId) turnMessageByRecording.set(o.recordingId, o.source.recordId);
           const recordKey = `${o.recordingId}|${o.source.recordId ?? o.id}`;
-          const attached = [...(pendingTurnImages.get(recordKey) ?? []), ...(images ?? [])];
+          const attached = [...(pendingTurnImages.get(recordKey)?.images ?? []), ...(images ?? [])];
           pendingTurnImages.delete(recordKey);
           const turn: TimelineItem & { type: 'turn' } = { type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime, ...(typeof p.permissionMode === 'string' ? { permissionMode: p.permissionMode } : {}), ...(attached.length ? { images: attached } : {}) };
           turnByRecord.set(recordKey, turn);
@@ -782,7 +800,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       for (const a of finalAgents.values()) if (a.stoppedSequence === undefined && a.id.endsWith('.agent:main')) a.stoppedSequence = Math.max(0, timeline.length - 1);
     }
 
-    const placed = placeChildren(operations, timeline, [...artifacts.values()], prose, [...finalAgents.values()], itemReceipts);
+    const placed = placeChildren(operations, pendingTurnImages.size ? [...timeline, ...[...pendingTurnImages.values()].map(imageOnlyTurn)] : timeline, [...artifacts.values()], prose, [...finalAgents.values()], itemReceipts);
     crossLinks(placed.operations, placed.prose, finalLink);
     const passages = buildPassages(placed.timeline, placed.operations, placed.prose);
 
