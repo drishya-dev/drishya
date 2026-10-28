@@ -418,7 +418,7 @@ export type OperationDetail =
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
   | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[]; /** What the harness recorded about a page fetch. */ fetch?: { status?: number; statusText?: string; bytes?: number; durationMs?: number } }
   | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string; /** The harness recorded the task text only in encrypted form. */ descriptionEncrypted?: boolean }
-  | { kind: 'plan'; items: { text: string; status: string }[] }
+  | { kind: 'plan'; items: { id?: string; text: string; status: string }[]; /** Derived native task-list isolation boundary, not a native list id. */ scope?: string; omittedItems?: number; document?: { text: string; truncated: boolean; artifactId: string; source?: 'file' | 'proposal' } }
   | { kind: 'other'; input: unknown; resultPreview?: string };
 
 export interface WebResult { url: string; title?: string; domain?: string; snippet?: string }

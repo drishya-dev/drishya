@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-4 | @yash + Codex | `codex/whole-plan-acceptance` | 2026-10-27 | User resumed whole integration 27 Oct: result-confirmed native task projection and identity, plan/checklist scene/UI and Codex proposed-plan material, focused fixtures/tests and real acceptance/report. Proposed contract changes stay draft for other-builder agreement before merge. No History, adapter-claude (HOME-1), question mapping (CONTENT-3), PERF-2/3 or native model calls. Up to 15 files, consolidate existing review commits to keep about five. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | HOME-1 | @harsh + Codex | `harsh/home-1-titles-running` | 2026-10-27 | `apps/ui/src/modern/SessionHome.tsx`, `apps/ui/src/lib/session-title.ts`, Home stylesheets (`session-home.css`, `home-active.css`), session-discovery title code in `packages/adapter-claude/src/index.ts`, bounded-tail helper in `packages/capture-core/src/discover.ts` (64 KiB selected by the 27 Oct counts-only survey; Harsh authorized), plus tests. No contracts/ingest/store yet. |
 | TEST-2 | @harsh + Codex | `harsh/test-2-reading-jump` | 2026-10-27 | `History.tsx` (reading-anchor and height-measurement code only), plus tests. |
@@ -43,6 +42,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — CONTENT-4 native plan integration
+
+- **27 October, draft #258:** implemented the proposed D10 projection seam, result-confirmed task snapshots and stable identity, replay guards and captured plan Markdown. Existing native sources now reach the UI: six tasks/eighteen revisions, six desktop frames across two Claude captures and one Codex capture, zero browser errors/external requests. 895 units, both types and build pass; focused browser checks include the merged Codex question journeys.
+- **Review gate:** optional contract changes await the other builder's agreement; no Harsh approval is inferred. ExitPlanMode remains absent from both tested native inventories, so genuine approval/accepted-plan interaction stays unverified. Parent CONTENT-4 is open with concrete gates in TASKS. No new native model calls, History/question/Claude adapter or paused PERF edits. [Current report](review/content-4-living-plan-acceptance.md).
 
 ### Yash with Claude (Sonnet 5.5) — UI-11: header cluster and search field
 - **Result:** the black-square Workspace icon, the 4 px misaligned Workspace/Git icons and the clipped purple search outline are fixed with CSS only; all header glyphs are one line-icon weight on one baseline. Checked on a fixture, a real Codex and a real Claude session; guard added to `header-cluster.spec.ts`.

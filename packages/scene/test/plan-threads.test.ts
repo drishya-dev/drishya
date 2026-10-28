@@ -9,7 +9,7 @@ const plan = (id: string, seq: number, items: [string, string][], agentId = 'a')
   detail: { kind: 'plan', items: items.map(([text, status]) => ({ text, status })) },
 } as unknown as Operation);
 const turn = (sequence: number) => ({ type: 'turn', id: `t${sequence}`, sequence, agentId: 'a' });
-const projection = (operations: Operation[], turns: number[]) => ({ operations, timeline: turns.map(turn) }) as unknown as Projection;
+const projection = (operations: Operation[], turns: number[]) => ({ operations, timeline: Array.from({ length: Math.max(0, ...turns) + 1 }, (_, sequence) => turns.includes(sequence) ? turn(sequence) : { type: 'gap', id: `g${sequence}`, sequence, reason: 'fixture padding' }) }) as unknown as Projection;
 
 describe('planThreads', () => {
   it('chains rewrites in one turn and says what changed', () => {
