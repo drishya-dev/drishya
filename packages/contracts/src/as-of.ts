@@ -18,6 +18,8 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     ...projection,
     // Accounting points do not own timeline steps. Whole-session totals are not historical evidence.
     usage: undefined,
+    // Turn timing, outcome and errors describe the finished turn: a past step must not show what came later.
+    turns: undefined,
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
     ...(projection.notices ? { notices: projection.notices.filter((n) => noticeIds.has(n.id)) } : {}),

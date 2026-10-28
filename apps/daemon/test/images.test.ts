@@ -67,7 +67,7 @@ it('keeps inline result images once, serves them by hash to their own recording,
   // Codex: images attached to the prompt and images a tool returned, both as data URLs.
   const codexRows = [
     { timestamp: '2026-10-21T00:00:00Z', type: 'session_meta', payload: { id: 'codex-images', cwd: dir, cli_version: '0.162.0' } },
-    { timestamp: '2026-10-21T00:00:01Z', type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Match this mockup' }, { type: 'input_image', image_url: `data:image/png;base64,${PNG_1x1}` }, { type: 'input_image', image_url: 'https://example.com/never-fetched.png' }] } },
+    { timestamp: '2026-10-21T00:00:01Z', type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Match this mockup' }, { type: 'input_image', image_url: `data:image/png;base64,${PNG_1x1}` }, { type: 'input_image', image_url: 'https://example.com/never-fetched.png?credential=remote-private-marker' }] } },
     { timestamp: '2026-10-21T00:00:02Z', type: 'response_item', payload: { type: 'function_call', name: 'view_image', call_id: 'v1', arguments: JSON.stringify({ path: join(dir, 'shot.png') }) } },
     { timestamp: '2026-10-21T00:00:03Z', type: 'response_item', payload: { type: 'function_call_output', call_id: 'v1', output: [{ type: 'input_text', text: 'viewed' }, { type: 'input_image', image_url: `data:image/png;base64,${PNG_1x1}` }] } },
   ];
@@ -76,9 +76,14 @@ it('keeps inline result images once, serves them by hash to their own recording,
   const codex = await app.ingest.importSource('codex', codexPath);
   const cp = app.projection(codex.recordingId);
   const codexTurn = cp.timeline.find((i) => i.type === 'turn');
-  expect(codexTurn?.type === 'turn' && codexTurn.images).toEqual([{ sha: read[0]!.sha, mime: 'image/png', bytes: 70, width: 1, height: 1 }]);
+  expect(codexTurn?.type === 'turn' && codexTurn.images).toEqual([{ sha: read[0]!.sha, mime: 'image/png', bytes: 70, width: 1, height: 1 }, { omitted: 'remote' }]);
   expect(cp.operations.find((o) => o.id === `${codex.recordingId}.v1`)?.images?.map((i) => i.sha)).toEqual([read[0]!.sha]);
   expect(JSON.stringify(app.store.observations(codex.recordingId))).not.toContain('never-fetched');
+  expect(JSON.stringify(app.store.observations(codex.recordingId))).not.toContain('remote-private-marker');
+  const exported = JSON.stringify(await app.exportBundle(codex.recordingId));
+  expect(exported).not.toContain('never-fetched');
+  expect(exported).not.toContain('remote-private-marker');
+  expect(exported).toContain('"omitted":"remote"');
 
   // Another recording cannot fetch this recording's image, even by its hash.
   const other = await app.ingest.importSource('claude-code', write('b', [{ ...base('b'), type: 'user', uuid: 'q', message: { role: 'user', content: 'Hello' } }]));

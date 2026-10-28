@@ -24,6 +24,7 @@ import {
 } from '@drishya/capture-core';
 import { imageCandidate, sanitize } from '@drishya/privacy';
 import { typedItem } from './items.ts';
+import { turnDetail, turnEndedDetail, turnSettingsDetail, turnStartedDetail } from './turns.ts';
 
 export const descriptor: AdapterDescriptor = {
   id: 'codex',
@@ -133,10 +134,10 @@ export function intentOf(name: string, args: Rec, namespace?: string): ToolInten
 /** CONTENT-1: `input_image` entries carrying base64 data URLs, as unchecked candidates for sanitize. Remote URLs are never fetched. */
 function dataImages(content: unknown) {
   if (!Array.isArray(content)) return [];
-  return (content as Rec[]).flatMap((c) => {
+  return (content as Rec[]).flatMap<ReturnType<typeof imageCandidate> | { kind: 'captured-image'; omitted: 'remote' }>((c) => {
     const url = c?.type === 'input_image' && typeof c.image_url === 'string' ? c.image_url : '';
     const m = /^data:image\/[a-z+.-]+;base64,/i.exec(url);
-    return m ? [imageCandidate(url.slice(m[0].length))] : [];
+    return m ? [imageCandidate(url.slice(m[0].length))] : /^https?:\/\//i.test(url) ? [{ kind: 'captured-image', omitted: 'remote' }] : [];
   });
 }
 
@@ -208,16 +209,21 @@ export function createParser(_ctx: ParseContext): RecordParser {
         const identity = Object.fromEntries(Object.entries({ agentNickname: p.agent_nickname, agentPath: p.agent_path, parentThreadId: p.parent_thread_id, forkedFromId: p.forked_from_id, effort: p.reasoning_effort }).filter(([, value]) => typeof value === 'string'));
         // Existing metadata IDs/payloads remain unchanged. New identity data can enrich old recordings.
         if (Object.keys(identity).length) out.push({ ...base, part: 1, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', ...identity } });
+        // Lineage facts arrived later than the identity above (DATA-3), so they take their own part and can enrich old recordings.
+        const spawn = p.source?.subagent?.thread_spawn;
+        const lineage = Object.fromEntries(Object.entries({ threadSource: p.thread_source, startedBy: typeof p.source === 'string' ? p.source : undefined, spawnDepth: Number.isSafeInteger(spawn?.depth) ? spawn.depth : undefined, agentRole: spawn?.agent_role }).filter(([, value]) => value !== undefined && value !== null && (typeof value === 'number' || typeof value === 'string')));
+        if (Object.keys(lineage).length) out.push({ ...base, part: 2, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', ...lineage } });
         return out;
       }
       if (type === 'turn_context') {
+        const detail = turnDetail(base, turnSettingsDetail(p));
         const nextCwd = typeof p.cwd === 'string' ? p.cwd : cwd;
         const nextModel = typeof p.model === 'string' ? p.model : model;
         if (nextCwd !== cwd || nextModel !== model) {
           cwd = nextCwd; model = nextModel;
-          return [{ ...base, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', cwd, model } }];
+          return [{ ...base, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', cwd, model } }, ...detail];
         }
-        return [];
+        return detail;
       }
       if (type === 'event_msg') {
         const t = String(p.type ?? '');
@@ -231,7 +237,7 @@ export function createParser(_ctx: ParseContext): RecordParser {
           if (parsed.payload.agent && typeof p.item.agent_nickname === 'string') out.push({ ...base, part: 1, agentId: parsed.payload.agent.path ? agentFromAddress(parsed.payload.agent.path) : `agent:${parsed.payload.agent.threadId}`, kind: 'session.meta', payload: { harness: 'codex', agentNickname: p.item.agent_nickname } });
           return out;
         }
-        if (t === 'task_started') { turnId = typeof p.turn_id === 'string' ? p.turn_id : undefined; return [{ ...base, kind: 'turn.start', payload: { turnId: p.turn_id } }]; }
+        if (t === 'task_started') { turnId = typeof p.turn_id === 'string' ? p.turn_id : undefined; return [{ ...base, kind: 'turn.start', payload: { turnId: p.turn_id } }, ...turnDetail(base, turnStartedDetail(p))]; }
         if (t === 'token_count') {
           const keys = { input_tokens: 'input', cached_input_tokens: 'cachedInput', cache_write_input_tokens: 'cacheWrite', output_tokens: 'output', reasoning_output_tokens: 'reasoningOutput', total_tokens: 'total' } as const;
           const tokens = usageTokens(p.info?.total_token_usage, keys), request = usageTokens(p.info?.last_token_usage, keys);
@@ -244,8 +250,8 @@ export function createParser(_ctx: ParseContext): RecordParser {
           if (request) emit(1, { ...shared, cumulative: false, tokens: request });
           return out;
         }
-        if (t === 'task_complete') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }]; }
-        if (t === 'turn_aborted') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }]; }
+        if (t === 'task_complete') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }, ...turnDetail(base, turnEndedDetail(p, 'completed'))]; }
+        if (t === 'turn_aborted') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }, ...turnDetail(base, turnEndedDetail(p, 'aborted'))]; }
         if (t === 'context_compacted') return [{ ...base, kind: 'compaction', payload: {} }];
         if (IGNORED_EVENTS.has(t)) return [];
         return [{ ...base, kind: 'unknown', payload: { recordType: `event_msg:${t}` }, availability: 'metadata-only' }];

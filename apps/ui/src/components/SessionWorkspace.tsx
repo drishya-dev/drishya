@@ -319,6 +319,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   const [readingVersion, setReadingVersion] = useEvidenceState<string | undefined>('disk/version', undefined);
   const [query, setQuery] = useEvidenceState('disk/query', '');
   const [activeLine, setActiveLine] = useEvidenceState<number | undefined>('disk/line', undefined);
+  const [revealRequest,setRevealRequest] = useState(0);
   const [lineInput, setLineInput] = useEvidenceState('disk/lineInput', '');
   const [lineError, setLineError] = useState<string>();
   const [wrap, setWrap] = useEvidenceState('disk/wrap', false);
@@ -339,11 +340,12 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
     if (!matches.length) return;
     const current = matches.indexOf(activeLine ?? -1);
     setActiveLine(matches[current < 0 ? direction === 1 ? 0 : matches.length - 1 : (current + direction + matches.length) % matches.length]);
+    setRevealRequest(request=>request+1);
   };
   const go = () => {
     const line = Number(lineInput);
     if (!file || !/^\d+$/.test(lineInput) || !Number.isSafeInteger(line) || line < 1 || line > file.totalLines) { setLineError(`Choose a line from 1 to ${file?.totalLines ?? 0}`); return; }
-    setLineError(undefined); setActiveLine(line);
+    setLineError(undefined); setActiveLine(line); setRevealRequest(request=>request+1);
   };
   const copy = async () => {
     if (!file) return;
@@ -372,7 +374,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
     {workspace?.approved&&!peek&&<ImportContext path={path} current hideEmpty />}
     {!workspace?<p className="current-reader-access" role="status">Checking workspace access…</p>:!workspace.approved&&<section className="current-reader-access" aria-label="Current file access"><h3>Read current files</h3><p>{workspace.root?`Approve reading in ${workspace.root}. Captured work stays separate.`:'This session has no captured workspace root on this machine.'}</p><button className="btn" disabled={granting||!workspace.root} onClick={()=>{setGranting(true);setGrantError('');void approve().catch(error=>setGrantError(error.message)).finally(()=>setGranting(false));}}>{granting?'Approving…':'Approve current-file reading'}</button>{grantError&&<p role="alert">{grantError}</p>}</section>}
     {error && <p className="bad" role="alert">{error} <button className="btn" onClick={() => void current.refresh()}>Retry current source</button></p>}
-    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <><div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?documentAllowed?<Markdown text={file.text} document/>:<p role="status">Rendered documents support up to 5,000 lines and 256 KiB. The complete file remains available in <button className="btn ghost" onClick={()=>setDocumentMode(false)}>Source</button>.</p>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?'On disk · ':''}{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
+    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <><div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?documentAllowed?<Markdown text={file.text} document/>:<p role="status">Rendered documents support up to 5,000 lines and 256 KiB. The complete file remains available in <button className="btn ghost" onClick={()=>setDocumentMode(false)}>Source</button>.</p>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 
