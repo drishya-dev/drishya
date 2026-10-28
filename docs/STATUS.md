@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | CONTENT-5b | @yash + Codex parallel lane | `codex/content-5b-delegation-thread` | 2026-10-28 | Whole delegation thread: DelegationDetail/delegation helpers and scoped CSS, dedicated read-only worker/API evidence query and tests/report. No History.tsx, reducer, contracts, adaptive readers or held Claude adapter/discovery files; negotiate any unavoidable seam before edits. Real multi-agent acceptance required. |
 | MOTION-2 | @yash + Codex parallel lane | `codex/motion-2-tree-lift` | 2026-10-28 | Whole visible-file-row Lift: Origins.tsx, dedicated origin selection helper and motion tests/report. Existing tree row metadata reused; no History.tsx, scroll measurement, hover-reading, adaptive readers, reducer, contracts or SessionWorkspace.tsx edits. |
-| READ-5 | @yash + Codex parallel lane | `codex/read-5-session-attribution` | 2026-10-28 | Whole remaining task: scene session-diff/attribution helpers and since.ts, Changes presentation and dedicated tests/report. No History.tsx, reducer, FileHistory or Git history files; coordinate shared API wiring through root. |
 | READ-8 | @yash + Codex parallel lane | `codex/read-8-file-timeline` | 2026-10-28 | Whole remaining task: FileHistory.tsx, file-timeline helpers, file-action pagination/count service (`history.ts`, `history-worker.ts`, `api.ts` file methods; `server.ts` file-operations handler) and dedicated tests/report. No History.tsx, reducer, since/Changes or Git history files; coordinate shared API wiring through root. |
 | GIT-2 | @yash + Codex parallel lane | `codex/git-2-session-links` | 2026-10-28 | Whole remaining task: git-history service/types/UI and session-link helpers, dedicated tests/report; only Git-evidence import/method/dispatch in shared `history.ts`/`history-worker.ts` and GitReview construction in `server.ts` (explicitly coordinated with READ-8; root resolves integration). No History.tsx, reducer, FileHistory, since/Changes; coordinate shared API wiring through root. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
@@ -47,6 +46,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex parallel lane — READ-5 complete
+
+- **PR #267:** captured session net diffs, exact changed-line edit/turn links, reversions and subsequent recorded commands/checks. No History, API, reducer or schema changes; other claims preserved.
+- **Acceptance:** 29 focused units, both types/build, three desktop browser checks, actual Claude/Codex reading and independent 300-chain composition verification. Missing/gapped material stays unavailable; no independent disk-state or final-newline claim. [Report](review/133-session-net-attribution.md).
 
 ### Yash with Claude (Sonnet 5.5) — CONTENT-4b: plan mode and the desktop checklist
 - **Result:** Claude's `ExitPlanMode` shows its plan text as one captured proposal (no inferred approval) and the desktop app's `update_plan` checklist becomes one evolving list per prompt, hidden until each result is recorded. Real shapes came from this session's own journal; counts in TASKS. Reducer r21. Also merged today: #252 (TEST-2 reading jump), #263 (UI-11), #258 (CONTENT-4), #262 (HOME-1 titles), and `package:verify`'s expected observation count after DATA-3.
