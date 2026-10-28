@@ -11,3 +11,13 @@
 .structured-tool-output>.structured-output-controls{gap:6px;margin:2px 0 4px}
 .structured-tool-output>.structured-output-controls>button{padding:2px 6px;font-size:11px;min-height:22px}
 .captured-result-views>.material-context,.captured-result-views>.result-original{max-width:100%;overflow-wrap:anywhere}
+/* CONTENT-10: the reading controls (Inspect data / delimited text / resources / documents, and the manual choice) no longer take a
+   resident row above every result. They float over the result's top-right corner and show on hover or keyboard focus; the buttons,
+   their names and behaviour are unchanged. The expanded reader keeps its own row because it has room. */
+.result-readings,.terminal-preview{position:relative}
+.result-readings>.captured-result-views,.terminal-preview>.captured-result-views{position:absolute;top:2px;right:2px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:2px;width:max-content;max-width:min(440px,calc(100% - 4px));margin:0;padding:2px;border:1px solid var(--line);border-radius:8px;background:color-mix(in srgb,var(--s2) 94%,transparent);opacity:0;transition:opacity 120ms ease}
+.result-readings:is(:hover,:focus-within)>.captured-result-views,.terminal-preview:is(:hover,:focus-within)>.captured-result-views{opacity:1}
+.result-readings>.captured-result-views>.material-context,.terminal-preview>.captured-result-views>.material-context{max-width:min(420px,100%);white-space:normal}
+.result-readings>.captured-result-views>.result-original,.terminal-preview>.captured-result-views>.result-original{position:relative;margin:0}
+.result-readings>.captured-result-views>.result-original>:not(summary),.terminal-preview>.captured-result-views>.result-original>:not(summary){position:absolute;top:100%;right:0;z-index:4;min-width:max-content;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--s2)}
+@media(prefers-reduced-motion:reduce){.result-readings>.captured-result-views,.terminal-preview>.captured-result-views{transition:none}}
