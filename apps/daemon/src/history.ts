@@ -4,7 +4,7 @@ import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts'
 import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
 import { Worker } from 'node:worker_threads';
-import type { ArtifactSlice, Operation } from '@drishya/contracts';
+import type { ArtifactSlice } from '@drishya/contracts';
 import type { BlobSearchResult } from '@drishya/store';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { NowFacts } from '../../../packages/scene/src/now.ts';
