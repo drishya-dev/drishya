@@ -42,12 +42,12 @@ import { TurnAccumulator } from './turns.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 import { declinedFrom } from './declined.ts';
-import { TaskPlans, proposedPlan } from './plans.ts';
+import { DESKTOP_PLAN_TOOL, DesktopChecklists, TaskPlans, exitPlanText, proposedPlan } from './plans.ts';
 
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r20';
+export const REDUCER_VERSION = 'r21';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -73,6 +73,7 @@ type Rec = Record<string, any>;
 
 interface OpState {
   taskInput?: unknown;
+  taskRedacted?: boolean;
   taskTurn?: string;
   nestedPatch?: boolean;
   op: Operation;
@@ -101,6 +102,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   let observationCount = 0;
   let lastSequence = -1;
   const taskPlans = new TaskPlans();
+  const desktopPlans = new DesktopChecklists();
   const usage = new UsageAccumulator();
   const turnRecords = new TurnAccumulator();
   const itemReceipts = new Map<string, number>();
@@ -592,7 +594,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           const st = newOp(o, baseId, intent, String(p.tool));
           describeCall(st, p, rel);
-          if (['TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet'].includes(String(p.tool))) st.taskInput = resolveBlobs(p.input, text);
+          if (['TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet', 'ExitPlanMode', DESKTOP_PLAN_TOOL].includes(String(p.tool))) { st.taskInput = resolveBlobs(p.input, text); st.taskRedacted = o.redactions.length > 0; }
           if ((st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.command.length > (opts.maxInputChars ?? Infinity)) {
             const command = st.op.detail.command;
             st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_input`, kind: 'excerpt', observedAtSequence: st.op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: command }));
@@ -630,6 +632,24 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
                 st.op.kind = 'plan'; st.op.detail = { ...plan.detail, scope: `${plan.detail.scope}/turn:${st.taskTurn ?? 'unrecorded'}` }; st.op.title = 'Update tasks';
                 st.op.classification = derived('claude-task-result-v1', [...new Set([...plan.observations, ...st.op.observationIds])]);
                 st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_task-result`, kind: 'excerpt', observedAtSequence: st.op.endSequence!, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: JSON.stringify(resolveBlobs(p.structured, text), null, 2) }));
+              }
+            }
+            if (!p.isError && st.taskInput !== undefined && st.op.tool === 'ExitPlanMode' && o.source.adapterId === 'claude-code') {
+              // The plan text is the call's own input; the harness's reply stays a captured result, never an inferred approval.
+              const plan = exitPlanText(st.taskInput);
+              if (plan !== undefined) {
+                const artifactId = addArtifact({ id: `art_${st.op.id}_plan`, kind: 'snapshot', observedAtSequence: st.op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [st.callObservationId ?? o.id] }, redacted: st.taskRedacted === true, content: plan });
+                st.op.kind = 'plan'; st.op.title = 'Plan for approval';
+                st.op.detail = { kind: 'plan', items: [], document: { text: clip(plan, maxProse), truncated: plan.length > maxProse, artifactId, source: 'proposal' } };
+                st.op.artifactIds.push(artifactId);
+                st.op.classification = derived('claude-exit-plan-mode-v1', [...new Set([st.callObservationId ?? o.id, o.id])]);
+              }
+            }
+            if (!p.isError && st.taskInput !== undefined && st.op.tool === DESKTOP_PLAN_TOOL) {
+              const detail = desktopPlans.apply(o, st.op.tool, st.taskInput);
+              if (detail) {
+                st.op.kind = 'plan'; st.op.detail = detail; st.op.title = `Update plan · ${detail.items.length} items`;
+                st.op.classification = derived('claude-desktop-update-plan-v1', [...new Set([st.callObservationId ?? o.id, o.id])]);
               }
             }
             if (st.nestedPatch) st.wrapperResult = { observation: o, payload: p };
