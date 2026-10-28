@@ -5,6 +5,7 @@
 import type { Operation, Projection } from '@drishya/contracts';
 import { materialOperations, operationFailed } from '@drishya/contracts';
 import {operationObservations} from './operation-observations.ts';
+import {sessionDiff, type SessionDiff} from './session-diff.ts';
 
 export interface SinceItem {
   kind: 'edit' | 'failure' | 'test' | 'unfinished' | 'gap';
@@ -47,7 +48,7 @@ export interface SinceFileEdit {
   nextTest?: { operationId: string; outcome: 'passed' | 'failed' | 'unknown' };
 }
 /** Captured patch size of one edited file, and the prompt turn of the last captured edit to it. */
-export interface SinceFileStat { added: number; removed: number; edits: number; /** 1-based turn of the agent's prompts at the last captured edit. */ turn?: number; /** Captured edits in capture order, at most `FILE_EDIT_LIMIT`; `edits` is the full count. */ fileEdits?: SinceFileEdit[] }
+export interface SinceFileStat { added: number; removed: number; edits: number; /** 1-based turn of the agent's prompts at the last captured edit. */ turn?: number; /** Captured edits in capture order, at most `FILE_EDIT_LIMIT`; `edits` is the full count. */ fileEdits?: SinceFileEdit[]; netDiff?: SessionDiff }
 export interface SinceSnapshot extends SinceDigest {
   counts: Record<SinceGroup, number>;
   editedFileCount: number;
@@ -102,7 +103,9 @@ export function sinceSnapshot(p: Projection, after: number, page = 0): SinceSnap
   const counts = Object.fromEntries(groups.map((key) => [key, digest[key].length])) as Record<SinceGroup, number>;
   const pageFiles = digest.editedFiles.slice(offset * 50, offset * 50 + 50), gapCounts = new Map<string, number>();
   for (const gap of digest.gaps) gapCounts.set(gap.title, (gapCounts.get(gap.title) ?? 0) + 1);
-  return { fileStats: sinceFileStats(p, digest.edits, pageFiles), gapGroups: [...gapCounts].map(([title, count]) => ({ title, count })).sort((a, b) => b.count - a.count), ...digest, ...Object.fromEntries(groups.map((key) => [key, digest[key].slice(offset * 20, offset * 20 + 20)])), counts, editedFiles: digest.editedFiles.slice(offset * 50, offset * 50 + 50), editedFileCount: digest.editedFiles.length };
+  const fileStats = sinceFileStats(p, digest.edits, pageFiles);
+  for (const path of pageFiles) if (fileStats[path]) fileStats[path].netDiff = sessionDiff(p, path, after);
+  return { fileStats, gapGroups: [...gapCounts].map(([title, count]) => ({ title, count })).sort((a, b) => b.count - a.count), ...digest, ...Object.fromEntries(groups.map((key) => [key, digest[key].slice(offset * 20, offset * 20 + 20)])), counts, editedFiles: digest.editedFiles.slice(offset * 50, offset * 50 + 50), editedFileCount: digest.editedFiles.length };
 }
 
 /** Where an operation's outcome landed: its result if it has one, else where it started. */
