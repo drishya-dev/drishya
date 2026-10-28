@@ -4,6 +4,7 @@ import { fileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import {reviewInsights,findingMembers} from '../../../packages/scene/src/review-insights.ts';
 import {commandPage} from '../../../packages/scene/src/commands.ts';
 import {gitSessionEvidence,commandAtWorkspace} from './git-session-evidence.ts';
+import {delegationThread} from './delegation-thread.ts';
 import { parentPort, workerData } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
 import { sinceSnapshot } from '../../../packages/scene/src/since.ts';
@@ -258,6 +259,10 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if(message.method==='git-session-evidence'){
       const projection=current(a.id).projection;
       value=gitSessionEvidence(projection,a.query,op=>commandAtWorkspace(op.observationIds.slice(0,8).map(id=>source.observationById(a.id,id)).filter((o):o is Observation=>!!o),projection.workspaceRoot));
+    }
+    else if(message.method==='delegation-thread'){
+      const projection=current(a.id).projection;
+      value=delegationThread(source,a.step===undefined?projection:asOfProjection(projection,a.step),a.operationId,a.start,a.step);
     }
     else if (message.method === 'page') value = page(a.id, a.query);
     else if (message.method === 'page-bytes') value = new TextEncoder().encode(JSON.stringify(page(a.id, a.query)));
