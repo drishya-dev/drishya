@@ -31,15 +31,15 @@ export function DelegationDetail({ op, d }: { op: Operation; d: SpawnDetail }) {
   const child = useChild(d);
   const source=useApp(s=>s.source),recordingId=useApp(s=>s.recordingId),mode=useApp(s=>s.mode),step=useApp(s=>s.step),revision=useApp(s=>s.projection?.observationCount);
   const catalog=useApp(s=>s.recordings.map(r=>r.id).join(','));
-  const [start,setStart]=useState(0),[retry,setRetry]=useState(0),[value,setValue]=useState<{key:string;source:typeof source;revision:typeof revision;catalog:string;data:DelegationThread}>(),[error,setError]=useState(''),[fullMessage,setFullMessage]=useState('');
-  const at=mode==='replay'?step:undefined,key=`${recordingId}/${op.id}/${op.observationIds[0]}/${start}/${at??'live'}`;
+  const [start,setStart]=useState(0),[taskStart,setTaskStart]=useState(0),[retry,setRetry]=useState(0),[value,setValue]=useState<{key:string;source:typeof source;revision:typeof revision;catalog:string;data:DelegationThread}>(),[error,setError]=useState(''),[fullMessage,setFullMessage]=useState('');
+  const at=mode==='replay'?step:undefined,key=`${recordingId}/${op.id}/${op.observationIds[0]}/${start}/${taskStart}/${at??'live'}`;
   const thread=value?.key===key&&value.source===source?value.data:undefined,fresh=!!thread&&value?.revision===revision&&value?.catalog===catalog;
   const linkedChild=fresh?thread?.child:undefined;
   useEffect(()=>{
     if(!recordingId||!source?.delegationThread)return;let active=true;setError('');
-    void source.delegationThread(recordingId,op.id,start,at).then(data=>{if(active)setValue({key,source,revision,catalog,data});}).catch(e=>{if(active)setError(e.message);});
+    void source.delegationThread(recordingId,op.id,start,at,taskStart).then(data=>{if(active)setValue({key,source,revision,catalog,data});}).catch(e=>{if(active)setError(e.message);});
     return()=>{active=false;};
-  },[source,recordingId,op.id,start,at,key,revision,catalog,retry]);
+  },[source,recordingId,op.id,start,taskStart,at,key,revision,catalog,retry]);
   const own = useApp(state => child ? state.projection?.operations.filter(other => other.agentId === child.id).length ?? 0 : 0);
   const facts = thread?delegationFacts(d,undefined):delegationFacts(d,at===undefined?child:undefined);
   if(linkedChild){
@@ -52,9 +52,9 @@ export function DelegationDetail({ op, d }: { op: Operation; d: SpawnDetail }) {
   return <div className="op-expanded delegation-material" onClick={(e) => e.stopPropagation()}>
     {facts.length > 0 && <dl className="delegation-facts">{facts.map(fact => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}</dl>}
     <div className="material-context">Task given to the agent</div>
-    <div className="delegation-task">{d.descriptionEncrypted ? 'Not recorded: Codex stored the task text encrypted.' : (thread?.task?.text||d.description) ?? 'Not recorded.'}</div>
-    {thread?.task?.truncated&&<button className="btn ghost" onClick={()=>useApp.getState().select(op.id)}>Task preview limited · read captured request</button>}
-    {source?.delegationThread&&<details className="delegation-thread"><summary>Delegation thread{thread?` · ${thread.total} captured steps`:''}</summary>
+    <div className="delegation-task">{d.descriptionEncrypted ? 'Not recorded: Codex stored the task text encrypted.' : thread?.task?.unavailable?'Captured task text is unavailable.':(thread?.task?.text||d.description) ?? 'Not recorded.'}</div>
+    {thread?.task?.unavailable?<p className="muted small">{thread.task.reason==='content-limit'?'Captured task exceeds the 2 MiB reading limit.':'The capture references task text whose stored bytes are missing.'}</p>:thread?.task&&thread.task.total>16000&&<nav aria-label="Captured task text pages"><button className="btn ghost" disabled={!thread.task.start} onClick={()=>setTaskStart(Math.max(0,taskStart-16000))}>Previous task text</button><span className="muted small">Characters {thread.task.start+1}–{thread.task.start+thread.task.text.length} / {thread.task.total}</span><button className="btn ghost" disabled={!thread.task.truncated} onClick={()=>setTaskStart(thread.task!.start+thread.task!.text.length)}>Next task text</button></nav>}
+    {source?.delegationThread&&<details className="delegation-thread"><summary>Delegation thread{thread?` · ${thread.total} captured ${thread.total===1?'step':'steps'}`:''}</summary>
       {error?<p role="alert">Could not read the captured thread. <button className="btn ghost" onClick={()=>setRetry(n=>n+1)}>Retry</button></p>:!thread?<p role="status">Reading captured thread…</p>:<>
         {thread.identity==='unresolved'&&<p className="muted small">The capture does not establish one exact child identity. No child session is inferred.</p>}
         {!fresh&&<p className="muted small" role="status">Updating captured thread metadata…</p>}

@@ -81,7 +81,7 @@ export class HistoryService {
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
   gitSessionEvidence(id:string,query:GitSessionQuery) {return this.request<GitSessionEvidence>('git-session-evidence',{id,query});}
-  delegationThread(id:string,operationId:string,start=0,step?:number) {return this.request<DelegationThread|null>('delegation-thread',{id,operationId,start,step});}
+  delegationThread(id:string,operationId:string,start=0,step?:number,taskStart=0) {return this.request<DelegationThread|null>('delegation-thread',{id,operationId,start,step,taskStart});}
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   readingTarget(id: string, query: ReadingQuery) { return this.request<ReadingTarget | null>('reading-target', { id, query }); }

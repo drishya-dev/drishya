@@ -6,7 +6,7 @@ import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 import {expandCard} from './history-gestures.ts';
 
-let dir:string,app:App,server:RunningServer,codex:string,claude:string,child:string;
+let dir:string,app:App,server:RunningServer,codex:string,claude:string,child:string,long:string;
 const parentId='11111111-1111-4111-8111-111111111111',childId='22222222-2222-4222-8222-222222222222',t=(n:number)=>new Date(Date.UTC(2026,9,28,10,0,n)).toISOString();
 const write=(path:string,rows:unknown[])=>writeFileSync(path,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');
 test.beforeAll(async()=>{
@@ -21,7 +21,7 @@ test.beforeAll(async()=>{
   const sub=join(dir,'claude-parent','subagents');mkdirSync(sub,{recursive:true});const rows:unknown[]=[];
   for(let n=0;n<30;n++){rows.push({...common,isSidechain:true,agentId:'worker',type:'assistant',uuid:`a${n}`,timestamp:t(n+2),message:{role:'assistant',model:'synthetic-claude',content:[{type:'tool_use',id:`read${n}`,name:'Read',input:{file_path:join(dir,`file${n}.ts`)}}]}});rows.push({...common,isSidechain:true,agentId:'worker',type:'user',uuid:`r${n}`,timestamp:t(n+2),message:{role:'user',content:[{type:'tool_result',tool_use_id:`read${n}`,content:'1: captured source'}]}});}
   write(join(sub,'agent-worker.jsonl'),rows);claude=(await app.ingest.importSource('claude-code',main)).recordingId;
-  server=await startServer({app,port:0,token:'synthetic-thread-browser'});
+  const longPath=join(dir,'long-task.jsonl');write(longPath,[{...common,type:'user',uuid:'long-u',timestamp:t(0),message:{role:'user',content:'Review'}},{...common,type:'assistant',uuid:'long-a',timestamp:t(1),message:{role:'assistant',content:[{type:'tool_use',id:'long-agent',name:'Agent',input:{description:'Long task',subagent_type:'Explore',prompt:'Task line\n'.repeat(9000)}}]}}]);long=(await app.ingest.importSource('claude-code',longPath)).recordingId;server=await startServer({app,port:0,token:'synthetic-thread-browser'});
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 
@@ -40,4 +40,11 @@ test('Claude keeps task, all child actions and parent result together at the nar
   const detail=card.locator('.delegation-material'),thread=detail.locator('.delegation-thread');await expect(detail.locator('.delegation-task')).toHaveText('Read the implementation and return findings.');await thread.locator(':scope > summary').click();
   await expect(thread).toContainText('32 captured steps');await expect(thread.locator('li')).toHaveCount(25);await thread.getByRole('button',{name:'Next steps'}).click();await expect(thread.locator('li')).toHaveCount(7);await expect(thread).toContainText('Result returned to parent');await thread.getByRole('button',{name:'Previous steps'}).click();await expect(thread.locator('li')).toHaveCount(25);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('long native task text remains reachable through exact bounded pages',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${long}`);
+ const card=page.locator('article.op-spawn');await expect(card).toHaveCount(1);await expandCard(card);const detail=card.locator('.delegation-material');let text='';
+ for(let n=0;n<8;n++){await expect(detail.getByRole('navigation',{name:'Captured task text pages'})).toBeVisible();text+=await detail.locator('.delegation-task').textContent();const next=detail.getByRole('button',{name:'Next task text'});if(await next.isDisabled())break;await next.press('Enter');await expect(detail.getByRole('navigation',{name:'Captured task text pages'})).toContainText(`Characters ${(n+1)*16000+1}`);}
+ expect(text).toBe('Task line\n'.repeat(9000));
 });

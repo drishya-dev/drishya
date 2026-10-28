@@ -46,7 +46,7 @@ function childRecording(store:Store,id:string,threadId:string|undefined,childNat
 }
 
 /** A bounded read-model over sealed capture; no event-schema or reducer changes. */
-export function delegationThread(store:Store,p:Projection,operationId:string,start=0,step?:number):DelegationThread|null {
+export function delegationThread(store:Store,p:Projection,operationId:string,start=0,step?:number,taskStart=0):DelegationThread|null {
   const visible=step===undefined?p:asOfProjection(p,step),ranks=captureOrder(store,p),rank=(sequence:number)=>ranks.get(sequence)??Number.MAX_SAFE_INTEGER;
   const op=visible.operations.find(value=>value.id===operationId&&value.detail.kind==='spawn');if(!op||op.detail.kind!=='spawn')return null;
   const cutoff=step===undefined?Number.MAX_SAFE_INTEGER:step===0?-1:rank(p.timeline[Math.max(0,Math.min(step,p.timeline.length)-1)]?.sequence??-1);
@@ -70,9 +70,10 @@ export function delegationThread(store:Store,p:Projection,operationId:string,sta
   const last=(key:string)=>safeActivities.findLast(o=>typeof o.agent[key]==='string')?.agent[key] as string|undefined;
   const input=object(object(call.payload).input),intent=object(object(call.payload).intent);
   const rawTask=input.prompt??intent.prompt;
-  const taskValue=typeof rawTask==='string'?rawTask:rawTask&&typeof rawTask.$blob==='string'&&rawTask.bytes<=64000?store.blobs.get(rawTask.$blob):undefined;
+  const taskValue=typeof rawTask==='string'?rawTask:rawTask&&typeof rawTask.$blob==='string'&&rawTask.bytes<=2*1024*1024?store.blobs.get(rawTask.$blob):undefined;
   const task=op.detail.descriptionEncrypted||typeof taskValue==='string'&&/^gAAAA[A-Za-z0-9_-]{80,}={0,2}$/.test(taskValue)?undefined:taskValue;
-  const taskLimited=!!rawTask&&typeof rawTask==='object'&&rawTask.bytes>64000;
+  const taskLimited=!!rawTask&&typeof rawTask==='object'&&rawTask.bytes>2*1024*1024;
+  const taskMissing=!!rawTask&&typeof rawTask==='object'&&typeof rawTask.$blob==='string'&&taskValue===undefined;
   const steps:DelegationStep[]=[{id:call.id,kind:'spawn',label:'Task delegated',sequence:rank(call.receivedSequence),time:call.sourceTime,operationId:op.id}];
   for(const o of safeActivities){const kind=o.agent.kind;if(kind==='completed'||kind==='interacted'||kind==='spawn')steps.push({id:o.id,kind:kind==='completed'?'completed':kind==='spawn'?'spawn':'interaction',label:kind==='completed'?'Child completion recorded':kind==='spawn'?'Child started':'Interaction recorded',sequence:rank(o.sequence),time:o.time});}
   const actions=childId&&!ambiguous?visible.operations.filter(other=>other.agentId===childId&&other.id!==op.id):[];
@@ -88,5 +89,9 @@ export function delegationThread(store:Store,p:Projection,operationId:string,sta
   steps.sort((a,b)=>a.sequence-b.sequence||a.id.localeCompare(b.id));
   const rec=store.getRecording(p.recordingId),recordingId=childId&&!ambiguous?childRecording(store,p.recordingId,threadId,native!.replace(/^agent:/,''),p.workspaceRoot,rec?.sourcePath):undefined;
   const child=childId&&!ambiguous?{id:childId,name:(typeof input.description==='string'?input.description:(step===undefined?agent?.nickname??agent?.label:undefined)??op.detail.agentType??'Child agent').slice(0,300),model:last('model')??(step===undefined?agent?.model:undefined),effort:last('effort')??(step===undefined?agent?.effort:undefined),address:last('path')??(step===undefined?address:undefined),...(recordingId?{recordingId}:{})}:undefined;
-  return {operationId:op.id,child,...(task||taskLimited?{task:{text:task?.slice(0,16000)??'',truncated:taskLimited||!!task&&task.length>16000}}:{}),steps:steps.slice(start,start+25),total:steps.length,start,limit:25,childActions:actions.length,identity:child?'captured':'unresolved',recording:recordingId?'separate-recording':actions.length?'same-recording':child?'not-imported':'unresolved'};
+  let taskAt=task?Math.min(taskStart,Math.max(0,task.length-1)):0;
+  if(taskAt&&task&&/[\uDC00-\uDFFF]/.test(task[taskAt]!)&&/[\uD800-\uDBFF]/.test(task[taskAt-1]!))taskAt--;
+  let taskEnd=Math.min(task?.length??0,taskAt+16000);
+  if(task&&taskEnd<task.length&&/[\uD800-\uDBFF]/.test(task[taskEnd-1]!))taskEnd--;
+  return {operationId:op.id,child,...(task||taskLimited||taskMissing?{task:{text:task?.slice(taskAt,taskEnd)??'',truncated:taskLimited||taskMissing||!!task&&taskEnd<task.length,start:taskAt,total:task?.length??0,...(taskLimited||taskMissing?{unavailable:true,reason:taskLimited?'content-limit' as const:'missing' as const}:{})}}:{}),steps:steps.slice(start,start+25),total:steps.length,start,limit:25,childActions:actions.length,identity:child?'captured':'unresolved',recording:recordingId?'separate-recording':actions.length?'same-recording':child?'not-imported':'unresolved'};
 }

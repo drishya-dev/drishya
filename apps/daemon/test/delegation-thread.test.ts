@@ -82,3 +82,10 @@ it('retains a normal long reply and provides the complete artifact for a truncat
   const value=await app.history.delegationThread(codex,spawn(codex).id),message=value?.steps.findLast(row=>row.kind==='message');
   expect(message?.truncated).toBe(true);expect(message?.artifactId).toBeTruthy();const full=await app.history.artifact(codex,message!.artifactId!,0,100);expect(full.text).toBe(large);
 });
+it('keeps a long captured task reachable as bounded exact character pages',async()=>{
+  const path=join(dir,'long-task.jsonl'),task='Recorded 🚀 task content.\n'.repeat(2000),common={cwd:dir,sessionId:'long-task'};
+  write(path,[{...common,type:'user',uuid:'u',timestamp:t(0),message:{role:'user',content:'Review'}},{...common,type:'assistant',uuid:'a',timestamp:t(1),message:{role:'assistant',content:[{type:'tool_use',id:'long-agent',name:'Agent',input:{description:'Review',subagent_type:'Explore',prompt:task}}]}}]);
+  const id=(await app.ingest.importSource('claude-code',path)).recordingId,op=spawn(id);let joined='';
+  for(let start=0;start<task.length;){const value=await app.history.delegationThread(id,op.id,0,undefined,start);expect(value?.task?.text.length).toBeLessThanOrEqual(16000);joined+=value?.task?.text;start=value!.task!.start+value!.task!.text.length;}
+  expect(joined).toBe(task);
+});
