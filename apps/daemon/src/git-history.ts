@@ -25,6 +25,7 @@ async function state(git:Git) {
   return {raw,head,branch,refs,generation:hash(raw+'\0'+head+'\0'+branch)};
 }
 const publicRef=({raw,...reference}:GitReference&{raw:string}):GitReference=>reference;
+export async function verifyGitHistoryGeneration(git:Git,generation:string) {if((await state(git)).generation!==generation)throw changed();}
 
 // Revision walking treats shallow boundaries as roots; the object header retains the real parents.
 async function objectParents(git:Git,id:string):Promise<string[]> {

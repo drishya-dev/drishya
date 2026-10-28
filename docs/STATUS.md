@@ -33,7 +33,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | CONTENT-5b | @yash + Codex parallel lane | `codex/content-5b-delegation-thread` | 2026-10-28 | Whole delegation thread: DelegationDetail/delegation helpers and scoped CSS, dedicated read-only worker/API evidence query (`history.ts`, `history-worker.ts`, `server.ts`, `api.ts`) and tests/report; `Viewer.tsx` recorded-agent button metadata/title only. No History.tsx, reducer, contracts, adaptive readers or held Claude adapter/discovery files; negotiate any unavoidable seam before edits. Real multi-agent acceptance required. |
 | MOTION-2 | @yash + Codex parallel lane | `codex/motion-2-tree-lift` | 2026-10-28 | Whole visible-file-row Lift: Origins.tsx, dedicated origin selection helper and motion tests/report. Existing tree row metadata reused; no History.tsx, scroll measurement, hover-reading, adaptive readers, reducer, contracts or SessionWorkspace.tsx edits. |
-| GIT-2 | @yash + Codex parallel lane | `codex/git-2-session-links` | 2026-10-28 | Whole remaining task: git-history service/types/UI and session-link helpers, dedicated tests/report; only Git-evidence import/method/dispatch in shared `history.ts`/`history-worker.ts` and GitReview construction in `server.ts` (explicitly coordinated with READ-8; root resolves integration). No History.tsx, reducer, FileHistory, since/Changes; coordinate shared API wiring through root. |
+| GIT-2 | @yash + Codex | `codex/git-2-session-links` (PR #269; implementation review-ready) | 2026-10-28 | Implementation and fixture acceptance complete. No production files held; positive native time/path and current-edit matching sample absent, acceptance blocker recorded in TASKS. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | HOME-1 | @harsh + Codex | `harsh/home-1-titles-running` | 2026-10-27 | `apps/ui/src/modern/SessionHome.tsx`, `apps/ui/src/lib/session-title.ts`, Home stylesheets (`session-home.css`, `home-active.css`), session-discovery title code in `packages/adapter-claude/src/index.ts`, bounded-tail helper in `packages/capture-core/src/discover.ts` (64 KiB selected by the 27 Oct counts-only survey; Harsh authorized), plus tests. No contracts/ingest/store yet. |
 | TEST-2 | @harsh + Codex | `harsh/test-2-wheel-end` | 2026-10-28 | `apps/ui/src/components/History.tsx` wheel/scroll handling and reading-anchor/height code only; tests only with Harsh's explicit yes. No `hover-reading.ts` or `flow-route.ts` edits. |
@@ -44,6 +44,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex parallel lane — GIT-2 implementation ready; native acceptance blocked
+
+- **PR #269:** conservative captured-command time/path links and collapsed current changed-line matches, including approved new files. Bounded existing-worker metadata, omissions, root/consent/redaction guards and reliable Git reader reopen. Current matching does not verify line positions or authorship; no History, reducer, schema or native writes.
+- **Gate:** combined 943 units, both types/build, 12 desktop browser checks and packed-CLI offline import/API/restart verification pass. Both-harness positive fixtures pass; actual Claude/Codex graph views pass, but their current Git samples contain no positive case for the new associations. GIT-2 remains open for that named acceptance blocker; no production files held. Exact counts and remaining gate are in TASKS and PR #269.
 
 ### Yash with Codex parallel lane — READ-8 complete
 

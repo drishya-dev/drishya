@@ -1,5 +1,6 @@
 import {useEffect,useRef} from 'react';
 import type {GitCommit,GitSessionLink} from '../../../daemon/src/git-types.ts';
+import {gitSessionLinkDescription} from '../../../daemon/src/git-types.ts';
 import {ago} from '../lib/git-commit-rows.ts';
 import './commit-rows.css';
 
@@ -19,7 +20,7 @@ export function CommitRows({commits,selected,hovered,choose,hover,links}:{links?
         <code>{commit.hash.slice(0,7)}</code>
         <strong title={commit.subject}>{commit.subject||'Untitled commit'}</strong>
         <span className="commit-row-refs">{shown.map(label=><em key={label} title={label}>{label}</em>)}{more>0&&<small>+{more}</small>}</span>
-        <span className="commit-row-turn" title={links?.get(commit.hash)?'The hash appears in this session’s captured command output':undefined}>{links?.get(commit.hash)?links.get(commit.hash)!.turn?`turn ${links.get(commit.hash)!.turn}`:'session':''}</span>
+        <span className="commit-row-turn" title={links?.get(commit.hash)?gitSessionLinkDescription(links.get(commit.hash)!):undefined}>{links?.get(commit.hash)?links.get(commit.hash)!.turn?`turn ${links.get(commit.hash)!.turn}`:'session':''}</span>
         <span className="commit-row-author" title={commit.author}>{commit.author}</span>
         <time dateTime={commit.time} title={new Date(commit.time).toLocaleString()}>{ago(commit.time)}</time>
       </button>;

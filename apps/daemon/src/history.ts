@@ -16,6 +16,7 @@ import type { FixChain } from '../../../packages/scene/src/fix-chains.ts';
 import type { ReadBeforeWrite } from '../../../packages/scene/src/read-before-write.ts';
 import type { ModelConfig, Prepared } from '@drishya/explain';
 import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store/src/search-types.ts';
+import type {GitSessionQuery,GitSessionEvidence} from './git-session-evidence.ts';
 
 /** One worker owns the derived history index. Capture's SQLite writer remains the ingestor. */
 export class HistoryService {
@@ -78,6 +79,7 @@ export class HistoryService {
   findingMembers(id:string,key:string,page=0,q='') {return this.request<FindingMembers>('finding-members',{id,key,page,q});}
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
+  gitSessionEvidence(id:string,query:GitSessionQuery) {return this.request<GitSessionEvidence>('git-session-evidence',{id,query});}
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   readingTarget(id: string, query: ReadingQuery) { return this.request<ReadingTarget | null>('reading-target', { id, query }); }
