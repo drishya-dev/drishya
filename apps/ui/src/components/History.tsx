@@ -387,7 +387,13 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
-    if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
+    if (Math.abs(delta) > 0.5) {
+      const requested = el.scrollTop + delta;
+      setScrollTop(requested);
+      // A shorter allocation can clamp the scroll at either boundary. Keep the
+      // attained offset so later growth cannot replay the unapplied correction.
+      if (!pointerFocus.current) anchor.offset += requested - el.scrollTop;
+    }
   };
 
   useLayoutEffect(() => {
