@@ -75,8 +75,12 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       // Keep the real article in history's stacking context. A top-layer popover
       // would cover the header/composer instead of passing under their edge veils.
       card.dataset.hoverReading = 'focused';
-      const width = Math.min(Math.max(from.width, 520), viewport.width - 32);
-      const left = Math.max(viewport.left + 16, Math.min(viewport.right - width - 16, from.left + (from.width - width) / 2));
+      // A wide edit may already fill its resting row. Keep deliberate reading growth
+      // inside the history viewport instead of treating that row width as the target.
+      const wideEdit = document.documentElement.dataset.uiVersion === 'modern' && card.matches('.op-edit.shape-wide');
+      const gutter = wideEdit ? 8 : 16;
+      const width = Math.min(Math.max(from.width * (wideEdit ? 1.08 : 1), 520), viewport.width - gutter * 2);
+      const left = Math.max(viewport.left + gutter, Math.min(viewport.right - width - gutter, from.left + (from.width - width) / 2));
       card.style.setProperty('--hover-width', `${width}px`); card.style.setProperty('--hover-height', 'auto');
       card.style.setProperty('--hover-left', `${left}px`); card.style.setProperty('--hover-top', `${top}px`);
       // Fit the content: lay the card out at its natural height with the most room it may take, measure it,
