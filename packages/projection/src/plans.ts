@@ -78,6 +78,67 @@ export class TaskPlans {
   }
 }
 
+/** The Claude desktop app's own checklist tool. */
+export const DESKTOP_PLAN_TOOL = 'mcp__ccd_turn__update_plan';
+
+/**
+ * Lists kept by the Claude desktop app's `update_plan`. A call with `items` carries the whole list as recorded; its
+ * `advance`, `done` and `start` calls carry no list, only a change to the previous one, so they are applied to the
+ * last list of the same agent and source. A change with nothing to apply to, or with an index outside the list, stays a
+ * generic call: Drishya never invents a list the harness did not record.
+ */
+export class DesktopChecklists {
+  private lists = new Map<string, Item[]>();
+
+  apply(o: Observation, tool: string, input: unknown): Plan | undefined {
+    if (o.source.adapterId !== 'claude-code' || tool !== DESKTOP_PLAN_TOOL) return;
+    const request = object(input);
+    const key = JSON.stringify([o.recordingId, o.agentId, o.source.sourceId, o.source.generation]);
+    let next: Item[];
+    if (Array.isArray(request.items)) {
+      next = [];
+      for (const value of request.items) {
+        const row = object(value);
+        if (typeof row.content !== 'string' || typeof row.status !== 'string') return;
+        next.push({ text: row.content, status: row.status });
+      }
+    } else {
+      const previous = this.lists.get(key);
+      if (!previous) return;
+      next = previous.map(item => ({ ...item }));
+      let changed = false;
+      if (Array.isArray(request.done)) {
+        for (const n of request.done) {
+          if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > next.length) return;
+          next[(n as number) - 1]!.status = 'completed'; changed = true;
+        }
+      }
+      if (request.start !== undefined) {
+        const n = request.start;
+        if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > next.length) return;
+        next[(n as number) - 1]!.status = 'in_progress'; changed = true;
+      }
+      if (request.advance === true) {
+        const running = next.findIndex(item => item.status === 'in_progress');
+        if (running >= 0) next[running]!.status = 'completed';
+        const following = next.findIndex(item => item.status === 'pending');
+        if (following >= 0) next[following]!.status = 'in_progress';
+        changed = true;
+      }
+      if (!changed) return;
+    }
+    this.lists.set(key, next);
+    // `scope` keeps each change out of view until its result is recorded, and out of other agents' lists.
+    return { kind: 'plan', scope: key, items: next.slice(0, 2000).map(item => ({ ...item })), ...(next.length > 2000 ? { omittedItems: next.length - 2000 } : {}) };
+  }
+}
+
+/** Claude's ExitPlanMode puts the plan text, as Markdown, in its input; that text is what the person is asked to approve. */
+export function exitPlanText(input: unknown): string | undefined {
+  const plan = object(input).plan;
+  return typeof plan === 'string' && plan.trim() ? plan : undefined;
+}
+
 /** Only Codex's complete explicit marker establishes plan material, not a Markdown heading. */
 export function proposedPlan(o: Observation, text: string): string | undefined {
   if (o.source.adapterId !== 'codex' || o.kind !== 'message.assistant') return;
