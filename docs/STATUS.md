@@ -44,6 +44,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — TEST-2 wheel-frame wait (28 October 2026)
+- **Change:** on `harsh/test-2-wheel-end`, the element-independent two-RAF wait at `b2-live.spec.ts:177` uses `page.evaluate`. Harsh explicitly approved this line only. Native wheel input, real History distance query, <2 px assertion and timeouts are unchanged; no product or diagnostic diff.
+- **Evidence:** baseline :139 passed 1/5 alone and 0/3 whole-file runs. In the seven retained failure traces, the frame-wait API lasted 10.437–15.899 s and the distance query started after the 10 s poll failed, so no second wheel was sent. The internal delay remains NOT VERIFIED; the change removes the unused element lookup, not all locator/tracing costs. Local diagnostics are restored and their counts/timing-only reports remain ignored.
+- **Checks:** :139 alone 5/5; whole b2-live 5/5; both typechecks and 911 unit tests / 153 files; the full browser suite once 442 passed, 26 skipped, zero failures; package verification passed. Main already expects 19 Codex observations, so the older 18/19 package mismatch did not recur. History is unchanged, so the conditional resource benchmark does not apply. Baseline tracing and focused verification used different trace modes; no controlled latency speedup is claimed.
+- **Open:** TEST-2 remains unchecked for its broader acceptance scope. HOME-1 stats remain gated on Harsh confirming Yash's agreement to the local contract proposal; no stats code or additional test edits are authorized here.
+
 ### Yash with Codex parallel lane — GIT-2 implementation ready; native acceptance blocked
 
 - **PR #269:** conservative captured-command time/path links and collapsed current changed-line matches, including approved new files. Bounded existing-worker metadata, omissions, root/consent/redaction guards and reliable Git reader reopen. Current matching does not verify line positions or authorship; no History, reducer, schema or native writes.
@@ -1154,6 +1160,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **28 October — TEST-2 frame-only test wait (Harsh):** approved only replacing the History locator with the page receiver for the two-RAF wait at b2-live.spec.ts:177, because the callback uses no element and the baseline API call consumed the polling deadline before another wheel. Keep all assertions, native wheel amounts and timeouts; no broader test edits or product/animation changes were approved. The exact internal API delay remains NOT VERIFIED.
 
 - **23 October — PERF-2 gate holds DATA-3 (Harsh, no exception):** Keep the existing interaction p95 <100 ms, visible update <1.5 s and process RSS ≤512 MiB targets. Resume DATA-3 onward only after all three pass the full real-journal matrix. Yash owns the private-source acceptance runs; local invented sources and the 57.7 MB real sanity check are diagnostic evidence only. Keep #188 frozen pending a narrowed non-regression rerun; diagnostics and each subsequent fix stay in separate PRs. #206 remains an unmerged draft and receives no schema agreement from this gate coordination. This supersedes any earlier permission to resume the data lane while this gate is red. Reason: the red interaction/memory gate remains unresolved and the builder explicitly rejected exceptions.
 - **23 October — #207 (CONTENT-5 slice 1) kept despite the PERF-2 hold (Yash):** Yash directed the merge of #207 (UI only, no schema change, full browser gate clean) before seeing the hold above, which Claude had not seen when it claimed CONTENT-5; Yash then chose to keep it merged rather than revert. The hold otherwise stands: no more feature work, and #206 (DATA-3) stays an unmerged draft, until the PERF-2 gate passes on the full real-journal matrix. Reason: the change is isolated to the delegation card and revertable, and reverting would only churn history; it is not a precedent for the next item.
