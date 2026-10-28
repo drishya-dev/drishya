@@ -9,12 +9,12 @@ import './captured-content.css';
 /** History and Inspector share the same choices; raw material retains its existing owner. */
 /** `fallback` is the result's own body. When given and the whole captured result is complete JSON, an inline reading replaces it
  *  (CONTENT-10) and the "Inspect data" row disappears; a field inside a wrapper never replaces its siblings; everything else keeps its explicit, hover-revealed choices. */
-export function CapturedResultViews({text,evidence,argumentsView=false,fallback}:{text:string;evidence?:CapturedContentEvidence;argumentsView?:boolean;fallback?:ReactNode}){
+export function CapturedResultViews({text,evidence,argumentsView=false,fallback,inlineReading=true}:{text:string;evidence?:CapturedContentEvidence;argumentsView?:boolean;fallback?:ReactNode;inlineReading?:boolean}){
  const content=useMemo(()=>capturedContent(text,evidence),[text,evidence?.mime,evidence?.partial,evidence?.unavailable]);
  const [field,setField]=useState<string>();
  const preferred=content.data.find(item=>item.representation==='structured field')??content.data.find(item=>item.field!=='Whole captured result'&&(item.mime==='application/json'||item.mime?.endsWith('+json')))??content.data[0];
  const selected=content.data.find(item=>item.field===field)??preferred;
- const inline=useMemo(()=>fallback!==undefined&&!argumentsView&&selected?.field==='Whole captured result'?structuredData(selected.text)!==undefined:false,[fallback!==undefined,argumentsView,selected?.field,selected?.text]);
+ const inline=useMemo(()=>fallback!==undefined&&inlineReading&&!argumentsView&&selected?.field==='Whole captured result'?structuredData(selected.text)!==undefined:false,[fallback!==undefined,inlineReading,argumentsView,selected?.field,selected?.text]);
  const manual=!content.limited&&text.length<=262144&&text.trim().length>=32&&text.includes('\n');
  const dataContext=[content.partial,selected&&selected.field!=='Whole captured result'?`Captured field ${selected.field}${selected.representation==='structured field'?' · captured structured values; JSON formatting derived · choose Whole captured result for original source':''}`:undefined].filter(Boolean).join(' · ')||undefined;
  const chips=<div className={inline?'captured-result-views captured-result-views-inline':'captured-result-views'} role="group" aria-label={argumentsView?'Captured argument views':'Captured result views'} onClick={event=>event.stopPropagation()}>
