@@ -160,7 +160,7 @@ test('long history mounts only nearby work while selected evidence and live upda
 
   const selected = history.locator('article[data-op-id]').first();
   const selectedId = await selected.getAttribute('data-op-id');
-  await selected.locator('.op-head').click();
+  await selected.press('Enter'); // The captured-file title opens a separate reader.
   await history.locator(`article[data-op-id="${selectedId}"]`).focus();
   // Target the history's reading gutter: the centre can be a nested source or
   // terminal scroller, whose wheel consumption is deliberately independent.

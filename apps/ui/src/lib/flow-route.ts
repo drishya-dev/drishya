@@ -12,13 +12,16 @@ export function flowRoute(a: RouteRect, b: RouteRect, obstacles: RouteRect[]): s
     [{ x: a.right, y: ay }, { x: right, y: ay }, { x: right, y: by }, { x: b.right, y: by }],
   ];
   // A wrapped passage must leave the previous row vertically before crossing
-  // back to its first column. Side-to-side routes cross the intervening cards.
+  // back to its first column. Prefer that bottom-to-top relationship for stacks too;
+  // a side gutter is a fallback only when another card obstructs the row gap.
   if (a.bottom < b.top) {
     const gap = (a.bottom + b.top) / 2;
     const ax = (a.left + a.right) / 2;
     const bx = (b.left + b.right) / 2;
-    candidates.push(
+    candidates.unshift(
       [{ x: ax, y: a.bottom }, { x: ax, y: gap }, { x: bx, y: gap }, { x: bx, y: b.top }],
+    );
+    candidates.push(
       [{ x: a.right, y: ay }, { x: right, y: ay }, { x: right, y: b.top - 8 }, { x: bx, y: b.top - 8 }, { x: bx, y: b.top }],
     );
   }

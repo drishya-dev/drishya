@@ -81,6 +81,35 @@ describe('turnLedgers', () => {
     expect(none.durationMs).toBeUndefined(); expect(none.endTime).toBeUndefined();
   });
 
+  it('adds what the harness recorded about a turn and keeps the derived duration beside it', () => {
+    const projection = built();
+    projection.turns = [
+      { id: 'a', agentId: 'agent:main', basis: 'captured', startSequence: 0, endSequence: 20, durationMs: 12_000, timeToFirstTokenMs: 900, outcome: 'completed', settings: { model: 'm1', effort: 'high', approvalPolicy: 'never' } },
+      { id: 'b', agentId: 'agent:main', basis: 'captured', startSequence: 29, endSequence: 40, durationMs: 3_000, outcome: 'aborted', reason: 'interrupted', settings: { model: 'm1', effort: 'low', approvalPolicy: 'never' } },
+    ];
+    const [first, second] = turnLedgers(projection);
+    expect(first!.durationMs).toBe(8_000);
+    expect(first!.recorded).toEqual({ durationMs: 12_000, timeToFirstTokenMs: 900, outcome: 'completed', settingsChange: { model: 'm1', effort: 'high', approvalPolicy: 'never' } });
+    expect(second!.recorded).toEqual({ durationMs: 3_000, outcome: 'aborted', reason: 'interrupted', settingsChange: { effort: 'low' } });
+  });
+
+  it('puts the duration on a single-prompt turn only, and the outcome on the last prompt of a shared turn', () => {
+    const projection = built();
+    projection.turns = [{ id: 'a', agentId: 'agent:main', basis: 'captured', startSequence: 0, endSequence: 40, durationMs: 30_000, outcome: 'aborted', reason: 'interrupted', settings: { model: 'm1' } }];
+    const [first, second] = turnLedgers(projection);
+    expect(first!.recorded).toEqual({ settingsChange: { model: 'm1' } });
+    expect(second!.recorded).toEqual({ outcome: 'aborted', reason: 'interrupted' });
+  });
+
+  it('records nothing for a turn the harness did not record, or one that ended before the prompt', () => {
+    const none = built();
+    expect(turnLedgers(none).every((l) => l.recorded === undefined)).toBe(true);
+    none.turns = [{ id: 'a', agentId: 'agent:main', basis: 'captured', startSequence: 0, endSequence: 5, durationMs: 1 }];
+    const [first, second] = turnLedgers(none);
+    expect(first!.recorded).toEqual({ durationMs: 1 });
+    expect(second!.recorded).toBeUndefined();
+  });
+
   it('works on a real recording: one ledger per prompt, positions match the timeline', () => {
     const ledgers = turnLedgers(real);
     const turns = real.timeline.flatMap((item, index) => item.type === 'turn' ? [index] : []);

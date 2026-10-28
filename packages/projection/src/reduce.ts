@@ -36,16 +36,18 @@ import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
 import { literalPatch, touchesProtectedFile } from '@drishya/capture-core';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks } from './patch.ts';
 import { inWorkspace, relativize, toPosix } from './paths.ts';
-import { classifyShell, parseHitLines, SHELL_RULE } from './shell.ts';
+import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
+import { TurnAccumulator } from './turns.ts';
 import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 import { declinedFrom } from './declined.ts';
+import { DESKTOP_PLAN_TOOL, DesktopChecklists, TaskPlans, exitPlanText, proposedPlan } from './plans.ts';
 
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r17';
+export const REDUCER_VERSION = 'r21';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -70,6 +72,9 @@ const TITLE_RULE = 'title-v1';
 type Rec = Record<string, any>;
 
 interface OpState {
+  taskInput?: unknown;
+  taskRedacted?: boolean;
+  taskTurn?: string;
   nestedPatch?: boolean;
   op: Operation;
   intent: ToolIntent;
@@ -96,7 +101,10 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const obs = opts.ordered ? input : orderObservations([...input]);
   let observationCount = 0;
   let lastSequence = -1;
+  const taskPlans = new TaskPlans();
+  const desktopPlans = new DesktopChecklists();
   const usage = new UsageAccumulator();
+  const turnRecords = new TurnAccumulator();
   const itemReceipts = new Map<string, number>();
 
   const agents = new Map<string, Agent>();
@@ -257,7 +265,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       observationIds: [o.id],
       classification: { kind: 'captured', observationIds: [o.id] },
     };
-    const st: OpState = { op, intent, cwd, callObservationId: o.id, turnMessage: turnMessageByRecording.get(o.recordingId) };
+    const st: OpState = { op, intent, cwd, taskTurn: turnByRecording.get(o.recordingId), callObservationId: o.id, turnMessage: turnMessageByRecording.get(o.recordingId) };
     ops.set(id, st);
     if (st.turnMessage && (intent.kind === 'edit' || intent.kind === 'write' || intent.kind === 'patch')) awaitingCheckpoint.add(id);
     dirtyOperations.add(id);
@@ -274,6 +282,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       observationCount++;
       lastSequence = Math.max(lastSequence, o.receivedSequence);
       usage.add(o);
+      turnRecords.add(o);
       currentRecording = o.recordingId;
       if (o.source?.adapterId) {
         const d = opts.adapters[o.source.adapterId];
@@ -298,6 +307,16 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (typeof p.effort === 'string') a.effort = p.effort;
           if (typeof p.forkedFromId === 'string') a.forkedFromId = p.forkedFromId;
           if (typeof p.parentThreadId === 'string') a.parentId = `${o.recordingId}.agent:${p.parentThreadId}`;
+          if (typeof p.threadSource === 'string') a.threadSource = p.threadSource;
+          if (typeof p.startedBy === 'string') a.startedBy = p.startedBy;
+          if (typeof p.spawnDepth === 'number') a.spawnDepth = p.spawnDepth;
+          if (typeof p.agentRole === 'string') a.role = p.agentRole;
+          break;
+        }
+        case 'turn.detail': {
+          // The most recent turn's effort is the agent's current one; the per-turn history stays in Projection.turns.
+          const effort = (p.settings as { effort?: unknown } | undefined)?.effort;
+          if (typeof effort === 'string') ensureAgent(o).effort = effort;
           break;
         }
         case 'item.completed': {
@@ -479,6 +498,18 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (!t.trim()) break;
           const a = ensureAgent(o);
           if (typeof p.model === 'string') a.model = p.model;
+          const plan = proposedPlan(o, t);
+          if (plan !== undefined) {
+            const id = `plan_${o.id}`, st = newOp(o, id, { kind: 'plan', items: [] }, 'Plan');
+            const artifactId = addArtifact({ id: `art_${id}_plan`, kind: 'snapshot', observedAtSequence: o.receivedSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: t });
+            st.op.detail = { kind: 'plan', items: [], document: { text: clip(plan, maxProse), truncated: plan.length > maxProse, artifactId } };
+            st.op.title = 'Proposed plan'; st.op.status = 'ok'; st.op.endSequence = step() + 1;
+            st.op.artifactIds.push(artifactId); st.completed = true;
+            st.op.classification = derived('codex-proposed-plan-v1', [o.id]);
+            timeline.push({ type: 'op-start', id: `s_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            break;
+          }
           const pr: Prose = {
             id: `prose_${o.id}`,
             agentId: a.id,
@@ -563,6 +594,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           const st = newOp(o, baseId, intent, String(p.tool));
           describeCall(st, p, rel);
+          if (['TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet', 'ExitPlanMode', DESKTOP_PLAN_TOOL].includes(String(p.tool))) { st.taskInput = resolveBlobs(p.input, text); st.taskRedacted = o.redactions.length > 0; }
           if ((st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.command.length > (opts.maxInputChars ?? Infinity)) {
             const command = st.op.detail.command;
             st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_input`, kind: 'excerpt', observedAtSequence: st.op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: command }));
@@ -594,6 +626,32 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
             if (p.isError && !st.typedOutcome) { const declined = declinedFrom(text(p.text)); if (declined) st.op.declined = declined; }
             if (!st.typedOutcome) completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
+            if (!p.isError && st.taskInput !== undefined) {
+              const plan = taskPlans.apply(o, st.op.tool, st.taskInput, resolveBlobs(p.structured, text), st.callObservationId);
+              if (plan) {
+                st.op.kind = 'plan'; st.op.detail = { ...plan.detail, scope: `${plan.detail.scope}/turn:${st.taskTurn ?? 'unrecorded'}` }; st.op.title = 'Update tasks';
+                st.op.classification = derived('claude-task-result-v1', [...new Set([...plan.observations, ...st.op.observationIds])]);
+                st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_task-result`, kind: 'excerpt', observedAtSequence: st.op.endSequence!, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: JSON.stringify(resolveBlobs(p.structured, text), null, 2) }));
+              }
+            }
+            if (!p.isError && st.taskInput !== undefined && st.op.tool === 'ExitPlanMode' && o.source.adapterId === 'claude-code') {
+              // The plan text is the call's own input; the harness's reply stays a captured result, never an inferred approval.
+              const plan = exitPlanText(st.taskInput);
+              if (plan !== undefined) {
+                const artifactId = addArtifact({ id: `art_${st.op.id}_plan`, kind: 'snapshot', observedAtSequence: st.op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [st.callObservationId ?? o.id] }, redacted: st.taskRedacted === true, content: plan });
+                st.op.kind = 'plan'; st.op.title = 'Plan for approval';
+                st.op.detail = { kind: 'plan', items: [], document: { text: clip(plan, maxProse), truncated: plan.length > maxProse, artifactId, source: 'proposal' } };
+                st.op.artifactIds.push(artifactId);
+                st.op.classification = derived('claude-exit-plan-mode-v1', [...new Set([st.callObservationId ?? o.id, o.id])]);
+              }
+            }
+            if (!p.isError && st.taskInput !== undefined && st.op.tool === DESKTOP_PLAN_TOOL) {
+              const detail = desktopPlans.apply(o, st.op.tool, st.taskInput);
+              if (detail) {
+                st.op.kind = 'plan'; st.op.detail = detail; st.op.title = `Update plan · ${detail.items.length} items`;
+                st.op.classification = derived('claude-desktop-update-plan-v1', [...new Set([st.callObservationId ?? o.id, o.id])]);
+              }
+            }
             if (st.nestedPatch) st.wrapperResult = { observation: o, payload: p };
             link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: 'source-id', sourceObservationIds: [st.callObservationId ?? o.id, o.id], explanation: 'The harness recorded this result for this call id.' });
             // Completed calls no longer need their potentially large edit/command input.
@@ -741,6 +799,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     }
 
     const accounting = usage.snapshot();
+    const turns = turnRecords.snapshot();
     return {
       reducerVersion: REDUCER_VERSION,
       recordingId,
@@ -761,6 +820,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       gaps: [...gaps],
       capabilities: { ...capabilities },
       ...(accounting ? { usage: accounting } : {}),
+      ...(turns ? { turns } : {}),
     };
   }
   return { append, snapshot };
@@ -1025,6 +1085,13 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
           : 'The captured edit does not apply exactly once to the captured base.';
         if (op.status === 'ok') c.knownFull.delete(c.fileKey(o.recordingId, d.path)); // the file changed in a way we cannot reproduce
       }
+      // A native plan file has a dedicated recorded harness path. Ordinary Markdown writes
+      // remain edits; never read today's file or infer Plan semantics from a heading.
+      if (st.intent.kind === 'write' && o.source.adapterId === 'claude-code' && /(?:^|\/)\.claude\/plans\/[^/]+\.md$/i.test(toPosix(st.intent.path)) && after !== undefined && !omitted(after) && op.status === 'ok') {
+        op.kind = 'plan'; op.title = 'Plan file (path convention)';
+        op.detail = { kind: 'plan', items: [], document: { text: clip(after, 64_000), truncated: after.length > 64_000, artifactId: `art_${op.id}_after`, source: 'file' } };
+        op.classification = derived('claude-native-plan-file-v1', op.observationIds);
+      }
       break;
     }
     case 'search': {
@@ -1039,6 +1106,8 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       for (const h of hits) {
         if (seen.has(h.path)) continue;
         seen.add(h.path);
+        // The hit stays in the card as captured text; only a plausible path becomes a file reference (BUG-8).
+        if (!plausibleHitPath(h.path)) continue;
         op.paths.push({ path: h.path, role: 'search-hit', basis: op.classification.kind === 'derived' ? 'derived' : 'captured', lines: h.line ? { start: h.line, end: h.line } : undefined });
         c.link({ from: op.id, to: `file:${h.path}`, relation: 'explicit-reference', basis: 'captured-reference', sourceObservationIds: [o.id], explanation: 'This file appears in the search result.' });
       }

@@ -3,7 +3,8 @@ export interface StructuredData {value:unknown;nodes:DataNode[];table?:{rows:Rec
 const numberSource=Symbol('captured JSON number');
 interface NumberToken {[numberSource]:string}
 const numberToken=(value:unknown):value is NumberToken=>!!value&&typeof value==='object'&&numberSource in value;
-const record=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value)&&!numberToken(value);
+export const isDataRecord=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value)&&!numberToken(value);
+const record=isDataRecord;
 /** Serialize a selected captured value without rounding numeric literals or changing their type. */
 export function dataText(value:unknown):string{
  if(numberToken(value))return value[numberSource];
@@ -12,14 +13,17 @@ export function dataText(value:unknown):string{
  return JSON.stringify(value)??'Unavailable';
 }
 export const pointerKey=(key:string)=>key.replaceAll('~','~0').replaceAll('/','~1');
-export function structuredData(text:string):StructuredData|undefined{
- if(text.length>262144||new TextEncoder().encode(text).byteLength>262144)return;let value:unknown;try{value=JSON.parse(text,(_key,value,context?:{source?:string})=>{
+export function parseCapturedJson(text:string):unknown{
+ if(text.length>262144||new TextEncoder().encode(text).byteLength>262144)throw new Error('Captured JSON exceeds limit');return JSON.parse(text,(_key,value,context?:{source?:string})=>{
   if(typeof value!=='number')return value;
   // Source-aware parsing keeps large ids, under/overflow and decimal spelling literal.
   // Older parsers must leave inspection unavailable rather than silently round evidence.
   if(typeof context?.source!=='string')throw new Error('Lossless number source unavailable');
   return JSON.stringify(value)===context.source?value:{[numberSource]:context.source};
- });}catch{return;}
+ });
+}
+export function structuredData(text:string):StructuredData|undefined{
+ let value:unknown;try{value=parseCapturedJson(text);}catch{return;}
  if(!record(value)&&!Array.isArray(value))return;
  const nodes:DataNode[]=[],pending:Array<{value:unknown;pointer:string;key:string;depth:number;parent:string|undefined}>=[{value,pointer:'',key:'$',depth:0,parent:undefined}];
  while(pending.length){const item=pending.pop()!;if(nodes.length>=25000||item.depth>80)return;

@@ -61,10 +61,14 @@
 :root[data-ui-version=modern][data-experience=classic] .workspace-bar .modern-review-control.in-header {display:contents;}
 :root[data-ui-version=modern] .modern-session-header .studio-actions :is(svg,.modern-utility-glyph) {display:block;width:18px;height:18px;flex:none;margin:0;}
 :root[data-ui-version=modern] .modern-session-header .search-open :is(span,kbd) {display:none;}
+/* UI-11: every header glyph is a line icon of one weight. The Workspace glyph carries no paint of its own and drew as a solid black square. */
+:root[data-ui-version=modern] .modern-session-header .studio-actions svg {fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
 /* The Changes entry is a word, not an icon: it keeps the label's width instead of spilling out of a 34 px square. */
 :root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.review-open {width:auto;min-width:34px;padding:0 9px;}
 /* UI-1: Workspace, Git review and Git graph join the one navigation cluster as icons; their names stay in aria-label and title. */
 :root[data-ui-version=modern] .modern-session-header .workspace-view-slot>:is(.git-open,.workspace-open) {font-size:0;gap:0;}
+/* UI-11: their hidden label is a text node; in the grid it became a second row and lifted the icon 4 px above its neighbours. A flex box centres the glyph alone. */
+:root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.workspace-view-slot>:is(.git-open,.workspace-open) {display:flex;align-items:center;justify-content:center;}
 :root[data-ui-version=modern] .modern-native-composer:not(.composer-minimized) .modern-composer-top {padding-right:42px;}
 :root[data-ui-version=modern] .connected-workspace .workspace-header::after {content:none;}
 :root[data-ui-version=modern] .modern-session-header .studio-session-label {display:none;}
