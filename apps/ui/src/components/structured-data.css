@@ -41,3 +41,9 @@
 .captured-result-views{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;min-width:0}.captured-result-views>.data-inspection{margin:6px 0}
 
 .captured-result-views:empty{display:none}
+
+/* CONTENT-10: the inline JSON reading sits in the card; a short scrollable viewport, no padding box. */
+.data-inline{min-width:0}
+.data-reader-inline{padding:0;gap:8px}
+.data-reader-inline .data-viewport{height:min(200px,32dvh);min-height:120px}
+.data-reader-inline .data-reader-toolbar button{min-height:24px;padding:2px 8px}
