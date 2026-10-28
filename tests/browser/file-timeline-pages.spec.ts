@@ -54,28 +54,28 @@ test('Next and Previous change continue across the two pages of the action list'
   const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true }), next = steps.getByRole('button', { name: 'Next change', exact: true });
   const label = steps.getByRole('status');
-  await expect(label).toHaveText(/ of 24 · page 1 of 2/);
+  await expect(label).toHaveText(/ of 31/);
   // Walk back to the very first recorded step, the read.
   while (await previous.isEnabled()) await previous.click();
-  await expect(label).toHaveText('1 of 24 · page 1 of 2');
+  await expect(label).toHaveText('1 of 31');
   await expect(previous).toBeDisabled();
   for (let n = 2; n <= 24; n++) await next.click();
-  await expect(label).toHaveText('24 of 24 · page 1 of 2');
+  await expect(label).toHaveText('24 of 31');
   await expect(work).toContainText(line(23));
   // The last step on page 1 still has a next change: the first edit on page 2.
   await expect(next).toBeEnabled();
   await next.click();
-  await expect(label).toHaveText('1 of 7 · page 2 of 2');
+  await expect(label).toHaveText('25 of 31');
   await expect(work).toContainText(line(24));
   await expect(work.locator('.file-op[aria-pressed="true"]')).toHaveCount(1);
   // And the first step on page 2 goes back to the last step on page 1.
   await expect(previous).toBeEnabled();
   await previous.click();
-  await expect(label).toHaveText('24 of 24 · page 1 of 2');
+  await expect(label).toHaveText('24 of 31');
   await expect(work).toContainText(line(23));
   await next.click();
   for (let n = 2; n <= 7; n++) await next.click();
-  await expect(label).toHaveText('7 of 7 · page 2 of 2');
+  await expect(label).toHaveText('31 of 31');
   await expect(work).toContainText(line(30));
   await expect(next).toBeDisabled();
   await expect(previous).toBeEnabled();
@@ -87,5 +87,5 @@ test('the page label keeps the type floor and explains the page crossing', async
   const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
   const size = await steps.getByRole('status').evaluate(el => getComputedStyle(el).fontSize);
   expect(size).toBe('11px');
-  await expect(steps.getByRole('status')).toHaveAttribute('title', /neighbouring page/);
+  await expect(steps.getByRole('status')).toHaveAttribute('title', /whole session/);
 });

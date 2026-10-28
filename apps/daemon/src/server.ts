@@ -405,7 +405,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       if (sub === 'file-operations' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
-        return json(res, await app.history.file(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000)));
+        return json(res, await app.history.file(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000), (url.searchParams.get('selected') ?? '').slice(0, 1000) || undefined));
       }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
       if (sub === 'observations' && m === 'GET') {

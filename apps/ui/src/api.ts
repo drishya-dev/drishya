@@ -1,3 +1,4 @@
+import type { FileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/reading-target.ts';
 import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
@@ -88,7 +89,7 @@ export interface DataSource {
   /** What each turn did, over the whole recording, whatever window the reader holds. */
   turns?(id: string): Promise<{ turns: TurnLedger[] }>;
   historyMarker?(id: string, step: number, types: Marker['type'][], direction: 1 | -1): Promise<number | undefined>;
-  fileOperations?(id: string, path: string, start: number, count: number, step?: number, query?: string): Promise<{ operations: Operation[]; total: number }>;
+  fileOperations?(id: string, path: string, start: number, count: number, step?: number, query?: string, selectedOperationId?: string): Promise<FileOperationPage>;
   /** `refresh` rebuilds a stale map; otherwise the cached map is returned unchanged. */
   graph(id: string, refresh?: boolean): Promise<RepoGraph | undefined>;
   /** Approves scanning the recording's captured root for the map, and returns the full map. */
@@ -247,7 +248,7 @@ export const daemon: DataSource = {
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
   history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
   historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,
-  fileOperations: (id, path, start, count, step, query = '') => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query })}`),
+  fileOperations: (id, path, start, count, step, query = '', selectedOperationId) => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query, ...(selectedOperationId ? { selected: selectedOperationId } : {}) })}`),
   graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
   approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
