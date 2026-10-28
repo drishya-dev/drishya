@@ -16,10 +16,12 @@
     "package:verify": "pnpm package:build && node scripts/verify-package.ts",
     "demo:bundle": "node apps/daemon/src/cli.ts demo-bundle --out apps/ui/public/demo/bundle.json",
     "test": "vitest run",
-    "test:browser": "pnpm ui:build && playwright test",
+    "test:browser": "pnpm ui:build && node scripts/test-browser.ts",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @drishya/ui typecheck",
-    "check": "pnpm typecheck && pnpm test"
+    "check": "pnpm typecheck && pnpm test",
+    "check:real": "node scripts/check-real.ts",
+    "check:affected": "node scripts/check-affected.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
