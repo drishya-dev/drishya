@@ -86,7 +86,7 @@ Builder decision, 28 October (Yash; Harsh to confirm). This is the main rule for
    - *When the task is done:* all of its acceptance, the real-session checks above, the targeted browser specs, and `package:verify` if ingest, store or packaging changed.
    - *Full gate* (typecheck, all units, `ui:build`, full browser suite, `package:verify`): once per batch of finished tasks, in an isolated worktree with its own install, in the background while others keep working; always rebuild the UI first. A failure that reproduces on clean main is a TEST-2 flake: record it, re-run it alone, do not block on it. Never run the full gate for drafts, partial work or docs-only changes.
 4. **Do not stop at the first green.** Before calling an item done, read its *Accept* list line by line and check each line on a real session. Finishing fast means finishing once.
-5. TEST-3 makes this cheaper (parallel browser suite, affected-spec runner, one-command real-session check). Use those commands once they exist; until then, write the scan and import by hand as before and keep scripts out of the repository unless they are TEST-3's.
+5. **Use the commands.** `pnpm check:affected` (typecheck, related units, the specs that name your changed files; seconds to a few minutes), `pnpm check:real -- <case>` (real-session scan, import and counts; `--list` shows the cases; add one in `scripts/real-cases/` when your feature needs a case that is not there), and `pnpm test:browser` (the full browser suite on 4 workers plus a serial pass for six timing-sensitive specs; about 7 minutes). Do not run or print journal content, and never import into your real Drishya home: `check:real` uses a scratch home.
 
 ---
 

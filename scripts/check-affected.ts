@@ -25,15 +25,18 @@ const fullUnits = code.some((f) => /^(package\.json|pnpm-lock\.yaml|tsconfig.*|v
 
 const specs = readdirSync('tests/browser').filter((f) => f.endsWith('.spec.ts'));
 const kebab = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+const vague = new Set(['detail', 'reader', 'views', 'panel', 'result', 'results', 'source', 'common', 'shared', 'viewer', 'block', 'cards', 'material', 'inspector']);
 const generic = new Set(['index', 'api', 'types', 'store', 'utils', 'util', 'app', 'main', 'styles', 'style', 'test', 'tests']);
 const mapped = new Set<string>(code.filter((f) => f.startsWith('tests/browser/') && f.endsWith('.spec.ts')).map((f) => basename(f)));
 for (const file of code.filter((f) => !f.startsWith('tests/') && !f.startsWith('scripts/'))) {
   const name = basename(file, extname(file));
   if (generic.has(name.toLowerCase())) continue;
   const dashed = kebab(name);
+  // A spec also belongs to a component when it shares the component's leading word (DelegationDetail -> delegation-thread.spec.ts).
+  const lead = dashed.split('-').find((word) => word.length >= 5 && !vague.has(word));
   for (const spec of specs) {
     const body = readFileSync(join('tests/browser', spec), 'utf8');
-    if (spec.includes(dashed) || body.includes(name) || body.includes(`/${dashed}`)) mapped.add(spec);
+    if (spec.includes(dashed) || body.includes(name) || body.includes(`/${dashed}`) || (lead && spec.includes(lead))) mapped.add(spec);
   }
 }
 
