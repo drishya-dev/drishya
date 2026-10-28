@@ -7,8 +7,7 @@ import { basename, dirname, join } from 'node:path';
 import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, ExternalChangePayload, Observation } from '@drishya/contracts';
 import {
   fileInfo,
-  headRecords,
-  tailRecords,
+  headAndTailRecords,
   listFiles,
   parseMcpName,
   textOf,
@@ -375,13 +374,12 @@ async function discover(): Promise<DiscoveredSource[]> {
     if (basename(dirname(dirname(path))) === 'subagents' || basename(dirname(path)) === 'subagents') continue;
     const info = await fileInfo(path);
     if (!info || info.bytes === 0) continue;
-    const head = (await headRecords(path)) as Rec[];
+    const { head, tail } = await headAndTailRecords(path, info.bytes) as { head: Rec[]; tail: Rec[] };
     const cwd = head.find((r) => typeof r.cwd === 'string')?.cwd as string | undefined;
     let titled: string | undefined;
     let titleRank = 0;
     // Match imported metadata: the latest title at the highest recorded rank wins.
     // Tail records contribute titles only; workspace and first prompt still come from the head.
-    const tail = info.bytes > 256 * 1024 ? await tailRecords(path) : [];
     for (const r of [...head, ...tail] as Rec[]) {
       if (!r || typeof r !== 'object') continue;
       const rank = r.type === 'custom-title' ? 3 : r.type === 'summary' ? 2 : r.type === 'ai-title' ? 1 : 0;

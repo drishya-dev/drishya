@@ -1,8 +1,8 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { tailRecords } from '../src/discover.ts';
+import { headAndTailRecords, headRecords, tailRecords } from '../src/discover.ts';
 
 let dir: string;
 let file: string;
@@ -49,4 +49,28 @@ it('skips non-title lines without parsing while retaining title record order', a
     expect(parse).not.toHaveBeenCalledWith(lines[1]);
     expect(parse).toHaveBeenCalledTimes(4);
   } finally { parse.mockRestore(); }
+});
+
+it('preserves standalone head limits and cut-line handling', async () => {
+  writeFileSync(file, ' {"n":1}\nmalformed\n{"n":2}\n{"n":3}\n{"cut":');
+  expect(await headRecords(file, 1024, 2)).toEqual([{ n: 1 }, { n: 2 }]);
+  expect(await headRecords(file, 25)).toEqual([{ n: 1 }]);
+});
+
+it('shares bounded head and tail results while preserving the 400-record head limit', async () => {
+  const records = Array.from({ length: 401 }, (_, n) => ({ n }));
+  const title = { type: 'custom-title', customTitle: 'Latest title' };
+  writeFileSync(file, records.map(record => JSON.stringify(record)).join('\n') + '\n' +
+    JSON.stringify({ type: 'queue-operation', padding: 'x'.repeat(300 * 1024) }) + '\n' + JSON.stringify(title) + '\n');
+  const combined = await headAndTailRecords(file, statSync(file).size);
+  expect(combined.head).toEqual(records.slice(0, 400));
+  expect(combined.head).toEqual(await headRecords(file));
+  expect(combined.tail).toEqual([title]);
+  expect(combined.tail).toEqual(await tailRecords(file));
+});
+
+it('returns only the head for a fully read short journal', async () => {
+  const title = { type: 'ai-title', aiTitle: 'Short journal' };
+  writeFileSync(file, JSON.stringify(title) + '\n');
+  expect(await headAndTailRecords(file, statSync(file).size)).toEqual({ head: [title], tail: [] });
 });
