@@ -1,8 +1,9 @@
-import { appendFileSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { appendFileSync, copyFileSync, readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import {snapshot,rowsOf,violations} from './passage-geometry.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
@@ -14,7 +15,7 @@ import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts
 const WIDTHS = [1024, 1280, 1440, 1920] as const;
 type Recording = 'claude' | 'codex' | 'wrap';
 
-let dir: string, app: App, server: RunningServer; const ids = {} as Record<Recording, string>;
+let dir: string, app: App, server: RunningServer, pinnedId: string; const ids = {} as Record<Recording, string>;
 test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-passage-layout-'));
   app = new App(join(dir, 'data'));
@@ -43,93 +44,63 @@ test.beforeAll(async () => {
   row({ type: 'user', message: { role: 'user', content: results } });
   row({ type: 'assistant', message: { id: 'wrap-b', role: 'assistant', content: [{ type: 'text', text: 'Done with the wrap passage.' }] } });
   ids.wrap = (await app.ingest.importSource('claude-code', wrap)).recordingId;
+  // A longer captured checklist changes the prompt allocation without changing card sizes.
+  const todos = Array.from({length: 12}, (_, i) => ({content: `Captured task ${i + 1}`, status: i ? 'pending' : 'in_progress'}));
+  const pinned = join(dir, 'pinned-wrap.jsonl');
+  const pinnedRows = [
+    {type:'user',message:{role:'user',content:'Review the captured work'}},
+    {type:'assistant',message:{id:'pin-a',role:'assistant',content:[{type:'tool_use',id:'pin',name:'TodoWrite',input:{todos}},...uses]}},
+    {type:'user',message:{role:'user',content:[{type:'tool_result',tool_use_id:'pin',content:'Updated'},...results]}},
+  ];
+  writeFileSync(pinned,pinnedRows.map((r,i)=>JSON.stringify({...base,timestamp:new Date(at+i*1000).toISOString(),uuid:`pin-${i}`,...r})).join('\n')+'\n');
+  pinnedId = (await app.ingest.importSource('claude-code', pinned)).recordingId;
   server = await startServer({ app, port: 0, token: 'synthetic-passage-layout' });
+});
+
+test('pinned checklist expansion and rapid history scrolling retain wire geometry', async ({page}) => {
+  await page.setViewportSize({width:1280,height:1000});
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${pinnedId}`);
+  await expect(page.locator('.history .op .skeleton')).toHaveCount(0);
+  await page.evaluate(()=>document.fonts.ready);
+  const more=page.locator('.turn .plan-pinned-more');
+  await expect(more).toBeVisible();
+  // Let the finite arrival observer finish before causing a position-only reflow.
+  await page.waitForTimeout(1900);
+  await more.click();
+  await expect.poll(async()=>violations(await snapshot(page))).toEqual([]);
+  const history=page.locator('.history');
+  await history.evaluate(el=>{el.scrollTop=el.scrollHeight;el.scrollTop=0;});
+  await expect.poll(async()=>violations(await snapshot(page))).toEqual([]);
+  const frame=await snapshot(page); expect(frame.wires.length).toBeGreaterThan(0);
+  const collisions=await page.evaluate(()=>{
+    const pins=[...document.querySelectorAll('.turn .plan-pinned')].map(el=>el.getBoundingClientRect());
+    let count=0;
+    for(const path of document.querySelectorAll('[data-flow-link]')){
+      const pts=[...(path.getAttribute('d')??'').matchAll(/[ML] (\S+) (\S+)/g)].map(m=>({x:+m[1]!,y:+m[2]!}));
+      for(let i=1;i<pts.length;i++){const a=pts[i-1]!,b=pts[i]!;
+        if(pins.some(r=>a.x===b.x?a.x>r.left+1&&a.x<r.right-1&&Math.max(a.y,b.y)>r.top+1&&Math.min(a.y,b.y)<r.bottom-1:a.y>r.top+1&&a.y<r.bottom-1&&Math.max(a.x,b.x)>r.left+1&&Math.min(a.x,b.x)<r.right-1))count++;
+      }
+    }return count;
+  });
+  expect(collisions).toBe(0);
 });
 test.afterAll(async () => {
   if (server) await server.close(); if (app) await app.close();
   if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); }
 });
 
-interface Box { id: string; l: number; r: number; t: number; b: number }
-interface Passage { cards: Box[]; gap: number; room: number }
-interface Wire { key: string; pts: { x: number; y: number }[] }
-interface Snapshot { passages: Passage[]; wires: Wire[] }
-
 async function open(page: Page, recording: Recording, width: number) {
   await page.setViewportSize({ width, height: 6000 });
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[recording]}`);
   await expect(page.locator('.history article.op[data-op-id]').first()).toBeVisible();
-}
-
-const snapshot = (page: Page): Promise<Snapshot> => page.evaluate(() => {
-  const passages = [...document.querySelectorAll<HTMLElement>('.history .ops-row')].map(row => {
-    const style = getComputedStyle(row); const box = row.getBoundingClientRect();
-    return {
-      gap: parseFloat(style.columnGap) || 0,
-      room: box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
-      cards: [...row.querySelectorAll<HTMLElement>('.op[data-op-id]')].map(card => { const r = card.getBoundingClientRect(); return { id: card.dataset.opId!, l: r.left, r: r.right, t: r.top, b: r.bottom }; }),
-    };
-  });
-  const wires = [...document.querySelectorAll<SVGPathElement>('[data-flow-link]')].map(path => ({
-    key: path.dataset.flowLink!,
-    pts: [...path.getAttribute('d')!.matchAll(/[ML] (\S+) (\S+)/g)].map(m => ({ x: +m[1]!, y: +m[2]! })),
-  }));
-  return { passages, wires };
-});
-
-const rowsOf = (cards: Box[]) => {
-  const rows: Box[][] = [];
-  for (const card of cards) { const last = rows.at(-1); if (last && Math.abs(last[0]!.t - card.t) < 4) last.push(card); else rows.push([card]); }
-  return rows;
-};
-const onEdge = (p: { x: number; y: number }, c: Box) => {
-  const inX = p.x >= c.l - .5 && p.x <= c.r + .5, inY = p.y >= c.t - .5 && p.y <= c.b + .5;
-  return (inY && (Math.abs(p.x - c.l) < .5 || Math.abs(p.x - c.r) < .5)) || (inX && (Math.abs(p.y - c.t) < .5 || Math.abs(p.y - c.b) < .5));
-};
-/** Wires are orthogonal, so a segment hits a card exactly when it passes through the card's inset interior. */
-const crosses = (p: { x: number; y: number }, q: { x: number; y: number }, c: Box) =>
-  p.y === q.y
-    ? p.y > c.t + 1 && p.y < c.b - 1 && Math.max(p.x, q.x) > c.l + 1 && Math.min(p.x, q.x) < c.r - 1
-    : p.x > c.l + 1 && p.x < c.r - 1 && Math.max(p.y, q.y) > c.t + 1 && Math.min(p.y, q.y) < c.b - 1;
-
-/** Everything the READ-4 contract requires of one frame; an empty list means it holds. */
-function violations({ passages, wires }: Snapshot): string[] {
-  const found: string[] = []; const all = passages.flatMap(p => p.cards);
-  passages.forEach((passage, pi) => {
-    const { cards, gap, room } = passage; const rows = rowsOf(cards);
-    // Row order is unambiguous: reading order is row-major, so a card's successor is either to its right on the
-    // same row or the leftmost card of the next row down.
-    for (let i = 1; i < cards.length; i++) {
-      const a = cards[i - 1]!, b = cards[i]!;
-      const sameRow = Math.abs(a.t - b.t) < 4;
-      if (sameRow ? b.l < a.r : b.t <= a.t) found.push(`passage ${pi}: ${b.id} is out of reading order after ${a.id}`);
-    }
-    // Deterministic wrap: a row only starts when its first card could not have joined the row above.
-    rows.forEach((row, ri) => {
-      const above = rows[ri - 1]; if (!above) return;
-      const used = above.reduce((n, c) => n + c.r - c.l, 0) + gap * (above.length - 1);
-      const first = row[0]!;
-      if (used + gap + (first.r - first.l) <= room + .5) found.push(`passage ${pi}: ${first.id} wrapped although it fits row ${ri - 1}`);
-    });
-    // Wires: one per consecutive pair, edge to edge, never through a card.
-    for (let i = 1; i < cards.length; i++) {
-      const a = cards[i - 1]!, b = cards[i]!;
-      const wire = wires.find(w => w.key === `${a.id}/${b.id}`);
-      if (!wire) { found.push(`passage ${pi}: no wire ${a.id} -> ${b.id}`); continue; }
-      const start = wire.pts[0]!, end = wire.pts.at(-1)!;
-      if (!onEdge(start, a)) found.push(`wire ${a.id} -> ${b.id} does not leave the previous card's edge`);
-      if (!onEdge(end, b)) found.push(`wire ${a.id} -> ${b.id} does not enter the next card's edge`);
-      if (Math.abs(a.t - b.t) < 4 && !(wire.pts.length === 4 && start.y === end.y && Math.abs(start.x - a.r) < .5 && Math.abs(end.x - b.l) < .5)) found.push(`wire ${a.id} -> ${b.id}: neighbours on one row must join right edge to left edge`);
-    }
-  });
-  for (const wire of wires) for (let k = 1; k < wire.pts.length; k++) for (const card of all)
-    if (crosses(wire.pts[k - 1]!, wire.pts[k]!, card)) found.push(`wire ${wire.key} crosses ${card.id}`);
-  return found;
+  await expect(page.locator('.history .op .skeleton')).toHaveCount(0);
+  await page.evaluate(()=>document.fonts.ready);
 }
 
 // Cards per visual row, per passage, per recording (the 'wrap' recording ends with the checkout-fix passages).
-// Pinned from the measured layout on 26 October; a change here is a layout change and needs a builder decision.
+// Updated only for the delegated READ-4 wide-patch row contract; other row goldens are retained.
 const GOLDEN: Record<Recording, Record<number, string[]>> = {
   claude: { 1024: ['1/1/1', '1/1', '1/1/1', '1/1/1/1'], 1280: ['1/2', '2', '2/1', '2/2'], 1440: ['2/1', '2', '2/1', '2/2'], 1920: ['3', '2', '3', '3/1'] },
   codex: { 1024: ['1/1', '1/1/1'], 1280: ['1/1', '2/1'], 1440: ['2', '2/1'], 1920: ['2', '3'] },
@@ -137,7 +108,7 @@ const GOLDEN: Record<Recording, Record<number, string[]>> = {
     1024: ['1/1/1', '1/1', '1/1/1/1', '1/1/1/1/1/1/1/2/2/1'],
     1280: ['1/2', '2', '2/2', '1/1/2/2/2/3/1'],
     1440: ['2/1', '2', '2/2', '1/1/2/2/3/2/1'],
-    1920: ['3', '2', '3/1', '3/3/4/2'],
+    1920: ['3', '2', '3/1', '1/1/4/4/1/1'],
   },
 };
 
@@ -151,4 +122,27 @@ for (const recording of ['claude', 'codex', 'wrap'] as const) for (const width o
   const pairs = passages.reduce((n, p) => n + Math.max(0, p.cards.length - 1), 0);
   expect(pairs).toBeGreaterThan(0);
   expect(wires).toHaveLength(pairs);
+  if (recording === 'wrap' && width === 1920) await page.screenshot({path:resolve(`.local/read4-${process.env.READ4_PHASE??'after'}-1920.png`)});
+});
+
+for (const width of [1024, 1440]) test(`full-row wide edit still grows into bounded hover reading and returns at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({width,height:900});
+  const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
+  const op=[...bundle.projection.operations].reverse().find(item=>item.detail.kind==='edit');
+  op.detail.hunks=[{oldStart:1,oldLines:1,newStart:1,newLines:76,lines:[' const unchanged = true;',...Array.from({length:75},(_,n)=>`+export const capturedChange${n+1} = ${n+1};`)]}];
+  await page.route('**/demo/bundle.json',route=>route.fulfill({json:bundle}));
+  await page.goto(new URL('/?demo&experience=modern',server.launchUrl).href);
+  const card=page.locator(`article[data-op-id="${op.id}"]`);
+  await card.scrollIntoViewIfNeeded();
+  await expect.poll(()=>card.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length)).toBe(0);
+  const before=(await card.boundingBox())!, viewport=(await page.locator('.history').boundingBox())!;
+  await card.locator('.op-title').hover();await expect(card).toHaveAttribute('data-hover-reading','focused');
+  await expect.poll(()=>card.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length)).toBe(0);
+  const after=(await card.boundingBox())!;
+  expect(after.width).toBeGreaterThan(before.width);expect(after.height).toBeGreaterThan(before.height+20);
+  expect(after.x).toBeGreaterThanOrEqual(viewport.x+7);expect(after.x+after.width).toBeLessThanOrEqual(viewport.x+viewport.width-7);
+  await card.locator('.op-body').evaluate(el=>el.scrollTop=el.scrollHeight);
+  await expect(card.locator('.ln-tx').last()).toBeInViewport();
+  await page.mouse.move(5,5);await expect(card).not.toHaveAttribute('data-hover-reading',/.+/);
+  await expect.poll(async()=>Math.abs((await card.boundingBox())!.width-before.width)).toBeLessThan(1);
 });

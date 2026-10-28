@@ -83,6 +83,8 @@
 
 /* Wide diff cards: the width their longest line needs, read without wrapping and scrolled sideways inside the card. */
 :root[data-ui-version=modern] .connected-workspace .history .op[data-diff] { flex: 0 1 min(var(--reading-width,440px),100%); max-width: 100%; }
+/* Wide patches begin their own row without changing source type or reading motion. */
+:root[data-ui-version=modern] .connected-workspace .history .op.op-edit.shape-wide { flex: 0 0 100%; }
 :root[data-ui-version=modern] .history .op[data-diff=code] .op-body .diff { width: max-content; min-width: 100%; }
 :root[data-ui-version=modern] .history .op[data-diff=code] .op-body .diff .ln-tx { white-space: pre; overflow-wrap: normal; flex: 1 0 auto; }
 /* Added/removed counts sit beside the title, in the mono face used by the code. */
