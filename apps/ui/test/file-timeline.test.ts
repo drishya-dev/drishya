@@ -1,3 +1,4 @@
+import { fileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import type { Operation } from '@drishya/contracts';
 import { describe, expect, it } from 'vitest';
 import { fileTimeline, timelineStep } from '../src/lib/file-timeline.ts';
@@ -26,5 +27,37 @@ describe('file timeline', () => {
     const outside = { ...steps[0]!, operation: search('s1') };
     expect(timelineStep(steps, outside)).toEqual({ total: 3, previous: steps[2], next: steps[0] });
     expect(timelineStep([], undefined)).toEqual({ total: 0, previous: undefined, next: undefined });
+  });
+});
+
+
+describe('whole-session file timeline metadata', () => {
+  const actions = [read('first'), ...Array.from({ length: 52 }, (_, n) => search(`s${n}`)), edit('last')];
+  it('counts the whole path without shipping every operation and skips search-only pages directly', () => {
+    const first = fileOperationPage(actions, PATH, 0, 24, '', 'first');
+    expect(first.total).toBe(54);
+    expect(first.operations).toHaveLength(24);
+    expect(first.timeline).toEqual({ total: 2, positions: { first: 1 }, first: { operationId: 'first', start: 0 }, last: { operationId: 'last', start: 48 }, selected: { operationId: 'first', position: 1, previous: undefined, next: { operationId: 'last', start: 48 } } });
+    const middle = fileOperationPage(actions, PATH, 24, 24, '', 'last');
+    expect(middle.timeline.positions).toEqual({});
+    expect(middle.timeline.selected).toMatchObject({ position: 2, previous: { operationId: 'first', start: 0 }, next: undefined });
+  });
+  it('counts only captured material of this exact path, not multi-path search hits or unavailable reads', () => {
+    const missing = read('missing'); if (missing.detail.kind === 'read') delete missing.detail.excerptArtifactId;
+    const unrelated = read('other'); if (unrelated.detail.kind === 'read') unrelated.detail.path = 'other.ts';
+    const page = fileOperationPage([read('one'), missing, unrelated, search('match'), edit('two')], PATH, 0, 24);
+    expect(page.total).toBe(5);
+    expect(page.timeline.total).toBe(2);
+    expect(page.timeline.positions).toEqual({ one: 1, two: 2 });
+    expect(fileOperationPage([missing], PATH, 0, 24).timeline.total).toBe(0);
+  });
+  it('respects the active action filter without exposing selected metadata from outside it', () => {
+    expect(fileOperationPage(actions, PATH, 0, 24, 'last', 'first')).toMatchObject({ total: 1, timeline: { total: 1, positions: { last: 1 }, selected: undefined } });
+    expect(fileOperationPage(actions, 'other.ts', 0, 24, '', 'first')).toMatchObject({ total: 0, timeline: { total: 0, selected: undefined } });
+  });
+  it('recomputes the count when a previously missing read result arrives', () => {
+    const pending = read('pending'); if (pending.detail.kind === 'read') delete pending.detail.excerptArtifactId;
+    expect(fileOperationPage([pending, edit('e')], PATH, 0, 24).timeline.total).toBe(1);
+    expect(fileOperationPage([read('pending'), edit('e')], PATH, 0, 24).timeline.positions).toEqual({ pending: 1, e: 2 });
   });
 });

@@ -1,8 +1,9 @@
+import { fileOperationPage, type FileOperationPage, type FileStepTarget } from '../../../../packages/scene/src/file-timeline.ts';
 import './file-reader-controls.css';
 import { WorkspaceOptions } from './WorkspaceOptions.tsx';
 import {CapturedSourceComparison} from './CapturedSourceComparison.tsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Operation, Projection } from '@drishya/contracts';
+import type { Projection } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import { fileEvidence, type FileEvidence } from '../lib/file-evidence.ts';
 import { fileTimeline, timelineStep } from '../lib/file-timeline.ts';
@@ -48,7 +49,7 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const [query, setQuery] = useEvidenceState('file/query', '');
   const [start, setStart] = useEvidenceState('file/start', 0);
   const [retry, setRetry] = useState(0);
-  const [response, setResponse] = useState<{ key: string; operations: Operation[]; total: number }>();
+  const [response, setResponse] = useState<FileOperationPage & { key: string; requestedSelection?: string }>();
   const [failure, setFailure] = useState<{ key: string; message: string }>();
   const [savedLeft, setLeft] = useEvidenceState<FileEvidence | string | undefined>('file/left', undefined);
   const [savedRight, setRight] = useEvidenceState<FileEvidence | string | undefined>('file/right', undefined);
@@ -61,21 +62,21 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const trail = useRef<HTMLElement>(null);
   const reading = useRef<HTMLElement>(null);
   const key = `${recordingId}/${path}/${start}/${query}/${mode === 'replay' ? step : 'all'}/${JSON.stringify(revisions)}`;
+  const selectedOperationId = left?.operation.id ?? leftKey?.replace(/\/(read|patch|before|after|search\/\d+)$/, '');
   useEffect(() => {
     if (!source?.fileOperations) return;
     let active = true;
     const timer = setTimeout(() => {
-      void source.fileOperations!(recordingId, path, start, 24, mode === 'replay' ? step : undefined, query)
-        .then((page) => { if (active) { setResponse({ key, ...page }); setFailure(undefined); } })
+      void source.fileOperations!(recordingId, path, start, 24, mode === 'replay' ? step : undefined, query, selectedOperationId)
+        .then((page) => { if (active) { setResponse({ key, requestedSelection: selectedOperationId, ...page }); setFailure(undefined); } })
         .catch((error) => { if (active) setFailure({ key, message: error.message }); });
     }, 100);
     return () => { active = false; clearTimeout(timer); };
-  }, [source, key, retry]);
+  }, [source, key, retry, selectedOperationId]);
   const local = useMemo(() => {
     if (source?.fileOperations) return undefined;
-    const matches = projection.operations.filter((op) => op.paths.some((ref) => ref.path === path) && (!query || `${op.title} ${op.kind}`.toLowerCase().includes(query.toLowerCase())));
-    return { operations: matches.slice(start, start + 24), total: matches.length };
-  }, [source, projection, path, query, start]);
+    return fileOperationPage(projection.operations, path, start, 24, query, selectedOperationId);
+  }, [source, projection, path, query, start, selectedOperationId]);
   const page = local ?? (response?.key === key ? response : undefined);
   const error = failure?.key === key ? failure.message : undefined;
   useEvidenceScroll(trail, 'file/trail', !!page);
@@ -121,12 +122,25 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   const steps = useMemo(() => fileTimeline(page?.operations ?? [], path), [page, path]);
   const stepper = timelineStep(steps, first);
   const pageSize = 24, moreBefore = start > 0, moreAfter = !!page && start + pageSize < page.total;
-  const paged = !!page && page.total > pageSize;
+  const timeline = page?.timeline;
+  const selectedStep = timeline?.selected?.operationId === first?.operation.id ? timeline?.selected : undefined;
+  const globalPosition = selectedStep?.position ?? (first && timeline?.positions[first.operation.id]);
+  const totalSteps = timeline?.total ?? stepper.total;
+  // Retained evidence may be off-page. Wait for metadata for that exact selection before stepping it.
+  const selectionPending = !!source?.fileOperations && !!first && !timeline?.positions[first.operation.id] && response?.requestedSelection !== first.operation.id;
   // Crossing onto a neighbouring page of the action list: choose its first or last step once that page has loaded.
-  const pendingStep = useRef<'first' | 'last' | undefined>(undefined);
+  const pendingStep = useRef<'first' | 'last' | (FileStepTarget & { direction: 'previous' | 'next' }) | undefined>(undefined);
   const previousStep = useRef<HTMLButtonElement>(null), nextStep = useRef<HTMLButtonElement>(null);
   const stepped = useRef<'previous' | 'next' | undefined>(undefined);
   const stepTo = (side: 'previous' | 'next') => {
+    if (selectionPending) return;
+    const exact = selectedStep ? selectedStep[side] : globalPosition === undefined ? (side === 'next' ? timeline?.first : timeline?.last) : undefined;
+    if (exact) {
+      const loaded = steps.find(item => item.operation.id === exact.operationId);
+      if (loaded) { stepped.current = side; setLeft(loaded); }
+      else { pendingStep.current = { ...exact, direction: side }; setStart(exact.start); }
+      return;
+    }
     const target = stepper[side];
     if (target) { stepped.current = side; setLeft(target); return; }
     if (side === 'next' && moreAfter) { pendingStep.current = 'first'; setStart(start + pageSize); }
@@ -135,7 +149,12 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
   useEffect(() => {
     const want = pendingStep.current;
     if (!want || !page) return;
-    if (steps.length) { pendingStep.current = undefined; stepped.current = want === 'first' ? 'next' : 'previous'; setLeft(want === 'first' ? steps[0] : steps.at(-1)); }
+    if (typeof want === 'object') {
+      const target = steps.find(item => item.operation.id === want.operationId);
+      if (target) { pendingStep.current = undefined; stepped.current = want.direction; setLeft(target); }
+      else pendingStep.current = undefined;
+    }
+    else if (steps.length) { pendingStep.current = undefined; stepped.current = want === 'first' ? 'next' : 'previous'; setLeft(want === 'first' ? steps[0] : steps.at(-1)); }
     // A page of searches or other actions holds no read or edit of this file: keep going in the same direction.
     else if (want === 'first' && moreAfter) setStart(start + pageSize);
     else if (want === 'last' && moreBefore) setStart(Math.max(0, start - pageSize));
@@ -176,10 +195,10 @@ function FileWorkspace({ path, projection }: { path: string; projection: Project
       <section ref={reading} className="file-evidence-reading" aria-label="File evidence">
         <div className="file-evidence-toolbar">{!modern && <strong>Historical evidence</strong>}{source?.kind === 'daemon' && workspace?.root && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId) return; useApp.getState().set({ currentFile: path, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>}{!modern && <button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>}<button className="btn" aria-label={compare ? 'Single evidence' : 'Compare evidence'} aria-pressed={compare} disabled={!compare && choices.length < 2} onClick={() => { if (!compare) { setLeft(first); setRight(second); } setCompare(!compare); if (!compare) setTrailHidden(true); }}>{modern ? (compare ? 'Single view' : 'Compare') : (compare ? 'Single evidence' : 'Compare evidence')}</button>{modern && <WorkspaceOptions label="Captured file actions"><button className="btn ghost" aria-pressed={trailHidden} onClick={() => setTrailHidden(!trailHidden)}>{trailHidden ? 'Show actions' : 'Reading space'}</button>{<div onClick={event=>event.stopPropagation()}><ImportContext path={path} /></div>}</WorkspaceOptions>}</div>
 
-        {!compare && (stepper.total > 1 || moreBefore || moreAfter) && <div className="file-timeline-steps" role="group" aria-label="Step through captured reads and edits of this file">
-          <button ref={previousStep} className="btn ghost" disabled={!stepper.previous && !moreBefore} onClick={() => stepTo('previous')}>Previous change</button>
-          <span role="status" className="muted small" title={paged ? 'Steps through the reads and edits on this page of the recorded actions; Previous and Next continue onto the neighbouring page' : undefined}>{stepper.position ?? '–'} of {stepper.total}{paged && ` · page ${Math.floor(start / pageSize) + 1} of ${Math.ceil(page!.total / pageSize)}`}</span>
-          <button ref={nextStep} className="btn ghost" disabled={!stepper.next && !moreAfter} onClick={() => stepTo('next')}>Next change</button>
+        {!compare && totalSteps > 1 && <div className="file-timeline-steps" role="group" aria-label="Step through captured reads and edits of this file">
+          <button ref={previousStep} className="btn ghost" disabled={selectionPending || globalPosition === 1 || (!selectedStep && !stepper.previous && !moreBefore)} onClick={() => stepTo('previous')}>Previous change</button>
+          <span role="status" className="muted small" title="Captured reads and edits in recorded order across the whole session; Previous and Next continue across action pages. Counts respect the current filter and replay position. Actions without captured excerpts, patches or before/after references remain in the action list.">{globalPosition ?? '–'} of {totalSteps}{query && ' · filtered'}</span>
+          <button ref={nextStep} className="btn ghost" disabled={selectionPending || globalPosition === totalSteps || (!selectedStep && !stepper.next && !moreAfter)} onClick={() => stepTo('next')}>Next change</button>
         </div>}
         {!modern && <ImportContext path={path} />}
         {diskError && <p className="bad" role="alert">{diskError}</p>}

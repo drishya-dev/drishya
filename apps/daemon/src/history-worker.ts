@@ -1,3 +1,4 @@
+import { fileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import { readingTarget } from '../../../packages/scene/src/reading-target.ts';
 import { fileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import {reviewInsights,findingMembers} from '../../../packages/scene/src/review-insights.ts';
@@ -236,11 +237,10 @@ function artifactFind(id: string, artifactId: string, query: string, start: numb
   return store.findLines(item.blob, query, start, continuation);
 }
 
-function file(id: string, path: string, start: number, count: number, step?: number, query = '') {
+function file(id: string, path: string, start: number, count: number, step?: number, query = '', selectedOperationId?: string) {
   const full = current(id).projection;
   const historical = step === undefined ? full : asOfProjection(full, step);
-  const operations = historical.operations.filter((op) => op.paths.some((ref) => ref.path === path) && (!query || `${op.title} ${op.kind}`.toLowerCase().includes(query.toLowerCase())));
-  return { total: operations.length, operations: operations.slice(Math.max(0, start), Math.max(0, start) + Math.min(200, Math.max(1, count))) };
+  return fileOperationPage(historical.operations, path, start, count, query, selectedOperationId);
 }
 
 parentPort!.on('message', (message: { id: number; method: string; args: any }) => {
@@ -263,7 +263,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'page-bytes') value = new TextEncoder().encode(JSON.stringify(page(a.id, a.query)));
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
-    else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query);
+    else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query, a.selectedOperationId);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
     else if (message.method === 'reading-target') value = readingTarget(current(a.id).projection, a.query);
     else if (message.method === 'file-evidence') value = fileEvidence(a.step === undefined ? current(a.id).projection : asOfProjection(current(a.id).projection, a.step), a.paths);
