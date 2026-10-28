@@ -52,17 +52,21 @@ window.addEventListener('message',event => {
     else if(/^[123]$/.test(event.data.key))setActive(Number(event.data.key)-1);
   }
 });
-stage.addEventListener('load',()=>{
-  const doc=stage.contentDocument;
-  if(!doc)return;
-  const script=doc.createElement('script');script.type='module';script.src='/prototypes/read-ledger/bridge.ts';
-  script.dataset.recording=recording??'';doc.head.append(script);
-});
-const appURL=new URL('/index.html?experience=modern&motion=0',location.origin);
+const appURL=new URL('/prototypes/read-ledger/frame.html?experience=modern&motion=0',location.origin);
+if(recording)appURL.searchParams.set('recording',recording);
 if(parameters.has('bundle'))appURL.searchParams.set('bundle',parameters.get('bundle')!);
-if(token)appURL.hash=new URLSearchParams({token}).toString();
-else if(recording)appURL.hash=`/r/${encodeURIComponent(recording)}`;
+// Exchange launch credentials in the top-level page before booting the iframe.
+// The embedded app receives the ordinary same-origin HttpOnly session cookie.
+if(token){
+  try{
+    const response=await fetch('/v1/session',{method:'POST',credentials:'same-origin',headers:{authorization:`Bearer ${token}`}});
+    if(!response.ok)throw new Error('Launch link rejected');
+    history.replaceState(null,'',location.pathname+location.search);
+  }catch{
+    document.querySelector('#status')!.textContent='Open this study with the current local Drishya launch link.';
+  }
+}
+if(recording)appURL.hash=`/r/${encodeURIComponent(recording)}`;
 stage.src=appURL.href;
-if(token)history.replaceState(null,'',location.pathname+location.search);
 setActive(Math.max(0,Math.min(2,(Number.parseInt(parameters.get('v')??'1',10)||1)-1)));
 requestAnimationFrame(()=>requestAnimationFrame(()=>picker.setAttribute('data-ready','')));
