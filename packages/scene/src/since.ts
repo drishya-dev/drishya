@@ -104,7 +104,13 @@ export function sinceSnapshot(p: Projection, after: number, page = 0): SinceSnap
   const pageFiles = digest.editedFiles.slice(offset * 50, offset * 50 + 50), gapCounts = new Map<string, number>();
   for (const gap of digest.gaps) gapCounts.set(gap.title, (gapCounts.get(gap.title) ?? 0) + 1);
   const fileStats = sinceFileStats(p, digest.edits, pageFiles);
-  for (const path of pageFiles) if (fileStats[path]) fileStats[path].netDiff = sessionDiff(p, path, after);
+  let remainingLines = 10_000, remainingCharacters = 1_000_000;
+  for (const path of pageFiles) if (fileStats[path]) {
+    const diff = sessionDiff(p, path, after);
+    const characters = diff.lines.reduce((n, line) => n + line.text.length, 0);
+    if (diff.lines.length > remainingLines || characters > remainingCharacters) fileStats[path].netDiff = {basis:'derived',status:'unavailable',lines:[],note:'This review page exceeds the bounded net-diff material limit; inspect the individual captured edits.'};
+    else { fileStats[path].netDiff = diff; remainingLines -= diff.lines.length; remainingCharacters -= characters; }
+  }
   return { fileStats, gapGroups: [...gapCounts].map(([title, count]) => ({ title, count })).sort((a, b) => b.count - a.count), ...digest, ...Object.fromEntries(groups.map((key) => [key, digest[key].slice(offset * 20, offset * 20 + 20)])), counts, editedFiles: digest.editedFiles.slice(offset * 50, offset * 50 + 50), editedFileCount: digest.editedFiles.length };
 }
 
