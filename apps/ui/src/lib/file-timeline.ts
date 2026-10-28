@@ -1,3 +1,4 @@
+import { hasFileTimelineEvidence } from '../../../../packages/scene/src/file-timeline.ts';
 import type { Operation } from '@drishya/contracts';
 import { fileEvidence, type FileEvidence } from './file-evidence.ts';
 
@@ -9,7 +10,7 @@ import { fileEvidence, type FileEvidence } from './file-evidence.ts';
 export function fileTimeline(operations: readonly Operation[], path: string): FileEvidence[] {
   const steps: FileEvidence[] = [];
   for (const op of operations) {
-    if (op.detail.kind !== 'read' && op.detail.kind !== 'edit') continue;
+    if (!hasFileTimelineEvidence(op, path)) continue;
     const first = fileEvidence(op, path)[0];
     if (first) steps.push(first);
   }
