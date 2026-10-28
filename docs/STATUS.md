@@ -45,6 +45,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — HOME-1 titles and Running now (28 October 2026)
+- **Built:** Claude discovery chooses the latest record at the highest parser rank (custom-title > summary > ai-title), using the existing bounded head plus a 64 KiB title-only tail through one read-only handle. Bare-URL-only titles display Untitled session. The existing cross-repository followed-session strip is now above the library as Running now, with its evidence-limited tooltip; the 620 px hiding rule is unchanged.
+- **Verified:** typechecks and 860 unit tests; 88 browser tests in individual Home/fresh-workspace files, 17 opt-in skips; package verification. Three standalone toolbar runs passed. The earlier full suite had 393 passes, 26 skips and three failures: both b2-live tests fail alone on clean main (the second at a different assertion); toolbar passed alone on main and all three branch runs.
+- **Measured cost:** three alternating main/branch discovery pairs, medians 60.29399999999998 / 69.62169999999999 ms for 40 real journals (+15.470361893389084%); 401.4094 / 441.37870000000004 ms for 320 synthetic journals (+9.95724066252559%). Harsh authorized reporting the cost and continuing. Real Home sample checked three rows per harness: Claude parser-title parity 3/3, Codex 1/3 (Codex discovery unchanged). Screenshots and private measurements remain in ignored .local/.
+- **Open:** ready HOME-1 PR pending creation and current-main integration check; row stats remain pending Harsh's decision after the local coverage survey. HOME-1 stays unchecked and claimed.
+
+
 ### Yash with Claude (Sonnet 5.5) — READ-4: passage layout measured and guarded
 - **Result:** at 1024/1280/1440/1920 px on the two fixtures and a 12-tool synthetic passage, reading order is row-major, no card is orphaned, every consecutive pair has a wire from card edge to card edge, and no wire crosses a card (0 of 28 wires at each width). New `passage-layout.spec.ts` keeps it (12 tests; fails when order, gap or the wire obstruction test is broken). No app code changed.
 - **Open (TASKS READ-4), both visible changes:** wide diff cards do not start a row at 1920 px, and stacked cards' wires leave the left edge instead of the bottom edge. Waiting for a builder choice; acceptance on three real sessions is a builder-run check.
