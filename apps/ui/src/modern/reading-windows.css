@@ -134,3 +134,9 @@
 .history .turn-fold[aria-expanded=false]:active svg { transform: rotate(-90deg) scale(.9); }
 .history .folded-turn .turn { margin-bottom: 6px; }
 @media (prefers-reduced-motion: reduce) { .history .turn-fold, .history .turn-fold svg { transition: none; } }
+/* CONTENT-11: a notice Claude Code wrote in the user role reads as the harness's, quieter than a typed prompt. */
+.history .turn-source { color: var(--t3); letter-spacing: 0; text-transform: none; }
+:root[data-experience] .history .turn-source ~ .turn-text { font-size: 13px; font-weight: 400; line-height: 1.6; color: var(--t2); }
+.history .turn-captured { margin-top: 4px; font-size: 11px; color: var(--t3); }
+.history .turn-captured summary { cursor: pointer; width: max-content; }
+.history .turn-captured .output { margin: 6px 0 0; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
