@@ -1,5 +1,5 @@
 import type { Operation } from '@drishya/contracts';
-import { askQuestions } from '../lib/ask-question.ts';
+import { askQuestions, questionAcceptance } from '../lib/ask-question.ts';
 import './question-card.css';
 
 /** A question the agent put to the person, with its options and, once answered, which was chosen. Captured text only. */
@@ -8,6 +8,7 @@ export function QuestionCard({ op }: { op: Operation }) {
   const questions = askQuestions(detail?.input, detail?.resultPreview);
   if (!questions.length) return null;
   const waiting = op.status === 'running';
+  const accepted = questionAcceptance(detail?.resultPreview);
   return <div className="question-card" role="group" aria-label="Question to you">
     {questions.map((item) => <section key={item.question} className="question">
       {item.header && <small className="question-header">{item.header}{item.multiSelect ? ' · choose any' : ''}</small>}
@@ -19,6 +20,6 @@ export function QuestionCard({ op }: { op: Operation }) {
       {item.typed && <p className="question-typed"><small>{!item.options.length ? 'Answer' : item.chosen.length ? 'Also wrote' : 'Wrote'}</small> {item.typed}</p>}
     </section>)}
     {questions.some((item) => !item.options.length) && <small className="question-state">The capture keeps the question and the answer but not the offered options.</small>}
-    <small className="question-state">{waiting ? 'Waiting for your answer' : questions.some((item) => item.answer) ? 'Captured question and answer' : 'No answer was captured'}</small>
+    <small className="question-state">{waiting ? 'Waiting for your answer' : questions.some((item) => item.answer) ? 'Captured question and answer' : accepted === true ? 'Codex recorded the question as accepted; the answer is not part of this record' : accepted === false ? 'Codex recorded the question as not accepted' : 'No answer was captured'}</small>
   </div>;
 }

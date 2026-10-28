@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Hunk } from '@drishya/contracts';
-import { CodeView, DiffView, ProvenanceBadge, useArtifact } from './common.tsx';
+import { CodeView, DiffView, Output, ProvenanceBadge, useArtifact } from './common.tsx';
+import { CapturedResultViews } from './CapturedResultViews.tsx';
 import { ToolOutput } from './ToolOutput.tsx';
 import { ChangeColumns } from './ChangeColumns.tsx';
 import { useReadingReference } from './ReadingReference.tsx';
@@ -115,6 +116,8 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
   const sourceEnd = view.totalLines === undefined ? undefined : Math.min(sourceBase + view.totalLines - 1, view.artifact?.range?.end ?? Infinity);
   const sourceLines = text ? text.replace(/\n$/, '').split('\n') : [];
   const loadedEnd = Math.min(sourceStart + sourceLines.length - 1, sourceEnd ?? Infinity);
+  const capturedPage = view.artifact?.provenance.kind === 'captured';
+  const pageEvidence = {partial: `Loaded captured page · ${sourceLines.length ? `source lines ${sourceStart}–${loadedEnd}` : 'empty page'} · ${view.partial ?? `${view.artifact?.availability} stored artifact`} · supplied page only; no current file loaded`};
   const selectedRange = () => {
     const from = rangeFrom ? Number(rangeFrom) : sourceStart;
     const to = rangeTo ? Number(rangeTo) : loadedEnd;
@@ -187,7 +190,8 @@ export function ArtifactReader({ id, kind, path, startLine = 1, fallback, proven
       {kind === 'code' && !modernSource && <SourceFind query={query} change={q => { setQuery(q); setActiveLine(undefined); }} matches={matches} activeLine={activeLine} move={moveMatch} label="Find in loaded source page" idleLabel={loading ? 'Opening stored source page…' : text ? `Source lines ${sourceStart}–${sourceStart + text.replace(/\n$/, '').split('\n').length - 1} · loaded page only` : 'Empty source page'} />}
       {kind === 'code' && source?.artifactFind && query && <div className="stored-source-find"><button className="btn ghost small" disabled={finding || loading} onClick={() => void findStored()}>{finding ? 'Searching stored content…' : 'Find next stored match'}</button><span className="muted small" role="status">{findStatus || 'Literal search from this page through the stored artifact'}</span></div>}
       {kind === 'code' && !modernSource && <details className="source-utilities"><summary>Source tools · go to line, copy &amp; pin range</summary>{sourceTools}</details>}
-      {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView scrollRef={sourceViewport} text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : <ToolOutput text={text} />}
+      {loading ? <div className="skeleton tall" /> : kind === 'code' ? <CodeView scrollRef={sourceViewport} text={text} startLine={sourceStart} path={path} highlightLines={matchingLines} activeLine={activeLine} /> : capturedPage ? <ToolOutput text={text} evidence={pageEvidence} /> : <Output text={text} />}
+      {kind === 'code' && !loading && capturedPage && <CapturedResultViews text={text} evidence={pageEvidence} />}
       {view.partial && <div className="muted small reader-range">{view.partial}</div>}
       {(pageStart > 0 || next) && (
         <nav className="reader-pages" aria-label="Captured content pages">

@@ -9,6 +9,7 @@ const WHY: Record<string, string> = {
   'recording-budget': 'past the 256 MB of images kept per session',
   protected: 'from a protected file',
   unrecognised: 'not a recognised image type',
+  remote: 'a remote reference; never fetched automatically',
 };
 
 /**
@@ -45,7 +46,7 @@ function ImageThumbnail({ src, image, label, onOpen }: { src: string; image: Ope
 }
 
 /** The whole image: fitted first, actual pixels on click; Escape or the backdrop closes it. */
-function ImageReader({ src, image, onClose }: { src: string; image: OperationImage; onClose: () => void }) {
+function ImageReader({ src, image, onClose, currentCaption }: { src: string; image: OperationImage; onClose: () => void; currentCaption?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [actual, setActual] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -53,16 +54,18 @@ function ImageReader({ src, image, onClose }: { src: string; image: OperationIma
   // Explicit retry bypasses a cached failed response without changing the image's hash/owner.
   const imageSrc = retry ? `${src}${src.includes('?') ? '&' : '?'}retry=${retry}` : src;
   useEffect(() => { dialog.current?.showModal(); }, []);
-  return <dialog ref={dialog} className="image-reader" aria-label="Captured image reader" onClose={onClose} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
+  const caption = currentCaption ?? `Captured image${image.width && image.height ? ` · ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${size(image.bytes)}` : ''}`;
+  return <dialog ref={dialog} className="image-reader" aria-label={currentCaption ? 'Current image reader' : 'Captured image reader'} onClose={onClose} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
     <div className="image-reader-bar">
-      <span>Captured image{image.width && image.height ? ` · ${image.width}×${image.height}` : ''}{image.bytes ? ` · ${size(image.bytes)}` : ''}</span>
+      <span title={caption}>{caption}</span>
       <button type="button" disabled={failed} aria-pressed={actual} onClick={() => setActual((v) => !v)}>{actual ? 'Fit' : 'Actual size'}</button>
       <button type="button" onClick={() => dialog.current?.close()}>Close</button>
     </div>
+    {currentCaption && <p className="image-reader-context">Current file. It may differ from what the agent saw.</p>}
     <div className={`image-reader-stage${actual ? ' actual' : ''}`}>
-      {failed ? <div className="op-image-missing"><p role="status">Captured image could not be loaded. It may no longer be available.</p>
+      {failed ? <div className="op-image-missing"><p role="status">{currentCaption ? 'Current file could not be loaded. It may have changed or become unavailable.' : 'Captured image could not be loaded. It may no longer be available.'}</p>
         <button type="button" className="btn ghost" onClick={() => { setFailed(false); setRetry((value) => value + 1); }}>Retry image</button></div>
-        : <img key={retry} src={imageSrc} alt="Captured image" onError={() => setFailed(true)} onClick={() => setActual((v) => !v)} />}
+        : <img key={retry} src={imageSrc} alt={currentCaption ? 'Current file' : 'Captured image'} onError={() => setFailed(true)} onClick={() => setActual((v) => !v)} />}
     </div>
   </dialog>;
 }
@@ -95,9 +98,11 @@ export function PathImage({ op, path }: { op: Operation; path: string }) {
   const latestOwner = useRef(owner); latestOwner.current = owner;
   const request = useRef(0);
   const [result, setResult] = useState<{ owner: object; value: Status }>();
+  const [readerOwner, setReaderOwner] = useState<object>();
   const state = result?.owner === owner ? result.value : undefined;
   useEffect(() => () => { request.current++; }, [owner]);
-  const canOpen = !!source?.currentImageUrl && !!recordingId && !recordingId.includes('+');
+  const remote = /^https?:\/\//i.test(path) || /^[\\/]{2}/.test(path) || /^file:\/\/[^/]/i.test(path) && !/^file:\/\/localhost\//i.test(path);
+  const canOpen = !remote && !!source?.currentImageUrl && !!recordingId && !recordingId.includes('+');
   const open = async () => {
     if (!canOpen) return;
     const currentRequest = ++request.current;
@@ -110,7 +115,7 @@ export function PathImage({ op, path }: { op: Operation; path: string }) {
       // (the page policy allows same-origin images, not blob: URLs).
       const response = await fetch(url);
       if (!response.ok) {
-        const reason = response.status === 403 && /approve/.test(await response.text()) ? 'Allow workspace reading for this session to open the current file.' : response.status === 404 ? 'The file is no longer there.' : response.status === 415 ? 'The current file is not a PNG, JPEG, GIF or WebP image.' : response.status === 413 ? 'The current file is larger than 4 MB.' : 'The current file could not be opened here.';
+        const reason = response.status === 403 ? /approve/.test(await response.text()) ? 'Allow workspace reading for this session to open the current file.' : 'This image is outside the readable workspace or protected.' : response.status === 404 ? 'The file is no longer there.' : response.status === 415 ? 'The current file is not a PNG, JPEG, GIF or WebP image.' : response.status === 413 ? 'The current file is larger than 4 MB.' : 'The current file could not be opened here.';
         update({ error: reason });
         return;
       }
@@ -124,11 +129,15 @@ export function PathImage({ op, path }: { op: Operation; path: string }) {
       <span>image bytes not captured</span>
       {canOpen && (state === undefined || typeof state === 'object' && 'error' in state) && <button type="button" className="path-image-open" onClick={() => void open()}>{state ? 'Retry current file' : 'Open current file'}</button>}
     </div>
+    {remote && <div className="path-image-line">Remote image reference · never fetched automatically.</div>}
     {state === 'loading' && <div className="path-image-line">Opening the current file…</div>}
     {state && typeof state === 'object' && 'error' in state && <div className="path-image-line" role="status">{state.error}</div>}
     {state && typeof state === 'object' && 'url' in state && <figure className="path-image-current">
-      <img src={state.url} alt="Current file" onError={() => { if (latestOwner.current === owner && request.current === state.request) setResult({ owner, value: { error: 'The current file could not be loaded. It may have changed or become unavailable.' } }); }} />
+      <button type="button" className="path-image-reader-open" aria-label="Open current image reader" onClick={() => setReaderOwner(owner)}>
+        <img src={state.url} alt="Current file" onError={() => { if (latestOwner.current === owner && request.current === state.request) setResult({ owner, value: { error: 'The current file could not be loaded. It may have changed or become unavailable.' } }); }} />
+      </button>
       <figcaption>Current file{state.modified ? `, modified ${new Date(state.modified).toLocaleString()}` : ''}. It may differ from what the agent saw.</figcaption>
+      {readerOwner === owner && <ImageReader src={state.url} image={{}} currentCaption={`Current file${state.modified ? `, modified ${new Date(state.modified).toLocaleString()}` : ''}. It may differ from what the agent saw.`} onClose={() => setReaderOwner(undefined)} />}
     </figure>}
   </div>;
 }

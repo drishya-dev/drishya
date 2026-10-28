@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TurnLedger } from '../../../packages/scene/src/turns.ts';
-import { ledgerParts, ledgerSummary } from '../src/lib/turn-ledger.ts';
+import { ledgerBasis, ledgerParts, ledgerSummary, settingsLine } from '../src/lib/turn-ledger.ts';
 
 const base = (patch: Partial<TurnLedger> = {}): TurnLedger => ({
   step: 0, operations: 0, reads: 0, searches: 0, edits: { files: 0, added: 0, removed: 0 }, commands: 0,
@@ -33,5 +33,27 @@ describe('ledgerParts', () => {
     expect(ledgerSummary(base({ commands: 1, durationMs: 400 }))).toBe('1 command');
     expect(ledgerSummary(base({ durationMs: 60_000 }))).toBe('');
     expect(ledgerSummary(base({ commands: 1, durationMs: 59_000 }))).toBe('1 command · 59 s');
+  });
+});
+
+describe('recorded turn facts (DATA-3)', () => {
+  it('prefers the duration the harness recorded and says so', () => {
+    const ledger = base({ commands: 2, durationMs: 4_000, recorded: { durationMs: 90_000 } });
+    expect(ledgerSummary(ledger)).toBe('2 commands · 1 m 30 s');
+    expect(ledgerBasis(ledger)).toContain('recorded for this turn');
+    expect(ledgerBasis(base({ commands: 2, durationMs: 4_000 }))).toContain('last captured time');
+  });
+
+  it('names an interrupted or failed turn without turning it into a count', () => {
+    expect(ledgerSummary(base({ commands: 1, recorded: { outcome: 'aborted', reason: 'interrupted' } }))).toBe('1 command · interrupted');
+    expect(ledgerParts(base({ recorded: { error: { code: 'other' } } }))).toEqual([{ text: 'turn error', tone: 'bad' }]);
+  });
+
+  it('writes only changed settings and keeps defaults out of the line', () => {
+    expect(settingsLine({ model: 'm1', effort: 'medium', approvalPolicy: 'never', sandbox: 'danger-full-access', collaborationMode: 'default', approvalsReviewer: 'user', permissionProfile: 'disabled' })?.text).toBe('m1 · medium effort · never asks · full access');
+    expect(settingsLine({ effort: 'low' })?.text).toBe('low effort');
+    expect(settingsLine({ collaborationMode: 'plan' })?.text).toBe('plan mode');
+    expect(settingsLine({ collaborationMode: 'default' })).toBeUndefined();
+    expect(settingsLine({})).toBeUndefined();
   });
 });
