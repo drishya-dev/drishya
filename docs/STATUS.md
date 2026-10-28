@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-5b | @yash + Codex parallel lane | `codex/content-5b-delegation-thread` | 2026-10-28 | Whole delegation thread: DelegationDetail/delegation helpers and scoped CSS, dedicated read-only worker/API evidence query (`history.ts`, `history-worker.ts`, `server.ts`, `api.ts`) and tests/report; `Viewer.tsx` recorded-agent button metadata/title only. No History.tsx, reducer, contracts, adaptive readers or held Claude adapter/discovery files; negotiate any unavoidable seam before edits. Real multi-agent acceptance required. |
 | MOTION-2 | @yash + Codex parallel lane | `codex/motion-2-tree-lift` | 2026-10-28 | Whole visible-file-row Lift: Origins.tsx, dedicated origin selection helper and motion tests/report. Existing tree row metadata reused; no History.tsx, scroll measurement, hover-reading, adaptive readers, reducer, contracts or SessionWorkspace.tsx edits. |
 | GIT-2 | @yash + Codex | `codex/git-2-session-links` (PR #269; implementation review-ready) | 2026-10-28 | Implementation and fixture acceptance complete. No production files held; positive native time/path and current-edit matching sample absent, acceptance blocker recorded in TASKS. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
@@ -44,6 +43,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex parallel lane — CONTENT-5b complete
+
+- **PR #271:** one collapsible delegation thread joins the captured task, exact child activity/messages and parent result. Source-clock ordering, replay cutoffs, captured model/effort, exact imported-child links and bounded complete task/step paging; unavailable, encrypted and unresolved cases stay explicit. No History, reducer, schema, adapter or native writes.
+- **Acceptance:** 14 focused units and five delegation browser checks; actual Codex `7d8b3224` (12,542,301 bytes/449 observations, two spawns) and Claude `024517cd` (6,516,417 bytes/2,112 observations, one exact thread with 33 steps) mounted and read. Positive exact Codex interacted/completed and separately imported child navigation remain fixture-verified only; no native sample certified those cases.
+- **Shared gate on merged main `bcfbcde`:** 962 units/158 files, 17 focused desktop browsers across CONTENT-5b/MOTION-2, both types/build and packaged CLI offline import/API/restart pass. Source review found no remaining blocker. Both task branches stay separate for other-builder review; Claude owns merging.
 
 ### Yash with Codex parallel lane — GIT-2 implementation ready; native acceptance blocked
 
