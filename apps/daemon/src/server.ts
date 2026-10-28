@@ -121,7 +121,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('Drishya binds to loopback only.');
   const app = opts.app ?? new App(opts.dataDir);
   const workspace = new WorkspaceAccess(app);
-  const gitReview = new GitReview(workspace);
+  const gitReview = new GitReview(workspace,undefined,app.history);
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
   app.ingest.resetLiveFlags();
   const token = opts.token ?? randomBytes(24).toString('hex');
@@ -317,7 +317,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
-      if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:sessionLinks(app.store,id,page.commits.map(commit=>commit.hash))});}
+      if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:{...sessionLinks(app.store,id,page.commits.map(commit=>commit.hash)),...page.sessionLinks}});}
       if(sub==='git'&&subId==='commit'&&m==='GET')return json(res,await gitReview.commit(id,url.searchParams.get('hash')??'',intParam(url,'parent',0,0,1023),intParam(url,'start',0,0,10_000_000),url.searchParams.get('generation')??undefined));
       if (sub === 'workspace' && subId === 'approve' && m === 'POST') return json(res, await workspace.approve(id));
       if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));

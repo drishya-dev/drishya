@@ -52,3 +52,5 @@
 .atlas-copy-message {margin-block:5px;}
 .atlas-message>span {display:block;margin-top:8px;}
 .atlas-full-message {height:260px;overflow:auto;min-width:0;margin-block:10px;border:1px solid var(--line);border-radius:7px;}
+
+.atlas-working{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px}.atlas-working summary{cursor:pointer}.atlas-working summary small{margin-left:8px;color:var(--muted)}.atlas-working p{margin:8px 0;color:var(--muted);line-height:1.5}.atlas-working .atlas-files{margin:6px 0 0}
