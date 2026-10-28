@@ -169,8 +169,6 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 **19 of 41 done**
 
-**14 of 41 done**
-
 | Done | # | ID | Item | Tags |
 |---|---|---|---|---|
 | ☑ | 45 | READ-7 | Failure → fix chains (same command identity) | `read` `turn` |
