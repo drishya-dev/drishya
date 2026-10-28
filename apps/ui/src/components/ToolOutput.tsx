@@ -7,7 +7,7 @@ import type {CapturedContentEvidence} from '../lib/captured-content.ts';
 /** This display projection never changes stored bytes, source line addresses or copy/search input. */
 export function ToolOutput({text,inspect=true,evidence}:{text:string;inspect?:boolean;evidence?:CapturedContentEvidence}){
  // The reading controls float over the output's corner (captured-content.css) instead of taking a row of their own.
- return <div className="result-readings">{inspect?<CapturedResultViews text={text} evidence={evidence} fallback={<ToolOutputBody text={text}/>}/>:<ToolOutputBody text={text}/>}</div>;
+ return <div className="result-readings">{inspect&&<CapturedResultViews text={text} evidence={evidence}/>}<ToolOutputBody text={text}/></div>;
 }
 function ToolOutputBody({text}:{text:string}) {
   const formatted = useMemo(() => toolOutputText(text), [text]);
