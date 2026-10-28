@@ -46,6 +46,13 @@ it('does not reveal later child identity, metadata, completion or result before 
   const fake=structuredClone(p);fake.links=[];fake.operations.find(other=>other.id===op.id)!.observationIds=[];
   expect(delegationThread(app.store,asOfProjection(fake,op.startSequence+1),op.id,0,op.startSequence+1)).toBeNull();
 });
+it('uses the captured spawn workspace when a multi-worktree parent has no common projection root',()=>{
+  const p=structuredClone(app.projection(codex));p.workspaceRoot=undefined;
+  expect(delegationThread(app.store,p,spawn(codex).id)?.child?.recordingId).toBe(child);
+  const root=app.recording(child).workspaceRoot;
+  try{app.store.updateRecordingMeta(child,{workspaceRoot:join(dir,'other-worktree')});expect(delegationThread(app.store,p,spawn(codex).id)?.child?.recordingId).toBeUndefined();}
+  finally{app.store.updateRecordingMeta(child,{workspaceRoot:root});}
+});
 it('removes a forgotten child link without rewriting captured lifecycle',async()=>{
   await app.forget(child);const value=await app.history.delegationThread(codex,spawn(codex).id);
   expect(value?.child?.recordingId).toBeUndefined();expect(value?.steps.some(row=>row.kind==='completed')).toBe(true);
