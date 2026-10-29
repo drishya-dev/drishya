@@ -31,12 +31,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-4b | @yash + Codex plan agent | `codex/p1-plan-completion` | 2026-10-29 | Whole remaining real plan/checklist acceptance; plan-only helpers/components/tests and native-case/report files. No History.tsx, controller.ts, indexer, contracts or schema changes. Coordinate any shared reducer change before editing. |
+| CONTENT-4b | @yash + Codex plan agent | `codex/p1-plan-completion` | 2026-10-29 | Whole remaining real plan/checklist acceptance; plan-only helpers/components/tests and native-case/report files. Includes capture-core literalPlan helper/tests and reducer literal-patch-derived classification block/import/scope near line 612 after genuine native capture exposed the wrapped-plan gap. No History.tsx/controller/indexer/contracts/schema changes. CONTENT-3 alone owns reducer inputDepth and r24; coordinated disjoint reducer ranges. |
 | CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
+| CONTENT-1b | @yash + Codex | `codex/p1-image-first-recovery` | 2026-10-29 | Whole builder-reported image material/recovery task: exact-recorded-file volatile consent (no parent-directory grant), current-image boundary, OpImages/styles/API/tests and real Codex/Claude acceptance. Reserved History image-only preview/ExpandedMaterial branches around 873/987; no scroll/anchor/indexer/controller/projection edits. Bound to 15 files; split first if exceeded. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
-| TEST-2 | @harsh + Codex | `harsh/test-2-wheel-end` | 2026-10-28 | `apps/ui/src/components/History.tsx` wheel/scroll handling and reading-anchor/height code only; tests only with Harsh's explicit yes. No `hover-reading.ts` or `flow-route.ts` edits. |
-| INDEX-1 | @yash + Claude Sonnet 5.5 | `claude/index-1-nested-checkouts` | 2026-10-29 | `packages/indexer/src/index.ts` (walk, `isIndexableFile`, version), its unit tests, the map status line that reports skipped checkouts. No contracts, projection or History changes. |
-| CONTENT-2 | @yash + Codex browser agent | `codex/whole-browser` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. **28 Oct: Claude Sonnet 5.5 takes that History.tsx integration (branch `claude/content-2-history`, History.tsx insertion only, no other file); Codex keeps the rest of the row.** Up to 15 files; no adapter/contracts/projection or READ-4 test. |
+| TEST-2 | @yash + Codex | `codex/p1-test2-completion` | 2026-10-29 | Builder explicitly transferred TEST-2 from Harsh/Codex on 29 October, to start after the four P1 content tasks finish. Whole remaining regression acceptance and necessary focused fixes; preserve assertions, desktop-only. History wheel/reading-anchor scope only if reproduction requires it; no PERF-2/3 work or visual-density changes. |
+| CONTENT-2 | @yash + Codex browser agent | `codex/p1-browser-completion` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. **28 Oct: Claude Sonnet 5.5 takes that History.tsx integration (branch `claude/content-2-history`, History.tsx insertion only, no other file); Codex keeps the rest of the row.** Up to 15 files; no adapter/contracts/projection or READ-4 test. |
 
 
 ---
@@ -47,6 +47,17 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **PR #288:** native Claude stdio permission callback, policy-preserving Codex resume, cancellation/stale-approval repair; native Codex historical questions and exact keyed answers, r24 option depth, exact command/replacement approval presentation with original request access. No History/schema/config/journal changes.
 - **Acceptance:** genuine Claude `1a691710` (209,800 bytes/36 observations) and Codex `71a376d0` (375,432 bytes/80 observations), both 600/1440, live answer/cancel and actual approval declines; original `4b5ca5b1`/`4d842553` replay boundaries retested. 42 focused units, both types/build and 11 browsers pass. [Report](review/content-3-native-completion.md). Shared P1 gate pending; no merge performed.
+
+### Yash with Claude Sonnet 5.5 — order after SCREEN-1 recorded; two Files bugs and two passes added
+
+- **Decision (Yash, 29 Oct), with the reason:** after SCREEN-1 the order is AUDIT-1 (a pass through every built function for UI, backend, content and navigation problems, not fitted to his own list) → the UI and motion passes → the fresh-eyes agent review (COMP-1) → VIZ-1 (task-shaped visualizations: branches and PRs side by side, a PR beside a running agent, the screen beside the work). The audit comes first so the UI passes do not polish surfaces whose content is still unclear.
+- **New items:** FILES-8 (P1: Workspace opens the file chosen in Files, not peek), UI-16 (P1: the Files rail wastes its width, names are cut while the row has empty space), AUDIT-1 (P2), VIZ-1 (P3). Nothing built; work starts 30 October.
+
+### Yash with Claude Sonnet 5.5 — INDEX-1 complete (map and Files tree without nested checkouts)
+
+- **Cause:** the indexer walked into `.claude/worktrees/*`, each a full copy of the project with its own `.git`; on the real `drishya` workspace 4,999 of the 5,000 mapped files were copies and the real files were cut off.
+- **Fix:** any directory below the root with its own `.git` is another checkout and is skipped (map walk and `isIndexableFile`); the legend says how many were left out. Real workspace: 5,000 files truncated → 963 files, not truncated, 12 checkouts named.
+- **Checks:** 11 indexer units, two browser specs (1440x900, 600x720), `check:affected` green; real Claude Code and Codex sessions of the workspace checked. Not covered: a worktree whose `.git` has been deleted.
 
 ### Yash with Claude Sonnet 5.5 — UI-14 and UI-15 complete; Codex stack and HOME-1 merged
 
