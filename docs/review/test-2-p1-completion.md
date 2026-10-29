@@ -17,3 +17,13 @@ After the wheel test completed, two of three runs exposed B3 selecting the previ
 On the combined P1 tree, all four B2 journeys then pass three consecutive whole-file runs: 12 passed, zero failures or skips. The repaired full unit suite gives 1,031 passed / one skipped; both typechecks, UI build and package verification pass. Real-session and three consecutive full-browser acceptance follow before this task is ticked.
 
 Private logs remain under the isolated gate checkout's .local/p1-gate and .local/test2 directories. No History runtime, hover, visual density or PERF-2/3 source was changed.
+## Genuine-session held reading
+
+Both harnesses were imported through a scratch Drishya store and opened at 600 and 1440 px. Codex prefix 32f628ee: 533,572,179 source bytes and 32,854 observations. Claude Code prefix c8e5c9c8: 82,859,509 bytes and 10,466 observations. All four desktop checks recorded zero held-reading displacement, zero horizontal overflow and zero page errors. Mounted passage slots remained bounded (two for Codex, four for Claude).
+
+These checks prove static reading stability after scrolling through genuine paged history; they do not claim a fresh native live append. The B2 fixture separately verifies live append, focus, paging, copy and held-scroll behavior. Private screenshots and numeric logs remain in .local/test2/ in the isolated integrated checkout.
+## Full-suite prompt-rail follow-up
+
+The first post-B2 full pass on integration 03911eaf gave 471 parallel passes, 25 skips and one prompt-rail-evidence:33 keyboard-focus failure; the serial pass gave 33 passes and one skip, including all B2 cases. Its missing first marker did not reproduce in five isolated whole-file runs (ten checks passed). The failing width was not recorded, so phone sizing is not claimed as its proven cause.
+
+That journey still exercised unsupported 320/390 px widths. It now covers 600/900/1440 px, matching the desktop contract, and names each width as a report step for future diagnostics. Exact first/last marker focus, virtualization, ledger content, popup bounds and final prompt navigation are unchanged. The acceptance sequence restarts after this supported-range correction; the failed pass is retained rather than counted as green.
