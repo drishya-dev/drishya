@@ -39,6 +39,10 @@ const cached=new WeakMap<Projection,{commands:Operation[]; edits:Map<string,Oper
 export function commandAtWorkspace(observations:Observation[],root:string|undefined):boolean {
   if(!root)return false;
   const canonical=(path:string)=>{const p=path.replace(/\\/g,'/').replace(/\/$/,'');return /^[A-Za-z]:\//.test(p)?p.toLowerCase():p;};
+  const native=observations.filter(o=>o.kind==='item.completed'&&(o.payload as Record<string,unknown>).item==='command');
+  // A standalone native command records its actual execution directory, even
+  // when the enclosing code-mode request is not one literal terminal call.
+  if(native.length)return native.every(o=>typeof (o.payload as Record<string,unknown>).cwd==='string'&&canonical((o.payload as {cwd:string}).cwd)===canonical(root));
   const call=observations.find(o=>o.kind==='tool.call');if(!call||call.workspaceRoot&&canonical(call.workspaceRoot)!==canonical(root))return false;
   const input=(call.payload as {input?:unknown}).input;
   if(typeof input==='string')return !!call.workspaceRoot;
@@ -46,6 +50,13 @@ export function commandAtWorkspace(observations:Observation[],root:string|undefi
   const args=input as Record<string,unknown>,cwd=args.workdir??args.cwd;
   // An explicitly captured override must be the same absolute root; no relative cwd inference.
   return cwd===undefined?!!call.workspaceRoot:typeof cwd==='string'&&canonical(cwd)===canonical(root);
+}
+function intervalStart(op:Operation):number {
+  if(op.startTime)return Date.parse(op.startTime);
+  // Native CommandExecution completion records carry elapsed time but no
+  // start event. This derives an interval, not a fabricated captured timestamp.
+  const end=Date.parse(op.endTime??'');
+  return op.tool==='CommandExecution'&&Number.isFinite(end)&&typeof op.durationMs==='number'&&Number.isFinite(op.durationMs)&&op.durationMs>=0?end-op.durationMs:NaN;
 }
 /** Runs inside the existing history worker; never transfers a complete projection to the daemon. */
 export function gitSessionEvidence(projection:Projection,query:GitSessionQuery,atWorkspace:(op:Operation)=>boolean=()=>false):GitSessionEvidence {
@@ -73,14 +84,14 @@ export function gitSessionEvidence(projection:Projection,query:GitSessionQuery,a
     if(!commit.paths.length||commit.paths.some(path=>!relative(path)))continue;
     const time=Math.floor(Date.parse(commit.committedAt)/1000),paths=[...commit.paths].sort();
     const matches=index.commands.filter(op=>{
-      const start=Math.floor(Date.parse(op.startTime??'')/1000),end=Math.floor(Date.parse(op.endTime??'')/1000);
+      const start=Math.floor(intervalStart(op)/1000),end=Math.floor(Date.parse(op.endTime??'')/1000);
       return atWorkspace(op)&&Number.isFinite(time)&&Number.isFinite(start)&&Number.isFinite(end)&&start<=time&&time<=end&&
         op.detail.kind==='shell'&&same(explicitCommitPaths(op.detail.command)!,paths);
     });
     // One command matching multiple commits is ambiguous too (e.g. same-second cherry-pick).
     if(matches.length===1){
       const op=matches[0]!;
-      const candidates=query.commits.filter(other=>same([...other.paths].sort(),paths)&&Math.floor(Date.parse(other.committedAt)/1000)>=Math.floor(Date.parse(op.startTime!)/1000)&&Math.floor(Date.parse(other.committedAt)/1000)<=Math.floor(Date.parse(op.endTime!)/1000));
+      const candidates=query.commits.filter(other=>same([...other.paths].sort(),paths)&&Math.floor(Date.parse(other.committedAt)/1000)>=Math.floor(intervalStart(op)/1000)&&Math.floor(Date.parse(other.committedAt)/1000)<=Math.floor(Date.parse(op.endTime!)/1000));
       if(candidates.length===1)links[commit.hash]=link(op,'commit-time-paths');
     }
   }
