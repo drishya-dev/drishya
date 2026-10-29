@@ -31,8 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-4b | @yash + Codex plan agent | `codex/p1-plan-completion` | 2026-10-29 | Whole remaining real plan/checklist acceptance; plan-only helpers/components/tests and native-case/report files. Includes capture-core literalPlan helper/tests and reducer literal-patch-derived classification block/import/scope near line 612 after genuine native capture exposed the wrapped-plan gap. No History.tsx/controller/indexer/contracts/schema changes. CONTENT-3 alone owns reducer inputDepth and r24; coordinated disjoint reducer ranges. |
-| CONTENT-3 | @yash + Codex questions agent | `codex/p1-question-completion` | 2026-10-29 | Whole questions/approval completion: native controller permission transport, question/approval helpers/components and scoped tests/native acceptance. No History.tsx/indexer/schema changes. Reserved projection reduce.ts inputDepth entry for native request_user_input and reducer r24 cache invalidation only (coordinated with CONTENT-4b). |
 | CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | TEST-2 | @yash + Codex | `codex/p1-test2-completion` | 2026-10-29 | Builder explicitly transferred TEST-2 from Harsh/Codex on 29 October, to start after the four P1 content tasks finish. Whole remaining regression acceptance and necessary focused fixes; preserve assertions, desktop-only. History wheel/reading-anchor scope only if reproduction requires it; no PERF-2/3 work or visual-density changes. |
@@ -47,6 +45,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - **PR #293:** image-first captured/current material, original requests retained, and explicit volatile exact-recorded-image consent for worktree/generated locations without a directory grant. Ordinary workspace approval remains mandatory; protected/network/link/changed-file and revocation races are refused.
 - **Acceptance:** all three builder-reported actual Codex `32f628ee` images at 600/1440, 342 px previews and Fit/Actual current readers; Claude `061e5f2d` captured screenshot comparison at both widths. 31 image browsers, 17 focused units, both types/build pass. [Report](review/content-1b-image-first-recovery.md). Shared P1 gate pending; no merge performed.
+### Codex — CONTENT-4b native completion (29 October)
+
+PR #292 finishes genuine plan/checklist acceptance: native TodoWrite, task tools, Codex literal checklist, desktop checklist, proposal and truthful rejection/fallback. Fourteen desktop frames at 600/1440, 143 replay boundaries, 214 targeted units and eleven plan browsers pass; both types/build pass. [Report](review/content-4b-native-completion.md). Merge with #288 reducer r24; full batch gate is owned by the root integration lane. No History/controller/indexer/schema changes.
+
+### Yash with Codex — CONTENT-3 complete locally
+
+- **PR #288:** native Claude stdio permission callback, policy-preserving Codex resume, cancellation/stale-approval repair; native Codex historical questions and exact keyed answers, r24 option depth, exact command/replacement approval presentation with original request access. No History/schema/config/journal changes.
+- **Acceptance:** genuine Claude `1a691710` (209,800 bytes/36 observations) and Codex `71a376d0` (375,432 bytes/80 observations), both 600/1440, live answer/cancel and actual approval declines; original `4b5ca5b1`/`4d842553` replay boundaries retested. 42 focused units, both types/build and 11 browsers pass. [Report](review/content-3-native-completion.md). Shared P1 gate pending; no merge performed.
+
+### Yash with Claude Sonnet 5.5 — order after SCREEN-1 recorded; two Files bugs and two passes added
+
+- **Decision (Yash, 29 Oct), with the reason:** after SCREEN-1 the order is AUDIT-1 (a pass through every built function for UI, backend, content and navigation problems, not fitted to his own list) → the UI and motion passes → the fresh-eyes agent review (COMP-1) → VIZ-1 (task-shaped visualizations: branches and PRs side by side, a PR beside a running agent, the screen beside the work). The audit comes first so the UI passes do not polish surfaces whose content is still unclear.
+- **New items:** FILES-8 (P1: Workspace opens the file chosen in Files, not peek), UI-16 (P1: the Files rail wastes its width, names are cut while the row has empty space), AUDIT-1 (P2), VIZ-1 (P3). Nothing built; work starts 30 October.
 
 ### Yash with Claude Sonnet 5.5 — INDEX-1 complete (map and Files tree without nested checkouts)
 
