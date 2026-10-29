@@ -1,3 +1,4 @@
+import {recordedFileRoots} from './file-roots.ts';
 import {commandCursor} from '../../../packages/scene/src/commands.ts';
 // Local HTTP API. Loopback only; per-launch token exchanged for an HttpOnly session cookie;
 // strict Host and Origin checks; no generic filesystem access; passive capture plus explicitly opted-in native harness clients.
@@ -406,6 +407,10 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'file-operations' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, await app.history.file(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000), (url.searchParams.get('selected') ?? '').slice(0, 1000) || undefined));
+      }
+      if (sub === 'file-roots' && m === 'GET') {
+        const ids=id.split('+'); for(const key of ids) app.recording(key);
+        return json(res,await recordedFileRoots(app.store,ids));
       }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
       if (sub === 'observations' && m === 'GET') {

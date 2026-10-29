@@ -158,6 +158,7 @@ export interface ControllerStatus {
 }
 /** Explicit local workspace/controller capabilities; offline bundles never call them. */
 export const workspaceApi = {
+  fileRoots: (id:string) => req<{roots:import('./lib/worktree-files.ts').RecordedFileRoot[];truncated:boolean}>(`/v1/recordings/${encodeURIComponent(id)}/file-roots`),
   searchLibrary: (query:import('../../../packages/store/src/search-types.ts').LibrarySearchQuery) => req<import('../../../packages/store/src/search-types.ts').LibrarySearchPage>(`/v1/search-library?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]))}`),
   workingLocations: () => req<import('../../../packages/contracts/src/working-locations.ts').WorkingLocations>('/v1/working-locations'),
   saveWorkingLocations: (snapshot:import('../../../packages/contracts/src/working-locations.ts').WorkingLocations,keepalive=false) => req<{saved:boolean;revisions:Record<string,number>}>('/v1/working-locations',{method:'PUT',json:snapshot,keepalive}),

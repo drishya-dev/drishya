@@ -13,11 +13,12 @@ import { browserOps } from './real-cases/browser-ops.ts';
 import { completeJson } from './real-cases/complete-json.ts';
 import { imageOnlyPrompt } from './real-cases/image-only-prompt.ts';
 import { injectedMessages } from './real-cases/injected-messages.ts';
+import {worktreeRoots} from './real-cases/worktree-roots.ts';
 import { literalCommit } from './real-cases/literal-commit.ts';
 import { agentDeliveries } from './real-cases/agent-delivery.ts';
 import type { RealCase } from './real-cases/types.ts';
 
-const cases: RealCase[] = [imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries];
+const cases: RealCase[] = [imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, worktreeRoots];
 const { values, positionals } = parseArgs({ allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
