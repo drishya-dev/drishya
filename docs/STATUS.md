@@ -36,12 +36,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | TEST-2 | @harsh + Codex | `harsh/test-2-wheel-end` | 2026-10-28 | `apps/ui/src/components/History.tsx` wheel/scroll handling and reading-anchor/height code only; tests only with Harsh's explicit yes. No `hover-reading.ts` or `flow-route.ts` edits. |
-| CONTENT-2 | @yash + Codex browser agent | `codex/p1-browser-completion` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. **28 Oct: Claude Sonnet 5.5 takes that History.tsx integration (branch `claude/content-2-history`, History.tsx insertion only, no other file); Codex keeps the rest of the row.** Up to 15 files; no adapter/contracts/projection or READ-4 test. |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex - CONTENT-2 integrated acceptance complete
+
+- Current Codex and Claude captures plus retained full-source browser stories pass 600/1440, including genuine captured screenshot bytes. Captured metadata, result ownership and step scrubbing remain honest; no History or rendering change needed. Eight units, both types/build and ten named browser checks pass.
+- PR #289; [source matrix and limits](review/content-2-integrated-acceptance.md). Whole P1 batch gate follows; TEST-2 remains separate and claimed.
 
 ### Yash with Claude Sonnet 5.5 — INDEX-1 complete (map and Files tree without nested checkouts)
 
