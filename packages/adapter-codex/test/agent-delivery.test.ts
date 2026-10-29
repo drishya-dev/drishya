@@ -27,3 +27,13 @@ it('retains complete long summaries and unknown native senders as captured metad
   p.author='/root/unknown';p.content[0]!.text=envelope(text,'FINAL_ANSWER').replace('Sender: /root/review','Sender: /root/unknown');
   expect(agentDelivery(p,p.content[0]!.text)).toMatchObject({text,delivery:{sender:'/root/unknown',nativeId:'native-delivery',state:'complete'}});
 });
+it('projects child payload once by native identity, retains repeated text with distinct ids, and primes tail state',()=>{
+  const ctx={recordingId:'r',sourceId:'s',sourcePath:'x'},parser=createParser(ctx),p=payload('finding','FINAL_ANSWER'),row={type:'response_item',payload:p};
+  const first=parser.parse(row);
+  expect(first[0]).toMatchObject({agentId:'agent:review',kind:'message.assistant',payload:{text:'finding',delivery:{type:'FINAL_ANSWER',nativeId:'native-delivery'}}});
+  expect(parser.parse(row)).toEqual([]);
+  expect(parser.parse({...row,payload:{...p,id:'distinct'}})).toHaveLength(1);
+  expect(parser.parse({type:'response_item',payload:payload('revised finding','FINAL_ANSWER')})).toHaveLength(1);
+  const tail=createParser(ctx);tail.prime(first as unknown as import('@drishya/contracts').Observation[]);expect(tail.parse(row)).toEqual([]);
+  const empty=createParser(ctx).parse({type:'response_item',payload:payload()})[0];expect(empty).toMatchObject({payload:{text:'',delivery:{state:'empty'}},availability:'metadata-only'});
+});
