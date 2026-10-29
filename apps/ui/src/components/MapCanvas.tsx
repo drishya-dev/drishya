@@ -556,6 +556,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         <div className="map-legend">{connections?.root&&graph.temporal==='current'&&<span>Importer → dependency · up to40 static imports</span>}
           <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{connectionsOpen && neighborhood ? `${viewGraph?.nodes.length} neighborhood files · ${viewGraph?.edges.length} shown imports` : observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} observed files · ${viewGraph?.edges.length} shown imports` : `${graph.nodes.length} files · ${graph.edges.length} imports`}</span>
 
+          {!!graph.stats.nestedCheckouts&&<span title="Directories with their own .git (agent worktrees, submodules, nested clones) are other checkouts, not this workspace.">{graph.stats.nestedCheckouts} nested checkout{graph.stats.nestedCheckouts===1?'':'s'} not shown</span>}
           <MapActions graph={graph} />
         </div>
       )}
