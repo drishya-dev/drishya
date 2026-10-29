@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildGraph, graphFromPaths, jsImports, layout, probeGeneration, pythonImports, resolveJs, resolvePython } from '../src/index.ts';
+import { buildGraph, graphFromPaths, isIndexableFile, jsImports, layout, probeGeneration, pythonImports, resolveJs, resolvePython } from '../src/index.ts';
 
 const shop = fileURLToPath(new URL('../../../fixtures/synthetic/workspace/shop', import.meta.url));
 
@@ -91,6 +91,60 @@ describe('graph freshness and scope', () => {
       const g = await buildGraph(dir);
       expect(g.edges.filter((e) => e.from === '.env.js')).toHaveLength(0);
       expect(g.nodes.find((n) => n.path === '.env.js')?.lines).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// INDEX-1: a directory with its own `.git` (an agent worktree, a submodule, a nested clone) is another checkout, not this
+// workspace. Walking into it filled the file cap with copies of the project.
+describe('nested checkouts', () => {
+  const nested = (dir: string, name: string, git: 'file' | 'dir') => {
+    const root = join(dir, name);
+    mkdirSync(join(root, 'src'), { recursive: true });
+    if (git === 'file') writeFileSync(join(root, '.git'), 'gitdir: /elsewhere/.git/worktrees/x\n');
+    else mkdirSync(join(root, '.git'));
+    writeFileSync(join(root, 'src', 'copy.ts'), 'export const copy = 1;\n');
+  };
+
+  it('leaves out nested checkouts, whether .git is a file or a directory, even under a hidden folder, and says so', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'drishya-nested-'));
+    try {
+      mkdirSync(join(dir, '.git'));
+      mkdirSync(join(dir, 'src'));
+      writeFileSync(join(dir, 'src', 'own.ts'), 'export const own = 1;\n');
+      nested(dir, '.claude/worktrees/agent-a', 'file');
+      nested(dir, 'vendored-clone', 'dir');
+      const g = await buildGraph(dir);
+      expect(g.nodes.map((n) => n.path)).toEqual(['src/own.ts']);
+      expect(g.stats.nestedCheckouts).toBe(2);
+      expect(g.truncated).toBe(false);
+      expect(await isIndexableFile(dir, 'src/own.ts')).toBe(true);
+      expect(await isIndexableFile(dir, '.claude/worktrees/agent-a/src/copy.ts')).toBe(false);
+      expect(await isIndexableFile(dir, 'vendored-clone/src/copy.ts')).toBe(false);
+      const quiet = mkdtempSync(join(tmpdir(), 'drishya-nested-none-'));
+      try {
+        writeFileSync(join(quiet, 'a.ts'), 'export const a = 1;\n');
+        expect((await buildGraph(quiet)).stats.nestedCheckouts).toBeUndefined();
+      } finally {
+        rmSync(quiet, { recursive: true, force: true });
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not let copies of the project use up the file cap', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'drishya-nested-cap-'));
+    try {
+      for (let i = 0; i < 12; i++) nested(dir, `.claude/worktrees/w${i}`, 'file');
+      mkdirSync(join(dir, 'src'));
+      for (let i = 0; i < 5; i++) writeFileSync(join(dir, 'src', `f${i}.ts`), `export const f${i} = ${i};\n`);
+      const g = await buildGraph(dir, { maxFiles: 8 });
+      expect(g.nodes).toHaveLength(5);
+      expect(g.truncated).toBe(false);
+      expect(g.stats.nestedCheckouts).toBe(12);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

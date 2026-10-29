@@ -712,7 +712,7 @@ export interface RepoGraph {
   edges: GraphEdge[];
   unresolved: { from: string; specifier: string }[];
   truncated: boolean;
-  stats: { files: number; parsed: number; edges: number; unresolved: number; skipped: number; ms: number };
+  stats: { files: number; parsed: number; edges: number; unresolved: number; skipped: number; ms: number; /** Nested checkouts (agent worktrees, submodules) left out of the walk. */ nestedCheckouts?: number };
   /** Set by the local API: the workspace changed since this map was built. Refresh is explicit. */
   stale?: boolean;
   /** Set by the local API on a files-only map: this captured root can be scanned once approved. */
