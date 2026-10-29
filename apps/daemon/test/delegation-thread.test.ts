@@ -15,7 +15,7 @@ beforeAll(async()=>{
   dir=mkdtempSync(join(tmpdir(),'drishya-thread-'));app=new App(join(dir,'store'));
   parentPath=join(dir,`rollout-2026-10-28T10-00-00-${parentId}.jsonl`);
   const item=(n:number,kind:string)=>({type:'event_msg',timestamp:t(n),payload:{type:'item_completed',item:{type:'SubAgentActivity',id:n===2?'spawn':`activity-${n}`,agent_thread_id:childId,agent_path:'/root/review',kind,model:'synthetic-model',reasoning_effort:'high'}}});
-  write(parentPath,[{type:'session_meta',timestamp:t(0),payload:{id:parentId,cwd:dir}},{type:'response_item',timestamp:t(0),payload:{type:'message',role:'user',content:[{type:'input_text',text:'Delegate a review'}]}},{type:'response_item',timestamp:t(1),payload:{type:'function_call',name:'spawn_agent',call_id:'spawn',arguments:JSON.stringify({task_name:'review',message:'Review the captured change'})}},item(2,'spawn'),{type:'response_item',timestamp:t(3),payload:{type:'function_call_output',call_id:'spawn',output:'{"task_name":"review"}'}},item(4,'interacted'),item(5,'completed'),{type:'response_item',timestamp:t(6),payload:{type:'agent_message',author:'/root/review',content:[{type:'output_text',text:'Captured child reply'}]}}]);
+  write(parentPath,[{type:'session_meta',timestamp:t(0),payload:{id:parentId,cwd:dir}},{type:'response_item',timestamp:t(0),payload:{type:'message',role:'user',content:[{type:'input_text',text:'Delegate a review'}]}},{type:'response_item',timestamp:t(1),payload:{type:'function_call',name:'spawn_agent',call_id:'spawn',arguments:JSON.stringify({task_name:'review',message:'Review the captured change'})}},item(2,'started'),{type:'response_item',timestamp:t(3),payload:{type:'function_call_output',call_id:'spawn',output:'{"task_name":"review"}'}},item(4,'interacted'),item(5,'completed'),{type:'response_item',timestamp:t(6),payload:{type:'agent_message',author:'/root/review',content:[{type:'output_text',text:'Captured child reply'}]}}]);
   codex=(await app.ingest.importSource('codex',parentPath)).recordingId;
   const childPath=join(dir,`rollout-2026-10-28T10-00-01-${childId}.jsonl`);
   write(childPath,[{type:'session_meta',timestamp:t(2),payload:{id:childId,cwd:dir,parent_thread_id:parentId,agent_path:'/root/review'}},{type:'response_item',timestamp:t(2),payload:{type:'message',role:'user',content:[{type:'input_text',text:'Child task'}]}}]);child=(await app.ingest.importSource('codex',childPath)).recordingId;
@@ -32,7 +32,14 @@ it('joins captured Codex lifecycle, reply and exact imported child recording',as
   const value=await app.history.delegationThread(codex,spawn(codex).id);
   expect(value?.identity).toBe('captured');expect(value?.child).toMatchObject({recordingId:child,model:'synthetic-model',effort:'high'});
   expect(value?.steps.map(row=>row.kind)).toEqual(['spawn','spawn','interaction','completed','message']);expect(value?.steps.at(-1)?.text).toBe('Captured child reply');
+  expect(value?.steps.some(row=>row.label==='Child started')).toBe(true);
   expect(value?.steps.some(row=>row.kind==='result')).toBe(false);
+});
+it('retains the earlier captured spawn activity spelling',async()=>{
+  const path=join(dir,'legacy-spawn.jsonl');
+  write(path,[{type:'session_meta',timestamp:t(0),payload:{id:'legacy',cwd:dir}},{type:'response_item',timestamp:t(1),payload:{type:'function_call',name:'spawn_agent',call_id:'legacy',arguments:JSON.stringify({task_name:'legacy-review'})}},{type:'event_msg',timestamp:t(2),payload:{type:'item_completed',item:{type:'SubAgentActivity',id:'legacy',agent_thread_id:childId,agent_path:'/root/legacy-review',kind:'spawn'}}},{type:'response_item',timestamp:t(3),payload:{type:'function_call_output',call_id:'legacy',output:'{"task_name":"legacy-review"}'}}]);
+  const id=(await app.ingest.importSource('codex',path)).recordingId,value=await app.history.delegationThread(id,spawn(id).id);
+  expect(value?.steps.filter(row=>row.label==='Child started')).toHaveLength(1);
 });
 it('paginates every captured Claude child action and preserves its task and returned result',async()=>{
   const op=spawn(claude),first=await app.history.delegationThread(claude,op.id),last=await app.history.delegationThread(claude,op.id,25);
@@ -45,6 +52,13 @@ it('does not reveal later child identity, metadata, completion or result before 
   expect(await app.history.delegationThread(codex,op.id,0,0)).toBeNull();
   const fake=structuredClone(p);fake.links=[];fake.operations.find(other=>other.id===op.id)!.observationIds=[];
   expect(delegationThread(app.store,asOfProjection(fake,op.startSequence+1),op.id,0,op.startSequence+1)).toBeNull();
+});
+it('uses the captured spawn workspace when a multi-worktree parent has no common projection root',()=>{
+  const p=structuredClone(app.projection(codex));p.workspaceRoot=undefined;
+  expect(delegationThread(app.store,p,spawn(codex).id)?.child?.recordingId).toBe(child);
+  const root=app.recording(child).workspaceRoot;
+  try{app.store.updateRecordingMeta(child,{workspaceRoot:join(dir,'other-worktree')});expect(delegationThread(app.store,p,spawn(codex).id)?.child?.recordingId).toBeUndefined();}
+  finally{app.store.updateRecordingMeta(child,{workspaceRoot:root});}
 });
 it('removes a forgotten child link without rewriting captured lifecycle',async()=>{
   await app.forget(child);const value=await app.history.delegationThread(codex,spawn(codex).id);

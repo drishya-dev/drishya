@@ -5,6 +5,24 @@ import { materialIsMoving, moveMaterial } from './material-motion.ts';
 /** A hovered card never shrinks below a title strip and a few lines. */
 const MIN_READING_HEIGHT = 96;
 
+/** Surfaces that float over the history. An enlarged card must grow between them, never under them (UI-14). */
+const FLOATING_SURFACES = ['.modern-toolbox', '.complete-prompt-rail', '.folder-explorer'];
+/** The narrowest an enlarged card may be before reading it enlarged is no better than reading it in place. */
+const MIN_READING_WIDTH = 360;
+
+/** Horizontal room between the floating surfaces that sit beside the card's vertical band. */
+function clearSpan(viewport: DOMRect, top: number, bottom: number, gutter: number) {
+  let left = viewport.left + gutter, right = viewport.right - gutter;
+  const middle = (viewport.left + viewport.right) / 2;
+  for (const selector of FLOATING_SURFACES) for (const surface of document.querySelectorAll(selector)) {
+    const box = surface.getBoundingClientRect();
+    if (!box.width || !box.height || getComputedStyle(surface).visibility === 'hidden') continue;
+    if (box.bottom <= top || box.top >= bottom || box.right <= viewport.left || box.left >= viewport.right) continue;
+    if (box.left + box.width / 2 >= middle) right = Math.min(right, box.left - gutter); else left = Math.max(left, box.right + gutter);
+  }
+  return { left, right };
+}
+
 /** Enlarge one real DOM preview. Its resting slot stays in history; no evidence is copied. */
 export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
@@ -63,9 +81,10 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       const from = card.getBoundingClientRect();
       const viewport = root.getBoundingClientRect();
       if (from.bottom < viewport.top + 80 || from.top > viewport.bottom - 80) return;
-      const crown = document.querySelector('.workspace-header')?.getBoundingClientRect();
+      // The header (classic crown or the Modern session header) is a floor for the card's top edge.
+      const crownBottom = Math.max(0, ...[...document.querySelectorAll('.workspace-header, .modern-session-header')].map(el => el.getBoundingClientRect()).filter(box => box.height && box.top < 160).map(box => box.bottom));
       const composer = document.querySelector('.prompt-composer.open')?.getBoundingClientRect();
-      const top = Math.max(viewport.top + 16, (crown?.bottom ?? 0) + 16);
+      const top = Math.max(viewport.top + 16, crownBottom + 16);
       const bottom = Math.min(viewport.bottom - 24, (composer?.top ?? innerHeight) - 16);
       if (bottom - top < 120 || viewport.width < 240) return;
       if (active) close(active);
@@ -79,8 +98,10 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
       // inside the history viewport instead of treating that row width as the target.
       const wideEdit = document.documentElement.dataset.uiVersion === 'modern' && card.matches('.op-edit.shape-wide');
       const gutter = wideEdit ? 8 : 16;
-      const width = Math.min(Math.max(from.width * (wideEdit ? 1.08 : 1), 520), viewport.width - gutter * 2);
-      const left = Math.max(viewport.left + gutter, Math.min(viewport.right - width - gutter, from.left + (from.width - width) / 2));
+      const span = clearSpan(viewport, top, bottom, gutter);
+      if (span.right - span.left < MIN_READING_WIDTH) return;
+      const width = Math.min(Math.max(from.width * (wideEdit ? 1.08 : 1), 520), span.right - span.left);
+      const left = Math.max(span.left, Math.min(span.right - width, from.left + (from.width - width) / 2));
       card.style.setProperty('--hover-width', `${width}px`); card.style.setProperty('--hover-height', 'auto');
       card.style.setProperty('--hover-left', `${left}px`); card.style.setProperty('--hover-top', `${top}px`);
       // Fit the content: lay the card out at its natural height with the most room it may take, measure it,
