@@ -92,7 +92,7 @@ export function pathOnlyImage(op: Operation): string | undefined {
 export function PathImage({ op, path }: { op: Operation; path: string }) {
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
-  type Status = { url: string; modified?: string; request: number } | { error: string } | 'loading';
+  type Status = { url: string; modified?: string; request: number } | { error: string; consent?:boolean } | 'loading';
   // An older request or image error must not replace a different file/source's view.
   const owner = useMemo(() => ({}), [source, recordingId, op.id, path]);
   const latestOwner = useRef(owner); latestOwner.current = owner;
@@ -103,20 +103,21 @@ export function PathImage({ op, path }: { op: Operation; path: string }) {
   useEffect(() => () => { request.current++; }, [owner]);
   const remote = /^https?:\/\//i.test(path) || /^[\\/]{2}/.test(path) || /^file:\/\/[^/]/i.test(path) && !/^file:\/\/localhost\//i.test(path);
   const canOpen = !remote && !!source?.currentImageUrl && !!recordingId && !recordingId.includes('+');
-  const open = async () => {
+  const open = async (grant=false) => {
     if (!canOpen) return;
     const currentRequest = ++request.current;
     const current = () => latestOwner.current === owner && request.current === currentRequest && useApp.getState().source === source && useApp.getState().recordingId === recordingId;
     const update = (value: Status) => { if (current()) setResult({ owner, value }); };
     update('loading');
     try {
+      if(grant)await source!.approveCurrentImage!(recordingId!,op.id);
       const url = source!.currentImageUrl!(recordingId!, op.id);
       // Checked first so a refusal can be explained; the image then loads from the same address
       // (the page policy allows same-origin images, not blob: URLs).
       const response = await fetch(url);
       if (!response.ok) {
         const reason = response.status === 403 ? /approve/.test(await response.text()) ? 'Allow workspace reading for this session to open the current file.' : 'This image is outside the readable workspace or protected.' : response.status === 404 ? 'The file is no longer there.' : response.status === 415 ? 'The current file is not a PNG, JPEG, GIF or WebP image.' : response.status === 413 ? 'The current file is larger than 4 MB.' : 'The current file could not be opened here.';
-        update({ error: reason });
+        update({ error: reason,consent:response.status===409||response.status===403&&!reason.startsWith('Allow workspace') });
         return;
       }
       await response.arrayBuffer();
@@ -124,11 +125,16 @@ export function PathImage({ op, path }: { op: Operation; path: string }) {
     } catch { update({ error: 'The current file could not be opened here.' }); }
   };
   return <div className="path-image" onClick={(e) => e.stopPropagation()}>
+    {op.images?.length?<OpImages images={op.images} compact/>:null}
     <div className="path-image-line">
       <span className="path-image-path">{path}</span>
       <span>image bytes not captured</span>
       {canOpen && (state === undefined || typeof state === 'object' && 'error' in state) && <button type="button" className="path-image-open" onClick={() => void open()}>{state ? 'Retry current file' : 'Open current file'}</button>}
     </div>
+    {state&&typeof state==='object'&&'error'in state&&state.consent&&source?.approveCurrentImage&&<div className="path-image-consent">
+      <p>This recorded image is outside ordinary workspace reading. Allow only this file's current image bytes for this server session? Its contents may have changed.</p>
+      <button type="button" onClick={()=>void open(true)}>Allow this image only</button>
+    </div>}
     {remote && <div className="path-image-line">Remote image reference · never fetched automatically.</div>}
     {state === 'loading' && <div className="path-image-line">Opening the current file…</div>}
     {state && typeof state === 'object' && 'error' in state && <div className="path-image-line" role="status">{state.error}</div>}

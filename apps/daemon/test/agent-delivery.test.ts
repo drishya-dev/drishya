@@ -3,6 +3,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {expect,it} from 'vitest';
 import {App} from '../src/app.ts';
+import {REDUCER_VERSION} from '../../../packages/projection/src/reduce.ts';
 import {legacyAgentDelivery} from '../../../packages/projection/src/agent-delivery.ts';
 
 it('keeps native delivery findings once per child thread, encrypted shells explicit, and parent outcome unchanged',async()=>{
@@ -55,7 +56,7 @@ it('rebuilds an already imported legacy capture without rewriting sealed bytes o
     const prior=app.projection(id);app.store.putProjection(id,'r22',prior.observationCount,JSON.stringify({...prior,reducerVersion:'r22',prose:[]}));
     await app.close();app=new App(join(dir,'home'));
     const projected=app.projection(id),message=projected.prose[0]!;
-    expect(projected.reducerVersion).toBe('r23');expect(message.text).toBe('Captured legacy finding');expect(message.agentId.endsWith('agent:review')).toBe(true);
+    expect(projected.reducerVersion).toBe(REDUCER_VERSION);expect(message.text).toBe('Captured legacy finding');expect(message.agentId.endsWith('agent:review')).toBe(true);
     expect(projected.timeline.find(t=>t.type==='turn')).toMatchObject({prompt:wrapper});
     expect(JSON.stringify(app.store.observationById(id,stored.id))).toBe(originalBody);
     const artifact=await app.history.artifact(id,`art_${message.id}_prose`,0,100);

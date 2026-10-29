@@ -1,7 +1,7 @@
 // Current workspace bytes are a separate, explicitly approved reading capability.
 // They never stand in for captured historical artifacts.
 import { open, lstat, realpath } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep, parse } from 'node:path';
 import { MAX_IMAGE_BYTES, isDeniedPath, redactText, sniffImage } from '@drishya/privacy';
 import { App, HttpError } from './app.ts';
 import { isIndexableFile } from '@drishya/indexer';
@@ -9,6 +9,8 @@ import { isIndexableFile } from '@drishya/indexer';
 export class WorkspaceAccess {
   private grants = new Map<string, string>();
   private app: App;
+  private accessEpoch=new Map<string,number>();
+  private imageGrants=new Map<string,{path:string;identity:string}>();
   constructor(app: App) { this.app = app; }
 
   async approve(id: string) {
@@ -27,7 +29,7 @@ export class WorkspaceAccess {
     return { approved: this.grants.has(id), root: rec.workspaceRoot, scope: 'current-workspace' as const };
   }
 
-  revoke(id: string) { this.grants.delete(id); }
+  revoke(id: string) { this.accessEpoch.set(id,(this.accessEpoch.get(id)??0)+1);this.grants.delete(id);for(const key of this.imageGrants.keys())if(key.startsWith(id+'\0'))this.imageGrants.delete(key); }
 
   async root(id: string): Promise<string> {
     const rec = this.app.recording(id);
@@ -73,6 +75,49 @@ export class WorkspaceAccess {
       if (await this.root(id) !== root) throw new HttpError(403, 'workspace reading access changed');
       return { mime: sniff.mime, body: body.subarray(0, read), modifiedAt: stat.mtime.toISOString(), path: rel };
     } finally { await handle.close(); }
+  }
+
+  /** Separate, volatile consent to one image already named by an owned observation. No directory access. */
+  async approveImage(id:string,operation:string,path:string) {
+    const epoch=this.accessEpoch.get(id)??0,root=await this.root(id);
+    const file=await this.exactImageFile(path);
+    const stat=await lstat(file);
+    const key=id+'\0'+operation;
+    if(this.imageGrants.size>=64)this.imageGrants.delete(this.imageGrants.keys().next().value!);
+    const finalRoot=await this.root(id);
+    if((this.accessEpoch.get(id)??0)!==epoch||finalRoot!==root)throw new HttpError(403,'workspace access changed');
+    this.imageGrants.set(key,{path:file,identity:`${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`});
+    return {approved:true,scope:'exact-current-image' as const};
+  }
+  private async exactImageFile(path:string) {
+    if(!isAbsolute(path)||/^[\\/]{2}/.test(path)||isDeniedPath(path))throw new HttpError(403,'protected or remote image reference');
+    const given=resolve(path);
+    let file:string;try{file=await realpath(given);}catch{throw new HttpError(404,'the file is no longer there');}
+    if(process.platform==='win32'?file.toLowerCase()!==given.toLowerCase():file!==given)throw new HttpError(403,'linked files are not readable');
+    // Check every component, even links resolving back to the same path.
+    let cursor=parse(file).root;
+    for(const part of relative(cursor,file).split(sep)){cursor=join(cursor,part);if((await lstat(cursor)).isSymbolicLink()||isDeniedPath(cursor))throw new HttpError(403,'protected or linked image path');}
+    const stat=await lstat(file);
+    if(!stat.isFile()||stat.size>MAX_IMAGE_BYTES)throw new HttpError(413,'current image reader supports images up to 4 MiB');
+    return file;
+  }
+  async recordedImage(id:string,operation:string,path:string) {
+    const key=id+'\0'+operation,grant=this.imageGrants.get(key),epoch=this.accessEpoch.get(id)??0;
+    if(!grant)return this.image(id,path);
+    const root=await this.root(id),file=await this.exactImageFile(path);
+    const handle=await open(file,'r');
+    try{
+      const stat=await handle.stat(),identity=`${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+      if(file!==grant.path||identity!==grant.identity)throw new HttpError(409,'this image changed; allow this exact image again');
+      const body=Buffer.alloc(stat.size);let read=0;
+      while(read<body.length){const part=await handle.read(body,read,body.length-read,read);if(!part.bytesRead)break;read+=part.bytesRead;}
+      const after=await lstat(file);
+      const finalFile=await this.exactImageFile(path),finalRoot=await this.root(id);
+      if(this.imageGrants.get(key)!==grant||(this.accessEpoch.get(id)??0)!==epoch||read!==stat.size||after.isSymbolicLink()||`${after.dev}:${after.ino}:${after.size}:${after.mtimeMs}:${after.ctimeMs}`!==identity||finalFile!==file||finalRoot!==root)throw new HttpError(409,'image or access changed while reading');
+      const sniff=sniffImage(body.subarray(0,65536));
+      if(!sniff)throw new HttpError(415,'the file is not a PNG, JPEG, GIF or WebP image');
+      return {mime:sniff.mime,body,modifiedAt:stat.mtime.toISOString(),path:file};
+    }finally{await handle.close();}
   }
 
   async read(id: string, path: string, start = 0, count = 200) {
