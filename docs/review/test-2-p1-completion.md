@@ -34,3 +34,17 @@ On a1f53354, the first two complete commands each passed 505 checks with 26 skip
 The branch fixture reused one daemon across viewport tests and closed the first page as soon as a captured-link button was visible. Selecting the last commit starts a separate native Git read; the link does not depend on its result. Diagnostic instrumentation recorded one pending commit read at close in all four measured cases. Two controlled immediate history probes, one per width, both returned HTTP 409 while that read was pending. The daemon intentionally rejects concurrent Git inspection, and the next page has a new in-browser request queue. Thus this fixture can leak its final native read into the next viewport's initial history request. The original failed command did not retain its API response, so the controlled reproduction is distinguished from its timeout log.
 
 The fixture now awaits the successful response for the exact selected commit before closing through its captured link. It retains the same navigation, branch, patch, captured-link, unchanged-repository and bounds assertions; no product lock, runtime behavior, timeout or assertion tolerance changed. Diagnostic probes/instrumentation stay private and are removed from the committed spec. Consecutive acceptance restarts after this repair.
+
+## Final consecutive acceptance
+
+Three consecutive full browser commands passed on frozen integrated P1 revision 46bebde5. Each command rebuilt the production UI first, then ran the normal four-worker parallel project and one-worker serial project. No concurrent native, unit or other browser workload was started by this lane.
+
+| Run | Parallel passed | Serial passed | Skipped | Duration |
+|---|---:|---:|---:|---:|
+| 1 | 472 | 33 | 26 | 396.7 s |
+| 2 | 472 | 33 | 26 | 412.4 s |
+| 3 | 472 | 33 | 26 | 441 s |
+
+The earlier failed commands are not part of this streak. The prompt-rail supported-width journey also passed five isolated whole-file runs (ten checks), with no assertion/tolerance/timeout relaxation. The combined batch also passed both typechecks, production build, 1,031 units (one skipped), and package verification. Those checks were not repeated per test-only correction.
+
+TEST-2's remaining acceptance is complete on this Windows/Edge reference machine. This does not close deferred PERF-2/3, physical platform, accessibility or human preference gates. Other builders review and squash the task PRs; this integrated gate branch is not a feature PR to merge.
