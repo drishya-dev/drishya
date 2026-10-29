@@ -39,3 +39,7 @@ Legacy previews contain the exact captured payload substring. Their existing ful
 - Actual fresh and legacy Codex plus Claude viewport checks pass. Screenshots were inspected locally and remain uncommitted. No synthetic fixture is counted as native acceptance.
 
 Textless deliveries do not invent replay beats; their availability follows the existing captured source-rank cutoff and is visible in live history. The original pre-upgrade capture cannot recover discarded encrypted payload metadata or native delivery IDs. Sealed legacy raw evidence remains available through the intentional full captured-message reader; it is not displayed as ordinary conversation. No schema, turn ledger, History component, store migration, observer policy or native-controller change was made.
+
+## Final integrated gate
+
+Frozen source batch `ef541e4`: build, both typechecks, 1001 units (one intentional skip) and package verification pass. Full browsers: 481 passed, 26 skipped, one failure (`b2-live:139`, wheel-end distance 168420 rather than <2). The case passes alone on unchanged integrated source and clean main; baseline failure reproduction is unproven. No assertions/configuration were weakened and no broad rerun erased the original failure. Feature acceptance is complete; shared merge-gate qualification remains.
