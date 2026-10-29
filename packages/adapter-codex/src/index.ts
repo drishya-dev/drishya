@@ -3,6 +3,7 @@
 // exposed only as summaries; encrypted reasoning is never decoded or shown.
 
 import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation, UsagePayload } from '@drishya/contracts';
 import {
@@ -24,6 +25,7 @@ import {
 } from '@drishya/capture-core';
 import { imageCandidate, sanitize } from '@drishya/privacy';
 import { typedItem } from './items.ts';
+import { agentDelivery } from './agent-delivery.ts';
 import { turnDetail, turnEndedDetail, turnSettingsDetail, turnStartedDetail } from './turns.ts';
 
 export const descriptor: AdapterDescriptor = {
@@ -160,6 +162,16 @@ export function parseShellOutput(raw: unknown): { text?: string; exitCode?: numb
 
 export function createParser(_ctx: ParseContext): RecordParser {
   const calls = new Map<string, { tool: string; intent: ToolIntent }>();
+  const delivered = new Map<string, Set<string>>();
+  const rememberDelivery = (delivery: Rec, text: unknown) => {
+    if (typeof delivery.nativeId !== 'string') return false;
+    const clean = sanitize(delivery).value;
+    const digest = text && typeof text === 'object' && '$blob' in text ? text.$blob : createHash('sha256').update(sanitize(typeof text === 'string' ? text : '').value).digest('hex');
+    const key = JSON.stringify([clean.sender, clean.recipient, clean.type, clean.state, digest]);
+    const seen = delivered.get(clean.nativeId) ?? new Set<string>();
+    const duplicate = seen.has(key);seen.add(key);delivered.set(clean.nativeId, seen);
+    return duplicate;
+  };
   const openExec = new Set<string>();
   const track = (id: string, tool: string) => { if (tool === 'exec' || tool === 'functions.exec') openExec.add(id); };
   let cwd: string | undefined;
@@ -171,6 +183,8 @@ export function createParser(_ctx: ParseContext): RecordParser {
   return {
     prime(observations: Observation[]) {
       for (const o of observations) {
+        const delivery = (o.payload as Rec).delivery;
+        if (o.kind === 'message.assistant' && delivery) rememberDelivery(delivery, (o.payload as Rec).text);
         if (o.kind === 'turn.start') {
           const payload = o.payload as { turnId?: string };
           turnId = payload.turnId;
@@ -319,6 +333,12 @@ export function createParser(_ctx: ParseContext): RecordParser {
           const author = agentFromAddress(p.author);
           if (author === MAIN) return [];
           const text = textOf((Array.isArray(p.content) ? p.content : []).filter((c: Rec) => c?.type === 'input_text' || c?.type === 'output_text')) ?? '';
+          const delivery = agentDelivery(p, text);
+          if (delivery) {
+            // Native delivery identity, not equal text: distinct messages can repeat the same findings.
+            if (rememberDelivery(delivery.delivery, delivery.text)) return [];
+            return [{ ...base, agentId: author, kind: 'message.assistant', payload: { text: delivery.text, delivery: delivery.delivery }, contentKeys: ['text'], availability: delivery.delivery.state === 'complete' ? 'complete' : delivery.delivery.state === 'partial' ? 'partial' : 'metadata-only' }];
+          }
           return text ? [{ ...base, agentId: author, kind: 'message.assistant', payload: { text }, contentKeys: ['text'] }] : [];
         }
         case 'web_search_call':

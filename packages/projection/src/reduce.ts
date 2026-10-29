@@ -43,11 +43,12 @@ import { UsageAccumulator } from './usage.ts';
 import { placeChildren } from './children.ts';
 import { declinedFrom } from './declined.ts';
 import { DESKTOP_PLAN_TOOL, DesktopChecklists, TaskPlans, exitPlanText, proposedPlan } from './plans.ts';
+import {legacyAgentDelivery} from './agent-delivery.ts';
 
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r22';
+export const REDUCER_VERSION = 'r23';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -500,7 +501,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         }
         case 'message.assistant':
         case 'reasoning': {
-          const t = text(p.text) ?? '';
+          const original = text(p.text) ?? '';
+          const delivery = legacyAgentDelivery(o, original, agents.get(agentKey(o))?.address);
+          const t = delivery?.text ?? original;
           if (o.kind === 'reasoning' && p.exposure === 'none') {
             const a = ensureAgent(o);
             const key = `${turnByRecording.get(o.recordingId) ?? o.recordingId}|${a.id}`;
@@ -533,14 +536,14 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             agentId: a.id,
             role: o.kind === 'reasoning' ? 'reasoning' : 'assistant',
             text: clip(t, maxProse),
-            truncated: t.length > maxProse,
+            truncated: !!delivery || t.length > maxProse,
             exposure: p.exposure === 'summary' ? 'summary' : 'full',
             sequence: step(),
             time: o.sourceTime,
             observationIds: [o.id],
           };
           prose.push(pr);
-          if (pr.truncated) addArtifact({ id: `art_${pr.id}_prose`, kind: 'excerpt', observedAtSequence: pr.sequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, ...(isBlobText(p.text) ? { blobRef: p.text } : { content: t }) });
+          if (pr.truncated) addArtifact({ id: `art_${pr.id}_prose`, kind: 'excerpt', observedAtSequence: pr.sequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, ...(delivery?{note:'The preview shows the captured child payload with its routing wrapper omitted. This is the original captured message.'}:{}), ...(isBlobText(p.text) ? { blobRef: p.text } : { content: original }) });
           timeline.push({ type: 'prose', id: `t_${pr.id}`, proseId: pr.id, sequence: o.receivedSequence, agentId: a.id, time: o.sourceTime });
           break;
         }

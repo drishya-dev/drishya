@@ -4,6 +4,7 @@ import {asOfProjection} from '@drishya/contracts';
 import type {Store} from '@drishya/store';
 
 import type {DelegationThread,DelegationStep} from './delegation-types.ts';
+import {childMessageLabel,unavailableChildMessages} from './delegation-messages.ts';
 
 const object=(value:unknown):Record<string,any>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,any>:{};
 const canonical=(path:string)=>{const value=normalize(path).replace(/\\/g,'/');return /^[A-Za-z]:\//.test(value)?value.toLowerCase():value;};
@@ -82,8 +83,10 @@ export function delegationThread(store:Store,p:Projection,operationId:string,sta
     const position=p.timeline[message.sequence];
     if(message.agentId!==childId||message.role!=='assistant'||!position||rank(position.sequence)>cutoff)continue;
     const artifactId=`art_${message.id}_prose`,artifact=p.artifacts.find(a=>a.id===artifactId);
-    steps.push({id:message.id,kind:'message',label:'Child message',sequence:rank(position.sequence),time:message.time,text:message.text.slice(0,64000),truncated:message.truncated||message.text.length>64000,...(artifact?{artifactId}:{} )});
+    const observation=message.observationIds[0]?store.observationById(p.recordingId,message.observationIds[0]):undefined;
+    steps.push({id:message.id,kind:'message',label:childMessageLabel(observation),sequence:rank(position.sequence),time:message.time,text:message.text.slice(0,64000),truncated:message.truncated||message.text.length>64000,...(artifact?{artifactId}:{} )});
   }
+  if(childId&&!ambiguous)steps.push(...unavailableChildMessages(store,p.recordingId,call,address,p.agents.find(a=>a.id===op.agentId)?.address??'/root',rank,cutoff));
   const result=receipts.find(o=>o.kind==='tool.result');
   if(result&&!acknowledgement(op.detail.resultPreview))steps.push({id:result.id,kind:'result',label:'Result returned to parent',sequence:rank(result.receivedSequence),time:result.sourceTime,operationId:op.id});
   steps.sort((a,b)=>a.sequence-b.sequence||a.id.localeCompare(b.id));
