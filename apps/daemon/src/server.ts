@@ -612,6 +612,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const addr = server.address();
   if (addr && typeof addr === 'object') port = addr.port;
   const url = `http://127.0.0.1:${port}`;
+  // Enrichment uses the existing passive, sealed ingest path; the server is already listening.
+  void app.ingest.rescanLegacyCodex().catch(() => undefined);
   return {
     url,
     token,
