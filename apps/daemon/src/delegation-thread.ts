@@ -75,7 +75,7 @@ export function delegationThread(store:Store,p:Projection,operationId:string,sta
   const taskLimited=!!rawTask&&typeof rawTask==='object'&&rawTask.bytes>2*1024*1024;
   const taskMissing=!!rawTask&&typeof rawTask==='object'&&typeof rawTask.$blob==='string'&&taskValue===undefined;
   const steps:DelegationStep[]=[{id:call.id,kind:'spawn',label:'Task delegated',sequence:rank(call.receivedSequence),time:call.sourceTime,operationId:op.id}];
-  for(const o of safeActivities){const kind=o.agent.kind;if(kind==='completed'||kind==='interacted'||kind==='spawn')steps.push({id:o.id,kind:kind==='completed'?'completed':kind==='spawn'?'spawn':'interaction',label:kind==='completed'?'Child completion recorded':kind==='spawn'?'Child started':'Interaction recorded',sequence:rank(o.sequence),time:o.time});}
+  for(const o of safeActivities){const kind=o.agent.kind,started=kind==='started'||kind==='spawn';if(kind==='completed'||kind==='interacted'||started)steps.push({id:o.id,kind:kind==='completed'?'completed':started?'spawn':'interaction',label:kind==='completed'?'Child completion recorded':started?'Child started':'Interaction recorded',sequence:rank(o.sequence),time:o.time});}
   const actions=childId&&!ambiguous?visible.operations.filter(other=>other.agentId===childId&&other.id!==op.id):[];
   for(const action of actions){const position=p.timeline[action.startSequence];if(!position||rank(position.sequence)>cutoff)continue;steps.push({id:action.id,kind:'action',label:action.title.slice(0,400),operationId:action.id,sequence:rank(position.sequence),time:action.startTime,status:action.status});}
   if(childId&&!ambiguous)for(const message of visible.prose){
@@ -87,7 +87,9 @@ export function delegationThread(store:Store,p:Projection,operationId:string,sta
   const result=receipts.find(o=>o.kind==='tool.result');
   if(result&&!acknowledgement(op.detail.resultPreview))steps.push({id:result.id,kind:'result',label:'Result returned to parent',sequence:rank(result.receivedSequence),time:result.sourceTime,operationId:op.id});
   steps.sort((a,b)=>a.sequence-b.sequence||a.id.localeCompare(b.id));
-  const rec=store.getRecording(p.recordingId),recordingId=childId&&!ambiguous?childRecording(store,p.recordingId,threadId,native!.replace(/^agent:/,''),p.workspaceRoot,rec?.sourcePath):undefined;
+  // A parent spanning worktrees deliberately has no common projection root. The
+  // captured spawn's own workspace still proves this child's exact boundary.
+  const rec=store.getRecording(p.recordingId),recordingId=childId&&!ambiguous?childRecording(store,p.recordingId,threadId,native!.replace(/^agent:/,''),call.workspaceRoot??p.workspaceRoot,rec?.sourcePath):undefined;
   const child=childId&&!ambiguous?{id:childId,name:(typeof input.description==='string'?input.description:(step===undefined?agent?.nickname??agent?.label:undefined)??op.detail.agentType??'Child agent').slice(0,300),model:last('model')??(step===undefined?agent?.model:undefined),effort:last('effort')??(step===undefined?agent?.effort:undefined),address:last('path')??(step===undefined?address:undefined),...(recordingId?{recordingId}:{})}:undefined;
   let taskAt=task?Math.min(taskStart,Math.max(0,task.length-1)):0;
   if(taskAt&&task&&/[\uDC00-\uDFFF]/.test(task[taskAt]!)&&/[\uD800-\uDBFF]/.test(task[taskAt-1]!))taskAt--;
