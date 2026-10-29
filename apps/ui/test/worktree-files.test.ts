@@ -31,6 +31,13 @@ describe('recorded worktree file display',()=>{
     expect(currentWorkspacePath('worktree-main/src/a.ts',roots,undefined)).toBeUndefined();
     expect(currentWorkspacePath('src/a.ts',roots,'C:/repo')).toBe('src/a.ts');
   });
+  it('keeps distinct recorded prefixes for a local file URL alias of the main root',()=>{
+    const alias={root:'C:/repo',recordedRoot:'file:///C:/repo',prefix:'worktree-url'};
+    const rows=worktreeFileRows(['worktree-main/a.ts','worktree-url/a.ts'],[...roots,alias],'C:/repo',new Set(['']));
+    expect(rows.map(row=>row.path)).toEqual(['worktree-main/a.ts','worktree-url/a.ts']);
+    expect(rows.some(row=>row.worktree)).toBe(false);
+    expect(currentWorkspacePath('worktree-url/a.ts',[alias],'C:/repo')).toBe('a.ts');
+  });
   it('does not reveal a future or empty root without a matching visible file',()=>{
     const rows=worktreeFileRows(['worktree-main/README.md'],roots,'C:/repo',new Set(['',WORKTREE_GROUP]));
     expect(rows.map(row=>row.name)).toEqual(['README.md']);

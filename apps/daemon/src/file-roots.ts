@@ -1,13 +1,15 @@
+import {localFileUrlPath} from '@drishya/capture-core';
 import {setImmediate as yieldTurn} from 'node:timers/promises';
 import {createHash} from 'node:crypto';
 import type {Store} from '@drishya/store';
-interface RootCache {count:number;revision:number;roots:Map<string,{root:string;prefix:string}>;truncated:boolean}
+interface RecordedRoot {root:string;prefix:string;recordedRoot?:string}
+interface RootCache {count:number;revision:number;roots:Map<string,RecordedRoot>;truncated:boolean}
 const caches=new WeakMap<Store,Map<string,RootCache>>();
 
 /** Navigation metadata from already redacted observations; never a filesystem inventory. */
 export async function recordedFileRoots(store: Store, ids: string[]) {
   let cache=caches.get(store);if(!cache){cache=new Map();caches.set(store,cache);}
-  const roots=new Map<string,{root:string;prefix:string}>();let truncated=false;
+  const roots=new Map<string,RecordedRoot>();let truncated=false;
   for(const id of ids){
     const recording=store.getRecording(id);if(!recording)continue;
     const count=recording.observationCount,revision=recording.revision??0;
@@ -25,7 +27,8 @@ export async function recordedFileRoots(store: Store, ids: string[]) {
         const path=row.root.replace(/\\/g,'/').replace(/\/+$/,'');
         const normalized=/^[a-z]:\//i.test(path)?path.toLowerCase():path;
         if(!saved.roots.has(normalized)&&saved.roots.size===256){saved.truncated=true;break;}
-        if(!saved.roots.has(normalized))saved.roots.set(normalized,{root:row.root,prefix:`worktree-${createHash('sha256').update(normalized).digest('hex').slice(0,10)}`});
+        const decoded=localFileUrlPath(row.root);
+        if(!saved.roots.has(normalized))saved.roots.set(normalized,{root:decoded??row.root,...(decoded?{recordedRoot:row.root}:{}),prefix:`worktree-${createHash('sha256').update(normalized).digest('hex').slice(0,10)}`});
       }
       if(through<count)await yieldTurn();
       }

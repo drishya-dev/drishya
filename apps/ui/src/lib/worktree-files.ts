@@ -1,4 +1,4 @@
-export interface RecordedFileRoot { root: string; prefix: string }
+export interface RecordedFileRoot { root: string; prefix: string; recordedRoot?:string }
 export interface FileTreeRow { path: string; folder: boolean; depth: number; name: string; parent: string; location?: string; worktree?: boolean }
 export const WORKTREE_GROUP = '\u0000recorded-worktrees';
 const normalize = (value: string) => {
