@@ -33,14 +33,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | TEST-2 | @harsh + Codex | `harsh/test-2-wheel-end` | 2026-10-28 | `apps/ui/src/components/History.tsx` wheel/scroll handling and reading-anchor/height code only; tests only with Harsh's explicit yes. No `hover-reading.ts` or `flow-route.ts` edits. |
-| UI-14 | @yash + Claude Sonnet 5.5 | `claude/ui-14-hover-inside-window` | 2026-10-29 | Hover-reading allocation only: `apps/ui/src/lib/hover-reading.ts` and the History hover code that calls it, its stylesheet, `tests/browser/hover-fit.spec.ts`. TEST-2 lists hover-fit and `hover-reading.ts`: Harsh, please confirm no edit of those files is in flight. |
-| UI-15 | @yash + Claude Sonnet 5.5 | `claude/ui-15-session-menu` | 2026-10-29 | The session menu component and its stylesheet (Usage formatting included) and its browser spec. No History or reducer edits. |
 | CONTENT-2 | @yash + Codex browser agent | `codex/whole-browser` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. **28 Oct: Claude Sonnet 5.5 takes that History.tsx integration (branch `claude/content-2-history`, History.tsx insertion only, no other file); Codex keeps the rest of the row.** Up to 15 files; no adapter/contracts/projection or READ-4 test. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — UI-14 and UI-15 complete; Codex stack and HOME-1 merged
+
+- **UI-14 (#286):** a hover-enlarged card is clamped between the Toolbox, the prompt rail and the Files panel and sits below the header; if less than 360 px is free it does not enlarge. Real Claude Code and Codex sessions with wide edits: 12 cards under floating surfaces before, 0 after, at 1024 and 1440 px. Hover reading is off at 820 px and narrower by design, so 600 px does not apply.
+- **UI-15 (#287):** the session menu is three groups (This session, Move around, Share), no repeated Changes, Rescan under Share, Usage in thousands separators, '7-day window', local reset time and a one-line brief. Nested panels close after the click lands. Menu fits at rest at 1440x900 and 600x720 on both harnesses; expanded Usage scrolls inside.
+- **Batch gate** (UI-14 + UI-15 + HOME-1): typecheck, 992 units, ui:build, 452 + 33 serial browser tests, package:verify all green. Merged after it: #286, #287, #281 (HOME-1), then the Codex stack #276, #280, #282, #285, #283, #284, each with main merged in and `check:affected` green on the merged tree.
+- **Not run:** a full gate on the integrated main after the Codex stack (each PR had its own affected checks and Codex's stack gate); b2-live:139 remains the known load-sensitive flake.
 
 ### Yash with Codex — GIT-5 complete
 
