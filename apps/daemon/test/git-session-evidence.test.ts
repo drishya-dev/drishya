@@ -8,6 +8,7 @@ import {startServer,type RunningServer} from '../src/server.ts';
 import {explicitCommitPaths,gitSessionEvidence,commandAtWorkspace} from '../src/git-session-evidence.ts';
 import {gitSessionContext} from '../src/git-session-context.ts';
 import {HttpError} from '../src/app.ts';
+import type {Observation,Operation} from '@drishya/contracts';
 
 let dir:string,root:string,app:App,server:RunningServer,tip:string;
 const ids:string[]=[];
@@ -41,6 +42,18 @@ afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(
 it('accepts only an explicit literal commit path set',()=>{
   expect(explicitCommitPaths('git commit -m "Exact paths" -- "src/a file.ts" b.ts')).toEqual(['b.ts','src/a file.ts']);
   for(const cmd of ['git commit -am all','git commit -m x -- *.ts','git -C other commit -- a.ts','echo "git commit -- a.ts"','git commit -- a.ts; git status','git commit --amend -- a.ts','git commit -- ../a.ts','git commit -- $FILE'])expect(explicitCommitPaths(cmd)).toBeUndefined();
+});
+it('uses a standalone native command directory and captured elapsed interval without inventing a start event',()=>{
+  const p=app.projection(ids[0]!),call=p.operations.find(op=>op.detail.kind==='shell'&&explicitCommitPaths(op.detail.command))!;
+  const native:Operation={...call,tool:'CommandExecution',startTime:undefined,endTime:time(3),durationMs:2000,observationIds:['native-command']};
+  const observation={kind:'item.completed',payload:{item:'command',cwd:root}} as Observation;
+  const query={commits:[{hash:tip,committedAt:time(2),paths:['committed.ts']}],working:[]};
+  const check=(op= native,obs=observation)=>gitSessionEvidence({...p,operations:[op]},query,()=>commandAtWorkspace([obs],root));
+  expect(check().links[tip]?.basis).toBe('commit-time-paths');
+  expect(native.startTime).toBeUndefined();
+  for(const durationMs of [undefined,NaN,-1])expect(check({...native,durationMs}).links).toEqual({});
+  expect(check(native,{...observation,payload:{item:'command',cwd:join(root,'other')}}).links).toEqual({});
+  expect(commandAtWorkspace([{kind:'tool.call',workspaceRoot:root,payload:{input:{raw:'opaque wrapper'}}} as Observation,{...observation,payload:{item:'command',cwd:join(root,'other')}}],root)).toBe(false);
 });
 it('joins exact commit and uncommitted patch evidence for both harnesses over HTTP',async()=>{
   for(const id of ids){
