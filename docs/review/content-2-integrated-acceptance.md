@@ -46,3 +46,7 @@ node node_modules/@playwright/test/cli.js test tests/browser/browser-evidence.sp
 node node_modules/vitest/vitest.mjs run apps/ui/test/browser-evidence.test.ts apps/ui/test/browser-real-case.test.ts
 pnpm check:real -- browser-ops
 ```
+
+## Finished P1 batch gate
+
+The combined P1 tree at 46bebde5 passed three consecutive complete browser commands: each 505 passed, 26 skipped and zero failed (396.7 / 412.4 / 441.0 seconds). Both typechecks, production build, 1,031 units/one skip and package verification also pass. TEST-2 records the earlier failures and their corrections in PR #294; the failed commands are not counted in this streak. No browser/web runtime work or Claude History integration remains for CONTENT-2. Other-builder review and squash remain.
