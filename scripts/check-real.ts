@@ -9,6 +9,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { App } from '../apps/daemon/src/app.ts';
+import {questions} from './real-cases/questions.ts';
 import { browserOps } from './real-cases/browser-ops.ts';
 import { completeJson } from './real-cases/complete-json.ts';
 import { imageOnlyPrompt } from './real-cases/image-only-prompt.ts';
@@ -19,7 +20,7 @@ import { agentDeliveries } from './real-cases/agent-delivery.ts';
 import { localBranches } from './real-cases/local-branches.ts';
 import type { RealCase } from './real-cases/types.ts';
 
-const cases: RealCase[] = [imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots];
+const cases: RealCase[] = [questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);

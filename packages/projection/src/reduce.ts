@@ -48,7 +48,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r23';
+export const REDUCER_VERSION = 'r24';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -1382,6 +1382,6 @@ export const encryptedToken = (value: unknown): boolean => typeof value === 'str
 
 /** How deep a tool's input is kept. A question's offered options sit four levels down
  *  (questions → question → options → option); summarising them left the card unable to list them. */
-const inputDepth = (tool: unknown) => (tool === 'AskUserQuestion' ? 5 : 3);
+const inputDepth = (tool: unknown) => (['AskUserQuestion', 'request_user_input', 'request_user_input_async'].includes(String(tool)) ? 5 : 3);
 
 export type { OperationDetail };

@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | CONTENT-4b | @yash + Codex plan agent | `codex/p1-plan-completion` | 2026-10-29 | Whole remaining real plan/checklist acceptance; plan-only helpers/components/tests and native-case/report files. Includes capture-core literalPlan helper/tests and reducer literal-patch-derived classification block/import/scope near line 612 after genuine native capture exposed the wrapped-plan gap. No History.tsx/controller/indexer/contracts/schema changes. CONTENT-3 alone owns reducer inputDepth and r24; coordinated disjoint reducer ranges. |
-| CONTENT-3 | @yash + Codex questions agent | `codex/p1-question-completion` | 2026-10-29 | Whole questions/approval completion: native controller permission transport, question/approval helpers/components and scoped tests/native acceptance. No History.tsx/indexer/schema changes. Reserved projection reduce.ts inputDepth entry for native request_user_input and reducer r24 cache invalidation only (coordinated with CONTENT-4b).  Expanded to 16 files for one gate-discovered legacy migration test: assert current REDUCER_VERSION, preserving all sealed-evidence assertions. |
 | CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
 | CONTENT-1b | @yash + Codex | `codex/p1-image-first-recovery` | 2026-10-29 | Whole builder-reported image material/recovery task: exact-recorded-file volatile consent (no parent-directory grant), current-image boundary, OpImages/styles/API/tests and real Codex/Claude acceptance. Reserved History image-only preview/ExpandedMaterial branches around 873/987; no scroll/anchor/indexer/controller/projection edits. Bound to 15 files; split first if exceeded. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
@@ -43,6 +42,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — CONTENT-3 complete locally
+
+- **PR #288:** native Claude stdio permission callback, policy-preserving Codex resume, cancellation/stale-approval repair; native Codex historical questions and exact keyed answers, r24 option depth, exact command/replacement approval presentation with original request access. No History/schema/config/journal changes.
+- **Acceptance:** genuine Claude `1a691710` (209,800 bytes/36 observations) and Codex `71a376d0` (375,432 bytes/80 observations), both 600/1440, live answer/cancel and actual approval declines; original `4b5ca5b1`/`4d842553` replay boundaries retested. 42 focused units, both types/build and 11 browsers pass. [Report](review/content-3-native-completion.md). Shared P1 gate pending; no merge performed.
 
 ### Yash with Claude Sonnet 5.5 — order after SCREEN-1 recorded; two Files bugs and two passes added
 
