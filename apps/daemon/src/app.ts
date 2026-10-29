@@ -213,6 +213,8 @@ function selectionSummary(id: string, recs: RecordingSummary[]): RecordingSummar
   const times = (pick: (r: RecordingSummary) => string | undefined) => recs.map(pick).filter((t): t is string => !!t).sort();
   return {
     ...first,
+    // Accounting belongs to one native recording; a joined selection has no reported total.
+    stats: recs.length === 1 ? first.stats : undefined,
     id,
     title: [...new Set(recs.map((r) => r.title).filter(Boolean))].join(' + '),
     // `harness` stays one id (the UI keys labels and styles on it); projection.harnesses lists all.

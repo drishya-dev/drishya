@@ -659,9 +659,11 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await git.getByRole('button',{name:'Close Git review'}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
   const utilities=page.locator('.workspace-menu[open]');
-  await expect(utilities.getByRole('button',{name:'Changes',exact:true})).toBeVisible();
+  // The menu no longer repeats Changes (the header has it); the reading entries that are not in the header stay.
+  await expect(utilities.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await expect(utilities.getByRole('button',{name:'Review questions',exact:true})).toBeVisible();
-  await utilities.getByRole('button',{name:'Changes',exact:true}).click();
+  await page.keyboard.press('Escape');
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Close Changes',exact:true}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
@@ -1505,10 +1507,10 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
-  const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('Session tools',{exact:true})).toBeVisible();
-  await page.keyboard.press('ArrowDown');await expect(menu.getByRole('button',{name:'Changes',exact:true})).toBeFocused();
+  const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('This session',{exact:true})).toBeVisible();await expect(menu.getByText('Move around',{exact:true})).toBeVisible();await expect(menu.getByText('Share',{exact:true})).toBeVisible();await expect(menu.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
+  await page.keyboard.press('ArrowDown');await expect(menu.locator('.workspace-utilities').locator('button:not(:disabled),a[href],summary').filter({visible:true}).first()).toBeFocused();
   await menu.locator('.usage-peek>summary').focus();await page.keyboard.press('Enter');await expect(menu.getByText('No usage values captured for this session.',{exact:true})).toBeVisible();
-  await page.keyboard.press('End');await expect(menu.locator('.prompt-menu>summary')).toBeFocused();
+  await page.keyboard.press('End');await expect(menu.getByRole('link',{name:'Export recording',exact:true}).or(menu.getByRole('button',{name:'Rescan original journal',exact:true})).last()).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
   for(const width of [1440,390]) {
     await page.setViewportSize({width,height:844});await trigger.click();await page.locator('.workspace-menu .usage-peek>summary').click();
@@ -1548,7 +1550,7 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await page.setViewportSize({width:390,height:844});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
   await cards.first().getByRole('button',{name:'Open captured activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.inspector')).toBeVisible();
-  await page.keyboard.press('Escape');await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();
+  await page.keyboard.press('Escape');await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Captured commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
 
 });
@@ -1570,7 +1572,7 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
   await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open captured prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
   await page.evaluate(({recordingId})=>localStorage.setItem(`drishya-review-questions-v1:daemon:${recordingId}`,JSON.stringify([{id:'note',operationId:'captured-review-op',sequence:1,title:'Review note',question:'Check the edge condition. sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'Reviewer',status:'open',createdAt:'',updatedAt:''}])),{recordingId});
-  await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Review packet',exact:true});await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const preview=dialog.getByRole('textbox',{name:'Review packet preview',exact:true}),text=await preview.inputValue();expect(text).toContain('45 recorded checks');expect(text).toContain('Open reviewer questions (1)');expect(text).not.toContain('abcdefghijklmnop');
   await dialog.getByRole('button',{name:'Copy packet',exact:true}).click();expect(await page.evaluate(()=>(window as unknown as {packetCopy:string}).packetCopy)).toBe(text);
   const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download Markdown',exact:true}).click();const file=await download;expect(readFileSync((await file.path())!,'utf8')).toBe(text);
@@ -1582,7 +1584,7 @@ test('captured changes lead to typed map connections, current reading and a pers
   await page.route('**/controller',route=>route.fulfill({status:503,json:{error:'Synthetic native runtime unavailable'}}));
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();await expect(review).toHaveCount(0);
   const approve=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await approve.isVisible())await approve.click();
   const connections=page.getByRole('region',{name:'Direct import connections',exact:true});await expect(connections.locator('.map-connection-root')).toHaveText(path);
@@ -1599,7 +1601,7 @@ test('captured changes lead to typed map connections, current reading and a pers
 test('saved captured file selections recover as references and unavailable selections do not crash',async({page})=>{
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
   const reader=page.locator('dialog.file-workspace'),choice=reader.getByRole('combobox',{name:'First evidence',exact:true});await expect(choice.locator('option').first()).toBeAttached();
   const key=(await choice.locator('option').last().getAttribute('value'))!;await choice.selectOption(key);
   await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain(key);
@@ -1613,7 +1615,7 @@ test('a failed reader screen can recover by navigating to a healthy session',asy
   const id=ids['claude-code']!;
   await page.route(`**/v1/recordings/${id}/file-operations?*`,route=>route.fulfill({json:{operations:[null],total:1}}));
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
   await expect(page.getByText('This view could not be displayed',{exact:true})).toBeVisible();
   await page.evaluate(id=>{location.hash=`/r/${id}`;},ids.codex!);
   await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);

@@ -20,7 +20,6 @@ import type { RealCase } from './real-cases/types.ts';
 
 const cases: RealCase[] = [imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, worktreeRoots];
 const { values, positionals } = parseArgs({ allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
-const { values, positionals } = parseArgs({ allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
   process.exit(values.list ? 0 : 2);
