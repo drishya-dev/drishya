@@ -125,6 +125,7 @@ export function PathImage({ op, path }: { op: Operation; path: string }) {
     } catch { update({ error: 'The current file could not be opened here.' }); }
   };
   return <div className="path-image" onClick={(e) => e.stopPropagation()}>
+    {op.images?.length?<OpImages images={op.images} compact/>:null}
     <div className="path-image-line">
       <span className="path-image-path">{path}</span>
       <span>image bytes not captured</span>

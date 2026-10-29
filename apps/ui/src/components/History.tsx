@@ -833,6 +833,17 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const file=op.detail.kind==='read'||op.detail.kind==='edit'?prosePath(op.detail.path,workspaceRoot,true):undefined;
   const evidence=op.detail.kind==='read'?`${op.id}/read`:op.detail.kind==='edit'&&op.detail.hunks.length?`${op.id}/patch`:undefined;
   const title=file?<button type="button" className="op-title captured-file-path" title={displayTitle} aria-label={`Open captured work for ${file.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(file.path,op.detail.kind==='read'?op.detail.startLine:undefined,evidence);}}>{displayTitle}</button>:<span className="op-title" title={displayTitle}>{displayTitle}</span>;
+  const imagePath=pathOnlyImage(op);
+  const hasImage=op.images?.some(image=>image.sha);
+  // Keep the same evidence readers; images get the primary allocation, not a second card.
+  const imageOriginal=op.detail.kind==='read'&&!op.detail.excerptArtifactId
+    ?<ToolInput value={op.detail}/>:<ExpandedOperation op={op}/>;
+  const imageMaterial=imagePath||hasImage?<>
+    {imagePath?<PathImage op={op} path={imagePath}/>:<OpImages images={op.images!}/>}
+    {!imagePath&&['mcp','web'].includes(op.detail.kind)
+      ?expanded?<ExpandedOperation op={op}/>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>
+      :<details className="image-original"><summary>Original input and output</summary>{imageOriginal}</details>}
+  </>:null;
   return (
     <article ref={card}
       data-op-id={op.id}
@@ -869,9 +880,9 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </header>
       {op.declined && <DeclinedLine declined={op.declined} />}
       {!expanded && <div className="op-body">
-        {pathOnlyImage(op)?<PathImage op={op} path={pathOnlyImage(op)!}/>:op.images?.some(image=>image.sha)?<><OpImages images={op.images}/><details className="image-original"><summary>Original input and output</summary><OpPreview op={op} resolving={so.resolving} onSource={measureSource}/></details></>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/> }
+        {imageMaterial??<><OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
       </div>}
-      {expanded&&(pathOnlyImage(op)||op.images?.some(image=>image.sha))?<div className="image-material-expanded">{pathOnlyImage(op)?<PathImage op={op} path={pathOnlyImage(op)!}/>:<OpImages images={op.images!}/>}<details className="image-original"><summary>Original input and output</summary><ExpandedOperation op={op}/></details></div>:expanded?<ExpandedOperation op={op}/>:null}
+      {expanded&&(imageMaterial?<div className="image-material-expanded">{imageMaterial}</div>:<ExpandedOperation op={op}/>)}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
       <EvidenceNote op={op} />
     </article>
