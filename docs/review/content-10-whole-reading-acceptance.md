@@ -47,7 +47,11 @@ An initial syntax-only scan also found rectangular comma-bearing pytest output. 
 - Named regression gate: `inline-json-reading`, `adaptive-content`, `session-typography`: 11 passed.
 - Captured-content and structured-data units: 26 passed. Production UI build passes.
 - `node scripts/check-real.ts complete-json --pick 1`: Claude 66 sessions / 246 hits, Codex five sessions / ten hits within the default 90 MB bound. Scratch imports `rec_8baf1b3f` and `rec_428a053a` verify bounded complete JSON previews. Actual direct JSON UI proof above uses the separately identified rendered cases.
-- New `reading-delimited` real-case scanner is supplied for root registration in the shared `check-real.ts` registry. It recognises strict rectangular candidates only, reports that syntax is not dataset provenance, and never chooses a product delimiter. The fresh native journals each produce two matches, one TSV. Registration is coordinated with the root agent to avoid simultaneous registry edits.
+- New `reading-delimited` real-case scanner is registered in the shared `check-real.ts` registry. It recognises strict rectangular candidates only, reports that syntax is not dataset provenance, and never chooses a product delimiter. The fresh native journals each produce two matches, one TSV. The merge preserves the genuine question and plan case registrations alongside this case.
 - The root agent owns the once-per-batch full gate and central TASKS/STATUS completion. No duplicate full browser/packaging gate was started here.
 
 No task-specific external blocker remains. This report does not certify physical accessibility, every platform or ten-minute human preference release gates.
+
+## Finished P1 batch gate
+
+The combined P1 tree 46bebde5 passed three consecutive complete browser commands: each 505 passed, 26 skipped, zero failed (396.7 / 412.4 / 441.0 seconds). Both typechecks, production build, 1,031 units/one skip and package verification also pass. TEST-2 records earlier failures and their corrections separately in PR #294; they are not counted in this streak. No task-specific external blocker remains. Other-builder review and squash remain.
