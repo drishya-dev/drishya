@@ -206,7 +206,7 @@ describe('reading boundaries', () => {
     store.close();
     store = new Store(dir);
     expect(store.db.prepare('PRAGMA table_info(observations)').all().some((row) => row.name === 'clock_time')).toBe(true);
-    expect(store.db.prepare("SELECT value FROM meta WHERE key='schema_version'").get()?.value).toBe('4');
+    expect(store.db.prepare("SELECT value FROM meta WHERE key='schema_version'").get()?.value).toBe('5');
   });
   it('stores a mark with its previous value and removes it with the recording', () => {
     seed();

@@ -41,6 +41,21 @@ afterAll(async () => {
 });
 
 describe('combined export', () => {
+  it('preserves single-recording stats but never labels a joined selection with its first stats', async () => {
+    const recordingId = ids[0]!;
+    const source = app.store.getSources(recordingId)[0]!;
+    app.store.appendObservations(recordingId, source.id, source.cursor, [{
+      id: 'synthetic-export-cost', recordingId, kind: 'usage', agentId: 'agent:main',
+      source: { adapterId: 'claude-code', adapterVersion: 'test', sourceId: source.id, generation: 0, byteOffset: 100000, part: 0 },
+      payload: { source: 'claude-cost-state', cumulative: true, work: { durationMs: 500, linesAdded: 7, linesRemoved: 2 } },
+      observedAt: '2026-10-29T00:00:00Z', privacyPolicyVersion: 'p3', redactions: [], availability: 'complete',
+    }]);
+    const expected = { source: 'claude-cost-state', durationMs: 500, linesAdded: 7, linesRemoved: 2 };
+    expect((await app.exportBundle(recordingId)).recording.stats).toEqual(expected);
+    expect((await app.exportBundle(ids.join('+'))).recording.stats).toBeUndefined();
+    expect((await app.exportBundle([...ids].reverse().join('+'))).recording.stats).toBeUndefined();
+    expect(app.store.getRecording(recordingId)!.stats).toEqual(expected);
+  });
   it('keeps file identities and map nodes separate across captured worktrees', async () => {
     const p = app.projection(ids.join('+'));
     expect(p.workspaceRoot).toBeUndefined();
