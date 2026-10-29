@@ -77,8 +77,6 @@ const SLICE_BYTES = 1024 * 1024;
 // Scheduling budget only: complete-record commit size and hard limits stay unchanged.
 const RECORD_YIELD_MS = 8;
 const MAX_RECORD_BYTES = 16 * 1024 * 1024;
-// DATA-3 (#206) landed at this instant. createdAt is the initial import time, not native activity.
-const DATA3_IMPORTED_AFTER = Date.parse('2026-10-27T08:01:09Z');
 const LEGACY_CODEX_RESCAN = 'codex-turn-details-rescan-v1:';
 interface LegacyRescanResult { attempted: number; completed: number; unavailable: number; failed: number }
 
@@ -238,12 +236,15 @@ export class Ingestor extends EventEmitter {
     // Let the listening server return before any native read. Never hold startup on old history.
     await new Promise<void>(resolve => setImmediate(resolve));
     if (this.closed) return result;
-    const candidates = this.store.listRecordings().filter(r => r.harness === 'codex' && Date.parse(r.createdAt) < DATA3_IMPORTED_AFTER);
+    const candidates = this.store.listRecordings().filter(r => r.harness === 'codex');
+    // obs_rec_kind(recording_id, kind) bounds this check without loading captured history.
+    const turnDetail = this.store.db.prepare("SELECT 1 FROM observations WHERE recording_id=? AND kind='turn.detail' LIMIT 1");
     for (const recording of candidates) {
       if (this.closed) break;
       if (!this.store.getRecording(recording.id)) continue;
       const key = LEGACY_CODEX_RESCAN + recording.id;
       if (this.store.db.prepare('SELECT 1 FROM meta WHERE key=?').get(key)) continue;
+      if (turnDetail.get(recording.id)) continue;
       result.attempted++;
       try {
         // rescan already owns the recording lock. Do not wrap it in another same-recording lock.
