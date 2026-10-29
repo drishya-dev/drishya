@@ -43,4 +43,3 @@ describe('recorded worktree file display',()=>{
     expect(rows.map(row=>row.name)).toEqual(['README.md']);
   });
 });
-

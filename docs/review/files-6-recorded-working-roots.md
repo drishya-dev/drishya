@@ -33,3 +33,7 @@ Real screenshots and private drivers remain in ignored `.local/`; no journal con
 For multi-root recordings the existing daemon graph is captured/namespaced rather than a current repository index. Therefore the existing current-source API rejects even an exactly mapped main alias as outside its indexed workspace. FILES-6 opens those aliases as captured evidence and suppresses the misleading current-read action unless the exact relative path is actually indexed. It does not grant access to another worktree or broaden the source API. A future task may add explicitly approved current reading for evidenced multi-root main locations; this is separate from FILES-6's captured-file opening acceptance.
 
 Offline bundles have no recorded-root endpoint; they keep the original path display rather than reconstructing or guessing masked roots.
+
+## Final integrated gate
+
+Frozen batch `ef541e4` passed UI build, both typechecks, 1001 unit tests (one skip) and package verification. Full browsers: 481 passed, 26 skipped, one b2-live:139 wheel-end failure. It passes alone on unchanged integrated code and clean main; baseline failure is not established. Feature acceptance is complete with this shared merge-gate qualification retained. The pre-existing current-file graph-membership issue is tracked as FILES-7, not silently lost or claimed repaired here.
