@@ -869,12 +869,9 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </header>
       {op.declined && <DeclinedLine declined={op.declined} />}
       {!expanded && <div className="op-body">
-        <OpPreview op={op} resolving={so.resolving} onSource={measureSource} />
-        {op.images?.length && !(op.detail.kind === 'read' && !op.detail.excerptArtifactId) ? <OpImages images={op.images!} compact /> : null}
-        {op.detail.kind === 'other' && pathOnlyImage(op) ? <PathImage op={op} path={pathOnlyImage(op)!} /> : null}
+        {pathOnlyImage(op)?<PathImage op={op} path={pathOnlyImage(op)!}/>:op.images?.some(image=>image.sha)?<><OpImages images={op.images}/><details className="image-original"><summary>Original input and output</summary><OpPreview op={op} resolving={so.resolving} onSource={measureSource}/></details></>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/> }
       </div>}
-      {expanded && <ExpandedOperation op={op} />}
-      {expanded && op.images?.length ? <OpImages images={op.images!} /> : null}
+      {expanded&&(pathOnlyImage(op)||op.images?.some(image=>image.sha))?<div className="image-material-expanded">{pathOnlyImage(op)?<PathImage op={op} path={pathOnlyImage(op)!}/>:<OpImages images={op.images!}/>}<details className="image-original"><summary>Original input and output</summary><ExpandedOperation op={op}/></details></div>:expanded?<ExpandedOperation op={op}/>:null}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
       <EvidenceNote op={op} />
     </article>
