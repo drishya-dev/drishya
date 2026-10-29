@@ -3,6 +3,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {expect,it} from 'vitest';
 import {App} from '../src/app.ts';
+import {legacyAgentDelivery} from '../../../packages/projection/src/agent-delivery.ts';
 
 it('keeps native delivery findings once per child thread, encrypted shells explicit, and parent outcome unchanged',async()=>{
   const dir=mkdtempSync(join(tmpdir(),'drishya-delivery-')),app=new App(join(dir,'home'));
@@ -32,5 +33,32 @@ it('keeps native delivery findings once per child thread, encrypted shells expli
     const artifact=await app.history.artifact(id,messages[0]!.artifactId!,0,10000);expect(artifact.text).toBe(body);
     expect(JSON.stringify(app.store.observationsOfKinds(id,['message.assistant']))).not.toContain('never-store-ciphertext');
     const before=await app.history.delegationThread(id,op.id,0,op.startSequence+1);expect(before?.steps.some(s=>s.kind==='message')).toBe(false);
+  }finally{await app.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+it('rebuilds an already imported legacy capture without rewriting sealed bytes or losing its original artifact',async()=>{
+  const dir=mkdtempSync(join(tmpdir(),'drishya-legacy-delivery-'));let app=new App(join(dir,'home'));
+  try{
+    const wrapper='Message Type: FINAL_ANSWER\nTask name: /root\nSender: /root/review\nPayload:\nCaptured legacy finding';
+    const path=join(dir,'rollout.jsonl');writeFileSync(path,[
+      {type:'session_meta',payload:{cwd:dir}},
+      {type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:wrapper}]}},
+      {type:'response_item',payload:{type:'agent_message',author:'/root/review',content:[{type:'output_text',text:wrapper}]}},
+    ].map(row=>JSON.stringify(row)).join('\n')+'\n');
+    const id=(await app.ingest.importSource('codex',path)).recordingId;
+    const stored=app.store.observationsOfKinds(id,['message.assistant'])[0]!;
+    expect(stored.payload).not.toHaveProperty('delivery');
+    expect(legacyAgentDelivery(stored,wrapper,'/root/another/review')).toBeUndefined();
+    expect(legacyAgentDelivery({...stored,agentId:'agent:unknown'},wrapper)).toBeUndefined();
+    expect(legacyAgentDelivery({...stored,source:{...stored.source,adapterId:'claude-code'}},wrapper)).toBeUndefined();
+    const originalBody=JSON.stringify(stored);
+    const prior=app.projection(id);app.store.putProjection(id,'r22',prior.observationCount,JSON.stringify({...prior,reducerVersion:'r22',prose:[]}));
+    await app.close();app=new App(join(dir,'home'));
+    const projected=app.projection(id),message=projected.prose[0]!;
+    expect(projected.reducerVersion).toBe('r23');expect(message.text).toBe('Captured legacy finding');expect(message.agentId.endsWith('agent:review')).toBe(true);
+    expect(projected.timeline.find(t=>t.type==='turn')).toMatchObject({prompt:wrapper});
+    expect(JSON.stringify(app.store.observationById(id,stored.id))).toBe(originalBody);
+    const artifact=await app.history.artifact(id,`art_${message.id}_prose`,0,100);
+    expect(artifact.text).toBe(wrapper);expect(projected.artifacts[0]?.note).toContain('routing wrapper omitted');
   }finally{await app.close();rmSync(dir,{recursive:true,force:true});}
 });

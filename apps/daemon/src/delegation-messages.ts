@@ -1,6 +1,7 @@
 import type {Observation} from '@drishya/contracts';
 import type {Store} from '@drishya/store';
 import type {DelegationStep} from './delegation-types.ts';
+import {legacyAgentDelivery} from '../../../packages/projection/src/agent-delivery.ts';
 
 const metadata=(o:Observation)=>{
   const p=o.payload as Record<string,any>;
@@ -18,11 +19,15 @@ export function unavailableChildMessages(store:Store,recordingId:string,call:Obs
   if(!address)return [];
   const rows=store.db.prepare(`SELECT body FROM observations WHERE recording_id=? AND kind='message.assistant'
     AND json_extract(body,'$.source.sourceId')=? AND json_extract(body,'$.source.generation')=?
-    AND json_extract(body,'$.payload.delivery.sender')=? AND json_extract(body,'$.payload.delivery.recipient')=?
-    AND json_extract(body,'$.payload.text')='' ORDER BY seq`).all(recordingId,call.source.sourceId,call.source.generation,address,recipient) as {body:string}[];
+    AND ((json_extract(body,'$.payload.delivery.sender')=? AND json_extract(body,'$.payload.delivery.recipient')=? AND json_extract(body,'$.payload.text')='')
+      OR (json_extract(body,'$.payload.delivery') IS NULL AND agent_id=? AND json_extract(body,'$.payload.text') LIKE 'Message Type:%'))
+    ORDER BY seq`).all(recordingId,call.source.sourceId,call.source.generation,address,recipient,`agent:${address.split('/').at(-1)}`) as {body:string}[];
   return rows.flatMap(row=>{
     const o=JSON.parse(row.body) as Observation,delivery=metadata(o),sequence=rank(o.receivedSequence);
-    if(sequence<rank(call.receivedSequence)||sequence>cutoff||!delivery||!['encrypted','empty'].includes(delivery.state))return [];
+    if(sequence<rank(call.receivedSequence)||sequence>cutoff)return [];
+    const legacy=typeof (o.payload as Record<string,unknown>).text==='string'?legacyAgentDelivery(o,(o.payload as {text:string}).text,address):undefined;
+    if(legacy&&legacy.recipient===recipient&&!legacy.text.trim())return [{id:o.id,kind:'message' as const,label:'Child message unavailable · payload not present in captured text',sequence,time:o.sourceTime}];
+    if(!delivery||!['encrypted','empty'].includes(delivery.state))return [];
     return [{id:o.id,kind:'message' as const,label:delivery.state==='encrypted'?'Child message unavailable · Codex stored the payload encrypted':'Child message · no payload recorded',sequence,time:o.sourceTime}];
   });
 }
