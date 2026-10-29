@@ -44,6 +44,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude Sonnet 5.5 — order after SCREEN-1 recorded; two Files bugs and two passes added
+
+- **Decision (Yash, 29 Oct), with the reason:** after SCREEN-1 the order is AUDIT-1 (a pass through every built function for UI, backend, content and navigation problems, not fitted to his own list) → the UI and motion passes → the fresh-eyes agent review (COMP-1) → VIZ-1 (task-shaped visualizations: branches and PRs side by side, a PR beside a running agent, the screen beside the work). The audit comes first so the UI passes do not polish surfaces whose content is still unclear.
+- **New items:** FILES-8 (P1: Workspace opens the file chosen in Files, not peek), UI-16 (P1: the Files rail wastes its width, names are cut while the row has empty space), AUDIT-1 (P2), VIZ-1 (P3). Nothing built; work starts 30 October.
+
 ### Yash with Claude Sonnet 5.5 — INDEX-1 complete (map and Files tree without nested checkouts)
 
 - **Cause:** the indexer walked into `.claude/worktrees/*`, each a full copy of the project with its own `.git`; on the real `drishya` workspace 4,999 of the 5,000 mapped files were copies and the real files were cut off.
