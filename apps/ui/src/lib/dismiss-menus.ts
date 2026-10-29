@@ -21,9 +21,22 @@ export function useDismissMenus() {
         menu.style.setProperty('--menu-inline-space',`${Math.max(48,summary.right-Math.max(0,left)-8)}px`);
       }
     };
-    const dismiss = (event: Event) => {
+    // A disclosure inside an open session menu (Usage, Navigate history) closes when something else in that menu is used, but only after
+    // the click has landed: closing it on pointer down shifts the rows below it from under the pointer and the click misses (UI-15).
+    const insideOpenMenu = (menu: HTMLDetailsElement, event: Event) => {
+      const outer = menu.parentElement?.closest('.workspace-menu[open]');
+      return !!outer && event.composedPath().includes(outer);
+    };
+    const dismiss = (event: Event, deferInsideMenu = false) => {
       for (const menu of document.querySelectorAll<HTMLDetailsElement>(selectors)) {
-        if (!event.composedPath().includes(menu)) { motion(menu, event.type === 'pointerdown'); menu.open = false; }
+        if (event.composedPath().includes(menu)) continue;
+        if (deferInsideMenu && insideOpenMenu(menu, event)) continue;
+        motion(menu, event.type === 'pointerdown'); menu.open = false;
+      }
+    };
+    const click = (event: MouseEvent) => {
+      for (const menu of document.querySelectorAll<HTMLDetailsElement>(selectors)) {
+        if (!event.composedPath().includes(menu) && insideOpenMenu(menu, event)) { motion(menu, true); menu.open = false; }
       }
     };
     const pointer = (event: PointerEvent) => {
@@ -31,7 +44,7 @@ export function useDismissMenus() {
       const menu = summary?.parentElement;
       if (menu instanceof HTMLDetailsElement && menu.matches(menus)) { motion(menu, true); fit(menu); }
       document.documentElement.setAttribute('data-ui-press', '');
-      dismiss(event);
+      dismiss(event, true);
     };
     const keyboard = (event: KeyboardEvent) => {
       document.documentElement.removeAttribute('data-ui-press');
@@ -56,9 +69,12 @@ export function useDismissMenus() {
     };
     const resize = () => document.querySelectorAll<HTMLDetailsElement>(selectors).forEach(fit);
     document.addEventListener('pointerdown', pointer, true);
-    document.addEventListener('focusin', dismiss);
+    document.addEventListener('click', click);
+    // Focus that a pointer press moved waits for the click like the press itself; keyboard focus closes siblings at once.
+    const focus = (event: FocusEvent) => dismiss(event, document.documentElement.hasAttribute('data-ui-press'));
+    document.addEventListener('focusin', focus);
     window.addEventListener('resize', resize);
     document.addEventListener('keydown', keyboard);
-    return () => { document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('focusin', dismiss); window.removeEventListener('resize', resize); document.removeEventListener('keydown', keyboard); };
+    return () => { document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('click', click); document.removeEventListener('focusin', focus); window.removeEventListener('resize', resize); document.removeEventListener('keydown', keyboard); };
   }, []);
 }
