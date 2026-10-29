@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {redactText} from '@drishya/privacy';
 import {HttpError} from './app.ts';
 import {safeGitPath,gitDiffFlags} from './git-paths.ts';
+import {compareBranch} from './git-branches.ts';
 import type {GitReference,GitHistoryPage,GitCommitDetail,GitCommit,GitFile,GitOmission} from './git-types.ts';
 
 type Git=(args:string[])=>Promise<string>;
@@ -14,14 +15,15 @@ const preview=(text:string,limit:number)=>{const value=clean(text);return value.
 const page=(value:number)=>{if(!Number.isSafeInteger(value)||value<0||value>10_000_000)throw invalid();};
 
 async function state(git:Git) {
-  const raw=await git(['for-each-ref','--sort=refname','--format=%(refname)%00%(objectname)%00%(*objectname)%00','refs/heads','refs/remotes','refs/tags']);
+  const raw=await git(['for-each-ref','--sort=refname','--format=%(refname)%00%(objectname)%00%(*objectname)%00%(committerdate:iso-strict)%00%(upstream:short)%00%(symref)%00','refs/heads','refs/remotes','refs/tags']);
   const head=(await git(['rev-parse','--verify','HEAD']).catch(()=>'')).trim();
   const branch=(await git(['symbolic-ref','-q','HEAD']).catch(()=>'')).trim();
   const refs=raw.split('\n').filter(Boolean).map(row=>{
-    const [name,tip,peeled]=row.split('\0');
+    const [name,tip,peeled,lastCommit,upstream]=row.split('\0');
     if(!name||!oid.test(tip??''))throw new HttpError(422,'Git returned invalid reference metadata.');
-    return {raw:name,id:hash(name),name:clean(name.replace(/^refs\/(heads|remotes|tags)\//,'')),tip:peeled&&oid.test(peeled)?peeled:tip!,kind:name.startsWith('refs/heads/')?'branch':name.startsWith('refs/remotes/')?'remote':'tag',current:name===branch} as GitReference&{raw:string};
+    return {raw:name,id:hash(name),name:clean(name.replace(/^refs\/(heads|remotes|tags)\//,'')),tip:peeled&&oid.test(peeled)?peeled:tip!,kind:name.startsWith('refs/heads/')?'branch':name.startsWith('refs/remotes/')?'remote':'tag',current:name===branch,...(lastCommit?{lastCommit}:{}),...(upstream?{upstream:clean(upstream)}:{})} as GitReference&{raw:string};
   });
+  refs.sort((a,b)=>Number(b.current)-Number(a.current)||Number(b.kind==='branch')-Number(a.kind==='branch')||(b.lastCommit??'').localeCompare(a.lastCommit??'')||a.name.localeCompare(b.name));
   return {raw,head,branch,refs,generation:hash(raw+'\0'+head+'\0'+branch)};
 }
 const publicRef=({raw,...reference}:GitReference&{raw:string}):GitReference=>reference;
@@ -59,9 +61,19 @@ export async function gitHistory(git:Git,options:GitHistoryQuery={}):Promise<Git
   }
   const matching=before.refs.filter(ref=>ref.name.toLowerCase().includes(query.toLowerCase()));
   const primary=before.refs.find(ref=>ref.raw==='refs/heads/main')??before.refs.find(ref=>ref.raw==='refs/heads/master');
+  // A locally stored remote HEAD is explicit default evidence. main/master are labelled conventions.
+  const remoteHeads=before.raw.split('\n').map(row=>row.split('\0')).filter(row=>/^refs\/remotes\/[^/]+\/HEAD$/.test(row[0]??'')&&row[5]);
+  const remoteHead=remoteHeads.find(row=>row[0]==='refs/remotes/origin/HEAD')??(remoteHeads.length===1?remoteHeads[0]:undefined);
+  const target=remoteHead?.[5];
+  const defaultRef=target?(before.refs.find(ref=>ref.raw===target.replace(/^refs\/remotes\/[^/]+\//,'refs/heads/'))??before.refs.find(ref=>ref.raw===target)):primary;
+  const comparisonTip=selected?.kind==='branch'?selected.tip:reference==='all'?before.head:undefined;
+  const branchComparison=comparisonTip?{
+    ...(before.head?{current:await compareBranch(git,comparisonTip,{name:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',tip:before.head},shallow)}:{}),
+    ...(defaultRef?{default:await compareBranch(git,comparisonTip,{name:defaultRef.name,tip:defaultRef.tip,basis:remoteHead?'remote-head':'conventional-name'},shallow)}:{})
+  }:undefined;
   const signatures=await squashEvidence(git,commits.slice(0,50),primary?.tip??before.head);
   if((await state(git)).generation!==before.generation)throw changed();
-  return {mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,selectedReference:selected?publicRef(selected):undefined,...signatures};
+  return {mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,selectedReference:selected?publicRef(selected):undefined,branchComparison,...signatures};
 }
 
 /**
