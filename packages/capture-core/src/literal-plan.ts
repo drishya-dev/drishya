@@ -26,3 +26,15 @@ export function literalPlan(source: string): { text: string; status: string }[] 
   }
   return items;
 }
+
+/** The native update_plan result is an empty object. An outer wrapper succeeding
+ * does not establish this: nested error objects/text must remain generic. */
+export function literalPlanConfirmed(result: string | undefined): boolean {
+  if (result === undefined || result.length > 16_384) return false;
+  const wrapped = /^(?:Chunk ID: [a-zA-Z0-9_-]+\r?\n)?Wall time: [0-9]+(?:\.[0-9]+)? seconds\r?\n(?:Process exited with code 0\r?\n)?Output:\r?\n([\s\S]*)$/.exec(result);
+  const output = wrapped?.[1] ?? result;
+  try {
+    const value: unknown = JSON.parse(output);
+    return !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0;
+  } catch { return false; }
+}

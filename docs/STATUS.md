@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-4b | @yash + Codex plan agent | `codex/p1-plan-completion` | 2026-10-29 | Whole remaining real plan/checklist acceptance; plan-only helpers/components/tests and native-case/report files. No History.tsx, controller.ts, indexer, contracts or schema changes. Coordinate any shared reducer change before editing. |
 | CONTENT-3 | @yash + Codex questions agent | `codex/p1-question-completion` | 2026-10-29 | Whole questions/approval completion: native controller permission transport, question/approval helpers/components and scoped tests/native acceptance. No History.tsx/indexer/schema changes; coordinate shared projection changes first. |
 | CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
@@ -43,6 +42,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Codex — CONTENT-4b native completion (29 October)
+
+PR #292 finishes genuine plan/checklist acceptance: native TodoWrite, task tools, Codex literal checklist, desktop checklist, proposal and truthful rejection/fallback. Fourteen desktop frames at 600/1440, 143 replay boundaries, 214 targeted units and eleven plan browsers pass; both types/build pass. [Report](review/content-4b-native-completion.md). Merge with #288 reducer r24; full batch gate is owned by the root integration lane. No History/controller/indexer/schema changes.
+
 
 ### Yash with Claude Sonnet 5.5 — UI-14 and UI-15 complete; Codex stack and HOME-1 merged
 

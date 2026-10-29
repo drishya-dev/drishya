@@ -33,7 +33,7 @@ import type {
 } from '@drishya/contracts';
 import { isBlobText } from '@drishya/contracts';
 import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
-import { literalPatch, literalPlan, touchesProtectedFile } from '@drishya/capture-core';
+import { literalPatch, literalPlan, literalPlanConfirmed, touchesProtectedFile } from '@drishya/capture-core';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks } from './patch.ts';
 import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './shell.ts';
@@ -651,7 +651,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
             if (p.isError && !st.typedOutcome) { const declined = declinedFrom(text(p.text)); if (declined) st.op.declined = declined; }
             if (!st.typedOutcome) completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
-            if (!p.isError && st.literalPlan !== undefined) {
+            if (!p.isError && st.literalPlan !== undefined && literalPlanConfirmed(text(p.text))) {
               // The wrapper contains exactly one awaited literal call. A failed or
               // pending wrapper supplies no successful revision; dynamic code stays text.
               st.op.kind = 'plan';

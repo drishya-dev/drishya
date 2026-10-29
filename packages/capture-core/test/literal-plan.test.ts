@@ -1,7 +1,13 @@
 import { expect, it } from 'vitest';
-import { literalPlan } from '../src/literal-plan.ts';
+import { literalPlan, literalPlanConfirmed } from '../src/literal-plan.ts';
 
 const request = JSON.stringify({ plan: [{ step: 'Literal ) text\nnext', status: 'in_progress' }] });
+it('requires the native empty-object acknowledgement rather than an outer wrapper success', () => {
+  expect(literalPlanConfirmed('{}')).toBe(true);
+  expect(literalPlanConfirmed('Chunk ID: synthetic\nWall time: 0.1 seconds\nOutput:\n\n{}')).toBe(true);
+  for (const value of [undefined, 'Plan updated', '{"isError":true}', '{"error":"denied"}', 'null', '[]', '{"content":[{"type":"text","text":"Error"}]}']) expect(literalPlanConfirmed(value)).toBe(false);
+  for (const value of ['nested failure\nOutput:\n{}', 'Output:\n{}', 'Wall time: 0.1 seconds\nOutput:\nOutput:\n{}', 'Wall time: 0.1 seconds\nProcess exited with code 1\nOutput:\n{}']) expect(literalPlanConfirmed(value)).toBe(false);
+});
 it('decodes one awaited JSON plan call and preserves literal text/status', () => {
   for (const source of [`await tools.update_plan(${request});`, `text(await tools.update_plan(${request}));`]) {
     expect(literalPlan(source)).toEqual([{ text: 'Literal ) text\nnext', status: 'in_progress' }]);
