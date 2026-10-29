@@ -29,7 +29,7 @@ Evidence for this restructure: [122 developer review](review/122-developer-produ
 5. **Every interaction has purposeful motion.** Every click, toggle, open and close gets a suitable, interruptible transition tied to its true origin, with reduced-motion and low-resource fallbacks (MOTION-1). Use the installed `emil-design-eng`, `animate`, `review-animations` and `animation-performance` skills.
 6. **One coherent, verified increment per commit,** so either builder can backtrack. Schema changes need both builders' agreement (DATA-10).
 7. **Tick, then sync.** Tick the item's own checkbox in §3, then run `node scripts/sync-tasks.ts`: it sets the ☑/☐ marks and counts in the priority tables below (`--check` verifies them).
-8. **The premium bar (Yash, 29 Oct).** Every surface you touch is clean and premium down to the smallest detail, and information reaches the user with ease (no item-by-item paging, text that says what it is). Product target: $10,000 end to end, for millions of people who only read agent text today. Full statement: [VISION §8](VISION.md), *The premium bar*. Order after SCREEN-1: AUDIT-1, UI and motion passes, COMP-1, VIZ-1.
+8. **The premium bar (Yash, 29 Oct).** Every surface you touch is clean and premium down to the smallest detail, and information reaches the user with ease (no item-by-item paging, text that says what it is). Product target: $10,000 end to end, for millions of people who only read agent text today. Full statement: [VISION §8](VISION.md), *The premium bar*. Order after SCREEN-1: AUDIT-1, the UI passes, then the motion passes, COMP-1, VIZ-1.
 9. **Choosing a model.**
    - Opus for design specs, ambiguous UI direction and reviews.
    - Sonnet is suitable for executing items here that have explicit **Accept** lines.
@@ -88,9 +88,10 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 1. **SCREEN-1** (computer use on a big screen), with NATIVE work on whatever sessions Yash can supply.
 2. **AUDIT-1:** one pass through every function that exists, as a developer would use it on real sessions, listing what is wrong in the UI, the backend handling, the displayed content and the way a user gets to information. It runs *before* any UI pass, because the UI passes would otherwise polish surfaces whose content is still unclear. It is not fitted to Yash's own list; his findings are the minimum, and what he does not name is audited too.
-3. **The UI and motion passes** (UI-7, UI-8, UI-3, UI-4b, MOTION-1, MOTION-3), fed by AUDIT-1's findings.
-4. **The fresh-eyes agent review (COMP-1):** a new agent that sees the whole product as a would-be user.
-5. **VIZ-1:** task-shaped visualizations and the dynamics that make it a premium end-to-end product.
+3. **The UI passes first** (UI-7, UI-8, UI-3, UI-4b), fed by AUDIT-1's findings: layout, space, type, content presentation and every small detail settle before anything is animated.
+4. **Then the motion passes** (MOTION-1, MOTION-3), on the finished UI (Yash, 29 Oct): motion is tuned to surfaces that will not move again; animating a layout that is still changing is done twice.
+5. **The fresh-eyes agent review (COMP-1):** a new agent that sees the whole product as a would-be user.
+6. **VIZ-1:** task-shaped visualizations and the dynamics that make it a premium end-to-end product.
 
 First the base; the ideas in VIZ-1 are recorded now and decided after the review.
 

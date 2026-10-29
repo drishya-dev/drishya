@@ -56,6 +56,7 @@ PR #292 finishes genuine plan/checklist acceptance: native TodoWrite, task tools
 
 ### Yash with Claude Sonnet 5.5 — order after SCREEN-1 recorded; two Files bugs and two passes added
 
+- **Amendment (Yash, 29 Oct):** the UI passes come before the motion passes, because motion should be tuned on a finished UI. Order: SCREEN-1 → AUDIT-1 → UI passes (UI-7, UI-8, UI-3, UI-4b) → motion passes (MOTION-1, MOTION-3) → COMP-1 → VIZ-1.
 - **Decision (Yash, 29 Oct), with the reason:** after SCREEN-1 the order is AUDIT-1 (a pass through every built function for UI, backend, content and navigation problems, not fitted to his own list) → the UI and motion passes → the fresh-eyes agent review (COMP-1) → VIZ-1 (task-shaped visualizations: branches and PRs side by side, a PR beside a running agent, the screen beside the work). The audit comes first so the UI passes do not polish surfaces whose content is still unclear.
 - **New items:** FILES-8 (P1: Workspace opens the file chosen in Files, not peek), UI-16 (P1: the Files rail wastes its width, names are cut while the row has empty space), AUDIT-1 (P2), VIZ-1 (P3). Nothing built; work starts 30 October.
 
