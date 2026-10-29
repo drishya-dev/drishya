@@ -7,6 +7,12 @@ import { createParser, descriptor } from '../src/index.ts';
 const ctx = { recordingId: 'r', sourceId: 's', sourcePath: 'synthetic' };
 const fixture = (name: string) => readFileSync(new URL(`../../../fixtures/synthetic/codex-items/${name}.jsonl`, import.meta.url), 'utf8').trim().split('\n').map(line => JSON.parse(line));
 const capture = (record: unknown, parser = createParser(ctx)) => parser.parse(record).map(raw => seal({ raw, ...ctx, adapter: descriptor, generation: 0, byteOffset: 0, observedAt: '2026-10-20T10:00:00Z' }));
+it('keeps a native local file-URL command cwd in the captured workspace spelling',()=>{
+  const parser=createParser(ctx);
+  capture({type:'session_meta',payload:{cwd:'C:\\Synthetic\\project'}},parser);
+  const records=capture({type:'event_msg',payload:{type:'item_completed',item:{type:'CommandExecution',id:'command-url',command:'git status',cwd:'file:///C:/Synthetic/project',exit_code:0}}},parser);
+  expect(records.find(o=>o.kind==='item.completed')).toMatchObject({workspaceRoot:'C:\\Synthetic\\project',payload:{cwd:'C:\\Synthetic\\project'}});
+});
 it('maps every supported typed shape, using IDs first and only a unique open exec as fallback', () => {
   for (const name of ['one-command', 'three-commands', 'file-change', 'mcp-call', 'image-view', 'web-search', 'image-generation', 'subagent', 'standalone', 'ambiguous']) {
     const parser = createParser(ctx), observations = fixture(name).flatMap(row => capture(row, parser));

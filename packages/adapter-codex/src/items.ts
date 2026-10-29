@@ -1,5 +1,6 @@
 import type { ItemPayload } from '@drishya/contracts';
 import { isDeniedPath, mentionsDeniedPath } from '@drishya/privacy';
+import {localFileUrlPath} from '@drishya/capture-core';
 type Rec = Record<string, any>;
 const str = (v: unknown) => typeof v === 'string' ? v : undefined;
 const number = (v: unknown) => typeof v === 'number' && Number.isFinite(v) ? v : undefined;
@@ -19,7 +20,8 @@ export function typedItem(value: unknown, commandText: (v: unknown) => string): 
     case 'CommandExecution': {
       if (!(typeof v.command === 'string' || Array.isArray(v.command) && v.command.every((p: unknown) => typeof p === 'string'))) return undefined;
       const command = commandText(v.command);
-      return { denyContent: mentionsDeniedPath(command), payload: { ...base, item: 'command', command, cwd: str(v.cwd), exitCode: number(v.exit_code),
+      const cwd=str(v.cwd);
+      return { denyContent: mentionsDeniedPath(command), payload: { ...base, item: 'command', command, cwd: cwd===undefined?undefined:localFileUrlPath(cwd)??cwd, exitCode: number(v.exit_code),
         output: str(v.aggregated_output) ?? [str(v.stdout), str(v.stderr)].filter(p => p !== undefined).join('\n'),
         parsed: Array.isArray(v.parsed_cmd) ? v.parsed_cmd.filter((p: Rec) => p && typeof p.type === 'string').map((p: Rec) => ({ kind: p.type, path: str(p.path) })) : undefined } };
     }
