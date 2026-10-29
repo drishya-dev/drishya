@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch } from '../src/patch.ts';
 import { relativize } from '../src/paths.ts';
-import { classifyShell, parseHitLines } from '../src/shell.ts';
+import { classifyShell, parseHitLines, plausibleHitPath } from '../src/shell.ts';
 import { isTestCommand, parseTestOutput } from '../src/tests.ts';
 import { buildPassages } from '../src/reduce.ts';
 import type { Operation, TimelineItem } from '@drishya/contracts';
@@ -72,6 +72,29 @@ describe('shell classification (derived)', () => {
       { path: 'src/a.ts', line: 3, text: 'const x' },
       { path: 'C:\\w\\b.ts', line: 9, text: 'y' },
     ]);
+  });
+
+  // BUG-8: a grep over test-runner output must not invent files. Log lines still parse as hits (they are captured
+  // text) but only a plausible path may become a file reference.
+  it('does not register log lines from test output as files', () => {
+    const junk = [
+      'ok 146 tests\\browser\\toolbar.spec.ts:420:1 › the dock keeps identities',
+      '[270/408] tests\\browser\\p1-pacing.spec.ts:482:1 › every observed action kind',
+      '1) tests\\browser\\b2-live.spec.ts:139:1 › long history mounts only nearby work',
+      'x 150 tests/browser/a.spec.ts:9:1 › fails',
+    ];
+    for (const line of junk) {
+      const [hit] = parseHitLines(line);
+      expect(hit, line).toBeDefined();
+      expect(plausibleHitPath(hit!.path), line).toBe(false);
+    }
+  });
+
+  it('keeps real paths: relative, posix, dynamic routes, and absolute paths with spaces', () => {
+    for (const path of ['src/a.ts', 'tests\\browser\\a.spec.ts', 'app/[id]/page.tsx', '0-trace.stacks', '/home/me/my project/a.ts', 'C:\\Users\\Some One\\repo\\a.ts', '~/notes/a b.md']) {
+      expect(plausibleHitPath(path), path).toBe(true);
+    }
+    for (const path of ['', ' src/a.ts', 'src/a b.ts', 'src/a.ts\n']) expect(plausibleHitPath(path), JSON.stringify(path)).toBe(false);
   });
 });
 

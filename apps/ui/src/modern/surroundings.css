@@ -64,6 +64,10 @@
 :root[data-ui-version=modern][data-experience=classic] .theme-option[aria-pressed=true] { border-color:var(--modern-accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--modern-accent) 8%,transparent); }
 :root[data-ui-version=modern][data-experience=classic] .search { border-radius:14px; border:1px solid var(--modern-hairline); background:var(--modern-surface); box-shadow:0 14px 44px #0004; }
 :root[data-ui-version=modern][data-experience=classic] .search input { background:transparent; }
+/* UI-11: the search field is one flat row of the popover, not a box inside it. Focus brightens the row's underline; a 2px outline here was clipped by the popover and read as a stray purple line. */
+:root[data-ui-version=modern][data-experience=classic] .search .search-field input,
+:root[data-ui-version=modern][data-experience=classic] .search .search-field input:focus-visible {border:0;border-radius:0;box-shadow:none;outline:none;}
+:root[data-ui-version=modern][data-experience=classic] .search .search-field:focus-within {border-bottom-color:var(--t3);}
 :root[data-ui-version=modern][data-experience=classic] .home .recording { border-radius:12px; background:var(--modern-surface); border-color:var(--modern-hairline); }
 :root[data-ui-version=modern][data-experience=classic] .home :is(input,select) { border-radius:9px; background:var(--modern-surface); border-color:var(--modern-hairline); }
 @media(hover:hover) and (pointer:fine) {

@@ -51,3 +51,5 @@ No genuine captured CSV dataset body or JSON record-table dataset was present in
 Root integration performs whole-repository checks and task/claim bookkeeping. This report does not substitute fixture acceptance for unavailable genuine source cases or claim platform/physical release acceptance.
 
 Final root integration: 856 whole-repository units, both TypeScript projects, production build and all 14 new selector/document/artifact desktop browser cases passed together. Merge #255 (documentation), #253 (reader APIs), then #254 (consumer activation); this PR does not claim the later consumers are independently activated.
+
+The shared DataInspection API also snapshots an optional source label, so consumers can label reserialized structured fields as formatted instead of calling their formatting original. The default remains Original for captured source text; consumer-specific choice and acceptance remain CONTENT-6.

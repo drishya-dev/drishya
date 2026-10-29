@@ -1,3 +1,4 @@
+import {recordedFileRoots} from './file-roots.ts';
 import {commandCursor} from '../../../packages/scene/src/commands.ts';
 // Local HTTP API. Loopback only; per-launch token exchanged for an HttpOnly session cookie;
 // strict Host and Origin checks; no generic filesystem access; passive capture plus explicitly opted-in native harness clients.
@@ -121,7 +122,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('Drishya binds to loopback only.');
   const app = opts.app ?? new App(opts.dataDir);
   const workspace = new WorkspaceAccess(app);
-  const gitReview = new GitReview(workspace);
+  const gitReview = new GitReview(workspace,undefined,app.history);
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
   app.ingest.resetLiveFlags();
   const token = opts.token ?? randomBytes(24).toString('hex');
@@ -317,7 +318,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
-      if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:sessionLinks(app.store,id,page.commits.map(commit=>commit.hash))});}
+      if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:{...sessionLinks(app.store,id,page.commits.map(commit=>commit.hash)),...page.sessionLinks}});}
       if(sub==='git'&&subId==='commit'&&m==='GET')return json(res,await gitReview.commit(id,url.searchParams.get('hash')??'',intParam(url,'parent',0,0,1023),intParam(url,'start',0,0,10_000_000),url.searchParams.get('generation')??undefined));
       if (sub === 'workspace' && subId === 'approve' && m === 'POST') return json(res, await workspace.approve(id));
       if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));
@@ -405,7 +406,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       if (sub === 'file-operations' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
-        return json(res, await app.history.file(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000)));
+        return json(res, await app.history.file(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000), (url.searchParams.get('selected') ?? '').slice(0, 1000) || undefined));
+      }
+      if (sub === 'file-roots' && m === 'GET') {
+        const ids=id.split('+'); for(const key of ids) app.recording(key);
+        return json(res,await recordedFileRoots(app.store,ids));
       }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
       if (sub === 'observations' && m === 'GET') {
@@ -463,6 +468,13 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (!trail) throw new HttpError(404, 'not a captured change in this recording');
         return json(res, trail);
       }
+      if(sub==='delegation-thread'&&subId&&m==='GET'){
+        if(id.includes('+'))throw new HttpError(400,'Choose one recording for a delegation thread.');
+        app.recording(id);
+        const value=await app.history.delegationThread(id,subId,intParam(url,'start',0,0,10_000_000),url.searchParams.has('step')?intParam(url,'step',0,0,10_000_000):undefined,intParam(url,'taskStart',0,0,10_000_000));
+        if(!value)throw new HttpError(404,'No captured delegation at this position.');
+        return json(res,value);
+      }
       // READ-6: which lines of a file the agent had read, as recorded, before one edit.
       if (sub === 'read-before' && subId && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'read-before-write is computed per recording, not for a combined view');
@@ -479,12 +491,20 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       // CONTENT-1: the current file behind an image path one of this recording's actions referenced.
       // Needs workspace approval; it is today's file, so it is never cached.
+      if(sub==='workspace'&&subId==='image-grant'&&m==='POST') {
+        if(id.includes('+'))throw new HttpError(400,'choose one session workspace');
+        const body=await readJson(req,2048);
+        if(typeof body.operation!=='string'||Object.keys(body).some(key=>key!=='operation'))throw new HttpError(400,'choose one recorded image operation');
+        const path=referencedImagePath(app.store,firstId,body.operation);
+        if(!path)throw new HttpError(404,'This action did not reference an image file.');
+        return json(res,await workspace.approveImage(firstId,body.operation,path));
+      }
       if (sub === 'workspace' && subId === 'image' && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'choose one session workspace');
         app.recording(firstId);
         const path = referencedImagePath(app.store, firstId, url.searchParams.get('operation') ?? '');
         if (!path) throw new HttpError(404, 'This action did not reference an image file.');
-        const image = await workspace.image(firstId, path);
+        const image = await workspace.recordedImage(firstId, url.searchParams.get('operation') ?? '', path);
         res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline', 'x-drishya-modified-at': image.modifiedAt });
         res.end(image.body);
         return;
@@ -600,6 +620,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const addr = server.address();
   if (addr && typeof addr === 'object') port = addr.port;
   const url = `http://127.0.0.1:${port}`;
+  // Enrichment uses the existing passive, sealed ingest path; the server is already listening.
+  void app.ingest.rescanLegacyCodex().catch(() => undefined);
   return {
     url,
     token,

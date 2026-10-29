@@ -19,6 +19,10 @@
 .mh-search input:focus-visible { outline:0!important;box-shadow:none!important; }.mh-search:focus-within { box-shadow:0 1px 0 var(--modern-accent); }.mh-header .brand-mark { width:28px;height:28px;flex:none; }
 
 /* Retain the browser's select semantics, focus handling and outside dismissal. */
+.mh-row-stats {display:flex;align-items:center;gap:8px;white-space:nowrap;font:12px/18px var(--mono);font-variant-numeric:tabular-nums;color:var(--t2);}
+.mh-stat-added {color:var(--pass);}
+.mh-stat-removed {color:var(--fail);}
+
 @supports (appearance:base-select) {
   .mh-filters select,.mh-filters select::picker(select) { appearance:base-select; }
   .mh-filters select { display:flex;align-items:center;gap:12px;min-height:36px;padding:7px 11px;border:1px solid var(--line);border-radius:8px;background:var(--s1);color:var(--t2);font:12px/1.5 var(--sans); }

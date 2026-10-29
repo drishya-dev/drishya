@@ -59,8 +59,9 @@ export function generateLargeJournal(path: string, megabytes: number) {
     }
     write('event_msg', { type: 'task_complete', turn_id: 'invented-turn' });
   } finally { closeSync(fd); }
+  // expectedObservations: the final +4 is session meta, task_started, task_complete and the turn.detail observation DATA-3 adds.
   return { workload: 'invented-structure-matched-v1', requestedMB: megabytes, bytes, records, maxRecordBytes, cycles,
-    expectedLegacyObservations: cycles * 2 + 3, expectedObservations: cycles * 6 + extraUsage + 3, counts, sha256: hash.digest('hex') };
+    expectedLegacyObservations: cycles * 2 + 3, expectedObservations: cycles * 6 + extraUsage + 4, counts, sha256: hash.digest('hex') };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

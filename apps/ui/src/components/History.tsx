@@ -1,3 +1,6 @@
+import { BrowserEvidence, BrowserStrip, WebEvidence } from './BrowserEvidence.tsx';
+import { injectedLine, injectedMessage } from '../lib/injected-messages.ts';
+import { browserStep, groupBrowserSteps } from '../lib/browser-evidence.ts';
 import { passageArtifacts, passageItems, samePassageContent, type PassageContent } from '../lib/passage-content.ts';
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import { ReadingKeys } from './ReadingKeys.tsx';
@@ -8,6 +11,7 @@ import { reasoningGap } from '../lib/reasoning-gap.ts';
 import './reasoning-gap.css';
 import { ToolInput } from './ToolInput.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
+import { isQuestionTool } from '../lib/ask-question.ts';
 import { ToolOutput } from './ToolOutput.tsx';
 import { DelegationDetail, DelegationLine } from './DelegationDetail.tsx';
 import { ScriptDetails } from './Inspector.tsx';
@@ -26,7 +30,7 @@ import { CodeView, DiffView, Output, CapturedTime, useArtifact } from './common.
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf, readingWidth } from '../lib/presentation.ts';
 import { diffStat, evidenceNotes, isProse } from '../lib/card-evidence.ts';
-import { ledgerParts, LEDGER_BASIS } from '../lib/turn-ledger.ts';
+import { ledgerBasis, ledgerParts, settingsLine } from '../lib/turn-ledger.ts';
 import { useTurns } from '../lib/turns-store.ts';
 import { useNow } from '../lib/now-store.ts';
 import { Origins } from './Origins.tsx';
@@ -37,8 +41,7 @@ import { VerificationStrip } from './VerificationStrip.tsx';
 import { FixChainPanel, ReadBeforePanel } from './Verification.tsx';
 import { PinnedPlanList, PlanChecklist } from './PlanChecklist.tsx';
 import { DeclinedLine } from './DeclinedLine.tsx';
-import { WebResults } from './WebResults.tsx';
-import { CommandRunNotes, fetchFacts } from './CommandRun.tsx';
+import { CommandRunNotes } from './CommandRun.tsx';
 import { BeforeTurnPanel } from './BeforeTurn.tsx';
 import { NoticeLine } from './NoticeLine.tsx';
 import { OpImages, PathImage, pathOnlyImage } from './OpImages.tsx';
@@ -386,7 +389,13 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
-    if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
+    if (Math.abs(delta) > 0.5) {
+      const requested = el.scrollTop + delta;
+      setScrollTop(requested);
+      // A shorter allocation can clamp the scroll at either boundary. Keep the
+      // attained offset so later growth cannot replay the unapplied correction.
+      if (!pointerFocus.current) anchor.offset += requested - el.scrollTop;
+    }
   };
 
   useLayoutEffect(() => {
@@ -685,7 +694,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
         setExtentFloor(floor=>Math.max(floor,extentTotal.current));
         setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
       }}/>
-      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: ps.turnPrompt!, index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
+      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const note = injectedMessage(ps.turnPrompt!); return note ? injectedLine(note) : ps.turnPrompt!; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.
           if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));
@@ -719,7 +728,7 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
     <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {ps.turnPrompt && <TurnBlock prompt={ps.turnPrompt} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {!!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
@@ -728,9 +737,13 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
             {first?.startTime && <CapturedTime iso={first.startTime} />}
           </div>
           <div className="ops-row">
-            {ps.ops.map((o, i) => {
-              const op = ops.get(o.id);
-              return op ? <OpCard key={o.id} so={o} op={op} index={i} /> : null;
+            {groupBrowserSteps(ps.ops, ops).map((group) => {
+              const first = group[0]!;
+              const op = ops.get(first.id);
+              if (!op) return null;
+              if (group.length === 1) return <OpCard key={first.id} so={first} op={op} index={ps.ops.indexOf(first)} />;
+              const grouped = group.map(item => ops.get(item.id)!).filter(Boolean);
+              return <BrowserStrip key={first.id} operations={grouped} renderOperation={(chosen) => <OpCard key={chosen.id} so={group.find(item => item.id === chosen.id)!} op={chosen} index={ps.ops.findIndex(item => item.id === chosen.id)} />} />;
             })}
           </div>
         </>
@@ -820,6 +833,17 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const file=op.detail.kind==='read'||op.detail.kind==='edit'?prosePath(op.detail.path,workspaceRoot,true):undefined;
   const evidence=op.detail.kind==='read'?`${op.id}/read`:op.detail.kind==='edit'&&op.detail.hunks.length?`${op.id}/patch`:undefined;
   const title=file?<button type="button" className="op-title captured-file-path" title={displayTitle} aria-label={`Open captured work for ${file.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(file.path,op.detail.kind==='read'?op.detail.startLine:undefined,evidence);}}>{displayTitle}</button>:<span className="op-title" title={displayTitle}>{displayTitle}</span>;
+  const imagePath=pathOnlyImage(op);
+  const hasImage=op.images?.some(image=>image.sha);
+  // Keep the same evidence readers; images get the primary allocation, not a second card.
+  const imageOriginal=op.detail.kind==='read'&&!op.detail.excerptArtifactId
+    ?<ToolInput value={op.detail}/>:<ExpandedOperation op={op}/>;
+  const imageMaterial=imagePath||hasImage?<>
+    {imagePath?<PathImage op={op} path={imagePath}/>:<OpImages images={op.images!}/>}
+    {!imagePath&&['mcp','web'].includes(op.detail.kind)
+      ?expanded?<ExpandedOperation op={op}/>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>
+      :<details className="image-original"><summary>Original input and output</summary>{imageOriginal}</details>}
+  </>:null;
   return (
     <article ref={card}
       data-op-id={op.id}
@@ -856,12 +880,9 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </header>
       {op.declined && <DeclinedLine declined={op.declined} />}
       {!expanded && <div className="op-body">
-        <OpPreview op={op} resolving={so.resolving} onSource={measureSource} />
-        {op.images?.length && !(op.detail.kind === 'read' && !op.detail.excerptArtifactId) ? <OpImages images={op.images!} compact /> : null}
-        {op.detail.kind === 'other' && pathOnlyImage(op) ? <PathImage op={op} path={pathOnlyImage(op)!} /> : null}
+        {imageMaterial??<><OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
       </div>}
-      {expanded && <ExpandedOperation op={op} />}
-      {expanded && op.images?.length ? <OpImages images={op.images!} /> : null}
+      {expanded&&(imageMaterial?<div className="image-material-expanded">{imageMaterial}</div>:<ExpandedOperation op={op}/>)}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
       <EvidenceNote op={op} />
     </article>
@@ -877,6 +898,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
   const d = op.detail;
   const select = useApp((s) => s.select);
   const input = op.artifactIds.find((id) => id.endsWith('_input'));
+  if (browserStep(op)) return <div className="op-expanded mcp-material" onClick={e => e.stopPropagation()}><BrowserEvidence op={op} full/></div>;
   switch (d.kind) {
     case 'read':
       return <div className="op-expanded read-material" onClick={(e) => e.stopPropagation()}>
@@ -926,20 +948,13 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         <StructuredResult text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')} />
       </div>;
     case 'web':
-      return <div className="op-expanded web-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.url ?? d.query ?? 'Web request'}</div>
-        {d.fetch && <div className="material-context">{fetchFacts(d.fetch)}</div>}
-        {d.results?.length ? <><div className="material-context">{d.results.length} recorded result{d.results.length === 1 ? '' : 's'}</div><WebResults results={d.results} snippets/></> : null}
-        <div className="material-context">Captured result preview</div>
-        <CapturedOutcomes output={d.resultPreview}/>
-        <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
-      </div>;
+      return <div className="op-expanded web-material" onClick={e => e.stopPropagation()}><WebEvidence op={op} full/></div>;
     case 'plan':
       return <div className="op-expanded plan-material" onClick={(e) => e.stopPropagation()}><PlanChecklist op={op} full/></div>;
     case 'spawn':
       return <DelegationDetail op={op} d={d}/>;
     case 'other':
-      if (op.tool === 'AskUserQuestion') return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}><QuestionCard op={op}/><div className="material-context">Captured result</div><ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for the answer' : 'No result content captured')}/></div>;
+      if (isQuestionTool(op.tool)) return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}><QuestionCard op={op}/><div className="material-context">Captured result</div><ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for the answer' : 'No result content captured')}/></div>;
       return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">Captured input</div>
         <ToolInput value={d.input}/>
@@ -972,6 +987,7 @@ function ResultArea({ state, resolving, children }: { state: Operation['status']
 function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: boolean; onSource?: (text: string) => void }) {
   const d = op.detail;
   const set = useApp((s) => s.set);
+  if (browserStep(op)) return <BrowserEvidence op={op}/>;
   switch (d.kind) {
     case 'read':
       return <>
@@ -1045,14 +1061,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
         </div>
       );
     case 'web':
-      return (
-        <div className="web">
-          <div className="query">{d.url ?? d.query}</div>
-          <ResultArea state={op.status} resolving={resolving}>
-            {d.results?.length ? <WebResults results={d.results} limit={5}/> : d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
-          </ResultArea>
-        </div>
-      );
+      return <WebEvidence op={op}/>;
     case 'spawn':
       return (
         <div className="spawn">
@@ -1064,7 +1073,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'plan':
       return <PlanChecklist op={op}/>;
     default:
-      if (op.tool === 'AskUserQuestion') return <QuestionCard op={op}/>;
+      if (isQuestionTool(op.tool)) return <QuestionCard op={op}/>;
       return <>
         <ToolInput value={d.input}/>
         <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : undefined}</ResultArea>
@@ -1094,24 +1103,33 @@ function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { promp
     observer.observe(el);
     return () => observer.disconnect();
   }, [prompt, expanded]);
+  // Claude Code writes some notices in the user role (a finished background task, a command echo); those are not the person's words.
+  const injected = injectedMessage(prompt);
+  const who = injected ? <span className="turn-who turn-source" title={`Written into the journal by Claude Code, not typed by you${injected.hover ? ` · ${injected.hover}` : ''}`}>Claude Code · {injected.label}</span> : <span className="turn-who">You</span>;
+  const shown = injected ? injected.detail : prompt;
+  const captured = injected ? <details className="turn-captured"><summary>Captured text</summary><pre className="output">{prompt}</pre></details> : null;
   // The chapter treatment belongs to Modern; the retained UIs keep their original prompt block.
-  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn"><span className="turn-who">You</span><div className="turn-text">{prompt}</div></div>;
+  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn">{who}{shown && <div className="turn-text">{shown}</div>}{captured}{images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}</div>;
   const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
+  const basis = ledgerBasis(ledger);
+  const settings = ledger?.recorded?.settingsChange && mode === 'history' ? settingsLine(ledger.recorded.settingsChange) : undefined;
   return (
     <div className="turn">
-      <span className="turn-who">You</span>
-      <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{prompt}</div>
+      {who}
+      {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
+      {captured}
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
       {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
       {plan && <PinnedPlanList plan={plan} />}
       {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}
+      {settings && <div className="turn-mode" title={settings.title}>{settings.text}</div>}
       {fold ? (
         // The ledger line is the fold control: what the turn did is what stays when it folds.
-        <button type="button" className="turn-ledger turn-fold" aria-expanded={!fold.folded} aria-label={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `: ${parts.map((part) => part.text).join(', ')}` : ''}`} title={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `. ${LEDGER_BASIS}` : ''}`} onClick={(e) => { e.stopPropagation(); fold.toggle(); }}>
+        <button type="button" className="turn-ledger turn-fold" aria-expanded={!fold.folded} aria-label={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `: ${parts.map((part) => part.text).join(', ')}` : ''}`} title={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `. ${basis}` : ''}`} onClick={(e) => { e.stopPropagation(); fold.toggle(); }}>
           <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
           {parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}
         </button>
-      ) : parts.length > 0 && <div className="turn-ledger" title={LEDGER_BASIS}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
+      ) : parts.length > 0 && <div className="turn-ledger" title={basis}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
     </div>
   );
 }

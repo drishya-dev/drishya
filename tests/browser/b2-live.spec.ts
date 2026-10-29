@@ -160,7 +160,7 @@ test('long history mounts only nearby work while selected evidence and live upda
 
   const selected = history.locator('article[data-op-id]').first();
   const selectedId = await selected.getAttribute('data-op-id');
-  await selected.locator('.op-head').click();
+  await selected.press('Enter'); // The captured-file title opens a separate reader.
   await history.locator(`article[data-op-id="${selectedId}"]`).focus();
   // Target the history's reading gutter: the centre can be a nested source or
   // terminal scroller, whose wheel consumption is deliberately independent.
@@ -174,7 +174,7 @@ test('long history mounts only nearby work while selected evidence and live upda
   // Detached reading must not auto-follow those late measurements.
   await expect.poll(async () => {
     await page.mouse.wheel(0, 100_000);
-    await history.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     return history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop));
   }, { message: 'Deliberate wheel navigation reaches the measured history end' }).toBeLessThan(2);
   await expect.poll(() => history.locator('[data-passage-id]').count()).toBeLessThan(80);

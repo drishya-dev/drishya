@@ -61,6 +61,8 @@
 @media(pointer:coarse) {:root[data-ui-version=modern] .file-peek-reader .reading-window-actions :is(.btn,.icon-btn) {width:40px;height:44px;min-height:44px;}}
 
 :root[data-ui-version=modern] .developer-workspace {top:var(--workspace-leading-bottom,132px);}
+/* UI-12: beside the Files / Repository bar (wide windows) the panel rises into the band under the header instead of waiting for the bar's bottom edge. */
+@media(min-width:821px){:root[data-ui-version=modern] .developer-workspace {top:calc(var(--workspace-header-h,62px) + 12px);}}
 
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {top:var(--workspace-leading-bottom,var(--workspace-tools-bottom,132px));}
 
@@ -83,6 +85,8 @@
 
 /* Wide diff cards: the width their longest line needs, read without wrapping and scrolled sideways inside the card. */
 :root[data-ui-version=modern] .connected-workspace .history .op[data-diff] { flex: 0 1 min(var(--reading-width,440px),100%); max-width: 100%; }
+/* Wide patches begin their own row without changing source type or reading motion. */
+:root[data-ui-version=modern] .connected-workspace .history .op.op-edit.shape-wide { flex: 0 0 100%; }
 :root[data-ui-version=modern] .history .op[data-diff=code] .op-body .diff { width: max-content; min-width: 100%; }
 :root[data-ui-version=modern] .history .op[data-diff=code] .op-body .diff .ln-tx { white-space: pre; overflow-wrap: normal; flex: 1 0 auto; }
 /* Added/removed counts sit beside the title, in the mono face used by the code. */
@@ -130,3 +134,9 @@
 .history .turn-fold[aria-expanded=false]:active svg { transform: rotate(-90deg) scale(.9); }
 .history .folded-turn .turn { margin-bottom: 6px; }
 @media (prefers-reduced-motion: reduce) { .history .turn-fold, .history .turn-fold svg { transition: none; } }
+/* CONTENT-11: a notice Claude Code wrote in the user role reads as the harness's, quieter than a typed prompt. */
+.history .turn-source { color: var(--t3); letter-spacing: 0; text-transform: none; }
+:root[data-experience] .history .turn-source ~ .turn-text { font-size: 13px; font-weight: 400; line-height: 1.6; color: var(--t2); }
+.history .turn-captured { margin-top: 4px; font-size: 11px; color: var(--t3); }
+.history .turn-captured summary { cursor: pointer; width: max-content; }
+.history .turn-captured .output { margin: 6px 0 0; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }

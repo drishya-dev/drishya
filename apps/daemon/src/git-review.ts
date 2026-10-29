@@ -4,11 +4,13 @@ import { lstat, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { redactText } from '@drishya/privacy';
 import {safeGitPath as safe,gitDiffFlags as diffFlags} from './git-paths.ts';
-import {gitHistory,gitCommit,type GitHistoryQuery} from './git-history.ts';
+import {gitHistory,gitCommit,verifyGitHistoryGeneration,type GitHistoryQuery} from './git-history.ts';
 import { HttpError } from './app.ts';
 import type { WorkspaceAccess } from './workspace.ts';
 
 import type { GitFile, GitSnapshot, GitOmission } from './git-types.ts';
+import type {HistoryService} from './history.ts';
+import {gitSessionContext} from './git-session-context.ts';
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
 
 /** Fixed argv without a shell; snapshot also overrides configured content filters. */
@@ -66,7 +68,8 @@ export class GitReview {
   private busy = new Set<string>();
   private workspace: WorkspaceAccess;
   private read: GitReader;
-  constructor(workspace: WorkspaceAccess, read: GitReader = readGit) { this.workspace = workspace; this.read = read; }
+  private historyService?:HistoryService;
+  constructor(workspace: WorkspaceAccess, read: GitReader = readGit, historyService?:HistoryService) { this.workspace = workspace; this.read = read; this.historyService=historyService; }
   revoke(id: string) { this.grants.delete(id); }
   status(id: string) { return { approved: this.grants.has(id), scope: 'current-git' as const }; }
   async approve(id: string) { await this.workspace.root(id); this.grants.add(id); return this.status(id); }
@@ -83,7 +86,15 @@ export class GitReview {
       return result;
     }finally{this.busy.delete(id);}
   }
-  history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,git=>gitHistory(git,query));}
+  history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,async git=>{
+    const page=await gitHistory(git,query);
+    if(!this.historyService||id.includes('+'))return page;
+    const context=await gitSessionContext(git,page.commits.map(commit=>commit.hash),page.start===0,path=>this.workspace.read(id,path,0,5001));
+    const evidence=await this.historyService.gitSessionEvidence(id,context.query);
+    // Check refs again after reading patches and captured evidence.
+    await verifyGitHistoryGeneration(git,page.generation);
+    return {...page,sessionLinks:evidence.links,...(page.start===0?{workingTree:{files:evidence.working,omitted:context.omitted}}:{})};
+  });}
   commit(id:string,hash:string,parent=0,start=0,generation?:string) {return this.readHistory(id,git=>gitCommit(git,hash,parent,start,generation));}
   async snapshot(id: string, start = 0): Promise<GitSnapshot> {
     if (!Number.isSafeInteger(start) || start < 0) throw new HttpError(400, 'Invalid Git page.');

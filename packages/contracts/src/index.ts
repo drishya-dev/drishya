@@ -28,6 +28,7 @@ export type ObservationKind =
   | 'session.meta'
   | 'turn.start'
   | 'turn.end'
+  | 'turn.detail'
   | 'message.user'
   | 'message.assistant'
   | 'reasoning'
@@ -75,6 +76,7 @@ export type ObservationPayload =
   | AgentStopPayload
   | GapPayload
   | UsagePayload
+  | TurnDetailPayload
   | ItemPayload
   | UnknownPayload
   | Record<string, unknown>;
@@ -91,6 +93,48 @@ export interface SessionMetaPayload {
   parentThreadId?: string;
   forkedFromId?: string;
   effort?: string;
+  /** How the harness says this thread began: `user` or `subagent`. */
+  threadSource?: string;
+  /** The client or command that started the thread, as the harness names it (e.g. `exec`, `vscode`). */
+  startedBy?: string;
+  /** Sub-agent nesting depth below the root thread, as recorded (DATA-3). */
+  spawnDepth?: number;
+  agentRole?: string;
+}
+
+/** Settings a turn ran with, as the harness recorded them (Codex `turn_context`). Policy names only, never paths. */
+export interface TurnSettings {
+  model?: string;
+  effort?: string;
+  approvalPolicy?: string;
+  sandbox?: string;
+  permissionProfile?: string;
+  collaborationMode?: string;
+  approvalsReviewer?: string;
+  personality?: string;
+}
+
+/**
+ * Facts about one turn (DATA-3, schema S1). Separate from `turn.start`/`turn.end` so a re-import can add them to
+ * recordings made earlier without a second turn; several observations may describe one `turnId` and the reducer merges them.
+ */
+export interface TurnDetailPayload {
+  turnId: string;
+  rootTurnId?: string;
+  parentTurnId?: string;
+  /** Why the turn began, as the harness names it (`composer`, `exec`, `edit_user_message`, …). */
+  trigger?: string;
+  initiatingAgentPath?: string;
+  /** ISO times converted from the harness's epoch seconds; nothing is measured by Drishya. */
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
+  timeToFirstTokenMs?: number;
+  outcome?: 'completed' | 'aborted';
+  reason?: string;
+  /** Present only if the harness recorded an error for the turn; the text is redacted at ingest. */
+  error?: { message?: string; code?: string };
+  settings?: TurnSettings;
 }
 
 /** A file at the start of a turn, as the harness checkpointed it: a backup reference, or "did not exist". */
@@ -374,7 +418,7 @@ export type OperationDetail =
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
   | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[]; /** What the harness recorded about a page fetch. */ fetch?: { status?: number; statusText?: string; bytes?: number; durationMs?: number } }
   | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string; /** The harness recorded the task text only in encrypted form. */ descriptionEncrypted?: boolean }
-  | { kind: 'plan'; items: { text: string; status: string }[] }
+  | { kind: 'plan'; items: { id?: string; text: string; status: string }[]; /** Derived native task-list isolation boundary, not a native list id. */ scope?: string; omittedItems?: number; document?: { text: string; truncated: boolean; artifactId: string; source?: 'file' | 'proposal' } }
   | { kind: 'other'; input: unknown; resultPreview?: string };
 
 export interface WebResult { url: string; title?: string; domain?: string; snippet?: string }
@@ -433,6 +477,11 @@ export interface Agent {
   address?: string;
   effort?: string;
   forkedFromId?: string;
+  /** Recorded thread facts (DATA-3): where the thread began, how deep a sub-agent sits, its stated role. */
+  threadSource?: string;
+  startedBy?: string;
+  spawnDepth?: number;
+  role?: string;
   lastSequence: number;
   stoppedSequence?: number;
 }
@@ -523,7 +572,19 @@ export interface Passage {
   lastStep: number;
 }
 
+/** One turn as the harness recorded it, merged from `turn.start`, `turn.end` and `turn.detail` (DATA-3). */
+export interface Turn extends Omit<TurnDetailPayload, 'turnId'> {
+  id: string;
+  agentId: string;
+  startSequence?: number;
+  endSequence?: number;
+  /** Always captured: harnesses that record no turns (Claude Code) get none here rather than derived ones. */
+  basis: 'captured';
+}
+
 export interface Projection {
+  /** Turns the harness recorded, in start order. Absent in older projections and for harnesses with no turn records. */
+  turns?: Turn[];
   usage?: { latest?: UsagePayload; byTurn: Record<string, UsagePayload> };
   reducerVersion: string;
   recordingId: string;
@@ -550,6 +611,14 @@ export interface Projection {
 // ─── Recordings and sources ──────────────────────────────────────────────────────────────
 
 export interface RecordingSummary {
+  /** Harness-reported accounting only; absent fields were not recorded. */
+  stats?: {
+    source: 'claude-cost-state' | 'codex-turns';
+    durationMs?: number;
+    linesAdded?: number;
+    linesRemoved?: number;
+    lastOutcome?: 'completed' | 'aborted';
+  };
   id: string;
   title: string;
   harness: HarnessId;
@@ -643,7 +712,7 @@ export interface RepoGraph {
   edges: GraphEdge[];
   unresolved: { from: string; specifier: string }[];
   truncated: boolean;
-  stats: { files: number; parsed: number; edges: number; unresolved: number; skipped: number; ms: number };
+  stats: { files: number; parsed: number; edges: number; unresolved: number; skipped: number; ms: number; /** Nested checkouts (agent worktrees, submodules) left out of the walk. */ nestedCheckouts?: number };
   /** Set by the local API: the workspace changed since this map was built. Refresh is explicit. */
   stale?: boolean;
   /** Set by the local API on a files-only map: this captured root can be scanned once approved. */

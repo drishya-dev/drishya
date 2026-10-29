@@ -34,3 +34,15 @@
 .path-image-reader-open {justify-self:start;max-width:100%;padding:0;border:0;background:none;cursor:zoom-in;}
 .path-image-reader-open img {display:block;}
 .path-image-reader-open:focus-visible {outline:2px solid var(--t2);outline-offset:3px;border-radius:6px;}
+
+/* Image operations spend their surface on the material; raw requests remain one disclosure away. */
+.op-body > .op-images:not(.compact), .image-material-expanded > .op-images {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));}
+.op-body > .op-images:not(.compact) .op-image, .image-material-expanded > .op-images .op-image {width:100%;height:clamp(220px,32vh,380px);aspect-ratio:auto;}
+.path-image-current > .path-image-reader-open {width:100%;justify-self:stretch;}
+.path-image-current > .path-image-reader-open > img {width:100%;height:clamp(240px,36vh,420px);max-width:none;object-fit:contain;}
+.image-original {margin-top:8px;color:var(--t3);font:11.5px/1.6 var(--sans);}
+.image-original > summary {cursor:pointer;padding-block:4px;}
+.image-material-expanded {padding:12px;min-width:0;}
+.path-image-consent {font:12px/1.6 var(--sans);color:var(--t2);}
+.path-image-consent p {margin:4px 0 8px;}
+.path-image-consent button {padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--s2);color:var(--t1);cursor:pointer;}

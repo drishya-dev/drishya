@@ -77,6 +77,10 @@ const SLICE_BYTES = 1024 * 1024;
 // Scheduling budget only: complete-record commit size and hard limits stay unchanged.
 const RECORD_YIELD_MS = 8;
 const MAX_RECORD_BYTES = 16 * 1024 * 1024;
+// DATA-3 (#206) landed at this instant. createdAt is the initial import time, not native activity.
+const DATA3_IMPORTED_AFTER = Date.parse('2026-10-27T08:01:09Z');
+const LEGACY_CODEX_RESCAN = 'codex-turn-details-rescan-v1:';
+interface LegacyRescanResult { attempted: number; completed: number; unavailable: number; failed: number }
 
 /** What the ingestor remembers about a recording's collection; `health()` derives the state. */
 interface HealthRecord {
@@ -125,6 +129,7 @@ export class Ingestor extends EventEmitter {
   }
 
   private closed = false;
+  private legacyCodexRescan?: Promise<LegacyRescanResult>;
   private readonly now: () => Date;
   private readonly idleMs: number;
   private readonly liveTurnBytes: number;
@@ -221,6 +226,57 @@ export class Ingestor extends EventEmitter {
       }
       return this.syncUnlocked(recordingId, { acceptUnterminated: false });
     });
+  }
+
+  /** One background startup pass; successful native rereads are remembered across restarts. */
+  rescanLegacyCodex(): Promise<LegacyRescanResult> {
+    return this.legacyCodexRescan ??= this.rescanLegacyCodexOnce();
+  }
+
+  private async rescanLegacyCodexOnce(): Promise<LegacyRescanResult> {
+    const result: LegacyRescanResult = { attempted: 0, completed: 0, unavailable: 0, failed: 0 };
+    // Let the listening server return before any native read. Never hold startup on old history.
+    await new Promise<void>(resolve => setImmediate(resolve));
+    if (this.closed) return result;
+    const candidates = this.store.listRecordings().filter(r => r.harness === 'codex' && Date.parse(r.createdAt) < DATA3_IMPORTED_AFTER);
+    for (const recording of candidates) {
+      if (this.closed) break;
+      if (!this.store.getRecording(recording.id)) continue;
+      const key = LEGACY_CODEX_RESCAN + recording.id;
+      if (this.store.db.prepare('SELECT 1 FROM meta WHERE key=?').get(key)) continue;
+      result.attempted++;
+      try {
+        // rescan already owns the recording lock. Do not wrap it in another same-recording lock.
+        let scan = await this.rescan(recording.id);
+        while (scan.more && !this.closed) {
+          await new Promise<void>(resolve => setImmediate(resolve));
+          if (this.closed) break;
+          scan = await this.sync(recording.id, { acceptUnterminated: false });
+        }
+        if (!scan.more && this.store.getRecording(recording.id)) {
+          const health = this.healthRecords.get(recording.id);
+          // readSource can resolve normally after a source disappears. That is not a completed reread.
+          if (!health || health.phase !== 'ok' || !health.sources.length || health.sources.some(source => source.state !== 'ok')) {
+            result.unavailable++;
+            continue;
+          }
+          this.store.db.prepare('INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)').run(key, '1');
+          result.completed++;
+        }
+      } catch (error) {
+        if (!this.store.getRecording(recording.id)) continue;
+        const errno = (error as NodeJS.ErrnoException)?.code;
+        const missing = errno === 'ENOENT';
+        if (missing) result.unavailable++; else result.failed++;
+        this.setHealth(recording.id, {
+          phase: missing ? 'missing-source' : 'failed',
+          error: { code: missing ? 'missing-source' : errno === 'EACCES' || errno === 'EPERM' ? 'permission-denied' : 'read-failed',
+            message: missing ? 'The original journal is unavailable. Captured history remains readable.' : 'The journal could not be enriched. Captured history remains readable.' },
+        });
+        // No completion marker: a later startup may retry a restored/readable source.
+      }
+    }
+    return result;
   }
 
   private async syncUnlocked(recordingId: string, opts: SyncOptions): Promise<{ added: number; gaps: number; more: boolean }> {
@@ -561,7 +617,7 @@ export class Ingestor extends EventEmitter {
     this.closed = true;
     const running = [...this.live.values()].map((r) => r.current);
     this.stopAll();
-    await Promise.allSettled([...running, ...this.locks.values()]);
+    await Promise.allSettled([...running, ...this.locks.values(), this.legacyCodexRescan]);
   }
 
   /**

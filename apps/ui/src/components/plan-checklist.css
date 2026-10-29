@@ -23,3 +23,18 @@
 .plan-pinned .plan-list li .plan-text {transition:text-decoration-color .15s ease;}
 .plan-pinned-more {justify-self:start;font:11px/1.5 var(--sans);color:var(--t3);}
 @media(prefers-reduced-motion:reduce){.plan-pinned .plan-list li,.plan-pinned .plan-list li .plan-text{transition:none;}}
+
+/* Plan documents need reading width; revision receipts keep their compact allocation. */
+.connected-workspace .history .op.op-plan:has(.plan-document) {flex:0 1 min(620px,100%);max-width:100%;}
+.plan-document :is(h1,h2,h3,h4) {margin:4px 0;font:600 15px/1.4 var(--sans);color:var(--t1);}
+.plan-document :is(p,li) {font:12.5px/1.65 var(--sans);overflow-wrap:anywhere;}
+.plan-document :is(ol,ul) {margin:4px 0;padding-inline-start:1.6em;}
+
+/* The checklist has one home. Earlier updates remain selectable reading receipts. */
+:root[data-ui-version=modern] .connected-workspace .history .op.op-plan:has(.plan-earlier) {flex:0 1 100%;flex-direction:row;align-items:center;max-height:none;border:0;background:transparent;box-shadow:none;}
+:root[data-ui-version=modern] .history .op.op-plan:has(.plan-earlier)>.op-head {order:2;flex:none;padding:4px 8px;border:0;background:transparent;}
+:root[data-ui-version=modern] .history .op.op-plan:has(.plan-earlier)>.op-head .studio-action-identity {display:none;}
+:root[data-ui-version=modern] .history .op.op-plan:has(.plan-earlier)>.op-body {flex:1;min-width:0;padding:4px 8px;mask-image:none;-webkit-mask-image:none;}
+
+:root[data-ui-version=modern] .history .ops-row:has(>.op-plan .plan-earlier):not(:has(>.op:not(.op-plan))) {row-gap:8px;}
+:root[data-ui-version=modern] .connected-workspace .history .op.op-plan:has(.plan-earlier) {max-width:min(620px,100%);}

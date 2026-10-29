@@ -1,7 +1,9 @@
+import type { FileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/reading-target.ts';
 import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
+import type {DelegationThread} from '../../daemon/src/delegation-types.ts';
 // Where the UI gets its data: the local daemon (live, importable) or a static replay bundle
 // (the hosted demo). Both expose the same surface, so every screen works in both.
 
@@ -80,6 +82,7 @@ export interface DataSource {
   findingMembers?(id:string,key:string,page?:number,q?:string):Promise<FindingMembers>;
   reviewInsights?(id:string,page?:number,kind?:ReviewFinding['kind']):Promise<ReviewInsightsPage>;
   commands?(id:string,query:CommandQuery):Promise<CommandPage>;
+  delegationThread?(id:string,operationId:string,start?:number,step?:number,taskStart?:number):Promise<DelegationThread>;
   readingTarget?(id: string, query: ReadingQuery): Promise<ReadingTarget | null>;
   fileEvidence?(id: string, paths: string[], step?: number): Promise<FileEvidence[]>;
   summary?(id: string, from?: number): Promise<HistorySummary>;
@@ -88,7 +91,7 @@ export interface DataSource {
   /** What each turn did, over the whole recording, whatever window the reader holds. */
   turns?(id: string): Promise<{ turns: TurnLedger[] }>;
   historyMarker?(id: string, step: number, types: Marker['type'][], direction: 1 | -1): Promise<number | undefined>;
-  fileOperations?(id: string, path: string, start: number, count: number, step?: number, query?: string): Promise<{ operations: Operation[]; total: number }>;
+  fileOperations?(id: string, path: string, start: number, count: number, step?: number, query?: string, selectedOperationId?: string): Promise<FileOperationPage>;
   /** `refresh` rebuilds a stale map; otherwise the cached map is returned unchanged. */
   graph(id: string, refresh?: boolean): Promise<RepoGraph | undefined>;
   /** Approves scanning the recording's captured root for the map, and returns the full map. */
@@ -118,6 +121,7 @@ export interface DataSource {
   imageUrl?(id: string, sha: string): string;
   /** CONTENT-1 slice 3: today's file behind an image path an action referenced; needs workspace approval. */
   currentImageUrl?(id: string, operationId: string): string;
+  approveCurrentImage?(id:string,operationId:string):Promise<unknown>;
   /** DATA-5: a Claude Code checkpoint backup, read on request with workspace approval. Local recordings only. */
   checkpoint?(id: string, backup: string): Promise<CheckpointFile>;
   /** Moves the mark. Only explicit reader actions call this. */
@@ -155,6 +159,7 @@ export interface ControllerStatus {
 }
 /** Explicit local workspace/controller capabilities; offline bundles never call them. */
 export const workspaceApi = {
+  fileRoots: (id:string) => req<{roots:import('./lib/worktree-files.ts').RecordedFileRoot[];truncated:boolean}>(`/v1/recordings/${encodeURIComponent(id)}/file-roots`),
   searchLibrary: (query:import('../../../packages/store/src/search-types.ts').LibrarySearchQuery) => req<import('../../../packages/store/src/search-types.ts').LibrarySearchPage>(`/v1/search-library?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]))}`),
   workingLocations: () => req<import('../../../packages/contracts/src/working-locations.ts').WorkingLocations>('/v1/working-locations'),
   saveWorkingLocations: (snapshot:import('../../../packages/contracts/src/working-locations.ts').WorkingLocations,keepalive=false) => req<{saved:boolean;revisions:Record<string,number>}>('/v1/working-locations',{method:'PUT',json:snapshot,keepalive}),
@@ -233,6 +238,7 @@ export const daemon: DataSource = {
   findingMembers:(id,key,page=0,q='')=>req(`/v1/recordings/${encodeURIComponent(id)}/finding-members?${new URLSearchParams({key,page:String(page),q})}`),
   reviewInsights:(id,page=0,kind)=>req(`/v1/recordings/${encodeURIComponent(id)}/review-insights?${new URLSearchParams({page:String(page),...(kind?{kind}:{})})}`),
   commands:(id,query)=>req(`/v1/recordings/${encodeURIComponent(id)}/commands?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),
+  delegationThread:(id,operationId,start=0,step,taskStart=0)=>req(`/v1/recordings/${encodeURIComponent(id)}/delegation-thread/${encodeURIComponent(operationId)}?${new URLSearchParams({start:String(start),taskStart:String(taskStart),...(step===undefined?{}:{step:String(step)})})}`),
   storage: () => req('/v1/storage'),
   readingTarget: (id, query) => req(`/v1/recordings/${encodeURIComponent(id)}/reading-target?${new URLSearchParams(Object.entries(query).filter(([,value]) => value !== undefined).map(([key,value]) => [key, String(value)]))}`),
   fileEvidence: (id, paths, step) => req(`/v1/recordings/${encodeURIComponent(id)}/file-evidence?${new URLSearchParams([...paths.map(path => ['path', path]), ...(step === undefined ? [] : [['step', String(step)]])])}`),
@@ -247,7 +253,7 @@ export const daemon: DataSource = {
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
   history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
   historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,
-  fileOperations: (id, path, start, count, step, query = '') => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query })}`),
+  fileOperations: (id, path, start, count, step, query = '', selectedOperationId) => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query, ...(selectedOperationId ? { selected: selectedOperationId } : {}) })}`),
   graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
   approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
@@ -272,6 +278,7 @@ export const daemon: DataSource = {
       throw e;
     }
   },
+  approveCurrentImage:(id,operation)=>req(`/v1/recordings/${encodeURIComponent(id)}/workspace/image-grant`,{method:'POST',json:{operation}}),
   currentImageUrl: (id, operationId) => `/v1/recordings/${encodeURIComponent(id)}/workspace/image?operation=${encodeURIComponent(operationId)}`,
   imageUrl: (id, sha) => `/v1/recordings/${encodeURIComponent(id)}/images/${sha}`,
   checkpoint: (id, backup) => req<CheckpointFile>(`/v1/recordings/${encodeURIComponent(id)}/checkpoint/${encodeURIComponent(backup)}`),

@@ -314,7 +314,7 @@ test('file relationships start at measured renderer nodes and fall back when the
     document.body.append(cover);
   }, point);
   await page.mouse.move(0, 0); await edit.hover();
-  const fileReference = page.locator('.origin-thread[data-origin-type="File reference"]');
+  const fileReference = page.locator('.origin-thread[data-origin-type="File tree row"]');
   await expect(fileReference).toHaveCount(1);
   const folder = (await page.locator('.folder-tree [data-spine-path="test/checkout.test.ts"]').boundingBox())!;
   const folderCoordinates = (await fileReference.getAttribute('d'))!.match(/^M([\d.-]+),([\d.-]+)/)!;
@@ -328,7 +328,7 @@ test('file relationships start at measured renderer nodes and fall back when the
   await page.locator('.folder-tree [data-spine-path="test/checkout.test.ts"]').scrollIntoViewIfNeeded();
   await edit.locator('.op-head').hover();
   await expect(page.locator('.origin-thread[data-origin-type="Repository node"]')).toHaveCount(0);
-  await expect(page.locator('.origin-thread[data-origin-type="File reference"]')).toHaveCount(1);
+  await expect(page.locator('.origin-thread[data-origin-type="File tree row"]')).toHaveCount(1);
 });
 
 test('verification marks represent recorded counts and open the captured failing assertion', async ({ page }) => {

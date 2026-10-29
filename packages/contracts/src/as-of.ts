@@ -18,6 +18,8 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     ...projection,
     // Accounting points do not own timeline steps. Whole-session totals are not historical evidence.
     usage: undefined,
+    // Turn timing, outcome and errors describe the finished turn: a past step must not show what came later.
+    turns: undefined,
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
     ...(projection.notices ? { notices: projection.notices.filter((n) => noticeIds.has(n.id)) } : {}),
@@ -55,7 +57,7 @@ function pendingDetail(detail: OperationDetail): OperationDetail {
     case 'mcp': return { kind: 'mcp', server: detail.server, tool: detail.tool, input: detail.input };
     case 'web': return { kind: 'web', url: detail.url, query: detail.query };
     case 'spawn': return { kind: 'spawn', agentType: detail.agentType, description: detail.description };
-    case 'plan': return { kind: 'plan', items: detail.items };
+    case 'plan': return { kind: 'plan', items: detail.scope || detail.document ? [] : detail.items, ...(detail.scope || detail.document ? { scope: detail.scope ?? 'pending-document' } : {}) };
     case 'other': return { kind: 'other', input: detail.input };
   }
 }

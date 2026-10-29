@@ -67,3 +67,27 @@ for (const width of [600, 601, 640, 700, 701, 820, 1024]) {
     expect(actions!.right).toBeLessThanOrEqual(width + 0.5);
   });
 }
+
+// UI-11: the cluster reads as one group of line icons on one baseline, and the search field has no outline of its own.
+for (const width of [700, 1024, 1440]) {
+  test(`header glyphs are line icons on one baseline and search has no stray outline at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(url());
+    await expect(page.locator('.modern-session-header')).toBeVisible();
+    const glyphs = await page.evaluate(() => [...document.querySelectorAll<SVGElement>('.modern-session-header .studio-actions svg')].map((svg) => {
+      const r = svg.getBoundingClientRect(), cs = getComputedStyle(svg);
+      return { label: svg.closest('button,summary')?.getAttribute('aria-label') ?? '', top: r.top, height: r.height, fill: cs.fill, stroke: cs.strokeWidth };
+    }));
+    expect(glyphs.length).toBeGreaterThanOrEqual(3);
+    for (const glyph of glyphs) { expect(glyph.fill, `${glyph.label} must not be filled (a solid square)`).toBe('none'); expect(glyph.stroke, glyph.label).toBe('1.5px'); }
+    expect(new Set(glyphs.map((glyph) => Math.round(glyph.top))).size, 'every glyph shares one baseline').toBe(1);
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    const input = page.getByRole('textbox', { name: 'Search prose, commands, paths' });
+    await expect(input).toBeFocused();
+    const style = await input.evaluate((el) => { const cs = getComputedStyle(el); return { outline: cs.outlineStyle, shadow: cs.boxShadow, border: cs.borderTopWidth }; });
+    expect(style).toEqual({ outline: 'none', shadow: 'none', border: '0px' });
+    const field = page.locator('.search-field');
+    const [underline, rest] = await Promise.all([field.evaluate((el) => getComputedStyle(el).borderBottomColor), page.locator('.search-scopes').evaluate((el) => getComputedStyle(el).borderBottomColor)]);
+    expect(underline, 'focus shows as a brighter underline').not.toBe(rest);
+  });
+}

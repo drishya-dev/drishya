@@ -3,6 +3,7 @@
 // exposed only as summaries; encrypted reasoning is never decoded or shown.
 
 import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation, UsagePayload } from '@drishya/contracts';
 import {
@@ -24,6 +25,8 @@ import {
 } from '@drishya/capture-core';
 import { imageCandidate, sanitize } from '@drishya/privacy';
 import { typedItem } from './items.ts';
+import { agentDelivery } from './agent-delivery.ts';
+import { turnDetail, turnEndedDetail, turnSettingsDetail, turnStartedDetail } from './turns.ts';
 
 export const descriptor: AdapterDescriptor = {
   id: 'codex',
@@ -159,6 +162,16 @@ export function parseShellOutput(raw: unknown): { text?: string; exitCode?: numb
 
 export function createParser(_ctx: ParseContext): RecordParser {
   const calls = new Map<string, { tool: string; intent: ToolIntent }>();
+  const delivered = new Map<string, Set<string>>();
+  const rememberDelivery = (delivery: Rec, text: unknown) => {
+    if (typeof delivery.nativeId !== 'string') return false;
+    const clean = sanitize(delivery).value;
+    const digest = text && typeof text === 'object' && '$blob' in text ? text.$blob : createHash('sha256').update(sanitize(typeof text === 'string' ? text : '').value).digest('hex');
+    const key = JSON.stringify([clean.sender, clean.recipient, clean.type, clean.state, digest]);
+    const seen = delivered.get(clean.nativeId) ?? new Set<string>();
+    const duplicate = seen.has(key);seen.add(key);delivered.set(clean.nativeId, seen);
+    return duplicate;
+  };
   const openExec = new Set<string>();
   const track = (id: string, tool: string) => { if (tool === 'exec' || tool === 'functions.exec') openExec.add(id); };
   let cwd: string | undefined;
@@ -170,6 +183,8 @@ export function createParser(_ctx: ParseContext): RecordParser {
   return {
     prime(observations: Observation[]) {
       for (const o of observations) {
+        const delivery = (o.payload as Rec).delivery;
+        if (o.kind === 'message.assistant' && delivery) rememberDelivery(delivery, (o.payload as Rec).text);
         if (o.kind === 'turn.start') {
           const payload = o.payload as { turnId?: string };
           turnId = payload.turnId;
@@ -208,16 +223,21 @@ export function createParser(_ctx: ParseContext): RecordParser {
         const identity = Object.fromEntries(Object.entries({ agentNickname: p.agent_nickname, agentPath: p.agent_path, parentThreadId: p.parent_thread_id, forkedFromId: p.forked_from_id, effort: p.reasoning_effort }).filter(([, value]) => typeof value === 'string'));
         // Existing metadata IDs/payloads remain unchanged. New identity data can enrich old recordings.
         if (Object.keys(identity).length) out.push({ ...base, part: 1, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', ...identity } });
+        // Lineage facts arrived later than the identity above (DATA-3), so they take their own part and can enrich old recordings.
+        const spawn = p.source?.subagent?.thread_spawn;
+        const lineage = Object.fromEntries(Object.entries({ threadSource: p.thread_source, startedBy: typeof p.source === 'string' ? p.source : undefined, spawnDepth: Number.isSafeInteger(spawn?.depth) ? spawn.depth : undefined, agentRole: spawn?.agent_role }).filter(([, value]) => value !== undefined && value !== null && (typeof value === 'number' || typeof value === 'string')));
+        if (Object.keys(lineage).length) out.push({ ...base, part: 2, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', ...lineage } });
         return out;
       }
       if (type === 'turn_context') {
+        const detail = turnDetail(base, turnSettingsDetail(p));
         const nextCwd = typeof p.cwd === 'string' ? p.cwd : cwd;
         const nextModel = typeof p.model === 'string' ? p.model : model;
         if (nextCwd !== cwd || nextModel !== model) {
           cwd = nextCwd; model = nextModel;
-          return [{ ...base, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', cwd, model } }];
+          return [{ ...base, workspaceRoot: cwd, kind: 'session.meta', payload: { harness: 'codex', cwd, model } }, ...detail];
         }
-        return [];
+        return detail;
       }
       if (type === 'event_msg') {
         const t = String(p.type ?? '');
@@ -231,7 +251,7 @@ export function createParser(_ctx: ParseContext): RecordParser {
           if (parsed.payload.agent && typeof p.item.agent_nickname === 'string') out.push({ ...base, part: 1, agentId: parsed.payload.agent.path ? agentFromAddress(parsed.payload.agent.path) : `agent:${parsed.payload.agent.threadId}`, kind: 'session.meta', payload: { harness: 'codex', agentNickname: p.item.agent_nickname } });
           return out;
         }
-        if (t === 'task_started') { turnId = typeof p.turn_id === 'string' ? p.turn_id : undefined; return [{ ...base, kind: 'turn.start', payload: { turnId: p.turn_id } }]; }
+        if (t === 'task_started') { turnId = typeof p.turn_id === 'string' ? p.turn_id : undefined; return [{ ...base, kind: 'turn.start', payload: { turnId: p.turn_id } }, ...turnDetail(base, turnStartedDetail(p))]; }
         if (t === 'token_count') {
           const keys = { input_tokens: 'input', cached_input_tokens: 'cachedInput', cache_write_input_tokens: 'cacheWrite', output_tokens: 'output', reasoning_output_tokens: 'reasoningOutput', total_tokens: 'total' } as const;
           const tokens = usageTokens(p.info?.total_token_usage, keys), request = usageTokens(p.info?.last_token_usage, keys);
@@ -244,8 +264,8 @@ export function createParser(_ctx: ParseContext): RecordParser {
           if (request) emit(1, { ...shared, cumulative: false, tokens: request });
           return out;
         }
-        if (t === 'task_complete') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }]; }
-        if (t === 'turn_aborted') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }]; }
+        if (t === 'task_complete') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }, ...turnDetail(base, turnEndedDetail(p, 'completed'))]; }
+        if (t === 'turn_aborted') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }, ...turnDetail(base, turnEndedDetail(p, 'aborted'))]; }
         if (t === 'context_compacted') return [{ ...base, kind: 'compaction', payload: {} }];
         if (IGNORED_EVENTS.has(t)) return [];
         return [{ ...base, kind: 'unknown', payload: { recordType: `event_msg:${t}` }, availability: 'metadata-only' }];
@@ -313,6 +333,12 @@ export function createParser(_ctx: ParseContext): RecordParser {
           const author = agentFromAddress(p.author);
           if (author === MAIN) return [];
           const text = textOf((Array.isArray(p.content) ? p.content : []).filter((c: Rec) => c?.type === 'input_text' || c?.type === 'output_text')) ?? '';
+          const delivery = agentDelivery(p, text);
+          if (delivery) {
+            // Native delivery identity, not equal text: distinct messages can repeat the same findings.
+            if (rememberDelivery(delivery.delivery, delivery.text)) return [];
+            return [{ ...base, agentId: author, kind: 'message.assistant', payload: { text: delivery.text, delivery: delivery.delivery }, contentKeys: ['text'], availability: delivery.delivery.state === 'complete' ? 'complete' : delivery.delivery.state === 'partial' ? 'partial' : 'metadata-only' }];
+          }
           return text ? [{ ...base, agentId: author, kind: 'message.assistant', payload: { text }, contentKeys: ['text'] }] : [];
         }
         case 'web_search_call':

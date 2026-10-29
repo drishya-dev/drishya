@@ -97,7 +97,7 @@ test('all script-result images stay at their exact parent when reading different
   expect(children).toHaveLength(2); let urls: string[] | undefined;
   for (const child of children) {
     const card = page.locator(`article[data-op-id="${child.id}"]`); await card.getByRole('button', { name: /^Expand/ }).click();
-    const script = card.locator('details.captured-script'); await script.locator('summary').click();
+    const script = card.locator('details.captured-script'); await script.locator(':scope > summary').click();
     await expect(script).toContainText('does not assert which instruction caused the work'); await expect(script).toContainText('Parent image result');
     await expect(script.locator('.op-image')).toHaveCount(2);
     const current = await script.locator('.op-image img').evaluateAll(imgs => imgs.map(img => img.getAttribute('src')!));

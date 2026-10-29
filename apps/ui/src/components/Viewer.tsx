@@ -8,7 +8,7 @@ import {ReviewInsights} from './ReviewInsights.tsx';
 import {SavedMomentsEntry} from './SavedMoments.tsx';
 import {CapturedCommands} from './CapturedCommands.tsx';
 import { NativeReturn } from './NativeReturn.tsx';
-import { UsagePeek } from './RecordedUsage.tsx';
+import { RescanEntry, UsagePeek } from './RecordedUsage.tsx';
 import { ContextRing } from './ContextRing.tsx';
 import {SessionSegments} from "./SessionSegments.tsx";
 import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
@@ -264,6 +264,7 @@ function SessionLine({ projection }: { projection: Projection }) {
 
 /** A task-oriented shell; evidence and native capabilities stay in shared functional readers. */
 function StudioHeader({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const liveMetadata = useApp(s=>s.mode==='history');
   const recording = useApp(s => s.recording);
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
@@ -272,16 +273,17 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
   const filter = useApp(s => s.filter);
   const exportUrl = id ? source?.exportUrl(id) : undefined;
   const modern = document.documentElement.dataset.uiVersion === 'modern';
+  const [menuOpen, setMenuOpen] = useState(false);
   return <header className={`studio-header crown${modern ? ' modern-session-header' : ''}`}>
     {modern ? <div className="modern-identity"><button className="brand" aria-label="Drishya" title="All sessions" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button><SessionLine projection={projection} /></div>
       : <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>}
     {!modern&&<div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title || recording?.title}>{projection.title || recording?.title || 'Untitled session'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>}
     {modern&&connection==='reconnecting'&&<span role="status" className="session-connection">Reconnecting…</span>}
-    <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}{modern && <EvidenceReview key={`changes-${id}`} projection={projection} label="Changes" />}{modern && <span className="workspace-view-slot" ref={registerHeaderSlot} />}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu"><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div className={modern?"workspace-utilities":undefined}>{modern&&<span className="utility-heading">Session tools</span>}<NativeReturnEntry deferMoments={modern}/><SessionSegments/>{modern && <div className="modern-evidence-actions"><EvidenceReview key={id} projection={projection} /><ReviewQuestionsEntry key={`questions/${id}`} /><SavedMomentsEntry/><SessionIdentity/></div>}<UsagePeek />{modern&&<span className="utility-heading">Navigate &amp; share</span>}{modern&&<ReplayEntry/>}<LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></div></details></div>
+    <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}{modern && <EvidenceReview key={`changes-${id}`} projection={projection} label="Changes" />}{modern && <span className="workspace-view-slot" ref={registerHeaderSlot} />}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu" onToggle={event => { if (event.target === event.currentTarget) setMenuOpen(event.currentTarget.open); }}><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div className={modern?"workspace-utilities":undefined}>{modern&&<span className="utility-heading">This session</span>}<NativeReturnEntry deferMoments={modern}/><SessionSegments/>{modern && <div className="modern-evidence-actions"><ReviewQuestionsEntry key={`questions/${id}`} /><SavedMomentsEntry/><SessionIdentity/></div>}<UsagePeek />{modern ? <><span className="utility-heading">Move around</span><ReplayEntry/><SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><span className="utility-heading">Share</span><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<RescanEntry menuOpen={menuOpen} /></> : <><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><RescanEntry menuOpen={menuOpen} /></>}</div></details></div>
     {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Recorded agent shortcuts">{scene.agents.map(state => {
       const agent = projection.agents.find(a => a.id === state.id);
       const parent = projection.agents.find(a => a.id === state.parentId);
-      return <button key={state.id} data-origin-agent={state.id} role="switch" aria-checked={filter?.agentId === state.id} aria-label={`Focus ${agentName(agent)} from agent bar`} title={`${agentName(agent)} · ${state.state}${parent ? ` · child of ${agentName(parent)}` : ''}`} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}</span><small>{state.state}</small></button>;
+      return <button key={state.id} data-origin-agent={state.id} role="switch" aria-checked={filter?.agentId === state.id} aria-label={`Focus ${agentName(agent)} from agent bar`} title={`${agentName(agent)} · ${state.state}${liveMetadata&&agent?.model ? ` · ${agent.model}` : ''}${liveMetadata&&agent?.effort ? ` · ${agent.effort} effort` : ''}${parent ? ` · child of ${agentName(parent)}` : ''}`} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}</span><small>{[state.state,liveMetadata&&agent?.model,liveMetadata&&agent?.effort&&`${agent.effort} effort`].filter(Boolean).join(' · ')}</small></button>;
     })}</div>}
   </header>;
 }
@@ -300,6 +302,7 @@ function StudioDock({ scene }: { scene: Scene }) {
 }
 
 function Crown({ scene, projection }: { scene: Scene; projection: Projection }) {
+  const liveMetadata = useApp(s=>s.mode==='history');
   const recording = useApp((s) => s.recording);
   const recordingId = useApp((s) => s.recordingId);
   const connection = useApp((s) => s.connection);
@@ -341,7 +344,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
               title={`${agentName(agent)} — ${a.state}${a.activeOperationIds.length ? `, ${a.activeOperationIds.length} call in flight` : ''}. Click to follow only this agent.`}
             >
               <span className="agent-dot" />
-              {agentName(agent)}<small className="agent-harness">{agent?.harness}</small>
+              {agentName(agent)}<small className="agent-harness">{[liveMetadata&&agent?.model||agent?.harness,liveMetadata&&agent?.effort&&`${agent.effort} effort`].filter(Boolean).join(' · ')}</small>
               {a.state === 'active' && a.activeOperationIds.length > 0 && <span className="orbit" />}
             </button>
           );

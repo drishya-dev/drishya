@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { askQuestions } from '../src/lib/ask-question.ts';
+import { askQuestions, isQuestionTool, questionAcceptance } from '../src/lib/ask-question.ts';
 
 const input = { questions: [
   { question: 'Which area?', header: 'Area', multiSelect: false, options: [{ label: 'Cart', description: 'totals' }, { label: 'Checkout' }] },
@@ -89,4 +89,30 @@ it('keeps preview wording when it is part of a typed answer rather than an offer
   const literal='This " selected preview: remains my answer.';
   const q=askQuestions(input,`The user answered: "Next?"="${literal}". You can now continue.`)[0]!;
   expect(q.answer).toBe(literal);expect(q.typed).toBe(literal);expect(q.chosen).toEqual([]);
+});
+
+// Codex's request_user_input_async, in the shape real journals record: a `title`, options as plain strings (or none), and a
+// result that only says whether the question was accepted.
+it('reads a Codex question: title as the question, string options, and no invented answer', () => {
+  const [withOptions, bare] = askQuestions({ questions: [{ title: 'Which approach?', options: ['Small patch', 'Rewrite'] }, { title: 'Anything else?' }] }, '{"accepted":true}');
+  expect(withOptions).toMatchObject({ question: 'Which approach?', multiSelect: false, chosen: [] });
+  expect(withOptions!.options).toEqual([{ label: 'Small patch' }, { label: 'Rewrite' }]);
+  expect(withOptions!.answer).toBeUndefined();
+  expect(bare).toMatchObject({ question: 'Anything else?', options: [], chosen: [] });
+});
+it('knows both question tools and reads Codex acceptance only from its own result shape', () => {
+  expect(isQuestionTool('AskUserQuestion') && isQuestionTool('request_user_input_async')).toBe(true);
+  expect(isQuestionTool('Read')).toBe(false);
+  expect(questionAcceptance('{"accepted":true}')).toBe(true);
+  expect(questionAcceptance('{"accepted":false}')).toBe(false);
+  expect(questionAcceptance('The user answered: "A"="B"')).toBeUndefined();
+  expect(questionAcceptance(undefined)).toBeUndefined();
+});
+
+it('reads native Codex keyed answer arrays without treating an acknowledgement as an answer', () => {
+  const input={questions:[{id:'check',question:'Which check?',options:[{label:'Alpha'},{label:'Beta'}]}]};
+  expect(isQuestionTool('request_user_input')).toBe(true);
+  expect(askQuestions(input,'{"answers":{"check":{"answers":["Alpha"]}}}')[0]).toMatchObject({answer:'Alpha',chosen:['Alpha']});
+  expect(askQuestions(input,'{"answers":{"other":{"answers":["Alpha"]}}}')[0]!.answer).toBeUndefined();
+  expect(askQuestions(input,'{"accepted":true}')[0]!.answer).toBeUndefined();
 });

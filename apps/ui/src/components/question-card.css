@@ -12,3 +12,7 @@
 .question-typed {margin:0;font:12.5px/1.55 var(--sans);color:var(--t1);overflow-wrap:anywhere;}.question-typed small {color:var(--t3);margin-right:4px;}
 .question-state {font:11px/1.5 var(--sans);color:var(--t3);}
 @media(forced-colors:active){.question-options li[data-chosen] .question-mark {background:Highlight;}}
+
+.tool-approval .approval-path {display:block;overflow-wrap:anywhere;color:var(--t3);margin-top:6px;}
+.tool-approval .approval-removed {color:var(--fail);}
+.tool-approval .approval-added {color:var(--pass);}

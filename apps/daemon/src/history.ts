@@ -1,9 +1,10 @@
+import type { FileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/reading-target.ts';
 import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
 import { Worker } from 'node:worker_threads';
-import type { ArtifactSlice, Operation } from '@drishya/contracts';
+import type { ArtifactSlice } from '@drishya/contracts';
 import type { BlobSearchResult } from '@drishya/store';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
 import type { NowFacts } from '../../../packages/scene/src/now.ts';
@@ -15,6 +16,8 @@ import type { FixChain } from '../../../packages/scene/src/fix-chains.ts';
 import type { ReadBeforeWrite } from '../../../packages/scene/src/read-before-write.ts';
 import type { ModelConfig, Prepared } from '@drishya/explain';
 import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store/src/search-types.ts';
+import type {GitSessionQuery,GitSessionEvidence} from './git-session-evidence.ts';
+import type {DelegationThread} from './delegation-types.ts';
 
 /** One worker owns the derived history index. Capture's SQLite writer remains the ingestor. */
 export class HistoryService {
@@ -77,6 +80,8 @@ export class HistoryService {
   findingMembers(id:string,key:string,page=0,q='') {return this.request<FindingMembers>('finding-members',{id,key,page,q});}
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
+  gitSessionEvidence(id:string,query:GitSessionQuery) {return this.request<GitSessionEvidence>('git-session-evidence',{id,query});}
+  delegationThread(id:string,operationId:string,start=0,step?:number,taskStart=0) {return this.request<DelegationThread|null>('delegation-thread',{id,operationId,start,step,taskStart});}
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   readingTarget(id: string, query: ReadingQuery) { return this.request<ReadingTarget | null>('reading-target', { id, query }); }
@@ -89,7 +94,7 @@ export class HistoryService {
   verification(id: string, operationId: string) { return this.request<VerificationTrail | null>('verification', { id, operationId }); }
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }
   artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) { return this.request<BlobSearchResult | undefined>('artifact-find', { id, artifactId, query, start, continuation }); }
-  file(id: string, path: string, start = 0, count = 100, step?: number, query = '') { return this.request<{ operations: Operation[]; total: number }>('file', { id, path, start, count, step, query }); }
+  file(id: string, path: string, start = 0, count = 100, step?: number, query = '', selectedOperationId?: string) { return this.request<FileOperationPage>('file', { id, path, start, count, step, query, selectedOperationId }); }
   prepare(id: string, task: string, model: ModelConfig, body: Record<string, unknown>) { return this.request<Prepared>('prepare', { id, task, model: { ...model, apiKey: undefined }, body }); }
   marker(id: string, step: number, types: Marker['type'][], direction: 1 | -1) { return this.request<number | undefined>('marker', { id, step, types, direction }); }
   forget(id: string) { return this.request<void>('forget', { id }); }
