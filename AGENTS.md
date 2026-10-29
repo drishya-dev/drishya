@@ -60,6 +60,7 @@ The builder's defining requirement: **"Visualization is the main."** Not boxes o
 7. **The five signature moves:** **Lift** (content unfolds from its map node) · **Emit** (a tool call leaves its dock instrument; MCP servers open like drawers) · **Settle** (prior work eases back) · **Surface** (prose rises beneath the passage with a focus-pull, never typed) · **Resolve** (an outcome lands once and holds).
 8. **Every little thing is crafted** — hovers, selection, copy, focus rings, scrubbing — and every one is reversible and interruptible.
 9. **Three tests before anything ships:** *freeze* (any paused frame is readable, origins clear) · *truth* (no motion implies what the evidence cannot support) · *ten-minute* (still calm after ten minutes of real reading).
+10. **Clean and premium in the smallest things (builder, 29 Oct).** Even the smallest detail (alignment, spacing, truncation, empty and failure states, labels that say what they are) looks clean and premium; information reaches the user with ease, not item by item. Target: a $10,000 end-to-end product for millions of people who today only read an agent's text. Binding on every UI change and every pass: [`docs/VISION.md`](docs/VISION.md) §8, *The premium bar*.
 
 If an animation carries no information about where something came from, what it connects to, or what changed — cut it.
 

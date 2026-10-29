@@ -11,6 +11,25 @@ const obs = (sequence: number, kind = 'tool.result', payload: unknown = {}, over
  observedAt: '2026-10-27T00:00:00Z', kind, payload: payload as Observation['payload'], privacyPolicyVersion: 'test', redactions: [], availability: 'complete', ...overrides,
 });
 function memory() { const blobs = new Map<string, string>(); return { get: (sha: string) => blobs.get(sha), put: (text: string) => {const sha = createHash('sha256').update(text).digest('hex'); blobs.set(sha, text); return { sha, bytes: Buffer.byteLength(text) };} }; }
+it('rebuilds literal Codex code-mode plans only after their successful result, including blob-backed older captures', () => {
+ const io = memory(), rows = [obs(0, 'message.user', {text:'Synthetic checklist'}, {source:{adapterId:'codex',adapterVersion:'test',sourceId:'source',generation:0,byteOffset:0,part:0}})];
+ let n = 1;
+ for (const [isError, result] of [[false,'{}'],[true,'Error: synthetic'],[false,'{"isError":true}'],[false,'{}']] as const) {
+  const source = `text(await tools.update_plan(${JSON.stringify({plan:[{step:'Literal row',status:n>3?'completed':'pending'}]})}));`;
+  const ref = io.put(source), operationId = `literal-${n}`, codex = {adapterId:'codex',adapterVersion:'test',sourceId:'source',generation:0,byteOffset:n,part:0};
+  rows.push(obs(n++, 'tool.call', {tool:'exec',input:{raw:{$blob:ref.sha,bytes:ref.bytes}},intent:{kind:'shell',command:{$blob:ref.sha,bytes:ref.bytes}}}, {operationId,source:codex}));
+  rows.push(obs(n++, 'tool.result', {text:result,isError,outcome:{kind:'shell',stdout:result}}, {operationId,source:codex}));
+ }
+ const p = reduce('r', rows, io, {adapters:{}});
+ expect(p.operations.filter(op=>op.kind==='plan')).toHaveLength(2);
+ expect([...new Set([...planThreads(p).values()].map(v=>v.thread.id))]).toHaveLength(1);
+ expect(pinnedPlans(p).get(1)).toMatchObject({revision:2,total:1,done:1});
+ for (let step=0;step<=p.timeline.length;step++) {
+  const past=asOfProjection(p,step), ended=new Set(p.timeline.slice(0,step).filter(t=>t.type==='op-end').map(t=>t.operationId));
+  for (const pin of pinnedPlans(past).values()) expect(ended.has(pin.operationId)).toBe(true);
+ }
+ expect(p.operations.filter(op=>op.kind==='plan').every(op=>op.classification.kind==='derived')).toBe(true);
+});
 function taskRows() {
  const rows = [obs(0, 'message.user', { text: 'Synthetic plan task' })];
  let n = 1;

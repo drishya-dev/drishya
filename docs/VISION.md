@@ -311,6 +311,15 @@ Before any visual work ships, it passes three tests:
 
 And one aspiration that sits above all three: **someone watching over your shoulder should stop and ask what that is.**
 
+### The premium bar — builder direction, 29 October 2026
+
+Hold this for every screen, every pass and every agent. It is as binding as the three tests above.
+
+1. **Clean in every term, down to the smallest thing.** Alignment, spacing, truncation, icon weight, focus and hover states, scrollbars, counts, labels, and the empty, loading and failure states of every surface must look clean and premium. People keep using a product that feels this cared-for without knowing why; one rough edge (a name cut off beside empty space, a control larger than its content, a label that does not say what it is, a list you must page through one page at a time) makes them doubt everything else. "Small" is never a reason to leave it.
+2. **Information arrives with ease.** Summary before detail; reach what you need without clicking item by item; the text on screen says what it is in the product's own words. Features that exist but present badly are not finished (AUDIT-1 finds them).
+3. **The target is a $10,000, end-to-end product for millions of people** who today only read an agent's text and do not know what it is doing. The scope keeps widening to the one place a developer uses for any task (Workspace, Files, Git graph, Changes, branches, side-by-side comparison, pull requests) with the agent's work shown visually as it happens (VIZ-1). Build so that nobody can match us the next day in agent visualization and developer ease at one place.
+4. **Order of work (TASKS "Order after SCREEN-1"):** SCREEN-1, then AUDIT-1 (use every built function, list what is wrong), then the UI passes, then the motion passes (motion is tuned on a finished UI), then the fresh-eyes agent review (COMP-1), then VIZ-1. First the base.
+
 **18 October attached Git timeline reference:** The main history ribbon is32px, four times the earlier8px experiment, with dense fine cyan/blue/white/violet/pink fibers and occasional pale warm strands. Branches share this material, weighted by loaded segment population and capped at16px. These are render strokes on actual parent edges, not additional commits or relationships; no looping particles or invented topology. See [112](review/112-git-threads-integration.md).
 
 **18 October spatial correction:** A dense volumetric many-thread bundle, not two helices/DNA and not a flat strip that pinches to zero. Retain nearly uniform main diameter while the path rises/dips/overlaps in depth; branches peel from the outer rim at real fork/merge positions. Depth is presentation only. See review112’s spatial correction.

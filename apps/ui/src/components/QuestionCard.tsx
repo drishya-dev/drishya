@@ -10,7 +10,7 @@ export function QuestionCard({ op }: { op: Operation }) {
   const waiting = op.status === 'running';
   const accepted = questionAcceptance(detail?.resultPreview);
   return <div className="question-card" role="group" aria-label="Question to you">
-    {questions.map((item) => <section key={item.question} className="question">
+    {questions.map((item,index) => <section key={`${item.id??item.question}/${index}`} className="question">
       {item.header && <small className="question-header">{item.header}{item.multiSelect ? ' · choose any' : ''}</small>}
       <p className="question-text">{item.question}</p>
       <ul className="question-options">{item.options.map((option) => <li key={option.label} data-chosen={item.chosen.includes(option.label) || undefined}>
@@ -19,7 +19,7 @@ export function QuestionCard({ op }: { op: Operation }) {
       </li>)}</ul>
       {item.typed && <p className="question-typed"><small>{!item.options.length ? 'Answer' : item.chosen.length ? 'Also wrote' : 'Wrote'}</small> {item.typed}</p>}
     </section>)}
-    {questions.some((item) => !item.options.length) && <small className="question-state">The capture keeps the question and the answer but not the offered options.</small>}
+    {questions.some((item) => !item.options.length) && <small className="question-state">No offered options were captured.</small>}
     <small className="question-state">{waiting ? 'Waiting for your answer' : questions.some((item) => item.answer) ? 'Captured question and answer' : accepted === true ? 'Codex recorded the question as accepted; the answer is not part of this record' : accepted === false ? 'Codex recorded the question as not accepted' : 'No answer was captured'}</small>
   </div>;
 }
