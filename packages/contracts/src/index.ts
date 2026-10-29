@@ -611,6 +611,14 @@ export interface Projection {
 // ─── Recordings and sources ──────────────────────────────────────────────────────────────
 
 export interface RecordingSummary {
+  /** Harness-reported accounting only; absent fields were not recorded. */
+  stats?: {
+    source: 'claude-cost-state' | 'codex-turns';
+    durationMs?: number;
+    linesAdded?: number;
+    linesRemoved?: number;
+    lastOutcome?: 'completed' | 'aborted';
+  };
   id: string;
   title: string;
   harness: HarnessId;

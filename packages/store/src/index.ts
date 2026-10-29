@@ -12,9 +12,10 @@ import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import type { BlobText, Observation, RecordingSummary } from '@drishya/contracts';
 import type { LibrarySearchQuery, LibrarySearchPage, SessionSearchHit } from './search-types.ts';
+import { recordingStats } from './recording-stats.ts';
 
-// 2: revisions. 3: normalized observation clock. 4: local reading boundaries.
-export const SCHEMA_VERSION = 4;
+// 2: revisions. 3: normalized observation clock. 4: local reading boundaries. 5: reported stats.
+export const SCHEMA_VERSION = 5;
 const clockTime = (time: string | null | undefined) => time && Number.isFinite(Date.parse(time)) ? new Date(time).toISOString() : null;
 /** Strings longer than this move out of the observation into the blob store. */
 export const INLINE_LIMIT = 16 * 1024;
@@ -431,6 +432,16 @@ export class Store {
         for (const row of this.db.prepare('SELECT rowid,source_time FROM observations').iterate()) update.run(clockTime(row.source_time as string | null), row.rowid!);
       });
     }
+    if (!cols.includes('stats')) {
+      this.tx(() => {
+        this.db.exec('ALTER TABLE recordings ADD COLUMN stats TEXT');
+        // Read only accounting observations through obs_rec_kind, never whole projections/history.
+        for (const row of this.db.prepare(`SELECT id FROM recordings WHERE harness IN ('claude-code', 'codex')
+          AND EXISTS (SELECT 1 FROM observations WHERE recording_id = recordings.id AND kind IN ('usage', 'turn.detail'))`).iterate()) {
+          this.updateRecordingStats(String(row.id));
+        }
+      });
+    }
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('schema_version', String(SCHEMA_VERSION));
     this.db.prepare('UPDATE meta SET value = ? WHERE key = ?').run(String(SCHEMA_VERSION), 'schema_version');
   }
@@ -592,6 +603,9 @@ export class Store {
       }
       this.q('UPDATE sources SET cursor = ? WHERE id = ?').run(JSON.stringify(cursor), sourceId);
       if (added.length) {
+        if (added.some(o => o.kind === 'turn.detail' || (o.kind === 'usage' && (o.payload as { source?: string }).source === 'claude-cost-state'))) {
+          this.updateRecordingStats(recordingId);
+        }
         const times = added.map((a) => a.sourceTime).filter(Boolean).sort() as string[];
         // The revision moves in the same transaction as the data, so a reader that sees revision N
         // also sees every observation it counts (audit A07).
@@ -606,6 +620,20 @@ export class Store {
     const versions = this.policyCache.get(recordingId);
     if (versions) for (const o of stored) versions.add(String((o as { privacyPolicyVersion?: unknown }).privacyPolicyVersion ?? 'unknown'));
     return stored;
+  }
+
+  private updateRecordingStats(recordingId: string) {
+    const harness = (this.q('SELECT harness FROM recordings WHERE id = ?').get(recordingId) as { harness: string }).harness;
+    if (harness !== 'claude-code' && harness !== 'codex') return;
+    const kind = harness === 'claude-code' ? 'usage' : 'turn.detail';
+    const rows = this.q(`SELECT json_extract(body, '$.payload') AS payload FROM observations
+      WHERE recording_id = ? AND kind = ?
+        AND (? = 'codex' OR json_extract(body, '$.payload.source') = 'claude-cost-state')
+      ORDER BY json_extract(body, '$.source.sourceId') COLLATE BINARY DESC,
+        json_extract(body, '$.source.generation') DESC, json_extract(body, '$.source.byteOffset') DESC,
+        json_extract(body, '$.source.part') DESC, id DESC`).iterate(recordingId, kind, harness) as Iterable<{ payload: string }>;
+    const stats = recordingStats(harness, rows);
+    this.q('UPDATE recordings SET stats = ? WHERE id = ?').run(stats ? JSON.stringify(stats) : null, recordingId);
   }
 
   observations(recordingId: string, after = -1, limit = 1_000_000): Observation[] {
@@ -870,6 +898,7 @@ export class Store {
 
 function rowToRecording(r: any): RecordingSummary {
   return {
+    ...(r.stats ? { stats: JSON.parse(r.stats) } : {}),
     id: r.id,
     title: r.title,
     harness: r.harness,
