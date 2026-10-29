@@ -33,13 +33,18 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | TEST-2 | @harsh + Codex | `harsh/test-2-wheel-end` | 2026-10-28 | `apps/ui/src/components/History.tsx` wheel/scroll handling and reading-anchor/height code only; tests only with Harsh's explicit yes. No `hover-reading.ts` or `flow-route.ts` edits. |
-| INDEX-1 | @yash + Claude Sonnet 5.5 | `claude/index-1-nested-checkouts` | 2026-10-29 | `packages/indexer/src/index.ts` (walk, `isIndexableFile`, version), its unit tests, the map status line that reports skipped checkouts. No contracts, projection or History changes. |
 | CONTENT-2 | @yash + Codex browser agent | `codex/whole-browser` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. **28 Oct: Claude Sonnet 5.5 takes that History.tsx integration (branch `claude/content-2-history`, History.tsx insertion only, no other file); Codex keeps the rest of the row.** Up to 15 files; no adapter/contracts/projection or READ-4 test. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — INDEX-1 complete (map and Files tree without nested checkouts)
+
+- **Cause:** the indexer walked into `.claude/worktrees/*`, each a full copy of the project with its own `.git`; on the real `drishya` workspace 4,999 of the 5,000 mapped files were copies and the real files were cut off.
+- **Fix:** any directory below the root with its own `.git` is another checkout and is skipped (map walk and `isIndexableFile`); the legend says how many were left out. Real workspace: 5,000 files truncated → 963 files, not truncated, 12 checkouts named.
+- **Checks:** 11 indexer units, two browser specs (1440x900, 600x720), `check:affected` green; real Claude Code and Codex sessions of the workspace checked. Not covered: a worktree whose `.git` has been deleted.
 
 ### Yash with Claude Sonnet 5.5 — UI-14 and UI-15 complete; Codex stack and HOME-1 merged
 

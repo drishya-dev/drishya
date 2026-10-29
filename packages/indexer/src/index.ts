@@ -11,7 +11,7 @@ import { extname, join } from 'node:path';
 import type { GraphEdge, GraphNode, RepoGraph } from '@drishya/contracts';
 import { isDeniedPath } from '@drishya/privacy';
 
-export const INDEXER_VERSION = 'imports-rules-v1';
+export const INDEXER_VERSION = 'imports-rules-v2';
 
 const SKIP_DIRS = new Set([
   'node_modules', '.local', '.git', '.hg', '.svn', 'dist', 'build', 'out', '.next', '.nuxt', '.svelte-kit', '.turbo', '.cache',
@@ -42,13 +42,14 @@ interface FileEntry {
 }
 
 /** The files a map would include: the shared first step of building and of probing freshness. */
-async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntry[]; skipped: number; truncated: boolean }> {
+async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntry[]; skipped: number; truncated: boolean; nested: number }> {
   const maxFiles = opts.maxFiles ?? 5000;
   const maxBytes = opts.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const ignore = readGitignore(root);
   const files: FileEntry[] = [];
   let skipped = 0;
   let truncated = false;
+  let nested = 0;
 
   const walk = async (dir: string, rel: string): Promise<void> => {
     if (truncated) return;
@@ -56,6 +57,12 @@ async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntr
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch {
+      return;
+    }
+    // Another checkout inside this one (an agent worktree, a submodule, a nested clone) has its own `.git` entry. It is
+    // not this workspace's content, and a full copy of the project would fill the file cap with duplicates.
+    if (rel && entries.some((e) => e.name === '.git')) {
+      nested++;
       return;
     }
     entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -85,7 +92,7 @@ async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntr
     }
   };
   await walk(root, '');
-  return { files, skipped, truncated };
+  return { files, skipped, truncated, nested };
 }
 
 /** Check one map-eligible file without scanning the repository or applying the map's
@@ -102,6 +109,7 @@ export async function isIndexableFile(root: string, path: string): Promise<boole
     const info = await lstat(cursor).catch(() => undefined);
     if (!info || info.isSymbolicLink()) return false;
     if (directory ? !info.isDirectory() : !info.isFile() || info.size > DEFAULT_MAX_FILE_BYTES) return false;
+    if (directory && existsSync(join(cursor, '.git'))) return false; // inside a nested checkout, like the map's walk
   }
   return true;
 }
@@ -121,7 +129,7 @@ export async function probeGeneration(root: string, opts: IndexOptions = {}): Pr
 
 export async function buildGraph(root: string, opts: IndexOptions = {}): Promise<RepoGraph> {
   const t0 = performance.now();
-  const { files, skipped, truncated } = await scan(root, opts);
+  const { files, skipped, truncated, nested } = await scan(root, opts);
 
   const known = new Set(files.map((f) => f.path));
   const aliases = readTsPaths(root);
@@ -166,7 +174,7 @@ export async function buildGraph(root: string, opts: IndexOptions = {}): Promise
     edges,
     unresolved: unresolved.slice(0, 500),
     truncated,
-    stats: { files: files.length, parsed, edges: edges.length, unresolved: unresolved.length, skipped, ms: Math.round(performance.now() - t0) },
+    stats: { files: files.length, parsed, edges: edges.length, unresolved: unresolved.length, skipped, ms: Math.round(performance.now() - t0), ...(nested ? { nestedCheckouts: nested } : {}) },
   };
 }
 
