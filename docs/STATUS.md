@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| GIT-5 | @yash + Codex parallel agent | `codex/git-5-local-branches` | 2026-10-29 | Whole local branch selection/count acceptance: dedicated git branch helper/routes in git-history.ts, git-types.ts, GitHistory component/API and scoped tests/styles/report; no graph aesthetic rewrite. GIT-2 has no production files held; its positive-capture acceptance stays separate. No app.ts/server.ts/contracts edits held by HOME-1; request coordination if route registration needs those. Up to 15 files, about 5 commits; central docs finalized by root. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | TEST-2 | @harsh + Codex | `harsh/test-2-wheel-end` | 2026-10-28 | `apps/ui/src/components/History.tsx` wheel/scroll handling and reading-anchor/height code only; tests only with Harsh's explicit yes. No `hover-reading.ts` or `flow-route.ts` edits. |
 | UI-14 | @yash + Claude Sonnet 5.5 | `claude/ui-14-hover-inside-window` | 2026-10-29 | Hover-reading allocation only: `apps/ui/src/lib/hover-reading.ts` and the History hover code that calls it, its stylesheet, `tests/browser/hover-fit.spec.ts`. TEST-2 lists hover-fit and `hover-reading.ts`: Harsh, please confirm no edit of those files is in flight. |
@@ -42,6 +41,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — GIT-5 complete
+
+- **PR #284 (after #283):** read-only branch choice, selected commits/patches, current/recency ordering, upstream/last date and exact current/default ahead-behind counts. No checkout/fetch/config write. Shallow, detached, unrelated and unknown default states are honest; branch choices remain independent of sidebar paging/search.
+- **Acceptance:** six genuine Claude/Codex captures at 600/1440, including up to 289 local refs and exact 2-ahead/1-behind cases; checkout unchanged, links and patches still work. Five branch units, both types/build, 14 branch browsers and seven existing regressions pass, plus six final pagination-correction checks. [Report](review/git-5-local-branches.md).
+- **Shared gate/handoff:** 1001 units/build/types/package pass; browsers 481 passed/26 skipped/one b2-live:139 failure. Named integrated/main isolated reruns pass, not proven baseline flake. Claim released and task checked. Merge chain #276 → #282 → #285 → #283 → #284; all three real-case registrations and pnpm argument handling were reconciled and verified together. No merge performed.
 
 ### Yash with Codex — FILES-6 complete
 
