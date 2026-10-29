@@ -23,7 +23,7 @@ async function state(git:Git) {
     if(!name||!oid.test(tip??''))throw new HttpError(422,'Git returned invalid reference metadata.');
     return {raw:name,id:hash(name),name:clean(name.replace(/^refs\/(heads|remotes|tags)\//,'')),tip:peeled&&oid.test(peeled)?peeled:tip!,kind:name.startsWith('refs/heads/')?'branch':name.startsWith('refs/remotes/')?'remote':'tag',current:name===branch,...(lastCommit?{lastCommit}:{}),...(upstream?{upstream:clean(upstream)}:{})} as GitReference&{raw:string};
   });
-  refs.sort((a,b)=>Number(b.current)-Number(a.current)||Number(b.kind==='branch')-Number(a.kind==='branch')||(b.lastCommit??'').localeCompare(a.lastCommit??'')||a.name.localeCompare(b.name));
+  refs.sort((a,b)=>Number(b.current)-Number(a.current)||Number(b.kind==='branch')-Number(a.kind==='branch')||(Date.parse(b.lastCommit??'')||0)-(Date.parse(a.lastCommit??'')||0)||a.name.localeCompare(b.name));
   return {raw,head,branch,refs,generation:hash(raw+'\0'+head+'\0'+branch)};
 }
 const publicRef=({raw,...reference}:GitReference&{raw:string}):GitReference=>reference;
@@ -73,7 +73,7 @@ export async function gitHistory(git:Git,options:GitHistoryQuery={}):Promise<Git
   }:undefined;
   const signatures=await squashEvidence(git,commits.slice(0,50),primary?.tip??before.head);
   if((await state(git)).generation!==before.generation)throw changed();
-  return {mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,selectedReference:selected?publicRef(selected):undefined,branchComparison,...signatures};
+  return {mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,localBranches:before.refs.filter(ref=>ref.kind==='branch').slice(0,100).map(publicRef),localBranchTotal:before.refs.filter(ref=>ref.kind==='branch').length,selectedReference:selected?publicRef(selected):undefined,branchComparison,...signatures};
 }
 
 /**

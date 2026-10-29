@@ -32,6 +32,8 @@ it('reads the selected branch and returns exact current/default counts without c
   expect(result.branchComparison?.default).toEqual({name:'main',basis:'remote-head',state:'known',ahead,behind});
   expect(result.selectedReference?.upstream).toBeUndefined();expect(result.selectedReference?.lastCommit).toMatch(/^\d{4}-/);
   expect(initial.references[0]).toMatchObject({name:'main',current:true,upstream:'origin/main'});
+  const filtered=await history({query:'topic',referenceStart:100});
+  expect(filtered.references).toEqual([]);expect(filtered.localBranches?.[0]).toMatchObject({name:'main',current:true});
   expect(git('rev-parse','HEAD')).toBe(before);expect(git('show-ref')).toBe(refs);expect(git('status','--porcelain')).toBe('');
 });
 it('keeps detached HEAD explicit and does not infer an upstream',async()=>{
@@ -57,4 +59,14 @@ it('conservatively withholds shallow counts and distinguishes failed reads',asyn
   expect(await compareBranch(async()=>{throw new Error('not available');},topic,{name:'main',tip:'a'.repeat(40)},true)).toEqual({name:'main',state:'shallow'});
   expect(await compareBranch(async()=>'',topic,{name:'main',tip:topic},true)).toEqual({name:'main',state:'known',ahead:0,behind:0});
   expect(await compareBranch(async args=>args[0]==='merge-base'?topic:'invalid',topic,{name:'main',tip:'a'.repeat(40)},false)).toEqual({name:'main',state:'unavailable'});
+  expect(await compareBranch(async()=>{throw new Error('missing objects');},topic,{name:'main',tip:'a'.repeat(40)},false)).toEqual({name:'main',state:'unavailable'});
+});
+it('orders the current branch first and remaining local branches by commit recency',async()=>{
+  const tree=git('rev-parse','HEAD^{tree}');
+  for(const [name,date] of [['older','2010-01-01T00:00:00Z'],['newer','2030-01-01T00:00:00Z']]){
+    const tip=execFileSync('git',['commit-tree',tree,'-m',name!],{cwd:root,windowsHide:true,encoding:'utf8',env:{...process.env,GIT_AUTHOR_DATE:date,GIT_COMMITTER_DATE:date}}).trim();
+    git('update-ref',`refs/heads/${name}`,tip);
+  }
+  const refs=(await history()).references.filter(ref=>ref.kind==='branch');
+  expect(refs[0]?.name).toBe('main');expect(refs[1]?.name).toBe('newer');expect(refs.at(-1)?.name).toBe('older');
 });

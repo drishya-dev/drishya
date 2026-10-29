@@ -22,6 +22,8 @@ export interface GitHistoryPage {sessionLinks?: Record<string, GitSessionLink>;m
   commits:GitCommit[]; start:number; more:boolean; limit:number;
   references:GitReference[]; referenceStart:number; referenceCount:number; referenceTotal:number;
   selectedReference?:GitReference;
+  /** First 100 local branches in current/recency order, independent of sidebar search/paging. */
+  localBranches?:GitReference[]; localBranchTotal?:number;
   branchComparison?:{current?:GitBranchComparison;default?:GitBranchComparison};
   /** Squash-merge evidence (see git-history.ts): content signatures of each non-merge commit's own change, and of each
    * branch head's whole change since it left the primary line. Equal values mean identical written file contents. */

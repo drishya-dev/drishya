@@ -8,7 +8,12 @@ export async function compareBranch(git:Git,tip:string,base:{name:string;tip:str
   if(shallow)return {...reference,state:'shallow'};
   try {
     const mergeBase=(await git(['merge-base',base.tip,tip]).catch(()=>'')).trim();
-    if(!mergeBase)return {...reference,state:'unrelated'};
+    if(!mergeBase){
+      // A failed merge-base can also mean missing/corrupt objects or a read limit.
+      // Only report unrelated after both ancestry walks succeed locally.
+      const count=(await git(['rev-list','--count',base.tip,tip,'--'])).trim();
+      return {...reference,state:/^\d+$/.test(count)?'unrelated':'unavailable'};
+    }
     const counts=(await git(['rev-list','--left-right','--count',`${base.tip}...${tip}`,'--'])).trim().split(/\s+/).map(Number);
     if(counts.length!==2||counts.some(n=>!Number.isSafeInteger(n)||n<0))return {...reference,state:'unavailable'};
     return {...reference,state:'known',behind:counts[0],ahead:counts[1]};
