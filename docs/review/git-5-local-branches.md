@@ -33,3 +33,7 @@ The existing larger Claude session legitimately needs more than the browser asse
 - Seven additional browser regressions pass: B4 paged history, two Git review controls, two Git session-evidence journeys, and two commit-hunk attribution/picker journeys. The complete branch suite passes two fixture regressions plus twelve real-session desktop checks. The final sidebar-independent branch-list correction is additionally checked by both fixture journeys and both existing real-session repositories at both widths.
 
 The full gate is reserved for the root agent's finished-task batch, per AGENTS.md. No hosted CI, merge, broad release/hardware certification or native account-policy change is claimed. There is no outstanding external blocker for GIT-5's stated acceptance.
+
+## Final integrated gate and merge order
+
+This PR is stacked after #283 to preserve the reconciled real-case registrations. Merge #276, #282, #285, #283, then #284, retargeting each remaining PR to main after its parent lands. Frozen source batch `ef541e4` passes build, both typechecks, 1001 units (one skip) and package verification. Full browsers: 481 passed, 26 skipped, one b2-live:139 failure; the named case passes alone on unchanged integrated code and clean main, so baseline failure is unproven. Feature acceptance is complete; shared merge-gate qualification remains explicit.

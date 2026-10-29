@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| GIT-5 | @yash + Codex parallel agent | `codex/git-5-local-branches` | 2026-10-29 | Whole local branch selection/count acceptance: dedicated git branch helper/routes in git-history.ts, git-types.ts, GitHistory component/API and scoped tests/styles/report; no graph aesthetic rewrite. GIT-2 has no production files held; its positive-capture acceptance stays separate. No app.ts/server.ts/contracts edits held by HOME-1; request coordination if route registration needs those. Up to 15 files, about 5 commits; central docs finalized by root. |
 | MOTION-2 | @yash + Codex native verification | `codex/motion-2-real-acceptance` | 2026-10-28 | Audit merged origin task against new Definition of done: genuine Claude/Codex Read/Edit/Write arrivals at 600 and 1440 px, native tool-availability qualification, counts-only evidence report. No production History, scroll/anchor, hover, reducer, contracts or existing origin changes unless a reproduced owned-helper bug is found and coordinated. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | HOME-1 | @harsh + Codex | `harsh/home-1-row-stats` | 2026-10-29 | Yash agreed to the exact stats proposal, confirmed by Harsh on 29 Oct. `RecordingSummary.stats` only in `packages/contracts/src/index.ts`; `packages/store` nullable JSON column, migration, journal-order aggregate and backfill; `apps/ui/src/modern/SessionHome.tsx` row stats, Home styles and tests. Harsh approved adding `apps/daemon/src/app.ts` selectionSummary stats omission for combined exports and `apps/daemon/test/export.test.ts` regressions on 29 Oct. 29 Oct follow-up: Harsh approved automatic one-time rescan for pre-DATA-3 Codex imports on existing PR #281; add `packages/ingest/src/index.ts` lifecycle/metadata marker and `apps/daemon/src/server.ts` startup hook. New focused ingest regression file only if Harsh separately approves test-file edits; otherwise local verification. Up to 15 files; extra commits on this same PR authorized by the follow-up. No adapters/projection, animation, stats-contract/rule or benchmark changes. |
@@ -44,6 +43,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — GIT-5 complete
+
+- **PR #284 (after #283):** read-only branch choice, selected commits/patches, current/recency ordering, upstream/last date and exact current/default ahead-behind counts. No checkout/fetch/config write. Shallow, detached, unrelated and unknown default states are honest; branch choices remain independent of sidebar paging/search.
+- **Acceptance:** six genuine Claude/Codex captures at 600/1440, including up to 289 local refs and exact 2-ahead/1-behind cases; checkout unchanged, links and patches still work. Five branch units, both types/build, 14 branch browsers and seven existing regressions pass, plus six final pagination-correction checks. [Report](review/git-5-local-branches.md).
+- **Shared gate/handoff:** 1001 units/build/types/package pass; browsers 481 passed/26 skipped/one b2-live:139 failure. Named integrated/main isolated reruns pass, not proven baseline flake. Claim released and task checked. Merge chain #276 → #282 → #285 → #283 → #284; all three real-case registrations and pnpm argument handling were reconciled and verified together. No merge performed.
 
 ### Yash with Codex — FILES-6 complete
 
