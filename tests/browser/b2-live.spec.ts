@@ -46,7 +46,7 @@ function appendSyntheticRecords() {
   return app.ingest.sync(recordingId);
 }
 
-function appendLongRead() {
+async function appendLongRead() {
   const id = `b3-long-${callNumber++}`;
   const base = { cwd: '/home/dev/shop', sessionId: 'c0ffee00-0000-4000-8000-000000000001', version: '2.1.0', timestamp: new Date().toISOString() };
   const content = Array.from({ length: 250 }, (_, i) => `  ${String(i + 1).padStart(3)}\t// bounded reader line ${i + 1}`).join('\n');
@@ -54,7 +54,8 @@ function appendLongRead() {
     JSON.stringify({ ...base, uuid: randomUUID(), type: 'assistant', message: { id: `msg-${id}`, role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: '/home/dev/shop/src/checkout/guard.ts' } }] } }),
     JSON.stringify({ ...base, uuid: randomUUID(), type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content }] } }),
   ].join('\n') + '\n');
-  return app.ingest.sync(recordingId);
+  await app.ingest.sync(recordingId);
+  return `${recordingId}.${id}`;
 }
 
 type Anchor = { id?: string; offset?: number };
@@ -167,16 +168,21 @@ test('long history mounts only nearby work while selected evidence and live upda
   // terminal scroller, whose wheel consumption is deliberately independent.
   const gutter = await history.evaluate((el) => {
     const bounds = el.getBoundingClientRect();
-    return { x: bounds.left + parseFloat(getComputedStyle(el).paddingLeft) + 8, y: bounds.top + bounds.height / 2 };
+    return { x: bounds.left + parseFloat(getComputedStyle(el).paddingLeft) + 8, y: bounds.top + bounds.height / 2, extent: el.scrollHeight };
   });
   await page.mouse.move(gutter.x, gutter.y);
-  // Wheel through the measured end, rather than assuming ten events exhaust a
-  // virtual document whose last passages are still resolving their heights.
+  // Wheel over the measured extent: a fixed 100k delta stops partway through
+  // this growing document. Repeat if later measurements extend that boundary.
   // Detached reading must not auto-follow those late measurements.
   await expect.poll(async () => {
-    await page.mouse.wheel(0, 100_000);
-    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    return history.evaluate((el) => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop));
+    await page.mouse.wheel(0, gutter.extent);
+    // Keep the frame wait and exact geometry read in one browser call. The test
+    // worker also hosts the daemon; a second locator round trip can be starved
+    // by history-page work even while the browser continues rendering.
+    return page.evaluate(() => new Promise<number>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => {
+      const el = document.querySelector('.history')!;
+      resolve(Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop));
+    }))));
   }, { message: 'Deliberate wheel navigation reaches the measured history end' }).toBeLessThan(2);
   await expect.poll(() => history.locator('[data-passage-id]').count()).toBeLessThan(80);
   await expect(history.locator(`article[data-op-id="${selectedId}"]`)).toHaveCount(1);
@@ -197,14 +203,13 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   const history = page.locator('.history');
   const steps = page.locator('.reading-status');
   const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
-  await appendLongRead();
+  const readId = await appendLongRead();
   await expect(steps).toContainText(`${before + 2} recorded steps`);
 
-  // Pin the read by its operation id: `.last()` is re-resolved on every step, and in a long
-  // virtualized history the last mounted read can change while the expanded one re-measures.
-  const readId = await history.locator('article.op-read').last().getAttribute('data-op-id');
-  expect(readId).toBeTruthy();
+  // The step counter can update before the newest virtual material mounts. Await
+  // the exact appended read rather than pinning the previous last-mounted card.
   const read = history.locator(`article.op-read[data-op-id="${readId}"]`);
+  await expect(read).toBeAttached();
   const content = read.getByRole('region', { name: 'Content of src/checkout/guard.ts' });
   const range = read.getByRole('button', { name: 'Read excerpt of src/checkout/guard.ts' });
   await expect(range).toContainText('Preview · lines 1–200');
