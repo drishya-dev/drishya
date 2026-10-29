@@ -131,6 +131,7 @@ it('resumes Claude over structured stdin, exposes real tool inventory and applie
   expect(completed.usage).toEqual({ input: 120, output: 30, cached: 50, costUsd: 0.012 });
   const launch = launches.find(l => l.args.includes('--resume'))!;
   expect(launch.args).not.toContain(prompt);
+  expect(launch.args).toEqual(expect.arrayContaining(['--permission-prompts', 'host', '--permission-prompt-tool', 'stdio']));
   expect(launch.cwd).toBe(await realpath(root)); expect(launch.shell).toBe(false);
   expect(() => controller.decide(claudeId, started.runId, 'permission1', true)).toThrow('already answered');
 });
