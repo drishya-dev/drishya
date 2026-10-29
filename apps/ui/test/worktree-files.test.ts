@@ -1,11 +1,11 @@
 import {describe,it,expect} from 'vitest';
-import {worktreeFileRows,WORKTREE_GROUP} from '../src/lib/worktree-files.ts';
+import {worktreeFileRows,WORKTREE_GROUP,currentWorkspacePath} from '../src/lib/worktree-files.ts';
 const roots=[{root:'C:\\repo',prefix:'worktree-main'},{root:'C:\\agents\\worker',prefix:'worktree-child'}];
 const paths=['worktree-child/src/a.ts','worktree-main/src/a.ts','worktree-main/README.md'];
 describe('recorded worktree file display',()=>{
   it('opens the workspace first and keeps only known non-main roots in one closed group',()=>{
     const rows=worktreeFileRows(paths,roots,'c:/REPO',new Set(['']));
-    expect(rows.map(r=>r.name)).toEqual(['src','README.md','Agent worktrees']);
+    expect(rows.map(r=>r.name)).toEqual(['src','README.md','Other working directories']);
     expect(rows[0]?.path).toBe('worktree-main/src');
   });
   it('retains exact leaf identities and locations when opening groups',()=>{
@@ -24,6 +24,16 @@ describe('recorded worktree file display',()=>{
     const rows=worktreeFileRows(['.codex/worktrees/unrecorded/a.ts','worktree-unknown/a.ts'],roots,'C:/repo',new Set(['']));
     expect(rows.map(r=>r.name)).toEqual(['.codex','worktree-unknown']);
     expect(rows.some(r=>r.worktree)).toBe(false);
+  });
+  it('keeps exact main-root current reading inside its existing approval boundary',()=>{
+    expect(currentWorkspacePath('worktree-main/src/a.ts',roots,'c:/repo')).toBe('src/a.ts');
+    expect(currentWorkspacePath('worktree-child/src/a.ts',roots,'C:/repo')).toBeUndefined();
+    expect(currentWorkspacePath('worktree-main/src/a.ts',roots,undefined)).toBeUndefined();
+    expect(currentWorkspacePath('src/a.ts',roots,'C:/repo')).toBe('src/a.ts');
+  });
+  it('does not reveal a future or empty root without a matching visible file',()=>{
+    const rows=worktreeFileRows(['worktree-main/README.md'],roots,'C:/repo',new Set(['',WORKTREE_GROUP]));
+    expect(rows.map(row=>row.name)).toEqual(['README.md']);
   });
 });
 

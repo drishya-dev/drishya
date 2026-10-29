@@ -6,6 +6,13 @@ const normalize = (value: string) => {
   return /^[a-z]:\//i.test(path) ? path.toLowerCase() : path;
 };
 
+/** Only an exact recorded root match may enter the existing approved workspace reader. */
+export function currentWorkspacePath(path:string, roots:RecordedFileRoot[], workspaceRoot:string|undefined):string|undefined {
+  const root=roots.find(root=>path.startsWith(root.prefix+'/'));
+  if(!root)return path;
+  return workspaceRoot && normalize(root.root)===normalize(workspaceRoot) ? path.slice(root.prefix.length+1) : undefined;
+}
+
 /** Display structure only: every leaf keeps the projection's exact path identity. */
 export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], workspaceRoot: string | undefined, opened: Set<string>, query = ''): FileTreeRow[] {
   const byPrefix = new Map(roots.map(root => [root.prefix, root]));
@@ -30,7 +37,7 @@ export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], wor
   for (const item of located.filter(item => !item.other)) append(item.path, item.root, '', 0);
   const others = located.filter(item => item.other);
   if (others.length) {
-    rows.push({path:WORKTREE_GROUP,folder:true,depth:0,name:'Agent worktrees',parent:'',worktree:true});
+    rows.push({path:WORKTREE_GROUP,folder:true,depth:0,name:'Other working directories',parent:'',worktree:true});
     if (opened.has(WORKTREE_GROUP)) for (const root of roots) {
       const entries = others.filter(item => item.root === root);
       if (!entries.length) continue;
