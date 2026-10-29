@@ -1,9 +1,9 @@
 /** The tools that put a question to the person: Claude's AskUserQuestion and Codex's request_user_input_async. */
-export const isQuestionTool = (tool: unknown) => tool === 'AskUserQuestion' || tool === 'request_user_input_async';
+export const isQuestionTool = (tool: unknown) => tool === 'AskUserQuestion' || tool === 'request_user_input_async' || tool === 'request_user_input';
 
 /** A question read from its captured input and result text (Claude's AskUserQuestion, Codex's request_user_input_async). Display only; unknown shapes return nothing. */
 export interface AskOption { label: string; description?: string }
-export interface AskQuestion { question: string; header?: string; multiSelect: boolean; options: AskOption[]; /** The captured answer text, when the result names this question. */ answer?: string; chosen: string[]; /** Answer words that are not one of the offered options (the person typed their own). */ typed?: string }
+export interface AskQuestion { id?: string; question: string; header?: string; multiSelect: boolean; options: AskOption[]; /** The captured answer text, when the result names this question. */ answer?: string; chosen: string[]; /** Answer words that are not one of the offered options (the person typed their own). */ typed?: string }
 
 const text = (value: unknown, max = 600) => typeof value === 'string' ? value.slice(0, max) : undefined;
 
@@ -13,7 +13,7 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
   const questions = raw.slice(0, 6).flatMap((item): AskQuestion[] => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
     // Codex names the question `title` and lists options as plain strings, or none at all; Claude uses `question` and {label, description}.
-    const entry = item as { question?: unknown; title?: unknown; header?: unknown; multiSelect?: unknown; options?: unknown };
+    const entry = item as { id?: unknown; question?: unknown; title?: unknown; header?: unknown; multiSelect?: unknown; options?: unknown };
     const question = text(entry.question ?? entry.title, 800);
     if (!question) return [];
     const offered = Array.isArray(entry.options) ? entry.options : [];
@@ -24,9 +24,26 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
       const label = text((option as { label?: unknown })?.label, 200);
       return label ? [{ label, ...(text((option as { description?: unknown }).description) ? { description: text((option as { description?: unknown }).description) } : {}) }] : [];
     });
-    return [{ question, ...(text(entry.header, 60) ? { header: text(entry.header, 60) } : {}), multiSelect: entry.multiSelect === true, options, chosen: [] }];
+    return [{ ...(typeof entry.id === 'string' ? { id: entry.id } : {}), question, ...(text(entry.header, 60) ? { header: text(entry.header, 60) } : {}), multiSelect: entry.multiSelect === true, options, chosen: [] }];
   });
   if (!result) return questions;
+  // Native Codex returns keyed answer arrays. Match only the question's captured id;
+  // accepted acknowledgements and later user prose are never evidence of an answer.
+  try {
+    const value = JSON.parse(result);
+    if (value?.answers && typeof value.answers === 'object' && !Array.isArray(value.answers)) {
+      for (const question of questions) {
+        if (!question.id || questions.filter(q => q.id === question.id).length !== 1) continue;
+        const reply = Object.hasOwn(value.answers, question.id) ? value.answers[question.id]?.answers : undefined;
+        if (!Array.isArray(reply) || !reply.length || !reply.every(v => typeof v === 'string')) continue;
+        question.answer = reply.join(', ');
+        question.chosen = question.options.filter(option => reply.includes(option.label)).map(option => option.label);
+        const rest = reply.filter(v => !question.chosen.includes(v));
+        if (rest.length) question.typed = rest.join(', ');
+      }
+      return questions;
+    }
+  } catch { /* Older Claude results use literal answer framing below. */ }
   // Claude Code appends its own instruction after the last answer ("." then e.g. "Read the answers carefully…"). That
   // sentence has no double quotes; cut it so it is never shown as the person's words.
   result = result.replace(/"\.\s+[A-Z][^"]*$/, '"');

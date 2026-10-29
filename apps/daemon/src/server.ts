@@ -491,12 +491,20 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       // CONTENT-1: the current file behind an image path one of this recording's actions referenced.
       // Needs workspace approval; it is today's file, so it is never cached.
+      if(sub==='workspace'&&subId==='image-grant'&&m==='POST') {
+        if(id.includes('+'))throw new HttpError(400,'choose one session workspace');
+        const body=await readJson(req,2048);
+        if(typeof body.operation!=='string'||Object.keys(body).some(key=>key!=='operation'))throw new HttpError(400,'choose one recorded image operation');
+        const path=referencedImagePath(app.store,firstId,body.operation);
+        if(!path)throw new HttpError(404,'This action did not reference an image file.');
+        return json(res,await workspace.approveImage(firstId,body.operation,path));
+      }
       if (sub === 'workspace' && subId === 'image' && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'choose one session workspace');
         app.recording(firstId);
         const path = referencedImagePath(app.store, firstId, url.searchParams.get('operation') ?? '');
         if (!path) throw new HttpError(404, 'This action did not reference an image file.');
-        const image = await workspace.image(firstId, path);
+        const image = await workspace.recordedImage(firstId, url.searchParams.get('operation') ?? '', path);
         res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline', 'x-drishya-modified-at': image.modifiedAt });
         res.end(image.body);
         return;

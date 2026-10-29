@@ -7,6 +7,7 @@ import {filePeekState,openFilePeek,closeFilePeek,type FilePeekState} from '../li
 import {useSurfaceReflow} from '../lib/use-surface-reflow.ts';
 import {Markdown} from '../lib/markdown.tsx';
 import { acceptInvestigation } from '../lib/native-return.ts';
+import { NativeApproval } from './NativeApproval.tsx';
 import { NativeQuestions } from './NativeQuestions.tsx';
 import { useCurrentSource } from '../lib/use-current-source.ts';
 import { SourceVersionNotice } from './SourceVersions.tsx';
@@ -562,7 +563,7 @@ export function PromptComposer() {
       {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}{connectionError && <button className="btn ghost small" disabled={busy} onClick={() => void act(refresh)}>Retry native connection</button>}</p>}
       {controller?.promptRedacted && <p className="muted small">Detected secrets were removed before sending this prompt.</p>}
       {controller?.inputRequests?.map(request=><NativeQuestions key={`${controller.runId}/${request.id}`} request={request} busy={busy||connection!=='connected'} answer={answers=>void act(()=>workspaceApi.answer(id,controller.runId!,request.id,answers))} stop={()=>void act(()=>workspaceApi.stop(id,controller.runId!))}/>)}
-      {controller?.approvals.map(p => <div className="tool-approval" key={p.id}><strong>{p.name} · approval requested</strong><pre>{p.detail}</pre><button disabled={busy} onClick={() => void act(() => workspaceApi.decide(id, controller.runId!, p.id, false))}>Decline</button><button disabled={busy} onClick={() => void act(() => workspaceApi.decide(id, controller.runId!, p.id, true))}>Allow once</button></div>)}
+      {controller?.approvals.map(p => <NativeApproval key={p.id} request={p} busy={busy} decide={allow=>void act(()=>workspaceApi.decide(id,controller.runId!,p.id,allow))}/>)}
       </div>
   </section>;
 }

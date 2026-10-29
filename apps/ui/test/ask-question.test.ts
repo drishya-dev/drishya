@@ -108,3 +108,11 @@ it('knows both question tools and reads Codex acceptance only from its own resul
   expect(questionAcceptance('The user answered: "A"="B"')).toBeUndefined();
   expect(questionAcceptance(undefined)).toBeUndefined();
 });
+
+it('reads native Codex keyed answer arrays without treating an acknowledgement as an answer', () => {
+  const input={questions:[{id:'check',question:'Which check?',options:[{label:'Alpha'},{label:'Beta'}]}]};
+  expect(isQuestionTool('request_user_input')).toBe(true);
+  expect(askQuestions(input,'{"answers":{"check":{"answers":["Alpha"]}}}')[0]).toMatchObject({answer:'Alpha',chosen:['Alpha']});
+  expect(askQuestions(input,'{"answers":{"other":{"answers":["Alpha"]}}}')[0]!.answer).toBeUndefined();
+  expect(askQuestions(input,'{"accepted":true}')[0]!.answer).toBeUndefined();
+});
