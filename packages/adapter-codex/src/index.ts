@@ -3,6 +3,7 @@
 // exposed only as summaries; encrypted reasoning is never decoded or shown.
 
 import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation, UsagePayload } from '@drishya/contracts';
 import {
@@ -164,9 +165,11 @@ export function createParser(_ctx: ParseContext): RecordParser {
   const delivered = new Map<string, Set<string>>();
   const rememberDelivery = (delivery: Rec, text: unknown) => {
     if (typeof delivery.nativeId !== 'string') return false;
-    const key = JSON.stringify([delivery.sender, delivery.recipient, delivery.type, delivery.state, text]);
-    const seen = delivered.get(delivery.nativeId) ?? new Set<string>();
-    const duplicate = seen.has(key);seen.add(key);delivered.set(delivery.nativeId, seen);
+    const clean = sanitize(delivery).value;
+    const digest = text && typeof text === 'object' && '$blob' in text ? text.$blob : createHash('sha256').update(sanitize(typeof text === 'string' ? text : '').value).digest('hex');
+    const key = JSON.stringify([clean.sender, clean.recipient, clean.type, clean.state, digest]);
+    const seen = delivered.get(clean.nativeId) ?? new Set<string>();
+    const duplicate = seen.has(key);seen.add(key);delivered.set(clean.nativeId, seen);
     return duplicate;
   };
   const openExec = new Set<string>();

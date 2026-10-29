@@ -1,4 +1,5 @@
 import {expect,it} from 'vitest';
+import {createHash} from 'node:crypto';
 import {agentDelivery} from '../src/agent-delivery.ts';
 import {createParser} from '../src/index.ts';
 
@@ -35,5 +36,8 @@ it('projects child payload once by native identity, retains repeated text with d
   expect(parser.parse({...row,payload:{...p,id:'distinct'}})).toHaveLength(1);
   expect(parser.parse({type:'response_item',payload:payload('revised finding','FINAL_ANSWER')})).toHaveLength(1);
   const tail=createParser(ctx);tail.prime(first as unknown as import('@drishya/contracts').Observation[]);expect(tail.parse(row)).toEqual([]);
+  const blobTail=createParser(ctx),stored=structuredClone(first);
+  (stored[0]!.payload as Record<string,unknown>).text={$blob:createHash('sha256').update('finding').digest('hex'),bytes:7};
+  blobTail.prime(stored as unknown as import('@drishya/contracts').Observation[]);expect(blobTail.parse(row)).toEqual([]);
   const empty=createParser(ctx).parse({type:'response_item',payload:payload()})[0];expect(empty).toMatchObject({payload:{text:'',delivery:{state:'empty'}},availability:'metadata-only'});
 });
