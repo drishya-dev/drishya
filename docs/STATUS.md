@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
-| CONTENT-1b | @yash + Codex | `codex/p1-image-first-recovery` | 2026-10-29 | Whole builder-reported image material/recovery task: exact-recorded-file volatile consent (no parent-directory grant), current-image boundary, OpImages/styles/API/tests and real Codex/Claude acceptance. Reserved History image-only preview/ExpandedMaterial branches around 873/987; no scroll/anchor/indexer/controller/projection edits. Bound to 15 files; split first if exceeded. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | TEST-2 | @yash + Codex | `codex/p1-test2-completion` | 2026-10-29 | Builder explicitly transferred TEST-2 from Harsh/Codex on 29 October, to start after the four P1 content tasks finish. Whole remaining regression acceptance and necessary focused fixes; preserve assertions, desktop-only. History wheel/reading-anchor scope only if reproduction requires it; no PERF-2/3 work or visual-density changes. |
 | CONTENT-2 | @yash + Codex browser agent | `codex/p1-browser-completion` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. **28 Oct: Claude Sonnet 5.5 takes that History.tsx integration (branch `claude/content-2-history`, History.tsx insertion only, no other file); Codex keeps the rest of the row.** Up to 15 files; no adapter/contracts/projection or READ-4 test. |
@@ -42,6 +41,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — CONTENT-1b complete locally
+
+- **PR #293:** image-first captured/current material, original requests retained, and explicit volatile exact-recorded-image consent for worktree/generated locations without a directory grant. Ordinary workspace approval remains mandatory; protected/network/link/changed-file and revocation races are refused.
+- **Acceptance:** all three builder-reported actual Codex `32f628ee` images at 600/1440, 342 px previews and Fit/Actual current readers; Claude `061e5f2d` captured screenshot comparison at both widths. 31 image browsers, 17 focused units, both types/build pass. [Report](review/content-1b-image-first-recovery.md). Shared P1 gate pending; no merge performed.
 ### Codex — CONTENT-4b native completion (29 October)
 
 PR #292 finishes genuine plan/checklist acceptance: native TodoWrite, task tools, Codex literal checklist, desktop checklist, proposal and truthful rejection/fallback. Fourteen desktop frames at 600/1440, 143 replay boundaries, 214 targeted units and eleven plan browsers pass; both types/build pass. [Report](review/content-4b-native-completion.md). Merge with #288 reducer r24; full batch gate is owned by the root integration lane. No History/controller/indexer/schema changes.

@@ -121,6 +121,7 @@ export interface DataSource {
   imageUrl?(id: string, sha: string): string;
   /** CONTENT-1 slice 3: today's file behind an image path an action referenced; needs workspace approval. */
   currentImageUrl?(id: string, operationId: string): string;
+  approveCurrentImage?(id:string,operationId:string):Promise<unknown>;
   /** DATA-5: a Claude Code checkpoint backup, read on request with workspace approval. Local recordings only. */
   checkpoint?(id: string, backup: string): Promise<CheckpointFile>;
   /** Moves the mark. Only explicit reader actions call this. */
@@ -277,6 +278,7 @@ export const daemon: DataSource = {
       throw e;
     }
   },
+  approveCurrentImage:(id,operation)=>req(`/v1/recordings/${encodeURIComponent(id)}/workspace/image-grant`,{method:'POST',json:{operation}}),
   currentImageUrl: (id, operationId) => `/v1/recordings/${encodeURIComponent(id)}/workspace/image?operation=${encodeURIComponent(operationId)}`,
   imageUrl: (id, sha) => `/v1/recordings/${encodeURIComponent(id)}/images/${sha}`,
   checkpoint: (id, backup) => req<CheckpointFile>(`/v1/recordings/${encodeURIComponent(id)}/checkpoint/${encodeURIComponent(backup)}`),
