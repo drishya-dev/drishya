@@ -88,7 +88,8 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await expect(page.locator('.map')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Explore repository map', exact: true })).toBeVisible();
 
-  for (const width of [1440, 900, 390]) {
+  // The narrowest supported desktop window is 600 px (AGENTS.md, 26 October).
+  for (const width of [1440, 900, 600]) {
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     await pointAtHistory(page, history);
