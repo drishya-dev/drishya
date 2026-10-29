@@ -33,3 +33,7 @@ Thirteen focused capture/adapter/Git units and both TypeScript projects pass; pr
 The completed batch's full gate is recorded separately before review readiness. GIT-2 has no remaining native acceptance blocker after these checks. This is not NATIVE-1/2 connected-controller certification or platform release acceptance.
 
 A separate native-controller finding is handed to CONTENT-3/NATIVE-2: on this installed Claude CLI, manual/host without the explicit stdio permission callback produced denied Edit results and zero host requests; adding the supported callback produced the three exact permission requests and successful genuine actions above. The current controller invocation needs its own coordinated acceptance; this PR does not change it or silently describe that connected path as verified.
+
+## Final integrated gate
+
+Source-equivalent batch `ef541e4`: UI build, both typechecks, 1001 units (one skip) and package verification pass. Browsers: 481 passed, 26 skipped, one b2-live:139 wheel-end failure. That named test passes alone on unchanged integrated code and clean main; baseline failure is unproven. This is feature-complete and review-ready, with the shared merge-gate qualification retained rather than claimed green.
