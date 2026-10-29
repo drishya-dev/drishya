@@ -59,6 +59,7 @@ createInterface({ input: process.stdin }).on('line', line => {
     }
     send({type:'system',subtype:'init',tools:['Read','Edit','mcp__docs__lookup']});
     send({type:'control_request',request_id:'permission1',request:{subtype:'can_use_tool',tool_name:'Edit',input:{file_path:'a.ts',new_string:'const a = 2;'}}});
+    if(prompt==='APPROVAL_CANCEL')setTimeout(()=>send({type:'control_cancel_request',request_id:'permission1'}),500);
   } else if (v.type === 'control_response') send({type:'result',is_error:false,result:v.response.response.behavior + ' ' + prompt,usage:{input_tokens:120,output_tokens:30,cache_read_input_tokens:50},total_cost_usd:0.012});
   else if (v.method === 'initialize') send({id:v.id,result:{}});
   else if (v.method === 'config/read') send({id:v.id,result:{config:{model:'native-model',model_reasoning_effort:'high',approval_policy:'on-request',sandbox_mode:'read-only',api_key:'PRIVATE_CONFIG_VALUE'}}});
@@ -84,6 +85,7 @@ createInterface({ input: process.stdin }).on('line', line => {
       return;
     }
     send({id:99,method:'item/commandExecution/requestApproval',params:{threadId:v.params.threadId,command:'echo synthetic',cwd:process.cwd()}});
+    if(prompt==='APPROVAL_CANCEL')setTimeout(()=>send({method:'serverRequest/resolved',params:{threadId:v.params.threadId,requestId:99}}),500);
   } else if (v.method === 'turn/interrupt') {
     send({id:v.id,result:{}});
     send({method:'turn/completed',params:{turn:{status:'interrupted'}}});
@@ -171,7 +173,8 @@ it('routes model and effort through native controls without changing permission 
   const codex = await controller.start(codexId, 'settings', true, undefined, { model: 'native-model', effort: 'high' });
   await wait(codexId, 'approval');
   expect(frames.findLast(f => f.method === 'turn/start').params).toMatchObject({ model: 'native-model', effort: 'high' });
-  expect(frames.findLast(f => f.method === 'thread/resume').params).toMatchObject({ approvalPolicy: 'untrusted', sandbox: 'workspace-write' });
+  expect(frames.findLast(f => f.method === 'thread/resume').params).toEqual({ threadId: '44444444-4444-4444-8444-444444444444', cwd: await realpath(root) });
+  expect(frames.some(f => /config\/(?:write|batchWrite)/.test(f.method ?? ''))).toBe(false);
   expect(launches.at(-1)!.args).toEqual(['app-server', '--listen', 'stdio://']);
   await controller.stop(codexId, codex.runId);
   await expect(controller.start(codexId, 'unsafe', true, undefined, { approvalPolicy: 'never' })).rejects.toMatchObject({ status: 400 });
@@ -262,5 +265,15 @@ for(const harness of ['codex','claude'] as const)it(`${harness} clears a questio
   const id=harness==='codex'?codexId:claudeId,started=await controller.start(id,'QUESTION_CANCEL',true),pending=await wait(id,'approval'),request=pending.inputRequests![0]!;
   await expect.poll(()=>controller.status(id).inputRequests).toEqual([]);
   expect(()=>controller.answer(id,started.runId,request.id,{q0:{options:['o0']}})).toThrow('answered or cancelled');
+  await controller.stop(id,started.runId);
+});
+
+for(const harness of ['codex','claude'] as const)it(`${harness} removes a cancelled permission and refuses the obsolete approval`,async()=>{
+  const id=harness==='codex'?codexId:claudeId;
+  const started=await controller.start(id,'APPROVAL_CANCEL',true);
+  const pending=(await wait(id,'approval')).approvals[0]!;
+  await expect.poll(()=>controller.status(id).approvals.length,{timeout:3000}).toBe(0);
+  expect(controller.status(id).state).toBe('running');
+  expect(()=>controller.decide(id,started.runId,pending.id,true)).toThrow('already answered');
   await controller.stop(id,started.runId);
 });

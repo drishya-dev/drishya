@@ -145,6 +145,8 @@ export class HarnessController {
   private resolveInput(run:Run,wireId:unknown) {
     for(const [id,request] of run.inputRequests)if(request.wireId===wireId)run.inputRequests.delete(id);
     run.state.inputRequests=run.state.inputRequests?.filter(request=>run.inputRequests.has(request.id));
+    for(const [id,request] of run.pending)if(request.wireId===wireId)run.pending.delete(id);
+    run.state.approvals=run.state.approvals.filter(request=>run.pending.has(request.id));
     if(run.state.state==='approval')run.state.state=run.pending.size||run.inputRequests.size?'approval':'running';
   }
   answer(id:string,runId:unknown,requestId:unknown,raw:unknown) {
@@ -242,9 +244,10 @@ export class HarnessController {
   private async connectCodex(run: Run, root: string, prompt: string, attachments: PromptAttachment[], selected: TurnOptions) {
     await this.rpc(run, 'initialize', { clientInfo: { name: 'drishya', version: '0.1.0', title: 'Drishya' }, capabilities: { experimentalApi: false } });
     this.write(run, { method: 'initialized' });
-    const resumed = await this.rpc(run, 'thread/resume', { threadId: run.threadId, cwd: root, approvalPolicy: 'untrusted', sandbox: 'workspace-write' });
+    // Resume under the native client's effective policy; a connection must never widen saved read-only access.
+    const resumed = await this.rpc(run, 'thread/resume', { threadId: run.threadId, cwd: root });
     if (resumed.thread?.status?.type === 'active') throw new Error('native thread is already active; finish its other turn first');
-    run.state.settings = sanitize({ models: run.state.settings?.models ?? [], commands: ['compact'], scope: 'connected-session', model: String(resumed.model ?? selected.model ?? '') || undefined, effort: resumed.reasoningEffort ?? selected.effort, permission: typeof resumed.approvalPolicy === 'string' ? resumed.approvalPolicy : 'untrusted', sandbox: resumed.sandbox?.type ?? 'workspaceWrite' }).value as NativeSettings;
+    run.state.settings = sanitize({ models: run.state.settings?.models ?? [], commands: ['compact'], scope: 'connected-session', model: String(resumed.model ?? selected.model ?? '') || undefined, effort: resumed.reasoningEffort ?? selected.effort, permission: typeof resumed.approvalPolicy === 'string' ? resumed.approvalPolicy : undefined, sandbox: resumed.sandbox?.type }).value as NativeSettings;
     const result = prompt.trim() === '/compact'
       ? await this.rpc(run, 'thread/compact/start', { threadId: run.threadId })
       : await this.rpc(run, 'turn/start', { threadId: run.threadId, ...selected, input: [{ type: 'text', text: prompt, text_elements: [] }, ...attachments.filter(a => a.type === 'image').map(a => ({ type: 'image', url: `data:${a.mime};base64,${a.data}` }))] });
