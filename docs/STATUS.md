@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | CONTENT-4b | @yash + Codex plan agent | `codex/p1-plan-completion` | 2026-10-29 | Whole remaining real plan/checklist acceptance; plan-only helpers/components/tests and native-case/report files. Includes capture-core literalPlan helper/tests and reducer literal-patch-derived classification block/import/scope near line 612 after genuine native capture exposed the wrapped-plan gap. No History.tsx/controller/indexer/contracts/schema changes. CONTENT-3 alone owns reducer inputDepth and r24; coordinated disjoint reducer ranges. |
 | CONTENT-3 | @yash + Codex questions agent | `codex/p1-question-completion` | 2026-10-29 | Whole questions/approval completion: native controller permission transport, question/approval helpers/components and scoped tests/native acceptance. No History.tsx/indexer/schema changes. Reserved projection reduce.ts inputDepth entry for native request_user_input and reducer r24 cache invalidation only (coordinated with CONTENT-4b). |
-| CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
 | CONTENT-1b | @yash + Codex | `codex/p1-image-first-recovery` | 2026-10-29 | Whole builder-reported image material/recovery task: exact-recorded-file volatile consent (no parent-directory grant), current-image boundary, OpImages/styles/API/tests and real Codex/Claude acceptance. Reserved History image-only preview/ExpandedMaterial branches around 873/987; no scroll/anchor/indexer/controller/projection edits. Bound to 15 files; split first if exceeded. |
 | CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
 | TEST-2 | @yash + Codex | `codex/p1-test2-completion` | 2026-10-29 | Builder explicitly transferred TEST-2 from Harsh/Codex on 29 October, to start after the four P1 content tasks finish. Whole remaining regression acceptance and necessary focused fixes; preserve assertions, desktop-only. History wheel/reading-anchor scope only if reproduction requires it; no PERF-2/3 work or visual-density changes. |
@@ -43,6 +42,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex - CONTENT-10 whole reading acceptance complete
+
+- PR #291: existing direct-reading behavior passes 20 real Codex/Claude checks at 600/1440 including new genuine CSV/TSV stdout captures, plus five keyboard guards, 11 named regressions, 26 units, both types/build and affected checks. No production edits needed.
+- Exact Original, explicit delimiter choice and terminal/MCP fallback are preserved. [Source matrix](review/content-10-whole-reading-acceptance.md); one shared P1 batch gate follows.
 
 ### Yash with Claude Sonnet 5.5 — INDEX-1 complete (map and Files tree without nested checkouts)
 
