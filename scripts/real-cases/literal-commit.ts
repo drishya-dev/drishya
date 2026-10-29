@@ -1,4 +1,5 @@
 import { explicitCommitPaths } from '../../apps/daemon/src/git-session-evidence.ts';
+import {typedItem} from '../../packages/adapter-codex/src/items.ts';
 import type { RealCase } from './types.ts';
 
 // GIT-2: the strict commit link needs a literal `git commit ... -- <paths>` run in the session's own workspace root. Real journals rarely
@@ -11,6 +12,10 @@ export const literalCommit: RealCase = {
   scan(row, harness) {
     if (harness === 'codex') {
       const p = row.payload as Record<string, unknown> | undefined;
+      if(row.type==='event_msg'&&p?.type==='item_completed'){
+        const item=typedItem(p.item)?.payload;
+        return item?.item==='command'&&typeof item.command==='string'&&explicitCommitPaths(item.command)?{hits:1}:undefined;
+      }
       if (row.type !== 'response_item' || p?.type !== 'function_call' || !['exec_command', 'shell_command'].includes(String(p.name))) return;
       let input: Record<string, unknown>;
       try { input = JSON.parse(String(p.arguments)) as Record<string, unknown>; } catch { return; }
