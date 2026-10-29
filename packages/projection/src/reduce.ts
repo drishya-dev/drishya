@@ -33,7 +33,7 @@ import type {
 } from '@drishya/contracts';
 import { isBlobText } from '@drishya/contracts';
 import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
-import { literalPatch, touchesProtectedFile } from '@drishya/capture-core';
+import { literalPatch, literalPlan, touchesProtectedFile } from '@drishya/capture-core';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks } from './patch.ts';
 import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './shell.ts';
@@ -73,6 +73,7 @@ const TITLE_RULE = 'title-v1';
 type Rec = Record<string, any>;
 
 interface OpState {
+  literalPlan?: { text: string; status: string }[];
   taskInput?: unknown;
   taskRedacted?: boolean;
   taskTurn?: string;
@@ -615,6 +616,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           const st = newOp(o, baseId, intent, String(p.tool));
           describeCall(st, p, rel);
+          if (o.source.adapterId === 'codex' && (p.tool === 'exec' || p.tool === 'functions.exec') && intent.kind === 'shell') {
+            st.literalPlan = literalPlan(text(intent.command as TextValue) ?? '');
+          }
           if (['TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet', 'ExitPlanMode', DESKTOP_PLAN_TOOL].includes(String(p.tool))) { st.taskInput = resolveBlobs(p.input, text); st.taskRedacted = o.redactions.length > 0; }
           if ((st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.command.length > (opts.maxInputChars ?? Infinity)) {
             const command = st.op.detail.command;
@@ -647,6 +651,15 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
             if (p.isError && !st.typedOutcome) { const declined = declinedFrom(text(p.text)); if (declined) st.op.declined = declined; }
             if (!st.typedOutcome) completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
+            if (!p.isError && st.literalPlan !== undefined) {
+              // The wrapper contains exactly one awaited literal call. A failed or
+              // pending wrapper supplies no successful revision; dynamic code stays text.
+              st.op.kind = 'plan';
+              st.op.detail = { kind: 'plan', items: st.literalPlan, scope: JSON.stringify([o.recordingId, o.agentId, o.source.sourceId, o.source.generation, 'codex-literal-plan']) };
+              st.op.title = `Update plan · ${st.literalPlan.length} items`;
+              st.op.classification = derived('codex-literal-plan-v1', st.op.observationIds);
+            }
+            st.literalPlan = undefined;
             if (!p.isError && st.taskInput !== undefined) {
               const plan = taskPlans.apply(o, st.op.tool, st.taskInput, resolveBlobs(p.structured, text), st.callObservationId);
               if (plan) {
