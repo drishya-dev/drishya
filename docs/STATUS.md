@@ -31,15 +31,37 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
-| CONTENT-8 | @yash + Codex | `codex/cross-tool-parity` (draft #257; waiting upstream) | 2026-10-27 | Audit/fixture work preserved; no production files held. Whole acceptance waits for CONTENT-1/2/3/4 and CONTENT-5b/NATIVE-3 dependencies named in TASKS. Stop expanding this item until the earlier whole tasks finish. |
-| TEST-2 | @yash + Codex | `codex/p1-test2-completion` | 2026-10-29 | Builder explicitly transferred TEST-2 from Harsh/Codex on 29 October, to start after the four P1 content tasks finish. Whole remaining regression acceptance and necessary focused fixes; preserve assertions, desktop-only. History wheel/reading-anchor scope only if reproduction requires it; no PERF-2/3 work or visual-density changes. |
-| CONTENT-2 | @yash + Codex browser agent | `codex/p1-browser-completion` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. **28 Oct: Claude Sonnet 5.5 takes that History.tsx integration (branch `claude/content-2-history`, History.tsx insertion only, no other file); Codex keeps the rest of the row.** Up to 15 files; no adapter/contracts/projection or READ-4 test. |
+| UI-16 | @yash + Codex | `codex/ui16-files-rail-width` | 2026-10-30 | Whole Files rail width/filename acceptance: SessionWorkspace.tsx tree-row presentation only, apps/ui/src/components/FileRowName.tsx, apps/ui/src/components/file-evidence.css, tests/browser/files-rail-width.spec.ts and docs/review/ui16-files-rail-width.md; central completion docs. Preserve selection/routing (FILES-8 owns DeveloperWorkspace.tsx), counts, worktree grouping and lift origins. No History, ingest, controller or schema edits. |
+| FILES-8 | @harsh + Codex | `harsh/files-8-workspace-routing` | 2026-10-29 | Whole Files-to-open-Workspace routing and acceptance: `apps/ui/src/components/DeveloperWorkspace.tsx`, the scoped Files selection owner after P4 discovery (list exact path before edits), `tests/browser/files-workspace-routing.spec.ts`, `docs/review/files-8-workspace-routing.md`, `docs/TASKS.md`, `docs/STATUS.md`; counts-only real-session evidence and screenshots in ignored `.local/`. Preserve pane/tab limits, drafts, closed-Workspace peek and live/replay. No History.tsx, schema/contracts, animation or other-owner files. |
+| CONTENT-8 | @yash + Codex parity agent | `codex/cross-tool-parity` (draft #257) | 2026-10-29 | Builder resumed independent content completion on 29 October. Whole integrated cross-tool parity acceptance after CONTENT-1/2/3/4b/5b implementations and native child evidence; remaining NATIVE-3 is a separate end-to-end gate, not assumed complete. Reserve dedicated parity browser/real-case tests, scripts/real-cases/types.ts type-only import resolution, and `docs/review/content-8-cross-tool-parity.md`; shared captured-result views/helpers only if a genuine case exposes a gap, list exact paths before edits. No History/controller/schema/other-owner source edits. Read-only audit/preparation while TEST-2 runs; native/browser/unit workload waits for the root timing-gate release. |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex - CONTENT-10 whole reading acceptance complete
+
+- PR #291: existing direct-reading behavior passes 20 real Codex/Claude checks at 600/1440 including new genuine CSV/TSV stdout captures, plus five keyboard guards, 11 named regressions, 26 units, both types/build and affected checks. No production edits needed.
+- Exact Original, explicit delimiter choice and terminal/MCP fallback are preserved. [Source matrix](review/content-10-whole-reading-acceptance.md); one shared P1 batch gate follows.
+
+### Yash with Codex - CONTENT-2 integrated acceptance complete
+
+- Current Codex and Claude captures plus retained full-source browser stories pass 600/1440, including genuine captured screenshot bytes. Captured metadata, result ownership and step scrubbing remain honest; no History or rendering change needed. Eight units, both types/build and ten named browser checks pass.
+- PR #289; [source matrix and limits](review/content-2-integrated-acceptance.md). Whole P1 batch gate follows; TEST-2 remains separate and claimed.
+
+### Yash with Codex — TEST-2 whole supported-desktop acceptance
+
+- **PR #294:** all four B2 journeys pass three runs (12/12); supported prompt-rail journey 10/10. Three consecutive complete browser commands pass on integrated P1 46bebde5; each rebuilds UI and runs both normal projects. [Evidence and counts](review/test-2-p1-completion.md).
+- **Real sessions:** Codex 32f628ee (533,572,179 bytes/32,854 observations) and Claude c8e5c9c8 (82,859,509 bytes/10,466 observations), each at 600/1440: zero held-reading shift, overflow and page errors. Static reading acceptance, not a claim of fresh native append.
+- **Batch:** both typechecks/build/package and 1,031 units/one skip pass. Test-only fixes preserve native wheel, exact scroll/focus/copy/virtualization assertions and timeouts. No History or deferred PERF-2/3 source changes. Other-builder review/merge remains; new FILES-8/UI-16 scope is separate.
+
+### Yash with Codex — P1 content/regression batch ready for review
+
+- Ready and mergeable: [CONTENT-2 #289](https://github.com/drishya-dev/drishya/pull/289), [CONTENT-10 #291](https://github.com/drishya-dev/drishya/pull/291), [TEST-2 #294](https://github.com/drishya-dev/drishya/pull/294). No Claude implementation or sign-in blocker remains for these three; only normal other-builder review/squash. Task checkboxes/claim removal live in their completion PRs, not prematurely on main.
+- Frozen integrated P1 46bebde5: three consecutive full browser commands each 505 passed / 26 skipped / zero failed (396.7, 412.4, 441.0 seconds); both types/build/package and 1,031 units/one skip pass. Earlier failed commands, native-wheel driver coupling, exact operation selection and Git fixture lifetime diagnostics remain in #294, not hidden or counted green.
+- CONTENT-3 #288, CONTENT-4b #292 and CONTENT-1b #293 are merged. CONTENT-8 #257 has resumed whole parity acceptance in a separate lane; new FILES-8/UI-16 and deferred performance/release work remain separate. No source files held by the three ready PR claims.
+
 
 ### Yash with Codex — CONTENT-1b complete locally
 
@@ -57,6 +79,7 @@ PR #292 finishes genuine plan/checklist acceptance: native TodoWrite, task tools
 ### Yash with Claude Sonnet 5.5 — order after SCREEN-1 recorded; two Files bugs and two passes added
 
 - **Amendment (Yash, 29 Oct):** the UI passes come before the motion passes, because motion should be tuned on a finished UI. Order: SCREEN-1 → AUDIT-1 → UI passes (UI-7, UI-8, UI-3, UI-4b) → motion passes (MOTION-1, MOTION-3) → COMP-1 → VIZ-1.
+- **Window to 18 November (Yash, 29 Oct), with the reason:** speed to market matters (anyone can build something like this), the premium bar still holds. Scope runs as far as VIZ-1's ideas, not necessarily their implementation; P2 completes first; Claude Code and Codex stay the main harnesses, Cursor and Antigravity (ADAPT-1) only if time remains; MAC-1 (macOS acceptance) and VIDEO-1 (product videos, later) are separate items. The launch date is decided at the 18 November review. New items: MAC-1 (P2), ADAPT-1 and VIDEO-1 (P3).
 - **Decision (Yash, 29 Oct), with the reason:** after SCREEN-1 the order is AUDIT-1 (a pass through every built function for UI, backend, content and navigation problems, not fitted to his own list) → the UI and motion passes → the fresh-eyes agent review (COMP-1) → VIZ-1 (task-shaped visualizations: branches and PRs side by side, a PR beside a running agent, the screen beside the work). The audit comes first so the UI passes do not polish surfaces whose content is still unclear.
 - **New items:** FILES-8 (P1: Workspace opens the file chosen in Files, not peek), UI-16 (P1: the Files rail wastes its width, names are cut while the row has empty space), AUDIT-1 (P2), VIZ-1 (P3). Nothing built; work starts 30 October.
 
