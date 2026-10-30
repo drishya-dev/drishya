@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState, type ReactNode } from 'react';
 import type { Operation } from '@drishya/contracts';
+import { isScreenOperation } from '@drishya/scene';
 import { browserStep, safeWebUrl } from '../lib/browser-evidence.ts';
 import { useApp } from '../state.ts';
 import { ToolOutput } from './ToolOutput.tsx';
@@ -56,6 +57,7 @@ export function BrowserStrip({ operations, renderOperation }: { operations: Oper
   const op = operations[index];
   useLayoutEffect(() => { window.dispatchEvent(new Event('drishya-material-layout')); }, [op?.id]);
   if (!op) return null;
+  const screenFrames = operations.filter(item => isScreenOperation(item) && item.images?.length).length;
   const choose = (next: number) => { const item = operations[next]; if (item) { setChoice(item.id); useApp.getState().set({ follow: false }); } };
   return <div className="browser-strip" data-browser-steps={operations.length} data-browser-first-op={operations[0]?.id}>
     <nav className="browser-scrubber" aria-label="Captured browser steps" onClick={event => event.stopPropagation()}>
@@ -63,6 +65,7 @@ export function BrowserStrip({ operations, renderOperation }: { operations: Oper
       <span>Browser · {index + 1} / {operations.length}</span>
       <input type="range" aria-label="Browser step" min={1} max={operations.length} value={index + 1} onChange={event => choose(Number(event.target.value) - 1)}/>
       <button type="button" aria-label="Next browser step" disabled={index === operations.length - 1} onClick={() => choose(index + 1)}>›</button>
+      {screenFrames > 0 && <button type="button" className="browser-screen-open" title="Watch these steps on a large screen" onClick={() => useApp.setState({ screenView: { opId: isScreenOperation(op) ? op.id : operations.find(item => isScreenOperation(item))?.id } })}>Open screen</button>}
     </nav>
     {renderOperation(op, index)}
   </div>;
