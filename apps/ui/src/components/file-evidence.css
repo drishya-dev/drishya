@@ -1,5 +1,9 @@
 .folder-explorer .folder-tree .file-row-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.folder-explorer .file-evidence { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; margin-left: auto; padding-left: 5px; font: 11px/1.2 var(--sans); color: var(--t2); font-variant-numeric: tabular-nums; }
+.folder-explorer .folder-tree .file-row-name-parts { display: flex; }
+.file-row-stem { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.file-row-extension { flex: 0 0 auto; }
+/* Outrank the legacy last-span rule: evidence must never share the name's flexible column. */
+.folder-explorer .folder-tree .file-evidence { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; margin-left: auto; padding-left: 5px; font: 11px/1.2 var(--sans); color: var(--t2); font-variant-numeric: tabular-nums; }
 .folder-explorer .file-evidence > span { display: inline-flex; align-items: center; gap: 3px; }
 .folder-explorer .file-change { font-weight: 600; }
 .folder-explorer .change-E { color: var(--edited); }
