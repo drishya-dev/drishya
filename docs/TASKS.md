@@ -95,6 +95,18 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 First the base; the ideas in VIZ-1 are recorded now and decided after the review.
 
+**How the UI and motion passes are run (Yash, 30 Oct).** One surface at a time, in this order, so that each tool does what it is good at and nothing is polished twice:
+
+1. **AUDIT-1's findings for that surface** are the work list; the passes do not invent their own.
+2. **Reviewer lens: the HIG skill** ([dickwu/apple-design-skill](https://github.com/dickwu/apple-design-skill), 123 Apple Human Interface Guideline pages plus a design-craft lens; no licence file in the repository and the pages are Apple's text, so it is installed for the user or cloned under `.local/`, never copied into this repository). Load only the always-load set (accessibility, layout, typography, color, designing for macOS) plus the 3 to 6 pages for what is on screen (sidebars, split views, toolbars, lists and tables, search fields, windows, motion, feedback and loading states), and cite file and heading. Desktop pages only; phone, touch, widgets, Apple Pay and Duo pages are out of scope here. **Its findings are advice, filtered through our doctrine:** Apple's Liquid Glass and translucency do not override the flat, hairline theme with blur only at the header/composer edges (AGENTS creative doctrine 6), and Apple's own warning applies: delight is not decoration.
+3. **Worst-case data: `break-ui`** on the surface: long names, one-letter names, thousands of items, zero items, missing fields, non-Latin text. This is the tool for the smallest things in the premium bar.
+4. **Craft: `emil-design-eng`** for composition and polish, and the installed **`apple-design`** skill for how things should feel to touch (springs, interruptibility, momentum, reduced motion).
+5. **Component libraries (UI-3, Uiverse and others):** only to replace a specific component the audit found weak, never to add one; copy the CSS or markup, add no dependency, check each component's licence, and run it through the freeze, truth and ten-minute tests like anything else.
+6. **Then the motion pass, after the UI pass is done:** `find-animation-opportunities` to list what should move and what should not, `improve-animations` for the plan, `animate` and `review-animations` to build and check, `animation-performance` for frame budget. The AGENTS rules hold: motion carries information about origin, relationship or change, or it is cut.
+7. **Verify** at 600 and 1440 px on real sessions of both harnesses.
+
+A pilot comes first: run steps 2 to 4 on one surface (UI-16, the Files rail) and compare the result with what the installed skills alone give, before deciding how much weight the HIG skill gets.
+
 **Window to 18 November (Yash, 29 Oct).** Speed to market matters, because anyone can build something like this and we want to be first, and the premium bar still holds. The scope for this window runs **as far as VIZ-1's ideas**, not necessarily their implementation:
 
 1. **Complete P2 first.** The priority is smooth, premium current things: the P2 table (the audit, the UI passes, the motion passes and the rest) before anything new.
