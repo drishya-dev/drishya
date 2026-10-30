@@ -12,15 +12,18 @@ export function safeWebUrl(value: string): boolean {
 /** Display only literal captured input fields. Never execute script input or infer a current page. */
 export function browserStep(op: Operation) {
   const d = op.detail;
-  if (d.kind !== 'mcp' || !/(?:browser|chrome|playwright)/i.test(d.server) || !tools.has(d.tool)) return;
+  // Claude Code's own `computer` tool is recorded as an ordinary tool; it reads like the browser's (SCREEN-1).
+  if (d.kind !== 'mcp' && d.kind !== 'other') return;
+  if (d.kind === 'mcp' ? !/(?:browser|chrome|playwright)/i.test(d.server) || !tools.has(d.tool) : op.tool !== 'computer') return;
+  const server = d.kind === 'mcp' ? d.server : 'computer', tool = d.kind === 'mcp' ? d.tool : 'computer';
   let value = d.input;
   if (typeof value === 'string' && value.length <= 131072) { try { value = JSON.parse(value); } catch { /* Incomplete or literal input stays in the raw reader. */ } }
   const input = object(value);
   const actions = Array.isArray(input?.actions) ? input.actions : undefined;
   const batch = actions?.slice(0, 12).map(item => { const entry = object(item), fields = object(entry?.input); return { name: text(entry?.name), action: text(fields?.action), url: text(fields?.url) }; });
-  const action = text(input?.action) ?? d.tool.replace(/^browser_/, '').replace(/_/g, ' ');
+  const action = text(input?.action) ?? tool.replace(/^browser_/, '').replace(/_/g, ' ');
   const query = text(input?.query) ?? text(input?.text);
-  return { server: d.server, action, batch, batchCount: actions?.length, url: text(input?.url), query, tab: text(input?.tabId) ?? (typeof input?.tabId === 'number' ? String(input.tabId) : undefined), excerpt: d.resultPreview };
+  return { server, action, batch, batchCount: actions?.length, url: text(input?.url), query, tab: text(input?.tabId) ?? (typeof input?.tabId === 'number' ? String(input.tabId) : undefined), excerpt: d.resultPreview };
 }
 
 /** A passage already defines captured order and prose boundaries; do not group across it. */

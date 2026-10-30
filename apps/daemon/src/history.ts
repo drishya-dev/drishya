@@ -3,6 +3,8 @@ import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/re
 import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
+import type {ScreenRun} from '../../../packages/scene/src/screen.ts';
+import type {ToolInventory,ToolTrail,ToolFilter} from '../../../packages/scene/src/tools.ts';
 import { Worker } from 'node:worker_threads';
 import type { ArtifactSlice } from '@drishya/contracts';
 import type { BlobSearchResult } from '@drishya/store';
@@ -80,6 +82,9 @@ export class HistoryService {
   findingMembers(id:string,key:string,page=0,q='') {return this.request<FindingMembers>('finding-members',{id,key,page,q});}
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
+  screen(id:string,step?:number) {return this.request<ScreenRun>('screen',{id,step});}
+  tools(id:string,step?:number) {return this.request<ToolInventory>('tools',{id,step});}
+  toolTrail(id:string,filter:ToolFilter,from?:{id?:string;at?:number},step?:number) {return this.request<ToolTrail>('tool-trail',{id,filter,from,step});}
   gitSessionEvidence(id:string,query:GitSessionQuery) {return this.request<GitSessionEvidence>('git-session-evidence',{id,query});}
   delegationThread(id:string,operationId:string,start=0,step?:number,taskStart=0) {return this.request<DelegationThread|null>('delegation-thread',{id,operationId,start,step,taskStart});}
   searchLibrary(query:LibrarySearchQuery) {return this.request<LibrarySearchPage>('search-library',{query});}

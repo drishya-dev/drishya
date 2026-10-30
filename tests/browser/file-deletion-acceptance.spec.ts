@@ -42,7 +42,9 @@ test('explicit rescan enriches legacy deletion evidence in the same recording wi
  const source=join(dir,'legacy.jsonl'),data=join(dir,'legacy-data');
  writeFileSync(source,[{timestamp:'2026-10-25T10:00:00Z',type:'session_meta',payload:{id:'legacy-file-deletion',cwd:dir}},change(1,{'src/legacy.ts':{type:'add',content:'created\n'}}),change(2,{'src/legacy.ts':{type:'delete'}})].map(r=>JSON.stringify(r)).join('\n')+'\n');
  const store=new Store(data),adapters=defaultAdapters().map(adapter=>({...adapter,createParser(context:Parameters<typeof adapter.createParser>[0]){const parser=adapter.createParser(context);return {prime:parser.prime,parse:(record:unknown)=>parser.parse(record).filter(o=>o.kind!=='item.completed')};}}));
- const legacy=new Ingestor(store,adapters),imported=await legacy.importSource('codex',source),before=store.observations(imported.recordingId);await legacy.close();store.close();
+ const legacy=new Ingestor(store,adapters),imported=await legacy.importSource('codex',source),before=store.observations(imported.recordingId);
+ // HOME-1b rescans every Codex recording without turn details once at startup. This one stands for a recording that already had that pass, so only the explicit rescan enriches it.
+ await legacy.close();store.db.prepare('INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)').run('codex-turn-details-rescan-v1:'+imported.recordingId,'1');store.close();
  const current=new App(data),local=await startServer({app:current,port:0});
  try{
   expect(await current.history.fileEvidence(imported.recordingId,['src/legacy.ts'])).toEqual([]);

@@ -30,7 +30,8 @@ export function readingTarget(p: Projection, q: ReadingQuery): ReadingTarget | n
   const fromTurn = index.turns.find(turn => turn.turnKey === q.turnFrom);
   const at = from?.startSequence ?? fromTurn?.step ?? q.at;
   const operations = index.operations.filter(op =>
-    (!q.agent || op.agentId === q.agent) && (!q.tool || op.tool === q.tool) &&
+    // The tool filter is the scene's own: an MCP tool is matched by its name without the server.
+    (!q.agent || op.agentId === q.agent) && (!q.tool || op.origin.tool === q.tool) &&
     (!q.server || op.origin.type === 'mcp' && op.origin.server === q.server) &&
     (!q.operationKind || op.kind === q.operationKind) &&
     (q.kind !== 'edit' || op.kind === 'edit' || op.kind === 'write') &&
