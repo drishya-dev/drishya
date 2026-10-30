@@ -198,6 +198,10 @@ interface CompactionPayload{
 
 ---
 
+### 2.4 `tools.snapshot` (TOOLS-1, 30 October 2026; draft)
+
+The tools a harness recorded as available to the agent, names only. Payload: `source` (`prompt_snapshot`, `deferred_tools_delta` or `additional_tools`), `tools` (names to add, each with an optional `namespace`, the group the harness named), `removed` (names the harness withdrew). Claude Code lists them in `attachment` rows (the same rows carry the system prompt, which is never read); Codex lists tool groups in `additional_tools` response items. A list is "as recorded at that moment", never what is available now. The projection keeps the first-listed step of each tool in `Projection.availableTools`.
+
 ## 3. The adapter contract
 
 ```typescript

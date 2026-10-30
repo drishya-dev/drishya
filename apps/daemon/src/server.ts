@@ -373,6 +373,18 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if(cursor)try{commandCursor(cursor);}catch{throw new HttpError(400,'Invalid command cursor');}
         return json(res,await app.history.commands(id,{q,status:status as 'ok'|'error'|'running'|'unknown'|undefined,cursor,direction:direction as 'older'|'newer'}));
       }
+      if(sub==='tools'&&m==='GET') {
+        for(const key of id.split('+'))app.recording(key);
+        return json(res,await app.history.tools(id,url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
+      }
+      if(sub==='tool-trail'&&m==='GET') {
+        for(const key of id.split('+'))app.recording(key);
+        const field=(name:string)=>{const value=url.searchParams.get(name);if(value!==null&&(!value||value.length>300))throw new HttpError(400,'Invalid tool filter');return value??undefined;};
+        const filter={tool:field('tool'),server:field('server'),kind:field('kind'),agent:field('agent')};
+        if(!filter.tool&&!filter.server&&!filter.kind)throw new HttpError(400,'Name a tool, a server or a kind');
+        const from={id:field('from'),at:url.searchParams.has('at')?intParam(url,'at',0,0,Number.MAX_SAFE_INTEGER):undefined};
+        return json(res,await app.history.toolTrail(id,filter,from,url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
+      }
       if(sub==='screen'&&m==='GET') {
         for(const key of id.split('+'))app.recording(key);
         return json(res,await app.history.screen(id,url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
