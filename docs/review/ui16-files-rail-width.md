@@ -37,4 +37,4 @@ The extra HIG lens corroborated the fix and clarified acceptance, but found no s
 
 ## Integration gate
 
-Pending final results on isolated checkout at `8e44bcdc` (current main plus UI-16). No History, controller, ingest or schema runtime change belongs to this task.
+Isolated checkout `8e44bcdc` (current main plus UI-16), with its own frozen dependency install: both typechecks, UI build and package verification pass. Full browser command: 495 parallel + 33 serial = **528 passed, 26 skipped, zero failures**. All units pass with four workers: **1,058 passed, one skipped**. The initial unconstrained unit run timed out once at 5 seconds in the existing Git-branches test; the unchanged file passed separately, then the full four-worker rerun passed. The timeout cause is not proven and no assertion or timeout was changed. No hosted CI was requested. No History, controller, ingest or schema runtime change belongs to this task.
