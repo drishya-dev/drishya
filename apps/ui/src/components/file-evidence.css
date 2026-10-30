@@ -1,4 +1,5 @@
-.folder-explorer .folder-tree .file-row-name { display: flex; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-explorer .folder-tree .file-row-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-explorer .folder-tree .file-row-name-parts { display: flex; }
 .file-row-stem { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .file-row-extension { flex: 0 0 auto; }
 /* Outrank the legacy last-span rule: evidence must never share the name's flexible column. */
