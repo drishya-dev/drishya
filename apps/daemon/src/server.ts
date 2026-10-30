@@ -373,6 +373,10 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if(cursor)try{commandCursor(cursor);}catch{throw new HttpError(400,'Invalid command cursor');}
         return json(res,await app.history.commands(id,{q,status:status as 'ok'|'error'|'running'|'unknown'|undefined,cursor,direction:direction as 'older'|'newer'}));
       }
+      if(sub==='screen'&&m==='GET') {
+        for(const key of id.split('+'))app.recording(key);
+        return json(res,await app.history.screen(id,url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
+      }
       if (sub === 'turns' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, { turns: await app.history.turns(id) });

@@ -21,3 +21,5 @@
 .browser-batch li{overflow-wrap:anywhere}
 
 .browser-strip:has(.op.expanded){flex-basis:100%;width:100%}
+.browser-scrubber button.browser-screen-open{width:auto;padding:0 8px;color:var(--t2);font:inherit;white-space:nowrap}
+.browser-scrubber button.browser-screen-open:hover{color:var(--t1)}
