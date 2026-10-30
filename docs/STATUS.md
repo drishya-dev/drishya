@@ -34,13 +34,17 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | UI-16 | @yash + Codex | `codex/ui16-files-rail-width` | 2026-10-30 | Whole Files rail width/filename acceptance: SessionWorkspace.tsx tree-row presentation only, apps/ui/src/components/FileRowName.tsx, apps/ui/src/components/file-evidence.css, tests/browser/files-rail-width.spec.ts and docs/review/ui16-files-rail-width.md; central completion docs. Preserve selection/routing (FILES-8 owns DeveloperWorkspace.tsx), counts, worktree grouping and lift origins. No History, ingest, controller or schema edits. |
 | FILES-8 | @harsh + Codex | `harsh/files-8-workspace-routing` | 2026-10-29 | Whole Files-to-open-Workspace routing and acceptance: `apps/ui/src/components/DeveloperWorkspace.tsx`, the scoped Files selection owner after P4 discovery (list exact path before edits), `tests/browser/files-workspace-routing.spec.ts`, `docs/review/files-8-workspace-routing.md`, `docs/TASKS.md`, `docs/STATUS.md`; counts-only real-session evidence and screenshots in ignored `.local/`. Preserve pane/tab limits, drafts, closed-Workspace peek and live/replay. No History.tsx, schema/contracts, animation or other-owner files. |
 | HOME-1b | @harsh + Codex | `harsh/home-1b-missing-turn-data` | 2026-10-29 | Whole startup-rescan candidate-rule fix and acceptance: `packages/ingest/src/index.ts`, `packages/ingest/test/legacy-codex-rescan.test.ts`, `docs/TASKS.md`, `docs/STATUS.md`; counts-only real-session/three-run copied-database benchmark evidence in ignored `.local/`. No schema/contracts, UI, other-owner files or rescan behavior changes. |
-| CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Complete locally; ready PR #291 (direct readings/keyboard/CSV-TSV). Genuine both-harness acceptance and 20 real checks; shared full gate recorded in #294. No external implementation blocker or source files held; awaiting other-builder review/squash. Completion checkbox and claim removal are in the PR. |
 | CONTENT-8 | @yash + Codex parity agent | `codex/cross-tool-parity` (draft #257) | 2026-10-29 | Builder resumed independent content completion on 29 October. Whole integrated cross-tool parity acceptance after CONTENT-1/2/3/4b/5b implementations and native child evidence; remaining NATIVE-3 is a separate end-to-end gate, not assumed complete. Reserve dedicated parity browser/real-case tests, scripts/real-cases/types.ts type-only import resolution, and `docs/review/content-8-cross-tool-parity.md`; shared captured-result views/helpers only if a genuine case exposes a gap, list exact paths before edits. No History/controller/schema/other-owner source edits. Read-only audit/preparation while TEST-2 runs; native/browser/unit workload waits for the root timing-gate release. |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex - CONTENT-10 whole reading acceptance complete
+
+- PR #291: existing direct-reading behavior passes 20 real Codex/Claude checks at 600/1440 including new genuine CSV/TSV stdout captures, plus five keyboard guards, 11 named regressions, 26 units, both types/build and affected checks. No production edits needed.
+- Exact Original, explicit delimiter choice and terminal/MCP fallback are preserved. [Source matrix](review/content-10-whole-reading-acceptance.md); one shared P1 batch gate follows.
 
 ### Yash with Codex - CONTENT-2 integrated acceptance complete
 
