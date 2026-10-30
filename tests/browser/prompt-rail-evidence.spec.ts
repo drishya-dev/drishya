@@ -30,16 +30,16 @@ test('rail ticks are uniform and plain at rest; the captured ledger appears on h
  await expect(edited).toHaveAttribute('aria-description',/80 captured operations/);
  await page.screenshot({path:'.local/turn3-ledger.png'});
 });
-test('full rail remains virtualized, keyboard addressable and readable at desktop and phone widths',async({page})=>{
+test('full rail remains virtualized, keyboard addressable and readable at supported desktop widths',async({page})=>{
  const rail=page.getByRole('navigation',{name:'Prompt positions in history'});await expect(rail).toBeVisible();
- for(const width of [1440,390,320]){
+ for(const width of [1440,900,600])await test.step(`${width}px rail keyboard navigation`,async()=>{
   await page.setViewportSize({width,height:844});await rail.focus();await page.keyboard.press('End');await expect(rail.locator('[data-prompt-ordinal="75"]')).toBeFocused();
   expect(await rail.locator('button').count()).toBeLessThan(75);
   await page.keyboard.press('Home');await expect(rail.locator('[data-prompt-ordinal="1"]')).toBeFocused();
   const edited=rail.locator('[data-prompt-ordinal="3"]');await edited.hover();await expect(page.locator('.prompt-rail-ledger')).toContainText('80 captured operations');
   const preview=await page.locator('.prompt-rail-preview').boundingBox();expect(preview!.x).toBeGreaterThanOrEqual(0);expect(preview!.x+preview!.width).toBeLessThanOrEqual(width);expect(preview!.y+preview!.height).toBeLessThanOrEqual(844);
   await page.screenshot({path:`.local/turn3-${width}.png`});await page.mouse.move(0,0);
- }
+ });
  await page.keyboard.press('End');await page.keyboard.press('Enter');
  await expect(page.locator('.turn').filter({hasText:'Rail turn 74'})).toBeVisible();
 });

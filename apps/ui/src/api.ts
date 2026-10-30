@@ -3,6 +3,8 @@ import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/re
 import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../packages/scene/src/review-insights.ts';
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
+import type {ScreenRun} from '../../../packages/scene/src/screen.ts';
+import type {ToolInventory,ToolTrail,ToolFilter} from '../../../packages/scene/src/tools.ts';
 import type {DelegationThread} from '../../daemon/src/delegation-types.ts';
 // Where the UI gets its data: the local daemon (live, importable) or a static replay bundle
 // (the hosted demo). Both expose the same surface, so every screen works in both.
@@ -82,6 +84,12 @@ export interface DataSource {
   findingMembers?(id:string,key:string,page?:number,q?:string):Promise<FindingMembers>;
   reviewInsights?(id:string,page?:number,kind?:ReviewFinding['kind']):Promise<ReviewInsightsPage>;
   commands?(id:string,query:CommandQuery):Promise<CommandPage>;
+  /** SCREEN-1: the computer-use run over the whole recording (to `step` in replay), whatever window the reader holds. */
+  screen?(id:string,step?:number):Promise<ScreenRun>;
+  /** TOOLS-1: every tool the harness listed as available plus every tool used, with use counts over the whole recording. */
+  tools?(id:string,step?:number):Promise<ToolInventory>;
+  /** TOOLS-1: where the reader stands among the uses of a tool, over the whole recording. */
+  toolTrail?(id:string,filter:ToolFilter,from?:{id?:string;at?:number},step?:number):Promise<ToolTrail>;
   delegationThread?(id:string,operationId:string,start?:number,step?:number,taskStart?:number):Promise<DelegationThread>;
   readingTarget?(id: string, query: ReadingQuery): Promise<ReadingTarget | null>;
   fileEvidence?(id: string, paths: string[], step?: number): Promise<FileEvidence[]>;
@@ -238,6 +246,9 @@ export const daemon: DataSource = {
   findingMembers:(id,key,page=0,q='')=>req(`/v1/recordings/${encodeURIComponent(id)}/finding-members?${new URLSearchParams({key,page:String(page),q})}`),
   reviewInsights:(id,page=0,kind)=>req(`/v1/recordings/${encodeURIComponent(id)}/review-insights?${new URLSearchParams({page:String(page),...(kind?{kind}:{})})}`),
   commands:(id,query)=>req(`/v1/recordings/${encodeURIComponent(id)}/commands?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),
+  tools:(id,step)=>req(`/v1/recordings/${encodeURIComponent(id)}/tools${step===undefined?'':`?step=${step}`}`),
+  toolTrail:(id,filter,from,step)=>req(`/v1/recordings/${encodeURIComponent(id)}/tool-trail?${new URLSearchParams([...Object.entries(filter),...(from?.id?[['from',from.id]]:[]),...(from?.at===undefined?[]:[['at',String(from.at)]]),...(step===undefined?[]:[['step',String(step)]])].filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]))}`),
+  screen:(id,step)=>req(`/v1/recordings/${encodeURIComponent(id)}/screen${step===undefined?'':`?step=${step}`}`),
   delegationThread:(id,operationId,start=0,step,taskStart=0)=>req(`/v1/recordings/${encodeURIComponent(id)}/delegation-thread/${encodeURIComponent(operationId)}?${new URLSearchParams({start:String(start),taskStart:String(taskStart),...(step===undefined?{}:{step:String(step)})})}`),
   storage: () => req('/v1/storage'),
   readingTarget: (id, query) => req(`/v1/recordings/${encodeURIComponent(id)}/reading-target?${new URLSearchParams(Object.entries(query).filter(([,value]) => value !== undefined).map(([key,value]) => [key, String(value)]))}`),

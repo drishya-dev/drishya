@@ -4,7 +4,7 @@
 
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, ExternalChangePayload, Observation } from '@drishya/contracts';
+import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, ExternalChangePayload, Observation, ToolsSnapshotPayload } from '@drishya/contracts';
 import {
   fileInfo,
   headAndTailRecords,
@@ -52,6 +52,9 @@ const MAX_CHECKPOINT_FILES = 2000;
 const BACKUP_NAME = /^[0-9a-f]{8,64}@v\d+$/;
 
 /** Bookkeeping record types that carry no agent activity. Ignored on purpose, not by accident. */
+/** A tool name as a harness writes it; anything else is not a name and is not kept. */
+const TOOL_NAME = /^[A-Za-z0-9_.:-]{1,120}$/;
+const MAX_TOOL_NAMES = 400;
 const IGNORED = new Set([
   'queue-operation', 'bridge-session', 'mode', 'atis-latch',
   'last-prompt', 'agent-name', 'attachment', 'permission-mode', 'progress', 'frame-link',
@@ -193,7 +196,8 @@ export function createParser(ctx: ParseContext): RecordParser {
       const r = record as Rec;
       const type = String(r.type ?? '');
       if (typeof r.sessionId === 'string') lastSession = r.sessionId;
-      if (IGNORED.has(type) && !(type === 'attachment' && (r.attachment as Rec | undefined)?.type === 'edited_text_file')) return [];
+      const attachmentType = type === 'attachment' ? (r.attachment as Rec | undefined)?.type : undefined;
+      if (IGNORED.has(type) && attachmentType !== 'edited_text_file' && attachmentType !== 'prompt_snapshot' && attachmentType !== 'deferred_tools_delta') return [];
       const base = {
         recordId: typeof r.uuid === 'string' ? r.uuid : undefined,
         sourceTime: typeof r.timestamp === 'string' ? r.timestamp : undefined,
@@ -218,6 +222,18 @@ export function createParser(ctx: ParseContext): RecordParser {
         const messageId = str(type === 'file-history-snapshot' ? r.messageId ?? snap.messageId : r.snapshotMessageId);
         if (!messageId || !files.length) return [];
         return [{ ...base, part: 0, kind: 'checkpoint', payload: { messageId, ...defined({ at: str(snap.timestamp) ?? str(r.timestamp), session: lastSession }), files } satisfies CheckpointPayload }];
+      }
+
+      // TOOLS-1: the tool names Claude Code listed as available. Names only: the same rows carry the system prompt, which is never read.
+      if (type === 'attachment' && (attachmentType === 'prompt_snapshot' || attachmentType === 'deferred_tools_delta')) {
+        const at = r.attachment as Rec;
+        const names = (value: unknown): string[] => Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string' && TOOL_NAME.test(v)).slice(0, MAX_TOOL_NAMES) : [];
+        const listed = attachmentType === 'prompt_snapshot'
+          ? names(Array.isArray(at.tools) ? (at.tools as Rec[]).map((t) => t?.name) : [])
+          : [...names(at.addedNames), ...names(at.readdedNames)];
+        const removed = attachmentType === 'deferred_tools_delta' ? names(at.removedNames) : [];
+        if (!listed.length && !removed.length) return [];
+        return [{ ...base, part: 0, kind: 'tools.snapshot', payload: { source: attachmentType, ...(listed.length ? { tools: listed.map((name) => ({ name })) } : {}), ...(removed.length ? { removed } : {}) } satisfies ToolsSnapshotPayload }];
       }
 
       // DATA-6: Claude Code noticed a file it had read changed on disk outside its edit tools.
