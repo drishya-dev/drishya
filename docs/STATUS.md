@@ -36,12 +36,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | HOME-1b | @harsh + Codex | `harsh/home-1b-missing-turn-data` | 2026-10-29 | Whole startup-rescan candidate-rule fix and acceptance: `packages/ingest/src/index.ts`, `packages/ingest/test/legacy-codex-rescan.test.ts`, `docs/TASKS.md`, `docs/STATUS.md`; counts-only real-session/three-run copied-database benchmark evidence in ignored `.local/`. No schema/contracts, UI, other-owner files or rescan behavior changes. |
 | CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Complete locally; ready PR #291 (direct readings/keyboard/CSV-TSV). Genuine both-harness acceptance and 20 real checks; shared full gate recorded in #294. No external implementation blocker or source files held; awaiting other-builder review/squash. Completion checkbox and claim removal are in the PR. |
 | CONTENT-8 | @yash + Codex parity agent | `codex/cross-tool-parity` (draft #257) | 2026-10-29 | Builder resumed independent content completion on 29 October. Whole integrated cross-tool parity acceptance after CONTENT-1/2/3/4b/5b implementations and native child evidence; remaining NATIVE-3 is a separate end-to-end gate, not assumed complete. Reserve dedicated parity browser/real-case tests, scripts/real-cases/types.ts type-only import resolution, and `docs/review/content-8-cross-tool-parity.md`; shared captured-result views/helpers only if a genuine case exposes a gap, list exact paths before edits. No History/controller/schema/other-owner source edits. Read-only audit/preparation while TEST-2 runs; native/browser/unit workload waits for the root timing-gate release. |
-| CONTENT-2 | @yash + Codex browser agent | `codex/p1-browser-completion` | 2026-10-26 | Complete locally; ready PR #289 (browser/web evidence). Genuine Codex/Claude acceptance at 600/1440, eight units and ten named browsers; shared full gate recorded in #294. No Claude implementation remains and no source files held; awaiting other-builder review/squash. Completion checkbox and claim removal are in the PR. |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex - CONTENT-2 integrated acceptance complete
+
+- Current Codex and Claude captures plus retained full-source browser stories pass 600/1440, including genuine captured screenshot bytes. Captured metadata, result ownership and step scrubbing remain honest; no History or rendering change needed. Eight units, both types/build and ten named browser checks pass.
+- PR #289; [source matrix and limits](review/content-2-integrated-acceptance.md). Whole P1 batch gate follows; TEST-2 remains separate and claimed.
 
 ### Yash with Codex — TEST-2 whole supported-desktop acceptance
 
