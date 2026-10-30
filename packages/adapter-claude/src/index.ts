@@ -4,7 +4,7 @@
 
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, ExternalChangePayload, Observation } from '@drishya/contracts';
+import type { AdapterDescriptor, CheckpointPayload, CompactionPayload, DiscoveredSource, ExternalChangePayload, Observation } from '@drishya/contracts';
 import {
   fileInfo,
   headAndTailRecords,
@@ -255,7 +255,15 @@ export function createParser(ctx: ParseContext): RecordParser {
       }
 
       if (type === 'system') {
-        if (r.subtype === 'compact_boundary') out.push({ ...base, part: 0, kind: 'compaction', payload: { trigger: r.compactMetadata?.trigger } });
+        if (r.subtype === 'compact_boundary') {
+          out.push({ ...base, part: 0, kind: 'compaction', payload: { trigger: r.compactMetadata?.trigger } });
+          const metadata = r.compactMetadata ?? {};
+          const metric = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+          // A new part enriches old imports on rescan without rewriting their stable original observation.
+          out.push({ ...base, part: 1, kind: 'compaction', payload: { source: 'claude-boundary', phase: 'boundary',
+            ...defined({ trigger: str(metadata.trigger), beforeTokens: metric(metadata.preTokens), afterTokens: metric(metadata.postTokens), durationMs: metric(metadata.durationMs) }),
+          } satisfies CompactionPayload });
+        }
         return out; // hook bookkeeping and notices carry no agent activity
       }
 
@@ -263,6 +271,7 @@ export function createParser(ctx: ParseContext): RecordParser {
         const content = r.message?.content;
         if (r.isCompactSummary) {
           out.push({ ...base, part: 0, kind: 'compaction', payload: { summary: textOf(content) }, contentKeys: ['summary'] });
+          out.push({ ...base, part: 1, kind: 'compaction', payload: { source: 'claude-summary', phase: 'summary', ...defined({ boundaryRecordId: str(r.parentUuid) }) } satisfies CompactionPayload });
           return out;
         }
         const mode = typeof r.permissionMode === 'string' ? { permissionMode: r.permissionMode } : {};

@@ -13,15 +13,29 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
   const operations = projection.operations.filter((op) => started.has(op.id) || parents.has(op.id)).map((op) => ended.has(op.id) || parents.has(op.id) && op.endSequence !== undefined && op.endSequence < step ? op : pending(op));
   const visibleArtifacts = new Set(operations.flatMap((op) => op.artifactIds));
   for (const id of proseIds) visibleArtifacts.add(`art_${id}_prose`);
+  const readings = projection.context?.readings.filter(p => p.availableAfterStep < step);
+  const readingIds = new Set(readings?.map(p => p.id));
+  const compactionSummaries = projection.compactionSummaries?.filter(s => s.availableAfterStep <= step);
+  const summaryIds = new Set(compactionSummaries?.map(s => s.id));
+  for (const summary of compactionSummaries ?? []) if (summary.artifactId) visibleArtifacts.add(summary.artifactId);
+  const compactions = projection.compactions?.filter(c => c.step < step).map(c => ({ ...c,
+    priorReadingId: readingIds.has(c.priorReadingId ?? '') ? c.priorReadingId : undefined,
+    nextReadingId: readingIds.has(c.nextReadingId ?? '') ? c.nextReadingId : undefined,
+    summaryId: summaryIds.has(c.summaryId ?? '') ? c.summaryId : undefined,
+  }));
   const visibleEvidence = new Set([...operations.flatMap((op) => op.observationIds), ...projection.prose.filter((p) => proseIds.has(p.id)).flatMap((p) => p.observationIds)]);
   return {
     ...projection,
     // Accounting points do not own timeline steps. Whole-session totals are not historical evidence.
     usage: undefined,
+    context: readings?.length ? { readings, ...(new Set(readings.map(p => p.agentId)).size === 1 ? { latest: readings.at(-1) } : {}) } : undefined,
+    compactions,
+    compactionSummaries,
     // Turn timing, outcome and errors describe the finished turn: a past step must not show what came later.
     turns: undefined,
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
+    gaps: projection.gaps.filter(g => g.sequence < step),
     ...(projection.notices ? { notices: projection.notices.filter((n) => noticeIds.has(n.id)) } : {}),
     artifacts: projection.artifacts.filter((a) => visibleArtifacts.has(a.id)),
     links: projection.links.filter((link) => link.sourceObservationIds.every((id) => visibleEvidence.has(id))),
