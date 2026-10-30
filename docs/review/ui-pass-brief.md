@@ -67,6 +67,7 @@ Append at the end of every phase and read at the start of every phase; do not re
 | 30 Oct | Builder request | Tools dock | The list shows only observed tools and a selected tool only dims the rest. Wanted: every available tool listed, and previous/next through a chosen tool's uses. | UI, data | TOOLS-1 |
 | 30 Oct | Builder screenshot | Plan strip | A plan shows "Revision 1 · 0 of 5 done" collapsed behind Expand. Content a reader wants is shown by default, bounded when large, never hidden; applies to every collapsed-by-default surface. | UI, content | UI-17, TOOLS-1 |
 | 30 Oct | TOOLS-1 build | Toolbox | The new Available tools list duplicates the instruments and the MCP server sections; the toolbox should be one composition (instruments, servers and tools as one list with a trail), shown by default, including at half width. | UI | UI-8, UI-17 |
+| 30 Oct | Builder suggestion | Audit, UI and motion passes | Impeccable (critique, audit, harden, clarify, layout, typeset, detector) as a reviewer; Taste Skill as a rules and method reference and for the launch page. See TASKS "How the UI and motion passes are run". | UI | AUDIT-1, UI-8 |
 | 30 Oct | Builder note (Instagram reel) | Coloured themes | Palette concept: dominant hue, neutral and one contrasting accent spent on one thing at a time; section 7. | UI | UI-8 |
 
 ## 6. Who runs it
