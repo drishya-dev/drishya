@@ -44,6 +44,12 @@ The fixture and live-arrival suites pass **44 browser checks**, including both s
 
 **156 unique genuine acceptance journeys pass: 78 at 600 px and 78 at 1440 px, covering 39 selected cases in both History and replay.** This combines the broad matrix with targeted reruns after correcting driver selectors, large-source bootstrap waiting and asynchronous child-link metadata waiting. Every planned tuple is present in the private final count matrix; none is credited from a generic fallback in place of its dedicated question, plan, browser, image or delegation reader. All accepted journeys report zero external requests and zero page errors. Representative actual question, plan and child-thread screenshots were inspected locally.
 
+All 39 selected operations have a recorded `op-end` boundary. The driver now fails explicitly if one is absent, always enters replay with `at`, and checks its Timeline value; History cannot be credited as replay. A counts-only independent boundary audit and eight focused guarded journeys pass.
+
+After merging `origin/main` at `9c50bdf7`, both types/build, six scanner units, all 44 parity/live-arrival guards and 20 affected genuine browser/web/image journeys pass again. The registered `check:real -- content-parity --max-mb 20 --pick 1` scan finds 99 Claude sessions / 7,103 native calls and 34 Codex sessions / 2,491 native calls (nine/four journals above 20 MB skipped). Its scratch imports are `81c22a35` (17.3 MB, 535 operations) and `0de01fe5` (9.1 MB, 401 operations). Native-call and projected-operation counts are not assumed one-to-one.
+
+The shared isolated runtime batch at `8e44bcdc` passes types/build/package, 1,058 units / one skip and 528 browser checks / 26 skips / zero failures. This tests-only PR uses that batch gate and its focused checks rather than duplicating the full gate.
+
 The native-live evidence limit above remains explicit. The accepted archive rendering and regression coverage do not close NATIVE-3 or broader release acceptance.
 
 ## Genuine source matrix

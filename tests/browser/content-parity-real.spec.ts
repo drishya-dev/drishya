@@ -60,6 +60,7 @@ test.describe('genuine cross-tool content parity',()=>{
     const projection=app.projection(sample.recording),op=projection.operations.find(item=>item.id===sample.operation);
     if(!op)throw Error('Recorded operation is unavailable');
     const end=projection.timeline.findIndex(item=>item.type==='op-end'&&item.operationId===op.id);
+    if(end<0)throw Error('Selected after-result case has no recorded result boundary; replay cannot be credited');
     for(const replay of[false,true]){
      stage=`${sample.recording.slice(4,12)}/${sample.family}/${replay?'replay':'history'}/opening`;
      const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'}),page=await context.newPage();
@@ -72,10 +73,10 @@ test.describe('genuine cross-tool content parity',()=>{
      await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id:sample.recording,entries:[['location',{selectedOp:op.id,follow:false,held:true}]]}]}}):route.continue());
      try{
       await page.goto(server.launchUrl);await page.locator('.home').waitFor();
-      await page.goto(`${server.url}/?experience=modern&motion=0${replay&&end>=0?`&at=${end+1}`:''}#/r/${sample.recording}`);
+      await page.goto(`${server.url}/?experience=modern&motion=0${replay?`&at=${end+1}`:''}#/r/${sample.recording}`);
       await page.locator('.history').waitFor({timeout:60000});
-      if(replay&&end>=0)await expect(page.getByRole('slider',{name:'Timeline',exact:true})).toHaveAttribute('aria-valuenow',String(end+1));
-      const scene=compose(projection,{step:replay&&end>=0?end+1:projection.timeline.length}),target=scene.passages.find(ps=>ps.ops.some(item=>item.id===op.id));
+      if(replay)await expect(page.getByRole('slider',{name:'Timeline',exact:true})).toHaveAttribute('aria-valuenow',String(end+1));
+      const scene=compose(projection,{step:replay?end+1:projection.timeline.length}),target=scene.passages.find(ps=>ps.ops.some(item=>item.id===op.id));
       if(!target)throw Error('Genuine operation has no captured passage');
       const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`),group=groupBrowserSteps(target.ops,new Map(projection.operations.map(o=>[o.id,o]))).find(group=>group.some(item=>item.id===op.id));
       const strip=group&&group.length>1?page.locator(`.browser-strip[data-browser-first-op=${JSON.stringify(group[0]!.id)}]`):undefined;
@@ -86,7 +87,7 @@ test.describe('genuine cross-tool content parity',()=>{
       const inspector=page.locator('.inspector');if(await inspector.count())await inspector.getByRole('button',{name:'Close',exact:true}).press('Enter');
       const material=card.locator(sample.selector).last();await reveal(material);
       if(sample.family!=='image')expect(await material.evaluate(el=>!!el.textContent?.trim())).toBe(true);
-      const view=replay&&end>=0?asOfProjection(projection,end+1):projection;
+      const view=replay?asOfProjection(projection,end+1):projection;
       if(sample.family==='browser'){
        const step=browserStep(op);expect(!!step).toBe(true);
        expect(await material.locator('.browser-action').evaluate((el,action)=>el.textContent?.includes(action),step!.action)).toBe(true);
@@ -131,7 +132,7 @@ test.describe('genuine cross-tool content parity',()=>{
       }
       if(op.detail.kind==='spawn'){
        stage+=' / delegation first page';
-       let dto=await app.history.delegationThread(sample.recording,op.id,0,replay&&end>=0?end+1:undefined);
+       let dto=await app.history.delegationThread(sample.recording,op.id,0,replay?end+1:undefined);
        if(!dto)throw Error('Genuine delegation unavailable');
        await material.locator('.delegation-thread > summary').press('Enter');
        await expect.poll(()=>material.locator('.delegation-thread li').count()).toBe(dto.steps.length);
@@ -148,7 +149,7 @@ test.describe('genuine cross-tool content parity',()=>{
         steps+=dto.steps.length;
         if(dto.start+dto.limit>=dto.total){expect(steps).toBe(dto.total);break;}
         const next=dto.start+dto.limit;await material.getByRole('button',{name:'Next steps',exact:true}).press('Enter');
-        dto=await app.history.delegationThread(sample.recording,op.id,next,replay&&end>=0?end+1:undefined);
+        dto=await app.history.delegationThread(sample.recording,op.id,next,replay?end+1:undefined);
         await expect.poll(()=>material.locator('.delegation-thread ol').getAttribute('start')).toBe(String(next+1));
        }
       }
