@@ -50,7 +50,10 @@ test.describe('branch selection fixture',()=>{
     await expect(dialog.getByLabel('Commit changed files')).toContainText('topic.ts');
     await expect(dialog.locator('.git-patch-reader')).toContainText('export const topic = true;');
     await dialog.getByRole('button',{name:'Back to Git graph',exact:true}).click();
-    const row=dialog.locator(`[data-row-hash="${tip}"]`);await expect(row).toBeVisible();await row.click();
+    const row=dialog.locator(`[data-row-hash="${tip}"]`);await expect(row).toBeVisible();
+    // Finish the selected commit read before closing: the next viewport reuses this daemon.
+    const selectedCommit=page.waitForResponse(response=>{const url=new URL(response.url());return url.pathname.endsWith("/git/commit")&&url.searchParams.get("hash")===tip&&response.status()===200;});
+    await row.click();await selectedCommit;
     const link=dialog.getByRole('button',{name:'Seen in turn 1',exact:true});await expect(link).toBeVisible();await link.click();
     await expect(dialog).toHaveCount(0);await expect(page.getByRole('article',{name:'Run git log --oneline topic',exact:true})).toBeVisible();
     expect(git(root,'rev-parse','HEAD')).toBe(before);expect(git(root,'status','--porcelain')).toBe('');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

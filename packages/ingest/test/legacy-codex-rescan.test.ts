@@ -47,16 +47,36 @@ it('enriches old consumed bytes once across server restarts without rewriting ca
   expect(spy).not.toHaveBeenCalled(); expect(app.store.countObservations(id)).toBe(count);
 });
 
-it('skips Claude and newer Codex imports but still rescans an old recording with partial details', async () => {
+it('rescans newer Codex imports with no details but skips Claude and older partial details', async () => {
   const old = await legacy('partial', '2026-10-20T00:00:00Z', false);
   app!.store.db.prepare("DELETE FROM observations WHERE recording_id=? AND kind='turn.detail' AND json_extract(body,'$.payload.outcome') IS NOT NULL").run(old.id);
-  await legacy('new', '2026-10-28T00:00:00Z');
+  const newer = await legacy('new', '2026-10-28T00:00:00Z');
   app!.store.upsertRecording({ id: 'old-claude', adapterId: 'claude-code', harness: 'claude-code', sourcePath: join(dir, 'not-read') });
   app!.store.db.prepare("UPDATE recordings SET created_at='2026-10-20T00:00:00Z' WHERE id='old-claude'").run();
   const spy = vi.spyOn(app!.ingest, 'rescan');
   expect((await app!.ingest.rescanLegacyCodex()).completed).toBe(1);
-  expect(spy.mock.calls.map(call => call[0])).toEqual([old.id]);
-  expect(app!.store.getRecording(old.id)!.stats?.durationMs).toBe(600);
+  expect(spy.mock.calls.map(call => call[0])).toEqual([newer.id]);
+  expect(app!.store.getRecording(newer.id)!.stats?.durationMs).toBe(600);
+  expect(marked(old.id)).toBe(false);
+  expect(app!.store.getRecording(old.id)!.stats).toBeUndefined();
+});
+
+it('skips existing turn details regardless of import date without marking a reread', async () => {
+  const older = await legacy('older-complete', '2026-10-20T00:00:00Z', false);
+  const newer = await legacy('newer-complete', '2026-10-28T00:00:00Z', false);
+  const spy = vi.spyOn(app!.ingest, 'rescan');
+  expect(await app!.ingest.rescanLegacyCodex()).toEqual({ attempted: 0, completed: 0, unavailable: 0, failed: 0 });
+  expect(spy).not.toHaveBeenCalled();
+  expect(marked(older.id)).toBe(false); expect(marked(newer.id)).toBe(false);
+});
+
+it('honors an existing completion marker even when the recording has no turn details', async () => {
+  const { id } = await legacy('marked', '2026-10-28T00:00:00Z');
+  app!.store.db.prepare('INSERT INTO meta(key,value) VALUES (?,?)').run(marker(id), '1');
+  const old = app!.store.observations(id), spy = vi.spyOn(app!.ingest, 'rescan');
+  expect(await app!.ingest.rescanLegacyCodex()).toEqual({ attempted: 0, completed: 0, unavailable: 0, failed: 0 });
+  expect(spy).not.toHaveBeenCalled();
+  expect(app!.store.observations(id)).toEqual(old); expect(marked(id)).toBe(true);
 });
 
 it('keeps missing journals nonfatal and retryable on a later startup, preserving captured history', async () => {
