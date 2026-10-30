@@ -9,7 +9,7 @@ const navigable = (value: string): boolean => {
 };
 
 /** Recorded search results as a reading list. Links open only when clicked; nothing is fetched to show them. */
-export function WebResults({ results, limit, snippets = false }: { results: WebResult[]; limit?: number; snippets?: boolean }) {
+export function WebResults({ results, limit, snippets = false, onShowAll }: { results: WebResult[]; limit?: number; snippets?: boolean; onShowAll?: () => void }) {
   const shown = limit ? results.slice(0, limit) : results;
   return <div className={`web-results${snippets ? ' web-results-full' : ''}`}>
     <ol>{shown.map((result, i) => <li key={`${i}:${result.url}`}>
@@ -20,8 +20,9 @@ export function WebResults({ results, limit, snippets = false }: { results: WebR
         <span className="web-title">{result.title ?? result.url}</span>
         {result.title && <span className="web-snippet">{result.url}</span>}
       </div>}
+      {snippets && navigable(result.url) && <span className="web-address">{result.url}</span>}
       {snippets && result.snippet && <p className="web-snippet">{result.snippet}</p>}
     </li>)}</ol>
-    {limit && results.length > limit && <small className="web-more">{results.length - limit} more results</small>}
+    {limit && results.length > limit && <button type="button" className="web-more" onClick={event => { event.stopPropagation(); onShowAll?.(); }}>{results.length - limit} more in preview · Open results</button>}
   </div>;
 }
