@@ -3,6 +3,7 @@ import { readingTarget } from '../../../packages/scene/src/reading-target.ts';
 import { fileEvidence } from '../../../packages/scene/src/file-evidence.ts';
 import {reviewInsights,findingMembers} from '../../../packages/scene/src/review-insights.ts';
 import {commandPage} from '../../../packages/scene/src/commands.ts';
+import {screenRun} from '../../../packages/scene/src/screen.ts';
 import {gitSessionEvidence,commandAtWorkspace} from './git-session-evidence.ts';
 import {delegationThread} from './delegation-thread.ts';
 import { parentPort, workerData } from 'node:worker_threads';
@@ -256,6 +257,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if(message.method==='finding-members')value=findingMembers(current(a.id).projection,a.key,a.page,a.q);
     else if(message.method==='review-insights')value=reviewInsights(current(a.id).projection,a.page,a.kind);
     else if (message.method === 'commands') value=commandPage(current(a.id).projection.operations,a.query);
+    else if (message.method === 'screen') value=screenRun((a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step)).operations);
     else if(message.method==='git-session-evidence'){
       const projection=current(a.id).projection;
       value=gitSessionEvidence(projection,a.query,op=>commandAtWorkspace(op.observationIds.slice(0,8).map(id=>source.observationById(a.id,id)).filter((o):o is Observation=>!!o),projection.workspaceRoot));

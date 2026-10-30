@@ -469,3 +469,4 @@ function clip(s: string, n: number) {
   const t = s.replace(/\s+/g, ' ').trim();
   return t.length > n ? t.slice(0, n - 1) + '…' : t;
 }
+export { screenRun, isScreenOperation, SCREEN_STEP_CAP, type ScreenRun, type ScreenStep, type ScreenGesture } from './screen.ts';
