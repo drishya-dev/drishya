@@ -161,6 +161,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     const root = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof (o.payload as Rec).cwd === 'string' ? (o.payload as Rec).cwd : undefined);
     if (root && !rootsByRecording.has(o.recordingId)) rootsByRecording.set(o.recordingId, root);
   }
+  // Empty incremental readers may receive their first captured root only on append.
+  let branchPrimaryRoot = rootsByRecording.get(recordingId);
   const normalizedRoot = (root: string) => {
     const path = toPosix(root).replace(/\/+$/, '');
     return /^[a-z]:\//i.test(path) ? path.toLowerCase() : path;
@@ -313,12 +315,15 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         }
       }
       const p = o.payload as Rec;
+      if (!branchPrimaryRoot && o.recordingId === recordingId) {
+        branchPrimaryRoot = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof p.cwd === 'string' ? p.cwd : undefined);
+      }
       switch (o.kind) {
         case 'session.meta': {
           if (typeof p.cwd === 'string' && !workspaceRoot) workspaceRoot = p.cwd;
           // A branch names this captured root only. Neither companion agents nor another
           // recording/root may replace the selected session's identity; missing data stays missing.
-          const primaryRoot = rootsByRecording.get(o.recordingId);
+          const primaryRoot = branchPrimaryRoot;
           if (o.recordingId === recordingId && o.agentId === 'agent:main' &&
               typeof p.branch === 'string' && p.branch.trim() && typeof p.cwd === 'string' && p.cwd.trim() &&
               primaryRoot && normalizedRoot(p.cwd) === normalizedRoot(primaryRoot)) {

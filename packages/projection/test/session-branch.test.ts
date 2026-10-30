@@ -55,6 +55,9 @@ describe('captured session branch identity (UI-1b)', () => {
     expect(reducer.snapshot(false).recordedBranch?.name).toBe('first');
     reducer.append(observations.slice(1));
     expect(reducer.snapshot(false).recordedBranch).toEqual(project(observations).recordedBranch);
+    const empty = createReducer('r', [], io, { ...options, ordered: true });
+    empty.append(observations);
+    expect(empty.snapshot(false).recordedBranch).toEqual(project(observations).recordedBranch);
   });
 
   it('suppresses whole-session branch metadata at partial historical steps and tolerates old projections', () => {
