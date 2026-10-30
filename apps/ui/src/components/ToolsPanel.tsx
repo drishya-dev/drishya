@@ -60,7 +60,7 @@ export function ToolList() {
   for (const tool of tools) groups.set(tool.server ?? '', [...(groups.get(tool.server ?? '') ?? []), tool]);
   const usedCount = inventory.tools.filter(t => t.uses).length;
   return <section className="tool-list" aria-label="Available tools">
-    <div className="tool-heading">{inventory.recorded ? 'Available tools' : 'Tools used'} <span>{inventory.recorded ? `${inventory.tools.length} · ${usedCount} used` : inventory.tools.length}</span></div>
+    <div className="tool-heading">{inventory.recorded ? 'Available tools' : 'Tools used'} <span title={inventory.recorded ? `${usedCount} used of ${inventory.tools.length} available` : undefined}>{inventory.recorded ? `${usedCount} of ${inventory.tools.length}` : inventory.tools.length}</span></div>
     {!inventory.recorded && <p className="tool-note">This harness did not record which tools were available, so only the tools it used are shown.</p>}
     {inventory.tools.length > LONG && <input type="search" className="tool-search" aria-label="Search tools" placeholder="Search tools" value={query} onChange={event => setQuery(event.target.value)}/>}
     <div className="tool-groups" role="group" aria-label="Tools">

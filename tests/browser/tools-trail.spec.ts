@@ -43,7 +43,7 @@ for(const width of [600,1440])test(`every available tool is listed by default an
  const list=page.locator('.tool-list');
  await expect(list).toBeVisible();
  await expect(list.locator('.tool-heading')).toContainText('Available tools');
- await expect(list.locator('.tool-heading')).toContainText('8 · 2 used');
+ await expect(list.locator('.tool-heading')).toContainText('2 of 8');
  // Listed tools that were never used are there too, with no count, quietly.
  for(const name of ['Edit','Grep','Glob','WebSearch','search_code','create_issue'])await expect(list.locator('.tool-row',{hasText:name}).first()).toBeVisible();
  await expect(list.locator('.tool-row',{hasText:'Edit'}).locator('.tool-uses')).toHaveText('—');

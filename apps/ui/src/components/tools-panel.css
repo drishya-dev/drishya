@@ -5,7 +5,7 @@
 .tool-note { margin: 4px 6px 8px; color: var(--t3); font: 11px/16px var(--sans); }
 .tool-search { box-sizing: border-box; width: 100%; margin: 4px 0 8px; padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--s1); color: var(--t1); font: 12px/18px var(--sans); }
 .tool-search:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
-.tool-groups { max-height: min(46vh, 420px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.tool-groups { max-height: clamp(120px, calc(100dvh - 700px), 420px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .tool-group + .tool-group { margin-top: 8px; }
 .tool-group-name { display: flex; justify-content: space-between; padding: 4px 6px; color: var(--t3); font: 600 10px/14px var(--sans); letter-spacing: .04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tool-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 4px 6px; border: 0; border-radius: 5px; background: none; color: var(--t2); font: 12px/18px var(--sans); text-align: left; cursor: pointer; }
