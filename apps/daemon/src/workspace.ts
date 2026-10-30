@@ -5,6 +5,7 @@ import { isAbsolute, join, relative, resolve, sep, parse } from 'node:path';
 import { MAX_IMAGE_BYTES, isDeniedPath, redactText, sniffImage } from '@drishya/privacy';
 import { App, HttpError } from './app.ts';
 import { isIndexableFile } from '@drishya/indexer';
+import { recordedFileRoots, recordedMainRootPrefixes } from './file-roots.ts';
 
 export class WorkspaceAccess {
   private grants = new Map<string, string>();
@@ -134,7 +135,17 @@ export class WorkspaceAccess {
     const graph = await this.app.graph(id);
     // A bounded or explicitly stale map is not a complete list of eligible current files.
     // Check only this path under the same index rules; content permission stays separate.
-    if (!graph.nodes.some(n => n.path === path) && (!(graph.truncated || graph.stale) || !await isIndexableFile(root, path))) throw new HttpError(403, 'file is outside the indexed workspace');
+    if (!graph.nodes.some(n => n.path === path)) {
+      let recordedMainFile = false;
+      if (graph.temporal === 'recording-files-only') {
+        const { roots } = await recordedFileRoots(this.app.store, [id]);
+        const prefixes = recordedMainRootPrefixes(roots, this.app.recording(id).workspaceRoot);
+        // A historical namespaced node can identify a main file, never grant its bytes.
+        // The approved-root, link and index rules still decide every current read.
+        recordedMainFile = prefixes.some(prefix => graph.nodes.some(node => node.path === `${prefix}/${path}`));
+      }
+      if (!(recordedMainFile || graph.truncated || graph.stale) || !await isIndexableFile(root, path)) throw new HttpError(403, 'file is outside the indexed workspace');
+    }
     const handle = await open(file, 'r');
     try {
       if (await realpath(file) !== file) throw new HttpError(403, 'file location changed');

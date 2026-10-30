@@ -1,15 +1,41 @@
 # FILES-7 — current reading for exact recorded main-root aliases
 
-Implementation and acceptance in progress. This report contains no native journal material.
+Whole task in progress; backend verified, UI integration waits for UI-16 / SCREEN-1 merges as Harsh requested. No native journal material is included here.
 
 ## Cause and boundary
 
-`apps/daemon/src/workspace.ts:137` admits an absent graph path only when the graph is truncated or stale. A complete captured multi-root graph contains namespaced historical file identities, so an exactly decoded main-relative current path is rejected.
+On the starting tree, `apps/daemon/src/app.ts:127-128` returns a captured file-only graph when a multi-root projection has no single workspace root. Its nodes keep namespaced historical identities. `apps/daemon/src/workspace.ts:137` admitted an absent current relative path only when the graph was truncated or stale, so exact main-root aliases were refused.
 
-`apps/ui/src/components/SessionWorkspace.tsx:275` suppresses that same action when its decoded path is absent from the graph. UI-16 owns that component; the minimal integration waits for its explicit handoff.
+`apps/ui/src/components/SessionWorkspace.tsx:275` (click), `:281` (double-click) and `apps/ui/src/components/FileHistory.tsx:46` also suppress the action because that decoded path is absent from the captured graph. The shared SessionWorkspace integration is prepared only as an ignored handoff patch. Harsh approved replacing only the obsolete main-alias premise in `tests/browser/files-6-worktrees.spec.ts:29`; outside-root/grouping/security guards remain intact.
 
-The fix must prove an exact recorded prefix belongs to the approved main workspace, then apply existing indexable, protected-path, consent, identity and symlink checks. Captured identities remain unchanged; another working root receives no current-file grant.
+The daemon now accepts that missing graph membership only for a `recording-files-only` graph whose exact recorded prefix identifies the captured approved main root and whose exact namespaced file node exists. It then applies `isIndexableFile` and all existing current-reader consent, identity, protected-path and symlink checks. A sibling, descendant or similarly named root grants nothing. Captured identities, historical artifacts and the event schema are unchanged. Complete current graphs retain their old missing-node refusal.
 
-## Acceptance
+## Real-session evidence (counts only)
 
-Pending: before/after counts on pre-existing real multi-root recordings, genuine Codex and relevant Claude screen checks at 600/1440, new negative-path guards, plain/captured regression reading, affected checks and the named browser journey. Full batch verification belongs to the coordinating root lane.
+The baseline scan read 74 Codex journals and 41 Claude journals under a 700 MB per-journal bound. Three Codex journals had multiple raw cwd values and an existing primary root. Claude had 29 such journals, 27 with an existing primary root. All 30 locally rooted candidates were imported into a scratch home. Nested cwd changes alone are not called distinct worktrees.
+
+| Harness / recording prefix | Bytes | Observations | Exact main aliases | Eligible existing main files | Current reads before / after backend fix |
+|---|---:|---:|---:|---:|---:|
+| Codex `rec_5da1cec3` | 15,795,654 | 5,463 | 48 | 29 | 0 / 29 |
+| Claude `rec_b067a552` | 2,694,624 | 676 | 55 | 1 | 0 / 1 |
+| Claude `rec_14f29d5f` | 28,184,536 | 4,416 | 24 | 0 | 0 / 0 |
+| Claude `rec_2a19c19d` | 1,031,859 | 238 | 15 | 0 | 0 / 0 |
+| Claude `rec_93a3f541` | 10,113,732 | 3,426 | 55 | 6 | 0 / 6 |
+| Claude `rec_560c2ba9` | 9,596,554 | 2,919 | 96 | 2 | 0 / 2 |
+| Claude `rec_89ed5380` | 7,564,786 | 2,327 | 66 | 2 | 0 / 2 |
+
+The exact alias case remains one Codex recording and six Claude recordings before and after; current readability changes from 0/29 to 29/29 eligible Codex files and 0/11 to 11/11 Claude files. Missing/excluded files are not claimed readable. Current-root approval and every actual read used the normal WorkspaceAccess implementation.
+
+Before source edits, the running app on `rec_5da1cec3` and `rec_b067a552` at both 600 and 1440 px showed a captured dialog, zero current readers and zero on-disk actions for an approved main alias. Screenshots and private drivers remain in ignored `.local/`. Final UI acceptance is pending shared-file release.
+
+## Verification so far
+
+- 50 targeted units pass: 15 new alias/consent/exact-root/indexability/link/missing/identity/redaction guards, plus unchanged workspace, map eligibility, recorded-root and UI mapping regressions.
+- Both TypeScript projects pass.
+- `pnpm package:verify` passes: isolated offline package install, both harness imports, bundle, authenticated API and persisted restart.
+- `pnpm check:real -- main-root-aliases`: one Codex candidate / two distinct outside-primary root declarations; nine Claude candidates / 11 declarations. Selected imports preserve 48 namespaced files / one prefix (`rec_5da1cec3`, 15.8 MB) and 120 / three (`rec_14f29d5f`, 28.2 MB). This scanner locates native multi-root evidence; it does not itself approve or read current bytes. Exact-root/current-read evidence is in the separate matrix above.
+- `pnpm check:affected --dry` maps 60 browser specs through broad workspace-name matching. Execution waits for complete UI integration and the coordinated browser lease. Full batch verification belongs to the coordinating root lane.
+
+## Remaining whole-task acceptance
+
+Final running-app current reading at 600/1440 for both genuine harness samples; approved single-root current and captured-reader regressions; dedicated browser guards; affected check execution; package verification if required by the final daemon scope; shared UI integration after PRs #297/#298 merge. FILES-7 stays open and its own claim stays present until these pass.
