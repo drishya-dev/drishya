@@ -48,7 +48,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r24';
+export const REDUCER_VERSION = 'r25';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -152,6 +152,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const harnesses = new Set<string>();
   const capabilities: Record<string, CapabilityMatrix> = {};
   let workspaceRoot: string | undefined;
+  let recordedBranch: Projection['recordedBranch'];
   let title: string | undefined;
   let titleRank = 0;
   let firstPrompt: string | undefined;
@@ -315,6 +316,14 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       switch (o.kind) {
         case 'session.meta': {
           if (typeof p.cwd === 'string' && !workspaceRoot) workspaceRoot = p.cwd;
+          // A branch names this captured root only. Neither companion agents nor another
+          // recording/root may replace the selected session's identity; missing data stays missing.
+          const primaryRoot = rootsByRecording.get(o.recordingId);
+          if (o.recordingId === recordingId && o.agentId === 'agent:main' &&
+              typeof p.branch === 'string' && p.branch.trim() && typeof p.cwd === 'string' && p.cwd.trim() &&
+              primaryRoot && normalizedRoot(p.cwd) === normalizedRoot(primaryRoot)) {
+            recordedBranch = { name: p.branch, workspaceRoot: p.cwd, provenance: { kind: 'captured', observationIds: [o.id] } };
+          }
           const rank = typeof p.titleRank === 'number' ? p.titleRank : 1;
           if (typeof p.title === 'string' && p.title && rank >= titleRank) {
             title = p.title;
@@ -841,6 +850,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       lastSequence,
       harnesses: [...harnesses],
       workspaceRoot: multipleWorktrees ? undefined : workspaceRoot,
+      ...(recordedBranch ? { recordedBranch: { ...recordedBranch, provenance: { kind: 'captured', observationIds: [...recordedBranch.provenance.observationIds] } } } : {}),
       title: title ?? (firstPrompt ? clip(firstPrompt.replace(/\s+/g, ' ').trim(), 120) : undefined),
       agents: placed.agents,
       operations: placed.operations,

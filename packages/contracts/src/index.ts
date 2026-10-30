@@ -582,7 +582,17 @@ export interface Turn extends Omit<TurnDetailPayload, 'turnId'> {
   basis: 'captured';
 }
 
+export interface CapturedSessionBranch {
+  /** Sanitized exact branch text supplied by session.meta, never current Git. */
+  name: string;
+  /** Sanitized captured cwd that identifies which workspace this name belongs to. */
+  workspaceRoot: string;
+  provenance: Extract<Provenance, { kind: 'captured' }>;
+}
+
 export interface Projection {
+  /** Last eligible primary-root session metadata; not branch-at-step evidence. Absent in older projections. */
+  recordedBranch?: CapturedSessionBranch;
   /** Turns the harness recorded, in start order. Absent in older projections and for harnesses with no turn records. */
   turns?: Turn[];
   usage?: { latest?: UsagePayload; byTurn: Record<string, UsagePayload> };
