@@ -1,0 +1,54 @@
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve,sep,basename} from 'node:path';
+import {test,expect,type Page,type Locator} from '@playwright/test';
+import {App} from '../../apps/daemon/src/app.ts';
+import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+
+const path='src/backend/adapters/very-long-command-registration-and-configuration-handler.spec.ts';
+let dir:string,app:App,server:RunningServer;
+const ids:Record<string,string>={};
+test.beforeAll(async()=>{
+ dir=mkdtempSync(join(tmpdir(),'drishya-ui16-'));mkdirSync(join(dir,'src/backend/adapters'),{recursive:true});
+ writeFileSync(join(dir,path),'export const value = 1;\n');
+ const claude=[{type:'user',uuid:'u',sessionId:'ui16',cwd:dir,message:{role:'user',content:'Update the synthetic adapter.'}},
+  {type:'assistant',uuid:'a',sessionId:'ui16',cwd:dir,message:{role:'assistant',content:[{type:'tool_use',id:'edit',name:'Edit',input:{file_path:join(dir,path),old_string:'value = 1',new_string:'value = 2'}}]}},
+  {type:'user',uuid:'r',sessionId:'ui16',cwd:dir,message:{role:'user',content:[{type:'tool_result',tool_use_id:'edit',content:'File updated.'}]}}];
+ const patch=`*** Begin Patch\n*** Update File: ${path}\n@@\n-export const value = 1;\n+export const value = 2;\n*** End Patch`;
+ const codex=[{type:'session_meta',payload:{id:'ui16-codex',cwd:dir}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Update the synthetic adapter.'}]}},
+  {type:'response_item',payload:{type:'custom_tool_call',call_id:'edit',name:'apply_patch',input:patch}},
+  {type:'response_item',payload:{type:'custom_tool_call_output',call_id:'edit',output:`Success. Updated the following files:\nM ${path}`}}];
+ app=new App(join(dir,'store'));
+ for(const [harness,rows] of [['claude-code',claude],['codex',codex]] as const){const file=join(dir,`${harness}.jsonl`);writeFileSync(file,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');ids[harness]=(await app.ingest.importSource(harness,file)).recordingId;}
+ server=await startServer({app,port:0});mkdirSync('.local',{recursive:true});
+});
+test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary directory');rmSync(dir,{recursive:true,force:true});}});
+async function open(page:Page,id:string){
+ await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.viewer')).toBeVisible();
+ if(!await page.locator('.folder-explorer').isVisible())await page.getByRole('button',{name:'Show files',exact:true}).click();
+ const explorer=page.locator('.folder-explorer');for(const name of ['src','backend','adapters'])await explorer.getByRole('treeitem',{name,exact:true}).click();
+ const row=explorer.getByRole('treeitem',{name:basename(path),exact:true});await expect(row).toBeVisible();await expect(row.locator('.file-change')).toHaveText('E');return {explorer,row};
+}
+async function geometry(row:Locator){return row.evaluate(el=>{
+ const name=el.querySelector<HTMLElement>('.file-row-name')!,badge=el.querySelector<HTMLElement>('.file-evidence')!,r=el.getBoundingClientRect(),n=name.getBoundingClientRect(),b=badge.getBoundingClientRect();
+ return {name:n.width,badge:b.width,gap:b.left-n.right,right:r.right-b.right,overflow:el.scrollWidth-el.clientWidth,grow:getComputedStyle(badge).flexGrow};
+});}
+for(const harness of ['claude-code','codex'])for(const width of [600,1440])test(`${harness} Files gives available width to the name at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});const {explorer,row}=await open(page,ids[harness]);
+ const resize=explorer.getByRole('separator',{name:'Resize Files reading space'});
+ const readings=[];
+ for(const key of width===1440?['Home','End']:['']){
+  if(key){await resize.press(key);await expect(resize).toHaveAttribute('aria-valuenow',key==='Home'?'220':'420');}
+  const measured=await geometry(row);readings.push({...measured,rail:(await explorer.boundingBox())!.width});
+  await explorer.screenshot({path:resolve(`.local/ui16-rail-${width}-${key||'overlay'}.png`)});
+  expect(measured.badge).toBeLessThan(32);expect(measured.grow).toBe('0');expect(measured.gap).toBeLessThanOrEqual(10);expect(measured.right).toBeLessThanOrEqual(12);expect(measured.overflow).toBeLessThanOrEqual(1);
+  await expect(row).toHaveAttribute('title',path);await expect(row.locator('.file-row-name')).toHaveText(basename(path));
+  await expect(row.locator('.file-row-extension')).toHaveText('.ts');
+  expect(await row.locator('.file-row-extension').evaluate(el=>el.getBoundingClientRect().width>=el.scrollWidth-1)).toBe(true);
+ }
+ if(readings.length===2)expect(Math.abs((readings[1].name-readings[0].name)-(readings[1].rail-readings[0].rail))).toBeLessThanOrEqual(2);
+ writeFileSync(resolve(`.local/ui16-metrics-${harness}-${width}.json`),JSON.stringify({harness,width,readings}));
+ expect(await explorer.locator('.folder-tree').evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+ await page.screenshot({path:resolve(`.local/ui16-${harness}-${width}.png`)});
+});
