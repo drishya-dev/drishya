@@ -1,12 +1,12 @@
 # FILES-7 — current reading for exact recorded main-root aliases
 
-Whole task in progress; backend verified, UI integration waits for UI-16 / SCREEN-1 merges as Harsh requested. No native journal material is included here.
+Whole task in progress; backend verified, UI integration waits for the UI-16 merge (SCREEN-1 and FILES-8 are now integrated) as Harsh requested. No native journal material is included here.
 
 ## Cause and boundary
 
 On the starting tree, `apps/daemon/src/app.ts:127-128` returns a captured file-only graph when a multi-root projection has no single workspace root. Its nodes keep namespaced historical identities. `apps/daemon/src/workspace.ts:137` admitted an absent current relative path only when the graph was truncated or stale, so exact main-root aliases were refused.
 
-`apps/ui/src/components/SessionWorkspace.tsx:275` (click), `:281` (double-click) and `apps/ui/src/components/FileHistory.tsx:46` also suppress the action because that decoded path is absent from the captured graph. The shared SessionWorkspace integration is prepared only as an ignored handoff patch. Harsh approved replacing only the obsolete main-alias premise in `tests/browser/files-6-worktrees.spec.ts:29`; outside-root/grouping/security guards remain intact.
+`apps/ui/src/components/SessionWorkspace.tsx:275` (click), `:281` (double-click) and `apps/ui/src/components/FileHistory.tsx:46` also suppress the action because that decoded path is absent from the captured graph. The unowned FileHistory guard now permits the exact-root action and remembers its captured alias before current reading; the daemon remains the bytes/consent owner. Shared SessionWorkspace integration remains an ignored handoff until UI-16 merges. Harsh approved replacing only the obsolete main-alias premise in `tests/browser/files-6-worktrees.spec.ts:29`; outside-root/grouping/security guards remain intact.
 
 The daemon now accepts that missing graph membership only for a `recording-files-only` graph whose exact recorded prefix identifies the captured approved main root and whose exact namespaced file node exists. It then applies `isIndexableFile` and all existing current-reader consent, identity, protected-path and symlink checks. A sibling, descendant or similarly named root grants nothing. Captured identities, historical artifacts and the event schema are unchanged. Complete current graphs retain their old missing-node refusal.
 
@@ -30,12 +30,12 @@ Before source edits, the running app on `rec_5da1cec3` and `rec_b067a552` at bot
 
 ## Verification so far
 
-- 50 targeted units pass: 15 new alias/consent/exact-root/indexability/link/missing/identity/redaction guards, plus unchanged workspace, map eligibility, recorded-root and UI mapping regressions.
-- Both TypeScript projects pass.
+- 53 targeted units pass after integrating current main: 15 new alias/consent/exact-root/indexability/link/missing/identity/redaction guards, three new bounded navigation-origin guards, plus unchanged workspace, map eligibility, recorded-root and UI mapping regressions.
+- Both TypeScript projects pass. The affected related-unit command also passes 194 tests across 23 files, with one existing POSIX-only case skipped on Windows; no browser was launched.
 - `pnpm package:verify` passes: isolated offline package install, both harness imports, bundle, authenticated API and persisted restart.
 - `pnpm check:real -- main-root-aliases`: one Codex candidate / two distinct outside-primary root declarations; nine Claude candidates / 11 declarations. Selected imports preserve 48 namespaced files / one prefix (`rec_5da1cec3`, 15.8 MB) and 120 / three (`rec_14f29d5f`, 28.2 MB). This scanner locates native multi-root evidence; it does not itself approve or read current bytes. Exact-root/current-read evidence is in the separate matrix above.
-- `pnpm check:affected --dry` maps 60 browser specs through broad workspace-name matching. Execution waits for complete UI integration and the coordinated browser lease. Full batch verification belongs to the coordinating root lane.
+- `pnpm check:affected --dry` maps 64 browser specs after adding the captured-reader guard and dedicated fixture through broad workspace-name matching. The dedicated browser fixture lists four cases at 600/1440 but has not executed. Browser execution waits for complete UI integration and the coordinated browser lease. Full batch verification belongs to the coordinating root lane.
 
 ## Remaining whole-task acceptance
 
-Final running-app current reading at 600/1440 for both genuine harness samples; approved single-root current and captured-reader regressions; dedicated browser guards; affected check execution; package verification if required by the final daemon scope; shared UI integration after PRs #297/#298 merge. FILES-7 stays open and its own claim stays present until these pass.
+Final running-app current reading at 600/1440 for both genuine harness samples; approved single-root current and captured-reader regressions; dedicated browser guards; affected check execution; package verification if required by the final daemon scope; shared UI integration after PR #297 merges; PR #297 was confirmed OPEN/DRAFT on resume, so its SessionWorkspace owner remains untouched. FILES-7 stays open and its own claim stays present until these pass.
