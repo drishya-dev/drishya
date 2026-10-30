@@ -24,6 +24,8 @@ A Codex session of the `drishya` workspace, window about 2000 x 1160. The screen
 7. **Window management.** A panel that fills almost the whole window with its own header, a title row of three unlabelled icons (move, refresh, close), and a dim composer underneath. How it relates to the main history behind it, what the user returns to, and why it is a window and not a section are not answered by the layout.
 8. **Proportion.** A 270 px list beside a content area that is mostly one wide column; neither is sized from what it holds.
 
+**A second example (builder screenshots, 30 October): a web search.** The hover card lists five results and then "11 more results" with no way to open them; the expanded view is the harness's raw `Links: [{...}]` text as one block with the agent's paragraph below it, and an Evidence tab whose "4" does not say what it counts. The short form hides what was recorded and the expanded form does not say more than it, in a shape nobody can read. Every surface with a short and an expanded form is checked for this: all recorded material reachable, the expanded form richer and structured, counts that say what they count (CONTENT-13, then the audit's findings).
+
 ## 3. How to think about a surface: concept first
 
 For every surface, write the answers in the audit file **before** touching any CSS.
@@ -61,6 +63,11 @@ Append at the end of every phase and read at the start of every phase; do not re
 | 30 Oct | Builder screenshot | Test-runs block, change list | "Recorded order · coverage not established" and similar phrases are our vocabulary. | Content | AUDIT-1, UI-8 |
 | 30 Oct | Builder screenshot | Workspace panel | Window management: the panel's relation to the history behind it and what the user returns to are not answered by the layout. | UI | UI-8 |
 | 30 Oct | UI thinking, for later | Files to Workspace | Opening a file from a Files row could carry the row into the Workspace tab (Lift: origin is the Files row). | Motion | MOTION-1 |
+| 30 Oct | Builder screenshots | Web search card and Inspector | Short form hides 11 of 16 results; expanded form is raw JSON text plus prose in one box; Evidence count unlabelled. Check every short/expanded pair for the same. | Content, UI, audit | CONTENT-13, AUDIT-1 |
+| 30 Oct | Builder request | Tools dock | The list shows only observed tools and a selected tool only dims the rest. Wanted: every available tool listed, and previous/next through a chosen tool's uses. | UI, data | TOOLS-1 |
+| 30 Oct | Builder screenshot | Plan strip | A plan shows "Revision 1 · 0 of 5 done" collapsed behind Expand. Content a reader wants is shown by default, bounded when large, never hidden; applies to every collapsed-by-default surface. | UI, content | UI-17, TOOLS-1 |
+| 30 Oct | TOOLS-1 build | Toolbox | The new Available tools list duplicates the instruments and the MCP server sections; the toolbox should be one composition (instruments, servers and tools as one list with a trail), shown by default, including at half width. | UI | UI-8, UI-17 |
+| 30 Oct | Builder suggestion | Audit, UI and motion passes | Impeccable (critique, audit, harden, clarify, layout, typeset, detector) as a reviewer; Taste Skill as a rules and method reference and for the launch page. See TASKS "How the UI and motion passes are run". | UI | AUDIT-1, UI-8 |
 | 30 Oct | Builder note (Instagram reel) | Coloured themes | Palette concept: dominant hue, neutral and one contrasting accent spent on one thing at a time; section 7. | UI | UI-8 |
 
 ## 6. Who runs it
