@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { WorkFocus } from './work-focus';
 import type { HistoryPage, NativeState } from '../fresh/api';
 import { collectionBounds } from '../lib/collection-bounds.ts';
+import { ToolList, ToolTrailBar } from '../components/ToolsPanel.tsx';
 import './tool-inventories.css';
 
 function ToolCollection({count,label,children}:{count:number;label:string;children:ReactNode}) {
@@ -15,7 +16,9 @@ export function ModernTools({ page, native, onFilter, onClear, filter, agents }:
     <div className="md-tool-list">{page?.scene.dock.native.map(tool => <button key={tool.key} data-fr-tool={tool.tools.join('\n')} className={`instrument k-${tool.kind}`} data-fr-kind={tool.kind} title={tool.tools.join(' · ')} aria-pressed={filter?.kind === tool.kind} onClick={() => onFilter({ kind: tool.kind })}>
       <i className={`md-tool-dot kind-${tool.kind}`} /><span>{tool.kind}</span><small>{tool.uses}</small>
     </button>)}</div>
+    <ToolTrailBar/>
     {filter && <button className="md-clear-filter" onClick={onClear}>Clear focus ×</button>}
+    <ToolList/>
     {page?.scene.dock.mcp.map(server => <details className="md-server" key={server.server}>
       <summary className="server-name" data-mcp-server={server.server}><i className="md-tool-dot kind-mcp" /><span>{server.server}</span><small>MCP</small></summary>
       <ToolCollection count={server.tools.length} label={`MCP tools for ${server.server}`}>{server.tools.map(tool => <button key={tool.tool} data-fr-tool={tool.tool} data-mcp-server={server.server} data-mcp-tool={tool.tool} aria-pressed={filter?.tool === tool.tool && filter?.server === server.server} onClick={() => onFilter({ tool: tool.tool, server: server.server })}><span>{tool.tool}</span><small>{tool.uses}</small></button>)}</ToolCollection>

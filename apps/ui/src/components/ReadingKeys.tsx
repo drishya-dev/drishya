@@ -95,6 +95,7 @@ export function ReadingKeys(props: {
           if (!readingValid() || requestEpoch !== epoch || document.querySelector('dialog[open]')) return;
           if (!target) { setNotice('No further matching captured work'); return; }
           cursor = target;
+          if (target.type === 'operation') useApp.setState({ trailAt: target.id });
           await latest.current.navigate(target);
           if (!readingValid() || requestEpoch !== epoch || document.querySelector('dialog[open]')) return;
           focusMaterial(target.id);
@@ -103,10 +104,29 @@ export function ReadingKeys(props: {
         finally { queued--; }
       });
     };
+    // TOOLS-1: the tool trail asks the reader to move to one use of the chosen tool.
+    const goTo = (event: Event) => {
+      const target = (event as CustomEvent<ReadingTarget | undefined>).detail;
+      if (!target || target.type !== 'operation' || !target.id || !readingValid()) return;
+      epoch++;
+      chain = chain.then(async () => {
+        try {
+          if (!readingValid()) return;
+          useApp.getState().set({ follow: false });
+          cursor = target;
+          useApp.setState({ trailAt: target.id });
+          await latest.current.navigate(target);
+          if (!readingValid()) return;
+          focusMaterial(target.id);
+          setNotice(card(target.id)?.getAttribute('aria-label') ?? 'Captured operation');
+        } catch (error) { if (valid()) setNotice(`Reading navigation failed: ${(error as Error).message}`); }
+      });
+    };
+    window.addEventListener('drishya-reading-navigate', goTo);
     window.addEventListener('keydown', key, true);
     document.addEventListener('pointerdown', pointer, true);
     document.addEventListener('focusin', focusInput);
-    return () => { alive = false; epoch++; focusMaterial(); window.removeEventListener('keydown', key, true); document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('focusin', focusInput); };
+    return () => { alive = false; epoch++; focusMaterial(); window.removeEventListener('drishya-reading-navigate', goTo); window.removeEventListener('keydown', key, true); document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('focusin', focusInput); };
   }, [id, source]);
   return <span className="reading-key-notice" role="status" aria-live="polite">{notice}</span>;
 }
