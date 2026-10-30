@@ -86,7 +86,7 @@ Keep dependent work here **and** under its own item; this is a cross-reference w
 
 **Order after SCREEN-1 (Yash, 29 Oct).** Once the feature items are done, the order is fixed:
 
-1. **SCREEN-1** (computer use on a big screen), with NATIVE work on whatever sessions Yash can supply.
+1. **SCREEN-1** (computer use on a big screen), with NATIVE work on whatever sessions Yash can supply. **Amendment (Yash, 30 Oct):** AUDIT-1 starts only when the remaining screen, content, files and UI items above it have landed: SCREEN-1, CONTENT-12, FILES-7, UI-1b and the claimed FILES-8, UI-16, CONTENT-8. FILES-5's remaining external platform acceptance moves with MAC-1 and does not hold the audit.
 2. **AUDIT-1:** one pass through every function that exists, as a developer would use it on real sessions, listing what is wrong in the UI, the backend handling, the displayed content and the way a user gets to information. It runs *before* any UI pass, because the UI passes would otherwise polish surfaces whose content is still unclear. It is not fitted to Yash's own list; his findings are the minimum, and what he does not name is audited too.
 3. **The UI passes first** (UI-7, UI-8, UI-3, UI-4b), fed by AUDIT-1's findings: layout, space, type, content presentation and every small detail settle before anything is animated.
 4. **Then the motion passes** (MOTION-1, MOTION-3), on the finished UI (Yash, 29 Oct): motion is tuned to surfaces that will not move again; animating a layout that is still changing is done twice.
