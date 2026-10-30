@@ -24,9 +24,11 @@ export const computerFrames: RealCase = {
     for (const s of run.steps) if (s.unplaced) unplaced.set(s.unplaced, (unplaced.get(s.unplaced) ?? 0) + 1);
     const pointer = run.steps.filter((s) => s.point || s.from || s.unplaced).length;
     const kept = run.steps.filter((s) => s.image?.sha).length, omitted = run.steps.filter((s) => s.image?.omitted).length;
+    const batched = run.steps.filter((s) => s.id.includes('#')).length, unmatched = new Set(run.steps.filter((s) => s.unmatchedImages).map((s) => s.operationId)).size;
     const bad = run.steps.filter((s) => s.marker && (s.marker.x < 0 || s.marker.x > 1 || s.marker.y < 0 || s.marker.y > 1)).length;
     return [
-      `${found.hits} computer tool_use mentions (journal rows repeat a call; ${found.only} pointer mentions); ${run.total} steps read, ${run.frames} frames (${kept} kept, ${omitted} omitted)`,
+      `${found.hits} computer tool_use mentions (journal rows repeat a call; ${found.only} pointer mentions); ${run.total} steps read (${batched} from browser batches), ${run.frames} frames (${kept} kept, ${omitted} omitted)`,
+      ...(unmatched ? [`${unmatched} batches returned images that could not be matched to their actions`] : []),
       `${placed} markers placed of ${pointer} pointer steps; not placed: ${[...unplaced].map(([k, n]) => `${k} ${n}`).join(', ') || 'none'}`,
       ...(bad ? [`FAIL ${bad} markers fall outside their frame`] : []),
       ...(run.total ? ['PASS computer steps survive projection'] : ['FAIL no computer steps survived projection']),

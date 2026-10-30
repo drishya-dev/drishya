@@ -44,6 +44,50 @@ describe('screen run', () => {
     expect(step.unplaced).toBe('frame-size-differs');
   });
 
+  it('does not treat a requested-scale image as the coordinate frame when the harness reported none', () => {
+    const scaled = mcp(1, { action: 'screenshot', scale: 0.5 }, { images: [{ sha: 'a', width: 400, height: 200 }] });
+    const step = screenRun([scaled, mcp(2, { action: 'left_click', coordinate: [100, 50] })]).steps[1]!;
+    expect(step.marker).toBeUndefined();
+    expect(step.unplaced).toBe('frame-size-unknown');
+  });
+
+  it('aims a position at the latest screenshot of its own tab', () => {
+    const other = mcp(3, { action: 'screenshot', tabId: 9 }, { images: [{ sha: 'b', width: 100, height: 100 }], preview: 'Screenshot size: 100x100' });
+    const run = screenRun([shot(1), other, mcp(4, { action: 'left_click', coordinate: [100, 50], tabId: 7 }), mcp(5, { action: 'left_click', coordinate: [50, 50], tabId: 9 }), mcp(6, { action: 'wait', duration: 1, tabId: 7 })]);
+    expect(run.steps[2]).toMatchObject({ frame: 0, marker: { x: 0.1, y: 0.1 } });
+    expect(run.steps[3]).toMatchObject({ frame: 1, marker: { x: 0.5, y: 0.5 } });
+    // Unpositioned steps show the newest frame whatever its tab.
+    expect(run.steps[4]!.frame).toBe(1);
+  });
+
+  const batch = (n: number, actions: unknown[], opts: { images?: OperationImage[]; preview?: string } = {}) => mcp(n, { actions }, { ...opts, tool: 'browser_batch' });
+  const act = (input: Record<string, unknown>) => ({ name: 'computer', input });
+
+  it('reads the computer actions of a browser batch as steps and matches its images to its screenshot actions in order', () => {
+    const run = screenRun([batch(1, [act({ action: 'screenshot', tabId: 7 }), { name: 'navigate', input: { url: 'http://localhost/' } }, act({ action: 'left_click', coordinate: [100, 50], tabId: 7 }), act({ action: 'zoom', region: [0, 0, 10, 10], tabId: 7 })],
+      { images: [{ sha: 'a', width: 400, height: 200 }, { sha: 'z', width: 100, height: 100 }], preview: 'Screenshot size: 400x200' })]);
+    expect(run.steps.map(s => s.gesture)).toEqual(['screenshot', 'click', 'zoom']);
+    expect(run.steps.map(s => s.id)).toEqual(['op-1#0', 'op-1#1', 'op-1#2']);
+    expect(run.steps.every(s => s.operationId === 'op-1')).toBe(true);
+    expect(run.steps[0]!.image?.sha).toBe('a');
+    expect(run.steps[2]!.image?.sha).toBe('z');
+    expect(run.steps[1]).toMatchObject({ frame: 0, marker: { x: 0.25, y: 0.25 } });
+    expect(run.frames).toBe(2);
+  });
+
+  it('does not match a batch\'s images to steps when the counts disagree, and says how many it holds back', () => {
+    const run = screenRun([batch(1, [act({ action: 'screenshot' }), act({ action: 'screenshot' })], { images: [{ sha: 'a', width: 10, height: 10 }] })]);
+    expect(run.steps.map(s => s.image)).toEqual([undefined, undefined]);
+    expect(run.steps.every(s => s.unmatchedImages === 1)).toBe(true);
+    expect(run.frames).toBe(0);
+  });
+
+  it('keeps direct calls and batches in captured order', () => {
+    const run = screenRun([shot(1), batch(2, [act({ action: 'left_click', coordinate: [100, 50] })]), mcp(3, { action: 'key', text: 'Enter' })]);
+    expect(run.steps.map(s => s.id)).toEqual(['op-1', 'op-2#0', 'op-3']);
+    expect(run.steps[1]!.marker).toEqual({ x: 0.1, y: 0.1 });
+  });
+
   it('never guesses a position', () => {
     const run = screenRun([
       shot(1),

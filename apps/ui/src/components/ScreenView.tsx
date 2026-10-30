@@ -92,6 +92,9 @@ const gapBefore = (steps: readonly ScreenStep[], i: number) => {
   return Number.isFinite(ms) && ms >= 0 ? ms : undefined;
 };
 
+/** A cross-fade only between frames of the same shape; a different window size just fades in. */
+const sameShape = (a?: OperationImage, b?: OperationImage) => !!(a?.width && a.height && b?.width && b.height) && Math.abs(a.width / a.height - b.width / b.height) < 0.02;
+
 function useImageUrl() {
   const source = useApp(s => s.source);
   const recordingId = useApp(s => s.recordingId);
@@ -109,7 +112,7 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   const [playing, setPlaying] = useState(false);
   const last = steps.length - 1;
   const lastFrame = (() => { for (let i = last; i >= 0; i--) if (steps[i]!.image) return i; return last; })();
-  const wanted = opId ? steps.findIndex(s => s.id === opId) : -1;
+  const wanted = opId ? steps.findIndex(s => s.operationId === opId) : -1;
   // Until the reader moves, it shows the step it was opened on, else the newest frame; a live run keeps following the end.
   const [pinned, setPinned] = useState(false);
   const index = Math.max(0, Math.min(last, choice ?? (wanted >= 0 ? wanted : lastFrame)));
@@ -133,6 +136,27 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   const strip = useRef<HTMLDivElement>(null);
   useEffect(() => { strip.current?.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [shownIndex]);
 
+  // The reader owns the keyboard while it is open. A document listener, because focus can be nowhere inside it
+  // (the dialog is first shown empty and its controls arrive with the run).
+  const onKey = useRef<(event: KeyboardEvent) => void>(undefined);
+  onKey.current = event => {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+    const k = event.key;
+    if (k === 'ArrowRight' || k === 'ArrowDown') go(shownIndex + 1);
+    else if (k === 'ArrowLeft' || k === 'ArrowUp') go(shownIndex - 1);
+    else if (k === 'Home') go(0);
+    else if (k === 'End') go(last);
+    else if (k === ' ' && !(event.target as HTMLElement | null)?.closest('button')) setPlaying(p => !p);
+    else if (k === 'f' || k === 'F') setFull(v => !v);
+    else return;
+    event.preventDefault();
+  };
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => onKey.current?.(event);
+    document.addEventListener('keydown', listener);
+    return () => document.removeEventListener('keydown', listener);
+  }, []);
+
   if (!shown || !step) {
     return <dialog ref={dialog} className="screen-view" aria-label="Screen view" onClose={onClose}>
       <div className="screen-bar"><span>Screen</span><button type="button" onClick={() => dialog.current?.close()}>Close</button></div>
@@ -146,19 +170,7 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   const gap = gapLabel(gapBefore(steps, shownIndex));
   const frameNote = !frameStep ? 'No frame captured yet' : shown.image ? 'Frame returned by this step' : `No new frame captured · showing step ${shown.frame! + 1}`;
   const ratio = image?.width && image.height ? { aspectRatio: `${image.width} / ${image.height}` } : undefined;
-  const key = (event: React.KeyboardEvent) => {
-    const k = event.key;
-    if (k === 'ArrowRight' || k === 'ArrowDown') go(shownIndex + 1);
-    else if (k === 'ArrowLeft' || k === 'ArrowUp') go(shownIndex - 1);
-    else if (k === 'Home') go(0);
-    else if (k === 'End') go(last);
-    else if (k === ' ' && !(event.target as HTMLElement).closest('button')) setPlaying(p => !p);
-    else if (k === 'f' || k === 'F') setFull(v => !v);
-    else return;
-    event.preventDefault();
-  };
-
-  return <dialog ref={dialog} className={`screen-view${full ? ' full' : ''}`} aria-label="Screen view" onClose={onClose} onKeyDown={key}
+  return <dialog ref={dialog} className={`screen-view${full ? ' full' : ''}`} aria-label="Screen view" onClose={onClose}
     onClick={event => { if (event.target === dialog.current) dialog.current.close(); }}>
     <div className="screen-bar">
       <span className="screen-title">Screen</span>
@@ -171,7 +183,7 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
       <button type="button" onClick={() => dialog.current?.close()}>Close</button>
     </div>
     <div className="screen-stage">
-      {url && image ? <Frame key={shown.frame} url={url} image={image} ratio={ratio} step={shown} previous={steps[shownIndex - 1] && steps[shownIndex - 1]!.frame !== shown.frame ? imageUrl(steps[steps[shownIndex - 1]!.frame ?? -1]?.image) : undefined}/>
+      {url && image ? <Frame key={shown.frame} url={url} image={image} ratio={ratio} step={shown} previous={shown.frame !== steps[shownIndex - 1]?.frame && sameShape(steps[steps[shownIndex - 1]?.frame ?? -1]?.image, image) ? imageUrl(steps[steps[shownIndex - 1]!.frame!]!.image) : undefined}/>
         : <div className="screen-missing" role="status" style={ratio}>{image ? `Image not retained${image.omitted ? `: ${WHY[image.omitted] ?? image.omitted}` : ''}${image.width && image.height ? ` · recorded ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${bytesLabel(image.bytes)}` : ''}` : 'No frame captured yet'}</div>}
     </div>
     <div className="screen-caption">
@@ -184,8 +196,9 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
       <span>{frameNote}</span>
       {shown.context?.title && <span title={shown.context.url}>{shown.context.title}</span>}
       {shown.context?.url && <span className="screen-url" title={shown.context.url}>{shown.context.url}</span>}
+      {shown.unmatchedImages ? <span>This batch returned {shown.unmatchedImages} {shown.unmatchedImages === 1 ? 'image' : 'images'} that cannot be matched to its actions one by one; open the operation to see them.</span> : null}
       {shown.unplaced && !shown.marker && shown.unplaced !== 'no-position' && <span>{UNPLACED[shown.unplaced]}</span>}
-      <button type="button" className="screen-link" onClick={() => { dialog.current?.close(); useApp.getState().select(shown.id); }}>Open operation</button>
+      <button type="button" className="screen-link" onClick={() => { dialog.current?.close(); useApp.getState().select(shown.operationId); }}>Open operation</button>
     </div>
     <div className="screen-strip" ref={strip} role="listbox" aria-label="Captured steps">
       {steps.map((s, i) => {

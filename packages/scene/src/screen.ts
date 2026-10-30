@@ -5,7 +5,10 @@ export type ScreenGesture = 'screenshot' | 'zoom' | 'click' | 'double-click' | '
 export type Point = [number, number];
 
 export interface ScreenStep {
+  /** Unique per step: the operation id, plus `#n` for the nth computer action of a batched operation. */
   id: string;
+  /** The operation that recorded this step, for "open operation". */
+  operationId: string;
   sequence: number;
   time?: string;
   agentId: string;
@@ -20,11 +23,15 @@ export interface ScreenStep {
   scroll?: { direction: string; amount?: number };
   ref?: string;
   waitSeconds?: number;
+  /** The `scale` a screenshot asked for; the stored image is then a scaled copy of the frame positions refer to. */
+  scale?: number;
   tab?: string;
   /** Tab title and address as the result recorded them. */
   context?: { title?: string; url?: string };
   /** The image this step returned, when it returned one. */
   image?: OperationImage;
+  /** A batch returned this many images but not one per screenshot action, so none is matched to a step; they stay on the operation. */
+  unmatchedImages?: number;
   /** Index (in `steps`) of the step whose image this one shows: its own, else the latest screenshot. */
   frame?: number;
   /** Where the recorded position falls on that frame, as fractions. Absent when it cannot be placed truthfully. */
@@ -42,10 +49,12 @@ const text = (value: unknown) => typeof value === 'string' ? value : undefined;
 const finite = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 const point = (value: unknown): Point | undefined => Array.isArray(value) && value.length === 2 && finite(value[0]) !== undefined && finite(value[1]) !== undefined ? [value[0] as number, value[1] as number] : undefined;
 
-/** The computer tool of a browser server (Claude Code MCP) or Claude Code's own `computer` tool. Batched actions carry no per-action frame and are not read here. */
+const BROWSER_SERVER = /(?:browser|chrome|playwright|computer)/i;
+
+/** The computer tool of a browser server (Claude Code MCP), Claude Code's own `computer` tool, or a browser batch holding computer actions. */
 export function isScreenOperation(op: Operation): boolean {
   const d = op.detail;
-  if (d.kind === 'mcp') return d.tool === 'computer' && /(?:browser|chrome|playwright|computer)/i.test(d.server);
+  if (d.kind === 'mcp') return d.tool === 'computer' && BROWSER_SERVER.test(d.server) || batchedActions(op).length > 0;
   return d.kind === 'other' && op.tool === 'computer';
 }
 
@@ -78,20 +87,52 @@ function tabContext(preview: string | undefined, tab: string | undefined): Scree
   return m ? { title: m[1] || undefined, url: m[2] || undefined } : undefined;
 }
 
+/** The computer actions a browser batch recorded, in order. */
+function batchedActions(op: Operation): Record<string, unknown>[] {
+  const d = op.detail;
+  if (d.kind !== 'mcp' || d.tool !== 'browser_batch' || !BROWSER_SERVER.test(d.server)) return [];
+  const actions = input(op)?.actions;
+  return Array.isArray(actions) ? actions.flatMap(entry => { const e = object(entry), fields = object(e?.input); return text(e?.name) === 'computer' && fields ? [fields] : []; }) : [];
+}
+
+interface Item { op: Operation; id: string; fields?: Record<string, unknown>; image?: OperationImage; reported?: { width: number; height: number }; unmatchedImages?: number }
+
+/** One item per computer action: a direct call is one; a batch is one per computer action inside it. */
+function items(op: Operation): Item[] {
+  const preview = result(op);
+  const actions = batchedActions(op);
+  if (!actions.length) return [{ op, id: op.id, fields: input(op), image: op.images?.[0], reported: reportedSize(preview) }];
+  // A batch returns its screenshots in order. They are matched to its screenshot and zoom actions only when the counts agree.
+  const producing = actions.filter(a => a.action === 'screenshot' || a.action === 'zoom').length;
+  const images = op.images ?? [];
+  const matched = images.length === producing;
+  const reports = [...(preview ?? '').matchAll(/Screenshot size:\s*(\d{1,5})x(\d{1,5})/g)].map(m => ({ width: Number(m[1]), height: Number(m[2]) }));
+  const shots = actions.filter(a => a.action === 'screenshot').length;
+  let image = 0, shot = 0;
+  return actions.map((fields, i) => {
+    const makes = fields.action === 'screenshot' || fields.action === 'zoom';
+    const item: Item = { op, id: `${op.id}#${i}`, fields, image: makes && matched ? images[image] : undefined, unmatchedImages: !matched && images.length ? images.length : undefined };
+    if (makes) image++;
+    if (fields.action === 'screenshot') { if (reports.length === shots) item.reported = reports[shot]; shot++; }
+    return item;
+  });
+}
+
 export function screenRun(operations: readonly Operation[]): ScreenRun {
-  const ordered = operations.filter(isScreenOperation).sort((a, b) => a.startSequence - b.startSequence || (a.id < b.id ? -1 : 1));
+  const ordered = operations.filter(isScreenOperation).sort((a, b) => a.startSequence - b.startSequence || (a.id < b.id ? -1 : 1)).flatMap(items);
   const steps: ScreenStep[] = [];
   const sizes = new Map<number, { width: number; height: number; basis: 'reported' | 'image' }>();
   let latestShot: number | undefined;
-  for (const op of ordered) {
-    const fields = input(op), action = text(fields?.action) ?? 'unknown', gesture = GESTURES[action] ?? 'other';
-    const image = op.images?.[0];
+  // A position refers to the latest screenshot of its own tab; '' holds screenshots that recorded no tab.
+  const shotByTab = new Map<string, number>();
+  for (const { op, id, fields, image, reported, unmatchedImages } of ordered) {
+    const action = text(fields?.action) ?? 'unknown', gesture = GESTURES[action] ?? 'other';
     const preview = result(op);
     const step: ScreenStep = {
-      id: op.id, sequence: op.startSequence, time: op.startTime, agentId: op.agentId, status: op.status, action, gesture,
+      id, operationId: op.id, unmatchedImages, sequence: op.startSequence, time: op.startTime, agentId: op.agentId, status: op.status, action, gesture,
       point: point(fields?.coordinate), from: point(fields?.start_coordinate),
       region: Array.isArray(fields?.region) && fields.region.length === 4 && fields.region.every(v => finite(v) !== undefined) ? fields.region as [number, number, number, number] : undefined,
-      text: text(fields?.text), ref: text(fields?.ref), waitSeconds: finite(fields?.duration),
+      text: text(fields?.text), ref: text(fields?.ref), waitSeconds: finite(fields?.duration), scale: finite(fields?.scale),
       tab: text(fields?.tabId) ?? (finite(fields?.tabId) !== undefined ? String(fields!.tabId) : undefined),
       image,
     };
@@ -100,13 +141,17 @@ export function screenRun(operations: readonly Operation[]): ScreenRun {
     step.context = tabContext(preview, step.tab);
     const index = steps.length;
     if (image && gesture === 'screenshot') {
-      const reported = reportedSize(preview);
       if (reported) sizes.set(index, { ...reported, basis: 'reported' });
-      else if (image.width && image.height) sizes.set(index, { width: image.width, height: image.height, basis: 'image' });
+      // Without a reported frame, the stored image is the frame only when no scaling was asked for; otherwise positions cannot be placed.
+      else if (image.width && image.height && (step.scale === undefined || step.scale === 1)) sizes.set(index, { width: image.width, height: image.height, basis: 'image' });
       latestShot = index;
+      shotByTab.set(step.tab ?? '', index);
     }
     if (image) step.frame = index;
-    else if (latestShot !== undefined) step.frame = latestShot;
+    else {
+      const aimed = !POINTER.has(gesture) || step.tab === undefined ? latestShot : shotByTab.get(step.tab) ?? shotByTab.get('');
+      if (aimed !== undefined) step.frame = aimed;
+    }
     if (POINTER.has(gesture)) place(step, steps, sizes);
     steps.push(step);
   }
