@@ -64,6 +64,7 @@ Append at the end of every phase and read at the start of every phase; do not re
 | 30 Oct | Builder screenshot | Workspace panel | Window management: the panel's relation to the history behind it and what the user returns to are not answered by the layout. | UI | UI-8 |
 | 30 Oct | UI thinking, for later | Files to Workspace | Opening a file from a Files row could carry the row into the Workspace tab (Lift: origin is the Files row). | Motion | MOTION-1 |
 | 30 Oct | Builder screenshots | Web search card and Inspector | Short form hides 11 of 16 results; expanded form is raw JSON text plus prose in one box; Evidence count unlabelled. Check every short/expanded pair for the same. | Content, UI, audit | CONTENT-13, AUDIT-1 |
+| 30 Oct | Builder request | Tools dock | The list shows only observed tools and a selected tool only dims the rest. Wanted: every available tool listed, and previous/next through a chosen tool's uses. | UI, data | TOOLS-1 |
 | 30 Oct | Builder note (Instagram reel) | Coloured themes | Palette concept: dominant hue, neutral and one contrasting accent spent on one thing at a time; section 7. | UI | UI-8 |
 
 ## 6. Who runs it
