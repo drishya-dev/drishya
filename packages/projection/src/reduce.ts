@@ -48,7 +48,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r24';
+export const REDUCER_VERSION = 'r25';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -963,7 +963,7 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
       break;
     }
     case 'mcp':
-      op.detail = { kind: 'mcp', server: intent.server, tool: intent.tool, input: previewValue(p.input) };
+      op.detail = { kind: 'mcp', server: intent.server, tool: intent.tool, input: intent.tool === 'browser_batch' ? previewBatch(p.input) : previewValue(p.input) };
       op.title = `${intent.server} · ${intent.tool}`;
       break;
     case 'web':
@@ -1357,6 +1357,16 @@ function hostOf(url: string): string {
 }
 
 /** A bounded copy of a tool input for display: long strings clipped, big arrays cut, deep nesting summarised. */
+/**
+ * SCREEN-1: a browser batch keeps every action's own input (positions sit one level deeper than the usual bound), up to 200 actions,
+ * so a recorded click can be placed on its frame.
+ */
+export function previewBatch(input: unknown): unknown {
+  const actions = input && typeof input === 'object' ? (input as { actions?: unknown }).actions : undefined;
+  if (!Array.isArray(actions)) return previewValue(input);
+  return { ...(previewValue({ ...input as object, actions: undefined }) as object), actions: actions.slice(0, 200).map((entry) => previewValue(entry)) };
+}
+
 export function previewValue(v: unknown, depth = 0, maxDepth = 3): unknown {
   if (typeof v === 'string') return v.length > 600 ? v.slice(0, 599) + '…' : v;
   if (isBlobText(v)) return v.preview.slice(0, 600) + '…';

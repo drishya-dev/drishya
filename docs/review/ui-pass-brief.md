@@ -61,7 +61,28 @@ Append at the end of every phase and read at the start of every phase; do not re
 | 30 Oct | Builder screenshot | Test-runs block, change list | "Recorded order · coverage not established" and similar phrases are our vocabulary. | Content | AUDIT-1, UI-8 |
 | 30 Oct | Builder screenshot | Workspace panel | Window management: the panel's relation to the history behind it and what the user returns to are not answered by the layout. | UI | UI-8 |
 | 30 Oct | UI thinking, for later | Files to Workspace | Opening a file from a Files row could carry the row into the Workspace tab (Lift: origin is the Files row). | Motion | MOTION-1 |
+| 30 Oct | Builder note (Instagram reel) | Coloured themes | Palette concept: dominant hue, neutral and one contrasting accent spent on one thing at a time; section 7. | UI | UI-8 |
 
 ## 6. Who runs it
 
 The builder may switch to Opus for AUDIT-1, UI-8 and the motion passes: they need judgement more than speed. A change of model in the middle of a pass is fine: finish the current surface, append the ledger, say what is next. The authority order is [VISION](../VISION.md) §8 and the doctrine in AGENTS.md first, then this brief, then TASKS.
+
+## 7. Colour reference for the coloured themes (builder note, 30 October; for later)
+
+The builder asked that, when the coloured themes are done (the seven palettes, UI-8 and its palette checks), these palettes are looked at and that **the concept is taken, not just the three palettes**. Source: an Instagram reel by niki.aroca (https://www.instagram.com/reel/DfGEE7DIvjU/), whose caption begins "The secret to a memorable UI? One accent color ..." (the rest is not visible). Only the three frames the builder attached were read; the reel itself was not opened.
+
+| Dominant | Neutral | Accent | Hero it was shown on |
+|---|---|---|---|
+| Deep blue #09318D | Pure white #FFFFFF | Bubblegum pink #FD91CC | Enterprise security page: blue gradient hero, light cards, one pink gauge and button |
+| Midnight black #02070A | Electric blue #0297DE | Cantaloupe orange #FC734D | Video-editing page: near-black hero with a blue-to-orange glow, orange for the primary action and the data pop |
+| Sky blue #0593C6 | White #FCFFFF | Hot pink #D83995 | Health page: blue hero blurring into pink, frosted light cards, one pink action |
+
+**The concept to carry over (read from the frames, not from the author's words):**
+
+1. **Three colours, no more:** one dominant hue that carries the whole surface, one clean neutral for text and cards, and **one accent** that sits opposite the dominant hue in temperature (cool blue with warm pink or orange). The single accent is what makes it memorable.
+2. **The accent is spent on one thing at a time:** the primary action, the key figure, the selected or active item. Everything else stays in the dominant hue and the neutral. A screen with the accent in five places has no accent.
+3. **The accent is chosen against the dominant hue, not alone:** the same pink would fail on a different base. Each coloured theme picks its accent as a deliberate pair with its base and checks the pair for contrast.
+4. **Light cards on a saturated field, or the reverse, give depth without borders:** the surface colour does the separating that a border would do.
+
+**How it meets our doctrine (the doctrine wins where they differ):** colour carries meaning (agent identity, pass, fail, edited), so a theme's accent must never collide with the pass, fail and edited colours and must stay readable beside them; no glow pools and no gradients as decoration (AGENTS doctrine 6), so the hero gradients and glows in the frames are not to be copied unless the builder asks; the flat, hairline, graphite-based developer-tool theme stays the default. What is taken is the discipline: base, neutral, one accent, spent sparingly, chosen as a pair. Check each theme with the extended `palette-contrast` spec on all surfaces.
+
