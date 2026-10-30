@@ -5,7 +5,7 @@
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import type { AdapterDescriptor, CompactionPayload, DiscoveredSource, Observation, UsagePayload } from '@drishya/contracts';
+import type { AdapterDescriptor, CompactionPayload, DiscoveredSource, Observation, ToolsSnapshotPayload, UsagePayload } from '@drishya/contracts';
 import {
   fileInfo,
   headRecords,
@@ -49,6 +49,9 @@ export const descriptor: AdapterDescriptor = {
 };
 
 const MAIN = 'agent:main';
+/** A tool or group name as a harness writes it; anything else is not a name and is not kept. */
+const TOOL_NAME = /^[A-Za-z0-9_.:-]{1,120}$/;
+const MAX_TOOL_NAMES = 400;
 type Rec = Record<string, any>;
 
 /** Records that duplicate response items or carry only accounting. Ignored on purpose. */
@@ -346,6 +349,16 @@ export function createParser(_ctx: ParseContext): RecordParser {
             return [{ ...base, agentId: author, kind: 'message.assistant', payload: { text: delivery.text, delivery: delivery.delivery }, contentKeys: ['text'], availability: delivery.delivery.state === 'complete' ? 'complete' : delivery.delivery.state === 'partial' ? 'partial' : 'metadata-only' }];
           }
           return text ? [{ ...base, agentId: author, kind: 'message.assistant', payload: { text }, contentKeys: ['text'] }] : [];
+        }
+        // TOOLS-1: tool groups the harness listed as available to the agent (names only).
+        case 'additional_tools': {
+          const tools: { name: string; namespace?: string }[] = [];
+          const add = (name: unknown, namespace?: unknown) => { if (typeof name === 'string' && TOOL_NAME.test(name) && tools.length < MAX_TOOL_NAMES) tools.push({ name, ...(typeof namespace === 'string' && TOOL_NAME.test(namespace) ? { namespace } : {}) }); };
+          for (const entry of Array.isArray(p.tools) ? p.tools as Rec[] : []) {
+            if (Array.isArray(entry?.tools)) for (const child of entry.tools as Rec[]) add(child?.name, entry.name);
+            else add(entry?.name);
+          }
+          return tools.length ? [{ ...base, kind: 'tools.snapshot', payload: { source: 'additional_tools', tools } satisfies ToolsSnapshotPayload }] : [];
         }
         case 'web_search_call':
           if (typeof p.id === 'string') calls.set(p.id, { tool: 'web_search', intent: { kind: 'web', query: p.action?.query } });

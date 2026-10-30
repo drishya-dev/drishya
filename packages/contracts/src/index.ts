@@ -42,6 +42,7 @@ export type ObservationKind =
   | 'item.completed'
   | 'checkpoint'
   | 'external.change'
+  | 'tools.snapshot'
   | 'unknown';
 
 export interface Observation {
@@ -200,6 +201,27 @@ export interface ExternalChangePayload {
   /** The changed region as the harness showed it to the model, line-numbered. */
   snippet?: TextValue;
   basis: 'harness-notice';
+}
+
+/**
+ * TOOLS-1: the tools a harness recorded as available to the agent, as names only. A list as recorded at that moment, never what is
+ * available now. `tools` adds names (a full list or an addition); `removed` withdraws names the harness reported as no longer available.
+ */
+export interface ToolsSnapshotPayload {
+  source: 'prompt_snapshot' | 'deferred_tools_delta' | 'additional_tools';
+  tools?: { name: string; namespace?: string }[];
+  removed?: string[];
+}
+
+/** A tool the harness listed as available, with the timeline step at which it was first listed (and withdrawn). */
+export interface AvailableTool {
+  name: string;
+  /** A tool group the harness named (Codex `functions`, or an MCP namespace). */
+  namespace?: string;
+  /** The MCP server, read from the tool's recorded name. */
+  server?: string;
+  since: number;
+  until?: number;
 }
 
 /** Accounting reported by a harness, never a price or missing token count inferred by Drishya. */
@@ -659,6 +681,8 @@ export interface Projection {
   prose: Prose[];
   /** Harness notices, e.g. files changed outside the agent (DATA-6). Absent in older projections. */
   notices?: Notice[];
+  /** TOOLS-1: the tools the harness listed as available, as recorded. Absent when the harness recorded no list (and in older projections). */
+  availableTools?: AvailableTool[];
   artifacts: Artifact[];
   links: EvidenceLink[];
   timeline: TimelineItem[];

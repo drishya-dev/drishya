@@ -12,6 +12,7 @@ import type {
   OperationImage,
   Notice,
   Agent,
+  AvailableTool,
   Artifact,
   ArtifactKind,
   Availability,
@@ -33,7 +34,7 @@ import type {
 } from '@drishya/contracts';
 import { isBlobText } from '@drishya/contracts';
 import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
-import { literalPatch, literalPlan, literalPlanConfirmed, touchesProtectedFile } from '@drishya/capture-core';
+import { literalPatch, literalPlan, literalPlanConfirmed, parseMcpName, touchesProtectedFile } from '@drishya/capture-core';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks } from './patch.ts';
 import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './shell.ts';
@@ -135,6 +136,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const awaitingCheckpoint = new Set<string>();
   // DATA-6: harness notices of files changed outside its edits; identical repeats fold into one.
   const notices: Notice[] = [];
+  // TOOLS-1: tools the harness listed as available, in first-listed order.
+  const availableTools = new Map<string, AvailableTool>();
   const lastNotice = new Map<string, Notice>();
   const artifacts = new Map<string, Artifact>();
   const links: EvidenceLink[] = [];
@@ -731,6 +734,21 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           break;
         }
+        case 'tools.snapshot': {
+          const listed = Array.isArray(p.tools) ? p.tools as { name?: unknown; namespace?: unknown }[] : [];
+          const withdrawn = Array.isArray(p.removed) ? p.removed as unknown[] : [];
+          for (const t of listed.slice(0, 400)) {
+            if (typeof t?.name !== 'string' || !t.name) continue;
+            const namespace = typeof t.namespace === 'string' && t.namespace ? t.namespace : undefined;
+            const key = namespace ? `${namespace}.${t.name}` : t.name;
+            const known = availableTools.get(key);
+            if (known) { known.until = undefined; continue; }
+            const server = parseMcpName(t.name)?.server ?? (namespace?.startsWith('mcp__') ? namespace.slice(5).replace(/__$/, '') : undefined);
+            availableTools.set(key, { name: t.name, ...(namespace ? { namespace } : {}), ...(server ? { server } : {}), since: step() });
+          }
+          for (const name of withdrawn.slice(0, 400)) { const known = typeof name === 'string' ? availableTools.get(name) : undefined; if (known && known.until === undefined) known.until = step(); }
+          break;
+        }
         case 'external.change': {
           if (typeof p.path !== 'string') break;
           const a = ensureAgent(o);
@@ -865,6 +883,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       operations: placed.operations,
       prose: [...placed.prose],
       ...(notices.length ? { notices: notices.map((n) => ({ ...n, observationIds: [...n.observationIds] })) } : {}),
+      ...(availableTools.size ? { availableTools: [...availableTools.values()].map((t) => ({ ...t })) } : {}),
       artifacts: placed.artifacts,
       links: finalLinks,
       timeline: [...placed.timeline],
@@ -983,7 +1002,7 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
       break;
     }
     case 'mcp':
-      op.detail = { kind: 'mcp', server: intent.server, tool: intent.tool, input: previewValue(p.input) };
+      op.detail = { kind: 'mcp', server: intent.server, tool: intent.tool, input: intent.tool === 'browser_batch' ? previewBatch(p.input) : previewValue(p.input) };
       op.title = `${intent.server} · ${intent.tool}`;
       break;
     case 'web':
@@ -1383,6 +1402,16 @@ function hostOf(url: string): string {
 }
 
 /** A bounded copy of a tool input for display: long strings clipped, big arrays cut, deep nesting summarised. */
+/**
+ * SCREEN-1: a browser batch keeps every action's own input (positions sit one level deeper than the usual bound), up to 200 actions,
+ * so a recorded click can be placed on its frame.
+ */
+export function previewBatch(input: unknown): unknown {
+  const actions = input && typeof input === 'object' ? (input as { actions?: unknown }).actions : undefined;
+  if (!Array.isArray(actions)) return previewValue(input);
+  return { ...(previewValue({ ...input as object, actions: undefined }) as object), actions: actions.slice(0, 200).map((entry) => previewValue(entry)) };
+}
+
 export function previewValue(v: unknown, depth = 0, maxDepth = 3): unknown {
   if (typeof v === 'string') return v.length > 600 ? v.slice(0, 599) + '…' : v;
   if (isBlobText(v)) return v.preview.slice(0, 600) + '…';

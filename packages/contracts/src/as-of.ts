@@ -37,6 +37,8 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
     gaps: projection.gaps.filter(g => g.sequence < step),
     ...(projection.notices ? { notices: projection.notices.filter((n) => noticeIds.has(n.id)) } : {}),
+    // A tool listed after this step was not yet known to the agent.
+    ...(projection.availableTools ? { availableTools: projection.availableTools.filter((t) => t.since <= step).map((t) => t.until !== undefined && t.until <= step ? t : { ...t, until: undefined }) } : {}),
     artifacts: projection.artifacts.filter((a) => visibleArtifacts.has(a.id)),
     links: projection.links.filter((link) => link.sourceObservationIds.every((id) => visibleEvidence.has(id))),
     files: projection.files.filter((f) => f.firstStep < step).map((f) => ({ ...f, lastStep: Math.min(f.lastStep, step - 1) })),
