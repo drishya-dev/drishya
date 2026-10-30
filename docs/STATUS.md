@@ -31,17 +31,34 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| UI-16 | @yash + Codex | `codex/ui16-files-rail-width` | 2026-10-30 | Whole Files rail width/filename acceptance: SessionWorkspace.tsx tree-row presentation only, apps/ui/src/components/FileRowName.tsx, apps/ui/src/components/file-evidence.css, tests/browser/files-rail-width.spec.ts and docs/review/ui16-files-rail-width.md; central completion docs. Preserve selection/routing (FILES-8 owns DeveloperWorkspace.tsx), counts, worktree grouping and lift origins. No History, ingest, controller or schema edits. |
 | FILES-8 | @harsh + Codex | `harsh/files-8-workspace-routing` | 2026-10-29 | Whole Files-to-open-Workspace routing and acceptance: `apps/ui/src/components/DeveloperWorkspace.tsx`, the scoped Files selection owner after P4 discovery (list exact path before edits), `tests/browser/files-workspace-routing.spec.ts`, `docs/review/files-8-workspace-routing.md`, `docs/TASKS.md`, `docs/STATUS.md`; counts-only real-session evidence and screenshots in ignored `.local/`. Preserve pane/tab limits, drafts, closed-Workspace peek and live/replay. No History.tsx, schema/contracts, animation or other-owner files. |
 | HOME-1b | @harsh + Codex | `harsh/home-1b-missing-turn-data` | 2026-10-29 | Whole startup-rescan candidate-rule fix and acceptance: `packages/ingest/src/index.ts`, `packages/ingest/test/legacy-codex-rescan.test.ts`, `docs/TASKS.md`, `docs/STATUS.md`; counts-only real-session/three-run copied-database benchmark evidence in ignored `.local/`. No schema/contracts, UI, other-owner files or rescan behavior changes. |
-| CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Whole detected-reading acceptance and necessary isolated result-view fixes: CapturedResultViews/adaptive-reading helpers/scoped tests/report. No History.tsx, controller, plans, browser components, indexer or schema changes. |
-| CONTENT-8 | @yash + Codex parity agent | `codex/cross-tool-parity` (draft #257) | 2026-10-29 | Builder resumed independent content completion on 29 October. Whole integrated cross-tool parity acceptance after CONTENT-1/2/3/4b/5b implementations and native child evidence; remaining NATIVE-3 is a separate end-to-end gate, not assumed complete. Reserve dedicated parity browser/real-case tests and `docs/review/content-8-cross-tool-parity.md`; shared captured-result views/helpers only if a genuine case exposes a gap, list exact paths before edits. No History/controller/schema/other-owner source edits. Read-only audit/preparation while TEST-2 runs; native/browser/unit workload waits for the root timing-gate release. |
-| TEST-2 | @yash + Codex | `codex/p1-test2-completion` | 2026-10-29 | Builder explicitly transferred TEST-2 from Harsh/Codex on 29 October, to start after the four P1 content tasks finish. Whole remaining regression acceptance and necessary focused fixes; preserve assertions, desktop-only. History wheel/reading-anchor scope only if reproduction requires it; no PERF-2/3 work or visual-density changes. |
-| CONTENT-2 | @yash + Codex browser agent | `codex/p1-browser-completion` | 2026-10-26 | Whole browser/web evidence task: browser strip, consecutive steps/scrubber, honest fetch/search metadata, real Codex/Claude acceptance; dedicated browser component/helpers/scoped stylesheet/tests/report. Yash explicitly assigned History.tsx integration to Claude on 26 Oct; this branch supplies the exact integration handoff and tests. **28 Oct: Claude Sonnet 5.5 takes that History.tsx integration (branch `claude/content-2-history`, History.tsx insertion only, no other file); Codex keeps the rest of the row.** Up to 15 files; no adapter/contracts/projection or READ-4 test. |
+| CONTENT-10 | @yash + Codex reading agent | `codex/p1-reading-completion` | 2026-10-29 | Complete locally; ready PR #291 (direct readings/keyboard/CSV-TSV). Genuine both-harness acceptance and 20 real checks; shared full gate recorded in #294. No external implementation blocker or source files held; awaiting other-builder review/squash. Completion checkbox and claim removal are in the PR. |
+| CONTENT-8 | @yash + Codex parity agent | `codex/cross-tool-parity` (draft #257) | 2026-10-29 | Builder resumed independent content completion on 29 October. Whole integrated cross-tool parity acceptance after CONTENT-1/2/3/4b/5b implementations and native child evidence; remaining NATIVE-3 is a separate end-to-end gate, not assumed complete. Reserve dedicated parity browser/real-case tests, scripts/real-cases/types.ts type-only import resolution, and `docs/review/content-8-cross-tool-parity.md`; shared captured-result views/helpers only if a genuine case exposes a gap, list exact paths before edits. No History/controller/schema/other-owner source edits. Read-only audit/preparation while TEST-2 runs; native/browser/unit workload waits for the root timing-gate release. |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex - CONTENT-2 integrated acceptance complete
+
+- Current Codex and Claude captures plus retained full-source browser stories pass 600/1440, including genuine captured screenshot bytes. Captured metadata, result ownership and step scrubbing remain honest; no History or rendering change needed. Eight units, both types/build and ten named browser checks pass.
+- PR #289; [source matrix and limits](review/content-2-integrated-acceptance.md). Whole P1 batch gate follows; TEST-2 remains separate and claimed.
+
+### Yash with Codex — TEST-2 whole supported-desktop acceptance
+
+- **PR #294:** all four B2 journeys pass three runs (12/12); supported prompt-rail journey 10/10. Three consecutive complete browser commands pass on integrated P1 46bebde5; each rebuilds UI and runs both normal projects. [Evidence and counts](review/test-2-p1-completion.md).
+- **Real sessions:** Codex 32f628ee (533,572,179 bytes/32,854 observations) and Claude c8e5c9c8 (82,859,509 bytes/10,466 observations), each at 600/1440: zero held-reading shift, overflow and page errors. Static reading acceptance, not a claim of fresh native append.
+- **Batch:** both typechecks/build/package and 1,031 units/one skip pass. Test-only fixes preserve native wheel, exact scroll/focus/copy/virtualization assertions and timeouts. No History or deferred PERF-2/3 source changes. Other-builder review/merge remains; new FILES-8/UI-16 scope is separate.
+
+### Yash with Codex — P1 content/regression batch ready for review
+
+- Ready and mergeable: [CONTENT-2 #289](https://github.com/drishya-dev/drishya/pull/289), [CONTENT-10 #291](https://github.com/drishya-dev/drishya/pull/291), [TEST-2 #294](https://github.com/drishya-dev/drishya/pull/294). No Claude implementation or sign-in blocker remains for these three; only normal other-builder review/squash. Task checkboxes/claim removal live in their completion PRs, not prematurely on main.
+- Frozen integrated P1 46bebde5: three consecutive full browser commands each 505 passed / 26 skipped / zero failed (396.7, 412.4, 441.0 seconds); both types/build/package and 1,031 units/one skip pass. Earlier failed commands, native-wheel driver coupling, exact operation selection and Git fixture lifetime diagnostics remain in #294, not hidden or counted green.
+- CONTENT-3 #288, CONTENT-4b #292 and CONTENT-1b #293 are merged. CONTENT-8 #257 has resumed whole parity acceptance in a separate lane; new FILES-8/UI-16 and deferred performance/release work remain separate. No source files held by the three ready PR claims.
+
 
 ### Yash with Codex — CONTENT-1b complete locally
 
