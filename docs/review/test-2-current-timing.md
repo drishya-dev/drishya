@@ -29,10 +29,11 @@ The clean-main failure is at line 1050, before comparison opens: requested edito
 
 A private standalone probe uses the actual unchanged DraftEditor and records the native scroll setter. Across 40 cases at two heights, ten of twenty unchanged sequences depart from 250; zero of twenty sequences that wait for the measurement frames depart. One trace shows immediate 250 with maximum scroll 24,973, then a CodeMirror `DocView.scrollIntoView` / `EditorView.measure` write to 8. This excludes an immediate range clamp in that probe and demonstrates a pending-selection race there. It does not invent an exact full-app stack for the clean-main failure.
 
-The actual-app private copy probe and proposed test-only frame barrier remain local. The original shared spec and DraftEditor are untouched. Completing that repair and its full-file verification waits for UI-1b's file hold to end, as the builder instructed. The existing scroll/selection/comparison assertions must remain intact.
+The private actual-app copy preserves the original fixture and presteps and measures before comparison opens. All sixteen assignments immediately reach 250 with maximum scroll 32,454. Four of eight unchanged sequences then write 11 through CodeMirror's `scrollIntoView → measure → onScroll` stack; zero of eight frame-settled sequences move from 250. This confirms the pending-selection race in the actual app, rather than an extent clamp. The original shared spec SHA is unchanged.
+
+The proposed test-only frame barrier remains local. The original shared spec and DraftEditor are untouched. Completing that repair and its full-file verification waits for UI-1b's file hold to end, as the builder instructed. The existing scroll/selection/comparison assertions must remain intact.
 
 ## Remaining before the item can close
 
-- Finish the private actual-app phase measurement and record its results.
 - After Harsh's merges, apply and verify the minimal shared-test repair if the measurements support it; do not change the product to accommodate an invalid driver sequence.
 - Run the finished item's required real-session/targeted checks and one isolated full gate; update TASKS and remove the claim only then.
