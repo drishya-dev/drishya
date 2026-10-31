@@ -3,7 +3,7 @@ import {useCallback,useEffect,useId,useLayoutEffect,useMemo,useRef,useState} fro
 import type {GitCommit,GitSessionLink} from '../../../daemon/src/git-types.ts';
 import {gitRibbonGeometry} from '../lib/git-ribbon-geometry.ts';
 import {gitThreadLayout} from '../lib/git-thread-layout.ts';
-import {branchAt,gitLight,hashSeed,lightLayout,type LightBranch} from '../lib/git-light.ts';
+import {branchAt,gitLight,hashSeed,lightCache,lightLayout,type LightBranch} from '../lib/git-light.ts';
 import {LightRenderer} from '../lib/light-renderer.ts';
 import {ago} from '../lib/git-commit-rows.ts';
 import './git-thread-graph.css';
@@ -12,12 +12,14 @@ import {useApp} from '../state.ts';
 const ribbonColors=['#e6ffff','#69eaff','#427bff','#b5afff','#ffb7ee','#9068fa','#96f4ff','#e8dbb7','#4fb8ff','#e5dbff'];
 const MIN_SCALE=.04,MAX_SCALE=2.5,clampScale=(value:number)=>Math.max(MIN_SCALE,Math.min(MAX_SCALE,value));
 
-export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,evidence,mirror,onHover,reveal,links}:{links?:Map<string,GitSessionLink>;mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
+export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,evidence,mirror,onHover,reveal,links}:{select?:(hash:string)=>void;mirrorRef?:string;links?:Map<string,GitSessionLink>;mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
   const graph=useMemo(()=>gitThreadLayout(commits,primary?.tip,seeds,offset),[commits,primary?.tip,offset]),viewport=useRef<HTMLDivElement>(null);
   const [scale,setScale]=useState(.6),[hovered,setHovered]=useState(''),[orbit,setOrbit]=useState(false),[angle,setAngle]=useState(.35);
-  const [branchKey,setBranchKey]=useState('');
+  const [branchKey,setBranchKey]=useState(''),[pinnedKey,setPinnedKey]=useState('');
   const drag=useRef<{x:number;y:number;left:number;top:number;id:number;angle:number;moved:boolean}|undefined>(undefined);
-  const fit=()=>{const el=viewport.current;if(el){setInset({});setScale(clampScale(Math.min(1,(el.clientWidth-48)/graph.width,(el.clientHeight-70)/graph.height)));el.scrollTo(0,0);}};
+  const centerRiver=useRef(false);
+  // Fit sizes the graph to the width and then puts the river on the middle line of the window; branches above and below stay reachable by scrolling.
+  const fit=()=>{const el=viewport.current;if(el){setInset({});setScale(clampScale(Math.min(1,(el.clientWidth-48)/graph.width,lit?9:(el.clientHeight-70)/graph.height)));el.scrollLeft=0;centerRiver.current=true;}};
   const previous=useRef<{graph:typeof graph;key:string}|undefined>(undefined);
   const gradient=useId().replace(/:/g,'');
   const lowResource=useApp(state=>state.lowResource),motion=useApp(state=>state.motion);
@@ -38,11 +40,12 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
   },[graph,evidence]);
   const light=useMemo(()=>lit?lightLayout(graph,scale,squash):undefined,[lit,graph,scale,squash]);
   const worldHeight=light?.height??graph.height,heightNow=useRef(worldHeight);heightNow.current=worldHeight;
+  useLayoutEffect(()=>{const el=viewport.current;if(!centerRiver.current||!el)return;centerRiver.current=false;el.scrollTop=Math.max(0,(worldHeight*scale+48)/2-el.clientHeight/2);},[scale,worldHeight]);
   useLayoutEffect(()=>{
     const before=previous.current;previous.current={graph,key:resetKey};
     seeds.clear();for(const hash of graph.mainSeeds)seeds.add(hash);
     const el=viewport.current;if(!el)return;
-    if(!before||!before.graph.nodes.length||before.key!==resetKey){fit();setHovered('');setBranchKey('');return;}
+    if(!before||!before.graph.nodes.length||before.key!==resetKey){fit();setHovered('');setBranchKey('');setPinnedKey('');return;}
     const oldX=Math.max(24,(el.clientWidth-before.graph.width*scale)/2),newX=Math.max(24,(el.clientWidth-graph.width*scale)/2);
     const center=el.scrollLeft+el.clientWidth/2-oldX;
     const anchor=before.graph.nodes.filter(node=>graph.nodes.some(next=>next.hash===node.hash)).sort((a,b)=>Math.abs(a.x*scale-center)-Math.abs(b.x*scale-center))[0];
@@ -97,20 +100,29 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
   const byHash=useMemo(()=>new Map(commits.map(commit=>[commit.hash,commit])),[commits]);
   // A row hovered in the commit list lights the same commit and its neighbours as hovering it here would.
   const active=byHash.get(hovered||mirror||''),neighbors=new Set(active?[active.hash,...active.parents,...commits.filter(commit=>commit.parents.includes(active.hash)).map(commit=>commit.hash)]:[]);
-  const branch=!active&&light?light.branches.find(item=>item.key===branchKey):undefined;
+  // A ref hovered in the list names a head; its branch previews here like a strand hovered in the graph does.
+  const refBranch=useMemo(()=>{if(!mirrorRef||!light)return undefined;const head=commits.find(commit=>commit.labels.includes(mirrorRef));return head?light.branchOf.get(head.hash):undefined;},[mirrorRef,light,commits]);
+  const focused=light?.branches.find(item=>item.key===pinnedKey);
+  const branch=!active&&light?light.branches.find(item=>item.key===(branchKey||refBranch?.key||pinnedKey)):undefined;
   useEffect(()=>{onHover?.(hovered);},[hovered,onHover]);
-  // Picking a row brings its commit into view, nudging the timeline only when the commit is off-screen or at an edge.
-  useEffect(()=>{
-    const el=viewport.current,target=reveal?el?.querySelector<HTMLElement>(`[data-commit-hash="${reveal.hash}"]`):null;if(!el||!target)return;
+  // Picking a row, or stepping along a branch, brings its commit into view, nudging the timeline only when the commit is off-screen or at an edge.
+  const revealCommit=useCallback((hash:string)=>{
+    const el=viewport.current,target=el?.querySelector<HTMLElement>(`[data-commit-hash="${hash}"]`);if(!el||!target)return;
     const box=el.getBoundingClientRect(),at=target.getBoundingClientRect(),cx=at.left+at.width/2-box.left,cy=at.top+at.height/2-box.top,margin=Math.min(120,el.clientWidth/4);
     const dx=cx<margin||cx>el.clientWidth-margin?cx-el.clientWidth/2:0,dy=cy<48||cy>el.clientHeight-48?cy-el.clientHeight/2:0;
     if(dx||dy)el.scrollBy({left:dx,top:dy,behavior:!motion||lowResource?'auto':'smooth'});
-  },[reveal?.hash,reveal?.n]);
+  },[motion,lowResource]);
+  useEffect(()=>{if(reveal)revealCommit(reveal.hash);},[reveal?.hash,reveal?.n]);
+  // Previous and next along the focused branch, oldest to newest; the branch's fork and merge commits are not steps.
+  const step=(direction:1|-1)=>{
+    if(!focused)return;const at=focused.members.indexOf(selected),next=at<0?(direction>0?0:focused.members.length-1):at+direction;
+    const hash=focused.members[Math.max(0,Math.min(focused.members.length-1,next))];if(hash){(select??choose)(hash);revealCommit(hash);}
+  };
   // Lightning only where a ref names a head with no loaded child; the layout decides which of those are branches.
   const heads=useMemo(()=>{const children=new Set(commits.flatMap(commit=>commit.parents));return new Set(commits.filter(commit=>commit.labels.length&&!children.has(commit.hash)&&!squash.has(commit.hash)).map(commit=>commit.hash));},[commits,squash]);
   const focusSet=active?neighbors:branch?new Set([...branch.members,...(branch.fork?[branch.fork]:[]),...(branch.merge?[branch.merge]:[])]):undefined;
   const lastFocus=useRef<Set<string>|undefined>(undefined);if(focusSet)lastFocus.current=focusSet;
-  const focusMix=useRef(0),frame=useRef<number|undefined>(undefined),seed=useMemo(()=>hashSeed(primary?.name??'repository'),[primary?.name]);
+  const focusMix=useRef(0),cache=useRef(lightCache()),frame=useRef<number|undefined>(undefined),seed=useMemo(()=>hashSeed(primary?.name??'repository'),[primary?.name]);
   const scene=useRef({graph,light,scale,selected,lowResource,heads,seed,moreOlder});scene.current={graph,light,scale,selected,lowResource,heads,seed,moreOlder};
   const view=()=>{const el=viewport.current,origin=world.current;if(!el||!origin)return undefined;const box=el.getBoundingClientRect(),at=origin.getBoundingClientRect();return{box,ox:at.left-box.left,oy:at.top-box.top};};
   // Redraws only when the view, the data or the hover changes; idle costs nothing.
@@ -119,8 +131,11 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
     frame.current=requestAnimationFrame(()=>{
       frame.current=undefined;const output=renderer.current,el=viewport.current,s=scene.current,v=view();if(!output||!el||!v||!s.light)return;
       output.resize(el.clientWidth,el.clientHeight,Math.min(2,devicePixelRatio||1));
-      const built=gitLight(s.graph,s.light,{scale:s.scale,ox:v.ox,oy:v.oy,width:el.clientWidth,height:el.clientHeight},{focus:lastFocus.current,focusMix:focusMix.current,heads:s.heads,selected:s.selected,lowResource:s.lowResource,seed:s.seed,olderBeyond:s.moreOlder});
-      output.draw({lines:built.lines,points:built.points,bloom:s.lowResource?0:1,exposure:1.6});
+      const t0=performance.now();
+      const built=gitLight(s.graph,s.light,{scale:s.scale,ox:v.ox,oy:v.oy,width:el.clientWidth,height:el.clientHeight},{cache:cache.current,focus:lastFocus.current,focusMix:focusMix.current,heads:s.heads,selected:s.selected,lowResource:s.lowResource,seed:s.seed,olderBeyond:s.moreOlder});
+      const t1=performance.now();
+      output.draw({lines:built.lines,points:built.points,offset:built.offset,linesKey:built.linesKey,bloom:s.lowResource?0:1,exposure:1.6});
+      el.dataset.lightMs=`${(t1-t0).toFixed(1)}/${(performance.now()-t1).toFixed(1)}`;el.dataset.lightBuilds=String(cache.current.builds);
       el.dataset.lightSegments=String(built.segments);
     });
   },[]);
@@ -143,20 +158,21 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
   const placed=light?.nodes??ribbons!.nodes;
   const zoomStep=1.4;
   return <div className="thread-graph">
-    <div className="thread-controls"><span title={lit?'Time runs left to right. Light gathers where history runs together; the primary line is the widest strand and a branch thickens with each commit, up to half of it.':'One shared mixed-color treatment; primary history is thicker. Width reflects loaded branch-segment commits only.'}>{primary?.name??'Primary'} timeline</span><button className="btn ghost" aria-label="Zoom out Git graph" onClick={()=>zoomAt(1/zoomStep)} disabled={scale<=MIN_SCALE+1e-4}>−</button><span>{Math.round(scale*100)}%</span><button className="btn ghost" aria-label="Zoom in Git graph" onClick={()=>zoomAt(zoomStep)} disabled={scale>=MAX_SCALE-1e-4}>+</button>{!lit&&<button className="btn ghost" aria-label="Orbit 3D Git ribbon" title="Toggle orbit, then drag vertically or use Up/Down arrows in the graph" aria-pressed={orbit} onClick={()=>setOrbit(value=>!value)}>Orbit</button>}<button className="btn ghost" onClick={()=>{setAngle(.35);fit();}}>Fit graph</button></div>
+    <div className="thread-controls">{focused?<BranchChip branch={focused} byHash={byHash} selected={selected} step={step} clear={()=>setPinnedKey('')}/>:<span className="thread-title" title={lit?'Time runs left to right. Light gathers where history runs together; the primary line is the widest strand and a branch thickens with each commit, up to half of it. Click a branch to focus it.':'One shared mixed-color treatment; primary history is thicker. Width reflects loaded branch-segment commits only.'}>{primary?.name??'Primary'} timeline</span>}<div className="thread-zoom" role="group" aria-label="Git graph view"><button aria-label="Zoom out Git graph" title="Zoom out ( − )" onClick={()=>zoomAt(1/zoomStep)} disabled={scale<=MIN_SCALE+1e-4}><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6h7"/></svg></button><output aria-label="Zoom level">{Math.round(scale*100)}%</output><button aria-label="Zoom in Git graph" title="Zoom in ( + )" onClick={()=>zoomAt(zoomStep)} disabled={scale>=MAX_SCALE-1e-4}><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6h7M6 2.5v7"/></svg></button>{!lit&&<button aria-label="Orbit 3D Git ribbon" title="Toggle orbit, then drag vertically or use Up/Down arrows in the graph" aria-pressed={orbit} onClick={()=>setOrbit(value=>!value)}>3D</button>}<button aria-label="Fit graph" title="Fit the whole graph" onClick={()=>{setAngle(.35);fit();}}><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5V2h2.5M7.5 2H10v2.5M10 7.5V10H7.5M4.5 10H2V7.5"/></svg></button></div></div>
     <div className={`thread-stage${lit?' lit':''}`}><canvas ref={canvas} className="thread-light" aria-hidden="true"/>
     <div className={`thread-viewport atlas-commit-list${branch?' on-branch':''}`} ref={viewport} tabIndex={0} aria-label={orbit&&!lit?"Commits; drag vertically or use Up and Down arrows to orbit 3D ribbon":"Commits, oldest on the left; drag to pan, pinch or Ctrl + wheel to zoom"} onScroll={event=>{const el=event.currentTarget;if(lit)schedule();if(loading||el.scrollWidth<=el.clientWidth+4)return;if(el.scrollLeft<30&&moreOlder)extend('older');else if(el.scrollLeft+el.clientWidth>el.scrollWidth-30&&moreNewer)extend('newer');}} onPointerDown={event=>{
       if(event.button!==0||(event.target as HTMLElement).closest('button'))return;
       const el=event.currentTarget;drag.current={x:event.clientX,y:event.clientY,left:el.scrollLeft,top:el.scrollTop,id:event.pointerId,angle,moved:false};el.setPointerCapture(event.pointerId);
     }} onPointerMove={event=>{const state=drag.current;if(state&&state.id===event.pointerId){if(Math.hypot(event.clientX-state.x,event.clientY-state.y)>4)state.moved=true;if(orbit&&!lit)setAngle(state.angle+(event.clientY-state.y)*.01);else {event.currentTarget.scrollLeft=state.left+state.x-event.clientX;event.currentTarget.scrollTop=state.top+state.y-event.clientY;}}else if(event.pointerType!=='touch')hoverBranch(event.clientX,event.clientY,event.target);}} onPointerLeave={()=>setBranchKey('')} onPointerUp={event=>{const state=drag.current;if(state&&!orbit){const dx=state.x-event.clientX;if(dx<0&&event.currentTarget.scrollLeft<40&&moreOlder&&!loading)extend('older');else if(dx>0&&event.currentTarget.scrollLeft+event.currentTarget.clientWidth>event.currentTarget.scrollWidth-40&&moreNewer&&!loading)extend('newer');}
       // A click on a strand (not a drag) opens that branch's newest commit.
-      if(state&&!state.moved&&light){const v=view();const hitBranch=v&&branchAt(light,{scale,ox:v.ox,oy:v.oy},event.clientX-v.box.left,event.clientY-v.box.top);if(hitBranch)choose(hitBranch.head);}
+      if(state&&!state.moved&&light){const v=view();const hitBranch=v&&branchAt(light,{scale,ox:v.ox,oy:v.oy},event.clientX-v.box.left,event.clientY-v.box.top);if(hitBranch)setPinnedKey(value=>value===hitBranch.key?'':hitBranch.key);else if(pinnedKey)setPinnedKey('');}
       drag.current=undefined;}} onPointerCancel={()=>{drag.current=undefined;}} onKeyDown={event=>{
       if(orbit&&!lit&&['ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();setAngle(value=>value+(event.key==='ArrowUp'?-.12:.12));return;}
       if(event.key==='PageUp'&&moreOlder){event.preventDefault();extend('older');return;}if(event.key==='PageDown'&&moreNewer){event.preventDefault();extend('newer');return;}
       if((event.key==='+'||event.key==='=')&&!event.ctrlKey&&!event.metaKey){event.preventDefault();zoomAt(zoomStep);return;}if(event.key==='-'&&!event.ctrlKey&&!event.metaKey){event.preventDefault();zoomAt(1/zoomStep);return;}
+      if((event.key==='b'||event.key==='B')&&!event.altKey&&!event.ctrlKey&&!event.metaKey){const hash=(event.target as HTMLElement).closest<HTMLElement>('[data-commit-hash]')?.dataset.commitHash,found=hash?light?.branchOf.get(hash):undefined;if(found){event.preventDefault();setPinnedKey(value=>value===found.key?'':found.key);}return;}
       if(!['ArrowRight','ArrowLeft','Home','End','Escape'].includes(event.key))return;
-      if(event.key==='Escape'){setHovered('');setBranchKey('');return;}if(event.altKey||event.ctrlKey||event.metaKey)return;
+      if(event.key==='Escape'){if(pinnedKey||branchKey||hovered){event.stopPropagation();event.preventDefault();}setHovered('');setBranchKey('');setPinnedKey('');return;}if(event.altKey||event.ctrlKey||event.metaKey)return;
       const buttons=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('.thread-commit')];const index=buttons.indexOf(event.target as HTMLButtonElement);
       if(!buttons.length)return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:Math.max(0,Math.min(buttons.length-1,index+(event.key==='ArrowLeft'?1:-1)));buttons[next]?.focus();
     }}>
@@ -172,23 +188,35 @@ export function GitThreadGraph({commits,selected,choose,primary,seeds,resetKey,m
       </div></div>
     </div></div>
     {active&&<div className="thread-peek" role="status"><code>{active.hash.slice(0,10)}</code><strong>{active.subject||'Untitled commit'}</strong><span>{active.author} · {new Date(active.time).toLocaleString()}</span><span>{active.parents.length>1?`Merge · ${active.parents.length} parents`:active.parents.length?'Commit':'Root commit'}{active.labels.length?` · ${active.labels.join(', ')}`:''}{light?.branchOf.has(active.hash)?` · commit ${light.ordinal.get(active.hash)} of ${light.branchOf.get(active.hash)!.members.length} on its branch`:''}</span>{links?.get(active.hash)&&<span className="thread-session-link">{gitSessionLinkDescription(links.get(active.hash)!)}{links.get(active.hash)!.turn?` · turn ${links.get(active.hash)!.turn}`:''}</span>}<small>Click or Enter to read changed files</small></div>}
-    {branch&&<BranchPeek branch={branch} byHash={byHash} primary={primary?.name}/>}
-    <div className="thread-caption"><select aria-label="Choose Git commit" value="" onChange={event=>{if(event.target.value)choose(event.target.value);}}><option value="">Open a commit…</option>{commits.map(commit=><option key={commit.hash} value={commit.hash}>{commit.hash.slice(0,8)} · {commit.subject}</option>)}</select>{loading?'Loading connected history…':moreOlder?'Scroll left or Page Up for earlier history':'Start of local history'}{moreNewer?' · scroll right for newer history':''}{!graph.primaryFound&&primary?' · primary line outside this loaded neighborhood':''}{graph.omitted?` · ${graph.omitted} additional links: open a commit for its complete parents`:''}<span className="sr-only">Up to 300 commit nodes are mounted. Other history remains reachable by scrolling.</span></div>
+    {branch&&<BranchPeek branch={branch} byHash={byHash} primary={primary?.name} focused={branch.key===pinnedKey&&!branchKey&&!refBranch} open={()=>choose(branch.head)}/>}
+    <div className="thread-caption"><select aria-label="Choose Git commit" value="" onChange={event=>{if(event.target.value)choose(event.target.value);}}><option value="">Open a commit…</option>{commits.map(commit=><option key={commit.hash} value={commit.hash}>{commit.hash.slice(0,8)} · {commit.subject}</option>)}</select><span className="thread-status">{loading?'Loading connected history…':moreOlder?'Scroll left or Page Up for earlier history':'Start of local history'}{moreNewer?' · scroll right for newer history':''}{!graph.primaryFound&&primary?' · primary line outside this loaded neighborhood':''}{graph.omitted?` · ${graph.omitted} additional links: open a commit for its complete parents`:''}</span><span className="sr-only">Up to 300 commit nodes are mounted. Other history remains reachable by scrolling.</span></div>
   </div>;
 }
 
 /** What a branch strand is, from Git alone: its name if a ref names its head, where it left and rejoined, and its commits. */
-function BranchPeek({branch,byHash,primary}:{branch:LightBranch;byHash:Map<string,GitCommit>;primary?:string}) {
+function BranchPeek({branch,byHash,primary,focused,open}:{branch:LightBranch;byHash:Map<string,GitCommit>;primary?:string;focused?:boolean;open?:()=>void}) {
   const commits=branch.members.map(hash=>byHash.get(hash)).filter((commit):commit is GitCommit=>!!commit);
   const head=byHash.get(branch.head),fork=branch.fork?byHash.get(branch.fork):undefined,merge=branch.merge?byHash.get(branch.merge):undefined;
   const authors=[...new Set(commits.map(commit=>commit.author))];
   const first=commits[0],name=head?.labels[0];
-  return <div className="thread-peek thread-branch-peek" role="status">
+  return <div className={`thread-peek thread-branch-peek${focused?' interactive':''}`} role="status">
     <code>{name??'Unnamed branch'}{head&&head.labels.length+head.omittedLabels>1?` +${head.labels.length+head.omittedLabels-1}`:''}</code>
     <strong>{commits.length} {commits.length===1?'commit':'commits'} · {merge?`${branch.squash?'squash-merged':'merged'} into ${primary??'the primary line'} at ${merge.hash.slice(0,7)}`:'not merged in this history'}</strong>
     <span>{authors.slice(0,3).join(', ')}{authors.length>3?` +${authors.length-3}`:''}{first&&head?` · ${ago(first.time)} → ${ago(head.time)}`:''}{fork?` · left ${fork.hash.slice(0,7)}`:''}</span>
     {branch.squash&&merge&&<span>Git has no merge link: {merge.hash.slice(0,7)} “{merge.subject}” wrote exactly this branch’s file contents.</span>}
     <ol>{[...commits].reverse().slice(0,5).map(commit=><li key={commit.hash}><code>{commit.hash.slice(0,7)}</code>{commit.subject||'Untitled commit'}</li>)}{commits.length>5&&<li className="more">{commits.length-5} earlier</li>}</ol>
-    <small>Click the strand to open its newest commit</small>
+    {focused?<button type="button" className="btn ghost" onClick={open}>Open newest commit</button>:<small>Click the strand to focus this branch</small>}
+  </div>;
+}
+
+/** The focused branch, with previous and next along its commits and a way out. The name is the ref that points at its head, when one does. */
+function BranchChip({branch,byHash,selected,step,clear}:{branch:LightBranch;byHash:Map<string,GitCommit>;selected:string;step:(direction:1|-1)=>void;clear:()=>void}) {
+  const head=byHash.get(branch.head),name=head?.labels[0]??'Unnamed branch',at=branch.members.indexOf(selected);
+  return <div className="thread-branch-chip" role="group" aria-label={`Focused branch ${name}`} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.stopPropagation();clear();}}}>
+    <code title={name}>{name}</code>
+    <small>{at>=0?`${at+1} of ${branch.members.length}`:`${branch.members.length} ${branch.members.length===1?'commit':'commits'}`}</small>
+    <button type="button" aria-label="Previous commit on this branch" title="Previous commit on this branch" onClick={()=>step(-1)}><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 2.5 4 6l3.5 3.5"/></svg></button>
+    <button type="button" aria-label="Next commit on this branch" title="Next commit on this branch" onClick={()=>step(1)}><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5 8 6 4.5 9.5"/></svg></button>
+    <button type="button" aria-label="Clear branch focus" title="Clear focus ( Esc )" onClick={clear}><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3 3 9"/></svg></button>
   </div>;
 }
