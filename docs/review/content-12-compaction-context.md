@@ -66,3 +66,21 @@ After rebuilding, **all six targeted cases pass**: all five compaction cases plu
 ## External acceptance blocker
 
 **NOT VERIFIED on a genuine capture: Claude `/context` category output.** The approved design scan found zero actual context reports or exact `/context` echoes in 41 Claude journals (313,005,991 bytes; 20 boundaries, 13 automatic, seven manual, 20 summaries, seven unlinked). The official repository-local Claude Code 2.1.314 runtime is installed and its auth status reports `loggedIn: false`. This is an account blocker: no login, credential/configuration change or fabricated native journal was attempted, as the builder explicitly directed. A working signed-in Claude CLI or a supplied genuine `/context` capture is needed. The Codex scan covered 73 journals (163,317,603 bytes; 20 compacted rows, 16 bracketed request pairs, 18 encrypted replacement entries). Synthetic category tests establish regression behavior only. The UI does not manufacture the screenshot's categories, memory/skill/MCP inventories or a Compact button. No Codex plaintext summary is available in the checked compaction captures; encrypted states are verified instead.
+
+
+## Completion takeover — 31 October
+
+The builder authorized completion takeover of the inactive draft; the claim was transferred on main (`b7928e20`). Harsh's implementation and previously approved scope are preserved. No production correction was indicated by the acceptance review.
+
+Fresh checks in the independent completion worktree pass both TypeScript projects and 41 focused units across adapters, projection, paged worker, context reports and the existing ring. A fresh bounded `check:real -- compaction --pick 1 --max-mb 20` passes exact native boundary/metric/request-neighbour comparisons for Claude `rec_024517cd` (6.3 MB, 426 operations, four boundaries, four paired readings, four linked summaries) and Codex `rec_428a053a` (7.3 MB, 424 operations, one boundary, one paired reading, one encrypted summary). These are new local-source checks, separate from the prior acceptance matrix above; no journal text or paths were printed.
+
+A fresh read-only native `auth status` check still reports `loggedIn: false`, `authMethod: none`. Genuine Claude `/context` category acceptance remains externally account-blocked. No login/configuration or credential change was attempted. This does not establish genuine category rendering; synthetic category checks remain labelled regression guards.
+
+| Acceptance line | Evidence / remaining |
+| --- | --- |
+| Every real compaction preserves captured metrics or explicit missing values | Both-harness exact scanner comparison passes; original real browser matrix above covers 600/1440. |
+| Summary reachable with captured/encrypted/missing provenance | Original real browser matrix and focused worker/projection guards; no plaintext invented for encrypted Codex summaries. |
+| Genuine Claude `/context` categories | **External account blocker**, unchanged after fresh auth check. |
+| No-compaction session adds no boundary/report | Both-harness original genuine 600/1440 matrix above. |
+| Live/replay cutoff and bounded worker paging | Focused units pass; prior delayed/live/replay browser guards recorded above. |
+| Finished-task batch integration | Pending the coordinating root's one isolated combined gate; this PR remains draft until that gate is recorded. |
