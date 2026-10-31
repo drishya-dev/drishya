@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import {outcomeMaterial} from '../../apps/ui/src/lib/outcome-material.ts';
 import { resolve } from 'node:path';
 import { writeFileSync } from 'node:fs';
@@ -137,7 +138,7 @@ test('actual current Git review supports expanded patch reading without reposito
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern#/r/${encodeURIComponent(id)}`);
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   const reader=page.getByRole('dialog',{name:'Git review',exact:true});
   const workspace=reader.getByRole('button',{name:'Approve current workspace',exact:true});
   await expect(workspace.or(reader.getByRole('button',{name:'Approve read-only Git',exact:true})).or(reader.getByRole('button',{name:'Refresh changes',exact:true}))).toBeVisible();

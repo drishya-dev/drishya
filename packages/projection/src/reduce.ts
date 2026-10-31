@@ -41,6 +41,7 @@ import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './sh
 import { parseTestOutput } from './tests.ts';
 import { TurnAccumulator } from './turns.ts';
 import { UsageAccumulator } from './usage.ts';
+import { ContextAccumulator } from './context.ts';
 import { placeChildren } from './children.ts';
 import { declinedFrom } from './declined.ts';
 import { DESKTOP_PLAN_TOOL, DesktopChecklists, TaskPlans, exitPlanText, proposedPlan } from './plans.ts';
@@ -49,7 +50,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r26';
+export const REDUCER_VERSION = 'r29';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -107,6 +108,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const taskPlans = new TaskPlans();
   const desktopPlans = new DesktopChecklists();
   const usage = new UsageAccumulator();
+  const context = new ContextAccumulator();
   const turnRecords = new TurnAccumulator();
   const itemReceipts = new Map<string, number>();
 
@@ -155,6 +157,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const harnesses = new Set<string>();
   const capabilities: Record<string, CapabilityMatrix> = {};
   let workspaceRoot: string | undefined;
+  let recordedBranch: Projection['recordedBranch'];
   let title: string | undefined;
   let titleRank = 0;
   let firstPrompt: string | undefined;
@@ -163,6 +166,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     const root = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof (o.payload as Rec).cwd === 'string' ? (o.payload as Rec).cwd : undefined);
     if (root && !rootsByRecording.has(o.recordingId)) rootsByRecording.set(o.recordingId, root);
   }
+  // Empty incremental readers may receive their first captured root only on append.
+  let branchPrimaryRoot = rootsByRecording.get(recordingId);
   const normalizedRoot = (root: string) => {
     const path = toPosix(root).replace(/\/+$/, '');
     return /^[a-z]:\//i.test(path) ? path.toLowerCase() : path;
@@ -305,6 +310,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       observationCount++;
       lastSequence = Math.max(lastSequence, o.receivedSequence);
       usage.add(o);
+      context.usage(o, step(), agentKey(o));
       turnRecords.add(o);
       currentRecording = o.recordingId;
       if (o.source?.adapterId) {
@@ -315,9 +321,20 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         }
       }
       const p = o.payload as Rec;
+      if (!branchPrimaryRoot && o.recordingId === recordingId) {
+        branchPrimaryRoot = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof p.cwd === 'string' ? p.cwd : undefined);
+      }
       switch (o.kind) {
         case 'session.meta': {
           if (typeof p.cwd === 'string' && !workspaceRoot) workspaceRoot = p.cwd;
+          // A branch names this captured root only. Neither companion agents nor another
+          // recording/root may replace the selected session's identity; missing data stays missing.
+          const primaryRoot = branchPrimaryRoot;
+          if (o.recordingId === recordingId && o.agentId === 'agent:main' &&
+              typeof p.branch === 'string' && p.branch.trim() && typeof p.cwd === 'string' && p.cwd.trim() &&
+              primaryRoot && normalizedRoot(p.cwd) === normalizedRoot(primaryRoot)) {
+            recordedBranch = { name: p.branch, workspaceRoot: p.cwd, provenance: { kind: 'captured', observationIds: [o.id] } };
+          }
           const rank = typeof p.titleRank === 'number' ? p.titleRank : 1;
           if (typeof p.title === 'string' && p.title && rank >= titleRank) {
             title = p.title;
@@ -761,11 +778,25 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           timeline.push({ type: 'notice', id: `t_${notice.id}`, noticeId: notice.id, sequence: o.receivedSequence, agentId: a.id, time: o.sourceTime });
           break;
         }
-        case 'compaction':
+        case 'compaction': {
           ensureAgent(o);
-          timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: 'compaction', time: o.sourceTime });
-          gaps.push({ sequence: step() - 1, reason: 'compaction', detail: 'The harness summarised earlier context here.' });
+          const receipt = context.compaction(o, step(), agentKey(o));
+          const summary = receipt.summary ?? context.summary(o);
+          if (summary && p.summary) {
+            const content = text(p.summary as TextValue);
+            if (content?.trim() && !summary.artifactId) {
+              summary.artifactId = addArtifact({ id: `art_${summary.id}_summary`, kind: 'output', observedAtSequence: summary.availableAfterStep - 1,
+                content, availability: o.availability, provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0 });
+              summary.availability = 'captured';
+            }
+          }
+          if (receipt.fresh) {
+            const reason = receipt.boundary ? 'compaction' : 'compaction-summary';
+            timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason, time: o.sourceTime });
+            if (receipt.boundary) gaps.push({ sequence: step() - 1, reason, detail: 'The harness compacted earlier context here.' });
+          }
           break;
+        }
         case 'capture.gap':
           ensureAgent(o);
           timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: String(p.reason ?? 'gap'), time: o.sourceTime });
@@ -836,7 +867,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
 
     const placed = placeChildren(operations, pendingTurnImages.size ? [...timeline, ...[...pendingTurnImages.values()].map(imageOnlyTurn)] : timeline, [...artifacts.values()], prose, [...finalAgents.values()], itemReceipts);
     crossLinks(placed.operations, placed.prose, finalLink);
-    const passages = buildPassages(placed.timeline, placed.operations, placed.prose);
+    const placedSteps = new Map(placed.timeline.map((item, index) => [item.id, index]));
+    const contextEvidence = context.snapshot(at => at >= timeline.length ? placed.timeline.length : placedSteps.get(timeline[at]!.id) ?? at);
+    const passages = buildPassages(placed.timeline, placed.operations, placed.prose, contextEvidence);
 
     const files = new Map<string, { path: string; firstStep: number; lastStep: number; roles: Set<PathRef['role']> }>();
     for (const op of placed.operations) {
@@ -859,6 +892,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       lastSequence,
       harnesses: [...harnesses],
       workspaceRoot: multipleWorktrees ? undefined : workspaceRoot,
+      ...(recordedBranch ? { recordedBranch: { ...recordedBranch, provenance: { kind: 'captured', observationIds: [...recordedBranch.provenance.observationIds] } } } : {}),
       title: title ?? (firstPrompt ? clip(firstPrompt.replace(/\s+/g, ' ').trim(), 120) : undefined),
       agents: placed.agents,
       operations: placed.operations,
@@ -874,6 +908,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       capabilities: { ...capabilities },
       ...(accounting ? { usage: accounting } : {}),
       ...(turns ? { turns } : {}),
+      ...contextEvidence,
     };
   }
   return { append, snapshot };
@@ -1295,13 +1330,15 @@ function crossLinks(operations: Operation[], prose: Prose[], link: Ctx['link']) 
  * Passages: an agent's operations between two pieces of its prose, left to right, with the
  * prose that follows them beneath. A user turn closes every open passage.
  */
-export function buildPassages(timeline: TimelineItem[], operations: Operation[], prose: Prose[]): Projection['passages'] {
+export function buildPassages(timeline: TimelineItem[], operations: Operation[], prose: Prose[], context?: Pick<Projection, 'compactions' | 'compactionSummaries'>): Projection['passages'] {
   const scripts = new Set(operations.map(op => op.parentOperationId).filter(Boolean));
   const opAgent = new Map(operations.map((o) => [o.id, o.agentId]));
   const proseAgent = new Map(prose.map((p) => [p.id, p.agentId]));
   const out: Projection['passages'] = [];
   const open = new Map<string, Projection['passages'][number]>();
   const passageByOperation = new Map<string, Projection['passages'][number]>();
+  const boundaries = new Map(context?.compactions?.map(c => [c.step, c.id]) ?? []);
+  const summaries = new Map(context?.compactionSummaries?.filter(s => !s.boundaryId).map(s => [s.availableAfterStep - 1, s.id]) ?? []);
   timeline.forEach((it, i) => {
     if (it.type === 'turn') {
       open.clear();
@@ -1332,6 +1369,10 @@ export function buildPassages(timeline: TimelineItem[], operations: Operation[],
       }
       p.proseIds.push(it.proseId);
       p.lastStep = i;
+    } else if (it.type === 'gap' && (boundaries.has(i) || summaries.has(i))) {
+      out.push({ id: `psg_${it.id}`, agentId: it.agentId, operationIds: [], proseIds: [], firstStep: i, lastStep: i,
+        ...(boundaries.has(i) ? { compactionIds: [boundaries.get(i)!] } : { compactionSummaryIds: [summaries.get(i)!] }) });
+      open.delete(it.agentId);
     } else if (it.type === 'notice') {
       // A notice sits with the agent's open passage and never splits it.
       let p = open.get(it.agentId);

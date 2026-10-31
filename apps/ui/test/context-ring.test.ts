@@ -11,7 +11,9 @@ describe('context occupancy', () => {
     const c = contextOccupancy(usage({ a: request(40_000, 258_400), b: request(129_200, 258_400) }, cumulative(900_000, 258_400)));
     expect(c).toEqual({ used: 129_200, window: 258_400, fraction: .5 });
     expect(contextLabel(c!)).toContain('50%');
-    expect(contextLabel(c!)).toContain('129,200 of 258,400 tokens');
+    expect(contextLabel(c!)).toContain('129,200 of 258,400 recorded window tokens');
+    expect(contextLabel(c!)).toContain('ratio, derived');
+    expect(contextLabel(c!)).not.toContain('Context in use');
   });
   it('takes the window from the session point when the request carries none', () => {
     expect(contextOccupancy(usage({ a: request(1_000) }, cumulative(5_000, 100_000)))?.fraction).toBe(.01);

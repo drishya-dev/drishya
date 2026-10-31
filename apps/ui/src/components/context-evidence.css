@@ -1,0 +1,25 @@
+.context-evidence, .context-report { max-width: 680px; min-width: 0; padding: 18px 0; color: var(--t1); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.context-heading, .context-foot { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 20px; }
+.context-evidence strong, .context-report strong { font-weight: 500; }
+.context-evidence small, .context-report small, .request-context small, .context-missing { display: block; color: var(--t2); }
+.context-foot { color: var(--t2); }
+.context-evidence small, .context-report small, .request-context small { font-size: 11px; }
+.context-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 12px 0; }
+.context-metric { display: grid; grid-template-columns: 1fr auto; align-content: start; gap: 5px 12px; min-width: 0; font-variant-numeric: tabular-nums; }
+.context-metric small, .context-track { grid-column: 1 / -1; }
+.context-track { display: block; height: 4px; background: var(--line); overflow: hidden; }
+.context-track > span { display: block; height: 100%; background: var(--t2); }
+.context-metric:last-child .context-track > span { background: var(--t1); }
+.context-summary { margin-top: 6px; }
+.context-summary-reader { margin-top: 10px; min-width: 0; }
+.context-summary-reader .artifact-reader { max-width: 100%; }
+.context-evidence .btn { font-size: 12px; }
+.context-report dl { margin: 12px 0; }
+.context-report dl > div { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 1fr); gap: 2px 20px; margin: 10px 0; }
+.context-report dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.context-report .context-listing { margin: 14px 0 0; }
+.context-report .context-listing dl { margin: 6px 0 0; max-height: 220px; overflow: auto; border-top: 1px solid var(--line); }
+.context-report .context-listing dl > div { margin: 0; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.context-report .output { max-height: 360px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.request-context { display: grid; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+@media (max-width: 800px) { .context-pair { gap: 16px; } .context-metric { grid-template-columns: 1fr; } .context-metric strong { grid-row: 2; } .context-evidence, .context-report { padding: 12px 0; } }
