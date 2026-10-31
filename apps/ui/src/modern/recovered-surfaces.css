@@ -142,3 +142,4 @@
  :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer):has(.history-transport) .catalog-toggle {left:14px;right:auto;bottom:calc(var(--composer-gap,12px) + 4px);}
  :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer):has(.history-transport) .follow-pill {right:132px;bottom:calc(var(--composer-gap,12px) + 4px);}
 }
+:root[data-ui-version=modern] .modern-native-composer #prompt-size-status:not(.sr-only) { padding:2px 15px 4px; }

@@ -1656,6 +1656,21 @@ test('Files Markdown has document source recovery and a complete large-file fall
 });
 
 
+test('the largest rendered document is a setting: a 6,000-line Markdown file stays Source by default and renders as a document with the larger limit',async({page})=>{
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
+  await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();const desk=page.getByRole('region',{name:'Developer workspace',exact:true}),grant=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
+  const files=page.getByRole('textbox',{name:'Find repository files',exact:true});await files.fill('large-document.md');await page.locator('[data-spine-path="large-document.md"]').click();
+  const reader=page.locator('.current-file-reader');const note=reader.getByRole('status').filter({hasText:'Rendered documents support'});
+  await expect(note).toContainText('5,000 lines · 256 KiB');await expect(note).toContainText('larger limit is in Settings');
+  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();const settings=page.getByRole('dialog',{name:'Workspace settings'});
+  await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+  await settings.getByRole('combobox',{name:'Largest rendered document',exact:true}).selectOption('large');
+  await page.getByRole('button',{name:'Close Workspace settings'}).click();
+  await expect(note).toHaveCount(0);await expect(reader.locator('.desk-markdown, .current-document').first()).toContainText('Markdown source line 6000');
+  expect(await page.evaluate(()=>localStorage.getItem('drishya.documentSize'))).toBe('large');
+});
+
+
 test('a restored current reader requests fresh consent and keeps inspector navigation reachable',async({page})=>{
   const path=join(dir,'reading-consent.jsonl');writeFileSync(path,[{type:'session_meta',payload:{id:'reading-consent',cwd:root}},{type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:'reader-origin',arguments:JSON.stringify({cmd:'echo recorded input'})}}].map(row=>JSON.stringify(row)).join('\n')+'\n');const {recordingId:id}=await app.ingest.importSource('codex',path),operation=app.projection(id).operations[0]!;
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries:[['location',{currentFile:'README.md',filePanel:'src/cart/total.ts',selectedOp:operation.id}]]}]}}):route.continue());

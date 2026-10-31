@@ -1,8 +1,9 @@
 import { READING_SHORTCUTS } from './ReadingKeys.tsx';
+import { DOCUMENT_SIZES, type DocumentSize } from '../lib/document-limit.ts';
 import { installScrollbarActivity } from '../lib/scrollbar-activity.ts';
 import { useEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { setLowResource, setMapVisible, setMotion, setHoverReading, setTheme, setPresentationPreferences, useApp } from '../state.ts';
+import { setLowResource, setMapVisible, setMotion, setHoverReading, setDocumentSize, setTheme, setPresentationPreferences, useApp } from '../state.ts';
 import { useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { SettingsSections } from './UIVersions.tsx';
@@ -113,6 +114,7 @@ function Settings() {
   const map = useApp((s) => s.mapVisible);
   const low = useApp((s) => s.lowResource);
   const hoverReading = useApp(s => s.hoverReading);
+  const documentSize = useApp(s => s.documentSize);
   const depth = useApp(s => s.mapDepth);
   const orbit = useApp(s => s.mapOrbit);
   const reasoningDetail = useApp(s => s.reasoningDetail);
@@ -131,6 +133,7 @@ function Settings() {
       <label className="setting-row"><span>Slow background orbit<small>15 fps maximum. Resumes 12 seconds after manual camera movement; off in hidden tabs, low resource mode or reduced motion.</small></span><input type="checkbox" checked={orbit} disabled={!depth} onChange={e => setPresentationPreferences({ mapOrbit: e.target.checked })} /></label>
       <label className="setting-row"><span>Exposed reasoning<small>Display only; never unlocks private reasoning or changes model effort.</small></span><span className="settings-select"><select aria-label="Exposed reasoning detail" value={reasoningDetail} onChange={e => setPresentationPreferences({ reasoningDetail: e.target.value as 'expanded' | 'collapsed' | 'hidden' })}><option value="expanded">Full available detail</option><option value="collapsed">Collapsed</option><option value="hidden">Hide</option></select></span></label>
       <label className="setting-row"><span>Relationship motion<small>Finite origin and outcome cues; captured text is always immediately readable.</small></span><input type="checkbox" checked={motion} onChange={(e) => setMotion(e.target.checked)} /></label>
+      <label className="setting-row"><span>Largest rendered document<small>Markdown files up to this size open as a formatted document; larger ones open as Source, which is always available. Bigger limits render more slowly. Files over 2 MiB are never read.</small></span><span className="settings-select"><select aria-label="Largest rendered document" value={documentSize} onChange={e => setDocumentSize(e.target.value as DocumentSize)}>{(Object.keys(DOCUMENT_SIZES) as DocumentSize[]).map(key => <option key={key} value={key}>{DOCUMENT_SIZES[key].label}</option>)}</select></span></label>
       <label className="setting-row"><span>Hover reading focus<small>After a short dwell, enlarge the real preview within the viewport without moving history. Escape restores it. Desktop pointer only.</small></span><input type="checkbox" checked={hoverReading} onChange={e => setHoverReading(e.target.checked)} /></label>
       <label className="setting-row"><span>Notify when the agent needs me or finishes<small>{notify.permission === 'unsupported' ? 'This browser does not support notifications.' : notify.permission === 'denied' ? 'Blocked in your browser’s site settings; allow notifications there to turn this on.' : 'Only while this tab is hidden. Shows the session title and state, never captured content. The browser asks for permission when you turn this on.'}</small></span><input type="checkbox" checked={notify.enabled} disabled={notify.permission === 'unsupported' || notify.permission === 'denied'} onChange={e => void setNotifications(e.target.checked)} /></label>
       <p className="muted small">Low resource mode sets economical defaults; you can explicitly re-enable map or motion. Your browser's reduced-motion preference always suppresses animated cues.</p>
