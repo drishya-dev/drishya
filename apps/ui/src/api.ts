@@ -5,6 +5,7 @@ import type {ReviewInsightsPage,FindingMembers,ReviewFinding} from '../../../pac
 import type {CommandQuery,CommandPage} from '../../../packages/scene/src/commands.ts';
 import type {ScreenRun} from '../../../packages/scene/src/screen.ts';
 import type {ToolInventory,ToolTrail,ToolFilter} from '../../../packages/scene/src/tools.ts';
+import type {WebResultPage} from '../../../packages/scene/src/web.ts';
 import type {DelegationThread} from '../../daemon/src/delegation-types.ts';
 // Where the UI gets its data: the local daemon (live, importable) or a static replay bundle
 // (the hosted demo). Both expose the same surface, so every screen works in both.
@@ -69,6 +70,7 @@ export interface Config {
 }
 
 export interface DataSource {
+  webResult?(id:string,operationId:string,options:{start:number;count:number;q?:string;resultId?:string}):Promise<WebResultPage>;
   readingNotes?(id:string,start?:number):Promise<{bookmarks:{id:string;step:number;note:string;createdAt:string}[];total:number;start:number;count:number}>;
   kind: 'daemon' | 'bundle';
   /** Built-in synthetic fixture only; never used to classify a user's replay bundle. */
@@ -294,6 +296,7 @@ export const daemon: DataSource = {
   imageUrl: (id, sha) => `/v1/recordings/${encodeURIComponent(id)}/images/${sha}`,
   checkpoint: (id, backup) => req<CheckpointFile>(`/v1/recordings/${encodeURIComponent(id)}/checkpoint/${encodeURIComponent(backup)}`),
   persistedOutput: (id, operationId) => req<PersistedOutput>(`/v1/recordings/${encodeURIComponent(id)}/persisted-output/${encodeURIComponent(operationId)}`),
+  webResult:(id,operationId,options)=>req<WebResultPage>(`/v1/recordings/${encodeURIComponent(id)}/web-result/${encodeURIComponent(operationId)}?${new URLSearchParams({start:String(options.start),count:String(options.count),...(options.q?{q:options.q}:{}),...(options.resultId?{result:options.resultId}:{})})}`),
   fixChain: async (id, operationId) => {
     try {
       return await req<FixChain>(`/v1/recordings/${encodeURIComponent(id)}/fix-chain/${encodeURIComponent(operationId)}`);

@@ -84,3 +84,29 @@ A fresh read-only native `auth status` check still reports `loggedIn: false`, `a
 | No-compaction session adds no boundary/report | Both-harness original genuine 600/1440 matrix above. |
 | Live/replay cutoff and bounded worker paging | Focused units pass; prior delayed/live/replay browser guards recorded above. |
 | Finished-task batch integration | Pending the coordinating root's one isolated combined gate; this PR remains draft until that gate is recorded. |
+
+## Authoritative handback and integration assessment - 31 October
+
+The takeover section above records a historical handoff. Authoritative main `dbf3804` subsequently hands the whole CONTENT-12 item and this existing branch back to **Harsh + Codex**, after the builder confirmed Harsh is active. The current claim retains the approved 26-path scope and explicit genuine-Claude-context account blocker. This branch now merges that main, including its CONTENT-13 web-result implementation, without conflicts. Yash's separate CONTENT-14 and TEST-2 WIP/holds remain untouched; this handback is not permission to change their isolated result rendering or reliability work.
+
+The earlier local-only ownership uncertainty is resolved by the refreshed canonical STATUS row at `dbf3804`; the historical takeover is preserved rather than rewritten as current ownership. No claim removal, parent-task completion tick, PR readiness change or merge is applied here.
+
+### Named verification phases
+
+| Phase / candidate | Actual outcome | Limit |
+| --- | --- | --- |
+| Initial complete combined gate, `1fe9d6c` | UI build and both typechecks pass; package passes. Default-worker units: 1,104 pass / one skip / one selected-branch timeout. Full browsers: 583 pass / 28 skip / five failures. | Initial failures remain recorded, not overwritten by isolated passes. |
+| Initial serial browser phase, same candidate | 33 pass / one skip / zero failures. | Separate evidence for unchanged serial scope, not a second corrected full-suite run. |
+| Capped-unit follow-up, same combined source | 1,105 pass / one skip, all 183 files, with four maximum workers. | Does not erase the earlier unconstrained-worker timeout. |
+| CONTENT-12 repair, `55c5f45`, then feature `3966f29` | UI rebuild and UI typecheck pass; all six targeted browser cases pass (five compaction cases plus the unchanged Classic Usage case). | Exact existing assertions preserved; per-test scratch fixtures isolate persisted reader positions. |
+| User-run corrected parallel project, `91496c75` | **553 pass / 27 skip / two failures**. All five previously failing browser cases pass in this corrected parallel run. | The two different failures concern reader recovery and a blocked Inspect click. Root is diagnosing them against clean current main; neither is classified as a baseline failure yet. |
+| User-run corrected package, `91496c75` | Pass, 14.48 seconds. | This phase is green; corrected parallel browser project is not yet green. |
+| This authoritative-main alignment | `dbf3804` merged without conflicts; canonical handback and CONTENT-13 source preserved. | No build, test or browser run during root's exclusive diagnostic lease. Earlier candidate counts are not retroactive verification of newly merged main source. |
+
+The corrected parallel results and prior serial results are reported as separate phases. They are not added together to imply a new single green full-suite run. The current gate assessment remains with the coordinating root; its clean-current-main diagnosis is still in progress.
+
+### Exact proposed review-ready external exception (not activated)
+
+> External acceptance exception: genuine Claude Code `/context` category rendering remains **ACCOUNT BLOCKED and NOT VERIFIED on a genuine capture**. The official local Claude Code 2.1.314 runtime is installed but signed out; the user explicitly directed that no login, credential/configuration change or fabricated native capture be attempted. Existing parser/category fixtures are regression guards only. Compaction/no-compaction evidence for both harnesses at 600 and 1440 px is recorded above. The unmet genuine category line requires a working signed-in native runtime supplied by a builder, or a genuine captured `/context` result, before it can be checked. The parent CONTENT-12 TASKS checkbox remains unchecked for this case. Any review-ready change must first follow root's recorded assessment of the actual integration gate and must retain this exception verbatim in substance.
+
+This wording is prepared for the confirmed owner/coordinator; PR #301 remains **draft**, the claim remains active, and no whole-task acceptance or release readiness is claimed. No native auth/configuration action was performed in this closeout.
