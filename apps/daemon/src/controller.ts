@@ -38,7 +38,8 @@ interface Run {
   pending: Map<string, { wireId: string | number; method: string; input?: unknown }>;
   inputRequests:Map<string,{wireId:string|number;method:'codex'|'claude';spec:InputSpec}>;
   requests: Map<number, { resolve: (v: any) => void; reject: (e: Error) => void; timer: NodeJS.Timeout }>;
-  timer: NodeJS.Timeout;
+  /** Only set when a limit is asked for (tests). A turn has no wall-clock limit: it ends when the harness finishes, the person interrupts or the process exits. */
+  timer?: NodeJS.Timeout;
   shutdown?: NodeJS.Timeout;
   prompt?: string;
   attachments?: PromptAttachment[];
@@ -205,7 +206,7 @@ export class HarnessController {
     state.attachments = prepared.attachments.map(a => ({ name: a.name, type: a.type }));
     state.settings = this.settings.get(id);
     state.promptRedacted ||= prepared.redacted;
-    const run: Run = { state, child, pending: new Map(), inputRequests:new Map(), requests: new Map(), blocks: new Map(), claudeTasks: new Set(), claudeResult: false, threadId: sessionId, sequence: 0, timer: setTimeout(() => this.finish(run, 'failed', 'harness turn exceeded the connection time limit'), this.options.timeoutMs ?? 30 * 60_000) };
+    const run: Run = { state, child, pending: new Map(), inputRequests:new Map(), requests: new Map(), blocks: new Map(), claudeTasks: new Set(), claudeResult: false, threadId: sessionId, sequence: 0, ...(this.options.timeoutMs ? { timer: setTimeout(() => this.finish(run, 'failed', 'harness turn exceeded the connection time limit'), this.options.timeoutMs) } : {}) };
     // Retain a bounded set of recent connection receipts, no raw journals or auth material.
     for (const [key, old] of this.runs) if (this.runs.size >= 16 && !['connecting', 'running', 'approval'].includes(old.state.state)) this.runs.delete(key);
     this.runs.set(id, run);

@@ -249,6 +249,24 @@ it('rejects protected, binary, oversized and disguised image attachments before 
   expect(launches.length).toBe(before);
 });
 
+// CONNECT-1: a turn is not cut off by a clock. A harness waiting for the person's answer is waiting, not failing.
+it('a turn has no wall-clock limit unless one is explicitly set', async () => {
+  const options = (controller as unknown as { options: { timeoutMs?: number } }).options;
+  const started = await controller.start(claudeId, 'QUESTION', true);
+  const pending = await wait(claudeId, 'approval');
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  expect(controller.status(claudeId)).toMatchObject({ state: 'approval', runId: started.runId });
+  controller.answer(claudeId, started.runId, pending.inputRequests![0]!.id, { q0: { options: ['o0'] } });
+  await wait(claudeId, 'completed');
+  // The option stays for tests and for anyone who wants a limit: the same wait then fails with the limit's own message.
+  options.timeoutMs = 300;
+  try {
+    await controller.start(claudeId, 'QUESTION', true);
+    await expect.poll(() => controller.status(claudeId).state, { timeout: 4000 }).toBe('failed');
+    expect(controller.status(claudeId).error).toContain('connection time limit');
+  } finally { delete options.timeoutMs; }
+});
+
 for(const harness of ['codex','claude'] as const)it(`${harness} answers only an exact pending question and rejects stale replies`,async()=>{
   const id=harness==='codex'?codexId:claudeId,started=await controller.start(id,'QUESTION',true),pending=await wait(id,'approval');
   expect(pending.approvals).toEqual([]);const request=pending.inputRequests![0]!;expect(request.questions[0]!.question).toBe('Which approach?');
