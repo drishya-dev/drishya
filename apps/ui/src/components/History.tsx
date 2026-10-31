@@ -1,3 +1,4 @@
+import {StoredToolResult} from './StoredToolResult.tsx';
 import { BrowserEvidence, BrowserStrip, WebEvidence } from './BrowserEvidence.tsx';
 import { injectedLine, injectedMessage } from '../lib/injected-messages.ts';
 import { browserStep, groupBrowserSteps } from '../lib/browser-evidence.ts';
@@ -944,8 +945,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
       return <div className="op-expanded mcp-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.server} / {d.tool} · captured input</div>
         <ToolInput value={d.input}/>
-        <div className="material-context">Captured result preview</div>
-        <StructuredResult text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')} />
+        <StoredToolResult op={op} full/>
       </div>;
     case 'web':
       return <div className="op-expanded web-material" onClick={e => e.stopPropagation()}><WebEvidence op={op} full/></div>;
@@ -958,9 +958,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
       return <div className="op-expanded other-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">Captured input</div>
         <ToolInput value={d.input}/>
-        <div className="material-context">Captured result preview</div>
-        <CapturedOutcomes output={d.resultPreview}/>
-        <ToolOutput text={d.resultPreview || (op.status === 'running' ? 'Waiting for result' : 'No result content captured')}/>
+        <StoredToolResult op={op} full/>
       </div>;
     default:
       return null;
@@ -1056,7 +1054,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
           <div className="mcp-tool">{d.tool}</div>
           <ToolInput value={d.input}/>
           <ResultArea state={op.status} resolving={resolving}>
-            {d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview} /></div> : <span className="muted">{op.status === 'running' ? 'Waiting for result' : 'No result content captured'}</span>}
+            <div className="mcp-result"><StoredToolResult op={op}/></div>
           </ResultArea>
         </div>
       );
@@ -1076,7 +1074,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       if (isQuestionTool(op.tool)) return <QuestionCard op={op}/>;
       return <>
         <ToolInput value={d.input}/>
-        <ResultArea state={op.status} resolving={resolving}>{d.resultPreview ? <div className="mcp-result"><StructuredResult text={d.resultPreview}/></div> : undefined}</ResultArea>
+        <ResultArea state={op.status} resolving={resolving}><div className="mcp-result"><StoredToolResult op={op}/></div></ResultArea>
       </>;
   }
 }

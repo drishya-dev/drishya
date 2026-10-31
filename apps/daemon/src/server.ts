@@ -447,6 +447,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         return json(res, { observations: app.store.observations(firstId, after, limit) });
       }
       if (sub === 'artifacts' && subId && m === 'GET') {
+        if (url.searchParams.has('byteStart')) {
+          for (const key of id.split('+')) app.recording(key);
+          const start = intParam(url, 'byteStart', 0, 0, Number.MAX_SAFE_INTEGER);
+          return json(res, await app.history.artifactChunk(id, subId, start));
+        }
         if (url.searchParams.has('find')) {
           for (const key of id.split('+')) app.recording(key);
           const query = url.searchParams.get('find') ?? '', continuation = url.searchParams.get('cursor') ?? undefined;

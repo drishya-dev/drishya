@@ -230,6 +230,15 @@ function artifact(id: string, artifactId: string, start: number, count: number):
   return slice ? { artifact, available: true, start, ...slice } : { ...empty, available: false, reason: 'no-longer-stored' };
 }
 
+function artifactChunk(id: string, artifactId: string, start: number) {
+  const descriptor = artifact(id, artifactId, 0, 0);
+  if (!descriptor.available || !descriptor.artifact.blob) return descriptor;
+  if (descriptor.artifact.kind !== 'output') throw Error('Only recorded output supports text continuation');
+  const sha = descriptor.artifact.blob;
+  const chunk = source.blobs.readTextChunk(sha, start) ?? blobs.readTextChunk(sha, start);
+  return chunk ? { artifact: descriptor.artifact, available: true, ...chunk } : { artifact: descriptor.artifact, available: false, reason: 'no-longer-stored' };
+}
+
 function artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) {
   current(id);
   const row = db.prepare("SELECT body FROM items WHERE view_id=? AND kind='artifacts' AND id=?").get(id, artifactId) as { body: string } | undefined;
@@ -272,6 +281,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'page') value = page(a.id, a.query);
     else if (message.method === 'page-bytes') value = new TextEncoder().encode(JSON.stringify(page(a.id, a.query)));
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
+    else if (message.method === 'artifact-chunk') value = artifactChunk(a.id, a.artifactId, a.start);
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query, a.selectedOperationId);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
