@@ -120,3 +120,24 @@ describe('slash command output', () => {
     expect(out).toHaveLength(1);
   });
 });
+
+describe('messages typed while the agent was working (LIVE-5)', () => {
+  const attach = (prompt: unknown, extra: Record<string, unknown> = {}) => ({ type: 'attachment', uuid: 'q1', timestamp: '2026-10-31T11:15:14Z', sessionId: 's', cwd: '/w', attachment: { type: 'queued_command', prompt, commandMode: 'prompt', delivery_id: 'd', source_uuid: 's', timestamp: '2026-10-31T11:15:13Z', ...extra } });
+  it('keeps a queued prompt as the person\'s message, dated when it was queued', () => {
+    const out = createParser(ctx).parse(attach('do the other thing too'));
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ kind: 'message.user', sourceTime: '2026-10-31T11:15:13Z', payload: { text: 'do the other thing too' } });
+  });
+  it('keeps the text and the images of a prompt that arrives as content blocks, and a background task notice', () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+    const out = createParser(ctx).parse(attach([{ type: 'text', text: 'look at this' }, { type: 'image', source: { type: 'base64', media_type: 'image/png', data: png } }]));
+    expect(out.map((o) => [o.kind, o.part])).toEqual([['message.user', 0], ['message.user', 2]]);
+    expect((out[1]!.payload as { images?: unknown[] }).images).toHaveLength(1);
+    const notice = createParser(ctx).parse(attach('<task-notification><task-id>t1</task-id><status>completed</status></task-notification>', { commandMode: 'task-notification' }));
+    expect(notice[0]).toMatchObject({ kind: 'message.user' });
+  });
+  it('ignores an empty queued command and other attachments stay ignored', () => {
+    expect(createParser(ctx).parse(attach('   '))).toEqual([]);
+    expect(createParser(ctx).parse({ type: 'attachment', uuid: 'a', attachment: { type: 'date', date: '2026-10-31' } })).toEqual([]);
+  });
+});
