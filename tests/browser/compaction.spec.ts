@@ -11,7 +11,9 @@ const user=(i:number)=>({type:'response_item',timestamp:at(i),payload:{type:'mes
 const usage=(i:number,n:number)=>({type:'event_msg',timestamp:at(i),payload:{type:'token_count',info:{model_context_window:100000,last_token_usage:{input_tokens:n}}}});
 const compact=(i:number)=>({type:'compacted',timestamp:at(i),payload:{message:'',replacement_history:[{type:'compaction',encrypted_content:'synthetic-not-retained'}]}});
 async function imported(name:string,harness:string,rows:unknown[]){const path=join(dir,`${name}.jsonl`);writeFileSync(path,rows.map(r=>JSON.stringify(r)).join('\n')+'\n');return (await app.ingest.importSource(harness,path)).recordingId;}
-test.beforeAll(async()=>{
+// Working recovery persists reader pages in the daemon, beyond a browser context.
+// Each case owns its scratch store so its first-page assertions start from a fresh recording.
+test.beforeEach(async()=>{
   dir=mkdtempSync(join(tmpdir(),'drishya-compaction-browser-'));app=new App(join(dir,'data'));
   claude=await imported('claude','claude-code',[
     {type:'user',uuid:'prompt',timestamp:at(0),message:{content:'Synthetic compaction check'}},
@@ -26,7 +28,7 @@ test.beforeAll(async()=>{
   clean=await imported('clean','codex',[user(0)]);
   livePath=join(dir,'codex.jsonl');server=await startServer({app,port:0,token:'synthetic-compaction-browser'});
 });
-test.afterAll(async()=>{await server?.close();await app?.close();if(dir&&resolve(dir).startsWith(resolve(tmpdir())+sep))rmSync(dir,{recursive:true,force:true});});
+test.afterEach(async()=>{await server?.close();await app?.close();if(dir&&resolve(dir).startsWith(resolve(tmpdir())+sep))rmSync(dir,{recursive:true,force:true});});
 async function open(page:import('@playwright/test').Page,id:string,step?:number){await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0${step===undefined?'':`&at=${step}`}#/r/${id}`);await page.locator('.viewer').waitFor();}
 for(const width of [600,1440]) test(`captured metrics, summaries and categories at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:1000});await open(page,claude);

@@ -65,7 +65,7 @@ export function UsagePeek() {
       ['Context input', count(native.contextInput)], ['Context window', count(native.contextWindow)], ['Thread tokens so far', count(native.threadTotal)], ['Reasoning output tokens', count(native.reasoningOutput)],
     ]} /></section>}
     {!recorded && !native && !context && <p>{mode === 'replay' ? 'Recorded accounting is available in full session history.' : 'No usage values captured for this session.'}</p>}
-    <small>Captured receipts; derived request input is labelled. Cumulative tokens are usage, not occupied context. Subscription billing is not inferred.</small>
+    <small>Only reported values are shown as captured; derived request input is labelled. Cumulative tokens are usage, not occupied context. Subscription billing is not inferred.</small>
   </div></details>;
 }
 
