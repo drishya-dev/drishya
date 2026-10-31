@@ -1,5 +1,6 @@
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join,resolve,sep} from 'node:path';
 import {test,expect} from '@playwright/test';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {build} from 'esbuild';
 let dir:string,id:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-rail-'));const journal=join(dir,'session.jsonl'),sessionId='66666666-6666-4666-8666-666666666675';const rows:unknown[]=[];
@@ -42,4 +43,19 @@ test('full rail remains virtualized, keyboard addressable and readable at suppor
  });
  await page.keyboard.press('End');await page.keyboard.press('Enter');
  await expect(page.locator('.turn').filter({hasText:'Rail turn 74'})).toBeVisible();
+});
+
+test('keyboard navigation keeps focus when the active chapter changes in the same commit',async({page})=>{
+ const component=JSON.stringify(resolve('apps/ui/src/components/PromptRail.tsx').replaceAll('\\','/'));
+ const bundled=await build({stdin:{contents:`import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{PromptRail}from ${component};
+ const chapters=Array.from({length:75},(_,i)=>({id:String(i),label:'Synthetic prompt '+i,index:i}));
+ function Fixture(){const[active,setActive]=useState('0');const[opened,setOpened]=useState('none');return <main className="viewer" onKeyDown={event=>{if(event.key==='Home')setActive('74');}}><PromptRail chapters={chapters} activeId={active} open={chapter=>setOpened(chapter.id)}/><output aria-label="Opened synthetic prompt">{opened}</output></main>}createRoot(document.getElementById('root')).render(<Fixture/>);`,loader:'tsx',resolveDir:resolve('apps/ui')},bundle:true,write:false,format:'iife',platform:'browser',loader:{'.css':'empty'},define:{'process.env.NODE_ENV':'"production"'}});
+ await page.route('**/rail-focus-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><style>body{margin:0}.viewer{height:844px}.complete-prompt-rail{position:fixed;right:10px;top:16px;width:30px;max-height:300px;overflow-y:auto}.complete-prompt-rail button{width:24px;height:16px;padding:0}</style><div id="root"></div><script>${bundled.outputFiles[0]!.text}</script>`}));
+ await page.goto(server.url+'/rail-focus-fixture');
+ const rail=page.getByRole('navigation',{name:'Prompt positions in history'});await rail.focus();
+ await page.keyboard.press('End');await expect(rail.locator('[data-prompt-ordinal="75"]')).toBeFocused();
+ await page.keyboard.press('Home');await expect(rail.locator('[data-prompt-ordinal="1"]')).toBeFocused();
+ await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+ await expect(rail.locator('[data-prompt-ordinal="1"]')).toBeFocused();expect(await rail.locator('button').count()).toBeLessThan(75);
+ await page.keyboard.press('Enter');await expect(page.getByLabel('Opened synthetic prompt')).toHaveText('0');
 });
