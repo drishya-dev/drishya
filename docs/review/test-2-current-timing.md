@@ -1,6 +1,6 @@
 # TEST-2 — current rail focus and editor timing
 
-31 October 2026. **Whole item remains open.** The builder explicitly chose to wait for Harsh's merges before changing the MCP section of History or the large-draft test in `fresh-workspace.spec.ts`. This branch changes only the unclaimed rail component/spec and records the independent editor diagnosis. No full gate is run for this unfinished item.
+31 October 2026. **Implementation and targeted acceptance complete; whole-item batch gate pending.** The builder authorized completion takeover of the inactive pre-audit PRs, superseding the shared-test hold. The existing branches and approved production changes are preserved. No full gate is claimed before the integrated finished-task batch.
 
 ## Rail: measured cause and repair
 
@@ -23,7 +23,7 @@ Private scratch copies of already-redacted sources were checked at 600 and 1440 
 
 SQLite sizes describe the private scratch homes, not native journal bytes. The inherited Codex copy initially held 34,975 observations; normal startup enrichment imported newer native material, so the first preliminary frames saw 115 then 117 chapters. The final run above records the actual observation range instead of claiming an immutable snapshot. No native source was edited and no native prompt was sent by this check.
 
-## Workspace comparison: independent diagnosis, shared-test hold
+## Workspace comparison: measured driver race and repair
 
 The clean-main failure is at line 1050, before comparison opens: requested editor scroll 250 later reads 11. The test dispatches a synthetic paste, Ctrl+Home and Shift+End, then sets scrollTop immediately. Installed CodeMirror queues selection scrolling for its measurement frame.
 
@@ -31,9 +31,8 @@ A private standalone probe uses the actual unchanged DraftEditor and records the
 
 The private actual-app copy preserves the original fixture and presteps and measures before comparison opens. All sixteen assignments immediately reach 250 with maximum scroll 32,454. Four of eight unchanged sequences then write 11 through CodeMirror's `scrollIntoView → measure → onScroll` stack; zero of eight frame-settled sequences move from 250. This confirms the pending-selection race in the actual app, rather than an extent clamp. The original shared spec SHA is unchanged.
 
-The proposed test-only frame barrier remains local. The original shared spec and DraftEditor are untouched. Completing that repair and its full-file verification waits for UI-1b's file hold to end, as the builder instructed. The existing scroll/selection/comparison assertions must remain intact.
+After the builder-authorized takeover, the shared test now waits exactly two animation frames after keyboard selection and before setting scrollTop. DraftEditor is unchanged. All original scroll/selection/comparison assertions and timeouts remain intact. Eight repeated comparison checks pass, followed by the complete Workspace and rail files: **77 passed**, no failures or skips. This is a test-driver synchronization repair; it does not change editor behavior or hide a product failure.
 
 ## Remaining before the item can close
 
-- After Harsh's merges, apply and verify the minimal shared-test repair if the measurements support it; do not change the product to accommodate an invalid driver sequence.
 - Run the finished item's required real-session/targeted checks and one isolated full gate; update TASKS and remove the claim only then.

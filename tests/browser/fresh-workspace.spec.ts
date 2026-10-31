@@ -1046,6 +1046,8 @@ test('Workspace large draft comparison retains complete text, editing state and 
   await pasteDraft(editor,draft);
   await editor.press('Control+Home');await editor.press('Shift+End');
   const selection=await page.evaluate(()=>getSelection()?.toString());
+  // Let CodeMirror finish its queued keyboard-selection measurement before setting the reading position.
+  await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
   const scroller=document.locator('.cm-scroller');await scroller.evaluate(node=>node.scrollTop=250);
   await expect.poll(()=>scroller.evaluate(node=>node.scrollTop)).toBe(250);
   await document.getByRole('button',{name:'Compare draft',exact:true}).click();
