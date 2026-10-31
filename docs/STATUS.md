@@ -31,6 +31,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| CONNECT-1 | @yash + Claude Sonnet 5.5 | `claude/connect-1-no-turn-limit` | 2026-10-31 | `apps/daemon/src/controller.ts`, `apps/daemon/test/controller.test.ts`, docs |
+| GIT-6 | @yash + Claude Sonnet 5.5 | `claude/git-6-graph` | 2026-10-31 | `apps/ui/src/components/GitThreadGraph.tsx`, `GitHistory.tsx`, `git-thread-graph.css`, `apps/ui/src/lib/git-light.ts`, `light-renderer.ts`, Git atlas specs, docs |
+| DATA-12 | @yash + Claude Sonnet 5.5 | `claude/data-12-lineage` | 2026-10-31 | adapter-claude, store/ingest lineage link, projection, session menu, docs; schema note agreed with Harsh in review |
+| FILES-9 | @yash + Claude Sonnet 5.5 | `claude/files-9-full-view` | 2026-10-31 | file-operation entry points (card, peek, Inspector, Changes), `SessionWorkspace.tsx`, `DeveloperWorkspace.tsx`, docs |
 
 
 ---
