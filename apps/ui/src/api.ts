@@ -69,7 +69,7 @@ export interface Config {
   adapters: { id: string; label: string; capabilities: Record<string, string> }[];
 }
 
-export interface StoredResultChunk { artifact?: import('@drishya/contracts').Artifact; available: boolean; reason?: string; text?: string; start?: number; next?: number; totalBytes?: number; hasMore?: boolean }
+export interface StoredResultChunk { artifact?: import('@drishya/contracts').Artifact; available: boolean; reason?: string; fields?: ('text'|'structured')[]; field?: 'text'|'structured'; partial?: string; text?: string; start?: number; next?: number; totalBytes?: number; hasMore?: boolean }
 
 export interface DataSource {
   webResult?(id:string,operationId:string,options:{start:number;count:number;q?:string;resultId?:string}):Promise<WebResultPage>;
@@ -108,7 +108,7 @@ export interface DataSource {
   graph(id: string, refresh?: boolean): Promise<RepoGraph | undefined>;
   /** Approves scanning the recording's captured root for the map, and returns the full map. */
   approveGraph(id: string): Promise<RepoGraph>;
-  artifactChunk?(id: string, artifactId: string, start: number): Promise<StoredResultChunk>;
+  artifactChunk?(id: string, artifactId: string, start: number, field?: 'text'|'structured'): Promise<StoredResultChunk>;
   artifact(id: string, artifactId: string, range?: { start: number; count: number }): Promise<ArtifactSlice>;
   artifactFind?(id: string, artifactId: string, query: string, start: number, continuation?: string): Promise<BlobSearchResult>;
   search(id: string, q: string): Promise<SessionSearchHit[]>;
@@ -272,7 +272,7 @@ export const daemon: DataSource = {
   fileOperations: (id, path, start, count, step, query = '', selectedOperationId) => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query, ...(selectedOperationId ? { selected: selectedOperationId } : {}) })}`),
   graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
   approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
-  artifactChunk: (id, art, start) => req<StoredResultChunk>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?byteStart=${start}`),
+  artifactChunk: (id, art, start, field) => req<StoredResultChunk>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?byteStart=${start}${field?`&field=${field}`:''}`),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
   artifactFind: (id, art, query, start, continuation) => req<BlobSearchResult>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?${new URLSearchParams({ find: query, start: String(start), ...(continuation ? { cursor: continuation } : {}) })}`),
   search: async (id, q) => (await req<{ hits: SessionSearchHit[] }>(`/v1/recordings/${encodeURIComponent(id)}/search?q=${encodeURIComponent(q)}`)).hits,
