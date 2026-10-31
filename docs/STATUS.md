@@ -43,6 +43,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude Sonnet 5.5 — the gate on merged main after all five PRs (31 Oct)
+- **Result:** types pass; 1,127 units pass and one (`draft-recovery.test.ts` "fresh randomness…") failed once under load and passed 3 of 3 alone; parallel browsers 568 passed / 27 skipped / 0 failed; serial pass 32 of 33, the failure being `p1-pacing.spec.ts:348`, a real regression from CONTENT-14 (it removed the "Captured result preview" label the spec asserted) and fixed in `614d9d50` (spec now asserts the stored reader's "Complete stored result"; file 21 of 21); `package:verify` passes. Known baseline flake `b2-live.spec.ts:63` did not occur in this run.
+
 ### Yash with Claude Sonnet 5.5 — CONTENT-14 complete (MCP and other expanded readers reach the full stored result)
 - **Done:** Codex's implementation plus its uncommitted refinements (mixed siblings), one corrected assertion, and real-session acceptance on both harnesses. [Report](review/content-14-stored-results.md).
 
