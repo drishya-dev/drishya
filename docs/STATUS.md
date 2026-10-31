@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-14 | @yash + Claude Sonnet 5.5 (takeover of all five open PRs, 31 Oct builder instruction; finishing and merging) | `codex/content14-stored-results` | 2026-10-31 | Whole MCP/other full-result depth. Builder-authorized takeover releases isolated History result rendering; preserve CONTENT-12 compaction insertion. Exact fifteen paths: apps/ui/src/components/{StoredToolResult.tsx,History.tsx,Inspector.tsx,BrowserEvidence.tsx}, apps/ui/src/api.ts, apps/daemon/src/{server.ts,history.ts,history-worker.ts (new isolated artifact-chunk method only)}, packages/store/src/index.ts (bounded UTF-8 chunk reader), packages/store/test/store.test.ts, tests/browser/stored-tool-result.spec.ts, docs/review/content-14-stored-results.md and TASKS/STATUS/CONTINUITY. Existing line reader truncates an oversized single line permanently; bounded byte continuation is necessary for every stored byte to remain reachable. No schema, native reads, current-path inference or new dependency. About five coherent commits; original scope expanded before implementation, still fifteen paths.  **RESUMED, 31 Oct builder instruction:** complete only Yash-owned TEST-2 and CONTENT-14. Harsh UI-1b/FILES-7/CONTENT-12 remain untouched. Preserve isolated shared-file regions already agreed; no broad takeover. |
 | FILES-5 | @harsh + Codex | harsh/files-5-external-acceptance | 2026-10-30 | Remaining external platform/human acceptance only. No production changes: read existing recovery reports; docs/review/files-5-platform-handoff.md and ignored execution packet, with TASKS/STATUS evidence. Coordinate actual macOS/POSIX/symlink/device outcomes with MAC-1, REL-2 and REL-3; no simulated platform sign-off. |
 | REL-1 | @harsh + Codex | harsh/rel-1-runtime-antivirus | 2026-10-30 | Whole supported idle-time runtime remediation/recurrence acceptance. Read-only runtime/process/AV inventory first; ignored diagnostic packet and docs/review/rel-1-runtime-acceptance.md plus central docs. Never interrupt active work, alter AV protection, native configuration or credentials; any supported update waits for a proven idle window. |
 | REL-2 | @harsh + Codex | harsh/rel-2-physical-acceptance | 2026-10-30 | Whole physical platform acceptance: classify available hardware/executors, prepare exact existing-command runs and docs/review/rel-2-physical-acceptance.md with central docs. Real lower-resource/lower-core and Windows/macOS/Linux outcomes only; emulation does not certify hardware. Browser/benchmark runs require the root lease. |
@@ -43,6 +42,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — CONTENT-14 complete (MCP and other expanded readers reach the full stored result)
+- **Done:** Codex's implementation plus its uncommitted refinements (mixed siblings), one corrected assertion, and real-session acceptance on both harnesses. [Report](review/content-14-stored-results.md).
 
 ### Yash with Claude Sonnet 5.5 — TEST-2: the rail focus race and the Workspace test-driver race are fixed (#305); the item stays open
 - **Done:** Codex's two repairs, merged after the shared files were released. **Open:** `b2-live.spec.ts:63` anchor offset 5 px, intermittent on clean main (2 of 6 runs); recorded in TEST-2, no claim.

@@ -235,3 +235,22 @@ describe('policy versions', () => {
     expect(store.policyVersions('rec_a')).toEqual([]);
   });
 });
+
+
+it('continues oversized UTF-8 lines without losing original bytes or the final newline', () => {
+  const original = 'header\r\n' + '😀दृश्य@'.repeat(180_000) + '\r\nlast sibling\n';
+  const {sha} = store.blobs.put(original);
+  expect(store.blobs.readLines(sha,0,200)?.truncated).toBe(true);
+  let start=0,restored='';
+  for(let calls=0;calls<100;calls++) {
+    const chunk=store.blobs.readTextChunk(sha,start)!;
+    expect(chunk.start).toBe(start);expect(Buffer.byteLength(chunk.text)).toBeLessThanOrEqual(256*1024);
+    expect(chunk.text).not.toContain('�');restored+=chunk.text;
+    if(!chunk.hasMore)break;
+    expect(chunk.next).toBeGreaterThan(start);start=chunk.next;
+  }
+  expect(restored).toBe(original);
+  expect(store.blobs.readTextChunk('invalid',0)).toBeUndefined();
+  expect(()=>store.blobs.readTextChunk(sha,-1)).toThrow('Invalid text chunk range');
+  expect(()=>store.blobs.readTextChunk(sha,0,1024*1024)).toThrow('Invalid text chunk range');
+});

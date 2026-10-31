@@ -447,6 +447,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         return json(res, { observations: app.store.observations(firstId, after, limit) });
       }
       if (sub === 'artifacts' && subId && m === 'GET') {
+        if (url.searchParams.has('byteStart')) {
+          for (const key of id.split('+')) app.recording(key);
+          const start = intParam(url, 'byteStart', 0, 0, Number.MAX_SAFE_INTEGER);
+          const field = url.searchParams.get('field') ?? undefined;
+          if (field !== undefined && field !== 'text' && field !== 'structured') throw new HttpError(400, 'Invalid captured result field.');
+          try { return json(res, await app.history.artifactChunk(id, subId, start, field)); }
+          catch (error) { if (error instanceof Error && error.message.includes('UTF-8')) throw new HttpError(400, 'Invalid UTF-8 portion boundary.'); throw new HttpError(404, 'Stored result not found.'); }
+        }
         if (url.searchParams.has('find')) {
           for (const key of id.split('+')) app.recording(key);
           const query = url.searchParams.get('find') ?? '', continuation = url.searchParams.get('cursor') ?? undefined;

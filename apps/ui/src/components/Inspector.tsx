@@ -1,3 +1,4 @@
+import {StoredToolResult} from './StoredToolResult.tsx';
 import {CapturedPath,openCapturedPath} from './CapturedPath.tsx';
 import {prosePath} from '../lib/prose-path.ts';
 import { ToolInput } from './ToolInput.tsx';
@@ -176,7 +177,7 @@ function OperationTextMaterial({ op, projection }: { op: Operation; projection: 
           <h4>Input</h4>
           <ToolInput value={d.input}/>
           <h4>Result</h4>
-          <StructuredResult text={d.resultPreview || '—'}/>
+          <StoredToolResult op={op} full/>
         </>
       );
     case 'web':
@@ -206,7 +207,7 @@ function OperationTextMaterial({ op, projection }: { op: Operation; projection: 
           <h4>Input</h4>
           <ToolInput value={d.input}/>
           <h4>Result</h4>
-          <StructuredResult text={d.resultPreview || '—'}/>
+          <StoredToolResult op={op} full/>
         </>
       );
   }

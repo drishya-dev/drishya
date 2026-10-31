@@ -250,6 +250,46 @@ function artifact(id: string, artifactId: string, start: number, count: number):
   return slice ? { artifact, available: true, start, ...slice } : { ...empty, available: false, reason: 'no-longer-stored' };
 }
 
+function artifactChunk(id: string, artifactId: string, start: number, requestedField?: 'text'|'structured') {
+  if (artifactId.startsWith('result:')) {
+    const operationId = artifactId.slice(7);
+    const projection = current(id).projection;
+    const op = projection.operations.find(op => op.id === operationId);
+    if (!op || !['mcp','other'].includes(op.detail.kind) || op.endSequence === undefined) throw Error('Recorded result not found');
+    const owner = id.split('+').find(recording => operationId.startsWith(recording + '.'));
+    if (!owner) throw Error('Recorded result owner not found');
+    const receipt = op.observationIds.map(observation => source.observationById(owner, observation)).filter((row): row is Observation => row?.kind === 'tool.result').at(-1);
+    const payload = receipt?.payload as {text?: unknown; structured?: unknown} | undefined;
+    const fields = (['text','structured'] as const).filter(key => payload?.[key] !== undefined);
+    const field = requestedField ?? (fields.includes('text') ? 'text' : 'structured');
+    let value = payload?.[field];
+    if (!receipt || value === undefined) return {available:false,reason:'not-captured',fields,field};
+    let partial: string | undefined;
+    if (field === 'structured') {
+      value = JSON.stringify(value, (_key, item: unknown) => {
+        if (!isBlobText(item)) return item;
+        const text = source.blobs.get(item.$blob);
+        if (text !== undefined) return text;
+        partial = 'Some captured structured values are no longer stored; unavailable references are shown explicitly.';
+        return {$blob:item.$blob,availability:'no-longer-stored'};
+      }, 2);
+    }
+    if (typeof value !== 'string' && !isBlobText(value)) return {available:false,reason:'not-captured',fields,field};
+    const stored = typeof value === 'string' ? blobs.put(value) : undefined;
+    const sha = stored?.sha ?? (isBlobText(value) ? value.$blob : '');
+    const chunk = (stored ? blobs : source.blobs).readTextChunk(sha, start);
+    const provenance = field === 'structured' ? {kind:'derived',rule:'captured-structured-json-v1',observationIds:[receipt.id]} : {kind:'captured',observationIds:[receipt.id]};
+    const descriptor = {id:artifactId,kind:'output',observedAtSequence:op.endSequence,availability:receipt.availability,provenance,redacted:receipt.redactions.length>0,blob:sha,bytes:chunk?.totalBytes};
+    return chunk ? {artifact:descriptor,available:true,...chunk,fields,field,partial} : {artifact:descriptor,available:false,reason:'no-longer-stored',fields,field};
+  }
+  const descriptor = artifact(id, artifactId, 0, 0);
+  if (!descriptor.available || !descriptor.artifact.blob) return descriptor;
+  if (descriptor.artifact.kind !== 'output') throw Error('Only recorded output supports text continuation');
+  const sha = descriptor.artifact.blob;
+  const chunk = source.blobs.readTextChunk(sha, start) ?? blobs.readTextChunk(sha, start);
+  return chunk ? { artifact: descriptor.artifact, available: true, ...chunk } : { artifact: descriptor.artifact, available: false, reason: 'no-longer-stored' };
+}
+
 function artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) {
   current(id);
   const row = db.prepare("SELECT body FROM items WHERE view_id=? AND kind='artifacts' AND id=?").get(id, artifactId) as { body: string } | undefined;
@@ -292,6 +332,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'page') value = page(a.id, a.query);
     else if (message.method === 'page-bytes') value = new TextEncoder().encode(JSON.stringify(page(a.id, a.query)));
     else if (message.method === 'artifact') value = artifact(a.id, a.artifactId, a.start, a.count);
+    else if (message.method === 'artifact-chunk') value = artifactChunk(a.id, a.artifactId, a.start, a.field);
     else if (message.method === 'artifact-find') value = artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = file(a.id, a.path, a.start, a.count, a.step, a.query, a.selectedOperationId);
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);

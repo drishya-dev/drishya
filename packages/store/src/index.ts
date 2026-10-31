@@ -40,6 +40,8 @@ export interface SourceRow {
 }
 
 /** A slice of a blob's lines, with what a reader needs to know about the whole. */
+export interface TextChunk { text: string; start: number; next: number; totalBytes: number; hasMore: boolean }
+
 export interface LineSlice {
   text: string;
   /** Lines in the whole blob, counted as splitting the text on newlines would. */
@@ -120,6 +122,25 @@ export class BlobStore {
   has(sha: string): boolean {
     return /^[0-9a-f]{64}$/.test(sha) && this.exists(sha);
   }
+  /** UTF-8 aligned byte continuation, including a line longer than the line-reader cap. */
+  readTextChunk(sha: string, start = 0, count = 256 * 1024): TextChunk | undefined {
+    if (!Number.isSafeInteger(start) || start < 0 || !Number.isSafeInteger(count) || count < 4 || count > 256 * 1024) throw Error('Invalid text chunk range');
+    if (!this.has(sha)) return undefined;
+    const totalBytes = this.lineIndex(sha).bytes;
+    start = Math.min(start, totalBytes);
+    const reader = this.open(sha);
+    try {
+      const buffer = Buffer.alloc(Math.min(count + 4, totalBytes - start));
+      const read = reader.read(buffer, buffer.length, start);
+      this.stats.bytesRead += read;
+      if (read && (buffer[0]! & 0xc0) === 0x80) throw Error('Text chunk must start at a UTF-8 boundary');
+      let end = Math.min(count, read);
+      while (end < read && (buffer[end]! & 0xc0) === 0x80) end--;
+      const next = start + end;
+      return { text: buffer.subarray(0, end).toString('utf8'), start, next, totalBytes, hasMore: next < totalBytes };
+    } finally { reader.close(); }
+  }
+
   /**
    * Lines [start, start + count) of a blob, capped at `maxBytes`, without loading the whole file
    * (B2, audit A15). The first read of a blob builds a sparse line index in one streaming pass;

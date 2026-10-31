@@ -97,6 +97,7 @@ export class HistoryService {
   readBefore(id: string, operationId: string) { return this.request<ReadBeforeWrite | null>('read-before', { id, operationId }); }
   fixChain(id: string, operationId: string) { return this.request<FixChain | null>('fix-chain', { id, operationId }); }
   verification(id: string, operationId: string) { return this.request<VerificationTrail | null>('verification', { id, operationId }); }
+  artifactChunk(id: string, artifactId: string, start: number, field?: 'text'|'structured') { return this.request<unknown>('artifact-chunk', { id, artifactId, start, field }); }
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }
   artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) { return this.request<BlobSearchResult | undefined>('artifact-find', { id, artifactId, query, start, continuation }); }
   file(id: string, path: string, start = 0, count = 100, step?: number, query = '', selectedOperationId?: string) { return this.request<FileOperationPage>('file', { id, path, start, count, step, query, selectedOperationId }); }
