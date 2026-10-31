@@ -40,3 +40,22 @@ describe('a report with several tables', () => {
     expect(contextReport(long)!.sections[0]!.rows).toHaveLength(100);
   });
 });
+describe('the interactive report', () => {
+  const grid = '\x1b[38;2;1;2;3m⛁ ⛁ ⛶ ⛶\x1b[0m';
+  const interactive = captured(` Context Usage\n${grid}   model-name\n${grid}   293k/1M tokens (29%)\n${grid}   \x1b[2mEstimated usage by category\x1b[0m\n${grid}   \x1b[38;2;1;2;3m⛁\x1b[0m System prompt: 2.3k tokens (0.2%)\n${grid}   \x1b[38;2;1;2;3m⛁\x1b[0m Messages: 266.9k tokens (26.7%)\n${grid}   ⛶ Free space: 672.5k (67.3%)\n${grid}   ⛝ Autocompact buffer: 33k tokens (3.3%)\n\nMemory files · /memory\n└ 8 files · 0 tokens\n\nSkills · /skills\n└ 28 skills · 5.4k tokens\n`);
+  it('reads the legend as the categories and each "Title · /command" block as its own list', () => {
+    const report = contextReport(interactive)!;
+    expect(report.heading).toBe('Context Usage');
+    expect(report.rows).toEqual([
+      { label: 'System prompt', value: '2.3k tokens · 0.2%', percent: 0.2 }, { label: 'Messages', value: '266.9k tokens · 26.7%', percent: 26.7 },
+      { label: 'Free space', value: '672.5k · 67.3%', percent: 67.3 }, { label: 'Autocompact buffer', value: '33k tokens · 3.3%', percent: 3.3 },
+    ]);
+    expect(report.sections).toEqual([{ title: 'Memory files · /memory', rows: [{ label: '8 files', value: '0 tokens' }] }, { title: 'Skills · /skills', rows: [{ label: '28 skills', value: '5.4k tokens' }] }]);
+    expect(report.raw).toBe(interactive);
+  });
+  it('stays ordinary output without the report heading or at least two recorded categories', () => {
+    expect(contextReport(captured(`${grid}   Messages: 1k tokens (1%)`))).toBeUndefined();
+    expect(contextReport(captured(` Context Usage\n${grid}   ⛁ Messages: 1k tokens (1%)`))).toBeUndefined();
+    expect(contextReport(captured('Skills · /skills\n└ 28 skills · 5.4k tokens'))).toBeUndefined();
+  });
+});
