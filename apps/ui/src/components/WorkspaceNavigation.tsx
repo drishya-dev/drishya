@@ -1,4 +1,5 @@
 import {openGitHistory} from './GitHistory.tsx';
+import {openGitReview} from './GitReview.tsx';
 import {openReviewTool} from './ReviewInsights.tsx';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useApp } from '../state.ts';
@@ -50,7 +51,7 @@ export function WorkspaceNavigation() {
       all.push({key:'moments',name:'Saved moments',detail:'Your explicit captured-action references and local notes',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-saved-moments')))});
       if (kind === 'daemon' && id && !id.includes('+')) {
         all.push({key:'git-history',name:'Explore Git branches and commits',detail:'Local parent topology, refs and commit changes',run:()=>requestAnimationFrame(openGitHistory)});
-        all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => click('.git-open') });
+        all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => requestAnimationFrame(openGitReview) });
         all.push({ key: 'workspace', name: 'Open developer workspace', detail: 'Read current files and prepare local drafts with workspace consent', run: () => { if(!useApp.getState().developerWorkspace)click('[aria-label="Open developer workspace"]'); } });
       }
       all.push({key:'files',name:'Browse workspace files',detail:'Current files after consent; otherwise captured paths and work',run:()=>{useApp.getState().set({foldersHidden:false,explore:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('.folder-explorer input')?.focus({preventScroll:true}));}});

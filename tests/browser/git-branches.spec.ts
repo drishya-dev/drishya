@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -12,7 +13,7 @@ const remove=(dir:string)=>{if(!resolve(dir).startsWith(resolve(tmpdir())+sep))t
 async function open(page:Page,server:RunningServer,id:string,width:number){
   await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-  await page.getByRole('button',{name:'Git graph',exact:true}).click();
+  await openGitDestination(page, 'Git graph');
   const dialog=page.getByRole('dialog',{name:'Git history',exact:true});
   const approve=dialog.getByRole('button',{name:'Approve read-only Git history',exact:true});
   await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();

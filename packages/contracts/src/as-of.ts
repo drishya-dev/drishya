@@ -29,6 +29,8 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     ...projection,
     // Accounting points do not own timeline steps. Whole-session totals are not historical evidence.
     usage: undefined,
+    // Session metadata does not establish a branch history at replay steps.
+    recordedBranch: undefined,
     context: readings?.length ? { readings, ...(new Set(readings.map(p => p.agentId)).size === 1 ? { latest: readings.at(-1) } : {}) } : undefined,
     compactions,
     compactionSummaries,

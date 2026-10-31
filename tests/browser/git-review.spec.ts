@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -28,7 +29,7 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   await page.goto(`${server.url}/?experience=classic#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=classic#/r/${id}`);
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(reader).toBeVisible();
   const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
@@ -75,7 +76,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   await page.goto(`${server.url}/?experience=${experience}#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=${experience}#/r/${id}`);
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(reader).toBeVisible();
   const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
@@ -93,7 +94,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   await expect(reader.getByRole('textbox', { name: 'Handoff preview' })).toHaveValue(/Inspected the total/);
   await reader.getByRole('button', { name: 'Close Git review' }).click();
   await page.reload();
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await openGitDestination(page, 'Git review');
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.getByRole('checkbox', { name: 'Reviewed displayed patch' })).toBeChecked();
   writeFileSync(join(root, 'source.ts'), 'export const total = 3;\n');
@@ -125,7 +126,7 @@ test('Git file pages reach paths past fifty through the authenticated local API'
   await page.goto(`${server.url}/?experience=classic#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=classic#/r/${id}`);
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
@@ -150,7 +151,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: fresh hando
   await page.goto(`${server.url}/?experience=${experience}#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=${experience}#/r/${id}`);
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(reader).toBeVisible();
   const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
@@ -177,7 +178,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: fresh hando
   await expect(preview).toHaveValue(/Updated review note/);
   await reader.getByRole('button', { name: 'Close Git review' }).click();
   await page.reload();
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await openGitDestination(page, 'Git review');
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.getByRole('checkbox', { name: 'Reviewed displayed patch' })).toBeChecked();
   // Changes after review must be detected without asking the user to refresh first.

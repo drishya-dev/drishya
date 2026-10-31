@@ -21,6 +21,8 @@ import { agentDeliveries } from './real-cases/agent-delivery.ts';
 import { localBranches } from './real-cases/local-branches.ts';
 import { planMaterial } from './real-cases/plan-material.ts';
 import { turnDetails } from './real-cases/turn-details.ts';
+import { sessionBranch } from './real-cases/session-branch.ts';
+import { mainRootAliases } from './real-cases/main-root-aliases.ts';
 import { toolsAvailable } from './real-cases/tools-available.ts';
 import { workspaceFiles } from './real-cases/workspace-files.ts';
 import { computerFrames } from './real-cases/computer-frames.ts';
@@ -28,7 +30,7 @@ import { compaction, resetCompactionScan } from './real-cases/compaction.ts';
 import { contentParity } from './real-cases/content-parity.ts';
 import type { RealCase } from './real-cases/types.ts';
 
-const cases: RealCase[] = [questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, workspaceFiles, computerFrames, toolsAvailable, contentParity, compaction];
+const cases: RealCase[] = [questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
