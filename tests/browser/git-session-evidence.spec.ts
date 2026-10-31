@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -29,7 +30,7 @@ for(const width of [1440,600])test(`Git evidence opens captured commands and new
   await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   const open=async()=>{
-    await page.getByRole('button',{name:'Git graph',exact:true}).click();
+    await openGitDestination(page, 'Git graph');
     const dialog=page.getByRole('dialog',{name:'Git history',exact:true});
     const approve=dialog.getByRole('button',{name:'Approve read-only Git history',exact:true});
     await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();

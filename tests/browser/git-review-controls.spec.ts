@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -34,7 +35,7 @@ async function openReview(page:import('@playwright/test').Page){
   await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern#/r/${id}`);
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   const reader=page.getByRole('dialog',{name:'Git review',exact:true});
   const workspace=reader.getByRole('button',{name:'Approve current workspace'}),git=reader.getByRole('button',{name:'Approve read-only Git'}),refresh=reader.getByRole('button',{name:'Refresh changes',exact:true});
   await expect(workspace.or(git).or(refresh)).toBeVisible();

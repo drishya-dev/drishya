@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -208,7 +209,7 @@ test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette
   // The review dialog belongs to the session view; the desk covers its button.
   await page.reload(); await expect(page.getByRole('region', { name: 'Harness prompt' })).toBeVisible();
   // Git review: grants, then the working-tree patch, side by side, the raw patch and the file list.
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true }), git = (state: string) => everyPalette(page, state, found, '[data-contrast-scope=git]');
   await reader.evaluate(el => el.setAttribute('data-contrast-scope', 'git'));
   const workspace = reader.getByRole('button', { name: 'Approve current workspace', exact: true }), gitConsent = reader.getByRole('button', { name: 'Approve read-only Git', exact: true }), refresh = reader.getByRole('button', { name: 'Refresh changes', exact: true });

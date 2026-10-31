@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -28,6 +29,7 @@ const EXEMPT = '.turn-fold, svg *';
 const RAISED = '.modern-git-context small, .git-file-name small, .git-review-layout aside small, .desk-header small';
 
 async function press(page: Page, name: string | RegExp) {
+  if (name === 'Git review' || name === 'Git graph') { await openGitDestination(page, name); return; }
   const direct = page.getByRole('button', { name, exact: typeof name === 'string' }).first();
   if (await direct.isVisible().catch(() => false)) { await direct.click(); return; }
   await page.getByLabel('More workspace options', { exact: true }).click();

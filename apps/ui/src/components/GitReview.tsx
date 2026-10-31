@@ -1,7 +1,7 @@
 import {collectionBounds} from '../lib/collection-bounds.ts';
 import './collection-surfaces.css';
 import {openGitHistory} from './GitHistory.tsx';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { redactText } from '../../../../packages/privacy/src/index.ts';
 import { workspaceApi } from '../api.ts';
@@ -26,14 +26,51 @@ function GitBranchGlyph() {
   return <svg className="git-branch-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="6" cy="19" r="2.5" /><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6" /></svg>;
 }
 
-/** `slot`: render the button into that element (the header cluster) while the dialog stays mounted here. */
+export const openGitReview = () => window.dispatchEvent(new Event('drishya-git-review'));
+
+/** The reader owner stays mounted while its one trigger moves between header and fallback row. */
 export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: Element | null }) {
-  const [open, setOpen] = useWorkspaceState('git/open',false);
-  useEffect(()=>{const close=()=>setOpen(false);window.addEventListener('drishya-git-history',close);return()=>window.removeEventListener('drishya-git-history',close);},[setOpen]);
-  const id = useApp(s => s.recordingId);
-  const eligible = useApp(s => s.source?.kind === 'daemon' && !s.recordingId?.includes('+'));
-  const button = <button className="btn ghost git-open" aria-label="Git review" aria-expanded={open} onClick={() => setOpen(value => !value)}>{icon && <GitBranchGlyph />}Git review</button>;
-  return eligible ? <>{slot ? createPortal(button, slot) : button}{open && <GitReader key={id} close={() => setOpen(false)} />}</> : null;
+  const [open, setOpen] = useWorkspaceState('git/open', false);
+  const [choices, setChoices] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null), popover = useRef<HTMLDivElement>(null);
+  const popoverId = useId();
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const id = useApp(s => s.recordingId), source = useApp(s => s.source), mode = useApp(s => s.mode);
+  const modern = document.documentElement.dataset.uiVersion === 'modern';
+  const eligible = source?.kind === 'daemon' && !!id && !id.includes('+') && (!modern || mode === 'history');
+  const reason = 'Git needs a single local session in history';
+  const dismiss = () => popover.current?.hidePopover();
+  const chooseReview = () => { dismiss(); trigger.current?.focus({ preventScroll: true }); setOpen(true); };
+  useEffect(() => {
+    const close = () => setOpen(false);
+    const review = () => { const state = useApp.getState(); if (state.source?.kind === 'daemon' && state.recordingId && !state.recordingId.includes('+') && state.mode === 'history') chooseReview(); };
+    window.addEventListener('drishya-git-history', close);
+    window.addEventListener('drishya-git-review', review);
+    return () => { window.removeEventListener('drishya-git-history', close); window.removeEventListener('drishya-git-review', review); };
+  }, [setOpen]);
+  useEffect(() => { dismiss(); if (modern && !eligible) setOpen(false); }, [id, source, mode]);
+  useEffect(() => {
+    if (!choices) return;
+    const place = () => { const box = trigger.current?.getBoundingClientRect(); if (box) setPosition({ top: box.bottom + 6, left: Math.max(8, Math.min(innerWidth - 232, box.right - 224)) }); };
+    place(); window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [choices, slot]);
+  const button = modern ? <button ref={trigger} className="btn ghost git-open" aria-label="Git" title={eligible ? 'Git: current changes or branches and commits' : reason} aria-describedby={!eligible ? popoverId + '-reason' : undefined} aria-expanded={choices} aria-controls={popoverId} disabled={!eligible} onClick={event => {
+    const box = event.currentTarget.getBoundingClientRect(); setPosition({ top: box.bottom + 6, left: Math.max(8, Math.min(innerWidth - 232, box.right - 224)) });
+    const keyboard = event.detail === 0; popover.current?.togglePopover();
+    if (keyboard) requestAnimationFrame(() => popover.current?.querySelector<HTMLButtonElement>('button')?.focus());
+  }}>{icon && <GitBranchGlyph />}Git</button> : <button className="btn ghost git-open" aria-label="Git review" aria-expanded={open} onClick={() => setOpen(value => !value)}>{icon && <GitBranchGlyph />}Git review</button>;
+  if (!modern && !eligible) return null;
+  return <>{slot ? createPortal(button, slot) : button}{modern && createPortal(<>
+    {!eligible && <span className="sr-only" id={popoverId + '-reason'}>{reason}</span>}
+    <div ref={popover} id={popoverId} popover="auto" className="git-entry-choices" aria-label="Git destinations" style={position} onToggle={event => setChoices(event.newState === 'open')} onKeyDown={event => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); dismiss(); trigger.current?.focus(); }
+      else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault(); const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button')], current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowUp' ? -1 : 1) + buttons.length) % buttons.length]?.focus();
+      }
+    }}><button aria-label="Git review" onClick={chooseReview}><strong>Git review</strong><small>Current changes</small></button><button aria-label="Git graph" onClick={() => { dismiss(); trigger.current?.focus({ preventScroll: true }); openGitHistory(); }}><strong>Git graph</strong><small>Branches and commits</small></button></div>
+  </>, document.body)}{eligible && open && <GitReader key={id} close={() => { setOpen(false); requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true })); }} />}</>;
 }
 
 function GitReader({ close }: { close: () => void }) {

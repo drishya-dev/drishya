@@ -49,7 +49,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r26';
+export const REDUCER_VERSION = 'r27';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -155,6 +155,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const harnesses = new Set<string>();
   const capabilities: Record<string, CapabilityMatrix> = {};
   let workspaceRoot: string | undefined;
+  let recordedBranch: Projection['recordedBranch'];
   let title: string | undefined;
   let titleRank = 0;
   let firstPrompt: string | undefined;
@@ -163,6 +164,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     const root = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof (o.payload as Rec).cwd === 'string' ? (o.payload as Rec).cwd : undefined);
     if (root && !rootsByRecording.has(o.recordingId)) rootsByRecording.set(o.recordingId, root);
   }
+  // Empty incremental readers may receive their first captured root only on append.
+  let branchPrimaryRoot = rootsByRecording.get(recordingId);
   const normalizedRoot = (root: string) => {
     const path = toPosix(root).replace(/\/+$/, '');
     return /^[a-z]:\//i.test(path) ? path.toLowerCase() : path;
@@ -315,9 +318,20 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         }
       }
       const p = o.payload as Rec;
+      if (!branchPrimaryRoot && o.recordingId === recordingId) {
+        branchPrimaryRoot = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof p.cwd === 'string' ? p.cwd : undefined);
+      }
       switch (o.kind) {
         case 'session.meta': {
           if (typeof p.cwd === 'string' && !workspaceRoot) workspaceRoot = p.cwd;
+          // A branch names this captured root only. Neither companion agents nor another
+          // recording/root may replace the selected session's identity; missing data stays missing.
+          const primaryRoot = branchPrimaryRoot;
+          if (o.recordingId === recordingId && o.agentId === 'agent:main' &&
+              typeof p.branch === 'string' && p.branch.trim() && typeof p.cwd === 'string' && p.cwd.trim() &&
+              primaryRoot && normalizedRoot(p.cwd) === normalizedRoot(primaryRoot)) {
+            recordedBranch = { name: p.branch, workspaceRoot: p.cwd, provenance: { kind: 'captured', observationIds: [o.id] } };
+          }
           const rank = typeof p.titleRank === 'number' ? p.titleRank : 1;
           if (typeof p.title === 'string' && p.title && rank >= titleRank) {
             title = p.title;
@@ -859,6 +873,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       lastSequence,
       harnesses: [...harnesses],
       workspaceRoot: multipleWorktrees ? undefined : workspaceRoot,
+      ...(recordedBranch ? { recordedBranch: { ...recordedBranch, provenance: { kind: 'captured', observationIds: [...recordedBranch.provenance.observationIds] } } } : {}),
       title: title ?? (firstPrompt ? clip(firstPrompt.replace(/\s+/g, ' ').trim(), 120) : undefined),
       agents: placed.agents,
       operations: placed.operations,
