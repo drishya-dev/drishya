@@ -175,6 +175,7 @@ export function createParser(ctx: ParseContext): RecordParser {
   // whose backups live in that session's folder. Use the last session id the journal named.
   let lastSession: string | undefined;
   const messagesWithUsage = new Set<string>();
+  const compactionBoundaries = new Set<string>();
 
   const agentOf = (r: Rec): string => {
     if (ctx.agentId) return ctx.agentId;
@@ -272,6 +273,7 @@ export function createParser(ctx: ParseContext): RecordParser {
 
       if (type === 'system') {
         if (r.subtype === 'compact_boundary') {
+          if (typeof r.uuid === 'string') compactionBoundaries.add(r.uuid);
           out.push({ ...base, part: 0, kind: 'compaction', payload: { trigger: r.compactMetadata?.trigger } });
           const metadata = r.compactMetadata ?? {};
           const metric = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
@@ -287,7 +289,7 @@ export function createParser(ctx: ParseContext): RecordParser {
         const content = r.message?.content;
         if (r.isCompactSummary) {
           out.push({ ...base, part: 0, kind: 'compaction', payload: { summary: textOf(content) }, contentKeys: ['summary'] });
-          out.push({ ...base, part: 1, kind: 'compaction', payload: { source: 'claude-summary', phase: 'summary', ...defined({ boundaryRecordId: str(r.parentUuid) }) } satisfies CompactionPayload });
+          out.push({ ...base, part: 1, kind: 'compaction', payload: { source: 'claude-summary', phase: 'summary', ...defined({ boundaryRecordId: compactionBoundaries.has(r.parentUuid) ? str(r.parentUuid) : undefined }) } satisfies CompactionPayload });
           return out;
         }
         const mode = typeof r.permissionMode === 'string' ? { permissionMode: r.permissionMode } : {};

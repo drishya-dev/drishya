@@ -50,7 +50,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r26';
+export const REDUCER_VERSION = 'r28';
 
 export interface BlobIO {
   get(sha: string): string | undefined;

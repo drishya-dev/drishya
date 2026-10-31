@@ -24,9 +24,10 @@ import { turnDetails } from './real-cases/turn-details.ts';
 import { toolsAvailable } from './real-cases/tools-available.ts';
 import { workspaceFiles } from './real-cases/workspace-files.ts';
 import { computerFrames } from './real-cases/computer-frames.ts';
+import { compaction, resetCompactionScan } from './real-cases/compaction.ts';
 import type { RealCase } from './real-cases/types.ts';
 
-const cases: RealCase[] = [questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, workspaceFiles, computerFrames, toolsAvailable];
+const cases: RealCase[] = [questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, workspaceFiles, computerFrames, toolsAvailable, compaction];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
@@ -53,6 +54,7 @@ try {
     for (const file of walk(roots[harness])) {
       const size = statSync(file).size;
       if (size > maxBytes) { skippedLarge++; continue; }
+      if (chosen === compaction) resetCompactionScan();
       let hits = 0, only = 0;
       for (const line of readFileSync(file, 'utf8').split('\n')) {
         if (!line.includes(typeof chosen.prefilter === 'string' ? chosen.prefilter : chosen.prefilter[harness] ?? '')) continue;

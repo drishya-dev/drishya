@@ -106,6 +106,30 @@ describe('compaction and context evidence', () => {
     expect(p.context!.latest).toBeUndefined(); expect(new Set(p.context!.readings.map(r => r.agentId)).size).toBe(2);
   });
 
+
+  it('removes future unlinked summary references from historical passage metadata', () => {
+    const p = reduce('r', captured(claudeAdapter, [
+      { type: 'system', uuid: 'b', subtype: 'compact_boundary', timestamp: timestamp(0) },
+      { type: 'user', uuid: 's', parentUuid: 'unknown', isCompactSummary: true, timestamp: timestamp(1), message: { content: 'Synthetic unlinked future summary' } },
+      { type: 'user', uuid: 'u', timestamp: timestamp(2), message: { content: 'Synthetic following prompt' } },
+    ]), memory(), options);
+    const past = asOfProjection(p, p.compactions![0]!.step + 1);
+    expect(past.passages.flatMap(ps => ps.compactionSummaryIds ?? [])).toEqual([]);
+    expect(past.compactionSummaries).toEqual([]);
+    expect(past.artifacts).toEqual([]);
+  });
+
+  it('keeps same-timestamp receipts behind the next timeline item and never borrows a missing prior reading', () => {
+    const rows = [{ type: 'compacted', timestamp: timestamp(0), payload: { message: '' } }, usage(0, 5000), user(0), usage(0, 6000), user(1)];
+    const p = reduce('r', captured(codexAdapter, rows), memory(), options), c = p.compactions![0]!;
+    expect(c.priorReadingId).toBeUndefined();
+    expect(asOfProjection(p, c.step + 1).context).toBeUndefined();
+    const after = asOfProjection(p, c.step + 2);
+    expect(after.context!.latest!.input.tokens).toBe(5000);
+    expect(after.compactions![0]!.nextReadingId).toBe(after.context!.latest!.id);
+    expect(asOfProjection(p, p.timeline.length).context!.latest!.input.tokens).toBe(6000);
+  });
+
   it('incremental append has the same context evidence as a cold reduction', () => {
     const observations = captured(codexAdapter, [user(0), usage(1, 80000), { type: 'compacted', timestamp: timestamp(2), payload: { message: 'Synthetic captured Codex summary' } }, usage(3, 5000), user(4)]), io = memory();
     const reducer = createReducer('r', observations.slice(0, 3), io, { ...options, ordered: true });

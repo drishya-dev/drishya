@@ -23,6 +23,7 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     nextReadingId: readingIds.has(c.nextReadingId ?? '') ? c.nextReadingId : undefined,
     summaryId: summaryIds.has(c.summaryId ?? '') ? c.summaryId : undefined,
   }));
+  const compactionIds = new Set(compactions?.map(c => c.id));
   const visibleEvidence = new Set([...operations.flatMap((op) => op.observationIds), ...projection.prose.filter((p) => proseIds.has(p.id)).flatMap((p) => p.observationIds)]);
   return {
     ...projection,
@@ -31,6 +32,10 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     context: readings?.length ? { readings, ...(new Set(readings.map(p => p.agentId)).size === 1 ? { latest: readings.at(-1) } : {}) } : undefined,
     compactions,
     compactionSummaries,
+    passages: projection.passages.map(p => ({ ...p,
+      ...(p.compactionIds ? { compactionIds: p.compactionIds.filter(id => compactionIds.has(id)) } : {}),
+      ...(p.compactionSummaryIds ? { compactionSummaryIds: p.compactionSummaryIds.filter(id => summaryIds.has(id)) } : {}),
+    })),
     // Turn timing, outcome and errors describe the finished turn: a past step must not show what came later.
     turns: undefined,
     operations,
