@@ -31,6 +31,7 @@ import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 import { storageUsage } from './storage.ts';
 import { readPersistedOutput } from './persisted-output.ts';
+import {readWebResult} from './web-results.ts';
 import { readCheckpointFile } from './checkpoint-file.ts';
 import { readImage, referencedImagePath } from './images.ts';
 import { WorkspaceAccess } from './workspace.ts';
@@ -429,6 +430,16 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         return json(res,await recordedFileRoots(app.store,ids));
       }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
+      if(sub==='web-result'&&subId&&m==='GET'){
+        const key=id.split('+').find(key=>subId.startsWith(`${key}.`));
+        if(!key)throw new HttpError(400,'Choose a recorded web operation.');
+        app.recording(key);
+        const start=intParam(url,'start',0,0,Number.MAX_SAFE_INTEGER),count=intParam(url,'count',100,1,200);
+        const q=url.searchParams.get('q')??'',resultId=url.searchParams.get('result')??undefined;
+        if(q.length>500||(resultId&&resultId.length>1000))throw new HttpError(400,'Invalid recorded-result query.');
+        try{return json(res,readWebResult(app.store,key,subId,{start,count,q,resultId}));}
+        catch{throw new HttpError(404,'No matching captured web result.');}
+      }
       if (sub === 'observations' && m === 'GET') {
         app.recording(firstId);
         const after = intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER);
