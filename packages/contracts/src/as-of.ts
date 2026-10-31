@@ -13,6 +13,17 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
   const operations = projection.operations.filter((op) => started.has(op.id) || parents.has(op.id)).map((op) => ended.has(op.id) || parents.has(op.id) && op.endSequence !== undefined && op.endSequence < step ? op : pending(op));
   const visibleArtifacts = new Set(operations.flatMap((op) => op.artifactIds));
   for (const id of proseIds) visibleArtifacts.add(`art_${id}_prose`);
+  const readings = projection.context?.readings.filter(p => p.availableAfterStep < step);
+  const readingIds = new Set(readings?.map(p => p.id));
+  const compactionSummaries = projection.compactionSummaries?.filter(s => s.availableAfterStep <= step);
+  const summaryIds = new Set(compactionSummaries?.map(s => s.id));
+  for (const summary of compactionSummaries ?? []) if (summary.artifactId) visibleArtifacts.add(summary.artifactId);
+  const compactions = projection.compactions?.filter(c => c.step < step).map(c => ({ ...c,
+    priorReadingId: readingIds.has(c.priorReadingId ?? '') ? c.priorReadingId : undefined,
+    nextReadingId: readingIds.has(c.nextReadingId ?? '') ? c.nextReadingId : undefined,
+    summaryId: summaryIds.has(c.summaryId ?? '') ? c.summaryId : undefined,
+  }));
+  const compactionIds = new Set(compactions?.map(c => c.id));
   const visibleEvidence = new Set([...operations.flatMap((op) => op.observationIds), ...projection.prose.filter((p) => proseIds.has(p.id)).flatMap((p) => p.observationIds)]);
   return {
     ...projection,
@@ -20,10 +31,18 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     usage: undefined,
     // Session metadata does not establish a branch history at replay steps.
     recordedBranch: undefined,
+    context: readings?.length ? { readings, ...(new Set(readings.map(p => p.agentId)).size === 1 ? { latest: readings.at(-1) } : {}) } : undefined,
+    compactions,
+    compactionSummaries,
+    passages: projection.passages.map(p => ({ ...p,
+      ...(p.compactionIds ? { compactionIds: p.compactionIds.filter(id => compactionIds.has(id)) } : {}),
+      ...(p.compactionSummaryIds ? { compactionSummaryIds: p.compactionSummaryIds.filter(id => summaryIds.has(id)) } : {}),
+    })),
     // Turn timing, outcome and errors describe the finished turn: a past step must not show what came later.
     turns: undefined,
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
+    gaps: projection.gaps.filter(g => g.sequence < step),
     ...(projection.notices ? { notices: projection.notices.filter((n) => noticeIds.has(n.id)) } : {}),
     // A tool listed after this step was not yet known to the agent.
     ...(projection.availableTools ? { availableTools: projection.availableTools.filter((t) => t.since <= step).map((t) => t.until !== undefined && t.until <= step ? t : { ...t, until: undefined }) } : {}),

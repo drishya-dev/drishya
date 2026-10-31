@@ -5,7 +5,7 @@
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import type { AdapterDescriptor, DiscoveredSource, Observation, ToolsSnapshotPayload, UsagePayload } from '@drishya/contracts';
+import type { AdapterDescriptor, CompactionPayload, DiscoveredSource, Observation, ToolsSnapshotPayload, UsagePayload } from '@drishya/contracts';
 import {
   fileInfo,
   headRecords,
@@ -269,11 +269,17 @@ export function createParser(_ctx: ParseContext): RecordParser {
         }
         if (t === 'task_complete') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id } }, ...turnDetail(base, turnEndedDetail(p, 'completed'))]; }
         if (t === 'turn_aborted') { turnId = undefined; return [{ ...base, kind: 'turn.end', payload: { turnId: p.turn_id, reason: p.reason ?? 'aborted' } }, ...turnDetail(base, turnEndedDetail(p, 'aborted'))]; }
-        if (t === 'context_compacted') return [{ ...base, kind: 'compaction', payload: {} }];
+        if (t === 'context_compacted') return [{ ...base, kind: 'compaction', payload: {} }, { ...base, part: 1, kind: 'compaction', payload: { source: 'codex-context-compacted', phase: 'boundary' } satisfies CompactionPayload }];
         if (IGNORED_EVENTS.has(t)) return [];
         return [{ ...base, kind: 'unknown', payload: { recordType: `event_msg:${t}` }, availability: 'metadata-only' }];
       }
-      if (type === 'compacted') return [{ ...base, kind: 'compaction', payload: { summary: typeof p.message === 'string' ? p.message : undefined }, contentKeys: ['summary'] }];
+      if (type === 'compacted') {
+        const summary = typeof p.message === 'string' && p.message.trim() ? p.message : undefined;
+        // Only explicit compaction items establish encrypted summary availability. Never retain ciphertext.
+        const encrypted = Array.isArray(p.replacement_history) && p.replacement_history.some((item: Rec) => item?.type === 'compaction' && typeof item.encrypted_content === 'string' && item.encrypted_content.length > 0);
+        return [{ ...base, kind: 'compaction', payload: { summary: typeof p.message === 'string' ? p.message : undefined }, contentKeys: ['summary'] },
+          { ...base, part: 1, kind: 'compaction', payload: { source: 'codex-compacted', phase: 'boundary', summaryAvailability: summary ? 'captured' : encrypted ? 'encrypted' : 'not-recorded' } satisfies CompactionPayload }];
+      }
       if (type !== 'response_item') return [{ ...base, kind: 'unknown', payload: { recordType: type || 'untyped' }, availability: 'metadata-only' }];
 
       switch (p.type) {

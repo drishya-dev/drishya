@@ -138,13 +138,19 @@ function current(id: string) {
         for (const row of db.prepare('SELECT body FROM items WHERE view_id=? AND kind=? ORDER BY position').iterate(id, kind)) items.push(JSON.parse(String(row.body)));
         projection[kind] = items as never;
       }
+      for (const kind of ['context-readings', 'compactions', 'compactionSummaries'] as const) {
+        const items = [...db.prepare('SELECT body FROM items WHERE view_id=? AND kind=? ORDER BY position').iterate(id, kind)].map(row => JSON.parse(String(row.body)));
+        if (kind === 'context-readings') { if (projection.context) projection.context.readings = items; }
+        else if (items.length) projection[kind] = items;
+      }
     } else {
       // Individual histories use repeatable streaming SQL reads. Combined histories retain the
       // reducer's cross-source ordering and worktree identity until their merged disk cursor lands.
       cached = undefined;
       const built = build(id, ids, recordings.some((r) => r.live));
       projection = built.projection;
-      const header = { ...projection, operations: [], prose: [], artifacts: [], links: [], timeline: [], passages: [] };
+      const header = { ...projection, operations: [], prose: [], artifacts: [], links: [], timeline: [], passages: [], compactions: undefined, compactionSummaries: undefined,
+        ...(projection.context ? { context: { ...projection.context, readings: [] } } : {}) };
       db.exec('BEGIN IMMEDIATE');
       try {
         if (!built.appended) db.prepare('DELETE FROM views WHERE id=?').run(id);
@@ -153,6 +159,12 @@ function current(id: string) {
           position=excluded.position,body=excluded.body WHERE body<>excluded.body OR position<>excluded.position`);
         for (const kind of ['operations', 'prose', 'artifacts', 'links', 'timeline', 'passages'] as const) {
           projection[kind].forEach((item, position) => insert.run(id, kind, item.id, position, JSON.stringify(item)));
+        }
+        // Readings at one boundary fold as new receipts arrive. Remove obsolete derived rows on append too.
+        for (const kind of ['context-readings', 'compactions', 'compactionSummaries'] as const) {
+          db.prepare('DELETE FROM items WHERE view_id=? AND kind=?').run(id, kind);
+          const items = kind === 'context-readings' ? projection.context?.readings : projection[kind];
+          items?.forEach((item, position) => insert.run(id, kind, item.id, position, JSON.stringify(item)));
         }
         const file = db.prepare('INSERT OR IGNORE INTO file_ops VALUES(?,?,?,?)');
         projection.operations.forEach((op, position) => op.paths.forEach((path) => file.run(id, path.path, op.id, position)));
@@ -197,14 +209,22 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   const prose = historical.prose.filter((pr) => proseIds.has(pr.id));
   const noticeIds = new Set(passages.flatMap((ps) => ps.notices?.map((n) => n.id) ?? []));
   const notices = historical.notices?.filter((n) => noticeIds.has(n.id));
+  const compactionIds = new Set(passages.flatMap(ps => ps.compactionIds ?? []));
+  const compactions = historical.compactions?.filter(c => compactionIds.has(c.id));
+  const summaryIds = new Set([...passages.flatMap(ps => ps.compactionSummaryIds ?? []), ...compactions?.flatMap(c => c.summaryId ? [c.summaryId] : []) ?? []]);
+  const compactionSummaries = historical.compactionSummaries?.filter(s => summaryIds.has(s.id));
+  const readingIds = new Set([historical.context?.latest?.id, ...compactions?.flatMap(c => [c.priorReadingId, c.nextReadingId]) ?? []]);
+  const context = historical.context ? { latest: historical.context.latest, readings: historical.context.readings.filter(r => readingIds.has(r.id)) } : undefined;
   const artifactIds = new Set(operations.flatMap((op) => op.artifactIds));
   for (const pr of prose) if (pr.truncated) artifactIds.add(`art_${pr.id}_prose`);
+  for (const summary of compactionSummaries ?? []) if (summary.artifactId) artifactIds.add(summary.artifactId);
   const evidenceIds = new Set([...operations.flatMap((op) => op.observationIds), ...prose.flatMap((pr) => pr.observationIds)]);
   const links = historical.links.filter((link) => opIds.has(link.from) || opIds.has(link.to) || link.sourceObservationIds.some((key) => evidenceIds.has(key)));
   const targets = new Set(links.flatMap((link) => [link.from, link.to]));
   const references = Object.fromEntries(historical.operations.filter((op) => targets.has(op.id)).map((op) => [op.id, { title: op.title, step: (op.endSequence ?? op.startSequence) + 1 }]));
   const projection: Projection = {
     ...historical, operations, prose, ...(notices?.length ? { notices } : { notices: undefined }),
+    context, compactions, compactionSummaries,
     artifacts: historical.artifacts.filter((a) => artifactIds.has(a.id)),
     links,
     passages: historical.passages.filter((ps) => selected.has(ps.id)),

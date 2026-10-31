@@ -77,6 +77,7 @@ export type ObservationPayload =
   | AgentStopPayload
   | GapPayload
   | UsagePayload
+  | CompactionPayload
   | TurnDetailPayload
   | ItemPayload
   | UnknownPayload
@@ -231,9 +232,64 @@ export interface UsagePayload {
   tokens?: { input?: number; cachedInput?: number; cacheWrite?: number; output?: number; reasoningOutput?: number; total?: number };
   cumulative: boolean;
   contextWindow?: number;
+  /** Request input, never cumulative accounting or continuously measured occupancy. */
+  contextInput?: { tokens: number; basis: 'captured-request-input' | 'derived-request-input' };
   cost?: { usd: number; basis: 'harness-estimate'; modelCostUnknown?: boolean };
   work?: { linesAdded?: number; linesRemoved?: number; durationMs?: number; apiDurationMs?: number; toolDurationMs?: number };
   limits?: { usedPercent: number; windowMinutes: number; resetsAt: number; plan?: string };
+}
+
+/** Optional enrichment of an existing compaction record; its original observation stays immutable. */
+export interface CompactionPayload {
+  source: 'claude-boundary' | 'claude-summary' | 'codex-compacted' | 'codex-context-compacted';
+  phase: 'boundary' | 'summary';
+  trigger?: string;
+  beforeTokens?: number;
+  afterTokens?: number;
+  durationMs?: number;
+  boundaryRecordId?: string;
+  summary?: TextValue;
+  summaryAvailability?: 'captured' | 'encrypted' | 'not-recorded';
+}
+
+export interface ContextReading {
+  id: string;
+  agentId: string;
+  source: UsagePayload['source'];
+  time?: string;
+  /** Timeline length at capture; between-step readings appear after the next item in past replay. */
+  availableAfterStep: number;
+  observationIds: string[];
+  input: { tokens: number; basis: 'captured-request-input' | 'derived-request-input' };
+  window?: number;
+}
+
+export interface Compaction {
+  id: string;
+  agentId: string;
+  step: number;
+  time?: string;
+  observationIds: string[];
+  trigger?: string;
+  durationMs?: number;
+  beforeTokens?: number;
+  afterTokens?: number;
+  /** Temporal neighbors, not direct measurements of compaction. */
+  priorReadingId?: string;
+  nextReadingId?: string;
+  summaryId?: string;
+}
+
+export interface CompactionSummary {
+  id: string;
+  agentId: string;
+  time?: string;
+  availableAfterStep: number;
+  observationIds: string[];
+  artifactId?: string;
+  availability: 'captured' | 'encrypted' | 'not-recorded';
+  /** Set only by an exact native reference or content in the boundary record itself. */
+  boundaryId?: string;
 }
 
 /** Image references only in DATA-1. Inline image byte policy D7 is still undecided. */
@@ -590,6 +646,8 @@ export interface Passage {
   proseIds: string[];
   /** Harness notices recorded in this passage (DATA-6). */
   noticeIds?: string[];
+  compactionIds?: string[];
+  compactionSummaryIds?: string[];
   firstStep: number;
   lastStep: number;
 }
@@ -618,6 +676,9 @@ export interface Projection {
   /** Turns the harness recorded, in start order. Absent in older projections and for harnesses with no turn records. */
   turns?: Turn[];
   usage?: { latest?: UsagePayload; byTurn: Record<string, UsagePayload> };
+  context?: { latest?: ContextReading; readings: ContextReading[] };
+  compactions?: Compaction[];
+  compactionSummaries?: CompactionSummary[];
   reducerVersion: string;
   recordingId: string;
   observationCount: number;
