@@ -20,6 +20,7 @@ import {operationOutcome} from '../lib/operation-outcome.ts';
 import {InvestigationActions} from './InvestigationActions.tsx';
 import {SaveMoment} from './SavedMoments.tsx';
 import { PlanChecklist } from './PlanChecklist.tsx';
+import { WebEvidence } from './BrowserEvidence.tsx';
 
 export function Inspector({ projection }: { projection: Projection }) {
   const width = useApp(s => s.inspectorWidth);
@@ -58,7 +59,7 @@ export function Inspector({ projection }: { projection: Projection }) {
       <nav className="tabs" role="tablist">
         {(['detail', 'evidence'] as const).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => set({ inspectorTab: t })}>
-            {t === 'detail' ? 'Detail' : t === 'evidence' ? `Evidence${links.length ? ` · ${links.length}` : ''}` : 'Explain'}
+            {t === 'detail' ? 'Detail' : t === 'evidence' ? `Evidence${links.length ? ` · ${links.length} relationships` : ''}` : 'Explain'}
           </button>
         ))}
       </nav>
@@ -179,12 +180,7 @@ function OperationTextMaterial({ op, projection }: { op: Operation; projection: 
         </>
       );
     case 'web':
-      return (
-        <>
-          <p className="insp-note">{d.url ? <>Fetched <code>{d.url}</code></> : <>Searched the web for <code>{d.query}</code></>}</p>
-          <StructuredResult text={d.resultPreview || '—'}/>
-        </>
-      );
+      return <WebEvidence op={op} full/>;
     case 'spawn': {
       const child = projection.agents.find((a) => a.id === d.childAgentId);
       return (
