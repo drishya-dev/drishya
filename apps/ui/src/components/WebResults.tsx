@@ -14,7 +14,7 @@ export function WebResults({ results, limit, snippets = false, onShowAll }: { re
   return <div className={`web-results${snippets ? ' web-results-full' : ''}`}>
     <ol>{shown.map((result, i) => <li key={`${i}:${result.url}`}>
       {navigable(result.url) ? <a href={result.url} target="_blank" rel="noopener noreferrer" title={result.url} onClick={(event) => event.stopPropagation()}>
-        <span className="web-domain">{result.domain}</span>
+        <span className="web-domain">{result.domain ?? new URL(result.url).hostname}</span>
         <span className="web-title">{result.title ?? result.url}</span>
       </a> : <div className="web-reference">
         <span className="web-title">{result.title ?? result.url}</span>

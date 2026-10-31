@@ -39,6 +39,7 @@ export function WebEvidence({ op, full = false }: { op: Operation; full?: boolea
 function WebReading({op,detail:d,full}:{op:Operation;detail:Extract<Operation['detail'],{kind:'web'}>;full:boolean}) {
   const source=useApp(s=>s.source),recordingId=useApp(s=>s.recordingId);
   const [start,setStart]=useState(0),[query,setQuery]=useState(''),[retry,setRetry]=useState(0);
+  const [knownTotal,setKnownTotal]=useState<number>();
   const [loaded,setLoaded]=useState<{key:string;page?:WebResultPage;error?:boolean}>();
   const preview=useMemo(()=>webMaterial(d.resultPreview??'',d.results??[]),[d.resultPreview,d.results]);
   const canRead=full&&op.endSequence!==undefined&&!!source?.webResult&&!!recordingId;
@@ -47,28 +48,29 @@ function WebReading({op,detail:d,full}:{op:Operation;detail:Extract<Operation['d
   useEffect(()=>{
     if(!canRead||!source?.webResult||!recordingId)return;
     let active=true;
-    source.webResult(recordingId,op.id,{start,count:100,q:query,...(resultId?{resultId}:{})}).then(page=>{if(active)setLoaded({key,page});}).catch(()=>{if(active)setLoaded({key,error:true});});
+    source.webResult(recordingId,op.id,{start,count:100,q:query,...(resultId?{resultId}:{})}).then(page=>{if(active){setLoaded({key,page});setKnownTotal(page.total);}}).catch(()=>{if(active)setLoaded({key,error:true});});
     return()=>{active=false;};
   },[canRead,source,recordingId,key]);
   const page=loaded?.key===key?loaded.page:undefined,error=loaded?.key===key&&loaded.error;
-  const displayed=page??loaded?.page;
+  // A held reader can survive a replay seek. Never retain its later result before op-end.
+  const displayed=canRead?(page??loaded?.page):undefined;
   const material=displayed??preview,results=displayed?.results??preview.results;
   const open=()=>useApp.getState().select(op.id);
-  return <div className="web-evidence">
+  return <div className="web-evidence" aria-busy={canRead&&!page&&!error}>
     {d.url && <RecordedUrl url={d.url}/>}
     {d.query && <div className="query">{d.query}</div>}
-    {full&&<div className="web-reading-meta"><span>{page?`${page.total} recorded result${page.total===1?'':'s'}`:`${preview.results.length} results in preview`}</span>{(page?.time??op.endTime)&&<time dateTime={page?.time??op.endTime}>{new Date((page?.time??op.endTime)!).toLocaleString()}</time>}</div>}
+    {full&&<div className="web-reading-meta"><span>{displayed?`${displayed.total} recorded result${displayed.total===1?'':'s'}`:`${preview.results.length} results in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
     {d.fetch && fetchFacts(d.fetch) && <div className="browser-action">{fetchFacts(d.fetch)}</div>}
-    {full&&(displayed?.total??preview.results.length)>50&&<label className="web-result-filter">Find result<input type="search" value={query} placeholder="Title, address or snippet" onChange={event=>{setQuery(event.target.value);setStart(0);}}/></label>}
+    {full&&canRead&&(knownTotal??preview.results.length)>50&&<label className="web-result-filter">Find result<input type="search" value={query} placeholder="Title, address or snippet" onChange={event=>{setQuery(event.target.value);setStart(0);}}/></label>}
     {full&&canRead&&!page&&!error&&<span className="muted" role="status">Opening recorded results…</span>}
     {full&&error&&<p role="status">Could not open recorded results. <button type="button" onClick={()=>setRetry(value=>value+1)}>Retry</button></p>}
     {results.length ? <WebResults results={results} snippets={full} limit={full ? undefined : 5} onShowAll={open}/> : null}
     {!full&&op.endSequence!==undefined&&results.length<=5&&<button type="button" className="web-more" onClick={event=>{event.stopPropagation();open();}}>Open recorded results</button>}
-    {full&&page?.hasMore!==undefined&&(page.total>100||query)&&<nav className="web-result-pages" aria-label="Recorded result list"><span>{page.matched?`${page.start+1}–${page.start+page.results.length} of ${page.matched}${query?' matches':''}`:'No matching results'}</span><button type="button" disabled={!page.start} onClick={()=>setStart(Math.max(0,start-100))}>Previous results</button><button type="button" disabled={!page.hasMore} onClick={()=>setStart(start+100)}>Next results</button></nav>}
+    {full&&displayed&&(displayed.total>100||query)&&<nav className="web-result-pages" aria-label="Recorded result list"><span>{displayed.matched?`${displayed.start+1}–${displayed.start+displayed.results.length} of ${displayed.matched}${query?' matches':''}`:'No matching results'}</span><button type="button" disabled={!page||!displayed.start} onClick={()=>setStart(Math.max(0,start-100))}>Previous results</button><button type="button" disabled={!page||!displayed.hasMore} onClick={()=>setStart(start+100)}>Next results</button></nav>}
     {full&&!results.length&&!query&&<p className="muted">{op.endSequence===undefined?'Waiting for result':page?.availability==='removed'?'Captured result is no longer stored.':d.url?'No result list recorded for this page fetch.':'No result list recorded.'}</p>}
     {full && <CapturedOutcomes output={d.resultPreview}/>}
     {(full||!results.length)&&material.text&&<section className="web-response"><h4>{d.url?'Captured page text':'Captured response text'}</h4><div className={`browser-excerpt${full?' full':''}`} tabIndex={0} aria-label="Captured web result excerpt"><ToolOutput text={material.text}/></div></section>}
-    {full&&<details className="web-original"><summary>{page?.originalComplete?'Original captured result':'Original captured preview'}</summary><div className="browser-excerpt full" tabIndex={0}><ToolOutput text={material.original||'No result text captured'}/></div>{page&&!page.originalComplete&&<small className="muted">Text excerpt limited to 64 KiB. Result counts cover the stored list.</small>}</details>}
+    {full&&<details className="web-original"><summary>{displayed?.originalComplete?'Original captured result':'Original captured preview'}</summary><div className="browser-excerpt full" tabIndex={0}><pre className="output web-original-text">{material.original||'No result text captured'}</pre></div>{displayed&&!displayed.originalComplete&&<small className="muted">Text excerpt limited to 64 KiB. Result counts cover the stored list.</small>}</details>}
   </div>;
 }
 

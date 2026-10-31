@@ -53,15 +53,31 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  await expect(inspector.locator('.web-reading-meta')).toContainText('160 recorded results');
  await expect(inspector.locator('.web-results li')).toHaveCount(100);
  await expect(inspector.locator('.web-title').first()).toHaveText(longTitle);
+ await expect(inspector.locator('.web-domain').first()).toHaveText('example.invalid');
  await expect(inspector.locator('.web-response')).toContainText('Exact captured middle paragraph.');
  await expect(inspector.locator('.web-response')).toContainText('Exact captured final paragraph.');
  await expect(inspector.locator('.web-response')).not.toContainText('Links: [');
+ await page.screenshot({path:resolve(`.local/web-fixture-${harness}-${width}.png`)});
  await inspector.getByRole('button',{name:'Next results',exact:true}).press('Enter');
  await expect(inspector.locator('.web-results li')).toHaveCount(60);await expect(inspector.locator('.web-title').last()).toHaveText('Recorded result 159');
  const filter=inspector.getByRole('searchbox',{name:'Find result'});await filter.pressSequentially('result 159');await expect(filter).toBeFocused();
  await expect(inspector.locator('.web-results li')).toHaveCount(1);await expect(inspector.locator('.web-address')).toHaveText('https://example.invalid/result/159');
  await inspector.getByText('Original captured result',{exact:true}).click();await expect(inspector.locator('.web-original')).toContainText(output);
+ expect(await inspector.locator('.web-original-text').evaluate(el=>el.textContent)).toBe(output);
  expect(external).toBe(0);expect(await inspector.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+ // The same Inspector survives a seek before its result; cached future material must disappear.
+ const end=projection.timeline.findIndex(item=>item.type==='op-end'&&item.operationId===op.id);
+ await page.goto(`${server.url}/?experience=modern&motion=0&at=${end+1}#/r/${id}`);
+ const replayCard=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await replayCard.scrollIntoViewIfNeeded();await replayCard.press('Enter');
+ const replayInspector=page.getByRole('complementary',{name:'Operation detail'});await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 recorded results');
+ const timeline=page.getByRole('slider',{name:'Timeline',exact:true});await timeline.press('ArrowLeft');await expect(timeline).toHaveAttribute('aria-valuenow',String(end));
+ await expect(replayInspector.locator('.web-results li')).toHaveCount(0);await expect(replayInspector).toContainText('Waiting for result');await expect(replayInspector).not.toContainText('Exact captured final paragraph.');
+ await timeline.press('ArrowRight');await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 recorded results');
+ const api=`/v1/recordings/${id}/web-result/${encodeURIComponent(op.id)}`;
+ expect((await fetch(server.url+api)).status).toBe(401);
+ expect((await page.request.get(server.url+api+'?count=NaN')).status()).toBe(400);
+ const bounded=await page.request.get(server.url+api+'?count=999999');expect(bounded.status()).toBe(200);expect((await bounded.json()).results.length).toBeLessThanOrEqual(200);
+ expect((await page.request.get(server.url+api+'?result=unrelated-observation')).status()).toBe(404);
 });
 test('offline result URLs outside valid HTTP(S) stay literal and inert',async({page})=>{
  const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));const op=sample.projection.operations.find((x:{kind:string})=>x.kind==='mcp');sample.projection.operations=[op];sample.projection.prose=[];sample.projection.timeline=sample.projection.timeline.filter((t:{operationId?:string})=>t.operationId===op.id);sample.projection.passages=[{id:'web-only',agentId:op.agentId,operationIds:[op.id],proseIds:[],firstStep:1,lastStep:2}];op.kind='web';op.origin={type:'native',tool:'web'};op.artifactIds=[];
