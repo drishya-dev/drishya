@@ -1,3 +1,4 @@
+import { openGitDestination, gitEntry } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -50,9 +51,9 @@ async function openReview(page: Page) {
   await page.goto(`${server.url}/?experience=modern&motion=0#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-  await expect(page.getByRole('button', { name: 'Git review', exact: true })).toBeVisible();
+  await expect(gitEntry(page, 'Git review')).toBeVisible();
   await closeRestoredWork(page);
-  await page.getByRole('button', { name: 'Git review', exact: true }).click();
+  await openGitDestination(page, 'Git review');
   const review = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(review).toBeVisible();
   const workspaceConsent = review.getByRole('button', { name: 'Approve current workspace' });

@@ -1,3 +1,5 @@
+import { CompactionEvidence, CapturedContextReport, ContextEvidenceScope } from './ContextEvidence.tsx';
+import { contextReport } from '../lib/context-report.ts';
 import {StoredToolResult} from './StoredToolResult.tsx';
 import { BrowserEvidence, BrowserStrip, WebEvidence } from './BrowserEvidence.tsx';
 import { injectedLine, injectedMessage } from '../lib/injected-messages.ts';
@@ -90,7 +92,7 @@ export function History({ scene, projection, onWindow }: HistoryProps) {
     promptStep === deferred.promptStep && filter === deferred.filter;
   const shown = liveArrival ? deferred : pair;
   const artifacts = useMemo(() => new Map(shown.projection.artifacts.map(a => [a.id, a])), [shown.projection.artifacts]);
-  return <HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider>;
+  return <ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider></ContextEvidenceScope>;
 }
 
 const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: HistoryProps) {
@@ -729,7 +731,7 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   return (
     <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {!!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {!!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} time={ps.turnTime} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
@@ -749,6 +751,8 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
           </div>
         </>
       )}
+      {!folded && ps.compactionIds?.map(id => <CompactionEvidence key={id} id={id} />)}
+      {!folded && ps.compactionSummaryIds?.map(id => <CompactionEvidence key={id} summaryId={id} />)}
       {!folded && ps.prose.map((p) => {
         const pr = prose.get(p.id);
         return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
@@ -1084,7 +1088,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
  * a single line of what it did. The newest turn waits until the agent is quiet, and replay shows no ledger,
  * so nothing here tells the future.
  */
-function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { prompt: string; step?: number; permissionMode?: string; images?: OperationImage[]; plan?: PinnedPlan; fold?: { folded: boolean; toggle: () => void } }) {
+function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: { prompt: string; time?: string; step?: number; permissionMode?: string; images?: OperationImage[]; plan?: PinnedPlan; fold?: { folded: boolean; toggle: () => void } }) {
   const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
   const newest = useTurns((s) => s.lastStep === step);
   const active = useNow((s) => !!s.view?.mark);
@@ -1104,10 +1108,11 @@ function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { promp
   // Claude Code writes some notices in the user role (a finished background task, a command echo); those are not the person's words.
   const injected = injectedMessage(prompt);
   const who = injected ? <span className="turn-who turn-source" title={`Written into the journal by Claude Code, not typed by you${injected.hover ? ` · ${injected.hover}` : ''}`}>Claude Code · {injected.label}</span> : <span className="turn-who">You</span>;
-  const shown = injected ? injected.detail : prompt;
-  const captured = injected ? <details className="turn-captured"><summary>Captured text</summary><pre className="output">{prompt}</pre></details> : null;
+  const report = contextReport(prompt);
+  const shown = report ? undefined : injected ? injected.detail : prompt;
+  const captured = injected && !report ? <details className="turn-captured"><summary>Captured text</summary><pre className="output">{prompt}</pre></details> : null;
   // The chapter treatment belongs to Modern; the retained UIs keep their original prompt block.
-  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn">{who}{shown && <div className="turn-text">{shown}</div>}{captured}{images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}</div>;
+  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn">{who}{shown && <div className="turn-text">{shown}</div>}{captured}{report && <CapturedContextReport report={report} time={time} />}{images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}</div>;
   const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
   const basis = ledgerBasis(ledger);
   const settings = ledger?.recorded?.settingsChange && mode === 'history' ? settingsLine(ledger.recorded.settingsChange) : undefined;
@@ -1116,6 +1121,7 @@ function TurnBlock({ prompt, step, fold, permissionMode, images, plan }: { promp
       {who}
       {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
       {captured}
+      {report && <CapturedContextReport report={report} time={time} />}
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
       {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
       {plan && <PinnedPlanList plan={plan} />}

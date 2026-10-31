@@ -1,3 +1,4 @@
+import { openGitDestination, gitEntry } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -39,7 +40,7 @@ test('a commit hunk the agent wrote exactly links to its captured edit; a hand-w
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl); await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-  await page.getByRole('button', { name: 'Git graph', exact: true }).click();
+  await openGitDestination(page, 'Git graph');
   const atlas = page.getByRole('dialog', { name: 'Git history', exact: true });
   const approve = atlas.getByRole('button', { name: 'Approve read-only Git history', exact: true });
   await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible(); if (await approve.isVisible()) await approve.click();
@@ -68,10 +69,10 @@ test('several captured edits wrote a commit hunk: the Git graph offers them as a
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl); await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-  await expect(page.getByRole('button', { name: 'Git graph', exact: true })).toBeVisible();
+  await expect(gitEntry(page, 'Git graph')).toBeVisible();
   const stale = page.getByRole('dialog', { name: /^Work on / }); // the daemon restores the panel an earlier test left open
   if (await stale.count()) { await page.keyboard.press('Escape'); await expect(stale).toHaveCount(0); }
-  await page.getByRole('button', { name: 'Git graph', exact: true }).click();
+  await openGitDestination(page, 'Git graph');
   const atlas = page.getByRole('dialog', { name: 'Git history', exact: true });
   const approve = atlas.getByRole('button', { name: 'Approve read-only Git history', exact: true });
   await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible(); if (await approve.isVisible()) await approve.click();

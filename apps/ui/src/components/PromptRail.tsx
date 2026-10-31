@@ -43,7 +43,9 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
   }, []);
   useLayoutEffect(() => {
     const node = rail.current;
-    if (!node || hovering.current || node.contains(document.activeElement)) return;
+    // Virtualizing the requested row briefly removes the old focused button.
+    // An active-chapter update in that commit must not steal the pending key request.
+    if (!node || pendingFocus.current !== undefined || hovering.current || node.contains(document.activeElement)) return;
     node.scrollTop = Math.max(0, active * ROW - node.clientHeight / 2 + ROW / 2);
     setViewport({ top: node.scrollTop, height: node.clientHeight });
   }, [active, chapters.length]);

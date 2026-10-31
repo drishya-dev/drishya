@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -531,7 +532,7 @@ test('local Git atlas connects real branches and commits with root/merge patches
   git(['update-ref','refs/heads/atlas-feature',feature]);git(['update-ref','refs/heads/atlas-merge',merge]);git(['tag','atlas-root',base]);
   await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedHash:string}).copiedHash=text;}}}));
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await page.getByRole('button',{name:'Git graph',exact:true}).click();
+  await openGitDestination(page, 'Git graph');
   const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();
   if(await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).isVisible())await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).click();
   const merged=atlas.locator(`[data-commit-hash="${merge}"]`);await expect(merged).toBeVisible();
@@ -582,7 +583,7 @@ test('Modern reading windows resize, move, recover and reset without leaving the
   await page.setViewportSize({width:1440,height:900});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   const git=page.getByRole('dialog',{name:'Git review',exact:true});
   const height=git.getByRole('separator',{name:'Resize Git review window height'});
   await height.focus();await page.keyboard.press('Home');
@@ -602,7 +603,7 @@ test('Modern reading windows resize, move, recover and reset without leaving the
   await page.mouse.move(20,400,{steps:8});await page.mouse.up();
   const dragged=(await git.boundingBox())!;expect(dragged.x).toBeGreaterThanOrEqual(12);
   await git.getByRole('button',{name:'Close Git review'}).click();
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().y))).toBe(Math.round(dragged.y));
   await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('surface/Git review');
   await page.reload();await expect(git).toBeVisible();
@@ -622,7 +623,7 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await page.setViewportSize({width:1440,height:900});
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   const git=page.getByRole('dialog',{name:'Git review',exact:true});
   await expect(git).toBeVisible();
   const bounds=(await git.boundingBox())!;
@@ -651,7 +652,7 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await page.screenshot({path:resolve('.local/modern-compact-git-test.png')});
   await git.getByRole('button',{name:'Close Git review'}).click();
   await expect(git).toHaveCount(0);
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(draggedWidth);
   await expect(git.getByRole('button',{name:/^Files/})).toHaveAttribute('aria-expanded','false');
   await git.getByRole('button',{name:/^Files/}).click();
@@ -671,7 +672,7 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await expect(page.getByRole('dialog',{name:'Review questions',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Close Review questions',exact:true}).click();
   await page.setViewportSize({width:390,height:844});
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   await expect(git).toBeVisible();
   const mobileBounds=(await git.boundingBox())!;
   expect(mobileBounds.x).toBeGreaterThanOrEqual(0);
@@ -746,13 +747,13 @@ test('Modern retains Git scope and find controls after closing and reopening a r
   await page.route('**/git/snapshot**',route=>route.fulfill({json:snapshot}));
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   const reader=page.getByRole('dialog',{name:'Git review',exact:true});
   await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toBeVisible();
   await reader.getByRole('searchbox',{name:'Find in patch'}).fill('new');
   await reader.getByRole('button',{name:'Side by side',exact:true}).click();
   await reader.getByRole('button',{name:'Close Git review'}).click();
-  await page.getByRole('button',{name:'Git review',exact:true}).click();
+  await openGitDestination(page, 'Git review');
   await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toHaveValue('new');
   await expect(reader.getByRole('button',{name:'Side by side',exact:true})).toHaveAttribute('aria-pressed','true');
 });
@@ -1046,6 +1047,8 @@ test('Workspace large draft comparison retains complete text, editing state and 
   await pasteDraft(editor,draft);
   await editor.press('Control+Home');await editor.press('Shift+End');
   const selection=await page.evaluate(()=>getSelection()?.toString());
+  // Let CodeMirror finish its queued keyboard-selection measurement before setting the reading position.
+  await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
   const scroller=document.locator('.cm-scroller');await scroller.evaluate(node=>node.scrollTop=250);
   await expect.poll(()=>scroller.evaluate(node=>node.scrollTop)).toBe(250);
   await document.getByRole('button',{name:'Compare draft',exact:true}).click();
@@ -1165,9 +1168,9 @@ test('Modern navigation keeps independent edge actions readable and outside the 
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   for(const width of [1600,1280,1024,768,600,390]) {
     await page.setViewportSize({width,height:900});
-    const buttons=['Show files','Explore repository map','Open developer workspace','Git review','Git graph'];
+    const buttons=['Show files','Explore repository map','Open developer workspace','Git'];
     const boxes=[];
-    for(const name of buttons) {const node=page.getByRole('button',{name,exact:true});await expect(node).toBeVisible();const box=(await node.boundingBox())!;expect(box.height).toBeGreaterThanOrEqual(width>600&&['Open developer workspace','Git review','Git graph'].includes(name)?34:38);expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);boxes.push(box);}
+    for(const name of buttons) {const node=page.getByRole('button',{name,exact:true});await expect(node).toBeVisible();const box=(await node.boundingBox())!;expect(box.height).toBeGreaterThanOrEqual(width>600&&['Open developer workspace','Git'].includes(name)?34:38);expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);boxes.push(box);}
     expect(boxes[0]!.x).toBeLessThan(30);const cluster=(await page.locator('.studio-actions').boundingBox())!;expect(width>600?cluster.x+cluster.width:Math.max(...boxes.map(box=>box.x+box.width))).toBeGreaterThan(width-30);
     if(width===1280)await page.screenshot({path:resolve('.local/modern-navigation-edges.png')});
     for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i]!,b=boxes[j]!;expect(Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y))).toBeLessThan(1);}
@@ -1687,7 +1690,7 @@ test('Git timeline scrolls into older history without commit-range pages and kee
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await expect(page.locator('.modern-composer-identity')).toHaveText('');await expect(page.locator('.modern-composer-intro')).toHaveCount(0);await expect(page.locator('.modern-composer-location code')).toHaveCount(0);await expect(page.locator('.modern-composer-identity>svg')).toHaveCount(1);await expect(page.locator('.modern-composer-location')).not.toBeEmpty();
   for(const width of [390,320,1440]){await page.setViewportSize({width,height:960});await expect.poll(async()=>{const boxes=await page.getByRole('navigation',{name:'Workspace views',exact:true}).locator('button:visible').evaluateAll(elements=>elements.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));return boxes.every((a,index)=>a.x>=0&&a.right<=width&&boxes.slice(index+1).every(b=>a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y));}).toBe(true);}
-  await page.getByRole('button',{name:'Git graph',exact:true}).click();const atlas=page.getByRole('dialog',{name:'Git history',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
+  await openGitDestination(page, 'Git graph');const atlas=page.getByRole('dialog',{name:'Git history',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
   await expect(atlas.locator('.atlas-commit')).toHaveCount(50);await expect(atlas.getByRole('navigation',{name:'Commit pages'})).toHaveCount(0);
   const graph=atlas.getByLabel('Commits, oldest on the left; drag to pan, pinch or Ctrl + wheel to zoom',{exact:true});await graph.focus();await page.keyboard.press('PageUp');await expect.poll(()=>atlas.locator('.atlas-commit').count()).toBeGreaterThan(50);
   await atlas.getByLabel('Choose Git commit',{exact:true}).selectOption(tip);await expect(atlas.locator('.atlas-message')).toContainText('Continuous fixture 81');await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();

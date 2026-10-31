@@ -4,7 +4,7 @@
 
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import type { AdapterDescriptor, CheckpointPayload, DiscoveredSource, ExternalChangePayload, Observation, ToolsSnapshotPayload } from '@drishya/contracts';
+import type { AdapterDescriptor, CheckpointPayload, CompactionPayload, DiscoveredSource, ExternalChangePayload, Observation, ToolsSnapshotPayload } from '@drishya/contracts';
 import {
   fileInfo,
   headAndTailRecords,
@@ -175,6 +175,7 @@ export function createParser(ctx: ParseContext): RecordParser {
   // whose backups live in that session's folder. Use the last session id the journal named.
   let lastSession: string | undefined;
   const messagesWithUsage = new Set<string>();
+  const compactionBoundaries = new Set<string>();
 
   const agentOf = (r: Rec): string => {
     if (ctx.agentId) return ctx.agentId;
@@ -271,7 +272,22 @@ export function createParser(ctx: ParseContext): RecordParser {
       }
 
       if (type === 'system') {
-        if (r.subtype === 'compact_boundary') out.push({ ...base, part: 0, kind: 'compaction', payload: { trigger: r.compactMetadata?.trigger } });
+        if (r.subtype === 'compact_boundary') {
+          if (typeof r.uuid === 'string') compactionBoundaries.add(r.uuid);
+          out.push({ ...base, part: 0, kind: 'compaction', payload: { trigger: r.compactMetadata?.trigger } });
+          const metadata = r.compactMetadata ?? {};
+          const metric = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+          // A new part enriches old imports on rescan without rewriting their stable original observation.
+          out.push({ ...base, part: 1, kind: 'compaction', payload: { source: 'claude-boundary', phase: 'boundary',
+            ...defined({ trigger: str(metadata.trigger), beforeTokens: metric(metadata.preTokens), afterTokens: metric(metadata.postTokens), durationMs: metric(metadata.durationMs) }),
+          } satisfies CompactionPayload });
+        }
+        // A slash command's own output (`/context`, `/cost`) is a `system` row in current Claude Code and a user row in older versions.
+        // Both carry the same exact `<local-command-stdout>` text, so both reach History as the same captured command output.
+        if (r.subtype === 'local_command' && typeof r.content === 'string' && r.content.trimStart().startsWith('<local-command-stdout>')) {
+          out.push({ ...base, part: 0, kind: 'message.user', payload: { text: r.content }, contentKeys: ['text'] });
+          return out;
+        }
         return out; // hook bookkeeping and notices carry no agent activity
       }
 
@@ -279,6 +295,7 @@ export function createParser(ctx: ParseContext): RecordParser {
         const content = r.message?.content;
         if (r.isCompactSummary) {
           out.push({ ...base, part: 0, kind: 'compaction', payload: { summary: textOf(content) }, contentKeys: ['summary'] });
+          out.push({ ...base, part: 1, kind: 'compaction', payload: { source: 'claude-summary', phase: 'summary', ...defined({ boundaryRecordId: compactionBoundaries.has(r.parentUuid) ? str(r.parentUuid) : undefined }) } satisfies CompactionPayload });
           return out;
         }
         const mode = typeof r.permissionMode === 'string' ? { permissionMode: r.permissionMode } : {};

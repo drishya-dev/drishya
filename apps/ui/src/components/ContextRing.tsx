@@ -4,7 +4,7 @@ import './context-ring.css';
 
 const RADIUS = 4.5, CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-/** LIVE-4: how full the model's context was at the last recorded request. Absent unless the harness recorded it. */
+/** LIVE-4: recorded last-request input/window ratio. Absent unless the harness recorded both values. */
 export function ContextRing({ usage }: { usage: Projection['usage'] }) {
   const context = contextOccupancy(usage);
   if (!context) return null;

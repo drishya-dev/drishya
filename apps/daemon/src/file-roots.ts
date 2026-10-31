@@ -41,3 +41,14 @@ export async function recordedFileRoots(store: Store, ids: string[]) {
   }
   return {roots:[...roots.values()],truncated};
 }
+
+/** Exact captured main-root proof only; directory ancestry and realpath similarity grant nothing. */
+export function recordedMainRootPrefixes(roots: readonly RecordedRoot[], workspaceRoot: string | undefined): string[] {
+  if (!workspaceRoot) return [];
+  const normalize = (value: string) => {
+    const path = value.replace(/\\/g, '/').replace(/\/+$/, '');
+    return /^[a-z]:\//i.test(path) ? path.toLowerCase() : path;
+  };
+  const main = normalize(workspaceRoot);
+  return roots.filter(root => normalize(root.root) === main).map(root => root.prefix);
+}
