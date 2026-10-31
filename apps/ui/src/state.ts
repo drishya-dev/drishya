@@ -2,6 +2,7 @@
 // always compose(projection, cursor) — the store never holds a hand-built scene.
 
 import { create } from 'zustand';
+import { isDocumentSize, type DocumentSize } from './lib/document-limit.ts';
 import type { Projection, RecordingSummary, RepoGraph } from '@drishya/contracts';
 import { nextMarker, type ComposeInput, type Marker } from '@drishya/scene';
 import type { Config, DataSource, ReaderRecording } from './api.ts';
@@ -55,6 +56,8 @@ interface State {
   follow: boolean;
   motion: boolean;
   hoverReading: boolean;
+  /** Largest Markdown file the Document view renders; Source always stays available. */
+  documentSize: DocumentSize;
   reasoningDetail: 'expanded' | 'collapsed' | 'hidden';
   mapDepth: boolean;
   mapOrbit: boolean;
@@ -144,6 +147,7 @@ export const useApp = create<State>((set, get) => ({
   held: false,
   follow: true,
   hoverReading: (() => { try { return localStorage.getItem("drishya.hoverReading") !== "0"; } catch { return true; } })(),
+  documentSize: (() => { try { const value = localStorage.getItem("drishya.documentSize"); return isDocumentSize(value) ? value : "standard"; } catch { return "standard"; } })(),
   reasoningDetail: storedPresentation('reasoningDetail') === 'hidden' ? 'hidden' : storedPresentation('reasoningDetail') === 'collapsed' ? 'collapsed' : 'expanded',
   mapDepth: storedPresentation('mapDepth') !== 'false',
   mapOrbit: storedPresentation('mapOrbit') !== 'false',
@@ -352,6 +356,10 @@ export function setTheme(theme: ThemePreference) {
   try { localStorage.setItem('drishya.theme', theme); } catch { /* Optional local preference. */ }
 }
 
+export function setDocumentSize(size: DocumentSize) {
+  useApp.setState({ documentSize: size });
+  try { localStorage.setItem('drishya.documentSize', size); } catch { /* Optional local preference. */ }
+}
 export function setHoverReading(on: boolean) {
   useApp.setState({ hoverReading: on });
   try { localStorage.setItem('drishya.hoverReading', on ? '1' : '0'); } catch { /* Optional local preference. */ }

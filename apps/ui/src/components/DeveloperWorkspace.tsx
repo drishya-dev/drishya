@@ -1,4 +1,5 @@
 import {DraftRecovery} from './DraftRecovery.tsx';
+import { documentFits, documentLimitMessage } from '../lib/document-limit.ts';
 import {NativeReturn} from './NativeReturn.tsx';
 import {workspaceTabLabels} from '../lib/workspace-tab-labels.ts';
 import {WorkspaceOptions} from './WorkspaceOptions.tsx';
@@ -160,11 +161,12 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
     // pane must not steal input. Comparing keeps the same editor/selection mounted.
     if (editing && !comparing) editor.current?.focus();
   },[editing,comparing]);
+  const documentSize=useApp(s=>s.documentSize);
   const {previewDocument,documentError}=useMemo(()=>{
     if(!file)return {previewDocument:undefined,documentError:''};
-    if(file.totalLines>5000||new TextEncoder().encode(file.text).length>256*1024)return {previewDocument:undefined,documentError:'Rendered documents support up to 5,000 lines and 256 KiB. Use Source for this file.'};
+    if(!documentFits(file,documentSize))return {previewDocument:undefined,documentError:`${documentLimitMessage(documentSize)} Use Source for this file.`};
     return {previewDocument:file,documentError:''};
-  },[file]);
+  },[file,documentSize]);
   useLayoutEffect(() => {
     if(!file || !body.current) return;
     if(pendingLine.current !== undefined) {pendingLine.current=undefined;return;}

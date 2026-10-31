@@ -1,6 +1,23 @@
 import type { PromptAttachment } from '../api.ts';
 
 export const PROMPT_BYTES = 64 * 1024;
+export const ATTACHMENT_BYTES = 6 * 1024 * 1024;
+/** Sizes as a person reads them: 309 B, 47.4 KiB, 1.2 MiB. The exact byte counts stay in the data, never in the words. */
+export function formatBytes(bytes: number): string {
+  const trim = (value: number) => (Math.round(value * 10) / 10).toString();
+  if (bytes < 1024) return `${Math.max(0, Math.round(bytes))} B`;
+  if (bytes < 1024 * 1024) return `${trim(bytes / 1024)} KiB`;
+  return `${trim(bytes / (1024 * 1024))} MiB`;
+}
+/** What the composer says about size, and only what is true and useful: the prompt once it nears its 64 KiB limit, the attachments with the limit they count against. */
+export function promptSizeNote(promptBytes: number, attachments: { count: number; bytes: number }): { text: string; over: boolean; quiet: boolean } {
+  const over = promptBytes > PROMPT_BYTES;
+  if (over) return { over, quiet: false, text: `Prompt exceeds 64 KiB by ${formatBytes(promptBytes - PROMPT_BYTES)}. Your draft is kept.` };
+  const parts = [] as string[];
+  if (promptBytes >= 48 * 1024) parts.push(`Prompt ${formatBytes(promptBytes)} of 64 KiB`);
+  if (attachments.count) parts.push(`${attachments.count} ${attachments.count === 1 ? 'file' : 'files'} · ${formatBytes(attachments.bytes)} of 6 MiB`);
+  return { over, quiet: !parts.length, text: parts.length ? parts.join(' · ') : `${formatBytes(PROMPT_BYTES - promptBytes)} left of 64 KiB` };
+}
 export const utf8Bytes = (text: string) => new TextEncoder().encode(text).length;
 export const attachmentBytes = (item: PromptAttachment) => item.type === 'text' ? utf8Bytes(item.data) : item.data.length * 3 / 4 - (item.data.endsWith('==') ? 2 : item.data.endsWith('=') ? 1 : 0);
 

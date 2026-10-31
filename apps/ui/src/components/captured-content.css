@@ -22,6 +22,12 @@
 .result-readings>.captured-result-views>.result-original,.terminal-preview>.captured-result-views>.result-original{margin:0}
 .result-readings>.captured-result-views .data-inspection,.terminal-preview>.captured-result-views .data-inspection{margin:0}
 @media(prefers-reduced-motion:reduce){.result-readings>.captured-result-views,.terminal-preview>.captured-result-views{transition:none}}
+/* Floating chips rest as one small handle in the result's corner (31 Oct, builder: the labelled bar covered the first lines of output and
+   box sizes must not change). Hovering or focusing the handle opens the full set, anchored to the same corner; the buttons keep their
+   names and stay reachable by keyboard, because focus inside the group opens it. */
+.result-readings>.captured-result-views:not(:hover):not(:focus-within),.terminal-preview>.captured-result-views:not(:hover):not(:focus-within){width:26px;height:24px;padding:0;flex-wrap:nowrap;overflow:hidden;justify-content:flex-start}
+.result-readings>.captured-result-views:not(:hover):not(:focus-within)::before,.terminal-preview>.captured-result-views:not(:hover):not(:focus-within)::before{content:"\B7\B7\B7";flex:none;width:24px;text-align:center;color:var(--t2);font:14px/22px var(--sans);letter-spacing:1px}
+.result-readings>.captured-result-views:not(:hover):not(:focus-within)>*,.terminal-preview>.captured-result-views:not(:hover):not(:focus-within)>*{flex:none}
 
 .captured-result-views:empty{display:none}
 /* Beside an inline reading the chip sits at the bottom corner so it never covers the reading's own toolbar. */
