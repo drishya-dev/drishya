@@ -282,6 +282,12 @@ export function createParser(ctx: ParseContext): RecordParser {
             ...defined({ trigger: str(metadata.trigger), beforeTokens: metric(metadata.preTokens), afterTokens: metric(metadata.postTokens), durationMs: metric(metadata.durationMs) }),
           } satisfies CompactionPayload });
         }
+        // A slash command's own output (`/context`, `/cost`) is a `system` row in current Claude Code and a user row in older versions.
+        // Both carry the same exact `<local-command-stdout>` text, so both reach History as the same captured command output.
+        if (r.subtype === 'local_command' && typeof r.content === 'string' && r.content.trimStart().startsWith('<local-command-stdout>')) {
+          out.push({ ...base, part: 0, kind: 'message.user', payload: { text: r.content }, contentKeys: ['text'] });
+          return out;
+        }
         return out; // hook bookkeeping and notices carry no agent activity
       }
 

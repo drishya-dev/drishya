@@ -87,6 +87,8 @@ export function CompactionEvidence({ id, summaryId }: { id?: string; summaryId?:
 export function CapturedContextReport({ report, time }: { report: ContextReport; time?: string }) {
   return <section className="context-report" aria-label="Captured context report"><strong>Claude Code · {report.heading}</strong><small>Report from {contextTime(time)}</small>
     <dl>{report.rows.map((row, i) => <div key={i}><dt>{row.label}</dt><dd>{row.value}</dd>{row.percent !== undefined && <span className="context-track" aria-hidden="true"><span style={{ width: `${row.percent}%` }} /></span>}</div>)}</dl>
+    {report.sections.map((section, i) => <div className="context-listing" role="group" aria-label={section.title} key={i}><small>{section.title} · {section.rows.length} listed</small>
+      <dl>{section.rows.map((row, j) => <div key={j}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}</dl></div>)}
     {report.clipped && <small>Additional rows are in the captured report.</small>}
     <details><summary>Captured report</summary><pre className="output">{report.raw}</pre></details>
   </section>;

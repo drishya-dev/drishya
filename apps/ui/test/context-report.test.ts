@@ -20,3 +20,23 @@ describe('captured context report', () => {
     expect(report.rows).toHaveLength(48); expect(report.rows[0]!.percent).toBeUndefined(); expect(report.clipped).toBe(true); expect(report.raw).toBe(source);
   });
 });
+describe('a report with several tables', () => {
+  // Shape recorded by Claude Code 2.1.316 for `/context`: categories first, then one table per listed kind.
+  const real = captured('## Context Usage\n\n**Model:** m  \n**Tokens:** 28.1k / 1m (3%)\n\n### Estimated usage by category\n\n| Category | Tokens | Percentage |\n|----------|--------|------------|\n| System prompt | 2.9k | 0.3% |\n| Free space | 938.9k | 93.9% |\n\n### Skills\n\n| Skill | Source | Tokens |\n|-------|--------|--------|\n| animate | User | ~160 |\n| loop | Built-in | ~120 |\n\n### MCP Tools\n\n| Tool | Server | Tokens |\n|------|--------|--------|\n| search | web | ~40 |\n');
+  it('keeps the categories apart from the other tables, each named by its own heading', () => {
+    const report = contextReport(real)!;
+    expect(report.rows).toEqual([{ label: 'System prompt', value: '2.9k · 0.3%', percent: 0.3 }, { label: 'Free space', value: '938.9k · 93.9%', percent: 93.9 }]);
+    expect(report.sections).toEqual([
+      { title: 'Skills', rows: [{ label: 'animate', value: 'User · ~160' }, { label: 'loop', value: 'Built-in · ~120' }] },
+      { title: 'MCP Tools', rows: [{ label: 'search', value: 'web · ~40' }] },
+    ]);
+    expect(report.clipped).toBe(false); expect(report.raw).toBe(real);
+  });
+  it('bounds sections and rows and says so', () => {
+    const many = captured('# Context Usage\n| Category | Tokens |\n| a | 1 |\n\n' + Array.from({ length: 10 }, (_, i) => `### T${i}\n| Name | Tokens |\n| x | ${i} |\n`).join('\n'));
+    const report = contextReport(many)!;
+    expect(report.sections).toHaveLength(8); expect(report.clipped).toBe(true);
+    const long = captured('# Context Usage\n| Category | Tokens |\n| a | 1 |\n\n### Big\n| Name | Tokens |\n' + Array.from({ length: 130 }, (_, i) => `| r${i} | ${i} |`).join('\n'));
+    expect(contextReport(long)!.sections[0]!.rows).toHaveLength(100);
+  });
+});

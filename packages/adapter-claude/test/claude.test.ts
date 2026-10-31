@@ -106,3 +106,17 @@ describe('Claude Code adapter', () => {
     expect(results[2]!.payload).toMatchObject({ text: 'Captured inspection result.' });
   });
 });
+
+describe('slash command output', () => {
+  it('keeps a `system` local_command row as the same exact captured stdout older versions wrote in the user role', () => {
+    const stdout = '<local-command-stdout>## Context Usage\n\n| Category | Tokens |\n|---|---|\n| Messages | 10 |\n</local-command-stdout>';
+    const rows = [
+      { type: 'user', uuid: 'u1', timestamp: '2026-10-31T10:00:00Z', sessionId: 's', cwd: '/w', message: { role: 'user', content: '<command-name>/context</command-name>' } },
+      { type: 'system', subtype: 'local_command', uuid: 'u2', parentUuid: 'u1', timestamp: '2026-10-31T10:00:01Z', sessionId: 's', cwd: '/w', content: stdout, level: 'info', isMeta: false },
+    ];
+    const parser = createParser(ctx);
+    const observed = rows.flatMap(row => parser.parse(row));
+    const out = observed.filter(o => o.kind === 'message.user' && (o.payload as { text?: string }).text === stdout);
+    expect(out).toHaveLength(1);
+  });
+});
