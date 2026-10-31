@@ -250,17 +250,22 @@ const HARNESS_NAME: Record<string, string> = { 'claude-code': 'Claude Code', cod
 function SessionLine({ projection }: { projection: Projection }) {
   const recording = useApp(s => s.recording);
   const source = useApp(s => s.source);
+  const mode = useApp(s => s.mode), selectedId = useApp(s => s.recordingId);
   const working = useNow(s => !!s.view?.mark);
   if (!recording) return null;
   const title = projection.title || recording.title || 'Untitled session';
   const repo = recording.workspaceRoot?.replace(/\\/g, '/').replace(/\/$/, '').split('/').at(-1);
   const model = projection.agents.find(agent => !agent.parentId)?.model;
+  const rootKey = (root?: string) => { const normalized = root?.replace(/\\/g, '/').replace(/\/+$/, ''); return normalized && /^[a-z]:/i.test(normalized) ? normalized.toLowerCase() : normalized; };
+  const revealBranch = (element: HTMLElement) => { const box = element.getBoundingClientRect(); element.style.setProperty('--branch-reading-width', box.width + 'px'); element.style.setProperty('--branch-reading-left', box.left + 'px'); element.dataset.reading = ''; };
+  const dismissBranch = (element: HTMLElement) => { if (!element.matches(':hover,:focus')) delete element.dataset.reading; };
+  const branch = mode === 'history' && !selectedId?.includes('+') && !recording.privacyOutdated && projection.recordedBranch && rootKey(projection.recordedBranch.workspaceRoot) === rootKey(recording.workspaceRoot) ? projection.recordedBranch : undefined;
   const meta = [repo ?? (source?.kind === 'bundle' ? 'Offline evidence' : undefined), HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ');
   const state = !recording.live ? undefined : working ? 'working' : 'watching';
   const stateText = state === 'working' ? 'Agent working now' : state === 'watching' ? 'Watching the journal; the agent is quiet' : undefined;
   return <div className="session-line" title={[title, meta, stateText].filter(Boolean).join('\n')}>
     <span className="session-line-title">{title}</span>
-    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}<ContextRing usage={projection.usage} />{meta}</span>
+    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}<ContextRing usage={projection.usage} /><span className="session-line-repo">{repo ?? (source?.kind === 'bundle' ? 'Offline evidence' : '')}</span>{branch && <span className="session-line-branch" tabIndex={0} onMouseEnter={event => revealBranch(event.currentTarget)} onFocus={event => revealBranch(event.currentTarget)} onMouseLeave={event => dismissBranch(event.currentTarget)} onBlur={event => dismissBranch(event.currentTarget)} aria-label={`Recorded branch: ${branch.name}. Last branch captured in session metadata; not current Git`} title="Last branch captured in session metadata; not current Git"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="19" r="2.5"/><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6"/></svg><span className="session-branch-name">{branch.name}</span></span>}<span className="session-line-harness">{[HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ')}</span></span>
   </div>;
 }
 

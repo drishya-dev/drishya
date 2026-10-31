@@ -1,3 +1,4 @@
+import { openGitDestination } from './git-navigation.ts';
 import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -18,7 +19,7 @@ test.beforeAll(async()=>{
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 async function openGraph(page:Page){
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern#/r/${id}`);
- await page.getByRole('button',{name:'Git graph',exact:true}).click();const atlas=page.getByRole('dialog',{name:'Git history',exact:true});
+ await openGitDestination(page, 'Git graph');const atlas=page.getByRole('dialog',{name:'Git history',exact:true});
  const approve=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
  await expect(atlas.locator('.thread-commit')).toHaveCount(3);
  const rows=atlas.getByRole('button',{name:/Commits ·/});if(await rows.getAttribute('aria-expanded')!=='true')await rows.click();

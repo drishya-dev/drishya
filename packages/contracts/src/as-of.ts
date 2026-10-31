@@ -18,6 +18,8 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     ...projection,
     // Accounting points do not own timeline steps. Whole-session totals are not historical evidence.
     usage: undefined,
+    // Session metadata does not establish a branch history at replay steps.
+    recordedBranch: undefined,
     // Turn timing, outcome and errors describe the finished turn: a past step must not show what came later.
     turns: undefined,
     operations,
