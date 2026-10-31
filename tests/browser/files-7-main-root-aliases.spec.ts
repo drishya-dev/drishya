@@ -52,6 +52,7 @@ for(const width of [600,1440]){
   await expect(captured).toContainText('captured main source');await expect(captured).not.toContainText('No matching captured actions.');
   await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
   await expect(current.locator('.current-file-code')).toContainText('currentMain');
+  if(width===1440){await choose(page,alias);await page.locator(`[data-spine-path="${alias}"]`).dblclick();await expect(current.locator(`[data-peek-path="${path}"]`)).not.toHaveClass(/preview/);await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();await expect(captured).toContainText('captured main source');}
   expect(app.projection(id).files.map(file=>file.path)).toEqual(before);expect(before).toContain(alias);expect(before).toContain(other);
  });
  test(`approved Files alias opens Workspace with Enter and outside root stays captured at ${width}px`,async({page})=>{
