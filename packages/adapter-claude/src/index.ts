@@ -198,7 +198,7 @@ export function createParser(ctx: ParseContext): RecordParser {
       const type = String(r.type ?? '');
       if (typeof r.sessionId === 'string') lastSession = r.sessionId;
       const attachmentType = type === 'attachment' ? (r.attachment as Rec | undefined)?.type : undefined;
-      if (IGNORED.has(type) && attachmentType !== 'edited_text_file' && attachmentType !== 'prompt_snapshot' && attachmentType !== 'deferred_tools_delta') return [];
+      if (IGNORED.has(type) && attachmentType !== 'edited_text_file' && attachmentType !== 'prompt_snapshot' && attachmentType !== 'deferred_tools_delta' && attachmentType !== 'queued_command') return [];
       const base = {
         recordId: typeof r.uuid === 'string' ? r.uuid : undefined,
         sourceTime: typeof r.timestamp === 'string' ? r.timestamp : undefined,
@@ -223,6 +223,18 @@ export function createParser(ctx: ParseContext): RecordParser {
         const messageId = str(type === 'file-history-snapshot' ? r.messageId ?? snap.messageId : r.snapshotMessageId);
         if (!messageId || !files.length) return [];
         return [{ ...base, part: 0, kind: 'checkpoint', payload: { messageId, ...defined({ at: str(snap.timestamp) ?? str(r.timestamp), session: lastSession }), files } satisfies CheckpointPayload }];
+      }
+
+      // LIVE-5: a message typed while the agent was working is not a `user` row. Claude Code records it as a `queue-operation` and delivers it
+      // into the turn as a `queued_command` attachment (`prompt` is the text, or text and image blocks; a background task's notice arrives the same way).
+      if (type === 'attachment' && attachmentType === 'queued_command') {
+        const at = r.attachment as Rec, blocks = Array.isArray(at.prompt) ? at.prompt as Rec[] : [];
+        const text = typeof at.prompt === 'string' ? at.prompt : blocks.filter((b) => b?.type === 'text' && typeof b.text === 'string').map((b) => b.text as string).join('\n');
+        const queued = typeof at.timestamp === 'string' && !Number.isNaN(Date.parse(at.timestamp)) ? at.timestamp : base.sourceTime;
+        const items: RawObservation[] = [];
+        if (text.trim()) items.push({ ...base, sourceTime: queued, part: 0, kind: 'message.user', payload: { text }, contentKeys: ['text'] });
+        blocks.forEach((b, i) => { if (b?.type === 'image' && (b.source as Rec | undefined)?.type === 'base64') items.push({ ...base, sourceTime: queued, part: i + 1, kind: 'message.user', payload: { text: '', images: [imageCandidate((b.source as Rec).data as string)] }, contentKeys: ['text', 'images'] }); });
+        return items;
       }
 
       // TOOLS-1: the tool names Claude Code listed as available. Names only: the same rows carry the system prompt, which is never read.
