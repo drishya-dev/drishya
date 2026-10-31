@@ -1,4 +1,4 @@
-import type { Projection } from '@drishya/contracts';
+import type { Projection } from '../../packages/contracts/src/index.ts';
 
 /** One thing a feature has to survive on real sessions. A case never prints journal content: counts only. */
 export interface RealCase {
