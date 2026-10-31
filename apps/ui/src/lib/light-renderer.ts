@@ -3,13 +3,19 @@
  * and a tone map, so a bright core comes from overlapping filaments rather than paint. No text is ever drawn here.
  * Geometry is in CSS pixels of the canvas; vertices are x, y, r, g, b, a (7 floats with `size` for points).
  */
-export interface LightFrame { lines: Float32Array; points: Float32Array; bloom: number; exposure: number; nebula?: boolean }
+export interface LightFrame {
+  lines: Float32Array; points: Float32Array; bloom: number; exposure: number; nebula?: boolean;
+  /** Added to every line vertex on the GPU, so panning moves cached geometry without rebuilding or re-uploading it. */
+  offset?: [number, number];
+  /** The lines are uploaded only when this differs from the last frame's; omit it to upload every frame. */
+  linesKey?: number;
+}
 
 const QUAD = `#version 300 es
 in vec2 p; out vec2 uv; void main(){ uv = p * .5 + .5; gl_Position = vec4(p, 0, 1); }`;
 const LINE_VS = `#version 300 es
-in vec2 pos; in vec4 col; uniform vec2 size; out vec4 c;
-void main(){ c = col; gl_Position = vec4(pos / size * 2. - 1., 0, 1); gl_Position.y *= -1.; }`;
+in vec2 pos; in vec4 col; uniform vec2 size; uniform vec2 offset; out vec4 c;
+void main(){ c = col; gl_Position = vec4((pos + offset) / size * 2. - 1., 0, 1); gl_Position.y *= -1.; }`;
 const LINE_FS = `#version 300 es
 precision highp float; in vec4 c; out vec4 o; void main(){ o = vec4(c.rgb * c.a, 1); }`;
 const POINT_VS = `#version 300 es
@@ -41,6 +47,7 @@ export class LightRenderer {
   private pointBuffer: WebGLBuffer;
   private targets: Target[] = [];
   private size = { w: 0, h: 0, dpr: 1 };
+  private lineKey: number | undefined;
 
   /** Undefined when WebGL2 is unavailable; callers keep their non-light presentation. */
   static create(canvas: HTMLCanvasElement): LightRenderer | undefined {
@@ -123,9 +130,11 @@ export class LightRenderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, sharp.fb); gl.viewport(0, 0, sharp.w, sharp.h); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
     const line = this.programs.line;
-    gl.useProgram(line); gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuffer); gl.bufferData(gl.ARRAY_BUFFER, frame.lines, gl.DYNAMIC_DRAW);
+    gl.useProgram(line); gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuffer);
+    // Cached geometry stays on the GPU between frames; only a new key uploads it again.
+    if (frame.linesKey === undefined || frame.linesKey !== this.lineKey) { gl.bufferData(gl.ARRAY_BUFFER, frame.lines, gl.DYNAMIC_DRAW); this.lineKey = frame.linesKey; }
     this.attrib(line, 'pos', 2, 24, 0); this.attrib(line, 'col', 4, 24, 8);
-    gl.uniform2f(gl.getUniformLocation(line, 'size'), W, H);
+    gl.uniform2f(gl.getUniformLocation(line, 'size'), W, H); gl.uniform2f(gl.getUniformLocation(line, 'offset'), frame.offset?.[0] ?? 0, frame.offset?.[1] ?? 0);
     gl.drawArrays(gl.LINES, 0, frame.lines.length / 6);
     const point = this.programs.point;
     gl.useProgram(point); gl.bindBuffer(gl.ARRAY_BUFFER, this.pointBuffer); gl.bufferData(gl.ARRAY_BUFFER, frame.points, gl.DYNAMIC_DRAW);
