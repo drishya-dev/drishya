@@ -3,7 +3,7 @@ import type { Projection } from '@drishya/contracts';
 export interface ContextOccupancy { used: number; window: number; fraction: number }
 
 /**
- * How much of the model's context the last request used, from two numbers the harness itself recorded: that request's
+ * The last recorded request input relative to the recorded context window, from that request's
  * input tokens and the context window. Cumulative session tokens are usage, not occupied context, so they are never used.
  * Nothing is estimated: a harness that records neither (Claude Code records no window) gets no ring.
  */
@@ -18,4 +18,4 @@ export function contextOccupancy(usage: Projection['usage']): ContextOccupancy |
 }
 
 export const contextLabel = (c: ContextOccupancy) =>
-  `Context in use: ${Math.round(c.fraction * 100)}%. The last request's input was ${c.used.toLocaleString('en-US')} of ${c.window.toLocaleString('en-US')} tokens, as the harness recorded them.`;
+  `Last request input: ${c.used.toLocaleString('en-US')} of ${c.window.toLocaleString('en-US')} recorded window tokens. ${Math.round(c.fraction * 100)}% ratio, derived from the harness's recorded values.`;

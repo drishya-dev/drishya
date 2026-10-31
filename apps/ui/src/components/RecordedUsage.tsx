@@ -1,3 +1,4 @@
+import { RequestContextLine } from './ContextEvidence.tsx';
 import { Fragment, useEffect, useState } from 'react';
 import type { UsagePayload } from '@drishya/contracts';
 import { recordedUsageApi } from '../api.ts';
@@ -49,18 +50,22 @@ function RecordedPoint({ point }: { point: UsagePayload }) {
 /** Recorded journal receipts and native-runtime receipts have separate, explicit sources. */
 export function UsagePeek() {
   const { controller } = useSessionWorkspace();
-  const { projection, mode } = useApp();
+  const { projection, mode, step, historyPage } = useApp();
+  const total = historyPage?.scene.total ?? projection?.timeline.length ?? 0;
+  const readings = projection?.context?.readings.filter(r => mode === 'history' || step >= total || r.availableAfterStep < step);
+  const context = projection?.context?.latest && readings?.length && new Set(readings.map(r => r.agentId)).size === 1 ? readings.at(-1) : undefined;
   const recorded = mode === 'history' ? projection?.usage?.latest : undefined;
   const native = controller?.usage;
   const brief = usageBrief(recorded);
   return <details className="usage-peek"><summary>Usage{brief && <small className="usage-brief">{brief}</small>}</summary><div>
+    {context && <RequestContextLine reading={context} />}
     {recorded && <RecordedPoint point={recorded} />}
     {native && <section aria-label="Native runtime usage"><strong>Native runtime · {controller?.harness === 'codex' ? 'Last model request' : 'Connected turn'}</strong><Rows rows={[
       ['Input tokens', count(native.input)], ['Output tokens', count(native.output)], ['Cached input', count(native.cached)], ['Cost · harness estimate', native.costUsd === undefined ? undefined : money(native.costUsd)],
       ['Context input', count(native.contextInput)], ['Context window', count(native.contextWindow)], ['Thread tokens so far', count(native.threadTotal)], ['Reasoning output tokens', count(native.reasoningOutput)],
     ]} /></section>}
-    {!recorded && !native && <p>{mode === 'replay' ? 'Recorded accounting is available in full session history.' : 'No usage values captured for this session.'}</p>}
-    <small>Only reported values. Cumulative tokens are usage, not occupied context. Subscription billing is not inferred.</small>
+    {!recorded && !native && !context && <p>{mode === 'replay' ? 'Recorded accounting is available in full session history.' : 'No usage values captured for this session.'}</p>}
+    <small>Captured receipts; derived request input is labelled. Cumulative tokens are usage, not occupied context. Subscription billing is not inferred.</small>
   </div></details>;
 }
 
