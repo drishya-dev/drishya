@@ -68,3 +68,17 @@ Yash authorized Codex to finish the inactive pre-audit PRs, preserving Harsh's i
 - Claude Code is installed but `auth status` reports signed out. No authentication, credential or configuration change was attempted; a fresh Claude native capture cannot run in this environment. The earlier genuine Claude reader/refusal evidence above remains the task's Claude acceptance, and no newly recorded Claude result is claimed.
 
 The once-per-finished-batch full gate remains with the coordinating root. Until it finishes, PR #299 remains draft and FILES-7 remains open/claimed. The takeover does not silently classify the preserved draft-reopen failure as a fixed product defect or a proven clean-main flake.
+
+## 31 October handback and integrated-gate accounting
+
+Harsh resumed ownership after the explicit builder handback on main `dbf3804`. This branch fast-forwarded to `2c7af3e`, retaining the takeover's report and genuine fresh-Codex evidence, then merged current main without conflicts. The integration preserves all current claims, real-case registrations and CONTENT-13 source. No production code, test assertion or timeout changed in this closeout pass. FILES-7 remains open/claimed and PR #299 remains draft.
+
+The coordinating root owns the browser/heavy-test lease and final baseline assessment. These are separate recorded phases, not a clean full-gate result:
+
+| Phase | Recorded result | Qualification |
+|---|---|---|
+| Initial sealed combined gate | UI build, both types and package verification pass; default-worker units 1,104 pass / one skip / one timeout; capped rerun 1,105 pass / one skip | The initial timeout remains recorded; the capped run supplies the passing unit tier. |
+| Initial browser command | 583 pass / 28 skip / five failures; serial subset 33 pass / one skip / zero failures | Two CONTENT-12 causes were repaired with six targeted checks passing. The other initial failures passed one-worker isolation on candidate and clean main; that alone did not establish their cause or prove a baseline flake. |
+| Corrected combined candidate `91496c75` | Parallel phase 553 pass / 27 skip / two failures; all five preceding failure cases pass in this phase | This is the parallel phase only. The two remaining observations are the old-reader recovery race and the blocked Inspect click with 144 pointer interceptions. Their clean-main comparison and final serial/gate assessment are pending with the root. |
+
+The original FILES-7 focused draft-reopen failure and the subsequent unchanged 30/30 whole-file plus 40/40 closed-tab checks remain in the report above. No recurrence is silently called a clean-main flake or a FILES-7 regression without the bounded comparison. No tests, builds, browsers or benchmarks were rerun by this closeout pass. Completion checkboxes, claim removal, final Last session entry and ready-for-review state wait for the coordinating root's evidence assessment. CONTENT-14 and TEST-2 remain with Yash and are outside this branch's implementation scope.
