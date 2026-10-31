@@ -45,7 +45,9 @@ export function webMaterial(text: string, seeds: WebResult[] = []): WebMaterial 
   const collected: WebResult[] = [], spans: {start:number;end:number}[] = [];
   for (const match of text.matchAll(links)) {
     const start = match.index + match[0].length, end = arrayEnd(text,start);
-    if (end === undefined) continue;
+    // An unclosed outer array owns the remaining text. Do not rescan its nested
+    // starts repeatedly; keep that remainder literal instead of guessing a list.
+    if (end === undefined) break;
     try {
       const parsed = results(JSON.parse(text.slice(start,end)));
       if (parsed) {

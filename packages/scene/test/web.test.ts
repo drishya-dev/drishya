@@ -2,6 +2,11 @@ import {describe,expect,it} from 'vitest';
 import {webMaterial} from '../src/web.ts';
 
 describe('captured web material',()=>{
+  it('keeps repeated unclosed list starts literal without rescanning their remainder',()=>{
+    const text='Links: [\n'.repeat(10000);
+    const value=webMaterial(text);
+    expect(value.results).toEqual([]);expect(value.text).toBe(text);expect(value.original).toBe(text);expect(value.listRecorded).toBe(false);
+  });
   it('keeps every full result and removes only the balanced Claude list',()=>{
     const rows=Array.from({length:61},(_,n)=>({url:`https://example.test/${n}`,title:`Captured title ${n} ${'detail '.repeat(60)}`,snippet:`Snippet ${'context '.repeat(100)}`,extra:{nested:['[quoted]','escaped " ]', {deep:true}]}}));
     const original='Captured introduction.\n  Links \t:\n'+JSON.stringify(rows,null,2)+'\nCaptured closing prose.';
