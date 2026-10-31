@@ -62,6 +62,9 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  await expect(inspector.locator('.web-results li')).toHaveCount(60);await expect(inspector.locator('.web-title').last()).toHaveText('Recorded result 159');
  const filter=inspector.getByRole('searchbox',{name:'Find result'});await filter.pressSequentially('result 159');await expect(filter).toBeFocused();
  await expect(inspector.locator('.web-results li')).toHaveCount(1);await expect(inspector.locator('.web-address')).toHaveText('https://example.invalid/result/159');
+ let failedOnce=false;await page.route('**/web-result/**',route=>{if(!failedOnce){failedOnce=true;return route.fulfill({status:503,json:{error:'Synthetic temporary read failure'}});}return route.continue();});
+ await filter.fill('temporary failure');await expect(inspector.getByRole('button',{name:'Retry',exact:true})).toBeVisible();await expect(filter).toBeFocused();
+ await filter.fill('result 159');await expect(inspector.locator('.web-results li')).toHaveCount(1);await expect(inspector.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
  await inspector.getByText('Original captured result',{exact:true}).click();await expect(inspector.locator('.web-original')).toContainText(output);
  expect(await inspector.locator('.web-original-text').evaluate(el=>el.textContent)).toBe(output);
  expect(external).toBe(0);expect(await inspector.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
