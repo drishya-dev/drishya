@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-13 | @yash + Codex | `codex/content13-web-results-depth` | 2026-10-30 | Whole web-result depth, bounded redacted-store reader needed because projection clips results to 20 and text to 4,000 characters. Exact 15 paths: apps/ui/src/components/{WebResults.tsx,BrowserEvidence.tsx,Inspector.tsx,web-results.css}, apps/ui/src/api.ts, packages/scene/src/web.ts, apps/daemon/src/web-results.ts, apps/daemon/src/server.ts (isolated authenticated read-only route), packages/scene/test/web.test.ts, apps/daemon/test/web-results.test.ts, tests/browser/web-result-acceptance.spec.ts (extend existing test, including the deliberate full-title premise update), docs/review/content-13-web-results-depth.md and TASKS/STATUS/CONTINUITY. About five coherent commits; no History, Viewer, contracts, reducers, adapters or controller edits. Harsh claims preserved. Adjacent-depth review is read-only; UI-17 remains in UI-8. |
 | FILES-5 | @harsh + Codex | harsh/files-5-external-acceptance | 2026-10-30 | Remaining external platform/human acceptance only. No production changes: read existing recovery reports; docs/review/files-5-platform-handoff.md and ignored execution packet, with TASKS/STATUS evidence. Coordinate actual macOS/POSIX/symlink/device outcomes with MAC-1, REL-2 and REL-3; no simulated platform sign-off. |
 | REL-1 | @harsh + Codex | harsh/rel-1-runtime-antivirus | 2026-10-30 | Whole supported idle-time runtime remediation/recurrence acceptance. Read-only runtime/process/AV inventory first; ignored diagnostic packet and docs/review/rel-1-runtime-acceptance.md plus central docs. Never interrupt active work, alter AV protection, native configuration or credentials; any supported update waits for a proven idle window. |
 | REL-2 | @harsh + Codex | harsh/rel-2-physical-acceptance | 2026-10-30 | Whole physical platform acceptance: classify available hardware/executors, prepare exact existing-command runs and docs/review/rel-2-physical-acceptance.md with central docs. Real lower-resource/lower-core and Windows/macOS/Linux outcomes only; emulation does not certify hardware. Browser/benchmark runs require the root lease. |
@@ -46,6 +45,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — CONTENT-13 complete (whole recorded web-result reading)
+
+- **31 October; PR #304:** bounded indexed sealed-store reader, full search lists/fields, shared card/Inspector depth, separate captured response text and literal original. No reducer, adapter, contracts, History or native-policy edits.
+- **Acceptance:** 14 focused browsers, 17 parser/store tests and 28 genuine journeys across both harnesses / 600/1440 / History and replay. Types/build/package and 1,081 units/one skip pass. Full browsers: 573 passed / 28 skipped / two failures, both reproduced on clean main and recorded under reopened TEST-2; unchanged pair passes alone. [Exact source counts, limits and baseline failures](review/content-13-web-results-depth.md).
+- **Next before AUDIT-1:** Harsh owns UI-1b #302, CONTENT-12 #301 and FILES-7 #299. Newly recorded CONTENT-14 addresses MCP full-result depth after coordination with the History owner; TEST-2 needs its two reproduced timing failures resolved. UI-17 remains in the prescribed UI-8 pass, and FILES-5 external platform acceptance does not hold the audit. Ready for other-builder review, not self-merged.
+
 
 ### Yash with Codex — UI-16 complete (Files rail width)
 
