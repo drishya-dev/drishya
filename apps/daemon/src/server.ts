@@ -450,7 +450,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (url.searchParams.has('byteStart')) {
           for (const key of id.split('+')) app.recording(key);
           const start = intParam(url, 'byteStart', 0, 0, Number.MAX_SAFE_INTEGER);
-          return json(res, await app.history.artifactChunk(id, subId, start));
+          try { return json(res, await app.history.artifactChunk(id, subId, start)); }
+          catch (error) { if (error instanceof Error && error.message.includes('UTF-8')) throw new HttpError(400, 'Invalid UTF-8 portion boundary.'); throw new HttpError(404, 'Stored result not found.'); }
         }
         if (url.searchParams.has('find')) {
           for (const key of id.split('+')) app.recording(key);

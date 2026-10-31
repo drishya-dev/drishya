@@ -1,3 +1,4 @@
+import {StoredToolResult} from './StoredToolResult.tsx';
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Operation } from '@drishya/contracts';
 import { isScreenOperation } from '@drishya/scene';
@@ -25,7 +26,7 @@ export function BrowserEvidence({ op, full = false }: { op: Operation; full?: bo
     <div className="browser-action"><span>{step.action}</span>{step.tab !== undefined && <small>tab {step.tab}</small>}<small>{op.status === 'running' ? 'Running' : op.status === 'error' ? 'Failed' : op.status === 'ok' ? 'Returned' : 'Outcome not captured'}</small></div>
     {step.batch?.length ? <ol className="browser-batch">{step.batch.map((item, i) => <li key={i}><span>{item.name ?? 'Recorded action'}{item.action ? ` · ${item.action}` : ''}</span>{item.url && <RecordedUrl url={item.url}/>}</li>)}{step.batchCount! > step.batch.length && <li className="muted">{step.batchCount! - step.batch.length} more actions · expand for captured input</li>}</ol> : null}
     {step.query && <div className="browser-query">{step.query}</div>}
-    {step.excerpt ? <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Captured browser result excerpt"><ToolOutput text={step.excerpt}/></div> : <p className="muted">{op.status === 'running' ? 'Waiting for browser result' : 'No page text captured'}</p>}
+    {full&&op.detail.kind==='mcp'?<StoredToolResult op={op} full/>:step.excerpt ? <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Captured browser result excerpt"><ToolOutput text={step.excerpt}/></div> : <p className="muted">{op.status === 'running' ? 'Waiting for browser result' : 'No page text captured'}</p>}
     {full && op.detail.kind === 'mcp' && <details><summary>Captured browser input</summary><ToolInput value={op.detail.input}/></details>}
   </div>;
 }

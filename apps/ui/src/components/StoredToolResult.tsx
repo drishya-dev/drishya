@@ -11,10 +11,13 @@ import {ProvenanceBadge} from './common.tsx';
 
 /** The same captured output owns compact, expanded and Inspector readings. No current-file fallback. */
 export function StoredToolResult({op,full=false}:{op:Operation;full?:boolean}) {
+  const source=useApp(s=>s.source);
   const history=useContext(HistoryArtifacts);
   const artifacts=useApp(s=>s.projection?.artifacts);
   const outputs=op.artifactIds.filter(id=>id.endsWith('_out')||(history?.get(id)??artifacts?.find(a=>a.id===id))?.kind==='output');
   const preview='resultPreview' in op.detail?op.detail.resultPreview:undefined;
+  // Claude keeps complete result text on the sealed observation even without a projection artifact.
+  if(!outputs.length&&source?.kind==='daemon'&&source.artifactChunk&&op.endSequence!==undefined&&preview)outputs.push(`result:${op.id}`);
   // A reader can survive seeking backwards. Never mount a fetcher for a future receipt.
   if(op.endSequence===undefined)return <span className="muted">{op.status==='running'?'Waiting for result':'No result content captured'}</span>;
   if(!full)return <><StructuredResult text={preview||'No result content captured'}/>{outputs.length>0&&<button type="button" className="material-more" onClick={event=>{event.stopPropagation();useApp.getState().select(op.id);}}>Read full captured result</button>}</>;

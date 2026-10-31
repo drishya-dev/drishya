@@ -231,6 +231,22 @@ function artifact(id: string, artifactId: string, start: number, count: number):
 }
 
 function artifactChunk(id: string, artifactId: string, start: number) {
+  if (artifactId.startsWith('result:')) {
+    const operationId = artifactId.slice(7);
+    const projection = current(id).projection;
+    const op = projection.operations.find(op => op.id === operationId);
+    if (!op || !['mcp','other'].includes(op.detail.kind) || op.endSequence === undefined) throw Error('Recorded result not found');
+    const owner = id.split('+').find(recording => operationId.startsWith(recording + '.'));
+    if (!owner) throw Error('Recorded result owner not found');
+    const receipt = op.observationIds.map(observation => source.observationById(owner, observation)).filter((row): row is Observation => row?.kind === 'tool.result').at(-1);
+    const value = (receipt?.payload as {text?: unknown} | undefined)?.text;
+    if (!receipt || (typeof value !== 'string' && !isBlobText(value))) return {available:false,reason:'not-captured'};
+    const stored = typeof value === 'string' ? blobs.put(value) : undefined;
+    const sha = stored?.sha ?? (isBlobText(value) ? value.$blob : '');
+    const chunk = (stored ? blobs : source.blobs).readTextChunk(sha, start);
+    const descriptor = {id:artifactId,kind:'output',observedAtSequence:op.endSequence,availability:receipt.availability,provenance:{kind:'captured',observationIds:[receipt.id]},redacted:receipt.redactions.length>0,blob:sha,bytes:chunk?.totalBytes};
+    return chunk ? {artifact:descriptor,available:true,...chunk} : {artifact:descriptor,available:false,reason:'no-longer-stored'};
+  }
   const descriptor = artifact(id, artifactId, 0, 0);
   if (!descriptor.available || !descriptor.artifact.blob) return descriptor;
   if (descriptor.artifact.kind !== 'output') throw Error('Only recorded output supports text continuation');

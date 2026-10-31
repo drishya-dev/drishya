@@ -50,7 +50,7 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
 test('oversized single line and malformed output retain every byte through bounded continuation',async({page})=>{
  const output='@{broken: '+ '😀दृश्य'.repeat(180_000)+' final unparsed sibling\r\n';
  const {id,op,projection}=await imported('claude-code',output,'oversized');
- const artifact=projection.artifacts.find(a=>op.artifactIds.includes(a.id)&&a.kind==='output')!;expect(artifact).toBeTruthy();
+ const artifact=projection.artifacts.find(a=>op.artifactIds.includes(a.id)&&a.kind==='output');const artifactId=artifact?.id??`result:${op.id}`;
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();await card.press('Enter');
  const inspector=page.getByRole('complementary',{name:'Operation detail'}),full=inspector.locator('.stored-tool-result');
@@ -61,7 +61,7 @@ test('oversized single line and malformed output retain every byte through bound
   const next=full.getByRole('button',{name:'Next portion',exact:true});if(await next.isDisabled())break;await next.click();await expect(full.getByText('Opening stored result…',{exact:true})).toHaveCount(0);
  }
  expect(joined).toBe(output);
- const path=`/v1/recordings/${id}/artifacts/${encodeURIComponent(artifact.id)}`;
+ const path=`/v1/recordings/${id}/artifacts/${encodeURIComponent(artifactId)}`;
  expect((await fetch(server.url+path+'?byteStart=0')).status).toBe(401);
  expect((await page.request.get(server.url+path+'?byteStart=NaN')).status()).toBe(400);
  expect((await page.request.get(server.url+path+'?byteStart=-1')).status()).toBe(400);
