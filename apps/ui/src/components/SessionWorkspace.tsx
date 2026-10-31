@@ -1,4 +1,5 @@
 import {useFileRoots} from '../lib/use-file-roots.ts';
+import {FileRowName} from './FileRowName.tsx';
 import {worktreeFileRows, currentWorkspacePath} from '../lib/worktree-files.ts';
 import { FileEvidenceMarks, fileEvidenceDescription, useFileEvidence } from './FileEvidenceMarks.tsx';
 import { touchedFiles } from '../../../../packages/scene/src/file-evidence.ts';
@@ -278,7 +279,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: currentPath ?? row.path }));
         else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath ?? row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
         else useApp.getState().set({...(workspace?.approved ? { currentFile: currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
-      }} onDoubleClick={()=>{if(!row.folder&&(!row.location||graph?.nodes.some(node=>node.path===currentWorkspacePath(row.path,fileRoots,workspace?.root)))&&currentWorkspacePath(row.path,fileRoots,workspace?.root)!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore)window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentWorkspacePath(row.path,fileRoots,workspace?.root) ?? row.path,pin:true}}));}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><span className="file-row-name">{row.name}</span><FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
+      }} onDoubleClick={()=>{if(!row.folder&&(!row.location||graph?.nodes.some(node=>node.path===currentWorkspacePath(row.path,fileRoots,workspace?.root)))&&currentWorkspacePath(row.path,fileRoots,workspace?.root)!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore)window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentWorkspacePath(row.path,fileRoots,workspace?.root) ?? row.path,pin:true}}));}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><FileRowName name={row.name} folder={row.folder}/><FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No captured file activity' : 'No relative paths captured yet'}</p>}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>
