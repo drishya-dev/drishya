@@ -21,11 +21,8 @@ import { agentDeliveries } from './real-cases/agent-delivery.ts';
 import { localBranches } from './real-cases/local-branches.ts';
 import { planMaterial } from './real-cases/plan-material.ts';
 import { turnDetails } from './real-cases/turn-details.ts';
-<<<<<<< HEAD
 import { sessionBranch } from './real-cases/session-branch.ts';
-=======
 import { toolsAvailable } from './real-cases/tools-available.ts';
->>>>>>> origin/main
 import { workspaceFiles } from './real-cases/workspace-files.ts';
 import { computerFrames } from './real-cases/computer-frames.ts';
 import type { RealCase } from './real-cases/types.ts';

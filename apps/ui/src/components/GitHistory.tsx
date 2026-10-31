@@ -33,10 +33,11 @@ export function GitHistory() {
   const [open,setOpen]=useState(false),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode);
   useEffect(()=>{
     const show=()=>{const state=useApp.getState();if(state.source?.kind!=='daemon'||!state.recordingId||state.recordingId.includes('+')||state.mode!=='history')return;state.set({developerWorkspace:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});setOpen(true);};
-    window.addEventListener('drishya-git-history',show);return()=>window.removeEventListener('drishya-git-history',show);
+    const close=()=>setOpen(false);
+    window.addEventListener('drishya-git-history',show);window.addEventListener('drishya-git-review',close);return()=>{window.removeEventListener('drishya-git-history',show);window.removeEventListener('drishya-git-review',close);};
   },[]);
   useEffect(()=>setOpen(false),[id,source,mode]);
-  return open&&id?<GitHistoryReader key={id} id={id} close={()=>setOpen(false)}/>:null;
+  return open&&id?<GitHistoryReader key={id} id={id} close={()=>{setOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('button.git-open[aria-label="Git"]')?.focus({preventScroll:true}));}}/>:null;
 }
 
 function GitHistoryReader({id,close}:{id:string;close:()=>void}) {
