@@ -354,7 +354,8 @@ test('MCP input and captured result can be read in the history passage', async (
   const operation = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
   await operation.getByRole('button', { name: /Expand/ }).click();
   await expect(operation).toContainText('context7CompatibleLibraryID');
-  await expect(operation).toContainText('Captured result preview');
+  // CONTENT-14: the expanded result is the stored reader, which says whether it holds the complete result, not a "preview".
+  await expect(operation.getByRole('region', { name: 'Stored captured result' })).toContainText('Complete stored result');
   await expect(operation.locator('.op-expanded .result-prose')).toContainText('TypeScript handbook');
 });
 
