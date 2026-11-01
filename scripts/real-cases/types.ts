@@ -11,5 +11,5 @@ export interface RealCase {
   /** Hits on one parsed journal line, or undefined. `only` counts the stricter subset (for example an image with no text). */
   scan(row: Record<string, unknown>, harness: 'claude-code' | 'codex'): { hits: number; only?: number } | undefined;
   /** Counts read back from the imported recording. Lines starting with "FAIL" fail the check. */
-  verify?(projection: Projection, found: { hits: number; only: number }): string[];
+  verify?(projection: Projection, found: { hits: number; only: number; sourceId: string }): string[];
 }

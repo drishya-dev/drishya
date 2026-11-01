@@ -1,3 +1,5 @@
+import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
+import type {QueueQuery, QueuePage, QueueInputChunk, QueueTimelineItem} from '@drishya/contracts';
 import type { FileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/reading-target.ts';
 import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts';
@@ -74,6 +76,8 @@ export interface StoredResultChunk { artifact?: import('@drishya/contracts').Art
 export interface DataSource {
   webResult?(id:string,operationId:string,options:{start:number;count:number;q?:string;resultId?:string}):Promise<WebResultPage>;
   readingNotes?(id:string,start?:number):Promise<{bookmarks:{id:string;step:number;note:string;createdAt:string}[];total:number;start:number;count:number}>;
+  queue?(id: string, query?: QueueQuery): Promise<QueuePage>;
+  queueInput?(id: string, receiptId: string, through?: string, start?: number): Promise<QueueInputChunk>;
   kind: 'daemon' | 'bundle';
   /** Built-in synthetic fixture only; never used to classify a user's replay bundle. */
   sample?: 'recorded' | 'growing';
@@ -247,6 +251,8 @@ export async function signIn(): Promise<'ok' | 'no-daemon' | 'signed-out'> {
 }
 
 export const daemon: DataSource = {
+  queue: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/queue?${new URLSearchParams(Object.entries(query).filter(([,v])=>v!==undefined).map(([k,v])=>[k,String(v)]))}`),
+  queueInput: (id, receiptId, through, start = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/queue/${encodeURIComponent(receiptId)}?${new URLSearchParams({start:String(start),...(through?{through}:{})})}`),
   readingNotes:(id,start=0)=>req(`/v1/recordings/${encodeURIComponent(id)}/bookmarks?start=${start}&count=25`),
   findingMembers:(id,key,page=0,q='')=>req(`/v1/recordings/${encodeURIComponent(id)}/finding-members?${new URLSearchParams({key,page:String(page),q})}`),
   reviewInsights:(id,page=0,kind)=>req(`/v1/recordings/${encodeURIComponent(id)}/review-insights?${new URLSearchParams({page:String(page),...(kind?{kind}:{})})}`),
@@ -356,6 +362,21 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
   const unsupported = () => Promise.reject(new Error('Not available in a replay bundle — run Drishya locally.'));
   return {
     kind: 'bundle',
+    queue: async (id, query = {}) => queuePage(bundle.projection.timeline, id, query),
+    queueInput: async (id, receiptId, through, start = 0) => {
+      const all = bundle.projection.timeline.filter((item): item is QueueTimelineItem => item.type === 'queue' && item.ownerRecordingId === id);
+      const visible = queuePage(bundle.projection.timeline, id, {through, receiptId, count: 1});
+      const item = all.find(item => item.sourceObservationId === receiptId && item.operation === 'enqueue');
+      if (!item?.inputArtifactId || !visible.items.length) throw Error('Input not captured at this point.');
+      const text = bundle.artifactText[item.inputArtifactId];
+      if (text === undefined) throw Error('Captured input is no longer stored.');
+      if (!Number.isSafeInteger(start) || start < 0) throw Error('Invalid input range.');
+      const bytes = new TextEncoder().encode(text), begin = Math.min(start, bytes.length);
+      if (begin < bytes.length && (bytes[begin]! & 0xc0) === 0x80) throw Error('Invalid UTF-8 boundary.');
+      let next = Math.min(begin + 256 * 1024, bytes.length);
+      while (next < bytes.length && (bytes[next]! & 0xc0) === 0x80) next--;
+      return {text:new TextDecoder().decode(bytes.slice(begin,next)),start:begin,next,totalBytes:bytes.length,hasMore:next<bytes.length};
+    },
     config: async () => ({ version: 'bundle', llm: { configured: false, baseUrl: '', models: { nano: '', super: '', ultra: '' } }, adapters: [] }),
     recordings: async () => [bundle.recording],
     sources: async () => ({ sources: [], errors: [] }),

@@ -9,6 +9,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { App } from '../apps/daemon/src/app.ts';
+import { sourceIdFor } from '../packages/capture-core/src/index.ts';
 import {readingDelimited} from './real-cases/reading-delimited.ts';
 import {questions} from './real-cases/questions.ts';
 import { browserOps } from './real-cases/browser-ops.ts';
@@ -29,9 +30,10 @@ import { computerFrames } from './real-cases/computer-frames.ts';
 import { compaction, resetCompactionScan } from './real-cases/compaction.ts';
 import { contentParity } from './real-cases/content-parity.ts';
 import { sessionLineage, resetSessionLineageScan } from './real-cases/session-lineage.ts';
+import { midTurnInput } from './real-cases/mid-turn-input.ts';
 import type { RealCase } from './real-cases/types.ts';
 
-const cases: RealCase[] = [questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage];
+const cases: RealCase[] = [questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
@@ -76,7 +78,7 @@ try {
       const imported = await app.ingest.importSource(harness, f.file);
       const projection = app.projection(imported.recordingId);
       console.log(`  ${imported.recordingId.slice(0, 12)} · ${Math.round(f.size / 1e5) / 10} MB · ${projection.operations.length} operations`);
-      for (const line of chosen.verify?.(projection, { hits: f.hits, only: f.only }) ?? []) { console.log(`    ${line}`); if (line.startsWith('FAIL')) failed = true; }
+      for (const line of chosen.verify?.(projection, { hits: f.hits, only: f.only, sourceId: sourceIdFor(resolve(f.file)) }) ?? []) { console.log(`    ${line}`); if (line.startsWith('FAIL')) failed = true; }
     }
   }
   await app.close();
