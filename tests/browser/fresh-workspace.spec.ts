@@ -1818,8 +1818,11 @@ test('last captured material clears the prompt without an oversized gap',async({
 
 test('Files single click replaces preview and double click keeps a file without entering Workspace',async({page})=>{
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
- const grant=page.getByRole('button',{name:/Enable workspace reading/});if(await grant.isVisible())await grant.click();
  const files=page.getByRole('complementary',{name:'Repository files'});
+ const grant=files.getByRole('button',{name:/Enable workspace reading/});
+ // A cold fixture has no prior grant: wait for the permission phase before choosing.
+ await expect(grant.or(files.locator('[data-spine-path="README.md"]'))).toBeVisible();
+ if(await grant.isVisible())await grant.click();
  await files.locator('[data-spine-path="README.md"]').click();const reader=page.locator('.file-peek-reader');await expect(reader.getByRole('tab')).toHaveCount(1);await expect(reader.locator('.file-peek-tab.preview')).toHaveCount(1);
  await files.locator('[data-spine-path="package.json"]').click();await expect(reader.getByRole('tab')).toHaveCount(1);await expect(reader.getByRole('tab')).toContainText('package.json');
  await files.locator('[data-spine-path="package.json"]').dblclick();await expect(reader.locator('.file-peek-tab.preview')).toHaveCount(0);
