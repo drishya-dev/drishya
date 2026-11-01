@@ -24,16 +24,17 @@ export function useDisclosureChoice(surface: string, initial = true): [boolean, 
     } catch { /* Browser storage can be disabled. */ }
     return new Map(preferences()).get(key) ?? initial;
   };
-  const [choice, setChoice] = useState(() => ({key, value: read()}));
-  const value = choice.key === key ? choice.value : read();
+  const [choice, setChoice] = useState(() => ({key, initial, value: read()}));
+  // Settings may change a default; a stored explicit choice still wins.
+  const value = choice.key === key && choice.initial === initial ? choice.value : read();
   useEffect(() => {
-    const refresh = () => setChoice({key, value: read()});
+    const refresh = () => setChoice({key, initial, value: read()});
     window.addEventListener(changed, refresh);
     window.addEventListener('storage', refresh);
     return () => {window.removeEventListener(changed, refresh); window.removeEventListener('storage', refresh);};
   }, [key, initial]);
   return [value, next => {
-    setChoice({key, value: next});
+    setChoice({key, initial, value: next});
     try {
       // One key per explicit choice: new surfaces never evict earlier choices.
       localStorage.setItem(`${storageKey}/${key}`, next ? '1' : '0');

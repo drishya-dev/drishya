@@ -77,6 +77,9 @@ for (const width of [600, 1440]) test(`reading choices survive new plan data, re
   await expect(page.locator('.usage-peek')).not.toHaveAttribute('open');
   await expect(page.locator('.session-identity')).not.toHaveAttribute('open');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Go to checklist',exact:true}).press('Enter');
+  await expect(page.locator('article.op-plan').last()).toBeInViewport();
 });
 
 for (const width of [600, 1440]) test(`thirteen captured revisions keep one live checklist and every earlier list readable at ${width}px`, async ({ page }) => {
@@ -243,4 +246,29 @@ for (const width of [600,1440]) test(`Codex explicit proposal renders Markdown w
  await expect(proposal).toContainText('Captured proposal · not an approval');
  await expect(page.locator('.plan-pinned')).toHaveCount(0);
  await expect(page.locator('.prose')).toHaveCount(0);
+});
+
+
+test('reasoning defaults follow Settings until a reader makes a persistent local choice', async ({page}) => {
+  await page.setViewportSize({width:1440,height:960});
+  const session='reasoning-defaults',source=join(dir,session+'.jsonl');
+  writeFileSync(source,serialize([planPrompt(dir,session),{type:'assistant',uuid:'reasoning-defaults-answer',sessionId:session,message:{role:'assistant',content:[{type:'thinking',thinking:'Synthetic available reasoning.'},{type:'text',text:'Synthetic ordinary answer.'}]}}]));
+  const id=(await app.ingest.importSource('claude-code',source)).recordingId;
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await open(page,id);
+  const reasoning=page.locator('.prose-reasoning'),toggle=reasoning.locator('.prose-label');
+  await expect(toggle).toHaveAttribute('aria-expanded','true');
+  const detail=async(value:string)=>{
+    await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+    await page.getByRole('dialog',{name:'Workspace settings',exact:true}).getByRole('tab',{name:'Reading',exact:true}).click();
+    await page.getByLabel('Exposed reasoning detail',{exact:true}).selectOption(value);
+    await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
+  };
+  await detail('collapsed');await expect(toggle).toHaveAttribute('aria-expanded','false');
+  await expect(page.locator('.prose-assistant')).toContainText('Synthetic ordinary answer.');
+  await detail('expanded');await expect(toggle).toHaveAttribute('aria-expanded','true');
+  await toggle.press('Enter');await expect(toggle).toHaveAttribute('aria-expanded','false');
+  await detail('collapsed');await detail('expanded');
+  await expect(toggle).toHaveAttribute('aria-expanded','false');
+  await page.reload();await expect(toggle).toHaveAttribute('aria-expanded','false');
+  await toggle.press('Enter');await expect(toggle).toHaveAttribute('aria-expanded','true');
 });
