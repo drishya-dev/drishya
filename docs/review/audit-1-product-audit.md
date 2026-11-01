@@ -172,9 +172,17 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 | Z4 | Narrowing to 600 px with the file rail open leaves the rail over the text. | Medium | UI-8. |
 | Z5 | An agent named by its model id wraps mid-name in the toolbox (`claude-sonnet-5-` / `5`). | Low | UI-8. |
 
+## File peek and the session panel
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| K1 | A Markdown file over the limit opened to an apology and a link: `docs/STATUS.md` (1,565 lines) showed no content at all. | High | Fixed: it opens as source with a one-line note. The Workspace view has the same message and one more click (UI-8). |
+| K2 | `Actions` wrapped under its own icon in the peek's title bar. | Low | Fixed. |
+| K3 | The session panel is complete and readable; `Harness`, `Recording`, `Observation` and the usage notes are our vocabulary. | Low | UI-21. |
+
 ## Not yet walked
 
-This is the first batch, not the end of the audit. **Still to walk:** a live session as it runs; Review questions, Saved moments, Export, Review packet and Prompt overview; the file peek beside the agent; side-by-side compare; every toolbox state; the A2 interaction inventory (right click, drag, resize and every keyboard route, per component) as a written table; the same walk on a Codex session at 600 px; light themes. AUDIT-1 stays open until these are done.
+This is the first batch, not the end of the audit. **Still to walk:** a live session as it runs; Review questions, Saved moments, Export, Review packet and Prompt overview; side-by-side compare; every toolbox state; the A2 interaction inventory (right click, drag, resize and every keyboard route, per component) as a written table; the same walk on a Codex session at 600 px; light themes. AUDIT-1 stays open until these are done.
 
 ## Tools
 
