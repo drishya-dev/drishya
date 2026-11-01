@@ -22,6 +22,13 @@
 .plan-pinned .plan-list li {transition:color .15s ease;}
 .plan-pinned .plan-list li .plan-text {transition:text-decoration-color .15s ease;}
 .plan-pinned-more {justify-self:start;font:11px/1.5 var(--sans);color:var(--t3);}
+.history .plan-pinned {display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+/* Current content is readable at its arrival; prior revisions stay quiet receipts. */
+.connected-workspace .history .op.op-plan:has(.plan-card:not(.plan-earlier)) {flex:0 1 min(620px,100%);max-width:100%;max-height:none;}
+.history .op-plan:has(.plan-card:not(.plan-earlier))>.op-body {max-height:none;mask-image:none;-webkit-mask-image:none;}
+:root[data-experience] .connected-workspace .history .op.op-plan:not(.expanded):not([data-hover-reading]):has(.plan-card:not(.plan-earlier)) {max-height:none;}
+.plan-card>.plan-list {max-block-size:360px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;}
+.plan-document {max-block-size:360px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;}
 @media(prefers-reduced-motion:reduce){.plan-pinned .plan-list li,.plan-pinned .plan-list li .plan-text{transition:none;}}
 
 /* Plan documents need reading width; revision receipts keep their compact allocation. */

@@ -25,6 +25,60 @@ async function open(page: Page, id: string, at?: number) {
   await expect(page.getByRole('region', { name: 'Captured work' })).toBeVisible();
 }
 
+for (const width of [600, 1440]) test(`reading choices survive new plan data, replay and reload at ${width}px`, async ({page}) => {
+  await page.setViewportSize({width, height: 960});
+  const session = `disclosures-${width}`, source = join(dir, session + '.jsonl');
+  writeFileSync(source, serialize([planPrompt(dir, session), ...planRows(dir, session, 0),
+    {type:'assistant',uuid:'mcp-disclosure-call',sessionId:session,message:{role:'assistant',content:[{type:'tool_use',id:'probe-call',name:'mcp__fixture__probe',input:{value:'Synthetic visible tool'}}]}},
+    {type:'user',uuid:'mcp-disclosure-result',sessionId:session,message:{role:'user',content:[{type:'tool_result',tool_use_id:'probe-call',content:'Synthetic visible result'}]}}
+  ]));
+  const id = (await app.ingest.importSource('claude-code', source)).recordingId;
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page, id);
+  const checklist = page.locator('.plan-card[role=group]');
+  await expect(checklist.locator('li')).toHaveCount(10);
+  await expect(checklist.getByRole('button', {name:'Show all 12 items · 2 more',exact:true})).toBeVisible();
+  const serverTools = page.locator('.md-server').filter({has:page.locator('summary span', {hasText:'fixture'})});
+  const tools = page.getByRole('button',{name:'Tools',exact:true});
+  if (await tools.isVisible()) await tools.click();
+  await expect(serverTools).toHaveAttribute('open','');
+  await expect(serverTools.getByRole('button', {name:/probe/})).toBeVisible();
+  const inventory = page.locator('.tool-list');
+  await expect(inventory).toHaveAttribute('open','');
+  await inventory.locator('summary').click();
+  await serverTools.locator('summary').click();
+  await checklist.getByRole('button',{name:'Collapse plan',exact:true}).press('Enter');
+  await expect(checklist.locator('li')).toHaveCount(0);
+  appendFileSync(source, serialize(planRows(dir, session, 1))); await app.ingest.sync(id);
+  await expect(checklist).toContainText('Revision 2');
+  await expect(checklist.locator('li')).toHaveCount(0);
+  await page.reload(); await page.locator('.history').waitFor();
+  await expect(checklist.getByRole('button',{name:'Show plan',exact:true})).toBeVisible();
+  await expect(checklist.locator('li')).toHaveCount(0);
+  await expect(inventory).not.toHaveAttribute('open');
+  await expect(serverTools).not.toHaveAttribute('open');
+  const projection = app.projection(id), first = projection.operations.find(op=>op.kind==='plan')!;
+  await open(page,id,first.startSequence+1);
+  await expect(checklist.getByRole('button',{name:'Show plan',exact:true})).toBeVisible();
+  await expect(checklist).toContainText('Revision 1');
+  await checklist.getByRole('button',{name:'Show plan',exact:true}).press('Enter');
+  await expect(checklist.locator('li')).toHaveCount(10);
+  await expect(checklist.locator('li.plan-completed')).toHaveCount(0);
+  await checklist.getByRole('button',{name:'Show all 12 items · 2 more',exact:true}).press('Enter');
+  await expect(checklist.locator('li')).toHaveCount(12);
+  await open(page,id); await expect(checklist.locator('li')).toHaveCount(12);
+  await page.reload(); await expect(checklist.locator('li')).toHaveCount(12);
+  await page.locator('.workspace-menu > summary[aria-label="More workspace options"]').click();
+  await expect(page.locator('.usage-peek')).toHaveAttribute('open','');
+  await expect(page.locator('.session-identity')).toHaveAttribute('open','');
+  await page.locator('.usage-peek summary').click();
+  await page.locator('.session-identity summary').click();
+  await page.reload();
+  await page.locator('.workspace-menu > summary[aria-label="More workspace options"]').click();
+  await expect(page.locator('.usage-peek')).not.toHaveAttribute('open');
+  await expect(page.locator('.session-identity')).not.toHaveAttribute('open');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+});
+
 for (const width of [600, 1440]) test(`thirteen captured revisions keep one live checklist and every earlier list readable at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 960 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -41,19 +95,20 @@ for (const width of [600, 1440]) test(`thirteen captured revisions keep one live
     await app.ingest.sync(id);
     await expect(pinned).toContainText(`Plan · ${revision} of 12 done · revision ${revision + 1}`);
     await expect(pinned).toHaveAttribute('data-acceptance-stable', 'yes');
-    await expect(pinned.locator('li')).toHaveCount(8);
-    if (revision < PLAN_ITEMS) await expect(pinned.locator('li.plan-in_progress')).toContainText(planItems(revision)[revision]!.content);
-    await expect(page.locator('article.op-plan .plan-list')).toHaveCount(0);
+    await expect(page.locator('.plan-card[role=group] li')).toHaveCount(10);
+    if (revision < PLAN_ITEMS) await expect(page.locator('.plan-card[role=group] li.plan-in_progress')).toContainText(planItems(revision)[revision]!.content);
+    await expect(page.locator('article.op-plan .plan-list')).toHaveCount(1);
     await expect(page.getByRole('group', { name: 'Plan checklist' })).toHaveCount(1);
   }
-  const showAll = pinned.getByRole('button', { name: 'Show all 12', exact: true });
+  const checklist = page.locator('.plan-card[role=group]');
+  const showAll = checklist.getByRole('button', { name: 'Show all 12 items · 2 more', exact: true });
   await showAll.focus(); await showAll.press('Enter');
-  await expect(pinned.locator('li')).toHaveCount(12);
-  await expect(pinned.locator('li.plan-completed')).toHaveCount(12);
-  await expect(pinned.locator('.plan-text').first()).toHaveCSS('text-decoration-line', 'line-through');
-  await expect(pinned.getByRole('button', { name: 'Show fewer', exact: true })).toHaveAttribute('aria-expanded', 'true');
-  await pinned.getByRole('button', { name: 'Show fewer', exact: true }).press('Enter');
-  await expect(pinned.locator('li')).toHaveCount(8);
+  await expect(checklist.locator('li')).toHaveCount(12);
+  await expect(checklist.locator('li.plan-completed')).toHaveCount(12);
+  await expect(checklist.locator('.plan-text').first()).toHaveCSS('text-decoration-line', 'line-through');
+  await expect(checklist.getByRole('button', { name: 'Show fewer', exact: true })).toHaveAttribute('aria-expanded', 'true');
+  await checklist.getByRole('button', { name: 'Show fewer', exact: true }).press('Enter');
+  await expect(page.locator('.plan-card[role=group] li')).toHaveCount(10);
 
   const cards = page.locator('article.op-plan');
   await expect(cards).toHaveCount(PLAN_REVISIONS);
@@ -92,7 +147,7 @@ for (const width of [600, 1440]) test(`thirteen captured revisions keep one live
     await expect(pinned).toHaveCount(1);
     await expect(pinned).toContainText(`Plan · ${revision} of 12 done`);
     await expect(pinned).toHaveAttribute('title', `The agent's newest captured todo list, revision ${revision + 1} of ${revision + 1}`);
-    await expect(page.locator('article.op-plan .plan-list')).toHaveCount(0);
+    await expect(page.locator('article.op-plan .plan-list')).toHaveCount(1);
   }
   await open(page, id, 0); await expect(pinned).toHaveCount(0);
   await open(page, id); await expect(pinned).toContainText('Plan · 12 of 12 done · revision 13');
@@ -116,7 +171,7 @@ test('unknown and empty captured states use a neutral mark, retain literal acces
   const id = (await app.ingest.importSource('claude-code', source)).recordingId;
   await page.setViewportSize({ width: 1024, height: 960 });
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page, id);
-  const pinned = page.locator('.turn .plan-pinned');
+  const pinned = page.locator('.plan-card[role=group]');
   await expect(pinned).toContainText('0 of 3 done');
   const unfamiliar = pinned.locator('li').filter({ hasText: 'Still unfamiliar' });
   const missing = pinned.locator('li').filter({ hasText: 'Missing state' });
@@ -145,20 +200,20 @@ for (const width of [600, 1440]) test(`native task results update one checklist 
  writeFileSync(source,serialize([planPrompt(dir,session),...first,...second]));
  const id=(await app.ingest.importSource('claude-code',source)).recordingId;
  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page,id);
- const pinned=page.locator('.turn .plan-pinned'); await expect(pinned).toHaveCount(1);
+ const pinned=page.locator('.plan-card[role=group]'); await expect(pinned).toHaveCount(1);
  await expect(pinned.locator('li')).toHaveCount(2); await expect(pinned.locator('.plan-mark')).toHaveText(['·','·']);
- await pinned.evaluate(el=>el.setAttribute('data-stable-native','yes'));
+ const progress=page.locator('.turn .plan-pinned'); await progress.evaluate(el=>el.setAttribute('data-stable-native','yes'));
  for(let revision=0;revision<12;revision++){
   const taskId=String(revision%2+1),status=revision<10?'in_progress':'completed';
   appendFileSync(source,serialize(pair('TaskUpdate',{taskId,status,...(revision===10?{subject:'Renamed checkpoint'}:{})},
    {success:true,taskId,updatedFields:revision===10?['status','subject']:['status'],statusChange:{from:'in_progress',to:status}})));
   await app.ingest.sync(id);
-  await expect(pinned).toContainText(`revision ${revision+3}`);
-  await expect(pinned).toHaveAttribute('data-stable-native','yes');
+  await expect(pinned).toContainText(`Revision ${revision+3}`);
+  await expect(progress).toHaveAttribute('data-stable-native','yes');
  }
  await expect(pinned).toContainText('2 of 2 done'); await expect(pinned).toContainText('Renamed checkpoint');
  await expect(pinned.locator('li')).toHaveCount(2);
- await expect(page.locator('article.op-plan .plan-list')).toHaveCount(0);
+ await expect(page.locator('article.op-plan .plan-list')).toHaveCount(1);
  const receipt=page.locator('article.op-plan').first();
  await expect(receipt).toHaveCSS('border-top-width','0px');
  await expect(receipt.locator('button.op-expand')).toBeVisible();

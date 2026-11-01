@@ -5,6 +5,7 @@ import { useApp } from '../state.ts';
 import './plan-checklist.css';
 import { Markdown } from '../lib/markdown.tsx';
 import { ArtifactReader } from './ArtifactReader.tsx';
+import {useDisclosureChoice} from './Disclosure.tsx';
 
 const threadCache = new WeakMap<Projection, Map<string, PlanPosition>>();
 const threadsOf = (projection: Projection) => {
@@ -17,7 +18,9 @@ const MARK: Record<string, string> = { completed: '✓', in_progress: '▸', pen
 const WORD = { added: 'added', started: 'started', completed: 'completed', reopened: 'reopened' } as const;
 
 function Items({ revision, limit }: { revision: PlanRevision; limit?: number }) {
-  const shown = limit ? revision.items.slice(0, limit) : revision.items;
+  const focus = Math.max(0, revision.items.findIndex(item => item.status !== 'completed'));
+  const from = limit ? Math.min(Math.max(0, focus - 2), Math.max(0, revision.items.length - limit)) : 0;
+  const shown = limit ? revision.items.slice(from, from + limit) : revision.items;
   return <>
     <ul className="plan-list">{shown.map((item, i) => <li key={item.id ?? i} className={`plan-${item.status}`} data-change={item.change}>
       <span className="plan-mark" aria-hidden="true">{MARK[item.status] ?? '·'}</span>
@@ -37,8 +40,13 @@ const summary = (revision: PlanRevision) => {
 /** The agent's rewritten todo list as one evolving checklist. Captured items only; "changed" is a comparison with the revision before. */
 export function PlanChecklist({ op, full = false }: { op: Operation; full?: boolean }) {
   const projection = useApp((s) => s.projection);
-  const position = useMemo(() => (projection ? threadsOf(projection).get(op.id) : undefined), [projection, op.id]);
+  const mode = useApp(s => s.mode), step = useApp(s => s.step);
+  const position = useMemo(() => (projection ? (mode === 'replay'
+    ? planThreads(projection, candidate => (candidate.detail.kind === 'plan' && candidate.detail.scope ? candidate.endSequence ?? Infinity : candidate.startSequence) < step)
+    : threadsOf(projection)).get(op.id) : undefined), [projection, op.id, mode, step]);
   const [at, setAt] = useState<number>();
+  const [open, setOpen] = useDisclosureChoice(`plan/${position?.thread.revisions[0]?.operationId ?? op.id}`);
+  const [all, setAll] = useDisclosureChoice(`plan-items/${position?.thread.revisions[0]?.operationId ?? op.id}`, false);
   if (op.detail.kind === 'plan' && op.detail.document) {
     const doc = op.detail.document;
     return <section className="plan-card plan-document" aria-label={doc.source === 'file' ? 'Captured plan file' : 'Proposed plan'}><small className="plan-basis">{doc.source === 'file' ? 'Captured file · plan-path convention' : 'Captured proposal'} · not an approval</small>{doc.truncated ? <ArtifactReader id={doc.artifactId} kind="output" fallback={doc.text} /> : <Markdown text={doc.text} document />}</section>;
@@ -51,51 +59,37 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
   const revision = thread.revisions[shownIndex]!;
   const heading = <span className="plan-head"><b>Revision {shownIndex + 1}</b> · {revision.done} of {revision.total}{revision.omittedItems ? ' shown' : ''} done</span>;
 
-  // Modern pins the lead agent's newest list under the prompt (TurnBlock), so in the stream every
-  // revision of it is one line; the retained UIs keep the list where it arrived.
-  const pinned = !full && thread.lead && typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern';
-  if (!full && (!latest || pinned)) {
+  // Earlier revisions duplicate the current checklist. Keep their own changes
+  // readable, while the newest captured revision owns the actual list.
+  if (!full && !latest) {
     // An earlier list in the same turn: one line saying what it changed, not the list again.
     return <div className="plan-card plan-earlier">{heading}{summary(revision) && <small className="plan-delta">{summary(revision)}</small>}</div>;
   }
   return <div className="plan-card" role="group" aria-label="Plan checklist">
     <div className="plan-bar">
       {heading}
+      {!full && <button type="button" className="link" aria-label={open ? 'Collapse plan' : 'Show plan'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Collapse' : 'Show plan'}</button>}
       {full && thread.revisions.length > 1 && <span className="plan-steps">
         <button type="button" className="link" disabled={shownIndex === 0} onClick={() => setAt(shownIndex - 1)} aria-label="Earlier revision">‹</button>
         <button type="button" className="link" disabled={shownIndex >= index} onClick={() => setAt(shownIndex + 1)} aria-label="Later revision">›</button>
       </span>}
     </div>
-    <Items revision={revision} limit={full ? undefined : 10} />
+    {(full || open) && <><Items revision={revision} limit={full || all ? undefined : 10} />
+      {!full && revision.items.length > 10 && <button type="button" className="link plan-pinned-more" aria-expanded={all} onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${revision.items.length} items · ${revision.items.length - 10} more`}</button>}
+    </>}
     {!!revision.omittedItems && <small className="plan-basis">{revision.omittedItems} additional tasks outside the bounded list; recorded result retained in details.</small>}
     {full && revision.removed.length > 0 && <small className="plan-removed">Left out of this revision: {revision.removed.join(' · ')}</small>}
     <small className="plan-basis">Captured task facts, compared with the revision before</small>
   </div>;
 }
 
-const PINNED_LIMIT = 8;
-
 /**
- * CONTENT-4: the turn's checklist, pinned under the prompt and rewritten in place as the agent updates it.
- * It is the lead agent's newest captured list as of the viewed step; longer lists show a window around the work in progress.
+ * The prompt keeps a progress reference; the current captured revision below
+ * owns the list. This avoids both duplicate text and an offscreen-only home.
  */
 export function PinnedPlanList({ plan }: { plan: PinnedPlan }) {
-  const [all, setAll] = useState(false);
-  const long = plan.items.length > PINNED_LIMIT;
-  let items = plan.items.map((item, i) => ({ item, i }));
-  if (long && !all) {
-    const focus = Math.max(0, plan.items.findIndex((item) => item.status === 'in_progress'));
-    const from = Math.min(Math.max(0, focus - 2), plan.items.length - PINNED_LIMIT);
-    items = items.slice(from, from + PINNED_LIMIT);
-  }
-  return <div className="plan-pinned" role="group" aria-label="Plan checklist" title={`The agent's newest captured todo list, revision ${plan.revision} of ${plan.revisions}`} onClick={(e) => e.stopPropagation()}>
+  return <div className="plan-pinned" title={`The agent's newest captured todo list, revision ${plan.revision} of ${plan.revisions}`} onClick={(e) => e.stopPropagation()}>
     <span className="plan-head"><b>Plan</b> · {plan.done} of {plan.total}{plan.omittedItems ? ' shown' : ''} done{plan.revisions > 1 ? ` · revision ${plan.revision}` : ''}</span>
-    <ul className="plan-list">{items.map(({ item, i }) => <li key={item.id ?? i} className={`plan-${item.status}`}>
-      <span className="plan-mark" aria-hidden="true">{MARK[item.status] ?? '·'}</span>
-      <span className="plan-text">{item.text}</span>
-      <span className="sr-only"> ({item.status ? item.status.replace('_', ' ') : 'status not recorded'})</span>
-    </li>)}</ul>
-    {!!plan.omittedItems && <small className="plan-basis">{plan.omittedItems} additional tasks outside the bounded list; recorded result retained in details.</small>}
-    {long && <button type="button" className="link plan-pinned-more" aria-expanded={all} onClick={() => setAll((v) => !v)}>{all ? 'Show fewer' : `Show all ${plan.items.length}`}</button>}
+    <button type="button" className="link plan-pinned-more" onClick={() => window.dispatchEvent(new CustomEvent('drishya-reading-navigate', {detail: {type: 'operation', id: plan.operationId}}))}>Go to checklist</button>
   </div>;
 }

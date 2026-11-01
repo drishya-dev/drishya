@@ -4,7 +4,9 @@ import { useApp } from '../state.ts';
 /** Light dismissal for utility disclosures; content readers remain deliberate. */
 export function useDismissMenus() {
   useEffect(() => {
-    const menus = '.workspace-menu, .usage-peek, .prompt-menu, .permission-policy, .session-segments, .review-tools, .desk-options, .session-identity';
+    // Usage and identity are persistent reading disclosures (UI-17), not menus.
+    // Hiding the outer utility menu must not overwrite their explicit choices.
+    const menus = '.workspace-menu, .prompt-menu, .permission-policy, .session-segments, .review-tools, .desk-options';
     const selectors = menus.split(', ').map(selector => `${selector}[open]`).join(', ');
     const motion = (menu: HTMLDetailsElement, pointer: boolean) => {
       menu.toggleAttribute('data-pointer-menu', pointer && useApp.getState().motion && !useApp.getState().lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches);
