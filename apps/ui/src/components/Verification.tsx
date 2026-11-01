@@ -8,16 +8,16 @@ import type { FixChain, ReadBeforeWrite, VerificationTrail } from '@drishya/scen
 import { CapturedTime } from './common.tsx';
 import { useApp } from '../state.ts';
 
-const VERDICT: Record<VerificationTrail['verdict'], string> = {
-  'no-check-recorded': 'No test run was recorded after this change.',
-  'checked-after': 'A test run was recorded after this change.',
-  'changed-after-last-check': 'The last recorded test run predates a later change to this file.',
+const VERDICT: Record<VerificationTrail['verdict'], string | undefined> = {
+  'no-check-recorded': 'No tests ran after this change in this session.',
+  'checked-after': undefined,
+  'changed-after-last-check': 'The file changed again after the last test run.',
 };
 
 const CAVEAT: Record<VerificationTrail['verdict'], string> = {
-  'no-check-recorded': 'That means none in this capture, not that none was run.',
-  'checked-after': 'Running later does not show that the run exercises this change.',
-  'changed-after-last-check': 'The latest version of the file has no recorded run after it.',
+  'no-check-recorded': 'Tests run outside this session would not show here.',
+  'checked-after': 'These ran later in the session. That does not show they exercised this change.',
+  'changed-after-last-check': 'The latest version of the file has no test run after it.',
 };
 
 export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (operationId: string) => void }) {
@@ -56,8 +56,8 @@ export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (ope
   const lastOperation = operations?.find(operation => operation.id === last?.operationId);
   return (
     <section className={`verify verify-${trail.verdict}`} aria-label="Test runs after this change">
-      <h4>Test runs after this change{trail.totalChecks > 1 && <small> · {trail.totalChecks} runs</small>}</h4>
-      <p className="verify-verdict" title={CAVEAT[trail.verdict]}>{VERDICT[trail.verdict]}</p>
+      <h4 title={CAVEAT[trail.verdict]}>Test runs after this change{trail.totalChecks > 1 && <small> · {trail.totalChecks}</small>}</h4>
+      {VERDICT[trail.verdict] && <p className="verify-verdict" title={CAVEAT[trail.verdict]}>{VERDICT[trail.verdict]}</p>}
       {last && (
         <p className="small">
           Latest:{' '}
@@ -65,24 +65,27 @@ export function VerificationPanel({ op, onOpen }: { op: Operation; onOpen?: (ope
           {(lastOperation?.endTime ?? lastOperation?.startTime) && <CapturedTime iso={(lastOperation?.endTime ?? lastOperation?.startTime)!} />}
           {last.detail && <span className="muted"> · {last.detail}</span>}
           {last.status === 'error' && <span className="bad"> · failed</span>}
-          {last.namesChangedFile && <span className="muted"> · a captured failure names this file</span>}
+          {last.namesChangedFile && <span className="muted"> · a failure names this file</span>}
           {!last.sameAgent && <span className="muted"> · run by another agent</span>}
         </p>
       )}
-      <small className="muted">Recorded order · coverage not established</small>
-      {trail.laterChanges.length > 0 && (
-        <div className="small">
-          Later changes to {trail.paths.length === 1 ? 'this file' : 'these files'}:
-          <ul>
-            {trail.laterChanges.map((c) => (
-              <li key={c.operationId}>
-                <button className="link verify-open" onClick={() => open(c.operationId)}>{c.title}</button>
-                {last && c.sequence > last.sequence && <span className="muted"> · after the last recorded run</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {trail.laterChanges.length > 0 && (trail.paths.length === 1
+        // The same file each time, so the titles would be identical lines: position is what differs.
+        ? <p className="small verify-later">
+            <span className="muted">Changed again:</span>
+            {trail.laterChanges.map((c, index) => <button key={c.operationId} className="link verify-open" title={`${c.title}${last && c.sequence > last.sequence ? ' · after the last test run' : ''}`} aria-label={`Later change ${index + 1}: ${c.title}`} onClick={() => open(c.operationId)}>{index + 1}</button>)}
+          </p>
+        : <div className="small">
+            Later changes to these files:
+            <ul>
+              {trail.laterChanges.map((c) => (
+                <li key={c.operationId}>
+                  <button className="link verify-open" onClick={() => open(c.operationId)}>{c.title}</button>
+                  {last && c.sequence > last.sequence && <span className="muted"> · after the last test run</span>}
+                </li>
+              ))}
+            </ul>
+          </div>)}
     </section>
   );
 }

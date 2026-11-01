@@ -24,7 +24,7 @@ test('keyboard navigation opens exact captured file work and keeps underlying re
   await expect(reading).toHaveCount(0);
   const op = page.locator('article.op-edit').first();
   await expandCard(op);
-  await op.getByRole('button', { name: 'Open provenance and file states' }).press('Enter');
+  await op.getByRole('button', { name: 'Open details' }).press('Enter');
   const inspector = page.getByRole('complementary', { name: 'Operation detail' });
   await expect(inspector).toBeVisible();
   await page.keyboard.press('Control+k');

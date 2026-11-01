@@ -916,16 +916,16 @@ function ExpandedMaterial({ op }: { op: Operation }) {
   switch (d.kind) {
     case 'read':
       return <div className="op-expanded read-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.path} · historical source at this action</div><FileReadingActions path={d.path} op={op}/>
+        <FileReadingActions path={d.path} op={op}/>
         <ArtifactReader key={d.excerptArtifactId} id={d.excerptArtifactId} kind="code" startLine={d.startLine} path={d.path} provenance />
       </div>;
     case 'edit':
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.path} · captured patch{d.reconstruction !== 'complete' ? ' · after-state not verified' : ''}</div>
+        {d.reconstruction !== 'complete' && <div className="material-context">The file after this edit could not be verified</div>}
         <FileReadingActions path={d.path} op={op}/><ReadBeforePanel op={op} />
         <BeforeTurnPanel op={op} />
         {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ArtifactReader id={op.artifactIds.find(id => id.endsWith('_after'))} kind="code" path={d.path} provenance /> : <p className="muted">No source bytes or patch captured.</p>}
-        <button className="material-more" onClick={() => select(op.id)}>Open provenance and file states</button>
+        <button className="material-more" onClick={() => select(op.id)}>Open details</button>
       </div>;
     case 'search':
       return <div className="op-expanded search-material" onClick={(e) => e.stopPropagation()}>

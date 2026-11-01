@@ -29,12 +29,12 @@ test('map and verification failures offer local retry without replacing captured
   await expect(page.locator('.history')).toHaveAttribute('data-recovery-reference', firstHistory!);
   const edit = page.locator('article.op-edit').last();
   await expandCard(edit);
-  await edit.getByRole('button', { name: 'Open provenance and file states' }).press('Enter');
+  await edit.getByRole('button', { name: 'Open details' }).press('Enter');
   const detail = page.getByRole('complementary', { name: 'Operation detail' });
   await expect(detail.getByRole('button', { name: 'Retry test verification' })).toBeVisible();
   verificationFails = false;
   await detail.getByRole('button', { name: 'Retry test verification' }).click();
-  await expect(detail.getByRole('region', { name: 'Test runs after this change' })).toContainText('Recorded order');
+  await expect(detail.getByRole('region', { name: 'Test runs after this change' })).toContainText('Test runs after this change');
   await expect(detail.getByRole('button', { name: 'Retry test verification' })).toHaveCount(0);
   await expect(page.locator('.history')).toHaveAttribute('data-recovery-reference', firstHistory!);
 });
