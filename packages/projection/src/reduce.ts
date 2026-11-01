@@ -215,7 +215,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   };
   const correlationOwner = (o: Observation) => opts.lineage?.recordingIds.includes(o.recordingId) ? opts.lineage.currentRecordingId : o.recordingId;
   const agentKey = (o: Observation) => `${correlationOwner(o)}.${o.agentId}`;
-  const callKey = (o: Observation) => `${correlationOwner(o)}.${o.agentId}/${o.operationId ?? o.id}`;
+  // Calls correlate by owner and native operation id; a proven lineage shares one owner, an ordinary recording is unchanged.
+  const callKey = (o: Observation, operationId = o.operationId ?? o.id) => `${correlationOwner(o)}.${operationId}`;
   const step = () => timeline.length;
 
   const ensureAgent = (o: Observation): Agent => {
@@ -368,8 +369,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         case 'item.completed': {
           const item = { ...p, command: text(p.command) } as ItemPayload;
           const parentId = o.correlation ? `${o.recordingId}.${o.correlation.operationId}` : undefined;
+          const groupId = o.correlation ? callKey(o, o.correlation.operationId) : undefined;
           let parent = parentId ? ops.get(`${parentId}#script`) ?? ops.get(parentId) : undefined;
-          const targets = parentId ? (opGroups.get(parentId) ?? []).map(id => ops.get(id)!) : [];
+          const targets = groupId ? (opGroups.get(groupId) ?? []).map(id => ops.get(id)!) : [];
           const scriptParent = () => {
             if (!parentId || !targets.some(st => st.nestedPatch)) return parent;
             const found = ops.get(`${parentId}#script`);
@@ -396,7 +398,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               completeOp(wrapper, result.observation, result.payload, { text, rel, addArtifact, knownFull, link, fileKey });
             }
             for (const edit of edits) { edit.op.parentOperationId = wrapper.op.id; dirtyOperations.add(edit.op.id); }
-            opGroups.get(parentId)!.push(wrapper.op.id);
+            opGroups.get(groupId!)!.push(wrapper.op.id);
             return wrapper;
           };
           const relate = (op: Operation) => {
