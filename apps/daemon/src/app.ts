@@ -64,14 +64,21 @@ export class App {
     } finally { this.deleting.delete(id); }
   }
 
+  /** Historical identity only; controller, grants and current files keep the physical selected id. */
+  readingId(id: string): string {
+    if (id.includes('+')) return id;
+    this.recording(id);
+    return this.store.lineageView(id)?.recordingIds.join('+') ?? id;
+  }
+
   /** A projection for one recording, or several joined with "+" (combined view). */
   projection(idOrIds: string): Projection {
-    const ids = idOrIds.split('+').filter(Boolean);
+    const ids = this.readingId(idOrIds).split('+').filter(Boolean);
     for (const id of ids) this.recording(id);
     return this.ingest.combinedProjection(ids);
   }
   paged(idOrIds: string): boolean {
-    const ids = idOrIds.split('+');
+    const ids = this.readingId(idOrIds).split('+');
     return ids.reduce((count, id) => count + this.recording(id).observationCount, 0) > 10_000 ||
       ids.reduce((bytes, id) => bytes + this.store.sourceBytes(id), 0) > 32 * 1024 * 1024;
   }
@@ -120,7 +127,7 @@ export class App {
    * `refresh` rebuilds it.
    */
   async graph(idOrIds: string, refresh = false): Promise<RepoGraph> {
-    const ids = idOrIds.split('+');
+    const ids = this.readingId(idOrIds).split('+');
     const rec = this.recording(ids[0]!);
     const large = this.paged(idOrIds);
     const projection = large ? (await this.history.page(idOrIds, { count: 1 })).projection : this.projection(idOrIds);
@@ -169,7 +176,7 @@ export class App {
   }
 
   async exportBundle(idOrIds: string): Promise<ReplayBundle> {
-    const ids = [...new Set(idOrIds.split('+').filter(Boolean))];
+    const ids = [...new Set(this.readingId(idOrIds).split('+').filter(Boolean))];
     const recordings = ids.map((id) => this.recording(id));
     const projection = this.projection(idOrIds);
     const artifactText: Record<string, string> = {};
@@ -185,7 +192,7 @@ export class App {
       version: 1,
       exportedAt: new Date().toISOString(),
       privacyPolicyVersion: PRIVACY_POLICY_VERSION,
-      recording: selectionSummary(idOrIds, recordings),
+      recording: { ...selectionSummary(idOrIds, recordings), observationCount: projection.observationCount },
       projection,
       graph: { ...graph, root: '' },
       artifactText,

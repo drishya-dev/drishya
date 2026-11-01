@@ -5,6 +5,7 @@ import { EventEmitter } from 'node:events';
 import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { claudeAdapter } from '@drishya/adapter-claude';
+import { claudeContinuation } from '../../adapter-claude/src/continuation.ts';
 import { codexAdapter } from '@drishya/adapter-codex';
 import {
   headRecords,
@@ -189,7 +190,7 @@ export class Ingestor extends EventEmitter {
   }
 
   /** Imports (or resumes importing) a journal and its companions. Idempotent. */
-  async importSource(adapterId: string, mainPath: string, opts: { title?: string } & SyncOptions = {}): Promise<ImportResult> {
+  async importSource(adapterId: string, mainPath: string, opts: { title?: string; lineageSeen?: Set<string>; lineageSources?: string[] } & SyncOptions = {}): Promise<ImportResult> {
     const adapter = this.adapter(adapterId);
     const path = resolve(mainPath);
     await stat(path); // fail early, before creating a recording
@@ -198,7 +199,26 @@ export class Ingestor extends EventEmitter {
     this.store.upsertRecording({ id: recordingId, adapterId, harness: adapter.descriptor.harness, sourcePath: path, title });
     this.store.upsertSource({ id: sourceIdFor(path), recordingId, path, role: 'main', cursor: initialCursor() });
     const r = await this.sync(recordingId, { turnBytes: opts.turnBytes });
+    if (adapterId === 'claude-code') await this.refreshLineage(recordingId, opts.lineageSeen ?? new Set(), opts.lineageSources);
     return { recordingId, ...r };
+  }
+
+  /** Derived links are read from discovered native files; importing an ancestor never grants current-workspace access. */
+  private async refreshLineage(id: string, seen: Set<string>, paths?: string[]): Promise<void> {
+    if (seen.has(id) || seen.size >= 16) return;
+    seen.add(id);
+    const rec = this.store.getRecording(id);
+    if (!rec?.sourcePath) return;
+    paths ??= (await this.discover('claude-code')).map(source => source.path);
+    const link = await claudeContinuation(rec.sourcePath, paths);
+    if (!link) return;
+    const candidates = link.candidatePaths.map(path => recordingIdFor('claude-code', path));
+    const parent = link.parentPath ? recordingIdFor('claude-code', link.parentPath) : undefined;
+    this.store.putLineage({ childRecordingId: id, parentRecordingId: parent, status: link.status, basis: 'native-logical-parent', childSourceId: sourceIdFor(rec.sourcePath), boundaryRecordId: link.boundaryRecordId, logicalParentRecordId: link.logicalParentRecordId, candidateRecordingIds: candidates, sharedMessageRecords: link.sharedMessageRecords });
+    if (parent && link.parentPath && !seen.has(parent)) {
+      if (!this.store.getRecording(parent)) await this.importSource('claude-code', link.parentPath, { lineageSeen: seen, lineageSources: paths });
+      else await this.refreshLineage(parent, seen, paths);
+    }
   }
 
   /**
@@ -222,7 +242,9 @@ export class Ingestor extends EventEmitter {
         // Parse from the beginning rather than prime with future calls/settings from the old cursor.
         this.parsers.set(source.id, adapter.createParser({ recordingId, sourceId: source.id, sourcePath: source.path, agentId: source.agentId }));
       }
-      return this.syncUnlocked(recordingId, { acceptUnterminated: false });
+      const result = await this.syncUnlocked(recordingId, { acceptUnterminated: false });
+      if (adapter.descriptor.id === 'claude-code') await this.refreshLineage(recordingId, new Set());
+      return result;
     });
   }
 
@@ -504,6 +526,8 @@ export class Ingestor extends EventEmitter {
       projection = reduce(recordingId, this.store.orderedObservations(recordingId), this.store.blobs, { adapters: this.descriptors, live, ordered: true });
       if (count <= 10_000) this.store.putProjection(recordingId, REDUCER_VERSION, count, JSON.stringify(projection));
     }
+    const lineage = this.store.lineageView(recordingId);
+    if (lineage?.recordingIds.length === 1) projection.lineage = lineage;
     this.cacheProjection(recordingId, count, projection);
     return projection;
   }
@@ -518,12 +542,13 @@ export class Ingestor extends EventEmitter {
     const roots = unique.map((id) => this.store.getRecording(id)?.workspaceRoot?.replace(/\\/g, '/').replace(/\/+$/, ''));
     const mixedRoots = roots.some((root) => !root) || new Set(roots.map((root) => /^[a-z]:\//i.test(root!) ? root!.toLowerCase() : root)).size !== 1;
     const key = unique.join('+');
-    const cacheKey = `${key}\u0000${roots.join('\u0000')}`;
+    const lineage = this.store.lineageForIds(unique);
+    const cacheKey = `${key}\u0000${roots.join('\u0000')}\u0000${JSON.stringify(lineage?.links)}`;
     const count = unique.reduce((s, id) => s + this.store.countObservations(id), 0);
     const cached = this.projectionCache.get(cacheKey);
     if (cached && cached.count === count) return cached.projection;
     const live = unique.some((id) => this.store.getRecording(id)?.live);
-    const projection = reduce(key, this.store.orderedObservations(unique), this.store.blobs, { adapters: this.descriptors, live, ordered: true });
+    const projection = reduce(lineage?.currentRecordingId ?? key, lineage ? this.store.lineageObservations(lineage) : this.store.orderedObservations(unique), this.store.blobs, { adapters: this.descriptors, live, ordered: true, lineage });
     // A combined view spanning worktrees has no single repository root. Its paths remain
     // evidence-backed per source, and the map uses captured paths instead of one checkout.
     if (mixedRoots) projection.workspaceRoot = undefined;

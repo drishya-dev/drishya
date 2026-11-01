@@ -1,3 +1,4 @@
+import {FileReadingActions} from './FileReadingActions.tsx';
 import {collectionBounds} from '../lib/collection-bounds.ts';
 import './collection-surfaces.css';
 import {openGitHistory} from './GitHistory.tsx';
@@ -181,7 +182,7 @@ function GitReader({ close }: { close: () => void }) {
             {snapshot.totalAllowed === undefined && snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
           </aside>
           <section>{file && <>
-            <header className={modern ? 'git-selected-file-header' : undefined}><strong title={file.path}>{file.path}</strong><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button>{!modern && <button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button>}</header>
+            <header className={modern ? 'git-selected-file-header' : undefined}><strong title={file.path}>{file.path}</strong><FileReadingActions path={file.path} compact onNavigate={close}/><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button>{!modern && <button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button>}</header>
             <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} openRecorded={(path, key) => { close(); useApp.getState().set({ filePanel: path, filePanelFocus: 'change', filePanelEvidence: key }); }} /></div>
             {file.status !== '??' && <footer>
               <label><input type="checkbox" disabled={busy || checking} checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label>
