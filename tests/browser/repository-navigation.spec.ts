@@ -28,7 +28,9 @@ test('whole repository approval keeps Files bounded and every row reachable in b
   const explorer = page.getByRole('complementary',{name:'Repository files'}), tree = explorer.getByRole('tree');
   await expect(explorer).toBeVisible();
   await explorer.getByRole('button',{name:'Enable workspace reading'}).click();
-  await expect(tree.getByRole('treeitem').first()).toBeVisible();
+  const rootItem=tree.getByRole('treeitem').first();await expect(rootItem).toBeVisible();
+  // A recorded root can start collapsed; approval does not imply expansion.
+  if(await rootItem.getAttribute('aria-expanded')==='false'){await rootItem.focus();await page.keyboard.press('ArrowRight');await expect(rootItem).toHaveAttribute('aria-expanded','true');}
   await expect.poll(()=>tree.evaluate(el=>el.scrollHeight)).toBeGreaterThan(19000);
   const box = await explorer.boundingBox(); expect(box!.y+box!.height).toBeLessThanOrEqual(720);
   await tree.evaluate(el=>el.scrollTop=el.scrollHeight);
