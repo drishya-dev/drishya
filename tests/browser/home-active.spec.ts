@@ -8,6 +8,26 @@ let dir:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-home-active-'));app=new App(dir);server=await startServer({app,port:0});});
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 
+test('sub-agent threads leave the main list, stay reachable, and scratch folders fold into one group',async({page})=>{
+ const now=new Date().toISOString(),source=(path:string,cwd:string,extra:object)=>({path,harness:'codex',adapterId:'codex',cwd,modifiedAt:now,bytes:10,companions:[],...extra});
+ const sources=[
+  source('C:/x/parent.jsonl','C:/projects/shop',{title:'Fix the cart',sessionId:'parent'}),
+  source('C:/x/child.jsonl','C:/projects/shop',{sessionId:'child',parentSessionId:'parent',agentName:'Reviewer'}),
+  source('C:/x/orphan.jsonl','C:/projects/shop',{sessionId:'orphan',parentSessionId:'gone',agentName:'Lost'}),
+  source('C:/x/a.jsonl','C:/Users/me/AppData/Local/Temp/probe-a',{title:'Probe one'}),
+  source('C:/x/b.jsonl','/tmp/probe-b',{title:'Probe two'}),
+ ];
+ await page.route('**/v1/recordings',route=>route.fulfill({json:{recordings:[]}}));
+ await page.route('**/v1/sources',route=>route.fulfill({json:{sources,errors:[]}}));
+ await page.goto(server.launchUrl);
+ const rows=page.locator('.mh-session'),rail=page.getByRole('complementary',{name:'Workspaces'});
+ await expect(rows).toHaveCount(4);await expect(page.locator('.mh-results')).not.toContainText('Sub-agent Reviewer');
+ await expect(rows.filter({hasText:'Fix the cart'})).toContainText('1 sub-agent');await expect(rows.filter({hasText:'Sub-agent Lost'})).toHaveCount(1);
+ await expect(rail.getByRole('button',{name:/Temporary folders/})).toContainText('2 folders');
+ await rail.getByRole('button',{name:/^Sub-agents/}).click();await expect(rows).toHaveCount(1);await expect(rows).toContainText('Sub-agent Reviewer');
+ await expect(page.locator('.mh-results h2')).toHaveText('Sub-agents');
+});
+
 test('Home rows drop the per-row availability tag, clean titles, and list followed sessions once',async({page})=>{
  const now=new Date().toISOString(),base={harness:'codex',workspaceRoot:'C:/projects/shop',createdAt:now,updatedAt:now,lastSourceTime:now,observationCount:12,pinned:false};
  const recordings=[

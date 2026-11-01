@@ -13,6 +13,7 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
   const operations = projection.operations.filter((op) => started.has(op.id) || parents.has(op.id)).map((op) => ended.has(op.id) || parents.has(op.id) && op.endSequence !== undefined && op.endSequence < step ? op : pending(op));
   const visibleArtifacts = new Set(operations.flatMap((op) => op.artifactIds));
   for (const id of proseIds) visibleArtifacts.add(`art_${id}_prose`);
+  for (const item of applied) if (item.type === 'queue' && item.inputArtifactId) visibleArtifacts.add(item.inputArtifactId);
   const readings = projection.context?.readings.filter(p => p.availableAfterStep < step);
   const readingIds = new Set(readings?.map(p => p.id));
   const compactionSummaries = projection.compactionSummaries?.filter(s => s.availableAfterStep <= step);

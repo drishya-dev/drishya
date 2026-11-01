@@ -1,3 +1,4 @@
+import {QueuedInputs} from './QueuedInputs.tsx';
 import {currentReadingTarget,currentReadingFailure} from '../lib/file-reading.ts';
 import {CapturedFileFallback} from './FileHistory.tsx';
 import {FileReadingActions} from './FileReadingActions.tsx';
@@ -333,8 +334,9 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   const code = useRef<HTMLDivElement>(null);
   const markdown=/\.(md|markdown)$/i.test(path);
   const [documentMode,setDocumentMode]=useEvidenceState('disk/formatted',true);
-  const formatted=markdown&&documentMode;
   const documentSize=useApp(s=>s.documentSize),documentAllowed=useMemo(()=>!file||documentFits(file,documentSize),[file,documentSize]);
+  // A file too large to render opens as its source; a notice is no reason to withhold the content.
+  const formatted=markdown&&documentMode&&documentAllowed,oversized=markdown&&documentMode&&!documentAllowed;
   useEvidenceScroll(code, `disk/${formatted?'document':start}`, !!file);
   useEffect(() => { if (file && !readingVersion) setReadingVersion(file.modifiedAt); }, [file, readingVersion]);
   useEffect(() => { setCopied(''); }, [start,file]);
@@ -381,7 +383,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
     {workspace?.approved&&!peek&&<ImportContext path={path} current hideEmpty />}
     {!workspace?<p className="current-reader-access" role="status">Checking workspace access…</p>:!workspace.approved&&<section className="current-reader-access" aria-label="Current file access"><h3>Read current files</h3><p>{workspace.root?`Approve reading in ${workspace.root}. Captured work stays separate.`:'This session has no captured workspace root on this machine.'}</p><button className="btn" disabled={granting||!workspace.root} onClick={()=>{setGranting(true);setGrantError('');void approve().catch(error=>setGrantError(error.message)).finally(()=>setGranting(false));}}>{granting?'Approving…':'Approve current-file reading'}</button>{grantError&&<p role="alert">{grantError}</p>}</section>}
     {error && <p className="bad" role="alert">{error} <button className="btn" onClick={() => void current.refresh()}>Retry current source</button></p>}
-    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <><div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?documentAllowed?<Markdown text={file.text} document/>:<p role="status">{documentLimitMessage(documentSize)} The complete file remains available in <button className="btn ghost" onClick={()=>setDocumentMode(false)}>Source</button>.</p>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
+    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <>{oversized&&<p role="status" className="document-limit-note">{documentLimitMessage(documentSize)} Showing the source.</p>}<div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?<Markdown text={file.text} document/>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 
@@ -525,7 +527,7 @@ export function PromptComposer() {
     observer.observe(node);
     return () => { observer.disconnect(); viewer.style.removeProperty('--composer-gap'); };
   }, [source, id]);
-  if (source?.kind !== 'daemon' || !id || id.includes('+')) return null;
+  if (source?.kind !== 'daemon' || !id || id.includes('+')) return source?.kind === 'bundle' && id ? <QueuedInputs standalone/> : null;
   const running = controller && ['connecting', 'running', 'approval'].includes(controller.state);
   const promptBytes = utf8Bytes(prompt);
   const overLimit = promptBytes > PROMPT_BYTES;
@@ -573,6 +575,7 @@ export function PromptComposer() {
       {canRetryFiles && <button className="btn ghost small" disabled={loadingFiles || busy || !!running} onClick={() => void attach(rejectedFiles.current)}>Retry rejected files</button>}
       {preview && <ReadingDialog title={`Attachment: ${preview.name}`} close={() => setPreview(undefined)} className="attachment-preview-dialog"><p className="muted">Prepared locally · not sent. Text is redacted by the server before submission; inspect images for secrets.</p>{preview.type === 'image' ? <img alt={preview.name} src={`data:${preview.mime};base64,${preview.data}`} style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain' }} /> : <><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight:'60dvh',overflow:'auto' }}>{preview.data}</pre></>}</ReadingDialog>}
 
+      <QueuedInputs/>
       <div className="native-turn-details">
       {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}{connectionError && <button className="btn ghost small" disabled={busy} onClick={() => void act(refresh)}>Retry native connection</button>}</p>}
       {controller?.promptRedacted && <p className="muted small">Detected secrets were removed before sending this prompt.</p>}

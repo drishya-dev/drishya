@@ -35,6 +35,11 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
       blocks.push(<blockquote key={key++}>{renderMarkdown(quote.join('\n'), onPath, document, depth + 1, workspaceRoot)}</blockquote>);continue;
     }
     if (document && /^\s*(---+|\*\*\*+)\s*$/.test(line)) {blocks.push(<hr key={key++}/>);i++;continue;}
+    // HTML is never interpreted, and as a paragraph it reads like broken prose; show it as the source it is.
+    if (document && /^\s*<(?:!--|\/?[a-z][\w-]*[\s/>])/i.test(line)) {
+      const markup:string[]=[];while(i<lines.length && lines[i]!.trim())markup.push(lines[i++]!);
+      blocks.push(<pre className="md-html" key={key++}>{markup.join('\n')}</pre>);continue;
+    }
     const fence = /^\s*```(\w*)/.exec(line);
     if (fence) {
       const code: string[] = [];

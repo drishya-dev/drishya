@@ -78,7 +78,7 @@ test('actual product surfaces keep evidence, current source, review and map navi
     const questions=page.getByRole('dialog',{name:'Review questions',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
     await questions.getByRole('button',{name:'Close Review questions',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
-    await page.locator('.workspace-menu[open] .usage-peek>summary').click();await frame(`usage-${width}`);
+    if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.workspace-menu[open] .usage-peek>summary').click();await frame(`usage-${width}`);
     await page.keyboard.press('Escape');await page.keyboard.press('Escape');
     await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
     const grant=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();await expect(desk.getByRole('tablist')).toBeVisible();
@@ -319,7 +319,7 @@ test('actual Review findings, prompt overview and packet stay bounded in both ha
   for(const id of [ids[0]!,ids.at(-1)!]){
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(id)}`);await expect(page.locator('.history')).toBeVisible();
     for(const [query,title] of [['Review findings','Review findings'],['Prompt overview','Prompt overview'],['Prepare review packet','Review packet']] as const){
-      await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(query);await nav.getByRole('option').filter({hasText:query}).click();const dialog=page.getByRole('dialog',{name:title,exact:true});await expect(dialog.locator('.insights-intro')).toContainText('through observation');await expect(dialog.getByRole('alert')).toHaveCount(0);
+      await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(query);await nav.getByRole('option').filter({hasText:query}).click();const dialog=page.getByRole('dialog',{name:title,exact:true});await expect(dialog.locator('.insights-intro')).toContainText('Whole session');await expect(dialog.getByRole('alert')).toHaveCount(0);
       if(title==='Review packet'){await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();await expect(dialog.getByRole('textbox',{name:'Review packet preview',exact:true})).toContainText('Through observation');}
       for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/insights-${query.replaceAll(' ','-')}-${id}-${width}.png`)});}
       await dialog.getByRole('button',{name:`Close ${title}`,exact:true}).click();

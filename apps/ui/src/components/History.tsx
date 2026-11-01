@@ -27,6 +27,7 @@ import type { PinnedPlan, Scene, SceneOp, ScenePassage } from '@drishya/scene';
 import { ESTIMATED_PASSAGE_HEIGHT, passageWindow } from '../lib/history-window.ts';
 import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
+import { fileFolder, fileName } from '../lib/file-identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
 import {prosePath} from '../lib/prose-path.ts';
 import './captured-file-path.css';
@@ -57,6 +58,7 @@ import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-mo
 import { useHoverReading } from '../lib/hover-reading.ts';
 import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { NativeTurn } from './SessionWorkspace.tsx';
+import {useDisclosureChoice} from './Disclosure.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
@@ -773,8 +775,7 @@ function openCapturedFile(path:string,line?:number,evidence?:string) {
 function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agent?: Agent }) {
   const detail = useApp(s => s.reasoningDetail);
   const workspaceRoot = useApp(s => s.recording?.workspaceRoot);
-  const [open, setOpen] = useState(true);
-  useEffect(() => setOpen(detail === 'expanded'), [detail]);
+  const [open, setOpen] = useDisclosureChoice(`prose/${pr.id}`, pr.role !== 'reasoning' || detail === 'expanded');
   const [full, setFull] = useState(false);
   const prose = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -791,7 +792,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   return (
     <div ref={prose} data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
-        <button className="prose-label" onClick={() => { setOpen((o) => !o); }} aria-expanded={open}>
+        <button className="prose-label" onClick={() => { setOpen(!open); }} aria-expanded={open}>
           {label}
           {open ? ' · collapse' : ' · show'}
         </button>
@@ -837,10 +838,15 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const readingAllocation = presentation.width ?? sourceWidth;
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   const command = op.detail.kind === 'shell' || op.detail.kind === 'test' ? commandDisplay(op.detail.command) : undefined;
-  const displayTitle = command?.decoded ? command.text : op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '');
   const file=op.detail.kind==='read'||op.detail.kind==='edit'?{path:op.detail.path}:undefined;
+  const asked=op.tool==='AskUserQuestion'||op.tool==='request_user_input';
+  const said=op.detail.kind==='shell'||op.detail.kind==='test'?op.detail.description:undefined;
+  // A card is named by what differs between cards: the file, the agent's own words, the tool of a server.
+  const displayTitle = asked ? 'Asked you' : said ?? (file ? fileName(file.path) : op.detail.kind === 'mcp' ? op.detail.tool : command?.decoded ? command.text : op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, ''));
+  const lines=op.detail.kind==='read'&&op.detail.lineCount>0&&op.detail.startLine>1?`lines ${op.detail.startLine}–${op.detail.startLine+op.detail.lineCount-1}`:undefined;
+  const note=[lines,file&&fileFolder(file.path)].filter(Boolean).join(' · ');
   const evidence=op.detail.kind==='read'?`${op.id}/read`:op.detail.kind==='edit'&&op.detail.hunks.length?`${op.id}/patch`:undefined;
-  const title=file?<button type="button" className="op-title captured-file-path" title={displayTitle} aria-label={`Open captured work for ${file.path}`} onClick={event=>{event.stopPropagation();openCapturedFileReading(file.path,op);}}>{displayTitle}</button>:<span className="op-title" title={displayTitle}>{displayTitle}</span>;
+  const title=file?<button type="button" className="op-title captured-file-path" title={file.path} aria-label={`Open captured work for ${file.path}`} onClick={event=>{event.stopPropagation();openCapturedFileReading(file.path,op);}}>{displayTitle}</button>:<span className="op-title" title={displayTitle}>{displayTitle}</span>;
   const imagePath=pathOnlyImage(op);
   const hasImage=op.images?.some(image=>image.sha);
   // Keep the same evidence readers; images get the primary allocation, not a second card.
@@ -876,7 +882,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
     >
       <header className="op-head">
         <MaterialGlyph material={presentation.material} />
-        {experience !== 'legacy' ? <span className="studio-action-identity">{title}<span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{originLabel}<span aria-hidden="true"> · </span>{op.tool}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
+        {experience !== 'legacy' ? <span className="studio-action-identity">{title}<span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={op.tool}>{asked ? 'Question' : originLabel}{note && <><span aria-hidden="true"> · </span>{note}</>}</span></span> : <><span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`} title={so.origin.type === 'map' ? `File reference: ${so.origin.path}` : so.origin.type === 'mcp' ? `Observed MCP server: ${so.origin.server}` : `Observed tool: ${op.tool}`}>{originLabel}</span><span className="op-title" title={op.title}>{op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '')}</span></>}
         {op.detail.kind === 'edit' && op.detail.hunks.length > 0 && !op.declined && <DiffStat hunks={op.detail.hunks} />}
         <StateMark state={so.state} op={op} />
         {['read', 'edit', 'search', 'test', 'shell', 'mcp', 'web', 'plan', 'spawn', 'other'].includes(op.detail.kind) && (
@@ -891,7 +897,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         {imageMaterial??<><OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
       </div>}
       {expanded&&(imageMaterial?<div className="image-material-expanded">{imageMaterial}</div>:<ExpandedOperation op={op}/>)}
-      {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Captured input preview · expand for full text</div>}
+      {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Shortened · Expand to read all of it</div>}
       <EvidenceNote op={op} />
     </article>
   );
@@ -910,16 +916,16 @@ function ExpandedMaterial({ op }: { op: Operation }) {
   switch (d.kind) {
     case 'read':
       return <div className="op-expanded read-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.path} · historical source at this action</div><FileReadingActions path={d.path} op={op}/>
+        <FileReadingActions path={d.path} op={op}/>
         <ArtifactReader key={d.excerptArtifactId} id={d.excerptArtifactId} kind="code" startLine={d.startLine} path={d.path} provenance />
       </div>;
     case 'edit':
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.path} · captured patch{d.reconstruction !== 'complete' ? ' · after-state not verified' : ''}</div>
+        {d.reconstruction !== 'complete' && <div className="material-context">The file after this edit could not be verified</div>}
         <FileReadingActions path={d.path} op={op}/><ReadBeforePanel op={op} />
         <BeforeTurnPanel op={op} />
         {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ArtifactReader id={op.artifactIds.find(id => id.endsWith('_after'))} kind="code" path={d.path} provenance /> : <p className="muted">No source bytes or patch captured.</p>}
-        <button className="material-more" onClick={() => select(op.id)}>Open provenance and file states</button>
+        <button className="material-more" onClick={() => select(op.id)}>Open details</button>
       </div>;
     case 'search':
       return <div className="op-expanded search-material" onClick={(e) => e.stopPropagation()}>
@@ -1097,7 +1103,7 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
   const active = useNow((s) => !!s.view?.mark);
   const mode = useApp((s) => s.mode);
   const text = useRef<HTMLDivElement>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useDisclosureChoice(`prompt/${step ?? 'first'}`, false);
   const [overflows, setOverflows] = useState(false);
   useLayoutEffect(() => {
     const el = text.current;
@@ -1125,7 +1131,7 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
       {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
       {captured}
       {report && <CapturedContextReport report={report} time={time} />}
-      {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
+      {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>{expanded ? 'Show less' : `Show full prompt · ${shown?.length.toLocaleString() ?? 0} characters`}</button>}
       {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
       {plan && <PinnedPlanList plan={plan} />}
       {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}

@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { timeSection, workspaceGroups } from '../src/lib/home-groups.ts';
+import { foldTemporary, parentFolder, timeSection, workspaceGroups } from '../src/lib/home-groups.ts';
 import {workingLocations} from '../../../packages/contracts/src/working-locations.ts';
 
 it('retains only an explicit boolean introduction preference',()=>{
   const clean=(value:unknown)=>workingLocations({version:1,sessions:[{id:'@home',entries:[['home/intro',value]]}]}).sessions[0]!.entries;
   expect(clean(false)).toEqual([['home/intro',false]]);expect(clean(true)).toEqual([['home/intro',true]]);
   expect(clean('private text')).toEqual([]);expect(clean({text:'source'})).toEqual([]);
+});
+
+describe('Home workspace rail', () => {
+  const groups = (...roots: string[]) => workspaceGroups(roots, root => root, () => undefined);
+  it('folds scratch folders into one group and keeps every session in it', () => {
+    const folded = foldTemporary(groups('C:\\Users\\a\\AppData\\Local\\Temp\\probe-1', '/tmp/probe-2', '/home/a/repo'));
+    expect(folded.map(group => group.name)).toEqual(['repo', 'Temporary folders']);
+    expect(folded[1]).toMatchObject({ detail: '2 folders', items: ['C:\\Users\\a\\AppData\\Local\\Temp\\probe-1', '/tmp/probe-2'] });
+  });
+  it('leaves a single scratch folder where it is', () => {
+    expect(foldTemporary(groups('/tmp/probe', '/home/a/repo')).map(group => group.name).sort()).toEqual(['probe', 'repo']);
+  });
+  it('shows the parent folder, shortened from the home folder', () => {
+    expect(parentFolder('C:\\Users\\a\\Desktop\\CS\\drishya')).toBe('~/Desktop/CS');
+    expect(parentFolder('/Users/a/code/repo/')).toBe('~/code');
+    expect(parentFolder('/srv/repo')).toBe('/srv');
+  });
 });
 
 describe('Home workspace and calendar groups', () => {

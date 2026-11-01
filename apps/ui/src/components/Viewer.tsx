@@ -1,3 +1,4 @@
+import {Disclosure} from './Disclosure.tsx';
 import {CapturedPath,openCapturedPath} from './CapturedPath.tsx';
 import {prosePath} from '../lib/prose-path.ts';
 import {ReplayEntry,ModernReplayTransport} from './ModernReplay.tsx';
@@ -196,9 +197,9 @@ function WorkspaceViewer() {
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
-      <NowWatcher key={recordingId} /><NotifyWatcher />
+      <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
-      <PromptComposer key={recordingId} />
+      <PromptComposer key={`composer/${recordingId}`} />
       <DeveloperWorkspace />
       <Inspector projection={historical} />
       <Briefing projection={projection} />
@@ -303,7 +304,7 @@ function StudioDock({ scene }: { scene: Scene }) {
     <div className="studio-instruments">{scene.dock.native.map(d => <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} onClick={() => setFilter(focusKind(filter, d.kind))}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span><span className="studio-instrument-name">{KIND_LABEL[d.kind]}<small>{d.tools.join(' · ')}</small></span><span className="inst-uses">{d.uses || '—'}</span></button>)}</div>
     {scene.dock.mcp.length > 0 && <div className="studio-dock-title">MCP servers <span>{scene.dock.mcp.length}</span></div>}
     {scene.dock.mcp.map(server => <section key={server.server} className={`server catalogued${server.open ? ' open' : ''}`}><button className="server-name" aria-pressed={filter?.server === server.server} onClick={() => setFilter(focusMcp(filter, server.server))}><span className="server-dot" />{server.server}</button><div className="drawer">{server.tools.map(t => <button key={t.tool} className={`server-tool${t.active ? ' active' : ''}`} data-mcp-server={server.server} data-mcp-tool={t.tool} aria-pressed={filter?.server === server.server && filter?.tool === t.tool} disabled={!t.uses} onClick={() => setFilter(focusMcp(filter, server.server, t.tool))}><span className="server-tool-identity"><span className="tool-mark"><MaterialGlyph material="external" /></span><span>{t.tool}</span></span><span className="inst-uses">{t.uses || '—'}</span></button>)}</div></section>)}
-    {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary><ol>{controller.tools.map(t => <li key={t}>{t}</li>)}</ol></details>}
+    {controller?.inventory === 'runtime' && <Disclosure surface="tools/runtime" className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary><ol>{controller.tools.map(t => <li key={t}>{t}</li>)}</ol></Disclosure>}
     {filter && <button className="btn ghost clear-filter" onClick={() => setFilter(undefined)}>Show everything <Kbd>Esc</Kbd></button>}
   </aside>;
 }
@@ -387,7 +388,7 @@ function SessionIdentity() {
   const recording=useApp(s=>s.recording),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
   const [status,setStatus]=useState('');
   if(!recording||!id)return null;
-  return <details className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline evidence bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span></details>;
+  return <Disclosure surface="session/details" className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline evidence bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span></Disclosure>;
 }
 
 // ─── dock: native instruments, then MCP servers by name ──────────────────────────────────
@@ -400,7 +401,7 @@ function Dock({ scene }: { scene: Scene }) {
     <aside id="observed-tools" className="dock" aria-label="Tools" title="Tools observed in this recording; connected runtime inventory is listed separately">
       <div className="dock-head">Tools</div>
 
-      {controller?.inventory === 'runtime' && <details className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary><ol>{controller.tools.map(t => <li key={t}>{t}</li>)}</ol>{controller.tools.length === 0 && <small>No MCP tools reported by this runtime</small>}</details>}
+      {controller?.inventory === 'runtime' && <Disclosure surface="tools/runtime" className="runtime-tools"><summary>Available in connected runtime · {controller.tools.length}</summary><ol>{controller.tools.map(t => <li key={t}>{t}</li>)}</ol>{controller.tools.length === 0 && <small>No MCP tools reported by this runtime</small>}</Disclosure>}
       {scene.dock.native.map((d) => (
         <button key={d.key} className={`instrument k-${d.kind}${d.active ? ' active' : ''}${d.uses ? '' : ' unused'}${filter?.kind === d.kind ? ' on' : ''}`} title={`Show observed ${KIND_LABEL[d.kind]} activity · ${d.tools.join(', ')}`} aria-pressed={filter?.kind === d.kind} disabled={!d.uses} onClick={() => setFilter(focusKind(filter, d.kind))}>
           <span className={`op-kind k-${d.kind}`}><span className="tool-mark"><MaterialGlyph material={({ read: 'source', search: 'matches', edit: 'change', shell: 'terminal', test: 'verification' } as Record<string, string>)[d.kind] ?? d.kind} /></span>{KIND_LABEL[d.kind]}</span>

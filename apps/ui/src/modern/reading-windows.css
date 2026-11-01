@@ -140,3 +140,31 @@
 .history .turn-captured { margin-top: 4px; font-size: 11px; color: var(--t3); }
 .history .turn-captured summary { cursor: pointer; width: max-content; }
 .history .turn-captured .output { margin: 6px 0 0; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* AUDIT-1: the detail panel is one column beside the history. It takes the toolbox's place whole, and the history keeps a readable column beside the file rail. */
+@media(min-width:821px) {
+ :root[data-ui-version=modern] .connected-workspace .inspector { top:64px;width:min(var(--inspector-width,760px),max(420px,calc(100vw - 750px)));border-top:1px solid var(--line-2);border-top-left-radius:12px; }
+ :root[data-ui-version=modern] .connected-workspace:has(.inspector):has(.folder-explorer) .history { left:290px;right:min(var(--inspector-width,760px),max(420px,calc(100vw - 750px))); }
+ :root[data-ui-version=modern] .connected-workspace:has(.inspector) :is(svg.origins,.workspace-follow,.follow-pill) { display:none; }
+}
+.verify-later { display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px; }
+.verify-later>.verify-open { min-width:22px;min-height:22px;text-align:center; }
+@media(min-width:821px) { :root[data-ui-version=modern]:has(.inspector) svg.origins { display:none; } }
+
+/* AUDIT-1: Changes opens on the counts and the lists, with paging at the end of what is being read. */
+:root[data-ui-version=modern] .evidence-review .review-intro { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px 0; }
+:root[data-ui-version=modern] .evidence-review .review-note { padding-inline:24px; }
+:root[data-ui-version=modern] .evidence-review .review-counts { padding-block:8px 16px; }
+
+/* AUDIT-1: the palette is an input and a list. Its title stays for assistive technology and takes no room. */
+:root[data-ui-version=modern] .workspace-navigation { top:14dvh;margin-block:0 auto; }
+:root[data-ui-version=modern] .workspace-navigation>header { position:absolute;right:6px;top:6px;padding:0;border:0;background:transparent;z-index:1; }
+:root[data-ui-version=modern] .workspace-navigation>header>h2 { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
+:root[data-ui-version=modern] .workspace-navigation-query { width:100%;margin:0;padding:14px 48px 14px 16px;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0;background:transparent!important;font:14px/1.5 var(--sans);box-shadow:none!important;outline:0!important; }
+:root[data-ui-version=modern] .workspace-navigation-results { padding:6px; }
+:root[data-ui-version=modern] .workspace-navigation-results>button { min-height:36px;padding:6px 10px;gap:10px; }
+:root[data-ui-version=modern] .workspace-navigation-results>button>span:last-child { display:flex;align-items:baseline;gap:10px;min-width:0;flex:1; }
+:root[data-ui-version=modern] .workspace-navigation-results strong { flex:none;max-width:60%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:500 13px/1.5 var(--sans); }
+:root[data-ui-version=modern] .workspace-navigation-results small { min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:12px/1.5 var(--sans); }
+:root[data-ui-version=modern] .navigation-command-icon { display:none; }
+:root[data-ui-version=modern] .workspace-navigation-help { padding:8px 16px;font-size:11px; }

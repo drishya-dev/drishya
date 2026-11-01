@@ -34,7 +34,7 @@ test('recorded usage stays sourced and hides absent values', async ({ page }) =>
   for (const name of ['codex', 'claude', 'missing', 'unknown']) {
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[name]}`);
     await page.getByLabel('More workspace options', { exact: true }).click();
-    await page.locator('.usage-peek>summary').click();
+    if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();
     const usage = page.locator('.usage-peek');
     await expect(usage.getByText('Not reported', { exact: true })).toHaveCount(0);
     if (name === 'codex') {
@@ -54,7 +54,7 @@ test('recorded usage stays sourced and hides absent values', async ({ page }) =>
     await expect(usage.getByRole('button', { name: 'Rescan original journal' })).toHaveCount(0);
     await expect(menu.getByRole('button', { name: 'Rescan original journal' })).toBeVisible();
     await menu.getByRole('button', { name: 'Rescan original journal' }).click();
-    await expect(menu.getByRole('status')).toContainText('0 new observations');
+    await expect(menu.getByRole('status').filter({hasText:'0 new observations'})).toHaveCount(1);
     await page.screenshot({ path: resolve(`.local/usage-${name}.png`) });
   }
 });
@@ -72,7 +72,7 @@ test('existing local recorded usage reads through an isolated copy without nativ
     for (const row of config.selected) {
       await page.goto(`${local.url}/?experience=modern&motion=0#/r/${row.id}`);
       await page.getByLabel('More workspace options', { exact: true }).click();
-      await page.locator('.usage-peek>summary').click();
+      if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();
       await expect(page.locator('.usage-peek')).toContainText(row.harness === 'codex' ? 'Recorded · Codex token_count' : 'Recorded · Claude');
       await expect(page.locator('.usage-peek section[aria-label="Recorded usage"] dt').first()).toBeVisible();
     }

@@ -51,7 +51,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r30';
+export const REDUCER_VERSION = 'r32';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -500,7 +500,25 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           dirtyOperations.add(id);
           break;
         }
+        case 'queue.operation': {
+          if (!['enqueue', 'dequeue', 'remove'].includes(p.operation)) break;
+          ensureAgent(o);
+          const input = p.operation === 'enqueue' && p.text !== undefined ? addArtifact({id: `art_queue_${o.id}`, kind: 'excerpt',
+            observedAtSequence: step(), availability: o.availability, provenance: {kind: 'captured', observationIds: [o.id]},
+            redacted: o.redactions.length > 0, ...(isBlobText(p.text) ? {blobRef: p.text} : {content: typeof p.text === 'string' ? p.text : ''})}) : undefined;
+          timeline.push({type: 'queue', id: `queue_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), time: o.sourceTime,
+            sourceObservationId: o.id, ownerRecordingId: o.recordingId, sourceId: o.source.sourceId, generation: o.source.generation, operation: p.operation,
+            ...(typeof p.nativeQueueId === 'string' ? {nativeQueueId: p.nativeQueueId} : {}),
+            ...(input ? {inputArtifactId: input, preview: clip(typeof p.text === 'string' ? p.text : isBlobText(p.text) ? p.text.preview : '', 240)} : {}),
+            ...(Array.isArray(p.images) && p.images.length ? {images: imageRefs(p.images)} : {})});
+          break;
+        }
         case 'message.user': {
+          // Only an explicit queue identity can link a native delivery. A source
+          // UUID, delivery UUID, equal text or nearby time cannot establish it.
+          if (typeof p.nativeQueueId === 'string') timeline.push({type: 'queue', id: `delivery_${o.id}`, sequence: o.receivedSequence,
+            agentId: agentKey(o), time: o.sourceTime, sourceObservationId: o.id, ownerRecordingId: o.recordingId,
+            nativeQueueId: p.nativeQueueId, sourceId: o.source.sourceId, generation: o.source.generation, operation: 'delivered'});
           const t = text(p.text) ?? '';
           // CONTENT-1: images attached to a prompt. Claude stores them as separate parts of the
           // prompt's record, before or after its text, so they meet the turn through that record.
@@ -1003,10 +1021,11 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
     }
     case 'shell': {
       const cls = classifyShell(intent.command);
+      const description = typeof p.input?.description === 'string' && p.input.description.trim() ? { description: oneLine(p.input.description) } : {};
       if (cls.kind === 'test') {
         op.kind = 'test';
         op.classification = derived(SHELL_RULE, op.observationIds);
-        op.detail = { kind: 'test', command: intent.command };
+        op.detail = { kind: 'test', command: intent.command, ...description };
         op.title = `Test · ${clip(oneLine(intent.command), 70)}`;
       } else if (cls.kind === 'read') {
         const path = rel(cls.path, st.cwd);
@@ -1021,7 +1040,7 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
         op.detail = { kind: 'search', query: cls.query, mode: cls.query === '--files' ? 'file' : 'text', hits: [] };
         op.title = `Search “${clip(cls.query, 60)}”`;
       } else {
-        op.detail = { kind: 'shell', command: intent.command };
+        op.detail = { kind: 'shell', command: intent.command, ...description };
         op.title = `Run ${clip(oneLine(intent.command), 80)}`;
       }
       break;

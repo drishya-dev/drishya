@@ -29,6 +29,7 @@ export type ObservationKind =
   | 'turn.start'
   | 'turn.end'
   | 'turn.detail'
+  | 'queue.operation'
   | 'message.user'
   | 'message.assistant'
   | 'reasoning'
@@ -515,8 +516,8 @@ export type OperationDetail =
   | { kind: 'read'; path: string; startLine: number; lineCount: number; totalLines?: number; excerptArtifactId?: string }
   | { kind: 'search'; query: string; mode: 'text' | 'file' | 'web'; hits: SearchHit[]; total?: number }
   | { kind: 'edit'; path: string; hunks: Hunk[]; created: boolean; /** The harness recorded this change as deleting the file. */ deleted?: boolean; reconstruction: Availability; reconstructionNote?: string; /** The harness's checkpoint of this file at the start of the turn (DATA-5). */ beforeTurn?: BeforeTurn }
-  | { kind: 'shell'; command: string; exitCode?: number | null; outputArtifactId?: string; outputPreview?: string }
-  | { kind: 'test'; command: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
+  | { kind: 'shell'; command: string; /** The agent's own one-line account of this command, when the harness records one. */ description?: string; exitCode?: number | null; outputArtifactId?: string; outputPreview?: string }
+  | { kind: 'test'; command: string; description?: string; exitCode?: number | null; summary?: TestSummary; outputArtifactId?: string; outputPreview?: string }
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
   | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[]; /** What the harness recorded about a page fetch. */ fetch?: { status?: number; statusText?: string; bytes?: number; durationMs?: number } }
   | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string; /** The harness recorded the task text only in encrypted form. */ descriptionEncrypted?: boolean }
@@ -635,8 +636,25 @@ export interface EvidenceLink {
   explanation: string;
 }
 
+/** A captured queue action is not a delivered user turn. Physical identity bounds replay. */
+export interface QueueTimelineItem {
+  type: 'queue'; id: string; sequence: number; agentId: string; time?: string;
+  sourceObservationId: string; ownerRecordingId: string;
+  operation: 'enqueue' | 'dequeue' | 'remove' | 'delivered';
+  nativeQueueId?: string; inputArtifactId?: string; preview?: string; images?: OperationImage[]; sourceId: string; generation: number;
+}
+export interface QueueQuery { through?: string; before?: number; count?: number; receiptId?: string }
+export interface QueueReceipt {
+  id: string; ownerRecordingId: string; sequence: number; agentId: string; time?: string;
+  state: 'recorded' | 'unknown' | 'removed' | 'delivered'; preview: string;
+  nativeQueueId?: string; changeObservationId?: string; images?: OperationImage[]; inputArtifactId?: string;
+}
+export interface QueuePage { items: QueueReceipt[]; total: number; before?: number }
+export interface QueueInputChunk { text: string; start: number; next: number; totalBytes: number; hasMore: boolean }
+
 /** One unit of playback. The timeline is what the transport steps through. */
 export type TimelineItem =
+  | QueueTimelineItem
   | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string; permissionMode?: string; /** CONTENT-1: images the person attached. */ images?: OperationImage[] }
   | { type: 'op-start'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'op-end'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
@@ -798,6 +816,12 @@ export interface DiscoveredSource {
   importedRecordingId?: string;
   /** Related files the adapter reads together with this one (e.g. subagent transcripts). */
   companions: string[];
+  /** The harness's own session id, when its first record states one. */
+  sessionId?: string;
+  /** Set when this journal is a sub-agent thread of another session, so it is not listed as a session of its own. */
+  parentSessionId?: string;
+  /** The sub-agent's recorded name. */
+  agentName?: string;
 }
 
 // ─── Repository map ──────────────────────────────────────────────────────────────────────

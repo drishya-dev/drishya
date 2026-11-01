@@ -217,7 +217,7 @@ test('patch layouts retain captured changes and adapt without overflowing a narr
   await expect(edit.locator('.unified-change')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await edit.getByRole('button', { name: 'Open provenance and file states' }).click();
+  await edit.getByRole('button', { name: 'Open details' }).click();
   const inspector = page.locator('.inspector');
   await expect(inspector.getByRole('button', { name: 'Changes', exact: true })).toHaveCount(1);
   await inspector.getByRole('button', { name: 'Side by side', exact: true }).click();
@@ -234,10 +234,10 @@ test('terminal folding is reversible and keyboard map search targets a real file
   await page.locator('.search-results button').first().click();
   const shell = page.locator('article.op-shell');
   await expect.poll(() => shell.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
-  await shell.getByRole('button', { name: /captured lines between/ }).click();
+  await shell.getByRole('button', { name: /more lines/ }).click();
   await expect(shell).toContainText('missing-total');
-  await shell.getByRole('button', { name: 'Fold captured preview' }).click();
-  await expect(shell.getByRole('button', { name: /captured lines between/ })).toBeVisible();
+  await shell.getByRole('button', { name: 'Show less' }).click();
+  await expect(shell.getByRole('button', { name: /more lines/ })).toBeVisible();
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('checkout/guard');
   const match = page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true });
@@ -457,7 +457,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
   await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
   await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
   const panel = page.getByRole('region', { name: 'Test runs after this change' });
-  await expect(panel).toContainText('Recorded order · coverage not established');
+  await expect(panel.locator('h4')).toHaveAttribute('title', /does not show they exercised/);
   const id = 'p1-live-verification';
   append({ type: 'assistant', message: { id, role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'npm test -- p1-live-verification' } }] } });
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Tests  1 passed (1)' }] } });

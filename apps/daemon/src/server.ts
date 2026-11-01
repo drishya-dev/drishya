@@ -1,3 +1,4 @@
+import {queuedInputChunk} from './queued-inputs.ts';
 import {recordedFileRoots} from './file-roots.ts';
 import {commandCursor} from '../../../packages/scene/src/commands.ts';
 // Local HTTP API. Loopback only; per-launch token exchanged for an HttpOnly session cookie;
@@ -449,6 +450,25 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if(q.length>500||(resultId&&resultId.length>1000))throw new HttpError(400,'Invalid recorded-result query.');
         try{return json(res,readWebResult(app.store,key,subId,{start,count,q,resultId}));}
         catch{throw new HttpError(404,'No matching captured web result.');}
+      }
+      if (sub === 'queue' && m === 'GET') {
+        if (id.includes('+')) throw new HttpError(400, 'Choose a physical queue owner.');
+        app.recording(id);
+        const through = url.searchParams.get('through') ?? undefined;
+        if (through && through.length > 1000 || subId && subId.length > 1000) throw new HttpError(400, 'Invalid queue reading.');
+        try {
+          if (subId) {
+            const visible = await app.history.queue(app.readingId(id), id, {through, receiptId: subId, count: 1});
+            if (!visible.items.some(item => item.id === subId)) throw new HttpError(404, 'Queued input was not captured at this point.');
+            const chunk = queuedInputChunk(app.store, id, subId, undefined, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER));
+            if (!chunk) throw new HttpError(404, 'Queued input was not captured at this point.');
+            return json(res, chunk);
+          }
+          return json(res, await app.history.queue(app.readingId(id), id, {through, before: intParam(url, 'before', Number.MAX_SAFE_INTEGER, 0, Number.MAX_SAFE_INTEGER), count: intParam(url, 'count', 20, 1, 50)}));
+        } catch (error) {
+          if (error instanceof HttpError) throw error;
+          throw new HttpError(400, 'Invalid queue reading boundary or range.');
+        }
       }
       if (sub === 'observations' && m === 'GET') {
         app.recording(firstId);

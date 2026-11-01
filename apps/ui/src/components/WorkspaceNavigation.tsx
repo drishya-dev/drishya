@@ -79,14 +79,14 @@ export function WorkspaceNavigation() {
   const choose = (destination: Destination) => { setOpen(false); destination.run(); };
   if (!open || screen !== 'viewer') return null;
   return <ReadingDialog title="Navigate workspace" close={() => setOpen(false)} className="workspace-navigation">
-    <input ref={input} className="workspace-navigation-query" role="combobox" aria-label="Find a command, file or session" aria-expanded="true" aria-controls={listId} aria-activedescendant={destinations.length ? `${listId}/${index}` : undefined} autoComplete="off" maxLength={200} value={query} onChange={event => { setQuery(event.target.value); setActive(0); }} onKeyDown={event => {
+    <input ref={input} data-dialog-focus placeholder="Find a file, a session or a command" className="workspace-navigation-query" role="combobox" aria-label="Find a command, file or session" aria-expanded="true" aria-controls={listId} aria-activedescendant={destinations.length ? `${listId}/${index}` : undefined} autoComplete="off" maxLength={200} value={query} onChange={event => { setQuery(event.target.value); setActive(0); }} onKeyDown={event => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setActive((index + (event.key === 'ArrowDown' ? 1 : -1) + destinations.length) % Math.max(1, destinations.length)); }
       else if (event.key === 'Enter' && destinations[index]) { event.preventDefault(); choose(destinations[index]!); }
     }} />
     <div id={listId} role="listbox" aria-label="Workspace destinations" className="workspace-navigation-results">
-      {destinations.map((item, n) => <button key={item.key} id={`${listId}/${n}`} role="option" aria-selected={index === n} onMouseMove={() => setActive(n)} onClick={() => choose(item)}>{item.path ? <FileIcon path={item.path} /> : <span className="navigation-command-icon" aria-hidden="true">↗</span>}<span><strong>{item.name}</strong><small>{item.detail}</small></span></button>)}
+      {destinations.map((item, n) => <button key={item.key} id={`${listId}/${n}`} role="option" aria-selected={index === n} onMouseMove={() => setActive(n)} onClick={() => choose(item)}>{item.path ? <FileIcon path={item.path} /> : <span className="navigation-command-icon" aria-hidden="true"/>}<span><strong>{item.name}</strong><small>{item.detail}</small></span></button>)}
       {!destinations.length && <p>No matching destination.</p>}
     </div>
-    <p className="workspace-navigation-help">↑↓ Choose · Enter Open · Esc Close · First 40 matches; refine to reach another file/session</p>
+    <p className="workspace-navigation-help">↑↓ choose · Enter open · Esc close · first 40 matches</p>
   </ReadingDialog>;
 }

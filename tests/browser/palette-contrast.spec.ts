@@ -170,13 +170,13 @@ test('the toolbox and its menus keep 4.5:1 on every palette', async ({ page }) =
   await at('toolbox with an instrument focused');
   await press(page, toolbox.getByRole('button', { name: 'Clear focus ×', exact: true }));
   const mcpServer = toolbox.locator('.md-server').filter({ has: page.locator('[data-mcp-server]') }).first(); await expect(mcpServer).toBeVisible();
-  await press(page, mcpServer.locator('summary'));
+  if (!await mcpServer.evaluate(el => (el as HTMLDetailsElement).open)) await press(page, mcpServer.locator('summary'));
   const tool = mcpServer.locator('button[data-mcp-tool]').first(); await expect(tool).toBeVisible();
   await at('MCP server drawer open');
   await press(page, tool); await expect(tool).toHaveAttribute('aria-pressed', 'true');
   await at('MCP tool focused');
   await press(page, toolbox.getByRole('button', { name: 'Clear focus ×', exact: true }));
-  await press(page, toolbox.locator('.md-agents>summary'));
+  if (!await toolbox.locator('.md-agents').evaluate(el => (el as HTMLDetailsElement).open)) await press(page, toolbox.locator('.md-agents>summary'));
   await at('agents disclosure open');
   expect(found).toEqual([]);
 });

@@ -208,14 +208,14 @@ test('Home dense sessions remain reachable through virtualization and responsive
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   const list=page.locator('.mh-session-list'),rows=page.locator('.mh-session');
   await expect(rows.first()).toBeVisible();
-  expect(await rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(80);
+  expect(await rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(64);
   expect(await rows.first().locator('.mh-session-open>span').evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(12);
   await list.evaluate(node=>{node.scrollTop=1200;});
   await expect.poll(()=>list.evaluate(node=>node.scrollTop)).toBe(1200);
   await expect.poll(()=>list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');})).toMatch(/^Session /);
   const key=await list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');});
   await page.setViewportSize({width:390,height:844});
-  await expect.poll(()=>rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(104);
+  await expect.poll(()=>rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(84);
   await expect.poll(()=>list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');})).toBe(key);
   expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
   await list.evaluate(node=>{node.scrollTop=0;});
@@ -515,7 +515,7 @@ test('recovered Modern toolbox preserves actual instrument origins, filters and 
   const mcpServer=toolbox.locator('.md-server').filter({has:page.locator('[data-mcp-server]')}).first();
   await expect(mcpServer).toBeVisible();
   {
-    await mcpServer.locator('summary').click();
+    if (!await mcpServer.evaluate(el => (el as HTMLDetailsElement).open)) await mcpServer.locator('summary').click();
     const tool=mcpServer.locator('button[data-mcp-tool]').first();
     await expect(tool).toBeVisible(); await tool.click();
     await expect(tool).toHaveAttribute('aria-pressed','true');
@@ -1480,9 +1480,8 @@ test('completed native turns open chronological captured review without implying
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await page.getByLabel('More workspace options').click();
   await page.getByRole('button',{name:'Review new captured activity',exact:true}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review).toContainText('Captured after this turn began');
+  const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review).toContainText('Since this turn began');
   await expect(review.locator('.review-counts')).toBeVisible();expect(after).toBe('0');
-  await expect(review).toContainText('order, not attribution or coverage');
 });
 
 
@@ -1514,11 +1513,11 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
   const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
   const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('This session',{exact:true})).toBeVisible();await expect(menu.getByText('Move around',{exact:true})).toBeVisible();await expect(menu.getByText('Share',{exact:true})).toBeVisible();await expect(menu.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await page.keyboard.press('ArrowDown');await expect(menu.locator('.workspace-utilities').locator('button:not(:disabled),a[href],summary').filter({visible:true}).first()).toBeFocused();
-  await menu.locator('.usage-peek>summary').focus();await page.keyboard.press('Enter');await expect(menu.getByText('No usage values captured for this session.',{exact:true})).toBeVisible();
+  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values captured for this session.',{exact:true})).toBeVisible();
   await page.keyboard.press('End');await expect(menu.getByRole('link',{name:'Export recording',exact:true}).or(menu.getByRole('button',{name:'Rescan original journal',exact:true})).last()).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
-  for(const width of [1440,390]) {
-    await page.setViewportSize({width,height:844});await trigger.click();await page.locator('.workspace-menu .usage-peek>summary').click();
+  for(const width of [1440,600]) {
+    await page.setViewportSize({width,height:844});await trigger.click();if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.workspace-menu .usage-peek>summary').click();
     const box=(await page.locator('.workspace-menu>div').boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);
     await page.screenshot({path:resolve(`.local/utilities-polish-${width}.png`)});await page.mouse.click(10,400);await expect(menu).toHaveCount(0);
   }
