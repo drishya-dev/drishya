@@ -13,6 +13,21 @@ Fresh local acceptance:
 
 No native journal, configuration or credential was edited. The native source's omission of some visible Claude text remains a harness boundary.
 
+### Genuine native Codex mid-turn input
+
+The current signed-in native app-server wrote source `01a1965b` (280,518 bytes). Its own read-only turn began a bounded sleep command, then accepted one text-and-image input through `turn/steer` with the exact active turn ID. The native protocol reported `on-request` and `readOnly`; no permission was widened and no journal/configuration/credential was edited. Exactly one source row contains that steer and exactly one image part.
+
+Scratch import `rec_0d7fccd4` has two delivered inputs, one captured image on the second input and six operations. History and replay frames at both 600 and 1440 show the image exactly once. These genuine frames and RPC evidence remain private under `.local/live5-native-check/` and `.local/live5-native-rpc.json`. This closes the earlier Codex source/RPC-ordering gap; the older scanner's candidate alone did not.
+
+### First full gate and clean-main diagnosis
+
+Isolated install, LIVE-5 `ee82e38`: typecheck/package pass; units 1,163 pass / seven fail / one skip; parallel browsers 583 pass / 17 fail / 27 skip; serial browsers 33 pass / one skip. This is **not** a green full gate.
+
+Clean main `c2cfe75` repeats all four image-related unit failures and all twelve image-related browser failures. All three Git unit files pass alone. The Windows short TEMP alias caused the image path refusals: the six units in `image-grant-race`/`path-images` pass unchanged when TEMP/TMP point at a canonical scratch directory. No production path/consent check or assertion was weakened. The other browser failure group passes 17 of 18 contention repeats on clean main; the workspace-toolbar scroll failure repeats there. Composer cleanup and the three Git browser cases pass in the bounded clean-main repeat. Their initial full-run failures remain recorded, without claiming each was reproduced on main.
+
+The finished LIVE-5/UI-17 runtime batch is now being gated in its own install with that canonical scratch TEMP path; its result is recorded separately below.
+
+
 31 October 2026. Whole task claimed before work; merged part 1 (#310) remains intact. This branch finishes remaining acceptance and prepares the early-queue decision. No native journal, configuration or credential is changed. Native content and screenshots remain private in `.local/`.
 
 ## Current evidence
