@@ -3,7 +3,7 @@ import {materialOperations,operationFailed} from '@drishya/contracts';
 import {sinceSnapshot,type SinceSnapshot} from './since.ts';
 import {operationObservations} from './operation-observations.ts';
 
-export interface ReviewFinding {sequenceBasis?:'captured-observation'|'timeline-position';key:string;kind:'repeated-command'|'unknown-outcome'|'missing-change'|'capture-gap';title:string;detail:string;count:number;sequence:number;examples:{operationId:string;sequence:number;sequenceBasis?:'captured-observation'|'timeline-position'}[]}
+export interface ReviewFinding {sequenceBasis?:'captured-observation'|'timeline-position';key:string;kind:'repeated-command'|'unknown-outcome'|'missing-change'|'capture-gap';title:string;detail:string;count:number;failed?:number;sequence:number;examples:{operationId:string;sequence:number;sequenceBasis?:'captured-observation'|'timeline-position'}[]}
 export interface PromptOverview {id:string;ordinal:number;step:number;sequence:number;time?:string;preview:string;operations:number;failures:number;checks:number;changes:number}
 export interface ReviewInsightsPage {recordingId:string;title?:string;through:number;page:number;findingCount:number;promptCount:number;findings:ReviewFinding[];prompts:PromptOverview[];facts:SinceSnapshot}
 const example=(op:Operation,starts:Map<string,number>)=>({operationId:op.id,sequence:starts.get(op.id)??op.startSequence,sequenceBasis:starts.has(op.id)?'captured-observation' as const:'timeline-position' as const});
@@ -54,13 +54,14 @@ export function reviewInsights(p:Projection,page=0,kind?:ReviewFinding['kind']):
     const identity=commandIdentity(op,artifacts);
     if(identity){const group=repeated.get(identity)??[];group.push(op);repeated.set(identity,group);}
   }
-  for(const group of repeated.values())if(group.length>=3){const op=group[0]!,detail=op.detail as Extract<Operation['detail'],{kind:'shell'|'test'}>;findings.push({key:`repeat/${op.id}`,kind:'repeated-command',title:`Same captured command · ${group.length} runs`,detail:detail.command.slice(0,512),count:group.length,sequence:starts.get(op.id)??op.startSequence,sequenceBasis:starts.has(op.id)?'captured-observation':'timeline-position',examples:examples(group,starts)});}
+  // Repeating a command says nothing by itself; repeating one that fails is worth a look.
+  for(const group of repeated.values()){const failed=group.filter(operationFailed).length;if(group.length>=3&&failed){const op=group[0]!,detail=op.detail as Extract<Operation['detail'],{kind:'shell'|'test'}>;findings.push({key:`repeat/${op.id}`,kind:'repeated-command',title:`Same command failed ${failed} of ${group.length} runs`,detail:detail.command.slice(0,512),count:group.length,failed,sequence:starts.get(op.id)??op.startSequence,sequenceBasis:starts.has(op.id)?'captured-observation':'timeline-position',examples:examples(group,starts)});}}
   const unknown=operations.filter(op=>op.status==='unknown');
   if(unknown.length)findings.push({key:'unknown',kind:'unknown-outcome',title:`${unknown.length} operations have no captured outcome`,detail:'No success or failure was exposed for these operations.',count:unknown.length,sequence:starts.get(unknown[0]!.id)??unknown[0]!.startSequence,sequenceBasis:starts.has(unknown[0]!.id)?'captured-observation':'timeline-position',examples:examples(unknown,starts)});
   const missing=operations.filter(op=>op.detail.kind==='edit'&&['unavailable','metadata-only'].includes(op.detail.reconstruction));
   if(missing.length)findings.push({key:'missing-change',kind:'missing-change',title:`Change material unavailable · ${missing.length} operations`,detail:'Open the captured action to inspect the available metadata and reconstruction note.',count:missing.length,sequence:starts.get(missing[0]!.id)??missing[0]!.startSequence,sequenceBasis:starts.has(missing[0]!.id)?'captured-observation':'timeline-position',examples:examples(missing,starts)});
-  if(p.gaps.length){const gap=p.gaps[0]!,entry=p.timeline[gap.sequence],located=entry?.type==='gap'&&entry.reason===gap.reason;findings.push({key:'gaps',kind:'capture-gap',title:`${p.gaps.length} capture gaps recorded`,detail:p.gaps.slice(0,3).map(gap=>gap.reason.replace(/-/g,' ')).join(' · '),count:p.gaps.length,sequence:located?entry.sequence:gap.sequence,sequenceBasis:located?'captured-observation':'timeline-position',examples:[]});}
-  findings.sort((a,b)=>b.sequence-a.sequence||a.key.localeCompare(b.key));
+  if(p.gaps.length){const gap=p.gaps[0]!,entry=p.timeline[gap.sequence],located=entry?.type==='gap'&&entry.reason===gap.reason;findings.push({key:'gaps',kind:'capture-gap',title:`${p.gaps.length} ${p.gaps.length===1?'gap':'gaps'} in the record`,detail:p.gaps.slice(0,3).map(gap=>gap.reason.replace(/-/g,' ')).join(' · '),count:p.gaps.length,sequence:located?entry.sequence:gap.sequence,sequenceBasis:located?'captured-observation':'timeline-position',examples:[]});}
+  findings.sort((a,b)=>(b.failed??0)-(a.failed??0)||b.sequence-a.sequence||a.key.localeCompare(b.key));
   const turns=p.timeline.flatMap((item,step)=>item.type==='turn'?[{item,step}]:[]).sort((a,b)=>a.item.sequence-b.item.sequence||a.step-b.step);
   const promptOperations=operations.filter(op=>starts.has(op.id)).sort((a,b)=>starts.get(a.id)!-starts.get(b.id)!||a.id.localeCompare(b.id));
   let operation=0;

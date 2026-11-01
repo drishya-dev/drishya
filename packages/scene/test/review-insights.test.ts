@@ -4,7 +4,7 @@ import {reviewInsights,findingMembers} from '../src/review-insights.ts';
 const projection=():Projection=>({reducerVersion:'test',recordingId:'synthetic',observationCount:0,lastSequence:999,harnesses:[],agents:[],operations:[],prose:[],artifacts:[],links:[],timeline:[],passages:[],files:[],gaps:[],capabilities:{}});
 const op=(n:number):Operation=>({id:`op-${n}`,agentId:'agent',kind:'shell',tool:'exec',title:'Captured command',titleProvenance:{kind:'captured',observationIds:[]},origin:{type:'native',tool:'exec'},status:'ok',startSequence:n,paths:[],detail:{kind:'shell',command:'echo same'},artifactIds:[],observationIds:[],classification:{kind:'derived',rule:'test',observationIds:[]}});
 it('groups only proven identical commands and links factual unknown/missing/gap conditions',()=>{
-  const p=projection();p.operations=Array.from({length:3},(_,n)=>op(n));
+  const p=projection();p.operations=Array.from({length:3},(_,n)=>n===1?{...op(n),status:'error'}:op(n));
   p.operations.push({...op(4),status:'unknown'},{...op(5),kind:'edit',detail:{kind:'edit',path:'a.ts',hunks:[],created:false,reconstruction:'unavailable'}});
   // Same clipped prefix with three different full bodies must never imply repetition.
   for(let n=6;n<9;n++){const input=`art_${n}_input`;p.operations.push({...op(n),artifactIds:[input]});p.artifacts.push({id:input,kind:'excerpt',blob:`different-${n}`,availability:'complete'} as Artifact);}
@@ -20,7 +20,8 @@ it('pages all prompts and counts operations by start window rather than late res
   const first=reviewInsights(p),second=reviewInsights(p,1),third=reviewInsights(p,2);
   expect(first.promptCount).toBe(45);expect(first.prompts[0]!.ordinal).toBe(45);expect(third.prompts).toHaveLength(5);
   const prompts=[...first.prompts,...second.prompts,...third.prompts];expect(new Set(prompts.map(p=>p.id)).size).toBe(45);expect(prompts.every(p=>p.operations===1)).toBe(true);
-  expect(first.findingCount).toBe(1);expect(first.findings[0]!.count).toBe(45);
+  // Forty-five clean runs of one command are not a finding.
+  expect(first.findingCount).toBe(0);
 });
 
 it('pages every exact finding member, filters previews and keeps gaps distinct from following activity',()=>{

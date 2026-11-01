@@ -185,10 +185,10 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 | # | Found | Severity | State |
 |---|---|---|---|
 | V1 | Prompt overview is the best summary in the product: every prompt with what it led to. It is buried in the palette, paged 7 times, and its counts include `0 change calls · 0 checks · 0 failed outcomes`. | Medium | UI-8: hide zeros, one list, a real way in. |
-| V2 | Review findings: 44 findings, led by `Same captured command · 3 runs` for harmless commands like `git status`. Repetition alone says nothing, as the dialog itself admits. | Medium | UI-22: does this earn its place? Rank by what failed, or cut. |
+| V2 | Review findings: 44 findings, led by `Same captured command · 3 runs` for harmless commands like `git status`. Repetition alone says nothing, as the dialog itself admits. | Medium | Fixed (UI-22): a repeat is a finding only if a run failed, and the most failures lead. |
 | V3 | `through observation 39156` on every review dialog. | Low | Fixed. |
 | V4 | Review packet: each checkbox sat on its own line above its label. | Low | Fixed. |
-| V5 | The packet reports `6462 capture gaps` on one Codex session. A number that large either means something is wrong or that the word does not mean what a reader thinks. | Medium | UI-22: find out what they are before anyone is shown that number. |
+| V5 | The packet reported `6462 capture gaps` on one Codex session. | High | Fixed (UI-22), see below: 74. |
 
 ## Live
 
@@ -218,6 +218,23 @@ Two genuine Claude Code runs on a throwaway repository (`live-repo`, haiku, abou
 | M5 | Comparing a read with disk matches by line position, so a shifted file reads as all changed. The dialog says so; a real line diff would be better. | Medium | UI-23. |
 | M7 | Light theme (Porcelain): Home, History, file view, palette and Changes read well. The detector's only new rule, `cream-palette`, is fashion, and rejected. | | Checked, nothing found. |
 | M8 | Codex `32f628ee` at 600 px: no horizontal overflow, no card past the edge, failure and pass cards read correctly. | | Checked, nothing found. |
+
+## What the capture gaps were (UI-22)
+
+Codex `32f628ee` reported 6,462 gaps. 31 were compactions and 6,431 were records the reader does not parse, and 6,388 of those were Codex repeating itself as `item_completed`. Measured across all 59 local Codex journals, with hashes and lengths only:
+
+| Record | Count | Finding |
+|---|---|---|
+| `Reasoning` | 8,925 | 8,171 empty, 754 match a kept summary, none differ, and `raw_content` is empty on every one |
+| `AgentMessage` | 1,106 | 1,092 identical to a kept message. The other 14 are questions, and each also appears in the tool call before it |
+| `UserMessage` | 224 | 211 identical, 13 contained in a kept prompt |
+| `ContextCompaction` | 41 | Only an id |
+| `CollabAgentToolCall` | 54 | All `wait`, already a tool card |
+| `Extension` | 146 | 79 `web.search` and 1 image are read; 66 `clock.sleep` are not, and stay gaps |
+
+Current Claude Code journals add `api-request`, `api-request-blob`, `api-request-shape` and `tools-used`: its request log beside the conversation (6,848 blobs across 40 recent journals, up to 1.7 MB each). They hold no work the conversation lacks. Their field names suggest they could give the exact tools offered per request, a possible later source for TOOLS-1. Only their field names and sizes were read here, and reading the rest would be a privacy decision.
+
+None of those are gaps in the work, so reducer r33 stops counting them. An unknown future record still counts. Real result: Codex `32f628ee` 6,462 to 74 (31 compactions, 43 sleep calls), Claude `c8e5c9c8` 25 to 7 (all compactions).
 
 ## Interaction inventory (A2)
 
