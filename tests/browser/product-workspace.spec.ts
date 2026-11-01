@@ -153,7 +153,7 @@ test('first-visit evidence review opens exact file work without a reading mark a
   const review = page.getByRole('dialog', { name: 'Review work', exact: true });
   await expect(review.getByRole('region', { name: 'Files with captured changes' })).toBeVisible();
   await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
-  await expect(review).toContainText('recorded order, not test coverage');
+  await expect(review).toContainText('Whole session');
   await page.screenshot({ path: resolve('.local/evidence-review-desktop.png') });
   await review.getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
   const file = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
