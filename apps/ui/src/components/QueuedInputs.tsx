@@ -69,7 +69,7 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   const latest = data?.items[0], waiting = latest?.state === 'recorded';
   // Replay hides the composer, so its receipts sit on the page itself, like an exported bundle's.
   const floating = standalone || mode === 'replay';
-  const view = <div className="queued-input-receipts" style={floating ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', padding: '0 4px'}}>
+  const view = <div className="queued-input-receipts" data-waiting={waiting || undefined} style={floating ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', padding: '0 4px'}}>
     <button type="button" className="btn ghost small" aria-label="Read recorded queued inputs" style={floating || waiting || following ? undefined : {visibility: 'hidden'}} onClick={() => {setOpen(true); if (latest) select(latest);}}>
       <span aria-live="polite">{waiting ? 'Queued input recorded' : `Queued inputs${data?.total ? ` · ${data.total}` : ''}`}</span>
     </button>

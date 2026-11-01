@@ -39,7 +39,7 @@ describe('nowView', () => {
   it('names the open call, its elapsed time and any others', () => {
     const view = nowView(facts({ open: [open(), open({ id: 'b' })], openCount: 3 }), true, ctx)!;
     expect(view).toMatchObject({ tone: 'running', mark: 'running', tab: '● Running · drishya' });
-    expect(view.text).toBe('Codex · running pnpm test · 42 s +2');
+    expect(view.text).toBe('Codex · 42 s · running pnpm test +2');
     expect(view.basis).toContain('no result yet');
   });
 

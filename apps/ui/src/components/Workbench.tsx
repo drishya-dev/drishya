@@ -91,6 +91,8 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
 /** Only captured family links create nesting. Missing parents remain independent roots. */
 function AgentFamilies({ projection, scene }: { projection: Projection; scene: Scene }) {
   const filter = useApp(s => s.filter);
+  // An ended session's last agent is the latest one, not a working one.
+  const following = useApp(s => s.mode === 'replay' || s.recording?.health?.state === 'following');
   const visible = new Set(scene.agents.map(a => a.id));
   const rendered = new Set<string>();
   const render = (state: Scene['agents'][number]): ReactNode => {
@@ -100,7 +102,7 @@ function AgentFamilies({ projection, scene }: { projection: Projection; scene: S
     const parent = projection.agents.find(a => a.id === state.parentId);
     const children = scene.agents.filter(a => a.parentId === state.id && !rendered.has(a.id));
     const description = `${agent?.harness ?? 'Harness'} · ${state.state}${parent ? ` · child of ${agentName(parent)}` : ''}. Focus this agent; surrounding history stays visible. Click again to show everyone.`;
-    const row = <button data-agent-id={state.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === state.id} title={description} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}<small>{state.state}</small></span></button>;
+    const row = <button data-agent-id={state.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === state.id} title={description} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}<small>{state.state === 'active' && !state.activeOperationIds.length && !following ? 'idle' : state.state}</small></span></button>;
     return <div key={state.id} className="station-agent-family">{row}{children.length > 0 && <details className="station-subagents"><summary>Subagents <span>{children.length}</span></summary><div>{children.map(render)}</div></details>}</div>;
   };
   const roots = scene.agents.filter(a => !a.parentId || !visible.has(a.parentId));

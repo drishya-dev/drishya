@@ -724,7 +724,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
           set({ follow: true, selectedOp: undefined, focusObservationId: undefined, promptStep: undefined, held: false });
           // Return the camera to the current replay/live edge, without stopping its clock.
         }}>
-          ↓
+          ↓{mode === 'history' && scene.total > seenThrough.current && <small>{scene.total - seenThrough.current}</small>}
         </button>
       )}
     </>
@@ -1033,7 +1033,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       const s = d.summary;
       return (
         <div className="test">
-          <CommandText text={d.command}/>
+          <CommandText text={d.command} compact/>
           <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} fallback={s ? (
             <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
@@ -1053,7 +1053,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'shell':
       return (
         <div className="shell">
-          <CommandText text={d.command}/>
+          <CommandText text={d.command} compact/>
           <ResultArea state={op.status} resolving={resolving}>
             <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
             {d.outputPreview ? <TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={operationFailed(op)} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}
