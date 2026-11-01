@@ -194,3 +194,12 @@
  .desk-header>div:last-child{width:100%;gap:4px;}
  .desk-header .desk-back-agent{position:absolute;right:8px;top:7px;}
 }
+
+/* AUDIT-1: the tab already names the file, so one row carries the view, Edit and Actions; prose keeps a reading measure. */
+@media(min-width:821px) {
+ :root[data-ui-version=modern] .desk-document { position:relative; }
+ :root[data-ui-version=modern] .desk-document>.desk-document-views { position:absolute;top:6px;right:220px;padding:0;border:0;background:transparent;z-index:1; }
+ :root[data-ui-version=modern] .desk-document>.desk-document-views~* { min-height:0; }
+}
+:root[data-ui-version=modern] .desk-markdown>* { max-width:80ch;margin-inline:auto; }
+.md-html { margin:0 0 12px;padding:0;max-height:6.6em;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.6 var(--mono);color:var(--t3);scrollbar-width:thin; }
