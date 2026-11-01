@@ -23,8 +23,8 @@ for(const width of [600,1440])test(`complete JSON reads inline with exact Origin
  const card=await open(page,raw),reading=card.getByRole('region',{name:'Captured data reading',exact:true});
  await expect(reading).toBeVisible();await expect(reading.getByRole('tree',{name:'Captured JSON tree',exact:true})).toBeVisible();
  await expect(card.getByRole('button',{name:'Inspect data',exact:true})).toHaveCount(0);await expect(card.getByText('Choose reading format')).toHaveCount(0);
- await reading.getByRole('button',{name:'Original',exact:true}).click();await expect(reading.locator('.data-original')).toHaveText(raw);
- await reading.getByRole('button',{name:'Open larger',exact:true}).click();
+ await reading.getByRole('button',{name:'Original',exact:true}).press('Enter');await expect(reading.locator('.data-original')).toHaveText(raw);
+ await reading.getByRole('button',{name:'Open larger',exact:true}).press('Enter');
  const dialog=page.getByRole('dialog',{name:'Captured data',exact:true});await expect(dialog).toBeVisible();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
 });
 test('a JSON field inside a wrapper never replaces the sibling text',async({page})=>{

@@ -399,9 +399,9 @@ test('substantial external results retain structured evidence and adapt to narro
   await expect(external.locator('tbody tr')).toHaveCount(5);
   await expect(external.locator('tbody')).toContainText('synthetic/file-4.ts');
   await expect(external.locator('tbody')).toContainText('null');
-  await external.getByText('Original captured preview', { exact: true }).click();
+  await external.getByText('Original captured preview', { exact: true }).press('Enter');
   await expect(external.locator('.result-original pre')).toHaveText(op.detail.resultPreview);
-  await external.getByText('Original captured preview', { exact: true }).click();
+  await external.getByText('Original captured preview', { exact: true }).press('Enter');
   await external.locator('.op-body').evaluate((el) => { el.scrollTop = 0; });
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });
