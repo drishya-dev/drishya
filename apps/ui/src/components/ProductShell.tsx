@@ -39,6 +39,8 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     const previous = document.activeElement as HTMLElement | null;
     const dialog = ref.current!;
     if (modeless) dialog.show(); else dialog.showModal();
+    // A dialog takes focus on its first control; one built around an input says so.
+    dialog.querySelector<HTMLElement>('[data-dialog-focus]')?.focus({ preventScroll: true });
     const state = useApp.getState();
     // Pointer-only feedback for an occasional modal. Keyboard reading/navigation is immediate.
     const animate = !modeless && !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
