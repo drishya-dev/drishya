@@ -1,3 +1,4 @@
+import { SessionLineage } from './SessionLineage.tsx';
 import { CompactionEvidence, CapturedContextReport, ContextEvidenceScope } from './ContextEvidence.tsx';
 import { contextReport } from '../lib/context-report.ts';
 import {StoredToolResult} from './StoredToolResult.tsx';
@@ -671,6 +672,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
             const fold = foldOf(ps, folded);
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={measureKey(ps.id, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
+              {fold !== 'hidden' && !unloaded && <SessionLineage projection={projection} passageId={ps.id} visibleStep={scene.step} />}
               {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading captured work…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
             </div>;
           }),
