@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-22 | @yash + Claude Opus 5.5 | `claude/ui-22-gaps` | 2026-11-01 | `packages/projection/src/reduce.ts`, `packages/scene/src/{since,review-insights}.ts`, their tests, the review dialogs' copy. |
 | CONTENT-15 | @yash + Claude Opus 5.5 | `claude/content-15-failures` | 2026-11-01 | `apps/ui/src/components/{EvidenceReview,CapturedOutcomes}.tsx`, `packages/scene/src/since.ts`, card outcome, their tests. |
 | REVIEW-6 | @yash + Claude Opus 5.5 | `claude/review-6-one-list` | 2026-11-01 | `apps/ui/src/components/EvidenceReview.tsx`, `packages/scene/src/since.ts`, the daemon review route, specs. |
 | UI-20 | @yash + Claude Opus 5.5 | `claude/ui-20-one-reading` | 2026-11-01 | `apps/ui/src/components/{History,Inspector,Verification}.tsx`, `ReadingKeys.tsx` only after TEST-2 releases it, specs naming the Inspector. More than 15 files by the decision's scope. |

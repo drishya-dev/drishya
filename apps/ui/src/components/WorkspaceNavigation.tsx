@@ -44,7 +44,7 @@ export function WorkspaceNavigation() {
         if(menu)menu.open=true;
         if(section){section.open=true;section.querySelector<HTMLElement>('summary')?.focus();}
       })});
-      for(const [view,name,detail] of [['findings','Review findings','Repeated commands, missing outcomes and capture gaps'],['prompts','Prompt overview','Captured prompt windows and recorded activity counts'],['packet','Prepare review packet','Changes, checks, gaps and your open reviewer questions']] as const)all.push({key:`review-${view}`,name,detail,run:()=>requestAnimationFrame(()=>openReviewTool(view))});
+      for(const [view,name,detail] of [['findings','Review findings','Commands that keep failing, missing outcomes and gaps'],['prompts','Prompt overview','Captured prompt windows and recorded activity counts'],['packet','Prepare review packet','Changes, checks, gaps and your open reviewer questions']] as const)all.push({key:`review-${view}`,name,detail,run:()=>requestAnimationFrame(()=>openReviewTool(view))});
       all.push({key:'commands',name:'Find captured commands',detail:'Search, copy and inspect recorded shell/test activity',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-commands')))});
       all.push({ key: 'review', name: 'Review recorded changes and checks', detail: 'Captured outcomes, not coverage', run: () => click('.review-open') });
       all.push({ key: 'questions', name: 'Review questions', detail: 'Your unresolved review decisions', run: () => click('button[data-review-questions]') });

@@ -25,6 +25,8 @@ export interface OpenOperation {
   asking: boolean;
   /** Bounded captured fields the sentence can name; never the full input. */
   command?: string;
+  /** The agent's own account of the command, when the harness records one. */
+  description?: string;
   path?: string;
   query?: string;
 }
@@ -41,6 +43,7 @@ export function nowFacts(projection: Projection, maxOpen = 3): NowFacts {
       id: op.id, agentId: op.agentId, agentLabel: label.get(op.agentId) ?? op.agentId, kind: op.kind, tool: op.tool, title: op.title,
       since: op.startTime, sequence: op.startSequence, asking: QUESTION_TOOLS.has(op.tool),
       command: d.kind === 'shell' || d.kind === 'test' ? clip(d.command) : undefined,
+      description: d.kind === 'shell' || d.kind === 'test' ? clip(d.description) : undefined,
       path: d.kind === 'read' || d.kind === 'edit' ? d.path : undefined,
       query: d.kind === 'search' ? clip(d.query) : d.kind === 'web' ? clip(d.url ?? d.query) : undefined,
     };

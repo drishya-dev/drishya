@@ -51,7 +51,15 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r32';
+export const REDUCER_VERSION = 'r33';
+
+/**
+ * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
+ * reasoning and calls as `item_completed` (checked on 59 local journals: every text is also kept from its
+ * response item or tool call, and reasoning has no raw content). Claude Code logs its API requests alongside
+ * the conversation. An `Extension` item stays a gap: some kinds have no other record.
+ */
+const SEPARATE_LOGS = new Set(['item_completed:Reasoning', 'item_completed:AgentMessage', 'item_completed:UserMessage', 'item_completed:ContextCompaction', 'item_completed:CollabAgentToolCall', 'api-request', 'api-request-blob', 'api-request-shape', 'tools-used']);
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -829,7 +837,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           gaps.push({ sequence: step() - 1, reason: String(p.reason ?? 'gap'), detail: typeof p.detail === 'string' ? p.detail : undefined });
           break;
         case 'unknown':
-          gaps.push({ sequence: step(), reason: 'unsupported-record', detail: String(p.recordType ?? 'unknown') });
+          if (!SEPARATE_LOGS.has(String(p.recordType))) gaps.push({ sequence: step(), reason: 'unsupported-record', detail: String(p.recordType ?? 'unknown') });
           break;
         default:
           break;
