@@ -194,6 +194,30 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 
 This is the first batch, not the end of the audit. **Still to walk:** a live session as it runs; Review questions, Saved moments and Export; side-by-side compare; every toolbox state; the A2 interaction inventory (right click, drag, resize and every keyboard route, per component) as a written table; the same walk on a Codex session at 600 px; light themes. AUDIT-1 stays open until these are done.
 
+## Impeccable's detector
+
+Run 1 November with Yash's yes to the download: `impeccable` 4.8.0, Apache-2.0, installed outside the repository with install scripts off. Nothing was written to the project, no hook or skill was installed, and the only network path in its launcher (fetching the engine) was not needed. It attached to a browser showing the real app through its `--cdp` mode, so panels could be scanned open on real sessions. Results stayed in `.local/`, and only rule names, selectors and counts were read.
+
+15 scans (Home, History at rest and among cards, an expanded card, Inspector, file work, palette, Changes, Settings, Prompt overview, Findings and Git history at 1440 px; Home, History and the palette at 600 px) gave 196 findings under 11 rules.
+
+| Rule | Found | Verdict |
+|---|---|---|
+| `undersized-ui-text` | 49, nearly all Git history's turn labels at 10 px | Fixed. All text below the 11 px floor is gone. |
+| `line-length` | 21, History prose at about 83 characters | Fixed: 540 px. Prompt overview 560 px. |
+| `straggler` | 17, paragraphs ending on one word | Fixed: `text-wrap: pretty` on prose. |
+| `low-contrast` | 12, line numbers on tinted diff rows and the reasoning note | Fixed. Our own lint missed these because it reads the wrong background. |
+| `tight-leading` | 8, Home titles at 1.29 | Fixed. Home now scans clean at both widths. |
+| `tiny-text` | 66, metadata at 11 px | Kept. 11 px is the house floor for metadata (UI-2). The rule wants 12 and up for body text; this is not body text. |
+| `overused-font` | 12, Geist | Rejected. The face is a decision, and the rule judges fashion, not reading. |
+| `text-occlusion` | 7 | Real at half width only: floating Tools and Follow controls over scrolling text. Sent to UI-8. |
+| `flat-type-hierarchy` | 2 | Recorded for the UI-8 type scale. |
+| `cramped-padding` | 1, rising to 3 | Rejected: diff rows are meant to be dense. |
+| `em-dash-overuse` | 1 | Rejected: that was captured agent text. |
+
+A scan of `apps/ui/src` gave four `side-tab` hits, all deliberate (blockquotes, the agent line on prose, a pinned reference).
+
+**Verdict:** worth running. It found real defects our own lint and eye had missed, in minutes, and five of its eleven rules were right. Use it as a check after each UI-8 surface. Its fixed type and font opinions do not outrank the doctrine. Do not install its hook or skills into this repository.
+
 ## Tools
 
-ECC was read at Yash's request (1 Nov): a general agent system of 314 skills, hooks and rules, not a design tool. It adds nothing to this pass, its hooks and rules would compete with AGENTS.md, and its motion skills target `motion/react`, which Drishya does not use. Not installed. Its `click-path-audit` skill is a useful method to read when tracing a state bug, and `frontend-a11y` and `accessibility` are worth reading for REL-3, as references. Strix is for security testing before release and `claude-seo` for the launch page; neither helps this pass. Impeccable's detector remains the one addition worth running, once Yash agrees to the download.
+ECC was read at Yash's request (1 Nov): a general agent system of 314 skills, hooks and rules, not a design tool. It adds nothing to this pass, its hooks and rules would compete with AGENTS.md, and its motion skills target `motion/react`, which Drishya does not use. Not installed. Its `click-path-audit` skill is a useful method to read when tracing a state bug, and `frontend-a11y` and `accessibility` are worth reading for REL-3, as references. Strix is for security testing before release and `claude-seo` for the launch page; neither helps this pass. Impeccable's detector is covered above.

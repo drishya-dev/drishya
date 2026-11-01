@@ -168,3 +168,8 @@
 :root[data-ui-version=modern] .workspace-navigation-results small { min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:12px/1.5 var(--sans); }
 :root[data-ui-version=modern] .navigation-command-icon { display:none; }
 :root[data-ui-version=modern] .workspace-navigation-help { padding:8px 16px;font-size:11px; }
+
+/* AUDIT-1, Impeccable's detector: prose holds a reading measure and does not end on one word; line numbers stay legible on a tinted diff row. */
+:root[data-ui-version=modern] .history .prose :is(p,li) { max-width:540px;text-wrap:pretty; }
+:root[data-ui-version=modern] .prompt-overview-row>p { max-width:560px; }
+:root[data-ui-version=modern] :is(.ln.add,.ln.del) .ln-no { color:var(--t2); }
