@@ -816,6 +816,12 @@ export interface DiscoveredSource {
   importedRecordingId?: string;
   /** Related files the adapter reads together with this one (e.g. subagent transcripts). */
   companions: string[];
+  /** The harness's own session id, when its first record states one. */
+  sessionId?: string;
+  /** Set when this journal is a sub-agent thread of another session, so it is not listed as a session of its own. */
+  parentSessionId?: string;
+  /** The sub-agent's recorded name. */
+  agentName?: string;
 }
 
 // ─── Repository map ──────────────────────────────────────────────────────────────────────
