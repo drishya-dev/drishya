@@ -25,7 +25,7 @@ Isolated install, LIVE-5 `ee82e38`: typecheck/package pass; units 1,163 pass / s
 
 Clean main `c2cfe75` repeats all four image-related unit failures and all twelve image-related browser failures. All three Git unit files pass alone. The Windows short TEMP alias caused the image path refusals: the six units in `image-grant-race`/`path-images` pass unchanged when TEMP/TMP point at a canonical scratch directory. No production path/consent check or assertion was weakened. The other browser failure group passes 17 of 18 contention repeats on clean main; the workspace-toolbar scroll failure repeats there. Composer cleanup and the three Git browser cases pass in the bounded clean-main repeat. Their initial full-run failures remain recorded, without claiming each was reproduced on main.
 
-The finished LIVE-5/UI-17 runtime batch is now being gated in its own install with that canonical scratch TEMP path; its result is recorded separately below.
+The finished integrated batch is recorded below; the earlier failed run is retained as evidence, not relabelled green.
 
 
 31 October 2026. Whole task claimed before work; merged part 1 (#310) remains intact. This branch finishes remaining acceptance and prepares the early-queue decision. No native journal, configuration or credential is changed. Native content and screenshots remain private in `.local/`.
@@ -73,3 +73,11 @@ Pending before this can merge:
 - `check:real -- mid-turn-input` fails on `rec_c8e5c9c8` (145 native enqueues in the main journal, 178 projected). Counting only the main agent did not change it, so the extra receipts come from somewhere else (sub-agent files carry their own `agent` ids, or rows the scan's prefilter misses). Find the 33 and decide whether the scan or the projection is wrong. `rec_ab475ed8` (97 of 97) and the Codex case pass.
 - Real-session screen frames of a receipt at 600 and 1440 px, and the Codex equivalent (inputs sent while a command runs) recorded.
 - Large-recording latency for text-only append (measured earlier at 0.2 to 1.6 s on this journal's copy; record it in the PR), `package:verify`, `check:affected`, then docs: tick LIVE-5, delete the claim row, `sync-tasks`.
+
+## Final acceptance (1 November)
+
+Genuine Claude `rec_93a3f541`, 10,613,483 bytes, contains one image in a native `queued_command` delivery. At 600/1440 the recorded delivery renders that image once. Its enqueue rows have no image references and the receipt renders none; bytes are not invented before the recorded delivery. The local metadata survey found no array-form enqueue image content, so the early-receipt image path remains fixture-checked; native delivery-image reading is genuinely checked. These facts do not correlate an anonymous receipt with a delivery by text, time or matching pixels. Private frames: `.local/claude-queue-image-real/`.
+
+Finished isolated integration `9f2ba26` (UI-17 `e185b8e` plus LIVE-5 `ee82e38`, each with its own workspace install): both types/build and package pass; all 192 unit files pass, 1,170 tests/one skip; 602 parallel browsers/27 skips; serial 32 pass/one skip and only `b2-live:63` fails. That is the exact five-pixel offset tracked by TEST-2. It fails alone on the integration and reproduces on rebuilt clean main `c2cfe75` in three of six runs. No assertion, timeout or native scrolling was weakened. This is not a clean-full-browser claim; the known baseline exception remains with TEST-2.
+
+UI-17's final reasoning-default correction is separately checked on isolated integration `8da0576`: both types/build, all thirteen affected browser journeys and package verification pass. The complete suite was not needlessly repeated for that bounded fix. All completion scope is checked within the explicit source/capability limits above. Other-builder review/squash remains; no self-merge.
