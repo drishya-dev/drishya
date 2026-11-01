@@ -24,6 +24,7 @@ import {
   type ToolOutcome,
 } from '@drishya/capture-core';
 import { imageCandidate, isDeniedPath, sanitize } from '@drishya/privacy';
+import { recordedQueueOperation } from './queued-input.ts';
 
 export const descriptor: AdapterDescriptor = {
   id: 'claude-code',
@@ -56,7 +57,7 @@ const BACKUP_NAME = /^[0-9a-f]{8,64}@v\d+$/;
 const TOOL_NAME = /^[A-Za-z0-9_.:-]{1,120}$/;
 const MAX_TOOL_NAMES = 400;
 const IGNORED = new Set([
-  'queue-operation', 'bridge-session', 'mode', 'atis-latch',
+  'bridge-session', 'mode', 'atis-latch',
   'last-prompt', 'agent-name', 'attachment', 'permission-mode', 'progress', 'frame-link',
   'artifact-autoreact-ledger', 'artifact-comment-monitor',
 ]);
@@ -209,6 +210,21 @@ export function createParser(ctx: ParseContext): RecordParser {
       };
       const out: RawObservation[] = [];
 
+      // A queue receipt records typing, not delivery. Anonymous dequeue/remove rows do
+      // not identify which input left the queue and must never create a user turn.
+      if (type === 'queue-operation') {
+        const queue = recordedQueueOperation(r);
+        if (!queue) return [];
+        const blocks = Array.isArray(queue.content) ? queue.content as Rec[] : [];
+        const text = typeof queue.content === 'string' ? queue.content : blocks.filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text as string).join('\n');
+        const images = blocks.flatMap(b => b?.type === 'image' && b.source?.type === 'base64' && typeof b.source.data === 'string' ? [imageCandidate(b.source.data)] : []);
+        return [{ ...base, part: 0, kind: 'queue.operation', payload: {
+          operation: queue.operation, ...(queue.nativeQueueId ? { nativeQueueId: queue.nativeQueueId } : {}),
+          ...(Object.hasOwn(queue, 'content') ? { text, ...(images.length ? { images } : {}) } : {}),
+        }, contentKeys: ['text', 'images'] }];
+      }
+
+
       // DATA-5: Claude Code's checkpoints (file backups per turn), as references only.
       if (type === 'file-history-snapshot' || type === 'file-history-delta') {
         const files: CheckpointPayload['files'] = [];
@@ -232,8 +248,11 @@ export function createParser(ctx: ParseContext): RecordParser {
         const text = typeof at.prompt === 'string' ? at.prompt : blocks.filter((b) => b?.type === 'text' && typeof b.text === 'string').map((b) => b.text as string).join('\n');
         const queued = typeof at.timestamp === 'string' && !Number.isNaN(Date.parse(at.timestamp)) ? at.timestamp : base.sourceTime;
         const items: RawObservation[] = [];
-        if (text.trim()) items.push({ ...base, sourceTime: queued, part: 0, kind: 'message.user', payload: { text }, contentKeys: ['text'] });
-        blocks.forEach((b, i) => { if (b?.type === 'image' && (b.source as Rec | undefined)?.type === 'base64') items.push({ ...base, sourceTime: queued, part: i + 1, kind: 'message.user', payload: { text: '', images: [imageCandidate((b.source as Rec).data as string)] }, contentKeys: ['text', 'images'] }); });
+        // A delivery id / source UUID identifies the attachment, not a queued item.
+        const nativeQueueId = str(at.queueId) ?? str(at.queue_id);
+        const queueIdentity = nativeQueueId ? { nativeQueueId } : {};
+        if (text.trim()) items.push({ ...base, sourceTime: queued, part: 0, kind: 'message.user', payload: { text, ...queueIdentity }, contentKeys: ['text'] });
+        blocks.forEach((b, i) => { if (b?.type === 'image' && (b.source as Rec | undefined)?.type === 'base64') items.push({ ...base, sourceTime: queued, part: i + 1, kind: 'message.user', payload: { text: '', ...queueIdentity, images: [imageCandidate((b.source as Rec).data as string)] }, contentKeys: ['text', 'images'] }); });
         return items;
       }
 

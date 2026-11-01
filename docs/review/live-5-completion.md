@@ -1,4 +1,4 @@
-# LIVE-5 — completion evidence and queued-input contract proposal
+# LIVE-5 — completion evidence and queued-input completion
 
 31 October 2026. Whole task claimed before work; merged part 1 (#310) remains intact. This branch finishes remaining acceptance and prepares the early-queue decision. No native journal, configuration or credential is changed. Native content and screenshots remain private in `.local/`.
 
@@ -9,7 +9,7 @@
 - A separate streaming Codex metadata scan includes the two large real journals at 590,880,857 and 134,522,849 bytes. Both retain user inputs as response items, not `event_msg:user_message`. This is source-shape research, not presentation/performance acceptance of those sizes. Determining which inputs arrived during unresolved tool work is still pending.
 - The earlier Claude measurements in TASKS establish that some visible assistant text never reached its journal. This branch cannot reconstruct it or claim a Drishya fix for nonexistent source material. Fresh small/large text-only append measurements and Codex equivalent checks remain acceptance work.
 
-## Proposed early-queue contract — not implemented or approved
+## Approved early-queue contract
 
 The immediate display is a **recorded queue receipt**, not an ordinary delivered user turn. Existing `queued_command` delivery remains the sole owner of the ordinary prompt and its images. No queued receipt starts a harness turn or grants controller authority.
 
@@ -26,7 +26,7 @@ A projection queue receipt has stable observation identity, agent/source ownersh
 
 Replay reveals receipts only at their recorded sequence. Counts, prompt rail and search distinguish queue receipts from actual delivered prompts; existing prompt counts do not silently increase. Rescan and repeated source records must not duplicate receipts. The resting interface has no permanent queue panel; only current recorded queue activity appears near the composer, with keyboard-accessible details.
 
-This needs explicit agreement on the additive event/projection contract from both builders before implementation. It is intentionally a concrete proposal, not a claim that Claude exposes reliable pending-message IDs.
+Both builders approved this contract through Yash on 31 October (recorded on main in 8bc94a9f). Implementation keeps the bounded paged-history boundary: one exact physical queue-observation pointer per History page, bounded sealed-store receipt pages, and 256 KiB UTF-8 input chunks. It does not claim Claude exposes reliable pending-message IDs. The exact cross-layer path reservation is on main in STATUS.
 
 ## Whole acceptance still required
 
