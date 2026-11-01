@@ -39,6 +39,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude — AUDIT-1, first batch
+
+- Yash changed the method on 1 November: walk the product as a developer and fix presentation in place, recording everything in [the audit](review/audit-1-product-audit.md), rather than record first and fix later. AUDIT-1 stays open: live, the review tools, the peek, compare and the written interaction inventory are not walked yet.
+- Walked on the real library (Claude `c8e5c9c8`, 2,695 operations; Codex `32f628ee` with 30 sub-agents) at 1440 and 600 px: Home, History cards, Inspector, file work, Workspace, Changes, the palette, Git review and history, search, Settings, composer, map, replay.
+- Biggest changes: Home's untitled rows were sub-agent threads, now nested with their journals in a Sub-agents group; 105 sessions in 96 scratch folders fold into one group; cards are named by the file or Claude's own command description (reducer r32); bounded previews end in a fade; the file view went from 390 px of chrome to one row; Ctrl+K lands in its input (it opened on the close button).
+- Seven findings became items: UI-20, UI-21, HOME-2, REVIEW-6, CONTENT-15, GIT-7, DATA-13. UI-20 and GIT-7 need a builder decision. `GitHistory.tsx` and the specs naming `Search evidence`, `Recorded checks` and `Ask harness` wait on TEST-2 (#314).
+
 ### Harsh with Codex — LIVE-5 complete, PR #312
 
 - Finished the approved early-queue receipt contract, bounded full reading and replay behavior. Fixed the acceptance scanner to compare physical source identity, not the common main-agent suffix. Fresh genuine Claude counts pass 477/477 and 190/190. The original failing source is unavailable and its extra 33 are not claimed attributed or rechecked.
