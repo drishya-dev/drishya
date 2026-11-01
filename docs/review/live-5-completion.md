@@ -34,3 +34,14 @@ Both builders approved this contract through Yash on 31 October (recorded on mai
 - Text-only live append without a subsequent record, measured on small and large genuine captures; no dependency on a later tool result.
 - Parser guards for known row shapes; queue receipt/delivery/removal/ambiguous identity/rescan/replay cases if the early-queue contract is approved.
 - Both typechecks, focused units and browsers, genuine 600/1440 frames, then one finished-task batch gate. No fixture is described as a real harness run.
+
+## State at 1 November (Claude took over; stopped here at the builder's request)
+
+Built and passing: Claude `queue-operation` rows captured as `queue.operation` receipts (adapter, projection r31, sealed-store reader, `/queue` routes, receipt dialog, exported bundles); typecheck, 732 units (packages and daemon) and all 11 browser cases in `tests/browser/live-captured-text.spec.ts` at 600/1440 px, including the new text-alone live append (within 3 s, also before a running call).
+
+Fixed on the way: receipts were hidden because the composer is minimized by default (the chip now sits above the composer and shows minimized), replay hides the composer (the chip is portalled to the page in replay), and the page's replay queue boundary used the newest queue event instead of the one at the replay cursor.
+
+Pending before this can merge:
+- `check:real -- mid-turn-input` fails on `rec_c8e5c9c8` (145 native enqueues in the main journal, 178 projected). Counting only the main agent did not change it, so the extra receipts come from somewhere else (sub-agent files carry their own `agent` ids, or rows the scan's prefilter misses). Find the 33 and decide whether the scan or the projection is wrong. `rec_ab475ed8` (97 of 97) and the Codex case pass.
+- Real-session screen frames of a receipt at 600 and 1440 px, and the Codex equivalent (inputs sent while a command runs) recorded.
+- Large-recording latency for text-only append (measured earlier at 0.2 to 1.6 s on this journal's copy; record it in the PR), `package:verify`, `check:affected`, then docs: tick LIVE-5, delete the claim row, `sync-tasks`.

@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
+import {createPortal} from 'react-dom';
 import type {QueueInputChunk, QueuePage, QueueReceipt} from '@drishya/contracts';
 import {useApp} from '../state.ts';
 import {ReadingDialog} from './ProductShell.tsx';
@@ -64,7 +65,9 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   };
   if (!source?.queue || !owner || mode === 'replay' && !through || !data?.total && !error) return null;
   const latest = data?.items[0];
-  return <div className="queued-input-receipts" style={standalone ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {padding: '0 12px 8px'}}>
+  // Replay hides the composer, so its receipts sit on the page itself, like an exported bundle's.
+  const floating = standalone || mode === 'replay';
+  const view = <div className="queued-input-receipts" style={floating ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', padding: '0 4px'}}>
     <button type="button" className="btn ghost small" aria-label="Read recorded queued inputs" onClick={() => {setOpen(true); if (latest) select(latest);}}>
       <span aria-live="polite">{latest?.state === 'recorded' ? 'Queued input recorded' : `Queue receipts${data?.total ? ` · ${data.total}` : ''}`}</span>
     </button>
@@ -95,4 +98,5 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
       </div>
     </ReadingDialog>}
   </div>;
+  return mode === 'replay' && !standalone ? createPortal(view, document.body) : view;
 }

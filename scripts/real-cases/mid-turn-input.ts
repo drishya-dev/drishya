@@ -23,7 +23,8 @@ export const midTurnInput: RealCase = {
     if (running && payload.type === 'message' && payload.role === 'user') return {hits: 1};
   },
   verify(projection, found) {
-    const receipts = projection.timeline.filter(item => item.type === 'queue' && item.operation === 'enqueue');
+    // The scan reads the main journal only; sub-agent journals imported with it carry their own queue rows.
+    const receipts = projection.timeline.filter(item => item.type === 'queue' && item.operation === 'enqueue' && item.agentId.endsWith('.agent:main'));
     const turns = projection.timeline.filter(item => item.type === 'turn');
     return projection.harnesses.includes('claude-code')
       ? [`${receipts.length === found.hits ? 'PASS' : 'FAIL'} ${found.hits} native enqueue receipts / ${receipts.length} projected; ${turns.length} distinct delivered turns remain separate`]

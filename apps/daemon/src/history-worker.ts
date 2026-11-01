@@ -238,7 +238,7 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   scene.passages = scene.passages.map((ps) => selected.has(ps.id) ? ps : { ...ps, ops: [], prose: [], turnPrompt: ps.turnPrompt && (ps.turnPrompt.length > 240 ? `${ps.turnPrompt.slice(0, 240)}…` : ps.turnPrompt), unloaded: true });
   const allMarkers = markers(full);
   const stride = Math.max(1, Math.ceil(allMarkers.length / 500));
-  const lastQueue = historical.timeline.findLast(item => item.type === 'queue');
+  const lastQueue = full.timeline.slice(0, step).findLast(item => item.type === 'queue');
   return { ...(lastQueue?.type === 'queue' ? {queueBoundary: {ownerRecordingId: lastQueue.ownerRecordingId, observationId: lastQueue.sourceObservationId}} : {}), projection, scene, start, operationCount: historical.operations.length, summary: historySummary(historical), references, loadedPassageIds: passages.map((ps) => ps.id), revisions,
     markers: allMarkers.filter((_, i) => i % stride === 0), dwell: dwellFor(full, step) };
 }
