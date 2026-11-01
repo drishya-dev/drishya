@@ -135,7 +135,7 @@
 .file-trail .file-op small { display: block; color: var(--t3); font-size: 10px; margin-top: 6px; }
 .file-inspect { color: var(--t3); font-size: 10px; padding: 2px 10px; }
 .file-inspect:hover { color: var(--focus); }
-.file-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 10px; color: var(--t3); }
+.file-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; color: var(--t3); }
 .file-evidence-reading { min-width: 0; padding: 20px; overflow: auto; }
 .file-evidence-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
 .file-evidence-toolbar strong { font-weight: 500; }
