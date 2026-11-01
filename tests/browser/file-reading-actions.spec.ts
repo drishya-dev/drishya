@@ -39,8 +39,14 @@ async function open(page:Page,id:string,entries:[string,unknown][]){
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries}]}}):route.continue());
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
 }
-for(const width of [600,1440])test(`Workspace, Changes and Git review share captured/current navigation at ${width}`,async({page})=>{
+for(const width of [600,1440])test(`Workspace, Changes and Git review find captured files outside the resident file list at ${width}`,async({page})=>{
   await page.setViewportSize({width,height:950});const sample=samples.get('claude-code')!,op=sample.ops.find(op=>op.location==='inside'&&op.kind==='write')!;
+  // A paged History projection is not the whole recording's file index. Changes
+  // owns a global path receipt; current-file/Git actions must check the bounded trail.
+  await page.route('**/v1/recordings/*/history?**',async route=>{
+    const response=await route.fetch(),body=await response.json();body.projection.files=[];
+    await route.fulfill({response,json:body});
+  });
   await open(page,sample.id,[['location',{selectedOp:op.id,follow:false,held:true}]]);
   const inspector=page.getByRole('complementary',{name:'Operation detail'});await expect(inspector).toBeVisible();
   await inspector.getByRole('button',{name:'Open current file for correction',exact:true}).click();
@@ -48,10 +54,18 @@ for(const width of [600,1440])test(`Workspace, Changes and Git review share capt
   await expect(desk.locator('.desk-code')).toContainText('CURRENT_WORKTREE_CHANGE');
   await desk.getByLabel(`File actions for ${op.path}`,{exact:true}).press('Enter');await desk.getByRole('button',{name:'View captured file',exact:true}).click();
   const captured=page.locator('.file-workspace');await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');await expect(captured).not.toContainText('CURRENT_WORKTREE_CHANGE');
-  await captured.getByRole('button',{name:/^Close Work on/}).click();
+  await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
+  const peek=page.locator('.current-file-reader');await expect(peek.locator('.current-file-code')).toBeVisible();
+  await peek.getByLabel('Reading options',{exact:true}).or(peek.getByLabel(`File reading actions for ${op.path}`,{exact:true})).press('Enter');
+  await peek.getByRole('button',{name:'Show in Files',exact:true}).click();
+  await expect(page.getByRole('textbox',{name:'Find repository files',exact:true})).toHaveValue(op.path);
   await page.getByRole('button',{name:'Changes',exact:true}).click();const changes=page.locator('.evidence-review');await expect(changes).toBeVisible();await changes.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await changes.getByRole('button',{name:'View captured file',exact:true}).click();
   await expect(changes).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');await captured.getByRole('button',{name:/^Close Work on/}).click();
-  await openGitDestination(page,'Git review');const git=page.getByRole('dialog',{name:'Git review',exact:true}),consent=git.getByRole('button',{name:'Approve read-only Git',exact:true}),refresh=git.getByRole('button',{name:'Refresh changes',exact:true});await expect(consent.or(refresh)).toBeVisible();if(await consent.isVisible())await consent.click();
+  const statusResponse=page.waitForResponse(response=>response.request().method()==='GET'&&response.url().endsWith(`/recordings/${sample.id}/git`));
+  await openGitDestination(page,'Git review');const git=page.getByRole('dialog',{name:'Git review',exact:true}),consent=git.getByRole('button',{name:'Approve read-only Git',exact:true}),refresh=git.getByRole('button',{name:'Refresh changes',exact:true});
+  // Consent is shared by the daemon across these viewport cases. Wait for its
+  // actual receipt, not the reader's provisional unapproved first frame.
+  const status=await (await statusResponse).json();if(status.approved)await expect(refresh).toBeVisible();else await consent.click();
   await expect(git.locator('.git-selected-file-header')).toContainText(op.path);await git.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await git.getByRole('button',{name:'View captured file',exact:true}).click();await expect(git).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
 });
 

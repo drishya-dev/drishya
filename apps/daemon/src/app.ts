@@ -176,7 +176,7 @@ export class App {
   }
 
   async exportBundle(idOrIds: string): Promise<ReplayBundle> {
-    const ids = [...new Set(idOrIds.split('+').filter(Boolean))];
+    const ids = [...new Set(this.readingId(idOrIds).split('+').filter(Boolean))];
     const recordings = ids.map((id) => this.recording(id));
     const projection = this.projection(idOrIds);
     const artifactText: Record<string, string> = {};
@@ -192,7 +192,7 @@ export class App {
       version: 1,
       exportedAt: new Date().toISOString(),
       privacyPolicyVersion: PRIVACY_POLICY_VERSION,
-      recording: selectionSummary(idOrIds, recordings),
+      recording: { ...selectionSummary(idOrIds, recordings), observationCount: projection.observationCount },
       projection,
       graph: { ...graph, root: '' },
       artifactText,

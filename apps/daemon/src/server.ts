@@ -435,7 +435,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         return json(res, await app.history.file(app.readingId(id), url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000), (url.searchParams.get('selected') ?? '').slice(0, 1000) || undefined));
       }
       if (sub === 'file-roots' && m === 'GET') {
-        const ids=id.split('+'); for(const key of ids) app.recording(key);
+        const ids=app.readingId(id).split('+'); for(const key of ids) app.recording(key);
         return json(res,await recordedFileRoots(app.store,ids));
       }
       if (sub === 'lineage' && m === 'GET') { app.recording(id); return json(res, { lineage: app.store.lineageView(id) ?? null }); }
@@ -576,7 +576,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       // CONTENT-1: an image this recording captured inline, by content hash. Immutable, so cacheable.
       if (sub === 'images' && subId && m === 'GET') {
-        const ids = id.split('+');
+        const ids = app.readingId(id).split('+');
         for (const key of ids) app.recording(key);
         const image = readImage(app.store, ids, subId);
         if (!image) throw new HttpError(404, 'No captured image with that hash in this recording.');

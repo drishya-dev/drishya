@@ -74,6 +74,29 @@ describe('native lineage metadata', () => {
     } finally { await app.close(); }
   });
 
+  it('keeps differing native content, rebuilds after ancestor append and survives restart', async () => {
+    const f = files({ parent: [user(1, 'original')], child: [boundary(2, 1), user(1, 'changed native variant'), user(3, 'later')] });
+    let app = new App(join(f.dir, 'home'));
+    const { recordingId } = await app.ingest.importSource('claude-code', f.paths.child!, { lineageSources: f.all });
+    try {
+      let projection = app.projection(recordingId);
+      expect(projection.timeline.filter(item => item.type === 'turn')).toHaveLength(3);
+      const parent = projection.lineage!.recordingIds[0]!;
+      const initial = await app.history.page(app.readingId(recordingId), { count: 1 });
+      appendFileSync(f.paths.parent!, JSON.stringify(user(4, 'new ancestor evidence')) + '\n');
+      await app.ingest.sync(parent);
+      const changed = await app.history.page(app.readingId(recordingId), { count: 1 });
+      expect(changed.scene.total).toBeGreaterThan(initial.scene.total);
+      expect(changed.projection.lineage?.recordingIds).toEqual(projection.lineage!.recordingIds);
+      expect(changed.projection.recordingId).toBe(recordingId);
+      await app.close();
+      app = new App(join(f.dir, 'home'));
+      projection = app.projection(recordingId);
+      expect(projection.timeline.filter(item => item.type === 'turn')).toHaveLength(4);
+      expect(projection.lineage!.recordingIds).toHaveLength(2);
+    } finally { await app.close(); }
+  });
+
   it('routes historical reads through lineage without widening Workspace, observations or native control', async () => {
     const f = files({ parent: [user(1, 'earlier needle')], child: [boundary(2, 1), user(1, 'earlier needle'), user(3, 'later')] });
     const app = new App(join(f.dir, 'home'));
