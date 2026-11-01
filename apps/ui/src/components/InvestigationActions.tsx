@@ -3,6 +3,7 @@ import type {Operation} from '@drishya/contracts';
 import {useApp} from '../state.ts';
 import {beginInvestigation} from '../lib/native-return.ts';
 import {prepareNativeRequest} from '../lib/prepare-native-request.ts';
+import {FileReadingActions} from './FileReadingActions.tsx';
 
 export function prepareCorrection(op:Operation,text:string) {
   const state=useApp.getState();
@@ -15,5 +16,5 @@ export function InvestigationActions({op}:{op:Operation}) {
   const source=useApp(s=>s.source),id=useApp(s=>s.recordingId),mode=useApp(s=>s.mode);
   const paths=[...new Set(op.paths.map(item=>item.path))], [path,setPath]=useState(paths[0]??'');
   if(source?.kind!=='daemon'||!id||id.includes('+')||mode!=='history')return null;
-  return <section className="investigation-entry" aria-label="Investigate this action"><h3>Investigate this action</h3><p>Read the captured material above. Open today’s file separately to prepare a correction; the harness applies it only after you submit.</p>{paths.length>1&&<label>Current file<select aria-label="Investigation file" value={path} onChange={e=>setPath(e.target.value)}>{paths.map(path=><option key={path}>{path}</option>)}</select></label>}{path?<button className="btn" onClick={()=>{beginInvestigation(source,id,op);useApp.getState().set({developerWorkspace:true,explore:false,selectedOp:undefined,expandedOp:undefined,currentFile:undefined,filePanel:undefined});window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:path}));}}>Open current file for correction</button>:<small>No file location was captured. Leave an anchored question below.</small>}</section>;
+  return <section className="investigation-entry" aria-label="Investigate this action"><h3>Investigate this action</h3><p>Captured material stays separate from today's file. Read it here, or use Workspace with its existing access checks.</p>{paths.length>1&&<label>Current file<select aria-label="Investigation file" value={path} onChange={e=>setPath(e.target.value)}>{paths.map(path=><option key={path}>{path}</option>)}</select></label>}{path?<FileReadingActions path={path} op={op} workspaceLabel="Open current file for correction" beforeWorkspace={()=>beginInvestigation(source,id,op)}/>:<small>No file location was captured. Leave an anchored question below.</small>}</section>;
 }
