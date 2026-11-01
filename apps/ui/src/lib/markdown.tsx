@@ -38,7 +38,7 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
     // HTML is never interpreted, and as a paragraph it reads like broken prose; show it as the source it is.
     if (document && /^\s*<(?:!--|\/?[a-z][\w-]*[\s/>])/i.test(line)) {
       const markup:string[]=[];while(i<lines.length && lines[i]!.trim())markup.push(lines[i++]!);
-      blocks.push(<FencedCode key={key++} text={markup.join('\n')} language="html"/>);continue;
+      blocks.push(<pre className="md-html" key={key++}>{markup.join('\n')}</pre>);continue;
     }
     const fence = /^\s*```(\w*)/.exec(line);
     if (fence) {
