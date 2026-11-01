@@ -33,6 +33,8 @@ test('prompt minimize and reversal share measured bounds without changing layout
  await openComposer(page);
  const before=(await composer.boundingBox())!;
  expect(before.width).toBeGreaterThan(500);
+ // Pause at creation: an IPC round trip can outlast the entire short morph under load.
+ await composer.evaluate(node=>{const original=Element.prototype.animate;(window as any).__restoreComposerAnimation=()=>{Element.prototype.animate=original;};Element.prototype.animate=function(frames,options){const animation=original.call(this,frames,options);if(this===node||node.contains(this)){animation.pause();animation.currentTime=0;}return animation;};});
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
  const pause=async(time:number)=>composer.evaluate((node,time)=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=time;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};},time);
  const start=await pause(0);for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
@@ -43,7 +45,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  expect((await composer.locator('[data-surface-label]').boundingBox())!.height).toBeLessThan(30);
  await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
- await composer.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await composer.evaluate(node=>{node.getAnimations({subtree:true}).forEach(animation=>animation.finish());(window as any).__restoreComposerAnimation();});
  await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-node.offsetHeight-24))).toBeLessThanOrEqual(1);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
@@ -64,7 +66,7 @@ test('toolbox minimizes from actual bounds and keeps its compact icon and indepe
  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
 });
 
-test.beforeAll(async () => {
+test.beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-fresh-')); root = join(dir, 'shop');
   cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
   writeFileSync(join(root,'src/cart/reading.ts'),Array.from({length:450},(_,i)=>`export const reviewLine${i+1} = ${i+1};`).join('\n'));
@@ -97,7 +99,7 @@ test.beforeAll(async () => {
 });
 test.beforeEach(async({request})=>{await request.delete(`${server.url}/v1/working-locations`,{headers:{authorization:`Bearer ${server.token}`,'content-type':'application/json'}});});
 
-test.afterAll(async () => {
+test.afterEach(async () => {
   if (server) await server.close(); if (app) await app.close();
   if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); }
 });
