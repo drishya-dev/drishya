@@ -14,7 +14,7 @@ export function presentationOf(op: Operation): { shape: MaterialShape; material:
       // A wide diff takes the width its longest line needs, up to the passage; short edits keep their compact card.
       return { shape: wide ? 'wide' : 'source', material: 'change', ...(wide ? { width: diffCardWidth(d.hunks) } : {}) };
     }
-    case 'shell': return { shape: d.command.length > 110 || d.command.includes('\n') ? 'wide' : (d.outputPreview?.length ?? 0) > 160 ? 'medium' : 'compact', material: 'terminal', width: readingWidth(d.command, d.outputPreview) };
+    case 'shell': return { shape: d.command.length > 110 || d.command.includes('\n') ? 'wide' : (d.outputPreview?.length ?? 0) > 160 ? 'medium' : 'compact', material: 'terminal', width: Math.max(readingWidth(d.command, d.outputPreview), titleWidth(d.description)) };
     case 'test': return { shape: d.command.length>110||d.command.includes('\n')?'wide':'medium', material: 'verification',width:Math.max(350,readingWidth(d.command,d.outputPreview)) };
     case 'search': return { shape: d.hits.length > 3 ? 'medium' : 'compact', material: 'matches', width: readingWidth(d.query, ...d.hits.slice(0, 5).map(hit => `${hit.path}:${hit.line ?? ''} ${hit.text ?? ''}`)) };
     case 'mcp': {
@@ -28,6 +28,9 @@ export function presentationOf(op: Operation): { shape: MaterialShape; material:
 }
 
 /** Preview-only sizing keeps a short receipt from inheriting a source-reader allocation. */
+/** A card named in the agent's words is wide enough to show them. */
+const titleWidth = (title?: string) => title ? Math.min(440, 140 + title.length * 7.5) : 0;
+
 export function readingWidth(...texts: (string | undefined)[]): number {
   let longest = 0;
   for (const text of texts) for (const line of (text ?? '').slice(0, 4096).split('\n').slice(0, 40)) longest = Math.max(longest, Math.min(90, line.length));

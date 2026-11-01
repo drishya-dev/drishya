@@ -203,3 +203,4 @@
 }
 :root[data-ui-version=modern] .desk-markdown>* { max-width:80ch;margin-inline:auto; }
 .md-html { margin:0 0 12px;padding:0;max-height:6.6em;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.6 var(--mono);color:var(--t3);scrollbar-width:thin; }
+:root[data-ui-version=modern] .source-version-dialog .modern-patch-tools { padding-inline:16px; }

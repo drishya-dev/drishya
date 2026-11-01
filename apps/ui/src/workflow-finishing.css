@@ -39,3 +39,4 @@
 }
 .review-packet fieldset>label { display:flex;align-items:center;gap:9px;padding:6px 0; }
 .review-packet fieldset>label>input { flex:none;margin:0; }
+:root[data-ui-version=modern] .saved-moments-dialog>:not(header) { margin-inline:24px; }
