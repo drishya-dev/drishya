@@ -1,3 +1,4 @@
+import {QueuedInputs} from './QueuedInputs.tsx';
 import {currentReadingTarget,currentReadingFailure} from '../lib/file-reading.ts';
 import {CapturedFileFallback} from './FileHistory.tsx';
 import {FileReadingActions} from './FileReadingActions.tsx';
@@ -525,7 +526,7 @@ export function PromptComposer() {
     observer.observe(node);
     return () => { observer.disconnect(); viewer.style.removeProperty('--composer-gap'); };
   }, [source, id]);
-  if (source?.kind !== 'daemon' || !id || id.includes('+')) return null;
+  if (source?.kind !== 'daemon' || !id || id.includes('+')) return source?.kind === 'bundle' && id ? <QueuedInputs standalone/> : null;
   const running = controller && ['connecting', 'running', 'approval'].includes(controller.state);
   const promptBytes = utf8Bytes(prompt);
   const overLimit = promptBytes > PROMPT_BYTES;
@@ -573,6 +574,7 @@ export function PromptComposer() {
       {canRetryFiles && <button className="btn ghost small" disabled={loadingFiles || busy || !!running} onClick={() => void attach(rejectedFiles.current)}>Retry rejected files</button>}
       {preview && <ReadingDialog title={`Attachment: ${preview.name}`} close={() => setPreview(undefined)} className="attachment-preview-dialog"><p className="muted">Prepared locally · not sent. Text is redacted by the server before submission; inspect images for secrets.</p>{preview.type === 'image' ? <img alt={preview.name} src={`data:${preview.mime};base64,${preview.data}`} style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain' }} /> : <><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight:'60dvh',overflow:'auto' }}>{preview.data}</pre></>}</ReadingDialog>}
 
+      <QueuedInputs/>
       <div className="native-turn-details">
       {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}{connectionError && <button className="btn ghost small" disabled={busy} onClick={() => void act(refresh)}>Retry native connection</button>}</p>}
       {controller?.promptRedacted && <p className="muted small">Detected secrets were removed before sending this prompt.</p>}

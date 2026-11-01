@@ -29,6 +29,7 @@ export type ObservationKind =
   | 'turn.start'
   | 'turn.end'
   | 'turn.detail'
+  | 'queue.operation'
   | 'message.user'
   | 'message.assistant'
   | 'reasoning'
@@ -635,8 +636,25 @@ export interface EvidenceLink {
   explanation: string;
 }
 
+/** A captured queue action is not a delivered user turn. Physical identity bounds replay. */
+export interface QueueTimelineItem {
+  type: 'queue'; id: string; sequence: number; agentId: string; time?: string;
+  sourceObservationId: string; ownerRecordingId: string;
+  operation: 'enqueue' | 'dequeue' | 'remove' | 'delivered';
+  nativeQueueId?: string; inputArtifactId?: string; preview?: string; images?: OperationImage[]; sourceId: string; generation: number;
+}
+export interface QueueQuery { through?: string; before?: number; count?: number; receiptId?: string }
+export interface QueueReceipt {
+  id: string; ownerRecordingId: string; sequence: number; agentId: string; time?: string;
+  state: 'recorded' | 'unknown' | 'removed' | 'delivered'; preview: string;
+  nativeQueueId?: string; changeObservationId?: string; images?: OperationImage[]; inputArtifactId?: string;
+}
+export interface QueuePage { items: QueueReceipt[]; total: number; before?: number }
+export interface QueueInputChunk { text: string; start: number; next: number; totalBytes: number; hasMore: boolean }
+
 /** One unit of playback. The timeline is what the transport steps through. */
 export type TimelineItem =
+  | QueueTimelineItem
   | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string; permissionMode?: string; /** CONTENT-1: images the person attached. */ images?: OperationImage[] }
   | { type: 'op-start'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'op-end'; id: string; operationId: string; sequence: number; agentId: string; time?: string }

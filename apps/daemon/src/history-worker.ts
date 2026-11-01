@@ -1,3 +1,4 @@
+import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
 import { fileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import { readingTarget } from '../../../packages/scene/src/reading-target.ts';
 import { fileEvidence } from '../../../packages/scene/src/file-evidence.ts';
@@ -237,7 +238,8 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   scene.passages = scene.passages.map((ps) => selected.has(ps.id) ? ps : { ...ps, ops: [], prose: [], turnPrompt: ps.turnPrompt && (ps.turnPrompt.length > 240 ? `${ps.turnPrompt.slice(0, 240)}…` : ps.turnPrompt), unloaded: true });
   const allMarkers = markers(full);
   const stride = Math.max(1, Math.ceil(allMarkers.length / 500));
-  return { projection, scene, start, operationCount: historical.operations.length, summary: historySummary(historical), references, loadedPassageIds: passages.map((ps) => ps.id), revisions,
+  const lastQueue = full.timeline.slice(0, step).findLast(item => item.type === 'queue');
+  return { ...(lastQueue?.type === 'queue' ? {queueBoundary: {ownerRecordingId: lastQueue.ownerRecordingId, observationId: lastQueue.sourceObservationId}} : {}), projection, scene, start, operationCount: historical.operations.length, summary: historySummary(historical), references, loadedPassageIds: passages.map((ps) => ps.id), revisions,
     markers: allMarkers.filter((_, i) => i % stride === 0), dwell: dwellFor(full, step) };
 }
 
@@ -322,6 +324,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'commands') value=commandPage(current(a.id).projection.operations,a.query);
     else if (message.method === 'tools') value=toolInventory(a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step));
     else if (message.method === 'tool-trail') value=toolTrail(a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step),a.filter,a.from);
+    else if (message.method === 'queue') value=queuePage(current(a.id).projection.timeline, a.owner, a.query);
     else if (message.method === 'screen') value=screenRun((a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step)).operations);
     else if(message.method==='git-session-evidence'){
       const projection=current(a.id).projection;
