@@ -232,7 +232,7 @@ Codex `32f628ee` reported 6,462 gaps. 31 were compactions and 6,431 were records
 | `CollabAgentToolCall` | 54 | All `wait`, already a tool card |
 | `Extension` | 146 | 79 `web.search` and 1 image are read; 66 `clock.sleep` are not, and stay gaps |
 
-Current Claude Code journals add `api-request`, `api-request-blob`, `api-request-shape` and `tools-used`: its request log beside the conversation (6,848 blobs across 40 recent journals, up to 1.7 MB each). They hold no work the conversation lacks. They could give the exact tools offered per request, which is a possible later source for TOOLS-1, and they carry the full system prompt, so reading them is a privacy decision.
+Current Claude Code journals add `api-request`, `api-request-blob`, `api-request-shape` and `tools-used`: its request log beside the conversation (6,848 blobs across 40 recent journals, up to 1.7 MB each). They hold no work the conversation lacks. Their field names suggest they could give the exact tools offered per request, a possible later source for TOOLS-1. Only their field names and sizes were read here, and reading the rest would be a privacy decision.
 
 None of those are gaps in the work, so reducer r33 stops counting them. An unknown future record still counts. Real result: Codex `32f628ee` 6,462 to 74 (31 compactions, 43 sleep calls), Claude `c8e5c9c8` 25 to 7 (all compactions).
 
