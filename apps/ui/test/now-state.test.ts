@@ -17,6 +17,7 @@ describe('elapsed', () => {
 describe('describeOpen', () => {
   it('names what each kind of open call is doing', () => {
     expect(describeOpen(open())).toBe('running pnpm test');
+    expect(describeOpen(open({ description: 'Run the unit tests' }))).toBe('Run the unit tests');
     expect(describeOpen(open({ kind: 'read', path: 'src\\store\\index.ts' }))).toBe('reading index.ts');
     expect(describeOpen(open({ kind: 'edit', path: 'apps/ui/src/App.tsx' }))).toBe('editing App.tsx');
     expect(describeOpen(open({ kind: 'search', query: 'amount' }))).toBe('searching amount');

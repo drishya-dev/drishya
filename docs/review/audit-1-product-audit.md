@@ -190,9 +190,65 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 | V4 | Review packet: each checkbox sat on its own line above its label. | Low | Fixed. |
 | V5 | The packet reports `6462 capture gaps` on one Codex session. A number that large either means something is wrong or that the word does not mean what a reader thinks. | Medium | UI-22: find out what they are before anyone is shown that number. |
 
-## Not yet walked
+## Live
 
-This is the first batch, not the end of the audit. **Still to walk:** a live session as it runs; Review questions, Saved moments and Export; side-by-side compare; every toolbox state; the A2 interaction inventory (right click, drag, resize and every keyboard route, per component) as a written table; the same walk on a Codex session at 600 px; light themes. AUDIT-1 stays open until these are done.
+Two genuine Claude Code runs on a throwaway repository (`live-repo`, haiku, about 90 seconds each, with deliberately slow commands), watched from Home to finish at 1440 px.
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| L1 | A new session needs Refresh, and a running session does not appear in `Running now` until it has been opened. | High | HOME-2. |
+| L2 | Once open, following held across arrivals; wheel up detached it; the new-step count and return to latest both worked. Opening took 0.8 s. | | Checked, nothing found. |
+| L3 | Toolbox said `active` on every finished session, including sessions weeks old, because the last agent counts as active. | High | Fixed: `active` needs a followed session or an open call. |
+| L4 | Command previews led with `cd "C:/Users/…long path" &&` and faded out before the command. | High | Fixed: `cd workspace &&` in the preview when the path is the session's own folder. Copy and Expand stay exact. |
+| L5 | A running command's time sat at the end of the pill, where it was always cut off. | Medium | Fixed: time first, and the agent's description instead of the command. |
+| L6 | A short command gave a narrow card that cut the agent's description. | Medium | Fixed: the card is as wide as its title needs. |
+| L7 | `Queued inputs · 1` stayed above the composer with nothing queued. | Medium | Fixed: past receipts show on composer hover or focus; a waiting input always shows. |
+| L8 | The toolbox was vertically centred, so it moved every time a tool appeared. | Medium | Fixed: fixed top edge. |
+| L9 | `16 new steps` existed only for screen readers. | Low | Fixed: the count shows beside the arrow. |
+| L10 | Notices sat 6 px left of the prose. | Low | Fixed. |
+
+## Review questions, Saved moments, compare, themes, Codex at half width
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| M1 | Saved moments ran flush against the dialog edge. | Medium | Fixed. |
+| M2 | `Captured action · observation 10832`; a two-clause scope sentence on Review questions. | Low | Fixed: `Step 10832`, one plain sentence. |
+| M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20: Expand gets one note. |
+| M4 | The Source versions toolbar sat flush against the dialog edge. | Low | Fixed. |
+| M5 | Comparing a read with disk matches by line position, so a shifted file reads as all changed. The dialog says so; a real line diff would be better. | Medium | UI-23. |
+| M6 | `Export recording` is listed for the session but the button is not reachable from the session panel; only `Use this session as local preview` was. | Low | UI-8: check the owner. |
+| M7 | Light theme (Porcelain): Home, History, file view, palette and Changes read well. The detector's only new rule, `cream-palette`, is fashion, and rejected. | | Checked, nothing found. |
+| M8 | Codex `32f628ee` at 600 px: no horizontal overflow, no card past the edge, failure and pass cards read correctly. | | Checked, nothing found. |
+
+## Interaction inventory (A2)
+
+What each component does for each kind of input, for UI-8 and the motion pass to preserve. `tested` means driven in the walk on a real session; `code` means read from the source and not driven. Right click is the browser's own menu everywhere (tested on cards and file rows): there is no product menu anywhere, which is UI-24.
+
+| Component | Pointer | Keyboard | Scroll and drag | Live and replay | Loading, empty, failing | Basis |
+|---|---|---|---|---|---|---|
+| Home row | Click opens; hover shows the arrow | Arrows, Home, End, PageUp, PageDown move; Enter opens | Virtual list; position remembered | Running strip when followed | Dim list while importing; empty and no-match states; error with Retry | tested |
+| Home rail | Click filters; title shows the full path | Tab, Enter; Esc closes at half width | Virtual list | None | Unknown remembered workspace falls back to All | tested |
+| History scroll | Wheel detaches following | `j k` step, `n p` edit, `f` failure, `t T` turn, `g G` ends, `e` expand, `o` open file, `y` copy, `c C` fold, `?` guide, Esc clears focus | Native scroll; prompts rail ticks jump | Keys only in history; replay has transport | Skeletons, gaps as notices | tested (j k n p e o ?), code (rest) |
+| Card | Click head opens details; click twice closes; click body never does; hover zooms reading | Enter opens details; Tab reaches it | Bounded preview scrolls without detaching | State mark settles once | Running: `Waiting for output`; red contour on failure | tested |
+| Expand | Click toggles | Enter on the button; `e` | Inner scroll | Same in replay, future hidden | Honest absent states | tested |
+| Inspector | Click card; close button | Esc closes | Resize by handle; history follows | Follows selection | Skeletons | tested |
+| Toolbox tool | Hover draws its connector; click dims others and offers Clear focus; click again clears | Tab, Enter; Esc does not clear focus | Long lists scroll locally | Counts rise live | `Tools used 0` before the first call | tested |
+| Toolbox panel | `−` minimises | Tab, Enter | Scrolls when tall | Grows downward, top edge fixed | | tested |
+| File rail | Click opens file; double click pins it; collapse button | `Find files…` filters | Handle resizes 220 to the limit; double click resets | Marks update live | Consent prompt; empty filter state | tested |
+| File peek | Tabs, Document and Source | Esc closes, focus returns | Local scroll | Disabled in replay | Over the limit: source with a note | tested |
+| File work | Step rows; hover shows Open in history | Previous and Next change; focus kept at the ends | Trail resize; window move and reset | Replay shows steps up to now | Filter empty state; restored evidence states | tested |
+| Workspace | Tabs, Edit, Actions | Ctrl+K reaches files | Split view | Off in replay | Consent state | tested |
+| Palette | Click a row | Ctrl+K opens, typing filters, arrows, Enter, Esc | List scroll | History only | No-match line | tested |
+| Changes | Rows open a file or an edit | Tab, Esc | Dialog scroll; paged | History only | Retry; `None recorded` | tested |
+| Git menu, review, history | Click; commit rows; ref rail | `B` focuses a branch, Esc clears it | Wheel pans, zoom buttons, Fit | History only | Three consents; loading line | tested |
+| Search | Click a result | Enter, Esc | Local scroll | Replay limits to the step | Empty state | tested |
+| Composer | Click opens; hover shows past receipts | Ctrl+Shift+Enter sends | Height follows content | Pill states live; hidden in replay | Unsupported requests fail explicitly | tested at rest, not sending |
+| Follow | Toggle; `↓` returns with the count | Tab, Space | Wheel detaches it | Hidden with the Inspector | | tested |
+| Repository map | Drag orbits, Shift drag pans, buttons zoom and Fit | Find a file | Wheel zooms | Replay follows | `Map the whole repository` | code, one screen tested |
+| Replay transport | Scrub, play, step, speed, leave | Space and arrows | | Stops on leave | | code, one screen tested |
+| Dialogs | Close button; move and reset where offered | Esc closes the top one; focus returns to the opener | Local scroll; resize where offered | | | tested |
+
+**Not driven:** the composer's send and approval paths, and replay's keyboard. Both need a session of their own.
 
 ## Impeccable's detector
 
