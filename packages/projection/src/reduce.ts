@@ -5,6 +5,7 @@
 import { createHash } from 'node:crypto';
 import type {
   AdapterDescriptor,
+  SessionLineageView,
   WebResult,
   CommandRun,
   BeforeTurn,
@@ -50,7 +51,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r29';
+export const REDUCER_VERSION = 'r30';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -58,6 +59,7 @@ export interface BlobIO {
 }
 
 export interface ReduceOptions {
+  lineage?: SessionLineageView;
   adapters: Record<string, AdapterDescriptor>;
   /** A live recording leaves unfinished operations "running" rather than "unknown". */
   live?: boolean;
@@ -103,6 +105,7 @@ export function reduce(recordingId: string, input: Iterable<Observation>, io: Bl
 export function createReducer(recordingId: string, input: Iterable<Observation>, io: BlobIO, opts: ReduceOptions) {
   const maxProse = opts.maxProseChars ?? 64_000;
   const obs = opts.ordered ? input : orderObservations([...input]);
+  const lineageStarts = new Map<string, string>();
   let observationCount = 0;
   let lastSequence = -1;
   const taskPlans = new TaskPlans();
@@ -210,7 +213,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     }
     return relativize(q, workspaceRoot);
   };
-  const agentKey = (o: Observation) => `${o.recordingId}.${o.agentId}`;
+  const correlationOwner = (o: Observation) => opts.lineage?.recordingIds.includes(o.recordingId) ? opts.lineage.currentRecordingId : o.recordingId;
+  const agentKey = (o: Observation) => `${correlationOwner(o)}.${o.agentId}`;
+  const callKey = (o: Observation) => `${correlationOwner(o)}.${o.agentId}/${o.operationId ?? o.id}`;
   const step = () => timeline.length;
 
   const ensureAgent = (o: Observation): Agent => {
@@ -276,14 +281,14 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       observationIds: [o.id],
       classification: { kind: 'captured', observationIds: [o.id] },
     };
-    const st: OpState = { op, intent, cwd, taskTurn: turnByRecording.get(o.recordingId), callObservationId: o.id, turnMessage: turnMessageByRecording.get(o.recordingId) };
+    const st: OpState = { op, intent, cwd, taskTurn: turnByRecording.get(correlationOwner(o)), callObservationId: o.id, turnMessage: turnMessageByRecording.get(correlationOwner(o)) };
     ops.set(id, st);
     if (st.turnMessage && (intent.kind === 'edit' || intent.kind === 'write' || intent.kind === 'patch')) awaitingCheckpoint.add(id);
     dirtyOperations.add(id);
     opOrder.push(id);
     const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
-    let group = opGroups.get(baseId);
-    if (!group) opGroups.set(baseId, group = []);
+    let group = opGroups.get(callKey(o));
+    if (!group) opGroups.set(callKey(o), group = []);
     group.push(id);
     return st;
   };
@@ -297,8 +302,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       pendingTurnImages.delete(key);
       ensureAgent(held.first);
       const turn = imageOnlyTurn(held);
-      turnByRecording.set(held.first.recordingId, turn.id);
-      if (held.first.source.recordId) turnMessageByRecording.set(held.first.recordingId, held.first.source.recordId);
+      turnByRecording.set(correlationOwner(held.first), turn.id);
+      if (held.first.source.recordId) turnMessageByRecording.set(correlationOwner(held.first), held.first.source.recordId);
       turnByRecord.set(key, turn);
       timeline.push(turn);
     }
@@ -306,6 +311,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
 
   function append(batch: Iterable<Observation>) {
     for (const o of batch) {
+      const materialStart = timeline.length;
       if (pendingTurnImages.size) flushImageOnlyTurns(`${o.recordingId}|${o.source?.recordId ?? o.id}`);
       observationCount++;
       lastSequence = Math.max(lastSequence, o.receivedSequence);
@@ -510,8 +516,8 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (o.agentId !== 'agent:main') break;
           if (!firstPrompt) firstPrompt = clip(t.replace(/\s+/g, ' ').trim(), 120);
           const id = `turn_${o.id}`;
-          turnByRecording.set(o.recordingId, id);
-          if (o.source.recordId) turnMessageByRecording.set(o.recordingId, o.source.recordId);
+          turnByRecording.set(correlationOwner(o), id);
+          if (o.source.recordId) turnMessageByRecording.set(correlationOwner(o), o.source.recordId);
           const recordKey = `${o.recordingId}|${o.source.recordId ?? o.id}`;
           const attached = [...(pendingTurnImages.get(recordKey)?.images ?? []), ...(images ?? [])];
           pendingTurnImages.delete(recordKey);
@@ -527,7 +533,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           const t = delivery?.text ?? original;
           if (o.kind === 'reasoning' && p.exposure === 'none') {
             const a = ensureAgent(o);
-            const key = `${turnByRecording.get(o.recordingId) ?? o.recordingId}|${a.id}`;
+            const key = `${turnByRecording.get(correlationOwner(o)) ?? o.recordingId}|${a.id}`;
             const line = unrecorded.get(key);
             if (line) { line.count = (line.count ?? 1) + 1; line.observationIds.push(o.id); break; }
             const reason = p.reason === 'encrypted' || p.reason === 'signature-only' ? p.reason : 'empty';
@@ -652,7 +658,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         case 'tool.result': {
           ensureAgent(o);
           const baseId = `${o.recordingId}.${o.operationId ?? o.id}`;
-          let targets = opGroups.get(baseId) ?? [];
+          let targets = opGroups.get(callKey(o)) ?? [];
           if (!targets.length) {
             // A result whose call we never saw (lost, or before a compaction): keep it, honestly generic.
             const st = newOp(o, baseId, { kind: 'other' }, String(p.tool ?? 'unknown tool'));
@@ -808,6 +814,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
         default:
           break;
       }
+      if (opts.lineage && timeline.length > materialStart && !lineageStarts.has(o.recordingId)) lineageStarts.set(o.recordingId, timeline[materialStart]!.id);
     }
 
   }
@@ -886,6 +893,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     const accounting = usage.snapshot();
     const turns = turnRecords.snapshot();
     return {
+      ...(opts.lineage ? { lineage: { ...structuredClone(opts.lineage), transitions: [...lineageStarts].flatMap(([recordingId, id]) => placedSteps.has(id) ? [{ recordingId, step: placedSteps.get(id)! }] : []) } } : {}),
       reducerVersion: REDUCER_VERSION,
       recordingId,
       observationCount,

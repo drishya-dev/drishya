@@ -415,6 +415,30 @@ export type Provenance =
   | { kind: 'derived'; rule: string; observationIds: string[] }
   | { kind: 'generated'; generator: string; observationIds: string[] };
 
+/** Derived from exact native row references; physical observations remain immutable. */
+export interface SessionLineageLink {
+  childRecordingId: string;
+  parentRecordingId?: string;
+  status: 'linked' | 'parent-missing' | 'ambiguous';
+  basis: 'native-logical-parent';
+  childSourceId: string;
+  boundaryRecordId: string;
+  logicalParentRecordId: string;
+  candidateRecordingIds: string[];
+  sharedMessageRecords: number;
+}
+export interface SessionLineageView {
+  kind: 'derived';
+  rule: 'claude-native-parent-lineage-v1';
+  currentRecordingId: string;
+  recordingIds: string[];
+  links: SessionLineageLink[];
+  duplicatePartsOmitted: number;
+  differingReceiptPartsRetained: number;
+  /** Exact first retained material per physical source, in derived timeline coordinates. */
+  transitions?: { recordingId: string; step: number }[];
+}
+
 /** The shapes the renderer knows. Harness names never reach it; these do. */
 export type OperationKind =
   | 'read'
@@ -671,6 +695,7 @@ export interface CapturedSessionBranch {
 }
 
 export interface Projection {
+  lineage?: SessionLineageView;
   /** Last eligible primary-root session metadata; not branch-at-step evidence. Absent in older projections. */
   recordedBranch?: CapturedSessionBranch;
   /** Turns the harness recorded, in start order. Absent in older projections and for harnesses with no turn records. */

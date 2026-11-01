@@ -155,7 +155,15 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const broadcast = (data: string) => {
     for (const c of clients) if (!writeEvent(c, data)) clients.delete(c);
   };
-  const onChange = (ev: ChangeEvent) => broadcast(`event: change\ndata: ${JSON.stringify(ev)}\n\n`);
+  const onChange = (ev: ChangeEvent) => {
+    broadcast(`event: change\ndata: ${JSON.stringify(ev)}\n\n`);
+    // The client keeps its selected physical control id. An ancestor append still invalidates its historical view.
+    for (const recording of app.store.listRecordings()) {
+      if (recording.id === ev.recordingId || !app.store.lineageView(recording.id)?.recordingIds.includes(ev.recordingId)) continue;
+      app.store.db.prepare('UPDATE recordings SET revision=revision+1 WHERE id=?').run(recording.id);
+      broadcast(`event: change\ndata: ${JSON.stringify({ ...ev, recordingId: recording.id, revision: app.store.getRecording(recording.id)?.revision })}\n\n`);
+    }
+  };
   // Capture state changes travel on their own event name, so viewers that only reload data on
   // `change` are not disturbed (B1, audit A05).
   const onHealth = (ev: HealthEvent) => broadcast(`event: health\ndata: ${JSON.stringify(ev)}\n\n`);
@@ -287,7 +295,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       return json(res, { ...r, recording: app.store.getRecording(r.recordingId) });
     }
     if (a === 'recordings' && !id && m === 'GET') {
-      const result = json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, sourceBytes: app.store.sourceBytes(r.id), live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
+      const result = json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, sourceBytes: (app.store.lineageView(r.id)?.recordingIds ?? [r.id]).reduce((bytes, id) => bytes + app.store.sourceBytes(id), 0), live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
       const sample = timings?.get(res);
       if (sample) sample.responseEndAtMs = performance.now();
       return result;
@@ -351,13 +359,13 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (body.pinnedPassageIds !== undefined && (!Array.isArray(body.pinnedPassageIds) || body.pinnedPassageIds.length > 3 || body.pinnedPassageIds.some((pin: unknown) => typeof pin !== 'string' || pin.length > 512))) throw new HttpError(400, 'invalid passage pins');
         if (body.filter !== undefined && (!body.filter || typeof body.filter !== 'object' || Array.isArray(body.filter))) throw new HttpError(400, 'invalid filter');
         if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');
-        return historyJson(res, await app.history.pageBytes(id, body));
+        return historyJson(res, await app.history.pageBytes(app.readingId(id), body));
       }
       if(sub==='finding-members'&&m==='GET') {
         for(const part of id.split('+'))app.recording(part);
         const key=url.searchParams.get('key')??'',raw=url.searchParams.get('page')??'0',page=Number(raw),q=url.searchParams.get('q')??'';
         if(!/^(unknown|missing-change|gaps|repeat\/.+)$/.test(key)||key.length>600||q.length>200||!/^\d+$/.test(raw)||!Number.isSafeInteger(page)||page>1_000_000)throw new HttpError(400,'Invalid finding query');
-        return json(res,await app.history.findingMembers(id,key,page,q));
+        return json(res,await app.history.findingMembers(app.readingId(id),key,page,q));
       }
       if(sub==='review-insights'&&m==='GET') {
         for(const key of id.split('+'))app.recording(key);
@@ -365,18 +373,18 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if(!/^\d+$/.test(raw)||!Number.isSafeInteger(page)||page>1_000_000)throw new HttpError(400,'Invalid review page');
         const kind=url.searchParams.get('kind')??undefined;
         if(kind&&!['repeated-command','unknown-outcome','missing-change','capture-gap'].includes(kind))throw new HttpError(400,'Invalid finding category');
-        return json(res,await app.history.reviewInsights(id,page,kind as 'repeated-command'|'unknown-outcome'|'missing-change'|'capture-gap'|undefined));
+        return json(res,await app.history.reviewInsights(app.readingId(id),page,kind as 'repeated-command'|'unknown-outcome'|'missing-change'|'capture-gap'|undefined));
       }
       if(sub==='commands'&&m==='GET') {
         for(const key of id.split('+'))app.recording(key);
         const q=url.searchParams.get('q')??'',status=url.searchParams.get('status')??undefined,cursor=url.searchParams.get('cursor')??undefined,direction=url.searchParams.get('direction')??'older';
         if(q.length>200||status&&!['ok','error','running','unknown'].includes(status)||!['older','newer'].includes(direction))throw new HttpError(400,'Invalid command filter');
         if(cursor)try{commandCursor(cursor);}catch{throw new HttpError(400,'Invalid command cursor');}
-        return json(res,await app.history.commands(id,{q,status:status as 'ok'|'error'|'running'|'unknown'|undefined,cursor,direction:direction as 'older'|'newer'}));
+        return json(res,await app.history.commands(app.readingId(id),{q,status:status as 'ok'|'error'|'running'|'unknown'|undefined,cursor,direction:direction as 'older'|'newer'}));
       }
       if(sub==='tools'&&m==='GET') {
         for(const key of id.split('+'))app.recording(key);
-        return json(res,await app.history.tools(id,url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
+        return json(res,await app.history.tools(app.readingId(id),url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
       }
       if(sub==='tool-trail'&&m==='GET') {
         for(const key of id.split('+'))app.recording(key);
@@ -384,54 +392,55 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         const filter={tool:field('tool'),server:field('server'),kind:field('kind'),agent:field('agent')};
         if(!filter.tool&&!filter.server&&!filter.kind)throw new HttpError(400,'Name a tool, a server or a kind');
         const from={id:field('from'),at:url.searchParams.has('at')?intParam(url,'at',0,0,Number.MAX_SAFE_INTEGER):undefined};
-        return json(res,await app.history.toolTrail(id,filter,from,url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
+        return json(res,await app.history.toolTrail(app.readingId(id),filter,from,url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
       }
       if(sub==='screen'&&m==='GET') {
         for(const key of id.split('+'))app.recording(key);
-        return json(res,await app.history.screen(id,url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
+        return json(res,await app.history.screen(app.readingId(id),url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
       }
       if (sub === 'turns' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
-        return json(res, { turns: await app.history.turns(id) });
+        return json(res, { turns: await app.history.turns(app.readingId(id)) });
       }
       if (sub === 'reading-target' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         const kind = url.searchParams.get('kind') ?? 'operation', direction = url.searchParams.get('direction') ?? '1', edge = url.searchParams.get('edge') ?? undefined;
         const fields = Object.fromEntries(['from', 'turnFrom', 'agent', 'tool', 'server', 'operationKind'].flatMap(key => url.searchParams.has(key) ? [[key, url.searchParams.get(key)!]] : []));
         if (!['operation','edit','failure','turn'].includes(kind) || !['1','-1'].includes(direction) || edge && !['first','last'].includes(edge) || Object.values(fields).some(value => !value || value.length > 300)) throw new HttpError(400, 'Invalid reading cursor');
-        return json(res, await app.history.readingTarget(id, { kind: kind as 'operation'|'edit'|'failure'|'turn', direction: direction === '-1' ? -1 : 1, edge: edge as 'first'|'last'|undefined, ...fields, at: url.searchParams.has('at') ? intParam(url, 'at', 0, 0, Number.MAX_SAFE_INTEGER) : undefined }));
+        return json(res, await app.history.readingTarget(app.readingId(id), { kind: kind as 'operation'|'edit'|'failure'|'turn', direction: direction === '-1' ? -1 : 1, edge: edge as 'first'|'last'|undefined, ...fields, at: url.searchParams.has('at') ? intParam(url, 'at', 0, 0, Number.MAX_SAFE_INTEGER) : undefined }));
       }
       if (sub === 'file-evidence' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         const paths = url.searchParams.getAll('path');
         if (!paths.length || paths.length > 100 || paths.some(path => !path || path.length > 1024)) throw new HttpError(400, 'Choose 1 to 100 file paths');
-        return json(res, await app.history.fileEvidence(id, paths, url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined));
+        return json(res, await app.history.fileEvidence(app.readingId(id), paths, url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined));
       }
       if (sub === 'now' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
-        return json(res, await app.history.now(id));
+        return json(res, await app.history.now(app.readingId(id)));
       }
       if (sub === 'summary' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
-        return json(res, await app.history.summary(id, intParam(url, 'from', 0, 0, Number.MAX_SAFE_INTEGER)));
+        return json(res, await app.history.summary(app.readingId(id), intParam(url, 'from', 0, 0, Number.MAX_SAFE_INTEGER)));
       }
       if (sub === 'history-marker' && m === 'POST') {
         for (const key of id.split('+')) app.recording(key);
         const body = await readJson(req);
         const types = Array.isArray(body.types) ? body.types.filter((type: unknown) => ['turn', 'edit', 'fail', 'pass', 'prose', 'gap', 'spawn'].includes(String(type))) : [];
-        return json(res, { step: await app.history.marker(id, Number(body.step) || 0, types, body.direction === -1 ? -1 : 1) });
+        return json(res, { step: await app.history.marker(app.readingId(id), Number(body.step) || 0, types, body.direction === -1 ? -1 : 1) });
       }
       if (sub === 'file-operations' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
-        return json(res, await app.history.file(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000), (url.searchParams.get('selected') ?? '').slice(0, 1000) || undefined));
+        return json(res, await app.history.file(app.readingId(id), url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 100, 1, 200), url.searchParams.has('step') ? intParam(url, 'step', 0, 0, Number.MAX_SAFE_INTEGER) : undefined, (url.searchParams.get('q') ?? '').slice(0, 1000), (url.searchParams.get('selected') ?? '').slice(0, 1000) || undefined));
       }
       if (sub === 'file-roots' && m === 'GET') {
         const ids=id.split('+'); for(const key of ids) app.recording(key);
         return json(res,await recordedFileRoots(app.store,ids));
       }
+      if (sub === 'lineage' && m === 'GET') { app.recording(id); return json(res, { lineage: app.store.lineageView(id) ?? null }); }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
       if(sub==='web-result'&&subId&&m==='GET'){
-        const key=id.split('+').find(key=>subId.startsWith(`${key}.`));
+        const key=app.readingId(id).split('+').find(key=>subId.startsWith(`${key}.`));
         if(!key)throw new HttpError(400,'Choose a recorded web operation.');
         app.recording(key);
         const start=intParam(url,'start',0,0,Number.MAX_SAFE_INTEGER),count=intParam(url,'count',100,1,200);
@@ -452,23 +461,23 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
           const start = intParam(url, 'byteStart', 0, 0, Number.MAX_SAFE_INTEGER);
           const field = url.searchParams.get('field') ?? undefined;
           if (field !== undefined && field !== 'text' && field !== 'structured') throw new HttpError(400, 'Invalid captured result field.');
-          try { return json(res, await app.history.artifactChunk(id, subId, start, field)); }
+          try { return json(res, await app.history.artifactChunk(app.readingId(id), subId, start, field)); }
           catch (error) { if (error instanceof Error && error.message.includes('UTF-8')) throw new HttpError(400, 'Invalid UTF-8 portion boundary.'); throw new HttpError(404, 'Stored result not found.'); }
         }
         if (url.searchParams.has('find')) {
           for (const key of id.split('+')) app.recording(key);
           const query = url.searchParams.get('find') ?? '', continuation = url.searchParams.get('cursor') ?? undefined;
           if (!query || query.length > 200 || /[\r\n]/.test(query) || (continuation && !/^[a-f0-9-]{36}$/.test(continuation))) throw new HttpError(400, 'Invalid stored search.');
-          const result = await app.history.artifactFind(id, subId, query, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), continuation);
+          const result = await app.history.artifactFind(app.readingId(id), subId, query, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), continuation);
           return json(res, result ?? { matches: [], totalLines: 0, scannedThrough: 0, skippedLines: 0, available: false });
         }
         const start = intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER);
         const count = intParam(url, 'count', 20_000, 0, 20_000);
-        if (app.paged(id)) return json(res, await app.history.artifact(id, subId, start, count));
+        if (app.paged(id)) return json(res, await app.history.artifact(app.readingId(id), subId, start, count));
         const projection=app.projection(id);
         // Bounded worker views retain long inputs as derived artifacts even when
         // this small session's ordinary projection keeps that input inline.
-        if(subId.endsWith('_input')&&projection.operations.some(op=>subId===`art_${op.id}_input`))return json(res,await app.history.artifact(id,subId,start,count));
+        if(subId.endsWith('_input')&&projection.operations.some(op=>subId===`art_${op.id}_input`))return json(res,await app.history.artifact(app.readingId(id),subId,start,count));
         return json(res, app.artifactSlice(projection, subId, start, count));
       }
       if (sub === 'graph' && !subId && m === 'GET') return json(res, await app.graph(id, url.searchParams.get('refresh') === '1'));
@@ -476,8 +485,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'graph' && subId === 'approve' && m === 'POST') return json(res, await app.approveGraphRoot(firstId, (await readJson(req)).root as string | undefined));
       if (sub === 'search' && m === 'GET') {
         const q = url.searchParams.get('q') ?? '';
-        const ids = id.split('+');
-        return json(res, { hits: ids.flatMap((r) => app.store.search(r, q, 50)) });
+        const ids = app.readingId(id).split('+');
+        const lineage = app.store.lineageForIds(ids);
+        return json(res, { hits: lineage ? app.store.lineageSearch(lineage, q) : ids.flatMap(r => app.store.search(r, q, 50)) });
       }
       if (sub === 'live' && m === 'POST') {
         const body = await readJson(req);
@@ -499,14 +509,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'verification' && subId && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'verification is computed per recording, not for a combined view');
         app.recording(firstId);
-        const trail = await app.history.verification(id, subId);
+        const trail = await app.history.verification(app.readingId(id), subId);
         if (!trail) throw new HttpError(404, 'not a captured change in this recording');
         return json(res, trail);
       }
       if(sub==='delegation-thread'&&subId&&m==='GET'){
         if(id.includes('+'))throw new HttpError(400,'Choose one recording for a delegation thread.');
         app.recording(id);
-        const value=await app.history.delegationThread(id,subId,intParam(url,'start',0,0,10_000_000),url.searchParams.has('step')?intParam(url,'step',0,0,10_000_000):undefined,intParam(url,'taskStart',0,0,10_000_000));
+        const value=await app.history.delegationThread(app.readingId(id),subId,intParam(url,'start',0,0,10_000_000),url.searchParams.has('step')?intParam(url,'step',0,0,10_000_000):undefined,intParam(url,'taskStart',0,0,10_000_000));
         if(!value)throw new HttpError(404,'No captured delegation at this position.');
         return json(res,value);
       }
@@ -514,7 +524,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'read-before' && subId && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'read-before-write is computed per recording, not for a combined view');
         app.recording(firstId);
-        const found = await app.history.readBefore(id, subId);
+        const found = await app.history.readBefore(app.readingId(id), subId);
         if (!found) throw new HttpError(404, 'no read-before-write facts for this operation');
         return json(res, found);
       }
@@ -564,13 +574,13 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'fix-chain' && subId && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'fix chains are computed per recording, not for a combined view');
         app.recording(firstId);
-        const chain = await app.history.fixChain(id, subId);
+        const chain = await app.history.fixChain(app.readingId(id), subId);
         if (!chain) throw new HttpError(404, 'no failure-to-later-run link for this command');
         return json(res, chain);
       }
       if (sub === 'since' && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');
-        return json(res, await app.history.since(id, intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER), intParam(url, 'page', 0, 0, 1_000_000)));
+        return json(res, await app.history.since(app.readingId(id), intParam(url, 'after', -1, -1, Number.MAX_SAFE_INTEGER), intParam(url, 'page', 0, 0, 1_000_000)));
       }
       if (sub === 'boundary' && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'marks are kept per recording, not for a combined view');
@@ -619,15 +629,15 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (sub === 'explain') {
           const opId = String(body.operationId ?? '');
           if (p && !p.operations.some((o) => o.id === opId)) throw new HttpError(404, 'operation not found');
-          prep = p ? prepareExplain(p, opId, art, model) : await app.history.prepare(id, sub, model, body);
+          prep = p ? prepareExplain(p, opId, art, model) : await app.history.prepare(app.readingId(id), sub, model, body);
           key = `explain:${opId}`;
         } else if (sub === 'briefing') {
           const from = body.from === undefined ? undefined : Number(body.from);
           const to = body.to === undefined ? undefined : Number(body.to);
-          prep = p ? prepareBriefing(p, art, model, { from, to }) : await app.history.prepare(id, sub, model, body);
+          prep = p ? prepareBriefing(p, art, model, { from, to }) : await app.history.prepare(app.readingId(id), sub, model, body);
           key = `briefing:${from ?? 0}-${to ?? 'end'}`;
         } else {
-          prep = p ? prepareLabels(p, model) : await app.history.prepare(id, sub, model, body);
+          prep = p ? prepareLabels(p, model) : await app.history.prepare(app.readingId(id), sub, model, body);
           key = 'labels';
         }
         const shown = preview(prep);
