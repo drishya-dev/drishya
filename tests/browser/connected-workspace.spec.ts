@@ -323,7 +323,7 @@ test('the composer submits through the real API transport, handles one approval 
   await expect(promptInput).toHaveValue('Draft the next turn without sending it');
   await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
   const inventory = page.locator('.runtime-tools');
-  await inventory.locator('summary').click();
+  await expect(inventory).toHaveAttribute('open', '');
   await inventory.locator('ol').evaluate(el => el.scrollTop = el.scrollHeight);
   await expect(inventory.locator('summary')).toBeInViewport();
   await inventory.locator('summary').click();

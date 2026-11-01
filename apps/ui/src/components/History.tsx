@@ -57,6 +57,7 @@ import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-mo
 import { useHoverReading } from '../lib/hover-reading.ts';
 import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { NativeTurn } from './SessionWorkspace.tsx';
+import {useDisclosureChoice} from './Disclosure.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
@@ -773,8 +774,7 @@ function openCapturedFile(path:string,line?:number,evidence?:string) {
 function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agent?: Agent }) {
   const detail = useApp(s => s.reasoningDetail);
   const workspaceRoot = useApp(s => s.recording?.workspaceRoot);
-  const [open, setOpen] = useState(true);
-  useEffect(() => setOpen(detail === 'expanded'), [detail]);
+  const [open, setOpen] = useDisclosureChoice(`prose/${pr.id}`, pr.role !== 'reasoning' || detail === 'expanded');
   const [full, setFull] = useState(false);
   const prose = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -791,7 +791,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   return (
     <div ref={prose} data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
-        <button className="prose-label" onClick={() => { setOpen((o) => !o); }} aria-expanded={open}>
+        <button className="prose-label" onClick={() => { setOpen(!open); }} aria-expanded={open}>
           {label}
           {open ? ' · collapse' : ' · show'}
         </button>
@@ -1097,7 +1097,7 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
   const active = useNow((s) => !!s.view?.mark);
   const mode = useApp((s) => s.mode);
   const text = useRef<HTMLDivElement>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useDisclosureChoice(`prompt/${step ?? 'first'}`, false);
   const [overflows, setOverflows] = useState(false);
   useLayoutEffect(() => {
     const el = text.current;
@@ -1125,7 +1125,7 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
       {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
       {captured}
       {report && <CapturedContextReport report={report} time={time} />}
-      {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded((open) => !open); }}>{expanded ? 'Show less' : 'Show full prompt'}</button>}
+      {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>{expanded ? 'Show less' : `Show full prompt · ${shown?.length.toLocaleString() ?? 0} characters`}</button>}
       {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
       {plan && <PinnedPlanList plan={plan} />}
       {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}

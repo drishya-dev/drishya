@@ -1,3 +1,4 @@
+import {Disclosure} from './Disclosure.tsx';
 import { useEffect, useMemo, useState } from 'react';
 import { toolInventory, toolTrail, type ComposeInput, type ToolEntry, type ToolInventory, type ToolTrail } from '@drishya/scene';
 import { useApp } from '../state.ts';
@@ -59,8 +60,8 @@ export function ToolList() {
   const groups = new Map<string, ToolEntry[]>();
   for (const tool of tools) groups.set(tool.server ?? '', [...(groups.get(tool.server ?? '') ?? []), tool]);
   const usedCount = inventory.tools.filter(t => t.uses).length;
-  return <section className="tool-list" aria-label="Available tools">
-    <div className="tool-heading">{inventory.recorded ? 'Available tools' : 'Tools used'} <span title={inventory.recorded ? `${usedCount} used of ${inventory.tools.length} available` : undefined}>{inventory.recorded ? `${usedCount} of ${inventory.tools.length}` : inventory.tools.length}</span></div>
+  return <Disclosure surface="tools/inventory" className="tool-list" aria-label="Available tools">
+    <summary className="tool-heading">{inventory.recorded ? 'Available tools' : 'Tools used'} <span title={inventory.recorded ? `${usedCount} used of ${inventory.tools.length} available` : undefined}>{inventory.recorded ? `${usedCount} of ${inventory.tools.length}` : inventory.tools.length}</span></summary>
     {!inventory.recorded && <p className="tool-note">This harness did not record which tools were available, so only the tools it used are shown.</p>}
     {inventory.tools.length > LONG && <input type="search" className="tool-search" aria-label="Search tools" placeholder="Search tools" value={query} onChange={event => setQuery(event.target.value)}/>}
     <div className="tool-groups" role="group" aria-label="Tools">
@@ -80,7 +81,7 @@ export function ToolList() {
       </div>)}
       {!tools.length && <p className="tool-note">No tool matches.</p>}
     </div>
-  </section>;
+  </Disclosure>;
 }
 
 /** Where the reader stands among the uses of the chosen tool, server or kind, with a way to walk them. */

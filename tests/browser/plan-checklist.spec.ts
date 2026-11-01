@@ -11,7 +11,7 @@ test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!res
 type Todo={content:string;status:string;activeForm:string};
 const todo=(content:string,status:string):Todo=>({content,status,activeForm:content});
 
-test('repeated TodoWrite lists read as one checklist pinned under the prompt, each update as one line',async({page})=>{
+test('repeated TodoWrite lists show the current checklist by default and earlier changes as receipts',async({page})=>{
  const timestamp='2026-10-18T00:00:00Z',session='plan-thread',source=join(dir,session+'.jsonl');
  const lists:Todo[][]=[
   [todo('Read the cart code','in_progress'),todo('Fix the total check','pending'),todo('Add a regression test','pending')],
@@ -27,14 +27,14 @@ test('repeated TodoWrite lists read as one checklist pinned under the prompt, ea
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const cards=page.locator('article.op-plan');await expect(cards).toHaveCount(3);
  // The newest list is pinned under the prompt; every update in the stream is one line saying what it changed.
- const latest=page.locator('.turn').getByRole('group',{name:'Plan checklist'});
+ const latest=cards.last().getByRole('group',{name:'Plan checklist'});
  await expect(page.getByRole('group',{name:'Plan checklist'})).toHaveCount(1);
- await expect(latest).toContainText('Plan · 2 of 4 done · revision 3');
+ await expect(latest).toContainText('Revision 3 · 2 of 4 done');
  await expect(latest.locator('li.plan-completed')).toHaveCount(2);await expect(latest.locator('li.plan-in_progress')).toContainText('Add a regression test');
- await expect(cards.locator('.plan-list')).toHaveCount(0);
+ await expect(cards.locator('.plan-list')).toHaveCount(1);
  await expect(cards.nth(0)).toContainText('Revision 1 · 0 of 3 done');
  await expect(cards.nth(1)).toContainText('Revision 2 · 1 of 3 done');await expect(cards.nth(1)).toContainText('completed Read the cart code');
- await expect(cards.nth(2)).toContainText('Revision 3 · 2 of 4 done');await expect(cards.nth(2)).toContainText('completed Fix the total check');
+ await expect(cards.nth(2)).toContainText('Revision 3 · 2 of 4 done');await expect(cards.nth(2).locator('li').filter({hasText:'Fix the total check'})).toHaveAttribute('data-change','completed');
  if(process.env.IMG_SHOT)await page.getByRole('region',{name:'Captured work'}).screenshot({path:resolve('.local/plan-pinned.png')});
  // Expanded, the list steps back through the updates it went through.
  // Keyboard, not a pointer: moving the pointer over the card can start hover reading, which moves it under the click.
