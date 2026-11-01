@@ -747,7 +747,8 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - **26 October, closed in the task-list honesty pass:** the hunk picker and matcher ship (above). Classic keeps its file-level button because Classic is frozen (UI-4); edits under a different repo root than the recording's workspace stay unattributed by design. Neither is planned work.
 
 - [ ] **GIT-7 · One consent to read a repository** · P2 · `git` — found by AUDIT-1 (G1). Reading one repository takes three approvals: the workspace, Git review, Git history. A privacy decision for both builders, not a polish item.
-  - **Accept:** a recorded decision; if it changes, one clear consent that says what is read, and no write path added.
+  - **Decision (Yash, 1 Nov; Harsh to confirm):** two approvals, one for files and one for Git. Git review and Git history share the Git approval. History stays separate from files because it can show deleted files and other branches.
+  - **Accept:** Harsh's confirmation recorded; one clear Git approval that says what is read, used by both Git surfaces; no write path added.
 
 ### FILES — Explorer, peek and Workspace
 
@@ -971,7 +972,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - **19 October progress (107):** Ten synthetic material kinds across seven palettes, draft comparisons/Git/Home/review readers and existing redacted Codex/Claude material checked. Current Codex source succeeds; old Claude current index unavailable and explicitly qualified. Every real artifact/state is not certified.
 
 - [ ] **UI-20 · One reading of a step** · P2 · `ui` `read` — found by AUDIT-1 (I6). Expand and the Inspector show the same diff; Expand holds the file actions and read-before facts, the Inspector holds the test runs, links and notes. Nobody can guess which holds what.
-  - **Decision needed from Yash:** which one survives. Recommendation: Expand becomes the one reading in place, and the Inspector goes unless the links earn a place.
+  - **Decision (Yash, 1 Nov):** Expand stays and becomes the one reading in place. The Inspector's test runs, links, Save moment, Investigate and review notes move into it, then the Inspector goes.
   - **Accept:** every action type has one reading that holds everything recorded, on real sessions of both harnesses at 600 and 1440 px, with no material lost.
 
 - [ ] **UI-21 · Product language sweep** · P2 · `ui` `content` — found by AUDIT-1 (L1). 493 distinct interface strings say captured, evidence, recorded or derived. Everything in the product is captured, so the word carries nothing. The doctrine that captured differs from derived governs what may be claimed; provenance stays reachable in tooltips and details. Includes `Search evidence`, `Ask harness to run a command`, `Recorded checks` and the palette's file detail, all held by TEST-2's specs until #314 lands.
