@@ -1,3 +1,4 @@
+import type {QueueQuery, QueuePage} from '@drishya/contracts';
 import type { FileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/reading-target.ts';
 import type { FileEvidence } from '../../../packages/scene/src/file-evidence.ts';
@@ -82,6 +83,7 @@ export class HistoryService {
   findingMembers(id:string,key:string,page=0,q='') {return this.request<FindingMembers>('finding-members',{id,key,page,q});}
   reviewInsights(id:string,page=0,kind?:ReviewFinding['kind']) {return this.request<ReviewInsightsPage>('review-insights',{id,page,kind});}
   commands(id:string,query:CommandQuery) {return this.request<CommandPage>('commands',{id,query});}
+  queue(id: string, owner: string, query: QueueQuery): Promise<QueuePage> {return this.request('queue', {id, owner, query});}
   screen(id:string,step?:number) {return this.request<ScreenRun>('screen',{id,step});}
   tools(id:string,step?:number) {return this.request<ToolInventory>('tools',{id,step});}
   toolTrail(id:string,filter:ToolFilter,from?:{id?:string;at?:number},step?:number) {return this.request<ToolTrail>('tool-trail',{id,filter,from,step});}

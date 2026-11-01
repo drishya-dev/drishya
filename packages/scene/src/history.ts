@@ -16,6 +16,8 @@ export interface HistoryQuery {
 }
 
 export interface HistoryPage {
+  /** Last queue event visible at the exact replay cursor, even outside the resident timeline tail. */
+  queueBoundary?: {ownerRecordingId: string; observationId: string};
   operationCount: number;
   summary: HistorySummary;
   references: Record<string, { title: string; step: number }>;

@@ -37,4 +37,3 @@ it('sends queue image bytes through the existing image-candidate privacy boundar
  const rows=parser.parse({type:'queue-operation',operation:'enqueue',content:[{type:'text',text:'look'},{type:'image',source:{type:'base64',data:'synthetic bytes'}}]});
  expect(rows).toHaveLength(1);expect(rows[0]?.payload).toMatchObject({text:'look',images:[{kind:'captured-image'}]});
 });
-
