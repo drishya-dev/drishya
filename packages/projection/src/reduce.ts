@@ -51,7 +51,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r31';
+export const REDUCER_VERSION = 'r32';
 
 export interface BlobIO {
   get(sha: string): string | undefined;
@@ -1021,10 +1021,11 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
     }
     case 'shell': {
       const cls = classifyShell(intent.command);
+      const description = typeof p.input?.description === 'string' && p.input.description.trim() ? { description: oneLine(p.input.description) } : {};
       if (cls.kind === 'test') {
         op.kind = 'test';
         op.classification = derived(SHELL_RULE, op.observationIds);
-        op.detail = { kind: 'test', command: intent.command };
+        op.detail = { kind: 'test', command: intent.command, ...description };
         op.title = `Test · ${clip(oneLine(intent.command), 70)}`;
       } else if (cls.kind === 'read') {
         const path = rel(cls.path, st.cwd);
@@ -1039,7 +1040,7 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
         op.detail = { kind: 'search', query: cls.query, mode: cls.query === '--files' ? 'file' : 'text', hits: [] };
         op.title = `Search “${clip(cls.query, 60)}”`;
       } else {
-        op.detail = { kind: 'shell', command: intent.command };
+        op.detail = { kind: 'shell', command: intent.command, ...description };
         op.title = `Run ${clip(oneLine(intent.command), 80)}`;
       }
       break;

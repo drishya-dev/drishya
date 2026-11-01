@@ -9,6 +9,8 @@ const labels = {recorded: 'Queue receipt recorded', unknown: 'Queue changed · i
 /** A provisional receipt never becomes a prompt by inference. Reading it does not send anything. */
 export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   const source = useApp(s => s.source), id = useApp(s => s.recordingId), mode = useApp(s => s.mode);
+  // Past receipts are for the end of the session; while reading back they would sit on top of the text.
+  const following = useApp(s => s.follow);
   const projection = useApp(s => s.projection), page = useApp(s => s.historyPage), step = useApp(s => s.step);
   const revision = useApp(s => s.recording?.revision);
   const [loaded, setLoaded] = useState<{key: string; page: QueuePage}>(), [open, setOpen] = useState(false);
@@ -64,12 +66,12 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
     finally {if (active.current && token === reading.current) setBusy(false);}
   };
   if (!source?.queue || !owner || mode === 'replay' && !through || !data?.total && !error) return null;
-  const latest = data?.items[0];
+  const latest = data?.items[0], waiting = latest?.state === 'recorded';
   // Replay hides the composer, so its receipts sit on the page itself, like an exported bundle's.
   const floating = standalone || mode === 'replay';
   const view = <div className="queued-input-receipts" style={floating ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', padding: '0 4px'}}>
-    <button type="button" className="btn ghost small" aria-label="Read recorded queued inputs" onClick={() => {setOpen(true); if (latest) select(latest);}}>
-      <span aria-live="polite">{latest?.state === 'recorded' ? 'Queued input recorded' : `Queue receipts${data?.total ? ` · ${data.total}` : ''}`}</span>
+    <button type="button" className="btn ghost small" aria-label="Read recorded queued inputs" style={floating || waiting || following ? undefined : {visibility: 'hidden'}} onClick={() => {setOpen(true); if (latest) select(latest);}}>
+      <span aria-live="polite">{waiting ? 'Queued input recorded' : `Queued inputs${data?.total ? ` · ${data.total}` : ''}`}</span>
     </button>
     {open && <ReadingDialog title="Recorded queued inputs" close={() => {setOpen(false); select(undefined); setError('');}} className="queue-input-reader" style={{width: 'min(880px, calc(100vw - 32px))'}}>
       <div style={{padding: '16px 20px', minWidth: 0}}>

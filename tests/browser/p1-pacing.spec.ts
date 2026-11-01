@@ -234,10 +234,10 @@ test('terminal folding is reversible and keyboard map search targets a real file
   await page.locator('.search-results button').first().click();
   const shell = page.locator('article.op-shell');
   await expect.poll(() => shell.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
-  await shell.getByRole('button', { name: /captured lines between/ }).click();
+  await shell.getByRole('button', { name: /more lines/ }).click();
   await expect(shell).toContainText('missing-total');
   await shell.getByRole('button', { name: 'Fold captured preview' }).click();
-  await expect(shell.getByRole('button', { name: /captured lines between/ })).toBeVisible();
+  await expect(shell.getByRole('button', { name: /more lines/ })).toBeVisible();
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('checkout/guard');
   const match = page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true });

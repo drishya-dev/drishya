@@ -8,9 +8,10 @@
 :root[data-ui-version=modern] .modern-toolbox .md-inventory-list>.md-runtime-tool,
 :root[data-ui-version=modern] .modern-toolbox .md-inventory-list>button {
   min-height:36px; height:auto; box-sizing:border-box; padding-block:8px; font-size:12px; line-height:18px;
-  overflow-wrap:anywhere;
 }
 .modern-toolbox .md-inventory-list>button>small { flex:none; }
+/* One line each: a tool name broken mid-word reads as two tools. */
+.modern-toolbox .md-inventory-list>button>span:first-child { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 
 /* Counts/status remain secondary without becoming miniature text. */
 :root[data-ui-version=modern] .modern-toolbox :is(small,.md-dock-foot) {font-size:11px;}
