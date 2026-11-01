@@ -9,6 +9,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { App } from '../apps/daemon/src/app.ts';
+import { sourceIdFor } from '../packages/capture-core/src/index.ts';
 import {readingDelimited} from './real-cases/reading-delimited.ts';
 import {questions} from './real-cases/questions.ts';
 import { browserOps } from './real-cases/browser-ops.ts';
@@ -77,7 +78,7 @@ try {
       const imported = await app.ingest.importSource(harness, f.file);
       const projection = app.projection(imported.recordingId);
       console.log(`  ${imported.recordingId.slice(0, 12)} · ${Math.round(f.size / 1e5) / 10} MB · ${projection.operations.length} operations`);
-      for (const line of chosen.verify?.(projection, { hits: f.hits, only: f.only }) ?? []) { console.log(`    ${line}`); if (line.startsWith('FAIL')) failed = true; }
+      for (const line of chosen.verify?.(projection, { hits: f.hits, only: f.only, sourceId: sourceIdFor(resolve(f.file)) }) ?? []) { console.log(`    ${line}`); if (line.startsWith('FAIL')) failed = true; }
     }
   }
   await app.close();

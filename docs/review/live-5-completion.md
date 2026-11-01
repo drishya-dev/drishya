@@ -1,5 +1,18 @@
 # LIVE-5 — completion evidence and queued-input completion
 
+## 1 November — Harsh continuation
+
+The acceptance scanner now compares enqueues from the **physical source ID it scanned**. Filtering by the main agent was insufficient: continuation journals also have main agents, and a main journal may contain sidechain rows. The regression retains all three receipts while checking two from the scanned source, and still fails an incorrect expected count. This corrects the check's boundary; it does **not** prove the origin of the earlier 33 receipts. `rec_c8e5c9c8` is unavailable on Harsh's machine and Harsh confirmed no copy is available. That exact discrepancy remains unverified rather than being reported fixed.
+
+Fresh local acceptance:
+
+- `check:real -- mid-turn-input --pick 2`: Claude `rec_6b23303f`, 59.6 MB, 477/477 scanned-source receipts, 481 delivered turns; `rec_a7e9af7d`, 28.3 MB, 190/190 receipts, 213 delivered turns. Both projections have zero additional-source receipts in these samples. Codex `rec_5da1cec3`, 15.8 MB, one input recorded while a command reports running, 24 delivered prompts. The source scan does not certify a controller steer RPC.
+- Private genuine-journal copy run: Claude source prefix `ecdd7477`, 24,459,453 bytes, 28 receipts and 29 delivered prompts; Codex `rec_5da1cec3`, 15,795,654 bytes, one running-command input and 24 prompts. History and replay frames at 600 and 1440 px are under `.local/live5-acceptance/`; no screenshots or journal text are committed. Queued input text is readable; Codex uses its ordinary recorded input, without inventing a Claude queue receipt.
+- Standalone native assistant rows, appended alone to scratch copies while the passive watcher runs: Claude 34,837-byte prefix 845 ms, 24,456,646-byte prefix 846 ms; Codex 46,736-byte prefix 816 ms, 15,672,372-byte prefix 2,662 ms. Initial history was settled before timing. These are individual observations, not a p95 claim. The Codex large sample exceeds the provisional 1.5 s typical-latency target. An earlier run overlapping initial loading measured 4,424 ms; it is retained here, not silently discarded. No following source record was needed in either run.
+- Both typechecks and all 11 `live-captured-text` browser cases pass; all six sealed queue units pass, including the new physical-source regression. Package/full batch gate and the unavailable exact-source repeat are still outstanding.
+
+No native journal, configuration or credential was edited. The native source's omission of some visible Claude text remains a harness boundary.
+
 31 October 2026. Whole task claimed before work; merged part 1 (#310) remains intact. This branch finishes remaining acceptance and prepares the early-queue decision. No native journal, configuration or credential is changed. Native content and screenshots remain private in `.local/`.
 
 ## Current evidence

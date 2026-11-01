@@ -8,6 +8,7 @@ import {Store} from '@drishya/store';
 import {seal} from '@drishya/capture-core';
 import {defaultAdapters} from '@drishya/ingest';
 import {queuedInputChunk} from '../src/queued-inputs.ts';
+import {midTurnInput} from '../../../scripts/real-cases/mid-turn-input.ts';
 
 let store: Store, dir: string, index: number;
 const recording = 'rec_queue', source = 'src_queue', cursor = {offset: 1, generation: 0, fingerprint: 'fixture'};
@@ -28,6 +29,16 @@ function recordedQueue(store: Store, id: string, query: import('@drishya/contrac
   return queuePage(projection.timeline, id, query);
 }
 describe('sealed, bounded queue receipts', () => {
+  it('checks the scanned physical source independently of agent names and continuation sources', () => {
+    append('enqueue', {text: 'main'});
+    append('enqueue', {text: 'sidechain in the same journal'}, 'agent:child');
+    append('enqueue', {text: 'another journal with a main agent'}, 'agent:main', 'other-source');
+    const projection = reduce(recording, store.observations(recording), store.blobs, {adapters: Object.fromEntries(defaultAdapters().map(adapter => [adapter.descriptor.id, adapter.descriptor]))});
+    const lines = midTurnInput.verify!(projection, {hits: 2, only: 0, sourceId: source});
+    expect(lines[0]).toMatch(/^PASS 2 native enqueue receipts \/ 2 projected from the scanned source; 1 receipts from other sources/);
+    expect(midTurnInput.verify!(projection, {hits: 1, only: 0, sourceId: source})[0]).toMatch(/^FAIL/);
+    expect(projection.timeline.filter(item => item.type === 'queue')).toHaveLength(3);
+  });
   it('keeps anonymous queue changes unknown and never correlates identical text', () => {
     const first = append('enqueue', {text: 'same'}), second = append('enqueue', {text: 'same'});
     expect(recordedQueue(store, recording).items.map(row => row.state)).toEqual(['recorded', 'recorded']);

@@ -23,11 +23,13 @@ export const midTurnInput: RealCase = {
     if (running && payload.type === 'message' && payload.role === 'user') return {hits: 1};
   },
   verify(projection, found) {
-    // The scan reads the main journal only; sub-agent journals imported with it carry their own queue rows.
-    const receipts = projection.timeline.filter(item => item.type === 'queue' && item.operation === 'enqueue' && item.agentId.endsWith('.agent:main'));
+    // Compare the physical file scanned, not an agent name: continuation journals
+    // also have a main agent, and a main journal can contain sidechain rows.
+    const allReceipts = projection.timeline.filter(item => item.type === 'queue' && item.operation === 'enqueue');
+    const receipts = allReceipts.filter(item => item.type === 'queue' && item.sourceId === found.sourceId);
     const turns = projection.timeline.filter(item => item.type === 'turn');
     return projection.harnesses.includes('claude-code')
-      ? [`${receipts.length === found.hits ? 'PASS' : 'FAIL'} ${found.hits} native enqueue receipts / ${receipts.length} projected; ${turns.length} distinct delivered turns remain separate`]
+      ? [`${receipts.length === found.hits ? 'PASS' : 'FAIL'} ${found.hits} native enqueue receipts / ${receipts.length} projected from the scanned source; ${allReceipts.length - receipts.length} receipts from other sources; ${turns.length} distinct delivered turns remain separate`]
       : [`${turns.length >= found.hits ? 'PASS' : 'FAIL'} ${found.hits} running-command input candidates; ${turns.length} presented prompts; source/RPC ordering requires separate genuine acceptance`];
   },
 };
