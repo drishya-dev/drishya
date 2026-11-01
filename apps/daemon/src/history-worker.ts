@@ -68,7 +68,7 @@ const io = {
   },
 };
 const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.id, a.descriptor]));
-const HISTORY_VERSION = 'h2-4096';
+const HISTORY_VERSION = 'h3-lineage-4096';
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
 let cached: { id: string; revision: string; projection: Projection; revisions: Record<string, number> } | undefined;
 let incremental: { id: string; reducer: ReturnType<typeof createReducer>; sequence: number; clock: string; roots: Set<string> } | undefined;
@@ -93,8 +93,10 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
   incremental = undefined;
   capturedBlobs.clear();
   if (ids.length !== 1) {
-    const ordered = { *[Symbol.iterator]() { for (const o of source.orderedObservations(ids)) { rememberCapturedBlobs(o.payload); yield o; } } };
-    const projection = reduce(id, ordered, io, { adapters, live, ordered: true, maxProseChars: 4096, maxInputChars: 4096 });
+    const lineage = source.lineageForIds(ids);
+    const input = lineage ? source.lineageObservations(lineage) : source.orderedObservations(ids);
+    const ordered = { *[Symbol.iterator]() { for (const o of input) { rememberCapturedBlobs(o.payload); yield o; } } };
+    const projection = reduce(lineage?.currentRecordingId ?? id, ordered, io, { adapters, live, ordered: true, maxProseChars: 4096, maxInputChars: 4096, lineage });
     const roots = ids.map((key) => {
       const root = source.getRecording(key)?.workspaceRoot?.replace(/\\/g, '/').replace(/\/+$/, '');
       return root && /^[A-Za-z]:\//.test(root) ? root.toLowerCase() : root;
