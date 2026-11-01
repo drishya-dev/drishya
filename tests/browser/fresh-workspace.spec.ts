@@ -551,7 +551,7 @@ test('local Git atlas connects real branches and commits with root/merge patches
     // Panning redraws the light from the new view; nothing is stale.
     const before=await viewport.getAttribute('data-light-segments');await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await expect.poll(async()=>await viewport.getAttribute('data-light-segments')).not.toBe(before);await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
     // Zoom keeps the commit under the anchor where it was; Ctrl + wheel zooms the graph, never the page.
-    const centre=async()=>{const b=(await merged.boundingBox())!;return b.x+b.width/2;};const zoomLabel=atlas.locator('.thread-controls>span').nth(1);
+    const centre=async()=>{const b=(await merged.boundingBox())!;return b.x+b.width/2;};const zoomLabel=atlas.getByRole('group',{name:'Git graph view'}).locator('output');
     const x0=await centre(),v=(await viewport.boundingBox())!;await page.mouse.move(x0,v.y+v.height/2);const label0=await zoomLabel.textContent();
     await page.keyboard.down('Control');await page.mouse.wheel(0,-240);await page.keyboard.up('Control');await expect(zoomLabel).not.toHaveText(label0!);
     expect(Math.abs(await centre()-x0)).toBeLessThan(12);expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);

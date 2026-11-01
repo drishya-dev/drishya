@@ -1,4 +1,5 @@
 import { SessionLineage } from './SessionLineage.tsx';
+import {FileReadingActions,openCapturedFileReading} from './FileReadingActions.tsx';
 import { CompactionEvidence, CapturedContextReport, ContextEvidenceScope } from './ContextEvidence.tsx';
 import { contextReport } from '../lib/context-report.ts';
 import {StoredToolResult} from './StoredToolResult.tsx';
@@ -837,9 +838,9 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   const command = op.detail.kind === 'shell' || op.detail.kind === 'test' ? commandDisplay(op.detail.command) : undefined;
   const displayTitle = command?.decoded ? command.text : op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, '');
-  const file=op.detail.kind==='read'||op.detail.kind==='edit'?prosePath(op.detail.path,workspaceRoot,true):undefined;
+  const file=op.detail.kind==='read'||op.detail.kind==='edit'?{path:op.detail.path}:undefined;
   const evidence=op.detail.kind==='read'?`${op.id}/read`:op.detail.kind==='edit'&&op.detail.hunks.length?`${op.id}/patch`:undefined;
-  const title=file?<button type="button" className="op-title captured-file-path" title={displayTitle} aria-label={`Open captured work for ${file.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(file.path,op.detail.kind==='read'?op.detail.startLine:undefined,evidence);}}>{displayTitle}</button>:<span className="op-title" title={displayTitle}>{displayTitle}</span>;
+  const title=file?<button type="button" className="op-title captured-file-path" title={displayTitle} aria-label={`Open captured work for ${file.path}`} onClick={event=>{event.stopPropagation();openCapturedFileReading(file.path,op);}}>{displayTitle}</button>:<span className="op-title" title={displayTitle}>{displayTitle}</span>;
   const imagePath=pathOnlyImage(op);
   const hasImage=op.images?.some(image=>image.sha);
   // Keep the same evidence readers; images get the primary allocation, not a second card.
@@ -909,13 +910,13 @@ function ExpandedMaterial({ op }: { op: Operation }) {
   switch (d.kind) {
     case 'read':
       return <div className="op-expanded read-material" onClick={(e) => e.stopPropagation()}>
-        <div className="material-context">{d.path} · historical source at this action</div>
+        <div className="material-context">{d.path} · historical source at this action</div><FileReadingActions path={d.path} op={op}/>
         <ArtifactReader key={d.excerptArtifactId} id={d.excerptArtifactId} kind="code" startLine={d.startLine} path={d.path} provenance />
       </div>;
     case 'edit':
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
         <div className="material-context">{d.path} · captured patch{d.reconstruction !== 'complete' ? ' · after-state not verified' : ''}</div>
-        <ReadBeforePanel op={op} />
+        <FileReadingActions path={d.path} op={op}/><ReadBeforePanel op={op} />
         <BeforeTurnPanel op={op} />
         {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ArtifactReader id={op.artifactIds.find(id => id.endsWith('_after'))} kind="code" path={d.path} provenance /> : <p className="muted">No source bytes or patch captured.</p>}
         <button className="material-more" onClick={() => select(op.id)}>Open provenance and file states</button>
