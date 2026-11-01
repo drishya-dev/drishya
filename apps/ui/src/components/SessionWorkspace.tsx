@@ -1,3 +1,6 @@
+import {currentReadingTarget,currentReadingFailure} from '../lib/file-reading.ts';
+import {CapturedFileFallback} from './FileHistory.tsx';
+import {FileReadingActions} from './FileReadingActions.tsx';
 import {useFileRoots} from '../lib/use-file-roots.ts';
 import { documentFits, documentLimitMessage } from '../lib/document-limit.ts';
 import {FileRowName} from './FileRowName.tsx';
@@ -160,6 +163,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const [query, setQuery] = useWorkspaceState('folders/query', '');
   const [approving,setApproving] = useState(false);
   const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
+  useEffect(()=>{const reveal=(event:Event)=>{const path=(event as CustomEvent).detail;if(typeof path==='string'){setQuery(path);setTouchedOnly(false);}};window.addEventListener('drishya-reveal-captured-file',reveal);return()=>window.removeEventListener('drishya-reveal-captured-file',reveal);},[setQuery,setTouchedOnly]);
   const treeElement = useRef<HTMLDivElement>(null);
   const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
   const [treeHeight, setTreeHeight] = useState(600);
@@ -313,9 +317,10 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   const narrow=useNarrowWorkspace();
   const {workspace,approve}=useSessionWorkspace();
   const recordedPath=currentFileOrigin(source,id,path,fileRoots,workspace?.root);
+  const projection=useApp(s=>s.projection),target=currentReadingTarget(path,fileRoots,workspace?.root??projection?.workspaceRoot);
   const [granting,setGranting]=useState(false),[grantError,setGrantError]=useState('');
   const [start, setStart] = useEvidenceState('disk/start', 0);
-  const current=useCurrentSource(id,path,workspace?.approved===true),file=current.shown,error=current.error;
+  const current=useCurrentSource(id,target.path??path,workspace?.approved===true&&!!target.path),file=current.shown,error=current.error;
   const [readingVersion, setReadingVersion] = useEvidenceState<string | undefined>('disk/version', undefined);
   const [query, setQuery] = useEvidenceState('disk/query', '');
   const [activeLine, setActiveLine] = useEvidenceState<number | undefined>('disk/line', undefined);
@@ -353,12 +358,14 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
     catch { setCopied('Copy unavailable · select the text to copy.'); }
   };
   const peek=modern&&!explore;
-  const fileActions=<><button className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, ...(peek?{}:{currentFile:undefined}), filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title="Open this current file in Workspace for split views and local drafts">{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Recorded work on this file" disabled={recordedPath===undefined} title={recordedPath===undefined?"Recorded location unavailable":"Recorded work on this file"} onClick={() => {if(recordedPath!==undefined)useApp.getState().set({ currentFile: undefined, filePanel: recordedPath });}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button></>;
+  const refusal=target.reason??currentReadingFailure(error)??currentReadingFailure(grantError);
+  if(projection&&!file&&refusal)return <ReadingDialog title={path} close={()=>useApp.setState({currentFile:undefined})} className="current-file-reader file-peek-reader" modeless floating headerExtra={tabs}><CapturedFileFallback path={recordedPath??path} projection={projection} reason={refusal}/></ReadingDialog>;
+  const fileActions=<><button disabled={!target.path} className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, ...(peek?{}:{currentFile:undefined}), filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title="Open this current file in Workspace for split views and local drafts">{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Recorded work on this file" disabled={recordedPath===undefined} title={recordedPath===undefined?"Recorded location unavailable":"Recorded work on this file"} onClick={() => {if(recordedPath!==undefined)useApp.getState().set({ currentFile: undefined, filePanel: recordedPath });}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button>{!narrow&&<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace compact/>}</>;
   const lineControls=<form className="source-go" onSubmit={e=>{e.preventDefault();go();}}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e=>{setLineInput(e.target.value);setLineError(undefined);}}/><button className="btn ghost small" aria-label="Go to line" disabled={!file}>Go</button><button type="button" className="btn ghost small" aria-label="Wrap lines" aria-pressed={wrap} onClick={()=>setWrap(!wrap)}>Wrap</button><span role="status">{lineError}</span></form>;
   const phoneOptions=<details className="desk-options current-reader-options" onKeyDown={event=>{if(event.key!=='Escape'||!event.currentTarget.open)return;event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector<HTMLElement>(':scope>summary')?.focus({preventScroll:true});}}><summary aria-label="Reading options" title="Reading options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 3v6M15 9v6M9 15v6"/></svg></summary><div>
    <span className="reader-source-context">{file?`${current.candidate?'Retained snapshot':'On disk'} · ${file.totalLines} lines${file.redacted?' · secrets redacted':''}`:'Current file not loaded'}</span>
    {!formatted&&workspace?.approved&&lineControls}
-   <button className="btn ghost" disabled={!file} onClick={()=>void copy()}>Copy file</button>{fileActions}
+   <button className="btn ghost" disabled={!file} onClick={()=>void copy()}>Copy file</button>{fileActions}<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace/>
    {copied&&<span role="status">{copied}</span>}
   </div></details>;
   return <ReadingDialog title={path} windowId={explore?undefined:'File reader'} resetWindow={()=>setWidth(1040)} close={() => useApp.setState({ currentFile: undefined })} className={`current-file-reader${modern&&!explore?' file-peek-reader':''}`} modeless={explore||modern} floating={modern&&!explore} headerExtra={tabs} headerActions={peek?(narrow?phoneOptions:fileActions):undefined} style={explore ? undefined : { width: modern?undefined:`min(${width}px, calc(100vw - 28px))` }}>
