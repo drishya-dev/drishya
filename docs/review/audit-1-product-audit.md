@@ -180,9 +180,19 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 | K2 | `Actions` wrapped under its own icon in the peek's title bar. | Low | Fixed. |
 | K3 | The session panel is complete and readable; `Harness`, `Recording`, `Observation` and the usage notes are our vocabulary. | Low | UI-21. |
 
+## Review tools
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| V1 | Prompt overview is the best summary in the product: every prompt with what it led to. It is buried in the palette, paged 7 times, and its counts include `0 change calls · 0 checks · 0 failed outcomes`. | Medium | UI-8: hide zeros, one list, a real way in. |
+| V2 | Review findings: 44 findings, led by `Same captured command · 3 runs` for harmless commands like `git status`. Repetition alone says nothing, as the dialog itself admits. | Medium | UI-22: does this earn its place? Rank by what failed, or cut. |
+| V3 | `through observation 39156` on every review dialog. | Low | Fixed. |
+| V4 | Review packet: each checkbox sat on its own line above its label. | Low | Fixed. |
+| V5 | The packet reports `6462 capture gaps` on one Codex session. A number that large either means something is wrong or that the word does not mean what a reader thinks. | Medium | UI-22: find out what they are before anyone is shown that number. |
+
 ## Not yet walked
 
-This is the first batch, not the end of the audit. **Still to walk:** a live session as it runs; Review questions, Saved moments, Export, Review packet and Prompt overview; side-by-side compare; every toolbox state; the A2 interaction inventory (right click, drag, resize and every keyboard route, per component) as a written table; the same walk on a Codex session at 600 px; light themes. AUDIT-1 stays open until these are done.
+This is the first batch, not the end of the audit. **Still to walk:** a live session as it runs; Review questions, Saved moments and Export; side-by-side compare; every toolbox state; the A2 interaction inventory (right click, drag, resize and every keyboard route, per component) as a written table; the same walk on a Codex session at 600 px; light themes. AUDIT-1 stays open until these are done.
 
 ## Tools
 
