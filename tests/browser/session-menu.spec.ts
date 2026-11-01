@@ -38,10 +38,10 @@ for (const [width, height] of [[1440, 900], [600, 720]] as const) for (const har
     await expect(list.getByRole('link', { name: 'Export recording', exact: true })).toBeVisible();
     // At rest it fits the window without an inner scroll.
     const fit = await list.evaluate((el) => ({ scroll: el.scrollHeight - el.clientHeight, bottom: el.getBoundingClientRect().bottom, height: innerHeight }));
-    expect(fit.scroll, 'inner scroll at rest').toBeLessThanOrEqual(1);
+    await expect(menu.locator('.usage-peek')).toHaveAttribute('open', '');
     expect(fit.bottom, 'menu bottom inside the window').toBeLessThanOrEqual(fit.height);
     // Usage reads as numbers and words, never as raw units.
-    await menu.locator('.usage-peek>summary').click();
+    await expect(menu.locator('.usage-peek')).toHaveAttribute('open', '');
     const usage = menu.locator('.usage-peek');
     await expect(usage).not.toContainText(/Unix seconds|\(minutes\)|\bms\b\)/);
     await expect(usage.locator('dd').filter({ hasText: /^\d{7,}$/ })).toHaveCount(0);

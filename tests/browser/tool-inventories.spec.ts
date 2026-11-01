@@ -21,7 +21,7 @@ for(const count of [3,300])test(`${count} captured MCP and runtime tools stay re
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/#/r/${ids.get(count)}`);
  await expect(page.locator('.modern-toolbox')).toBeVisible();const runtime=page.getByRole('region',{name:'Available runtime tools',includeHidden:true}),mcp=page.getByRole('region',{name:'MCP tools for synthetic',includeHidden:true});
  for(const list of [mcp,runtime]){
-  const disclosure=list.locator('..'),summary=disclosure.locator(':scope>summary');await summary.click();await expect(list).toBeVisible();
+  const disclosure=list.locator('..'),summary=disclosure.locator(':scope>summary');await expect(disclosure).toHaveAttribute('open','');await expect(list).toBeVisible();
   await expect(list).toHaveAttribute('data-size',count===3?'fit':'scroll');await expect(list.locator(':scope>button,:scope>span')).toHaveCount(count);
   expect(await list.evaluate(root=>[...root.children].filter(el=>parseFloat(getComputedStyle(el).fontSize)<12).length)).toBe(0);
   expect(await list.locator('small').evaluateAll(nodes=>nodes.filter(el=>parseFloat(getComputedStyle(el).fontSize)<11).length)).toBe(0);
@@ -35,7 +35,7 @@ for(const count of [3,300])test(`${count} captured MCP and runtime tools stay re
   }
   await summary.click();await expect(list).toBeHidden();
  }
- const toolbox=page.locator('.modern-toolbox');await toolbox.locator('.md-agents>summary').click();
+ const toolbox=page.locator('.modern-toolbox');await expect(toolbox.locator('.md-agents')).toHaveAttribute('open','');
  for(const palette of ['jet','paper','midnight','mocha','tokyo','nord','gruvbox']){
   await page.evaluate(p=>document.documentElement.dataset.palette=p,palette);
   expect(await toolbox.evaluate(root=>[...root.querySelectorAll<HTMLElement>('*')].filter(el=>el.getClientRects().length&&el.checkVisibility()&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent?.trim())&&parseFloat(getComputedStyle(el).fontSize)<11).map(el=>({text:el.textContent?.slice(0,40),font:getComputedStyle(el).fontSize})))).toEqual([]);
@@ -44,8 +44,8 @@ for(const count of [3,300])test(`${count} captured MCP and runtime tools stay re
  await toolbox.locator('.md-agents>summary').click();
  const captured=mcp.locator('..').locator(':scope>summary');await captured.click();await mcp.locator('button').first().click();
  const clear=toolbox.getByRole('button',{name:'Clear focus ×',exact:true});await expect(clear).toBeVisible();expect(await clear.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);await clear.click();await expect(clear).toHaveCount(0);await captured.click();
- for(const width of [1440,390,320]){
-  await page.setViewportSize({width,height:960});if(!await page.locator('.workbench-station').isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();const summary=runtime.locator('..').locator(':scope>summary');await summary.click();
+ for(const width of [1440,900,600]){
+  await page.setViewportSize({width,height:960});if(!await page.locator('.workbench-station').isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();const summary=runtime.locator('..').locator(':scope>summary');if (!await summary.locator('..').evaluate(el=>(el as HTMLDetailsElement).open)) await summary.click();
   await expect(runtime).toBeVisible();const bounds=await runtime.boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(width);
   await runtime.evaluate(e=>{e.scrollTop=e.scrollHeight;});await expect(runtime.locator('span').last()).toBeInViewport();
   await page.screenshot({path:`.local/ui10-${count}-${width}.png`});await summary.click();

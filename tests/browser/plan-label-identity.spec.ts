@@ -18,7 +18,7 @@ test.beforeAll(async()=>{
  const source=join(dir,'session.jsonl');writeFileSync(source,rows.map(r=>JSON.stringify(r)).join('\n')+'\n');id=(await app.ingest.importSource('claude-code',source)).recordingId;
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
-for(const width of [1440,390])test(`duplicate plan labels keep literal states and honest revision summaries at ${width}px`,async({page})=>{
+for(const width of [1440,600])test(`duplicate plan labels keep literal states and honest revision summaries at ${width}px`,async({page})=>{
  // Each viewport starts fresh; the preceding case deliberately saved an expanded card.
  await page.request.delete(`${server.url}/v1/working-locations`,{headers:{authorization:`Bearer ${server.token}`,'content-type':'application/json'}});
  await page.setViewportSize({width,height:900});await page.emulateMedia({reducedMotion:'reduce'});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);

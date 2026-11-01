@@ -51,9 +51,9 @@ test('plan-mode and desktop checklist records show as one proposed plan and one 
     await expect(document).not.toContainText('approved');
 
     // update_plan: three recorded changes are one pinned list that ends with the last state.
-    const pinned = page.locator('.turn .plan-pinned');
+    const pinned = page.locator('.plan-card[role=group]');
     await expect(pinned).toHaveCount(1);
-    await expect(pinned).toContainText('Plan · 2 of 3 done · revision 3');
+    await expect(pinned).toContainText('Revision 3 · 2 of 3 done');
     await expect(pinned.locator('li.plan-completed')).toHaveCount(2);
     await expect(pinned.locator('li.plan-in_progress')).toContainText('Run the tests');
   }

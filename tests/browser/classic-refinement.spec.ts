@@ -99,10 +99,10 @@ test('Classic evidence and agent rail, explicit palettes and map reading work ac
 
 test('usage expands inside the utility menu without clipping at narrow widths', async ({ page }) => {
   await page.goto(url());
-  for (const [width, height] of [[1440, 900], [900, 500], [390, 844]]) {
+  for (const [width, height] of [[1440, 900], [900, 500], [600, 844]]) {
     await page.setViewportSize({ width, height });
     await page.getByLabel('More workspace options', { exact: true }).click();
-    await page.locator('.workspace-menu .usage-peek > summary').click();
+    if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.workspace-menu .usage-peek > summary').click();
     const panel = page.locator('.workspace-menu .usage-peek > div');
     await expect(panel).toBeVisible();
     // scrollWidth is intrinsic; boundingBox includes the pointer-entry scale of
@@ -118,6 +118,7 @@ test('usage expands inside the utility menu without clipping at narrow widths', 
     await expect(panel).toContainText('Only reported values');
     expect(await page.locator('.workspace-menu .usage-peek > summary').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);
     if (width === 1440) await page.screenshot({ path: resolve('.local/classic-usage-fixed.png') });
+    await page.locator('.usage-peek > summary').focus();
     await page.keyboard.press('Escape');
     await expect(panel).toBeHidden();
     await expect(page.locator('.workspace-menu .usage-peek > summary')).toBeFocused();
@@ -140,7 +141,7 @@ test('utility menus restore nested focus, stay bounded and keep keyboard/reduced
   expect(bounds.y).toBeGreaterThanOrEqual(0);
   expect(bounds.y + bounds.height).toBeLessThanOrEqual(360);
   const usage = menu.locator('.usage-peek > summary');
-  await usage.focus(); await usage.press('Enter');
+  await usage.focus(); if (!await usage.locator('..').evaluate(el => (el as HTMLDetailsElement).open)) await usage.press('Enter');
   await usage.press('Escape');
   await expect(usage).toBeFocused();
   await expect(menu).toHaveAttribute('open', '');

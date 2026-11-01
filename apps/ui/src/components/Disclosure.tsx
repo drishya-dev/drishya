@@ -3,12 +3,13 @@ import {useApp} from '../state.ts';
 
 const storageKey = 'drishya-disclosures-v1';
 const changed = 'drishya-disclosure-change';
-// Only bounded identifiers and booleans live here; never captured bodies or grants.
+// Only identifiers and booleans live here; never captured bodies or grants.
+// The array is a migration fallback for choices saved by the earlier draft.
 function preferences(): [string, boolean][] {
   try {
     const rows: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
     return Array.isArray(rows) ? rows.slice(-256).filter((row): row is [string, boolean] =>
-      Array.isArray(row) && typeof row[0] === 'string' && row[0].length <= 1400 && typeof row[1] === 'boolean') : [];
+      Array.isArray(row) && row.length === 2 && typeof row[0] === 'string' && row[0].length <= 1400 && typeof row[1] === 'boolean') : [];
   } catch {return [];}
 }
 
@@ -16,7 +17,13 @@ function preferences(): [string, boolean][] {
 export function useDisclosureChoice(surface: string, initial = true): [boolean, (value: boolean) => void] {
   const id = useApp(state => state.recordingId);
   const key = `${id ?? 'unselected'}/${surface}`;
-  const read = () => new Map(preferences()).get(key) ?? initial;
+  const read = () => {
+    try {
+      const saved = localStorage.getItem(`${storageKey}/${key}`);
+      if (saved === '1' || saved === '0') return saved === '1';
+    } catch { /* Browser storage can be disabled. */ }
+    return new Map(preferences()).get(key) ?? initial;
+  };
   const [choice, setChoice] = useState(() => ({key, value: read()}));
   const value = choice.key === key ? choice.value : read();
   useEffect(() => {
@@ -28,8 +35,8 @@ export function useDisclosureChoice(surface: string, initial = true): [boolean, 
   return [value, next => {
     setChoice({key, value: next});
     try {
-      const rows = preferences().filter(([stored]) => stored !== key);
-      localStorage.setItem(storageKey, JSON.stringify([...rows, [key, next]].slice(-256)));
+      // One key per explicit choice: new surfaces never evict earlier choices.
+      localStorage.setItem(`${storageKey}/${key}`, next ? '1' : '0');
       window.dispatchEvent(new Event(changed));
     } catch { /* A blocked browser store still permits a choice for this mount. */ }
   }];

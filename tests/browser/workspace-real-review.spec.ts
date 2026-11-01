@@ -78,7 +78,7 @@ test('actual product surfaces keep evidence, current source, review and map navi
     const questions=page.getByRole('dialog',{name:'Review questions',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
     await questions.getByRole('button',{name:'Close Review questions',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
-    await page.locator('.workspace-menu[open] .usage-peek>summary').click();await frame(`usage-${width}`);
+    if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.workspace-menu[open] .usage-peek>summary').click();await frame(`usage-${width}`);
     await page.keyboard.press('Escape');await page.keyboard.press('Escape');
     await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
     const grant=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(desk.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();await expect(desk.getByRole('tablist')).toBeVisible();

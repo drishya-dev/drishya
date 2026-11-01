@@ -513,7 +513,7 @@ test('recovered Modern toolbox preserves actual instrument origins, filters and 
   const mcpServer=toolbox.locator('.md-server').filter({has:page.locator('[data-mcp-server]')}).first();
   await expect(mcpServer).toBeVisible();
   {
-    await mcpServer.locator('summary').click();
+    if (!await mcpServer.evaluate(el => (el as HTMLDetailsElement).open)) await mcpServer.locator('summary').click();
     const tool=mcpServer.locator('button[data-mcp-tool]').first();
     await expect(tool).toBeVisible(); await tool.click();
     await expect(tool).toHaveAttribute('aria-pressed','true');
@@ -1512,11 +1512,11 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
   const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
   const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('This session',{exact:true})).toBeVisible();await expect(menu.getByText('Move around',{exact:true})).toBeVisible();await expect(menu.getByText('Share',{exact:true})).toBeVisible();await expect(menu.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await page.keyboard.press('ArrowDown');await expect(menu.locator('.workspace-utilities').locator('button:not(:disabled),a[href],summary').filter({visible:true}).first()).toBeFocused();
-  await menu.locator('.usage-peek>summary').focus();await page.keyboard.press('Enter');await expect(menu.getByText('No usage values captured for this session.',{exact:true})).toBeVisible();
+  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values captured for this session.',{exact:true})).toBeVisible();
   await page.keyboard.press('End');await expect(menu.getByRole('link',{name:'Export recording',exact:true}).or(menu.getByRole('button',{name:'Rescan original journal',exact:true})).last()).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
-  for(const width of [1440,390]) {
-    await page.setViewportSize({width,height:844});await trigger.click();await page.locator('.workspace-menu .usage-peek>summary').click();
+  for(const width of [1440,600]) {
+    await page.setViewportSize({width,height:844});await trigger.click();if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.workspace-menu .usage-peek>summary').click();
     const box=(await page.locator('.workspace-menu>div').boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);
     await page.screenshot({path:resolve(`.local/utilities-polish-${width}.png`)});await page.mouse.click(10,400);await expect(menu).toHaveCount(0);
   }

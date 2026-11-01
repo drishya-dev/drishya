@@ -32,7 +32,7 @@ test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!res
 for(const count of [3,300])test(`${count} agents keep their family and filter in a bounded disclosure`,async({page})=>{
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/#/r/${ids.get(count)}`);
  const toolbox=page.locator('.modern-toolbox');await expect(toolbox).toBeVisible();
- const summary=toolbox.locator('.md-agents>summary');await summary.click();
+ const summary=toolbox.locator('.md-agents>summary');await expect(summary.locator('..')).toHaveAttribute('open','');
  const list=toolbox.getByRole('region',{name:'Recorded agents',exact:true});await expect(list).toBeVisible();await expect(list).toHaveAttribute('data-size',count===3?'fit':'scroll');
  const children=list.locator('.station-subagents>summary');await expect(children).toContainText(String(count-1));await children.click();
  await expect(list.getByRole('switch')).toHaveCount(count);
