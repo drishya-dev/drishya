@@ -10,7 +10,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import type { BlobText, Observation, RecordingSummary } from '@drishya/contracts';
+import { isBlobText } from '@drishya/contracts';
+import type { BlobText, Observation, RecordingSummary, SessionLineageLink, SessionLineageView } from '@drishya/contracts';
 import type { LibrarySearchQuery, LibrarySearchPage, SessionSearchHit } from './search-types.ts';
 import { recordingStats } from './recording-stats.ts';
 
@@ -369,6 +370,10 @@ export class Store {
   private migrate() {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS session_lineage (
+        child TEXT PRIMARY KEY REFERENCES recordings(id) ON DELETE CASCADE,
+        body TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS recordings (
         id TEXT PRIMARY KEY,
         adapter_id TEXT NOT NULL,
@@ -517,6 +522,86 @@ export class Store {
   getRecording(id: string): RecordingSummary | undefined {
     const r = this.q('SELECT * FROM recordings WHERE id = ?').get(id) as any;
     return r ? rowToRecording(r) : undefined;
+  }
+
+  putLineage(link: SessionLineageLink) {
+    const body = JSON.stringify(link);
+    const old = this.q('SELECT body FROM session_lineage WHERE child=?').get(link.childRecordingId) as { body: string } | undefined;
+    if (old?.body === body) return;
+    this.q('INSERT INTO session_lineage(child,body) VALUES(?,?) ON CONFLICT(child) DO UPDATE SET body=excluded.body').run(link.childRecordingId, body);
+    this.q('UPDATE recordings SET revision=revision+1 WHERE id=?').run(link.childRecordingId);
+  }
+
+  /** Exact native-parent chains only. Missing, ambiguous, cyclic and overlong chains never guess. */
+  lineageView(currentRecordingId: string): SessionLineageView | undefined {
+    const recordingIds: string[] = [], links: SessionLineageLink[] = [], seen = new Set<string>();
+    let id: string | undefined = currentRecordingId;
+    while (id) {
+      if (seen.has(id) || recordingIds.length === 16) {
+        return { kind: 'derived', rule: 'claude-native-parent-lineage-v1', currentRecordingId, recordingIds: [currentRecordingId], links: [{ ...links[0]!, status: 'ambiguous', parentRecordingId: undefined }], duplicatePartsOmitted: 0, differingReceiptPartsRetained: 0 };
+      }
+      seen.add(id); recordingIds.unshift(id);
+      const row = this.q('SELECT body FROM session_lineage WHERE child=?').get(id) as { body: string } | undefined;
+      if (!row) break;
+      const link = JSON.parse(row.body) as SessionLineageLink;
+      if (link.status === 'linked' && link.parentRecordingId && !this.getRecording(link.parentRecordingId)) {
+        links.push({ ...link, status: 'parent-missing', parentRecordingId: undefined }); break;
+      }
+      links.push(link);
+      id = link.status === 'linked' ? link.parentRecordingId : undefined;
+    }
+    return links.length ? { kind: 'derived', rule: 'claude-native-parent-lineage-v1', currentRecordingId, recordingIds, links, duplicatePartsOmitted: 0, differingReceiptPartsRetained: 0 } : undefined;
+  }
+
+  lineageForIds(ids: string[]): SessionLineageView | undefined {
+    const view = this.lineageView(ids.at(-1)!);
+    return view && view.recordingIds.join('+') === ids.join('+') ? view : undefined;
+  }
+
+  private lineagePartHash(value: unknown): string {
+    const canonical = (item: unknown): unknown => {
+      if (isBlobText(item)) return this.blobs.get(item.$blob) ?? { missingBlob: item.$blob };
+      if (Array.isArray(item)) return item.map(canonical);
+      if (item && typeof item === 'object') return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, canonical(child)]));
+      return item;
+    };
+    return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
+  }
+
+  /** Search stays bounded to candidate hits; never materialize a lineage's full observation bodies. */
+  lineageSearch(view: SessionLineageView, query: string, limit = 50): SessionSearchHit[] {
+    const hits = view.recordingIds.flatMap(id => this.search(id, query, limit));
+    return hits.filter(hit => {
+      const owner = view.recordingIds.find(id => !!this.observationById(id, hit.observationId));
+      const observation = owner ? this.observationById(owner, hit.observationId) : undefined;
+      if (!observation?.source.recordId) return true;
+      const hash = this.lineagePartHash(observation.payload);
+      for (const prior of view.recordingIds.slice(0, view.recordingIds.indexOf(owner!))) {
+        const rows = this.q("SELECT body FROM observations WHERE recording_id=? AND kind=? AND agent_id=? AND json_extract(body,'$.source.recordId')=? AND json_extract(body,'$.source.part')=?").all(prior, observation.kind, observation.agentId, observation.source.recordId, observation.source.part) as { body: string }[];
+        if (rows.some(row => this.lineagePartHash((JSON.parse(row.body) as Observation).payload) === hash)) return false;
+      }
+      return true;
+    }).slice(0, limit);
+  }
+
+  /** Retains physical IDs/provenance. Equality is of sealed parts, never raw secret-bearing content. */
+  lineageObservations(view: SessionLineageView): Iterable<Observation> {
+    const store = this;
+    return { *[Symbol.iterator]() {
+      const seen = new Map<string, Set<string>>();
+      view.duplicatePartsOmitted = 0; view.differingReceiptPartsRetained = 0;
+      for (const id of view.recordingIds) for (const observation of store.orderedObservations(id)) {
+        if (observation.source.recordId && (/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(observation.source.recordId) || observation.kind === 'usage' && /^usage:[a-z0-9_-]{1,160}$/i.test(observation.source.recordId))) {
+          const key = JSON.stringify([observation.agentId, observation.source.recordId, observation.kind, observation.source.part]);
+          const hash = store.lineagePartHash(observation.payload);
+          const variants = seen.get(key) ?? new Set<string>();
+          if (variants.has(hash)) { view.duplicatePartsOmitted++; continue; }
+          if (variants.size && observation.kind === 'usage') view.differingReceiptPartsRetained++;
+          variants.add(hash); seen.set(key, variants);
+        }
+        yield observation;
+      }
+    } };
   }
 
   /**
