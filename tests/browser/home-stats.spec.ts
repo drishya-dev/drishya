@@ -74,5 +74,5 @@ test('300 sessions with stats retain bounded virtualization and keyboard navigat
   await page.locator('.mh-session-list').focus(); await page.keyboard.press('End');
   await expect(page.locator('[data-session-index="299"] .mh-session-open')).toBeFocused();
   expect(await page.locator('.mh-session').count()).toBeLessThan(50);
-  await expect(page.locator('[data-session-index="299"] .mh-row-stats')).toContainText('completed');
+  await expect(page.locator('[data-session-index="299"] .mh-row-stats')).toContainText('1 m 39 s');
 });
