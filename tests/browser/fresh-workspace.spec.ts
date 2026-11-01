@@ -1616,12 +1616,25 @@ test('saved captured file selections recover as references and unavailable selec
 
 test('a failed reader screen can recover by navigating to a healthy session',async({page})=>{
   const id=ids['claude-code']!;
-  await page.route(`**/v1/recordings/${id}/file-operations?*`,route=>route.fulfill({json:{operations:[null],total:1}}));
+  let failedReads=0;
+  await page.route(`**/v1/recordings/${id}/file-operations?*`,route=>{failedReads++;return route.fulfill({json:{operations:[null],total:1}});});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
-  await expect(page.getByText('This view could not be displayed',{exact:true})).toBeVisible();
+  const fallback=page.getByText('This view could not be displayed',{exact:true});
+  await expect(fallback).toBeVisible();
+  const failedBefore=failedReads;
+  // Hold bootstrap to prove recovery never remounts the old failed reader while loading.
+  let resume=()=>{};const pending=new Promise<void>(resolve=>{resume=resolve;});
+  await page.route('**/v1/recordings',async route=>{await pending;await route.continue();});
   await page.evaluate(id=>{location.hash=`/r/${id}`;},ids.codex!);
-  await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+  try {await expect(page.getByText('Starting…',{exact:true})).toBeVisible();expect(failedReads).toBe(failedBefore);} finally {resume();}
+  await expect(page.locator('.history')).toBeVisible();await expect(fallback).toHaveCount(0);
+  expect(failedReads).toBe(failedBefore);
+  // Going Home from the same failed reader must also clear retained viewer state.
+  await page.evaluate(id=>{location.hash=`/r/${id}`;},id);
+  await expect(fallback).toBeVisible();
+  await page.evaluate(()=>{location.hash='';});
+  await expect(page.locator('.home')).toBeVisible();await expect(fallback).toHaveCount(0);
 });
 
 
