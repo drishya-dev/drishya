@@ -216,7 +216,6 @@ Two genuine Claude Code runs on a throwaway repository (`live-repo`, haiku, abou
 | M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20: Expand gets one note. |
 | M4 | The Source versions toolbar sat flush against the dialog edge. | Low | Fixed. |
 | M5 | Comparing a read with disk matches by line position, so a shifted file reads as all changed. The dialog says so; a real line diff would be better. | Medium | UI-23. |
-| M6 | `Export recording` is listed for the session but the button is not reachable from the session panel; only `Use this session as local preview` was. | Low | UI-8: check the owner. |
 | M7 | Light theme (Porcelain): Home, History, file view, palette and Changes read well. The detector's only new rule, `cream-palette`, is fashion, and rejected. | | Checked, nothing found. |
 | M8 | Codex `32f628ee` at 600 px: no horizontal overflow, no card past the edge, failure and pass cards read correctly. | | Checked, nothing found. |
 
