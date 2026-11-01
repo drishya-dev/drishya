@@ -197,9 +197,9 @@ function WorkspaceViewer() {
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} />
-      <NowWatcher key={recordingId} /><NotifyWatcher />
+      <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
-      <PromptComposer key={recordingId} />
+      <PromptComposer key={`composer/${recordingId}`} />
       <DeveloperWorkspace />
       <Inspector projection={historical} />
       <Briefing projection={projection} />

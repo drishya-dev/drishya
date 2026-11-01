@@ -8,11 +8,13 @@ import './file-reader-controls.css';
 import { WorkspaceOptions } from './WorkspaceOptions.tsx';
 import {CapturedSourceComparison} from './CapturedSourceComparison.tsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Projection } from '@drishya/contracts';
+import type { Operation, Projection } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import { fileEvidence, type FileEvidence } from '../lib/file-evidence.ts';
 import { fileTimeline, timelineStep } from '../lib/file-timeline.ts';
 import { agentName, KIND_LABEL } from '../lib/identity.ts';
+import { fileFolder, fileName } from '../lib/file-identity.ts';
+import { diffStat } from '../lib/card-evidence.ts';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
 import { VerificationPanel } from './Verification.tsx';
@@ -186,13 +188,13 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
   const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
   const content=<>
 
-    <div className="file-reading-context"><EvidenceNavigation compact={modern} />
+    <div className="file-reading-context"><EvidenceNavigation compact={modern} hideEmpty={modern} />
     {recoveryError&&<p role="status" className="file-workspace-intro">{recoveryError}</p>}
-    <div className="file-workspace-intro"><span className="muted small">{page ? `${page.total} recorded actions` : 'Loading captured actions…'} · {mode === 'replay' ? 'Visible at this replay step' : 'Recorded'}{requestedLine !== undefined && ` · Referenced line ${requestedLine} · captured ranges only`}</span></div></div>
+    {(mode === 'replay' || requestedLine !== undefined) && <div className="file-workspace-intro"><span className="muted small">{mode === 'replay' ? 'Up to this replay step' : ''}{mode === 'replay' && requestedLine !== undefined && ' · '}{requestedLine !== undefined && `Line ${requestedLine}, within the lines the agent saw`}</span></div>}</div>
     <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
       {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} reset={()=>setTrailWidth(230)} label="Resize file action history" />}
       <nav ref={trail} className="file-trail" aria-label="File action history">
-        <input className="file-filter" aria-label="Filter actions on this file" placeholder="Find a recorded action" value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); setLeft(undefined); setRight(undefined); }} />
+        <input className="file-filter" aria-label="Filter actions on this file" placeholder={page ? `${page.total} action${page.total === 1 ? '' : 's'} on this file` : 'Loading…'} value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); setLeft(undefined); setRight(undefined); }} />
         {error && <p role="alert" className="bad">{error} <button className="btn" onClick={() => { setFailure(undefined); setRetry((n) => n + 1); }}>Retry</button></p>}
         {!page && !error && <p className="muted" role="status">Loading captured actions…</p>}
         {page?.total === 0 && <p className="muted">No matching captured actions.</p>}
@@ -202,7 +204,7 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
             if (evidence.length) setLeft(evidence[0]);
             else { const state = useApp.getState(); state.select(op.id); state.set({ filePanel: undefined, explore: false }); }
           }} aria-pressed={first?.operation.id === op.id}>
-            <span className={`op-kind k-${op.kind}`}>{KIND_LABEL[op.kind]}</span><span className="file-op-title">{op.title}</span><small>{projection.agents.length > 1 && <>{agentName(projection.agents.find((agent) => agent.id === op.agentId))} · </>}{op.status === 'error' ? 'failed' : op.status === 'running' ? 'in flight' : op.status} {op.startTime && <CapturedTime iso={op.startTime} />}</small>
+            <span className={`op-kind k-${op.kind}`}>{KIND_LABEL[op.kind]}</span><span className="file-op-title" title={op.title}>{stepName(op)}</span><small>{projection.agents.length > 1 && <>{agentName(projection.agents.find((agent) => agent.id === op.agentId))} · </>}{op.status === 'error' ? <span className="bad">failed · </span> : op.status === 'running' ? 'in flight · ' : ''}{op.startTime && <CapturedTime iso={op.startTime} />}</small>
           </button>{evidence.length > 0 && <button data-file-op={op.id} className="file-inspect" onClick={() => { const state = useApp.getState(); state.select(op.id); state.set({ filePanel: undefined, explore: false }); }}>Open in history ↗</button>}</div>;
         })}
         {page && page.total > 24 && <div className="file-pagination"><button className="btn" disabled={start === 0} onClick={() => { setLeft(first); setStart(Math.max(0, start - 24)); }}>Previous</button><span>{start + 1}–{Math.min(start + 24, page.total)} / {page.total}</span><button className="btn" disabled={start + 24 >= page.total} onClick={() => { setLeft(first); setStart(start + 24); }}>Next</button></div>}
@@ -225,7 +227,20 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
       </section>
     </div>
   </>;
-  return embedded?<section className="file-workspace captured-file-fallback" aria-label="Captured file fallback" style={{width:'100%',height:'100%',maxHeight:'none',minHeight:0,border:0,borderRadius:0,display:'flex',flexDirection:'column',overflow:'hidden'}}>{reason&&<p className="file-workspace-intro" role="status">{reason}</p>}{content}</section>:<ReadingDialog title={`Work on ${recordedLocation ?? path}`} windowId={explore?undefined:'Captured file'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${windowWidth}px,calc(100vw - 28px))`}} resizeControl={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth} minimum={640} maximum={1800} change={setWindowWidth} reset={()=>setWindowWidth(1700)} label="Resize captured file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore}>{content}</ReadingDialog>;
+  return embedded?<section className="file-workspace captured-file-fallback" aria-label="Captured file fallback" style={{width:'100%',height:'100%',maxHeight:'none',minHeight:0,border:0,borderRadius:0,display:'flex',flexDirection:'column',overflow:'hidden'}}>{reason&&<p className="file-workspace-intro" role="status">{reason}</p>}{content}</section>:<ReadingDialog title={`Work on ${recordedLocation ?? path}`} heading={modern?<span className="file-heading"><strong>{fileName(path)}</strong><small title={recordedLocation ?? path}>{fileFolder(recordedLocation ?? path,4)}</small></span>:undefined} windowId={explore?undefined:'Captured file'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${windowWidth}px,calc(100vw - 28px))`}} resizeControl={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth} minimum={640} maximum={1800} change={setWindowWidth} reset={()=>setWindowWidth(1700)} label="Resize captured file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore}>{content}</ReadingDialog>;
+}
+
+/** The file is the window's title, so a row says what this step was. */
+function stepName(op: Operation): string {
+  const detail = op.detail;
+  if (detail.kind === 'read') return detail.lineCount > 0 ? `lines ${detail.startLine}–${detail.startLine + detail.lineCount - 1}` : 'whole file';
+  if (detail.kind === 'edit') {
+    if (detail.created) return 'new file';
+    const { added, removed } = diffStat(detail.hunks);
+    return detail.hunks.length ? `+${added} −${removed}` : 'change';
+  }
+  if (detail.kind === 'search') return detail.query;
+  return op.title;
 }
 
 function EvidenceColumn({ choices, value, choose, label, path, requestedLine }: { choices: FileEvidence[]; value?: FileEvidence; choose: (key: string) => void; label: string; path: string; requestedLine?: number }) {

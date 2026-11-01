@@ -24,7 +24,7 @@ it('retains multi-paragraph items and code without interpreting code as steps',(
 
 it('preserves nested document headings and quotes and escapes unsafe markup',()=>{
   const html=render('- Parent\n  > ### Nested title\n  > <script>unsafe</script>\n- End');
-  expect(html).toContain('<blockquote><h3>Nested title</h3><p>&lt;script&gt;unsafe&lt;/script&gt;</p></blockquote>');
+  expect(html).toContain('<blockquote><h3>Nested title</h3><pre class="md-html">&lt;script&gt;unsafe&lt;/script&gt;</pre></blockquote>');
   expect(html).not.toContain('<script>');
 });
 

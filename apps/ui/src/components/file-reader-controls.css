@@ -26,3 +26,29 @@
 
 :root[data-ui-version=modern] .file-evidence-toolbar .desk-options>summary>span { display:none; }
 :root[data-ui-version=modern] .file-evidence-toolbar .desk-options>summary { width:34px;justify-content:center;padding-inline:6px; }
+
+/* AUDIT-1: the file is the title, one toolbar row sits above the material, and the list says what differs between steps. */
+:root[data-ui-version=modern] .file-workspace>header { padding-block:12px; }
+.file-heading { display:flex;align-items:baseline;gap:10px;min-width:0; }
+.file-heading>strong { font:550 15px/1.4 var(--sans);color:var(--t1);white-space:nowrap; }
+.file-heading>small { font:12px/1.4 var(--sans);color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
+:root[data-ui-version=modern] .file-reading-context:not(:has(*)) { display:none; }
+:root[data-ui-version=modern] .file-evidence-reading { display:flex;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:4px 6px;padding:10px 16px; }
+:root[data-ui-version=modern] .file-evidence-reading>.file-timeline-steps { order:-1;margin:0; }
+:root[data-ui-version=modern] .file-evidence-reading>.file-evidence-toolbar { margin:0; }
+:root[data-ui-version=modern] .file-evidence-reading>.file-evidence-toolbar:first-of-type { order:1;margin-left:auto; }
+:root[data-ui-version=modern] .file-evidence-reading>.file-evidence-toolbar:nth-of-type(2) { order:0;margin-left:auto; }
+:root[data-ui-version=modern] .file-evidence-reading>.file-evidence-toolbar:nth-of-type(2)+* { margin-left:0; }
+:root[data-ui-version=modern] .file-evidence-reading>:not(.file-evidence-toolbar,.file-timeline-steps) { order:2;flex:1 0 100%;min-width:0; }
+:root[data-ui-version=modern] .file-evidence-choice select { background:transparent;border:0;padding-inline:0;font:500 13px/1.5 var(--sans);color:var(--t1); }
+:root[data-ui-version=modern] .file-evidence-material .snapshot-provenance { display:none; }
+:root[data-ui-version=modern] .file-trail { padding:10px; }
+:root[data-ui-version=modern] .file-trail-item { position:relative;margin:0; }
+:root[data-ui-version=modern] .file-trail .file-op { display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 8px;align-items:baseline;padding:7px 8px; }
+:root[data-ui-version=modern] .file-trail .file-op-title { margin:0;font:12px/18px var(--sans);color:var(--t1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
+:root[data-ui-version=modern] .file-trail .file-op small { grid-column:2;margin:0;font:11px/16px var(--sans); }
+:root[data-ui-version=modern] .file-trail .file-inspect { position:absolute;right:4px;bottom:5px;padding:0 4px;font-size:11px;background:var(--s1);opacity:0; }
+:root[data-ui-version=modern] .file-trail-item:is(:hover,:focus-within)>.file-inspect { opacity:1; }
+:root[data-ui-version=modern] :is(.file-evidence-material,.read-material) .captured-result-views>.material-context { display:none; }
+:root[data-ui-version=modern] .reading-window-actions .desk-options>summary>span { display:none; }
+:root[data-ui-version=modern] .current-file-reader .document-limit-note { flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--line);font:11px/1.5 var(--sans);color:var(--t3); }

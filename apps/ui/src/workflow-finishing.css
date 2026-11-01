@@ -37,3 +37,5 @@
   :is(.saved-moments-dialog,.draft-recovery-dialog) :is(input,textarea,button),.investigation-entry :is(button,select) {min-height:44px;font-size:16px;}
   .review-packet .packet-choice {min-height:44px;align-items:center;}
 }
+.review-packet fieldset>label { display:flex;align-items:center;gap:9px;padding:6px 0; }
+.review-packet fieldset>label>input { flex:none;margin:0; }

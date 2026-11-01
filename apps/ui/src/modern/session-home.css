@@ -74,3 +74,13 @@
  .mh-about>span {display:none;}
  .mh-about-mark {display:block;width:18px;height:18px;}
 }
+
+/* AUDIT-1: a list row holds one title line beside what differs; the open arrow is for the row in hand. */
+@media(min-width:651px) { .mh-session-open>strong {-webkit-line-clamp:1;} }
+.mh-session { padding-block:6px; }
+.mh-session-open>span>i { color:var(--t3);opacity:.7; }
+.mh-row-end>.icon-btn { opacity:0; }
+.mh-session:is(:hover,:focus-within)>.mh-row-end>.icon-btn { opacity:1; }
+.mh-refresh { background:transparent;border-color:var(--line); }
+.mh-chevron { width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;color:var(--t3); }
+@media(max-width:650px) { .mh-session { padding-block:8px; }.mh-session-open>span { flex-wrap:nowrap;max-height:18px; }.mh-session-open>span>* { flex:none; }.mh-session-open>span>span { flex:0 1 auto;min-width:0; } }

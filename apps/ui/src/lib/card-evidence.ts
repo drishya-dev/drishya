@@ -1,7 +1,7 @@
 import type { Hunk, Operation } from '@drishya/contracts';
 
 /** Prose reads better wrapped; code reads better on its own lines. */
-export const isProse = (path: string) => /\.(md|mdx|markdown|txt|rst|adoc)$/i.test(path);
+export const isProse = (path: string) => /\.(md|mdx|markdown|txt|rst|adoc|tex)$/i.test(path);
 
 /** Added and removed lines of a captured patch, counted from its unified lines. */
 export function diffStat(hunks: Hunk[]): { added: number; removed: number } {

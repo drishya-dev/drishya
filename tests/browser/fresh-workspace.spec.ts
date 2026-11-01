@@ -206,14 +206,14 @@ test('Home dense sessions remain reachable through virtualization and responsive
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   const list=page.locator('.mh-session-list'),rows=page.locator('.mh-session');
   await expect(rows.first()).toBeVisible();
-  expect(await rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(80);
+  expect(await rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(64);
   expect(await rows.first().locator('.mh-session-open>span').evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(12);
   await list.evaluate(node=>{node.scrollTop=1200;});
   await expect.poll(()=>list.evaluate(node=>node.scrollTop)).toBe(1200);
   await expect.poll(()=>list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');})).toMatch(/^Session /);
   const key=await list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');});
   await page.setViewportSize({width:390,height:844});
-  await expect.poll(()=>rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(104);
+  await expect.poll(()=>rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(84);
   await expect.poll(()=>list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');})).toBe(key);
   expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
   await list.evaluate(node=>{node.scrollTop=0;});
@@ -1478,9 +1478,8 @@ test('completed native turns open chronological captured review without implying
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await page.getByLabel('More workspace options').click();
   await page.getByRole('button',{name:'Review new captured activity',exact:true}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review).toContainText('Captured after this turn began');
+  const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review).toContainText('Since this turn began');
   await expect(review.locator('.review-counts')).toBeVisible();expect(after).toBe('0');
-  await expect(review).toContainText('order, not attribution or coverage');
 });
 
 

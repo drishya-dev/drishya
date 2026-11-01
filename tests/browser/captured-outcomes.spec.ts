@@ -21,7 +21,7 @@ test('wrapped test facts appear inside Shell, stay bounded and keep raw evidence
   const card = page.locator(`article[data-op-id="${op.id}"]`);
   await expect(card).toHaveClass(/op-shell/);
   await expect(card).toContainText(`${await page.evaluate(()=>(100000).toLocaleString())} passed`);
-  await expect(card).toContainText('Suite summary: 46 passed (46)');
+  await expect(card).toContainText('Suites: 46 passed (46)');
   await expect(card).toContainText('1 failed');
   await expect(card.locator('.captured-outcomes > section')).toHaveCount(2);
   expect(await card.locator('.verification-tile').count()).toBeLessThan(80);

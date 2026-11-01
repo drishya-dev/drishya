@@ -71,6 +71,11 @@ Append at the end of every phase and read at the start of every phase; do not re
 | 31 Oct | Builder report (screenshot) | Files, Workspace | A file the agent edited or wrote (a scratchpad path outside the workspace) opens the Workspace with "Reading current source…" then "not a readable workspace path" and no content. Every file operation should open to a full view with Open in Workspace and Show in Files; an outside-workspace path should say why and show the captured view. | UI, content | FILES-9, AUDIT-1, UI-8 |
 | 31 Oct | Builder direction | The whole-product passes | Audit as a user (does each feature help, what would help that is missing), then the interaction inventory (every component, every kind of interaction, on real sessions), then features built, then UI, then motion, kept as separate passes. See TASKS "The whole-product passes, planned". | all | AUDIT-1, UI-8, MOTION-1, MOTION-3 |
 | 30 Oct | Builder note (Instagram reel) | Coloured themes | Palette concept: dominant hue, neutral and one contrasting accent spent on one thing at a time; section 7. | UI | UI-8 |
+| 1 Nov | AUDIT-1 | Every card and list | Name a thing by what differs from its siblings: the file, the agent's words, the step. This one rule removed most of the noise on the main path, so apply it first on every surface. | UI | UI-8 |
+| 1 Nov | AUDIT-1 | Bounded previews | The end fade is driven by the scroller with no script and exists only while there is more to read. Reuse it for every bounded surface; it must not animate. | UI, motion | UI-8, MOTION-1 |
+| 1 Nov | AUDIT-1 | Expand and Inspector | Two readings of one step. Decide before UI-8 touches either. | UI | UI-20 |
+| 1 Nov | AUDIT-1 | Foundations | 11 font sizes, 11 radii and 20 button heights on one History screen. This batch added rules to the override pile on purpose; the token sheet absorbs them first. | UI | UI-8 |
+| 1 Nov | AUDIT-1 | All copy | The word `captured` carries nothing on screen. Provenance moves to tooltips and details. | Content | UI-21 |
 
 ## 6. Who runs it
 

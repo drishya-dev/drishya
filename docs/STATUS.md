@@ -31,13 +31,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. **Not touched while TEST-2 holds them:** `GitHistory.tsx`, `ScreenBoundary.tsx`, and the TEST-2 spec paths. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
+| AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. **Not touched while TEST-2 holds them:** `GitHistory.tsx` and `ScreenBoundary.tsx`. TEST-2's specs `fresh-workspace` and `product-workspace` take one-line copy updates only. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | TEST-2 | @harsh + Codex | `harsh/test-2-live-anchor` (draft #314) | 2026-10-31 | Whole TEST-2 completion, explicitly authorized by Harsh; up-to-25-file completion scope approved 1 Nov in chat. Exact runtime paths: apps/ui/src/components/{GitHistory,ScreenBoundary}.tsx. Verified browser paths: tests/browser/{fresh-workspace,git-graph-focus,captured-documents,delimited-acceptance,captured-resources,git-session-evidence,product-workspace,structured-data,structured-navigation-focus,inline-json-reading,repository-navigation}.spec.ts and tests/browser/legacy-test.ts. Additional approved diagnostics/repairs: tests/browser/{collection-surfaces,home-floor-typography}.spec.ts and history-gestures.ts; bounded related regression helpers or reading-scroll source/tests only if an actual defect is proven, within 25 paths total. Completion: docs/review/test-2-live-anchor.md, docs/TASKS.md, docs/STATUS.md. Preserve Claude commits; about eight new coherent increments plus necessary upstream merges. Diagnose actual pointer/layout and fixture lifetime causes, freeze animation inspection at creation; preserve assertions, timeouts, native scrolling and supported desktop bounds. Own isolated install and serial heavy/browser lease. No History, adapter, ingest, schema or other-owner UI-17/LIVE-5 source edits. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude — AUDIT-1, first batch
+
+- Yash changed the method on 1 November: walk the product as a developer and fix presentation in place, recording everything in [the audit](review/audit-1-product-audit.md), rather than record first and fix later. AUDIT-1 stays open: live, the review tools, the peek, compare and the written interaction inventory are not walked yet.
+- Walked on the real library (Claude `c8e5c9c8`, 2,695 operations; Codex `32f628ee` with 30 sub-agents) at 1440 and 600 px: Home, History cards, Inspector, file work, Workspace, Changes, the palette, Git review and history, search, Settings, composer, map, replay.
+- Biggest changes: Home's untitled rows were sub-agent threads, now nested with their journals in a Sub-agents group; 105 sessions in 96 scratch folders fold into one group; cards are named by the file or Claude's own command description (reducer r32); bounded previews end in a fade; the file view went from 390 px of chrome to one row; Ctrl+K lands in its input (it opened on the close button).
+- Eight findings became items: UI-20, UI-21, UI-22, HOME-2, REVIEW-6, CONTENT-15, GIT-7, DATA-13. UI-20 and GIT-7 need a builder decision. `GitHistory.tsx` and the specs naming `Search evidence`, `Recorded checks` and `Ask harness` wait on TEST-2 (#314).
 
 ### Harsh with Codex — LIVE-5 complete, PR #312
 

@@ -4,11 +4,11 @@ import {prosePath} from '../lib/prose-path.ts';
 import { ToolInput } from './ToolInput.tsx';
 import {StructuredResult} from './StructuredResult.tsx';
 import { OpImages } from './OpImages.tsx';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { EvidenceLink, Operation, Projection } from '@drishya/contracts';
 import { stepOfOperation } from '@drishya/scene';
 import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
-import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
+import { agentColor, agentName } from '../lib/identity.ts';
 import { useApp } from '../state.ts';
 import { Output, ProvenanceBadge, timeOf } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
@@ -33,6 +33,8 @@ export function Inspector({ projection }: { projection: Projection }) {
   const set = useApp((s) => s.set);
   const select = useApp((s) => s.select);
   const op = projection.operations.find((o) => o.id === selected);
+  // The history beside the panel makes room for the width the reader chose, so the width lives above both.
+  useLayoutEffect(() => { document.documentElement.style.setProperty('--inspector-width', `${width}px`); }, [width]);
   if (!op||developerWorkspace) return null;
   const outcome=operationOutcome(op);
   const agent = projection.agents.find((a) => a.id === op.agentId);
@@ -50,17 +52,17 @@ export function Inspector({ projection }: { projection: Projection }) {
         <button className="icon-btn" onClick={() => select(undefined)} aria-label="Close">✕</button>
       </header>
       <h2 className="insp-title">
-        <span className={`op-kind k-${op.origin.type === 'mcp' ? 'mcp' : op.kind}`}>{KIND_LABEL[op.kind]}</span> {op.title}
+        {op.title}
       </h2>
-      <EvidenceNavigation />
+      <EvidenceNavigation hideEmpty />
       <div className="insp-status">
         <span className={`pill st-${outcome.tone}`} title={outcome.explanation}>{outcome.label}</span>
-        <ProvenanceBadge p={op.classification} />
+        {op.classification?.kind !== 'captured' && <ProvenanceBadge p={op.classification} />}
       </div>
       <nav className="tabs" role="tablist">
         {(['detail', 'evidence'] as const).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => set({ inspectorTab: t })}>
-            {t === 'detail' ? 'Detail' : t === 'evidence' ? `Evidence${links.length ? ` · ${links.length} relationships` : ''}` : 'Explain'}
+            {t === 'detail' ? 'Detail' : t === 'evidence' ? `Links${links.length ? ` · ${links.length}` : ''}` : 'Explain'}
           </button>
         ))}
       </nav>

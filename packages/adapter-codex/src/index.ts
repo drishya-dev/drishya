@@ -390,6 +390,9 @@ async function discover(): Promise<DiscoveredSource[]> {
       cwd: typeof meta?.cwd === 'string' ? meta.cwd : undefined,
       title: t ? sanitize(t.slice(0, 160)).value : undefined,
       companions: [],
+      ...(typeof meta?.id === 'string' ? { sessionId: meta.id } : {}),
+      ...(typeof meta?.parent_thread_id === 'string' ? { parentSessionId: meta.parent_thread_id } : {}),
+      ...(typeof meta?.agent_nickname === 'string' ? { agentName: sanitize(meta.agent_nickname).value } : {}),
     });
   }
   return out.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
