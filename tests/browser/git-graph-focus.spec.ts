@@ -46,7 +46,9 @@ for (const width of [1440, 700]) test(`the graph's controls are one quiet group,
   await view.getByRole('button', { name: 'Fit graph' }).click();
   // Panning moves the cached light; it does not rebuild it.
   const viewport = dialog.locator('.thread-viewport'), builds = () => viewport.getAttribute('data-light-builds');
-  const built = await builds();
+  // Fit scrolls the graph and rebuilds once it settles: read the count only after two equal reads.
+  let last = ''; await expect.poll(async () => { const now = (await builds()) ?? ''; const same = now === last; last = now; return same; }, { intervals: [300] }).toBe(true);
+  const built = last;
   await viewport.hover(); await page.mouse.wheel(40, 0); await page.mouse.wheel(-40, 0);
   await expect.poll(builds).toBe(built);
   // B on a commit of the feature branch focuses that branch.
