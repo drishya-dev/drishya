@@ -39,7 +39,7 @@ test('completed evidence links keep full history and the chosen live-demo design
   await page.getByRole('button', { name: 'Review work', exact: true }).click();
   await page.getByRole('region', { name: 'Failures', exact: true }).getByRole('button').first().click();
   const detail = page.getByRole('complementary', { name: 'Operation detail' });
-  await detail.getByRole('tab', { name: /^Evidence/ }).click();
+  await detail.getByRole('tab', { name: /^Links/ }).click();
   await detail.locator('.link-row').filter({ hasText: 'Read test/checkout.test.ts' }).click();
   await expect(detail).toContainText('canCheckout');
   await expect(detail).not.toContainText('Result has not arrived');
@@ -140,10 +140,10 @@ test('failed shell preview surfaces buried captured errors and preserves the ful
   await page.locator('.search-results button').first().click();
   await page.getByRole('complementary', { name: 'Operation detail' }).getByRole('button', { name: 'Close', exact: true }).click();
   const action = page.locator(`article[data-op-id="${shell.id}"]`);
-  await expect(action).toContainText('Captured error excerpt');
+  await expect(action).toContainText('Error · output lines');
   await expect(action).toContainText('TypeError: cannot read cart.total');
   await expect(action).not.toContainText('build step 0');
-  await action.getByRole('button', { name: 'Show captured preview', exact: true }).click();
+  await action.getByRole('button', { name: 'Show the rest', exact: true }).click();
   await expect(action).toContainText('build step 0');
 });
 
@@ -552,7 +552,7 @@ test('agent ownership shares one history, and replay file choices obey the histo
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
-  await expect(dialog).toContainText('Visible at this replay step');
+  await expect(dialog).toContainText('Up to this replay step');
   await expect(dialog).not.toContainText('cart.total == null');
   await expect(dialog).not.toContainText('7 passed');
   await page.setViewportSize({ width: 390, height: 844 });

@@ -142,8 +142,8 @@
 .history .turn-captured .output { margin: 6px 0 0; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* AUDIT-1: the detail panel is one column beside the history. It takes the toolbox's place whole, and the history keeps a readable column beside the file rail. */
-:root[data-ui-version=modern] .connected-workspace .inspector { top:64px;width:min(var(--inspector-width,760px),max(420px,calc(100vw - 750px)));z-index:40;border-top:1px solid var(--line-2);border-top-left-radius:12px; }
 @media(min-width:821px) {
+ :root[data-ui-version=modern] .connected-workspace .inspector { top:64px;width:min(var(--inspector-width,760px),max(420px,calc(100vw - 750px)));border-top:1px solid var(--line-2);border-top-left-radius:12px; }
  :root[data-ui-version=modern] .connected-workspace:has(.inspector):has(.folder-explorer) .history { left:290px;right:min(var(--inspector-width,760px),max(420px,calc(100vw - 750px))); }
  :root[data-ui-version=modern] .connected-workspace:has(.inspector) :is(svg.origins,.workspace-follow,.follow-pill) { display:none; }
 }
