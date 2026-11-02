@@ -76,7 +76,7 @@ Each surface answers the brief's questions in short, then lists what was found. 
 | I3 | Connector lines ran across the panel. | Medium | Fixed. |
 | I4 | `Edit Edit docs/…`, a `Captured` pill on everything, `Evidence · 2 relationships`. | Medium | Fixed: one title, the pill only for what is not captured, `Links · 2`. |
 | I5 | `A test run was recorded after this change` beside `· 673 runs`, and `Recorded order · coverage not established`; `Later changes` listed identical lines. | High | Fixed: the sentence is gone, the caveat is the heading's tooltip, later changes are numbered links. |
-| I6 | Expand and Inspector show the same diff in two places. Expand has the file actions and the read-before facts; Inspector has the test runs, links and notes. Nobody can guess which holds what. | High | UI-20. A decision for Yash. |
+| I6 | Expand and Inspector show the same diff in two places. Expand has the file actions and the read-before facts; Inspector has the test runs, links and notes. Nobody can guess which holds what. | High | Fixed by UI-20: Expand is the one reading, and the Inspector is gone. |
 
 ## File work
 
@@ -213,7 +213,7 @@ Two genuine Claude Code runs on a throwaway repository (`live-repo`, haiku, abou
 |---|---|---|---|
 | M1 | Saved moments ran flush against the dialog edge. | Medium | Fixed. |
 | M2 | `Captured action · observation 10832`; a two-clause scope sentence on Review questions. | Low | Fixed: `Step 10832`, one plain sentence. |
-| M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20: Expand gets one note. |
+| M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20 both sit on one row of the open step. The two lists remain: UI-25. |
 | M4 | The Source versions toolbar sat flush against the dialog edge. | Low | Fixed. |
 | M5 | Comparing a read with disk matches by line position, so a shifted file reads as all changed. The dialog says so; a real line diff would be better. | Medium | UI-23. |
 | M7 | Light theme (Porcelain): Home, History, file view, palette and Changes read well. The detector's only new rule, `cream-palette`, is fashion, and rejected. | | Checked, nothing found. |
@@ -236,6 +236,18 @@ Current Claude Code journals add `api-request`, `api-request-blob`, `api-request
 
 None of those are gaps in the work, so reducer r33 stops counting them. An unknown future record still counts. Real result: Codex `32f628ee` 6,462 to 74 (31 compactions, 43 sleep calls), Claude `c8e5c9c8` 25 to 7 (all compactions).
 
+## Second batch, 2 November
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| N1 | A selected card widened the history under the file rail, because `.inspecting` dropped the rail's offset. | High | Fixed by UI-20: the class is gone. |
+| N2 | A step of a read image rendered its reading twice, once inside `Original input and output`. | Medium | Fixed by UI-20. |
+| N3 | `View captured file` showed twice in one step, in the material and under Investigate. | Medium | Fixed by UI-20: Investigate adds only the correction when the step already has the file's actions. |
+| N4 | A failed run with no parsed counts read `0 passed, 0 failed`. | High | Fixed by CONTENT-15: it reads its exit code. |
+| N5 | The Git consent shows Approve until the status arrives, so a click can land on a button about to be removed. Fails `git-session-evidence` on clean main, 0 clean runs of 4. | Medium | `GitHistory.tsx` is held by TEST-2. Needs a loading state in place of Approve. |
+| N6 | The return arrow overlaps the map's zoom controls at the bottom right. | Low | UI-8. |
+| N7 | Investigate is a titled block under every step, heavy for what it adds. | Low | UI-8. |
+
 ## Interaction inventory (A2)
 
 What each component does for each kind of input, for UI-8 and the motion pass to preserve. `tested` means driven in the walk on a real session; `code` means read from the source and not driven. Right click is the browser's own menu everywhere (tested on cards and file rows): there is no product menu anywhere, which is UI-24.
@@ -247,7 +259,7 @@ What each component does for each kind of input, for UI-8 and the motion pass to
 | History scroll | Wheel detaches following | `j k` step, `n p` edit, `f` failure, `t T` turn, `g G` ends, `e` expand, `o` open file, `y` copy, `c C` fold, `?` guide, Esc clears focus | Native scroll; prompts rail ticks jump | Keys only in history; replay has transport | Skeletons, gaps as notices | tested (j k n p e o ?), code (rest) |
 | Card | Click head opens details; click twice closes; click body never does; hover zooms reading | Enter opens details; Tab reaches it | Bounded preview scrolls without detaching | State mark settles once | Running: `Waiting for output`; red contour on failure | tested |
 | Expand | Click toggles | Enter on the button; `e` | Inner scroll | Same in replay, future hidden | Honest absent states | tested |
-| Inspector | Click card; close button | Esc closes | Resize by handle; history follows | Follows selection | Skeletons | tested |
+| Open step | Click a card, a Changes row, a search result or a link; Close on the card | Enter on the card, `e`; Esc closes; Back and Forward between steps | Reads in the history, no side panel | Same in replay, future hidden | Skeletons | tested |
 | Toolbox tool | Hover draws its connector; click dims others and offers Clear focus; click again clears | Tab, Enter; Esc does not clear focus | Long lists scroll locally | Counts rise live | `Tools used 0` before the first call | tested |
 | Toolbox panel | `−` minimises | Tab, Enter | Scrolls when tall | Grows downward, top edge fixed | | tested |
 | File rail | Click opens file; double click pins it; collapse button | `Find files…` filters | Handle resizes 220 to the limit; double click resets | Marks update live | Consent prompt; empty filter state | tested |
@@ -259,7 +271,7 @@ What each component does for each kind of input, for UI-8 and the motion pass to
 | Git menu, review, history | Click; commit rows; ref rail | `B` focuses a branch, Esc clears it | Wheel pans, zoom buttons, Fit | History only | Three consents; loading line | tested |
 | Search | Click a result | Enter, Esc | Local scroll | Replay limits to the step | Empty state | tested |
 | Composer | Click opens; hover shows past receipts | Ctrl+Shift+Enter sends | Height follows content | Pill states live; hidden in replay | Unsupported requests fail explicitly | tested at rest, not sending |
-| Follow | Toggle; `↓` returns with the count | Tab, Space | Wheel detaches it | Hidden with the Inspector | | tested |
+| Follow | Toggle; `↓` returns with the count | Tab, Space | Wheel detaches it | | | tested |
 | Repository map | Drag orbits, Shift drag pans, buttons zoom and Fit | Find a file | Wheel zooms | Replay follows | `Map the whole repository` | code, one screen tested |
 | Replay transport | Scrub, play, step, speed, leave | Space and arrows | | Stops on leave | | code, one screen tested |
 | Dialogs | Close button; move and reset where offered | Esc closes the top one; focus returns to the opener | Local scroll; resize where offered | | | tested |
