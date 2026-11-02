@@ -750,7 +750,7 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - **26 October, closed in the task-list honesty pass:** the hunk picker and matcher ship (above). Classic keeps its file-level button because Classic is frozen (UI-4); edits under a different repo root than the recording's workspace stay unattributed by design. Neither is planned work.
 
 - [ ] **GIT-7 · One consent to read a repository** · P2 · `git` — found by AUDIT-1 (G1). Reading one repository takes three approvals: the workspace, Git review, Git history. A privacy decision for both builders, not a polish item.
-  - **Decision (Yash, 1 Nov; Harsh to confirm):** two approvals, one for files and one for Git. Git review and Git history share the Git approval. History stays separate from files because it can show deleted files and other branches.
+  - **Decision (Yash, 1 Nov; Harsh confirmed through Yash, 2 Nov):** two approvals, one for files and one for Git. Git review and Git history share the Git approval. History stays separate from files because it can show deleted files and other branches.
   - **Accept:** Harsh's confirmation recorded; one clear Git approval that says what is read, used by both Git surfaces; no write path added.
 
 ### FILES — Explorer, peek and Workspace
