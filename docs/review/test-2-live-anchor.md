@@ -1,6 +1,6 @@
 # TEST-2: live reader anchor stability
 
-Status: diagnosis in progress; task remains open. Claim pushed on main in 289ae6f before branch work. Branch harsh/test-2-live-anchor has its own frozen pnpm install.
+Status: verified repairs integrated with current main; three clean full commands remain required. Task remains open. Claim pushed on main in 289ae6f before branch work. Branch harsh/test-2-live-anchor has its own frozen pnpm install.
 
 ## Problem and acceptance
 
@@ -99,3 +99,48 @@ Harsh approved **17 files** on 1 November; the main claim records the exact boun
 After these corrections: **52/52** reader checks (two repeats, four workers), **18/18** Git/morph checks (three repeats, four workers), the unchanged serial material file **4/4**, repository navigation **6/6** (three whole-file repeats), and the controlled reset probe **2/2** pass. The earlier single serial hover failure passes in the unchanged file after fixture correction, but an exact cause for that original hover failure is not claimed from an isolated pass alone.
 
 The standard untraced `pnpm test:browser` acceptance sequence will restart on the final clean candidate, with four parallel workers and the usual one-worker timing-sensitive pass. The earlier traced diagnostic and its failure attachments remain separate. The unit gate is reused only after a Git comparison proves all production paths and the lockfile identical to `e139568`; final typecheck and package verification still run. No assertion or timeout has been relaxed.
+
+
+## 2 November: three blocking failures, trace-first continuation
+
+Harsh explicitly continued draft #314 on the same branch. The existing 25-file ceiling remains. The builder now requires **three consecutive clean complete browser commands**, without the earlier cause-only alternative. No retries, relaxed assertions, timeout increases or hidden failures. Main through audit #317 and merged LIVE-5/UI-17 is integrated before acceptance.
+
+| Before | After | Why |
+| --- | --- | --- |
+| Home applies recordings/discovery/storage only after every endpoint settles. | Apply each result on settlement; accumulate endpoint errors in the existing combined line. A revision rejects obsolete refreshes. | Pending disk accounting must not withhold sessions or their journal-update marker. |
+| Concurrent refreshes each walk the store. | Per-server shared in-flight Promise and a two-second successful advisory cache; failures are never cached. | Avoid duplicate asynchronous disk walks without changing consent, symlink handling or claiming measured daemon latency improvements. |
+| Files test chooses approval before readiness. | Wait for the permission action or the readable README row. | Preserve all preview, double-click and kept-tab assertions. |
+| Late keyboard-reading navigation can overtake an explicit card action. | Control focus invalidates pending reading work; Escape cancels even while no card is focused yet. | Prevent late navigation from closing a newly expanded card or stealing focus before Enter. |
+
+### Proven Home and Files behavior
+
+- Held-storage regression fails before the Home correction (journal marker absent), passes afterwards while storage remains unresolved, and preserves both the discovery warning and useful row when released storage fails.
+- Files preview/navigation: **24 passed / zero failed, four workers**, no retries.
+- Both storage units pass. The new regression checks shared Promise identity, cache expiration, fresh accounting, and recovery after an uncached failed walk.
+- Genuine scratch imports: Codex **01a1824b, 5,011,679 bytes / 1,348 observations**; Claude **3a2fb933, 3,616,835 bytes**, 384 observations before integration / 392 with the current reducer. One genuine complete row was appended only to each scratch copy (758 / 83 bytes), after import. At **600 and 1440 px**, both rows and both journal-update markers render with storage pending, zero page errors or horizontal overflow. The private driver supplies discovery metadata for those actual scratch copies; standard-directory discovery is not claimed. Native journals remain read-only and screenshots stay private.
+
+### Expansion: actual trace evidence
+
+Private instrumentation synchronously subscribes to every expandedOp change with timestamps/writer stacks, and observes button mount identities, DOM replacement, focus, keys and clicks. The actual card toggle and Enter/assertion helper remain unchanged during diagnosis.
+
+| Diagnostic | Result |
+| --- | --- |
+| Complete instrumented parallel pass, four workers | 588 passed / 27 skipped / two failed. Expansion case passed. Palette failure is the diagnostic build preserving #000000 instead of normal CSS minification to #000. Workspace shared-draft line-1200 navigation is retained, cause unresolved. |
+| Unchanged collection expansion, 24 repetitions at four workers beside 16 CPU workers bounded to 120 seconds | 23 passed / one failed. Reporter omitted its in-memory attachment body; retained but not used for attribution. |
+| Same command, corrected trace persistence | 22 passed / two failed; both failed traces retained privately. |
+| Two controlled held-reading-target regressions | Both fail before correction; both pass afterwards. |
+| Same CPU-load diagnostic after correction | 24 passed / zero failed. Whole run extended beyond the 120-second burner bound; no constant-load-for-every-case claim. |
+
+First failed trace: the same button **mount 1** is focused at **2642.8 ms**, receives Enter at **2650.7**, click at **2651.4**, keyup at **2675.8**. expandedOp goes null -> operation at **2652.6**, then operation -> null at **2678.1**. The closing stack is ReadingKeys' awaited navigation -> History's navigate callback (original line 690), **25.5 ms after expansion**. There is no button replacement, second toggle, reload, select() call or stale expanded closure.
+
+Second failed trace: mount 1 is focused at **2066.8 ms**, a pending reading navigation focuses its article at **2069.4**, and Enter reaches that article at **2071.2**. No expandedOp write occurs; the button was not replaced.
+
+The verified cause is **pending keyboard-reading navigation**, closest to candidate (c), but not the suggested reload/selection writers. Button focus did not invalidate pending g/j work, and Escape returned early before queued work had focused any card. The product fix changes ReadingKeys cancellation; History and the toggle are unchanged. Both held-response regressions retain the expanded/focused assertions after the response and two rendering frames. The temporary helper instrumentation is saved privately and removed from the final source.
+
+Also retained, excluded from acceptance: invalid diagnostic injection/build, shell quoting that selected no tests, and an edit-script encoding failure followed by a stale-build run. No such run is counted as passing fixed-source evidence.
+
+### Final integrated gate
+
+Candidate b607f95: own frozen install, both typechecks, UI build and package verification pass; **192 unit files / 1,174 units pass, one skipped**. The first genuine integrated driver run passes both Home widths but fails all four delayed-reading journeys; its broad first-card locator is being diagnosed, with failures retained. It is not accepted as a product pass.
+
+Pending: final genuine delayed-reading acceptance and **three consecutive normal complete browser commands**, four parallel workers plus the standard one-worker serial pass. Every complete command, including failures, will be recorded here. TEST-2 stays unchecked and #314 stays draft until the strict streak passes.
