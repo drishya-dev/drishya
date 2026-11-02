@@ -101,3 +101,5 @@ The builder asked that, when the coloured themes are done (the seven palettes, U
 
 **How it meets our doctrine (the doctrine wins where they differ):** colour carries meaning (agent identity, pass, fail, edited), so a theme's accent must never collide with the pass, fail and edited colours and must stay readable beside them; no glow pools and no gradients as decoration (AGENTS doctrine 6), so the hero gradients and glows in the frames are not to be copied unless the builder asks; the flat, hairline, graphite-based developer-tool theme stays the default. What is taken is the discipline: base, neutral, one accent, spent sparingly, chosen as a pair. Check each theme with the extended `palette-contrast` spec on all surfaces.
 
+
+| 2 Nov | UI-8 continuation | File reader and map recovery | Moved actions are tested through their owner menu; map failure Retry was covered by the header and now uses the measured header bound. 13 focused and six seven-palette checks pass; real Claude/Codex file readers checked at 600/1440. Full UI-8 remains open. | UI | UI-8, review/ui-8-surface-pass.md |
