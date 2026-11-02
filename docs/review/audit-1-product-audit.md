@@ -132,7 +132,7 @@ The brief's worked example, and the most changed surface.
 
 | # | Found | Severity | State |
 |---|---|---|---|
-| G1 | Three separate consents to read one repository: workspace, Git review, Git history. | Medium | GIT-7. A privacy decision, not a polish item. |
+| G1 | Three separate consents to read one repository: workspace, Git review, Git history. | Medium | Fixed by GIT-7. The daemon already had one Git grant; the interface asked twice. One prompt on both surfaces says what is read, and carries the workspace approval Git needs. Claude `c6701b`, `63d6b3` and Codex `99b8dd`, `93fd34` at 1440 and 600 px: one approval, neither the other surface nor the workspace asked again. |
 | G2 | `No visible changes.` in a box in a box. | Low | To UI-8. |
 | G3 | Git history: `Read branch` select beside the same refs in the rail; `Open a commit…` above the same commits; `ahead 0 · behind 0` stated twice when nothing differs. | Medium | Held: TEST-2 owns `GitHistory.tsx`. To UI-8. |
 | G4 | With a commit open the subject column is seven characters wide. | Medium | Held, same reason. |
@@ -244,7 +244,7 @@ None of those are gaps in the work, so reducer r33 stops counting them. An unkno
 | N2 | A step of a read image rendered its reading twice, once inside `Original input and output`. | Medium | Fixed by UI-20. |
 | N3 | `View captured file` showed twice in one step, in the material and under Investigate. | Medium | Fixed by UI-20: Investigate adds only the correction when the step already has the file's actions. |
 | N4 | A failed run with no parsed counts read `0 passed, 0 failed`. | High | Fixed by CONTENT-15: it reads its exit code. |
-| N5 | The Git consent shows Approve until the status arrives, so a click can land on a button about to be removed. Fails `git-session-evidence` on clean main, 0 clean runs of 4. | Medium | `GitHistory.tsx` is held by TEST-2. Needs a loading state in place of Approve. |
+| N5 | The Git consent shows Approve until the status arrives, so a click can land on a button about to be removed. Fails `git-session-evidence` on clean main, 0 clean runs of 4. | Medium | Fixed: TEST-2 gave Git history its loading state, GIT-7 gave Git review the same. |
 | N6 | The return arrow overlaps the map's zoom controls at the bottom right. | Low | UI-8. |
 | N7 | Investigate is a titled block under every step, heavy for what it adds. | Low | UI-8. |
 
