@@ -144,3 +144,29 @@ Also retained, excluded from acceptance: invalid diagnostic injection/build, she
 Candidate b607f95: own frozen install, both typechecks, UI build and package verification pass; **192 unit files / 1,174 units pass, one skipped**. The first genuine integrated driver run passes both Home widths but fails all four delayed-reading journeys; its broad first-card locator is being diagnosed, with failures retained. It is not accepted as a product pass.
 
 Pending: final genuine delayed-reading acceptance and **three consecutive normal complete browser commands**, four parallel workers plus the standard one-worker serial pass. Every complete command, including failures, will be recorded here. TEST-2 stays unchecked and #314 stays draft until the strict streak passes.
+
+
+### First three-worker attempt: not accepted; atlas readiness/targeting defects proven
+
+The four-worker full command on 9bf3a0f failed: **605 parallel passed / 27 skipped / two failed**, **33 serial passed / one skipped**, exit 1, **623.97 seconds**. The failures were B4's already-handled route and Claude delegation's failed fetch before History. Both subsequently passed **24/24 unchanged diagnostic cases at four workers**. Their precise causes remain unverified; isolated success is not attribution.
+
+The first three-worker attempt on that same commit is fully retained:
+
+| Run | Parallel | Serial (one worker) | Exit | Seconds |
+| --- | --- | --- | ---: | ---: |
+| 1 | 607 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 780.22 |
+| 2 | 607 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 945.36 |
+| 3 | 606 passed / 27 skipped / 1 failed | 33 passed / 1 skipped / 0 failed | 1 | 944.28 |
+
+
+The third run fails the existing Fresh Workspace atlas case at its first merge-commit assertion. Its failed frame still shows the enabled Git approval action, with no Git error. The test checked approval visibility once while access could still be unknown, then never returned to approve.
+
+A controlled desktop driver holds the actual Git-status response through that decision: the old decision is **false**, release exposes the approval action, and the original merge-commit assertion fails. The counterpart waits for known permission state, then approves and passes the same assertion. No product change, retry, longer timeout or weakened assertion is involved.
+
+After adding that readiness guard, the original complete atlas case passes **21/24 at four workers**. All three retained failures are later in its branch-hover probe: it stops at the first visible tooltip, which names **atlas-merge**, while the unchanged assertions correctly require **atlas-feature**. This is the earlier recorded neighbouring-strand driver defect, not a failed text assertion to remove.
+
+The driver now settles Fit's layout and performs **one pointer move** to the midpoint between the fixture's rendered base and feature endpoints, matching the actual feature strand's parent edge. The offset-probing loop is removed. Visibility, exact feature-branch/commit text, geometry, topology, patch, clipboard and original timeout assertions remain. The whole original atlas case then passes **24/24 at four workers**.
+
+These are test-only corrections in the already-approved Fresh Workspace file. The application/packages/lockfile are identical to fully checked b607f95, so the passing types, 1,174 units/one skip, build/package and six genuine journeys remain valid. The two clean commands above are **not** borrowed: the strict streak restarts from zero on the newly sealed candidate.
+
+The earlier predecessor standard command a9dda1f is also retained: parallel **586 passed / 27 skipped / two failed / one timed out**, serial **33 passed / one skipped**, exit 1, **652.57 seconds**. Those are the three initial blocking cases this continuation repaired.
