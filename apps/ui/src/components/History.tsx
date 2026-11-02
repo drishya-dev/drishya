@@ -852,11 +852,11 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const hasImage=op.images?.some(image=>image.sha);
   // Keep the same evidence readers; images get the primary allocation, not a second card.
   const imageOriginal=op.detail.kind==='read'&&!op.detail.excerptArtifactId
-    ?<ToolInput value={op.detail}/>:<ExpandedOperation op={op}/>;
+    ?<ToolInput value={op.detail}/>:<ExpandedMaterial op={op}/>;
   const imageMaterial=imagePath||hasImage?<>
     {imagePath?<PathImage op={op} path={imagePath}/>:<OpImages images={op.images!}/>}
     {!imagePath&&['mcp','web'].includes(op.detail.kind)
-      ?expanded?<ExpandedOperation op={op}/>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>
+      ?expanded?<ExpandedMaterial op={op}/>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>
       :<details className="image-original"><summary>Original input and output</summary>{imageOriginal}</details>}
   </>:null;
   return (
