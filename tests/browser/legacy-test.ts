@@ -9,11 +9,12 @@ export const test = base.extend({
     // Each browser journey begins with its own reading locations. The daemon is
     // deliberately shared by tests, whereas real users intentionally share recovery.
     // Keep reloads within a journey intact; fresh-workspace covers recovery explicitly.
-    let first = true;
+    let reset: Promise<unknown> | undefined;
     await page.route('**/v1/working-locations', async route => {
-      if (first && route.request().method() === 'GET') {
-        first = false;
-        await page.request.delete(route.request().url(), { headers: { 'content-type': 'application/json' } });
+      if (route.request().method() === 'GET') {
+        // StrictMode can boot twice: every initial read must wait for the same reset.
+        reset ??= page.request.delete(route.request().url(), { headers: { 'content-type': 'application/json' } });
+        await reset;
       }
       await route.continue();
     });

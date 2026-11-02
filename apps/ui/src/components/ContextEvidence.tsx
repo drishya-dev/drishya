@@ -24,8 +24,14 @@ export function RequestContextLine({ reading }: { reading: ContextReading }) {
     <small>{reading.input.basis === 'derived-request-input' ? 'Claude message.usage · input + cache read + cache write.' : 'Codex token_count · captured request input.'} This reading stays fixed until another is recorded.</small>
   </section>;
 }
+// History remounts a row as it pages and measures; a summary being read must not close by itself.
+const openSummaries = new Set<string>();
 function Summary({ summary, unlinked = false }: { summary?: CompactionSummary; unlinked?: boolean }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(() => !!summary?.id && openSummaries.has(summary.id));
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    if (summary?.id) { if (next) openSummaries.add(summary.id); else openSummaries.delete(summary.id); }
+  };
   const button = useRef<HTMLButtonElement>(null);
   const readerId = useId();
   const reader = useRef<HTMLDivElement>(null);
@@ -50,7 +56,7 @@ function Summary({ summary, unlinked = false }: { summary?: CompactionSummary; u
   if (!summary?.artifactId || summary.availability !== 'captured') return <span className="context-missing">{summary?.availability === 'encrypted' ? 'Summary encrypted by harness' : 'Summary not recorded'}</span>;
   const close = () => { setOpen(false); button.current?.focus({ preventScroll: true }); };
   return <div className="context-summary" onKeyDown={e => { if (e.key === 'Escape' && open) { e.stopPropagation(); close(); } }}>
-    <button ref={button} type="button" className="btn ghost" aria-expanded={open} aria-controls={readerId} onClick={() => setOpen(v => !v)}>{open ? 'Hide summary' : unlinked ? 'Read nearby summary' : 'Read captured summary'}</button>
+    <button ref={button} type="button" className="btn ghost" aria-expanded={open} aria-controls={readerId} onClick={() => setOpen(!open)}>{open ? 'Hide summary' : unlinked ? 'Read nearby summary' : 'Read captured summary'}</button>
     {open && <div id={readerId} ref={reader} tabIndex={-1} className="context-summary-reader" aria-label="Captured compaction summary" onClickCapture={event => {
       navigation.current = (event.target as Element).closest<HTMLButtonElement>('.reader-pages button');
     }}><ArtifactReader id={summary.artifactId} kind="output" provenance navigationSlot={`compaction/${summary.id}`} /><button type="button" className="btn ghost" onClick={close}>Close summary</button></div>}

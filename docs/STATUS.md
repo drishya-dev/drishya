@@ -31,14 +31,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. **Not touched while TEST-2 holds them:** `GitHistory.tsx`, `ScreenBoundary.tsx`, `Home.tsx` and `ReadingKeys.tsx`. TEST-2's specs `fresh-workspace` and `product-workspace` take one-line copy updates only. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
-| TEST-2 | @yash + Claude Opus 5.5 (taken over from @harsh + Codex; Yash, 2 Nov) | `harsh/test-2-live-anchor` (#314), continued on current main | 2026-10-31 | Whole TEST-2 completion; Harsh explicitly requested the Home/storage fix, Files readiness proof and trace-first expansion repair on 1 Nov. Existing up-to-25-file ceiling retained. Runtime: apps/ui/src/components/{GitHistory,ScreenBoundary,Home,ReadingKeys}.tsx; apps/daemon/src/{storage,server}.ts (advisory storage read coalescing only). Verified browser paths: tests/browser/{fresh-workspace,git-graph-focus,captured-documents,delimited-acceptance,captured-resources,git-session-evidence,product-workspace,structured-data,structured-navigation-focus,inline-json-reading,repository-navigation,collection-surfaces,home-active}.spec.ts and legacy-test.ts; apps/daemon/test/storage.test.ts. Temporary expansion instrumentation in history-gestures.ts stays private; bounded related regression repair only with a proven cause, within 25 paths total. Completion: docs/review/test-2-live-anchor.md, docs/TASKS.md, docs/STATUS.md. Preserve Claude commits and merged audit/UI-17/LIVE-5. No retries, relaxed assertions, longer timeouts or hidden failures. Three consecutive clean full commands required, measured four-worker parallel plus standard serial pass. Own install and one browser command at a time. No History, adapter, ingest or schema source changes. |
+| AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | GIT-7 | @yash + Claude Opus 5.5 | `claude/git-7-consent` | 2026-11-02 | Harsh approves (Yash, 2 Nov). One Git approval for Git review and Git history. `GitHistory.tsx`, Git consent paths and their specs, stacked on TEST-2. |
 
 
 ---
 
 ## Last session
+
+### Harsh with Codex — TEST-2 repaired, manual three-run gate pending (#314)
+
+- Home results settle independently; storage walks coalesce per daemon. Files readiness passes 24/24 at four workers. Actual expansion traces prove pending keyboard navigation closes or steals focus from an explicit action; control focus/Escape cancellation, controlled regressions and genuine Claude/Codex 600/1440 journeys pass.
+- A later atlas failure is a test choosing consent while Git access is unknown; held-response proof confirms it. Its separate neighbour-strand probe is replaced by one pointer move on the rendered feature-parent edge. The full atlas case passes 24/24 at four workers, with original content/geometry/timeouts.
+- Types, 1,174 units/one skip, build and package pass on identical application code. Two clean three-worker commands were followed by a failed third, so they do not complete the streak. The next attempt crossed a Windows button/lid sleep and is retained as interrupted. [Every result and trace](review/test-2-live-anchor.md).
+- Harsh will run the prepared manual three-command gate and send its output. Background test execution was stopped for that handoff. TEST-2 stays claimed/unchecked and #314 stays draft; worker-count acceptance is pending, not certified.
 
 ### Yash with Claude — AUDIT-1, first batch
 

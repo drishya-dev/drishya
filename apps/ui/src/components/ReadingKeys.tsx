@@ -39,7 +39,9 @@ export function ReadingKeys(props: {
       if (node?.dataset.opId === latest.current.focused) return;
       cursor = undefined; latest.current.focus(undefined); focusMaterial();
     };
-    const focusInput = (event: FocusEvent) => { if (typing(event.target)) epoch++; };
+    // A pending reading request must yield to deliberate interaction, including
+    // a button focused before its response or two-frame navigation completes.
+    const focusInput = (event: FocusEvent) => { if (typing(event.target) || event.target instanceof Element && event.target.closest('button,a,summary,[role=slider],[role=menu]')) epoch++; };
     const key = (event: KeyboardEvent) => {
       const state = useApp.getState();
       if (!valid() || document.documentElement.dataset.uiVersion !== 'modern' || state.screen !== 'viewer' || event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || typing(event.target)) return;
@@ -49,7 +51,7 @@ export function ReadingKeys(props: {
       if (k === '?') { document.documentElement.removeAttribute('data-ui-press'); event.preventDefault(); event.stopImmediatePropagation(); openHelp(); return; }
       // Replay retains its explicit transport shortcuts; reading keys never seek its clock.
       if (state.mode !== 'history' || !['j','k','n','p','f','t','T','g','G','e','o','y','c','C','Escape'].includes(k)) return;
-      if (k === 'Escape' && !latest.current.focused) return;
+      if (k === 'Escape' && !latest.current.focused && !queued) return;
       event.preventDefault(); event.stopImmediatePropagation();
       document.documentElement.removeAttribute('data-ui-press');
       if (k === 'Escape') { epoch++; cursor = undefined; latest.current.focus(undefined); focusMaterial(); latest.current.root.current?.focus({ preventScroll: true }); return; }

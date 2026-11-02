@@ -30,7 +30,7 @@ import {
 import type { ChangeEvent, HealthEvent } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
-import { storageUsage } from './storage.ts';
+import { storageUsageReader } from './storage.ts';
 import { readPersistedOutput } from './persisted-output.ts';
 import {readWebResult} from './web-results.ts';
 import { readCheckpointFile } from './checkpoint-file.ts';
@@ -123,6 +123,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const host = opts.host ?? '127.0.0.1';
   if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('Drishya binds to loopback only.');
   const app = opts.app ?? new App(opts.dataDir);
+  const readStorageUsage = storageUsageReader(app.store.dataDir);
   const workspace = new WorkspaceAccess(app);
   const gitReview = new GitReview(workspace,undefined,app.history);
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
@@ -246,7 +247,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     const m = req.method ?? 'GET';
     const parts = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent); // drop "v1"
     const [a, id, sub, subId] = parts;
-    if (a === 'storage' && m === 'GET') return json(res, await storageUsage(app.store.dataDir));
+    if (a === 'storage' && m === 'GET') return json(res, await readStorageUsage());
     if (a === 'working-locations' && m === 'GET') return json(res, readWorkingLocations(app));
     if (a === 'working-locations' && m === 'PUT') return json(res, saveWorkingLocations(app, await readJson(req,256*1024)));
     if (a === 'working-locations' && m === 'DELETE') {app.store.db.prepare("DELETE FROM meta WHERE key='ui-working-locations-v1'").run();return json(res,{cleared:true});}

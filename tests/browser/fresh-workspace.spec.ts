@@ -33,6 +33,8 @@ test('prompt minimize and reversal share measured bounds without changing layout
  await openComposer(page);
  const before=(await composer.boundingBox())!;
  expect(before.width).toBeGreaterThan(500);
+ // Pause at creation: an IPC round trip can outlast the entire short morph under load.
+ await composer.evaluate(node=>{const original=Element.prototype.animate;(window as any).__restoreComposerAnimation=()=>{Element.prototype.animate=original;};Element.prototype.animate=function(frames,options){const animation=original.call(this,frames,options);if(this===node||node.contains(this)){animation.pause();animation.currentTime=0;}return animation;};});
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
  const pause=async(time:number)=>composer.evaluate((node,time)=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=time;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};},time);
  const start=await pause(0);for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
@@ -43,7 +45,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  expect((await composer.locator('[data-surface-label]').boundingBox())!.height).toBeLessThan(30);
  await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
- await composer.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await composer.evaluate(node=>{node.getAnimations({subtree:true}).forEach(animation=>animation.finish());(window as any).__restoreComposerAnimation();});
  await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-node.offsetHeight-24))).toBeLessThanOrEqual(1);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
@@ -64,7 +66,7 @@ test('toolbox minimizes from actual bounds and keeps its compact icon and indepe
  await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
 });
 
-test.beforeAll(async () => {
+test.beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-fresh-')); root = join(dir, 'shop');
   cpSync(resolve('fixtures/synthetic/workspace/shop'), root, { recursive: true });
   writeFileSync(join(root,'src/cart/reading.ts'),Array.from({length:450},(_,i)=>`export const reviewLine${i+1} = ${i+1};`).join('\n'));
@@ -97,7 +99,7 @@ test.beforeAll(async () => {
 });
 test.beforeEach(async({request})=>{await request.delete(`${server.url}/v1/working-locations`,{headers:{authorization:`Bearer ${server.token}`,'content-type':'application/json'}});});
 
-test.afterAll(async () => {
+test.afterEach(async () => {
   if (server) await server.close(); if (app) await app.close();
   if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); }
 });
@@ -534,7 +536,10 @@ test('local Git atlas connects real branches and commits with root/merge patches
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await openGitDestination(page, 'Git graph');
   const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();
-  if(await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).isVisible())await atlas.getByRole('button',{name:'Approve read-only Git history',exact:true}).click();
+  const historyGrant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});
+  // Git access starts unknown; choose consent only after its actual status resolves.
+  await expect(historyGrant.or(atlas.locator('.atlas-layout'))).toBeVisible();
+  if(await historyGrant.isVisible())await historyGrant.click();
   const merged=atlas.locator(`[data-commit-hash="${merge}"]`);await expect(merged).toBeVisible();
   // GIT-3: one compact row per loaded commit that mirrors the timeline both ways; references start as those named in view.
   const mergeRow=atlas.locator(`[data-row-hash="${merge}"]`);await expect(mergeRow).toBeVisible();expect(await atlas.locator('.commit-row').count()).toBe(await atlas.locator('.thread-commit').count());
@@ -557,9 +562,15 @@ test('local Git atlas connects real branches and commits with root/merge patches
     expect(Math.abs(await centre()-x0)).toBeLessThan(12);expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
     // A branch strand between commits names its branch and lists its commits, from Git alone.
     await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
-    const fb=(await atlas.locator(`[data-commit-hash="${feature}"]`).boundingBox())!;
-    let peek=false;for(const off of [4,8,12,-4,-8]){await page.mouse.move(off>0?fb.x-off:fb.x+fb.width-off,fb.y+fb.height/2);if(await atlas.locator('.thread-branch-peek').isVisible()){peek=true;break;}}
-    expect(peek).toBe(true);await expect(atlas.locator('.thread-branch-peek')).toContainText('atlas-feature');await expect(atlas.locator('.thread-branch-peek')).toContainText('Atlas feature fixture');await page.mouse.move(v.x+4,v.y+4);
+    await settled(viewport);
+    // This fixture's feature strand runs from base to feature. Aim between its
+    // rendered endpoints instead of stopping on the first neighbouring tooltip.
+    const branchPoint=await viewport.evaluate((el,{feature,base})=>{
+      const centre=(hash:string)=>{const node=el.querySelector<HTMLElement>('[data-commit-hash="'+hash+'"]');if(!node)throw new Error('Branch endpoint is not mounted');const box=node.getBoundingClientRect();return{x:box.x+box.width/2,y:box.y+box.height/2};};
+      const a=centre(feature),b=centre(base);return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    },{feature,base});
+    await page.mouse.move(branchPoint.x,branchPoint.y);
+    await expect(atlas.locator('.thread-branch-peek')).toBeVisible();await expect(atlas.locator('.thread-branch-peek')).toContainText('atlas-feature');await expect(atlas.locator('.thread-branch-peek')).toContainText('Atlas feature fixture');await page.mouse.move(v.x+4,v.y+4);
   } else {
     await expect(atlas.locator('.thread-links')).toBeVisible();await expect(atlas.locator('.thread-fiber')).toHaveCount(0);expect(await atlas.locator('.ribbon-lamina').count()).toBeGreaterThan(0);expect(await atlas.locator('.thread-links path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
     const surface=atlas.locator('.thread-ribbon').first(),beforeOrbit=await surface.getAttribute('d'),orbit=atlas.getByRole('button',{name:'Orbit 3D Git ribbon',exact:true});await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','true');const view=(await atlas.locator('.thread-viewport').boundingBox())!;await page.mouse.move(view.x+40,view.y+40);await page.mouse.down();await page.mouse.move(view.x+40,view.y+110,{steps:5});await page.mouse.up();await expect(surface).not.toHaveAttribute('d',beforeOrbit!);await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','false');await page.screenshot({path:resolve('.local/git-spatial-orbit.png')});
@@ -1605,12 +1616,25 @@ test('saved captured file selections recover as references and unavailable selec
 
 test('a failed reader screen can recover by navigating to a healthy session',async({page})=>{
   const id=ids['claude-code']!;
-  await page.route(`**/v1/recordings/${id}/file-operations?*`,route=>route.fulfill({json:{operations:[null],total:1}}));
+  let failedReads=0;
+  await page.route(`**/v1/recordings/${id}/file-operations?*`,route=>{failedReads++;return route.fulfill({json:{operations:[null],total:1}});});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
-  await expect(page.getByText('This view could not be displayed',{exact:true})).toBeVisible();
+  const fallback=page.getByText('This view could not be displayed',{exact:true});
+  await expect(fallback).toBeVisible();
+  const failedBefore=failedReads;
+  // Hold bootstrap to prove recovery never remounts the old failed reader while loading.
+  let resume=()=>{};const pending=new Promise<void>(resolve=>{resume=resolve;});
+  await page.route('**/v1/recordings',async route=>{await pending;await route.continue();});
   await page.evaluate(id=>{location.hash=`/r/${id}`;},ids.codex!);
-  await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+  try {await expect(page.getByText('Starting…',{exact:true})).toBeVisible();expect(failedReads).toBe(failedBefore);} finally {resume();}
+  await expect(page.locator('.history')).toBeVisible();await expect(fallback).toHaveCount(0);
+  expect(failedReads).toBe(failedBefore);
+  // Going Home from the same failed reader must also clear retained viewer state.
+  await page.evaluate(id=>{location.hash=`/r/${id}`;},id);
+  await expect(fallback).toBeVisible();
+  await page.evaluate(()=>{location.hash='';});
+  await expect(page.locator('.home')).toBeVisible();await expect(fallback).toHaveCount(0);
 });
 
 
@@ -1792,8 +1816,11 @@ test('last captured material clears the prompt without an oversized gap',async({
 
 test('Files single click replaces preview and double click keeps a file without entering Workspace',async({page})=>{
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
- const grant=page.getByRole('button',{name:/Enable workspace reading/});if(await grant.isVisible())await grant.click();
  const files=page.getByRole('complementary',{name:'Repository files'});
+ const grant=files.getByRole('button',{name:/Enable workspace reading/});
+ // A cold fixture has no prior grant: wait for the permission phase before choosing.
+ await expect(grant.or(files.locator('[data-spine-path="README.md"]'))).toBeVisible();
+ if(await grant.isVisible())await grant.click();
  await files.locator('[data-spine-path="README.md"]').click();const reader=page.locator('.file-peek-reader');await expect(reader.getByRole('tab')).toHaveCount(1);await expect(reader.locator('.file-peek-tab.preview')).toHaveCount(1);
  await files.locator('[data-spine-path="package.json"]').click();await expect(reader.getByRole('tab')).toHaveCount(1);await expect(reader.getByRole('tab')).toContainText('package.json');
  await files.locator('[data-spine-path="package.json"]').dblclick();await expect(reader.locator('.file-peek-tab.preview')).toHaveCount(0);

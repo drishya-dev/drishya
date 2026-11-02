@@ -15,7 +15,7 @@ test('JSON reading reaches late rows and fields with bounded DOM and exact origi
  op.detail={kind:'mcp',server:'records',tool:'list',input:{},resultPreview:raw};
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));
  await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);
- const card=page.locator(`article[data-op-id="${op.id}"]`);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);await expect(card).toBeAttached();await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:/^(Open larger|Inspect data)$/}).first().click();
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);await expect(card).toBeAttached();await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:/^(Open larger|Inspect data)$/}).first().press('Enter');
  const dialog=page.getByRole('dialog',{name:'Captured data'}),viewport=dialog.locator('.data-viewport');
  await expect(dialog.getByRole('table')).toBeVisible();await expect(dialog.getByRole('columnheader',{name:'late',exact:true})).toHaveCount(1);
  expect(await dialog.getByRole('row').count()).toBeLessThan(30);
@@ -31,23 +31,23 @@ test('JSON reading reaches late rows and fields with bounded DOM and exact origi
 
 test('reading windows reverse from their actual entrance and dismiss immediately for keyboard or reduced motion',async({page})=>{
  await page.addInitScript(()=>{
-  const original=Element.prototype.animate;(window as any).__readerMotion=[];
-  Element.prototype.animate=function(frames,options){if(this instanceof HTMLDialogElement)(window as any).__readerMotion.push({frames,options});return original.call(this,frames,options);};
+  const original=Element.prototype.animate;(window as any).__readerMotion=[];(window as any).__holdReaderArrival=true;
+  Element.prototype.animate=function(frames,options){const animation=original.call(this,frames,options);if(this instanceof HTMLDialogElement){(window as any).__readerMotion.push({frames,options});if((window as any).__holdReaderArrival){animation.pause();animation.currentTime=0;}}return animation;};
  });
  const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
  const op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.detail.resultPreview='{"answer":42}';
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));
  await page.goto(new URL('/?demo&experience=modern',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
- const trigger=page.locator(`article[data-op-id="${op.id}"]`).getByRole('button',{name:/^(Open larger|Inspect data)$/}).first();await trigger.click();
+ const trigger=page.locator(`article[data-op-id="${op.id}"]`).getByRole('button',{name:/^(Open larger|Inspect data)$/}).first();await trigger.focus();await trigger.click();
  const dialog=page.getByRole('dialog',{name:'Captured data'});
- const before=await dialog.evaluate(element=>{const animation=element.getAnimations()[0];animation.pause();animation.currentTime=70;const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};});
+ const before=await dialog.evaluate(element=>{const animation=element.getAnimations()[0];animation.pause();animation.currentTime=70;(window as any).__holdReaderArrival=false;const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};});
  await dialog.getByRole('button',{name:'Close Captured data'}).click({force:true});
  const frames=await page.evaluate(()=>(window as any).__readerMotion.at(-1).frames);
  expect(frames[0].opacity).toBe(before.opacity);expect(frames[0].transform).toBe(before.transform);
  await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
- await trigger.click();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
+ await trigger.focus();await trigger.click();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
  const exits=await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length);expect(exits).toBe(1);
- await page.emulateMedia({reducedMotion:'reduce'});await trigger.click();await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);
+ await page.emulateMedia({reducedMotion:'reduce'});await trigger.focus();await trigger.click();await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);
  expect(await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length)).toBe(1);
  await page.emulateMedia({reducedMotion:'no-preference'});await page.getByRole('button',{name:'Workspace settings',exact:true}).click();const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});await settings.getByRole('button',{name:'Close Workspace settings'}).click();await expect(settings).toHaveCount(0);
  expect(await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length)).toBe(2);
@@ -67,7 +67,7 @@ for(const kind of ['mcp','shell'] as const)test(`${kind} captured delimited text
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);
  await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
  const card=page.locator(`article[data-op-id="${op.id}"]`);await expect(card).toBeAttached();await card.scrollIntoViewIfNeeded();
- const trigger=card.getByRole('button',{name:'Inspect delimited text',exact:true});await expect(trigger).toHaveCount(1);await trigger.click();
+ const trigger=card.getByRole('button',{name:'Inspect delimited text',exact:true});await expect(trigger).toHaveCount(1);await trigger.press('Enter');
  const dialog=page.getByRole('dialog',{name:'Captured delimited text'});await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog.locator('.data-original')).toHaveText(csv);
  await dialog.getByRole('button',{name:'CSV',exact:true}).click();const table=dialog.getByRole('table',{name:'Captured delimited records'});await expect(table).toBeVisible();await expect(table).toHaveAttribute('aria-rowcount','1203');expect(await dialog.getByRole('row').count()).toBeLessThan(31);
  await dialog.getByRole('checkbox',{name:'First record contains column names'}).check();await expect(dialog.getByRole('columnheader',{name:'name',exact:true})).toHaveCount(2);
@@ -86,7 +86,7 @@ test('malformed delimited text keeps the exact source and never shows a partial 
  const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8')),op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.artifactIds=[];
  const raw='a,b\n1,2\n"unfinished';op.detail={kind:'mcp',server:'records',tool:'unknown',input:{},resultPreview:raw};
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
- const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Inspect delimited text'}).click();const dialog=page.getByRole('dialog',{name:'Captured delimited text'});await dialog.getByRole('button',{name:'CSV',exact:true}).click();await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog).toContainText('Unclosed quoted cell');await expect(dialog.locator('.data-original')).toHaveText(raw);await page.screenshot({path:resolve('.local/delimited-malformed.png')});
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Inspect delimited text'}).press('Enter');const dialog=page.getByRole('dialog',{name:'Captured delimited text'});await dialog.getByRole('button',{name:'CSV',exact:true}).click();await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog).toContainText('Unclosed quoted cell');await expect(dialog.locator('.data-original')).toHaveText(raw);await page.screenshot({path:resolve('.local/delimited-malformed.png')});
 });
 
 for(const kind of ['shell','wrapped-shell','mcp'] as const)test(`${kind} offers one complete JSON view even when its text preview is folded`,async({page})=>{
@@ -98,7 +98,7 @@ for(const kind of ['shell','wrapped-shell','mcp'] as const)test(`${kind} offers 
  else{op.kind='shell';op.origin={type:'native',tool:'shell_command'};op.detail={kind:'shell',command:'read captured data',outputPreview:raw,exitCode:0};}
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
  const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();const views=card.getByRole('group',{name:'Captured result views',exact:true});await expect(views).toHaveCount(1);
- const trigger=card.getByRole('button',{name:/^(Open larger|Inspect data)$/});await expect(trigger).toHaveCount(1);await trigger.click();
+ const trigger=card.getByRole('button',{name:/^(Open larger|Inspect data)$/});await expect(trigger).toHaveCount(1);await trigger.press('Enter');
  const reader=page.getByRole('dialog',{name:'Captured data',exact:true});await expect(reader).toBeVisible();await reader.getByRole('button',{name:'Original',exact:true}).click();await expect(reader.locator('.data-original')).toHaveText(raw);
  await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(trigger).toBeFocused();await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toHaveCount(0);
 });

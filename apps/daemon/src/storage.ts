@@ -23,3 +23,19 @@ export async function storageUsage(root: string) {
   const bytes = Object.values(categories).reduce((sum, n) => sum + n, 0);
   return { bytes, files, categories, budgetBytes: DISK_BUDGET_BYTES, overBudget: bytes >= DISK_BUDGET_BYTES, automaticDeletion: false as const };
 }
+
+// Per-server advisory accounting: concurrent refreshes share a walk; failures
+// are never cached. Filesystem calls stay asynchronous and never follow links.
+export function storageUsageReader(root: string, now: () => number = Date.now) {
+  let cached: { until: number; usage: Awaited<ReturnType<typeof storageUsage>> } | undefined;
+  let pending: ReturnType<typeof storageUsage> | undefined;
+  return () => {
+    if (pending) return pending;
+    if (cached && now() < cached.until) return Promise.resolve(cached.usage);
+    pending = storageUsage(root).then(usage => {
+      cached = { until: now() + 2000, usage };
+      return usage;
+    }).finally(() => { pending = undefined; });
+    return pending;
+  };
+}

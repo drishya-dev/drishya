@@ -1,5 +1,5 @@
 import { BrandMark } from './BrandMark.tsx';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DiscoveredSource, RecordingSummary } from '@drishya/contracts';
 import type { DiscoveryError } from '../api.ts';
 import { useApp } from '../state.ts';
@@ -40,16 +40,31 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', visible); };
   }, [now]);
 
+  const refreshRevision = useRef(0);
   const refresh = async () => {
     if (!source) return;
-    const [recordings, found, storage] = await Promise.allSettled([source.recordings(), source.sources(), source.storage?.()]);
-    if (useApp.getState().source !== source) return;
+    const revision = ++refreshRevision.current;
+    const current = () => revision === refreshRevision.current && useApp.getState().source === source;
+    const errors: string[] = [];
+    setErr(undefined);
     setNow(new Date());
-    const errors:string[]=[];
-    if(recordings.status==='fulfilled')set({recordings:recordings.value});else errors.push(`Captured sessions: ${recordings.reason.message}`);
-    if(found.status==='fulfilled'){setSources(found.value.sources);setSourceErrors(found.value.errors);}else errors.push(`Local discovery: ${found.reason.message}`);
-    if(storage.status==='fulfilled')setUsage(storage.value);else errors.push(`Storage information: ${storage.reason.message}`);
-    setErr(errors.join(' · ')||undefined);
+    // Discovery and recordings are useful independently; disk accounting can be slow.
+    const apply = async <T,>(index: number, label: string, read: () => Promise<T>, receive: (value: T) => void) => {
+      try {
+        const value = await read();
+        if (current()) receive(value);
+      } catch (error) {
+        if (current()) {
+          errors[index] = label + ': ' + (error as Error).message;
+          setErr(errors.filter(Boolean).join(' · '));
+        }
+      }
+    };
+    await Promise.all([
+      apply(0, 'Captured sessions', () => source.recordings(), recordings => set({ recordings })),
+      apply(1, 'Local discovery', () => source.sources(), found => { setSources(found.sources); setSourceErrors(found.errors); }),
+      apply(2, 'Storage information', async () => source.storage?.(), setUsage),
+    ]);
   };
   useEffect(() => {
     refresh().catch((e) => setErr(e.message));

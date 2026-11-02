@@ -10,7 +10,8 @@ import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts
 // GIT-6: the graph's controls, branch focus, and the cached light that makes panning and hovering cheap.
 const git = (root: string, ...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
 let dir: string, app: App, server: RunningServer, id: string;
-test.beforeAll(async () => {
+// Each width owns its daemon: a commit read can outlive a page and retain the Git inspection lock.
+test.beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-graph-focus-')); const root = join(dir, 'repo'); mkdirSync(root);
   git(root, 'init', '-b', 'main'); git(root, 'config', 'user.name', 'Synthetic'); git(root, 'config', 'user.email', 'synthetic@example.invalid'); git(root, 'config', 'core.autocrlf', 'false');
   const commit = (name: string, message: string) => { writeFileSync(join(root, name), `${message}\n`); git(root, 'add', '.'); git(root, 'commit', '-m', message); };
@@ -22,7 +23,7 @@ test.beforeAll(async () => {
   app = new App(join(dir, 'store')); id = (await app.ingest.importSource('claude-code', journal)).recordingId;
   server = await startServer({ app, port: 0, token: 'graph-focus' });
 });
-test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe scratch directory'); rmSync(dir, { recursive: true, force: true }); } });
+test.afterEach(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe scratch directory'); rmSync(dir, { recursive: true, force: true }); } });
 
 async function open(page: Page, width: number) {
   await page.setViewportSize({ width, height: 900 }); await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();

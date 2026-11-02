@@ -8,7 +8,7 @@ import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 
 let dir:string,app:App,server:RunningServer,id:string,tip:string;
-test.beforeAll(async()=>{
+test.beforeEach(async()=>{
   dir=mkdtempSync(join(tmpdir(),'drishya-session-git-ui-'));const root=join(dir,'repo');mkdirSync(root);
   const t=(n:number)=>`2026-10-28T10:00:0${n}Z`;
   const git=(...args:string[])=>execFileSync('git',args,{cwd:root,windowsHide:true,encoding:'utf8',env:{...process.env,GIT_AUTHOR_DATE:t(2),GIT_COMMITTER_DATE:t(args.includes('Base')?0:2)}}).trim();
@@ -24,7 +24,7 @@ test.beforeAll(async()=>{
   }
   const path=join(dir,'claude.jsonl');writeFileSync(path,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');app=new App(join(dir,'store'));id=(await app.ingest.importSource('claude-code',path)).recordingId;server=await startServer({app,port:0,token:'synthetic-git-session-ui'});
 });
-test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe test directory');rmSync(dir,{recursive:true,force:true});}});
+test.afterEach(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe test directory');rmSync(dir,{recursive:true,force:true});}});
 
 for(const width of [1440,600])test(`Git evidence opens captured commands and newly written files at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await page.locator('.home').waitFor();

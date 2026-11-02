@@ -83,3 +83,21 @@ for(const count of [3,300]){
   if(count===300){available=3;await git.getByRole('button',{name:'Refresh changes',exact:true}).click();await expect(files).toHaveAttribute('data-size','fit');await expect(files.locator(':scope>button')).toHaveCount(3);expect(await files.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);}
  });
 }
+
+for (const cancel of ['Escape', 'control focus']) test('pending reading navigation yields to '+cancel+' before expanding a card', async ({page}) => {
+ await open(page,3);
+ let release!:()=>void,requested!:()=>void;
+ const held=new Promise<void>(resolve=>{release=resolve;}),seen=new Promise<void>(resolve=>{requested=resolve;});
+ await page.route('**/reading-target?*',async route=>{const response=await route.fetch();requested();await held;await route.fulfill({response});});
+ const history=page.locator('.history');
+ await history.focus();await page.keyboard.press('g');await seen;
+ try {
+  if(cancel==='Escape')await page.keyboard.press('Escape');
+  const expand=history.locator('article.op-shell').first().locator('button.op-expand');
+  await expand.press('Enter');await expect(expand).toHaveAttribute('aria-expanded','true');
+  const arrived=page.waitForResponse(response=>response.url().includes('/reading-target?'));
+  release();await (await arrived).finished();
+  await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+  await expect(expand).toHaveAttribute('aria-expanded','true');await expect(expand).toBeFocused();
+ } finally { release(); }
+});
