@@ -1682,7 +1682,7 @@ test('captured excerpt comparison uses current reader consent, exact positions a
   await page.getByRole('treeitem',{name:'comparison.ts',exact:true}).click();
   const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();
   const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare captured source with disk',exact:true}).click();
-  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('moved code is not mapped');
+  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('placed by matching its lines');
   expect(await comparison.locator('.diff-scroll').textContent()).not.toContain('untouched');
   await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-disk-comparison-phone.png')});
