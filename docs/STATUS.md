@@ -41,12 +41,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Harsh with Codex — TEST-2 repaired, manual three-run gate pending (#314)
+### Harsh with Codex — TEST-2 current-main follow-up, manual gate pending
 
-- Home results settle independently; storage walks coalesce per daemon. Files readiness passes 24/24 at four workers. Actual expansion traces prove pending keyboard navigation closes or steals focus from an explicit action; control focus/Escape cancellation, controlled regressions and genuine Claude/Codex 600/1440 journeys pass.
-- A later atlas failure is a test choosing consent while Git access is unknown; held-response proof confirms it. Its separate neighbour-strand probe is replaced by one pointer move on the rendered feature-parent edge. The full atlas case passes 24/24 at four workers, with original content/geometry/timeouts.
-- Types, 1,174 units/one skip, build and package pass on identical application code. Two clean three-worker commands were followed by a failed third, so they do not complete the streak. The next attempt crossed a Windows button/lid sleep and is retained as interrupted. [Every result and trace](review/test-2-live-anchor.md).
-- Harsh will run the prepared manual three-command gate and send its output. Background test execution was stopped for that handoff. TEST-2 stays claimed/unchecked and #314 stays draft; worker-count acceptance is pending, not certified.
+- Harsh returned the manual gate: two clean complete commands, then one Workspace line-1200 failure (606 parallel + 33 serial passed; one failure). That breaks the streak. All results remain in [the report](review/test-2-live-anchor.md).
+- Numeric failure traces show Enter arriving before the source loads; Go is disabled and no submit occurs. A held-response proof fails with the original early Enter (zero submits), passes after waiting for Go (one submit). The one-assertion test fix preserves content, virtualization, search/wrap, draft/file-byte and timeout checks.
+- The fixed private sequence passes 96/96 under bounded load; the full Workspace file also passes 96/96 on current main's normal build at four workers. Both typechecks and all four affected browsers pass. No product/native-policy change or fresh full-suite acceptance claim.
+- #314 was already merged by Yash without waiting for the manual streak, explicitly leaving TEST-2 open. Work continues on current main in codex/test2-source-readiness, claimed in 6609d97. Harsh approved a 26-file final ceiling. Three consecutive full commands remain manual and pending; the task stays claimed/unchecked and the follow-up stays draft.
 
 ### Yash with Claude — AUDIT-1, first batch
 

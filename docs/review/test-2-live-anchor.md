@@ -190,3 +190,30 @@ Merged with current main 55d1aa81 (UI-20, UI-23, DATA-13). Four-worker command o
 | b2-live:63 | Still open, cause NOT VERIFIED. The same 5 px family already fails on clean main (recorded 31 October). |
 
 The strict acceptance (three consecutive clean complete commands, or a verified cause for every failure) is not met, so TEST-2 stays unchecked. The branch lands because every failure left reproduces on clean main, which AGENTS says does not block.
+
+
+## 2 November: returned manual results and the source-reader readiness fix
+
+The manual command ran all three commands on d00fcc1 with three parallel workers and the normal one-worker serial pass. The first two were clean; the third was not. No clean commands are borrowed across that failure.
+
+| Run | Parallel | Serial | Exit | Seconds |
+| --- | --- | --- | ---: | ---: |
+| 1 | 607 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 965.4 |
+| 2 | 607 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 977.66 |
+| 3 | 606 passed / 27 skipped / 1 failed | 33 passed / 1 skipped / 0 failed | 1 | 966.91 |
+
+
+The only failing case is workspace-shared-draft's jump to line 1200. Its final frame has the file loaded, which did not establish that it was loaded when Enter arrived. Private numeric instrumentation preserves render, input/submit, scroll-writer and observer timing without printing source bodies.
+
+- Unchanged sequence, four workers: **48/48 pass** without extra load. No cause inferred from that pass.
+- Same sequence, 24 repetitions/four test workers beside 16 CPU workers bounded to 120 seconds: **94 passed / two failed**. In one failed trace Enter arrives at **1417 ms**; the first 1,200-line render follows at **1424.1 ms**. In the other, Enter is **1325.8 ms**, first render **1345.4 ms**. Neither records a submit, scroll write or line-reveal request; activeLine remains unset. This is not a scroll position being reset after a successful reveal.
+- A held actual file-response proof confirms the state: **Go is disabled** while the file is pending. The original early Enter produces **zero submits** and fails the original line-1200 assertion after release. Waiting for Go to become enabled produces **one submit** and passes that same assertion. This is a test readiness race; the product already exposes the correct disabled state.
+- The proposed readiness assertion in the private copy then passes **96/96** under the same bounded-load setup. The complete run outlasts the 120-second burner; constant load for every case is not claimed.
+
+Harsh approved a **26-file final ceiling** on 2 November, including the additional Workspace spec and required completion documents. Before the tracked edit, the whole TEST-2 continuation was claimed on main in **6609d97**, branch **codex/test2-source-readiness**. Yash had already merged #314 and later main changes while the manual command ran. The follow-up uses current main a96fa40 plus that docs-only claim, preserving the merged implementation rather than changing the closed PR.
+
+The tracked change is exactly one readiness assertion: after filling 1200, wait for the existing Go button to be enabled, then press Enter once. The expected line text, fewer-than-150 mounted rows, search/wrap, draft retention, file bytes, and original timeouts remain. No retry or product change.
+
+**Current-main verification:** own frozen install and normal UI build pass; check:affected passes both typechecks and all four named browser cases. The complete Workspace file passes **96/96 at four workers** (24 repetitions). Temporary instrumentation is absent from the normal build. This test-only correction adds no native-session acceptance claim.
+
+**Still pending:** three consecutive complete commands on the follow-up candidate, run manually by Harsh. TEST-2 remains unchecked and claimed; the follow-up stays draft. The clean-main five-pixel b2-live anchor is still recorded separately, without a newly invented cause.
