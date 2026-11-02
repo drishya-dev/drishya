@@ -1,18 +1,17 @@
 /** Navigation metadata only. This is not a captured event or executable capability. */
 export interface WorkingLocations { version: 1; last?: string; sessions: { id: string; revision?:number; entries: [string,unknown][] }[] }
 const record=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
-const fields=new Set('files preview developerWorkspace selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence filePanelLine explore compareAgents mapFocusPath filter follow held inspectorTab inspectorWidth readingPassageId start agentId kind server tool x y height k zoom top left id offset query line wrap formatted activeLine scope pages index width layout match trailWidth trailHidden right leftKey rightKey version primary secondary split pane ratio cursor visits location memory open name root harness days workspace'.split(' '));
+const fields=new Set('files preview developerWorkspace selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence filePanelLine explore compareAgents mapFocusPath filter follow held readingPassageId start agentId kind server tool x y height k zoom top left id offset query line wrap formatted activeLine scope pages index width layout match trailWidth trailHidden right leftKey rightKey version primary secondary split pane ratio cursor visits location memory open name root harness days workspace'.split(' '));
 const slot=/^(peek\/tabs|surface\/(Git review|Git history|File reader|Captured file)|composer\/(collapsed|choice)|toolbox\/collapsed|location|history\/(top|anchor|heights|folded-turns)|desk\/(files|primary|secondary|split|pane|ratio)|desk\/document\/.+|folders\/(query|open|top|width)|map\/(yaw|pitch|camera|query|observed|changed|connections|file|page|neighborhood)|git\/(selected|page|open|width|historyWidth|filesHidden|rows)|canvas\/(view|panel|panelFocus|camera)|home\/.+|evidence\/trail)$/;
 const readerSlot=/^(disk\/(start|version|query|line|lineInput|wrap|width|formatted)|file\/(width|trailWidth|trailHidden|query|start|left|right)|(?:.*\/artifact|diff)\/.+\/(pages|index|query|wrap|line|lineInput|offset|layout|match)|scroll\/.+)$/;
 const locationStrings='selectedOp expandedOp currentFile filePanel filePanelFocus filePanelEvidence mapFocusPath readingPassageId'.split(' ');
 function location(input:unknown):Record<string,unknown> {
-  const out:Record<string,unknown>={explore:false,inspectorTab:'detail',inspectorWidth:760};
+  const out:Record<string,unknown>={explore:false};
   if(!record(input))return out;
   for(const key of locationStrings)if(typeof input[key]==='string'&&input[key].length<=2048)out[key]=input[key];
   for(const key of ['developerWorkspace','explore','compareAgents','follow','held'])if(typeof input[key]==='boolean')out[key]=input[key];
-  for(const key of ['start','inspectorWidth'])if(typeof input[key]==='number'&&Number.isFinite(input[key])&&input[key]>=0&&input[key]<=1e10)out[key]=input[key];
+  for(const key of ['start'])if(typeof input[key]==='number'&&Number.isFinite(input[key])&&input[key]>=0&&input[key]<=1e10)out[key]=input[key];
   if(typeof input.filePanelLine==='number'&&Number.isSafeInteger(input.filePanelLine)&&input.filePanelLine>=1&&input.filePanelLine<=999999999)out.filePanelLine=input.filePanelLine;
-  if(input.inspectorTab==='detail'||input.inspectorTab==='evidence')out.inspectorTab=input.inspectorTab;
   if(record(input.filter)) { const filter:Record<string,string>={};for(const key of ['kind','agentId','server','tool'])if(typeof input.filter[key]==='string'&&input.filter[key].length<=2048)filter[key]=input.filter[key];out.filter=filter; }
   // Older navigation snapshots could retain two reader owners. Restoring both
   // native modal dialogs makes one invisible to interaction beneath the other.

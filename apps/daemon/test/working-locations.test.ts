@@ -19,7 +19,14 @@ it('ignores corrupted versions and malformed state before any reader can consume
 it('does not accept unauthenticated or cross-origin recovery writes',async()=>{expect((await fetch(`${server.url}/v1/working-locations`)).status).toBe(401);expect((await fetch(`${server.url}/v1/working-locations`,{method:'PUT',headers:{authorization:`Bearer ${server.token}`,origin:'https://example.invalid','content-type':'application/json'},body:JSON.stringify(snapshot())})).status).toBe(403);});
 it('bounds request bytes and retains the previous valid checkpoint on rejection',async()=>{saveWorkingLocations(app,snapshot());const before=readWorkingLocations(app);expect((await fetch(`${server.url}/v1/working-locations`,{method:'PUT',headers:{authorization:`Bearer ${server.token}`,'content-type':'application/json'},body:JSON.stringify({padding:'x'.repeat(270000)})})).status).toBe(413);expect(readWorkingLocations(app)).toEqual(before);});
 it('drops references to unavailable recordings rather than restoring an invented session',()=>{saveWorkingLocations(app,{version:1,last:'gone',sessions:[{id:'gone',entries:[['desk/files',['file.ts']]]}]});expect(readWorkingLocations(app).sessions).toHaveLength(0);expect(readWorkingLocations(app).last).toBeUndefined();});
-it('merges different sessions and refuses stale writes to the same session',()=>{saveWorkingLocations(app,snapshot());saveWorkingLocations(app,{version:1,last:otherId,sessions:[{id:otherId,entries:[['location',{explore:true}]]}]});expect(readWorkingLocations(app).sessions).toHaveLength(2);expect(()=>saveWorkingLocations(app,snapshot())).toThrow('another window');expect(readWorkingLocations(app).sessions.find(s=>s.id===id)!.entries).toContainEqual(['desk/files',['src/cart/total.ts']]);});
+it('merges different sessions, and with two tabs on one session the later write wins quietly',()=>{saveWorkingLocations(app,snapshot());saveWorkingLocations(app,{version:1,last:otherId,sessions:[{id:otherId,entries:[['location',{explore:true}]]}]});expect(readWorkingLocations(app).sessions).toHaveLength(2);
+  const later=snapshot();later.sessions[0]!.entries=[['desk/files',['src/later.ts']]];
+  const first=saveWorkingLocations(app,later).revisions[id]!;
+  // The other tab still holds an older revision. Its write succeeds and is the one kept.
+  const stale=snapshot();(stale.sessions[0] as {revision?:number}).revision=0;stale.sessions[0]!.entries=[['desk/files',['src/stale-tab.ts']]];
+  expect(saveWorkingLocations(app,stale).revisions[id]).toBe(first+1);
+  expect(readWorkingLocations(app).sessions.find(s=>s.id===id)!.entries).toContainEqual(['desk/files',['src/stale-tab.ts']]);
+  expect(readWorkingLocations(app).sessions.find(s=>s.id===otherId)!.entries).toContainEqual(['location',{explore:true}]);});
 
 it('forgetting through the shared App also removes saved locations and last-session references',async()=>{
   const journal=join(dir,'forgotten.jsonl');copyFileSync(resolve('fixtures/synthetic/claude/checkout-fix.jsonl'),journal);
