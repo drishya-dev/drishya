@@ -1,4 +1,5 @@
 import { NotesEntry } from './StepNotes.tsx';
+import { ProductMenu } from './ProductMenu.tsx';
 import {Disclosure} from './Disclosure.tsx';
 import {CapturedPath,openCapturedPath} from './CapturedPath.tsx';
 import {prosePath} from '../lib/prose-path.ts';
@@ -53,7 +54,7 @@ import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
-  return <ReadingReferenceProvider><SessionWorkspaceProvider key={id}><EvidenceNavigationProvider><WorkspaceViewer /></EvidenceNavigationProvider></SessionWorkspaceProvider></ReadingReferenceProvider>;
+  return <ReadingReferenceProvider><SessionWorkspaceProvider key={id}><EvidenceNavigationProvider><ProductMenu /><WorkspaceViewer /></EvidenceNavigationProvider></SessionWorkspaceProvider></ReadingReferenceProvider>;
 }
 
 function WorkspaceViewer() {

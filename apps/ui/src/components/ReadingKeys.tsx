@@ -13,6 +13,18 @@ export const READING_SHORTCUTS = [
 const typing = (target: EventTarget | null) => target instanceof Element && !!target.closest('input,textarea,select,[contenteditable]:not([contenteditable=false]),.cm-editor,[role=textbox]');
 
 /** Keyboard reading is immediate. It moves one real material, without opening the inspector. */
+/** Selected text first, then the card's own copy control, then what the card shows. */
+export function copyCardMaterial(node: Element | null | undefined, notify: (message: string) => void) {
+  const selection = document.getSelection();
+  if (node && selection?.toString() && selection.anchorNode && selection.focusNode && node.contains(selection.anchorNode) && node.contains(selection.focusNode)) {
+    void navigator.clipboard.writeText(selection.toString()).then(() => notify('Copied selected text'), () => notify('Copy unavailable; select the text to copy')); return;
+  }
+  const copy = [...(node?.querySelectorAll<HTMLButtonElement>('button[aria-label^="Copy"]') ?? [])].find(button => !button.disabled && button.getClientRects().length);
+  if (copy) { copy.click(); return; }
+  const preview = node?.querySelector<HTMLElement>('.op-expanded, .op-body')?.innerText;
+  if (!preview) { notify('No material to copy'); return; }
+  void navigator.clipboard.writeText(preview).then(() => notify('Copied card preview'), () => notify('Copy unavailable; select the text to copy'));
+}
 export function ReadingKeys(props: {
   root: RefObject<HTMLDivElement | null>; projection: Projection; focused?: string;
   focus: (id?: string) => void; navigate: (target: ReadingTarget) => Promise<void>; fold: (collapse: boolean) => void;
@@ -67,15 +79,7 @@ export function ReadingKeys(props: {
           if (!path) { setNotice('No file path for this operation'); return; }
           state.set({ follow: false }); window.dispatchEvent(new CustomEvent('drishya-preview-file', { detail: { path } })); return;
         }
-        const selection = document.getSelection();
-        if (node && selection?.toString() && selection.anchorNode && selection.focusNode && node.contains(selection.anchorNode) && node.contains(selection.focusNode)) {
-          void navigator.clipboard.writeText(selection.toString()).then(() => setNotice('Copied selected text'), () => setNotice('Copy unavailable; select the text to copy')); return;
-        }
-        const copy = [...(node?.querySelectorAll<HTMLButtonElement>('button[aria-label^="Copy"]') ?? [])].find(button => !button.disabled && button.getClientRects().length);
-        if (copy) { copy.click(); return; }
-        const preview = node?.querySelector<HTMLElement>('.op-expanded, .op-body')?.innerText;
-        if (!preview) { setNotice('No material to copy'); return; }
-        void navigator.clipboard.writeText(preview).then(() => setNotice('Copied card preview'), () => setNotice('Copy unavailable; select the text to copy')); return;
+        copyCardMaterial(node, setNotice); return;
       }
       if (queued >= 20 || event.repeat && queued > 1) return;
       const requestEpoch = epoch; queued++;
