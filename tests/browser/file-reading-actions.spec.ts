@@ -54,7 +54,7 @@ for(const width of [600,1440])test(`Workspace, Changes and Git review find files
   await expect(desk.locator('.desk-code')).toContainText('CURRENT_WORKTREE_CHANGE');
   await desk.getByLabel(`File actions for ${op.path}`,{exact:true}).press('Enter');await desk.getByRole('button',{name:'View what the agent saw',exact:true}).click();
   const captured=page.locator('.file-workspace');await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');await expect(captured).not.toContainText('CURRENT_WORKTREE_CHANGE');
-  await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
+  if(!await captured.getByRole('button',{name:'Read file on disk',exact:true}).isVisible())await captured.getByLabel('File actions',{exact:true}).click();await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
   const peek=page.locator('.current-file-reader');await expect(peek.locator('.current-file-code')).toBeVisible();
   await peek.getByLabel('Reading options',{exact:true}).or(peek.getByLabel(`File reading actions for ${op.path}`,{exact:true})).press('Enter');
   await peek.getByRole('button',{name:'Show in Files',exact:true}).click();

@@ -47,3 +47,5 @@
 .captured-source-choices :is(.source-go,.source-range)>[role=status]{flex-basis:100%;font-size:var(--text-2xs);white-space:normal}
 .captured-source-choices .source-range>.btn{font-size:var(--text-xs)}
 
+
+:root[data-ui-version=modern] .desk-document-limit {margin:0;padding:6px 14px;color:var(--t2);font:var(--text-xs)/1.6 var(--sans);}
