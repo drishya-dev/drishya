@@ -217,3 +217,49 @@ The tracked change is exactly one readiness assertion: after filling 1200, wait 
 **Current-main verification:** own frozen install and normal UI build pass; check:affected passes both typechecks and all four named browser cases. The complete Workspace file passes **96/96 at four workers** (24 repetitions). Temporary instrumentation is absent from the normal build. This test-only correction adds no native-session acceptance claim.
 
 **Still pending:** three consecutive complete commands on the follow-up candidate, run manually by Harsh. TEST-2 remains unchecked and claimed; the follow-up stays draft. The clean-main five-pixel b2-live anchor is still recorded separately, without a newly invented cause.
+
+
+## 2 November: second returned manual streak, Pin range failure
+
+Harsh ran the prepared command on **a00af7b**, with three parallel workers, one serial worker and zero retries. The first two complete commands pass; the third fails. All three actual results are retained; the streak resets again.
+
+| Run | Parallel | Serial | Exit | Seconds |
+| --- | --- | --- | ---: | ---: |
+| 1 | 613 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 606.03 |
+| 2 | 613 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 587.61 |
+| 3 | 612 passed / 27 skipped / 1 timed out | 33 passed / 1 skipped / 0 failed | 1 | 629.69 |
+
+The sole failure is `product-workspace.spec.ts:344`, source references reject oversized text, preserve derived provenance and clear on replay seek. The original 90-second test timeout expires at line 364 waiting for Pin range. The line-1200 Workspace case and the serial B2 anchor pass all three returned commands. Git LF/CRLF and SQLite experimental notices are warnings, not the failure.
+
+The manual command preserved error context but no browser trace. A private copy of the unchanged failing test, with reader/disclosure event instrumentation and retained failure traces, reproduces **four failures / 20 passes at four workers**. In those failures the same reader and closed disclosure remain mounted, with no summary activation or open-attribute change. One captured action scrolls History from 0 to 8 to 289 px, targets the summary at y=423.25, then ends back at History scrollTop 0 with the disclosure closed. Earlier hit tests intersect the timeline footer. This establishes a missed pointer activation across a scroll change; the exact reset writer remains under investigation.
+
+Additional unchanged diagnostics pass: geometry-and-writer sampling 12/12; pointer-target sampling 24/24; light event sampling 24/24; bounded-load light sampling 24/24 (16 CPU workers bounded to 120 seconds, stopped when tests finish); click-target sampling 48/48; outside-click-only sampling 24/24; private instrumented writer build 24/24. These are diagnostic results, not acceptance, and do not establish a cause or fix. One initial load-helper invocation selected no tests because of an argument-quoting error; it is not counted as a test run.
+
+**At the initial diagnostic checkpoint, no tracked product or test change had been made for this failure.** No retry, timeout increase, relaxed assertion or additional skip. The follow-up remains draft #331; TEST-2 remains claimed and unchecked. The original five-pixel B2 cause is still unverified.
+
+
+### Verified writer and native-boundary correction
+
+A normal-build setter-only trace reproduces **one failure / 47 passes at four workers**. Its failing scroll writes at 1761.2 and 1838.5 ms set History to zero from `setScrollTop` -> `restoreReading` -> the History layout effect. The compiled caller is the explicit `readingAtStart` branch, not a reader remount, stale expanded closure or duplicate disclosure toggle. A separate private writer build (24/24 pass) exposes the same path even in successful cases: native positions 8 and 289 are remembered while both `navigating` and the old start flag remain true; the layout effect then writes zero.
+
+`onScroll` marks navigation active before remembering the position. The old `rememberReading` expression preserved a previous start flag for any active navigation, including a later native focus/scrollIntoView moving down. The correction preserves the upward start intent only while the position is not moving down relative to the last observed scroll. The original source-reference test, native pointer clicks, all content/provenance/pinning assertions and timeouts are unchanged. No keyboard substitution, force-click, retry, longer timeout or new skip.
+
+| Before | After | Why |
+| --- | --- | --- |
+| A stale start boundary could undo a later native scroll and move a source control during its pointer action. | A downward native scroll supersedes the start boundary; upward navigation retains its start intent. | Keep the real control at the reading position the browser just selected. |
+
+The exact new tracked regression centers the loaded source summary with native scrollIntoView, samples the resulting position, crosses two render frames, requires that exact position to remain and opens the disclosure with a real pointer click. With only the boundary expression reverted, **it fails: 289 expected, 0 received**. After restoring the fix and rebuilding, the same test passes. The normal restored build is the final candidate; temporary writer instrumentation is absent.
+
+Verification on the fixed source:
+
+- Unchanged original failing sequence: **96/96**, four workers.
+- Exact tracked new regression plus the untouched original case: **48/48**, each repeated 24 times at four workers.
+- Complete affected Workspace spec: **35/35**; B2 plus manual-scroll, run serially: **5/5**. This does not identify the earlier five-pixel B2 cause.
+- Both typechecks, normal UI build and **17 relevant units / four files** pass. Ingest, storage and packaging did not change; no fresh package or complete-suite pass is claimed.
+- Controlled held native pointer diagnostic on the old source: **24/24**, with unchanged control positions during the hold. It did not support the focus/remount candidate.
+
+Genuine copies: Codex **01a1824b**, **5,011,679 bytes / 1,348 observations / 317 operations**; Claude Code **3a2fb933**, **3,616,835 bytes / 392 observations / 71 operations**. The final private navigation check passes **all four Modern journeys**, both harnesses at **600 and 1440 px**: leave the start through native scrolling, retain a nonzero reading position, activate/retain the actual expanded card, no page errors or horizontal overflow. Codex also passes both Classic widths. These are screen-state/bounds checks with frames saved only in `.local/`; no native material or frames are attached to the PR. This is genuine History navigation acceptance, not a claim that these captures contain the synthetic oversized Pin range fixture.
+
+Limits and failed private attempts are retained: two early extra-shell runs each gave **5 passed / three failed**. That driver selected the distinct older `legacy` experience and initially used a fixed wheel distance that did not cover the long Codex history. The matching `classic`/Modern driver gives **six passed / two failed**, both with ordinary entry and with explicit at=end entry. In each, the two failures are Claude Classic initial-card visibility, before the boundary assertion; this extra retained-shell case remains **unverified**, with no new product cause invented. All four required Modern journeys pass in those checks; no six-of-eight result is described as eight clean journeys. Private artifacts stay local.
+
+**Whole TEST-2 is still open.** The second manual streak failed and cannot be counted toward a clean streak for this new candidate. Draft #331 records both repairs and all failures. Harsh's manual runner still uses three parallel workers, one serial worker and zero retries. No automatic complete-suite command was started, no worker-count certification was added to AGENTS/TEST-3, and no TEST-2 completion checkbox or claim removal is made.
