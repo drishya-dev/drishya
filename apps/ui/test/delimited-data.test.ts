@@ -23,7 +23,7 @@ it('bounds byte size, rows, columns and cells and accepts exact boundaries',()=>
  expect(delimitedData(Array(5000).fill('x').join('\n'),',').data?.rows).toHaveLength(5000);
 });
 it('finds literal fields in complete native/MCP/wrapped captures without flattening siblings',()=>{
- const csv='a,b\n1,2';expect(delimitedBlocks(csv)).toEqual([{text:csv,field:'Captured text'}]);
+ const csv='a,b\n1,2';expect(delimitedBlocks(csv)).toEqual([{text:csv,field:'Text'}]);
  const envelope=JSON.stringify({content:[{type:'image',data:'omitted'},{type:'text',text:csv},{type:'resource_link',uri:'https://example.invalid'}]});
  expect(delimitedBlocks(envelope)).toEqual([{text:csv,field:'/content/1/text'}]);expect(JSON.parse(envelope).content).toHaveLength(3);
  expect(delimitedBlocks(JSON.stringify([{status:'fulfilled',value:{output:csv,exit_code:0}}]))).toEqual([{text:csv,field:'/0/value/output'}]);

@@ -45,7 +45,7 @@ export function FlowConnections({ projection }: { projection: Projection }) {
           const d = flowRoute(a, b, [...visible.values()]);
           if (!d) continue;
           const link = evidence.get(`${from}/${to}`);
-          result.push({ key: `${from}/${to}`, d, label: link ? `${link.relation}: ${link.explanation}` : 'Recorded sequence · order, not a causal link', strong: selected === from || selected === to || hovered === from || hovered === to });
+          result.push({ key: `${from}/${to}`, d, label: link ? `${link.relation}: ${link.explanation}` : 'Order, not a causal link', strong: selected === from || selected === to || hovered === from || hovered === to });
         }
       }
       // Geometry follows compositor motion without sending 60 React updates a second.
@@ -78,5 +78,5 @@ export function FlowConnections({ projection }: { projection: Projection }) {
     return () => { observer.disconnect(); history.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); window.removeEventListener('drishya-material-layout', schedule); clearTimeout(timer); if (frame.current !== undefined) cancelAnimationFrame(frame.current); frame.current = undefined; };
   }, [projection, selected, hovered, explore, lowResource]);
   if (typeof document === 'undefined') return null;
-  return createPortal(<svg className="flow-connections" aria-label="Connections in recorded order" role="img"><defs><marker id="flow-arrow" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5" /></marker></defs><g ref={group} /></svg>, document.body);
+  return createPortal(<svg className="flow-connections" aria-label="Connections in order" role="img"><defs><marker id="flow-arrow" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5" /></marker></defs><g ref={group} /></svg>, document.body);
 }

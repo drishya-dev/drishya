@@ -3,14 +3,14 @@ import { readFileSync } from 'node:fs';
 import { asOfProjection, type ReplayBundle } from '@drishya/contracts';
 import { capturedOutcomes } from '../src/lib/captured-outcomes.ts';
 
-describe('bounded captured outcome presentation', () => {
+describe('bounded outcome presentation', () => {
   const vitest = '\u001b[32mTest Files 46 passed (46)\u001b[0m\nTests 324 passed (324)';
   it('unwraps mixed tool results without counting typecheck exit success', () => {
     const raw = JSON.stringify([{ i: 0, status: 'fulfilled', value: { output: vitest, exit_code: 0 } }, { i: 1, status: 'fulfilled', value: { output: '', exit_code: 0 } }]);
     const { runs } = capturedOutcomes(raw);
     expect(runs).toHaveLength(1); expect(runs[0]!.counts.passed).toBe(324); expect(runs[0]!.suites).toBe('46 passed (46)');
   });
-  it('preserves separate runner summaries and captured child output identities', () => {
+  it('preserves separate runner summaries and child output identities', () => {
     const { runs } = capturedOutcomes(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ output: vitest }) }, { type: 'text', text: JSON.stringify({ output: 'Tests: 1 failed, 4 passed, 1 skipped, 6 total' }) }] }));
     expect(runs.map(r => [r.runner, r.output, r.counts.passed])).toEqual([['Vitest', 1, 324], ['Jest', 2, 4]]);
     expect(capturedOutcomes(vitest + '\n' + vitest).runs).toHaveLength(2);
@@ -60,6 +60,6 @@ describe('bounded captured outcome presentation', () => {
     const raw = JSON.stringify(Array.from({ length: 30 }, () => ({ output: 'Tests 100000 passed (100000)' })));
     expect(capturedOutcomes(raw).runs).toHaveLength(8);
     expect(capturedOutcomes(raw).notes.length).toBeGreaterThan(0);
-    expect(capturedOutcomes('x'.repeat(200000)).notes).toContain('Parsing limited to the first 128 KiB of captured preview.');
+    expect(capturedOutcomes('x'.repeat(200000)).notes).toContain('Parsing limited to the first 128 KiB of preview.');
   });
 });

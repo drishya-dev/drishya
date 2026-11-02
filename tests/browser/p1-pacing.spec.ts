@@ -70,7 +70,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(operation).toContainText('drishya-live-input');
   await expect(operation.locator('.state-running')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Resolve');
-  append({ type: 'assistant', message: { id: 'p1-captured-explanation', role: 'assistant', model: 'synthetic', content: [{ type: 'text', text: 'The captured command returned its output. Now reading the guard.' }] } });
+  append({ type: 'assistant', message: { id: 'p1-captured-explanation', role: 'assistant', model: 'synthetic', content: [{ type: 'text', text: 'The command returned its output. Now reading the guard.' }] } });
   await app.ingest.sync(recordingId);
   await expect(page.locator('.prose').last()).toContainText('Now reading the guard');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Surface');
@@ -92,7 +92,7 @@ test('a single delayed read result keeps its request readable in a bounded mater
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const id = 'p1-late-source-growth';
-  append({ type: 'assistant', message: { id: `${id}-intro`, role: 'assistant', content: [{ type: 'text', text: 'Reading a captured source excerpt next.' }] } });
+  append({ type: 'assistant', message: { id: `${id}-intro`, role: 'assistant', content: [{ type: 'text', text: 'Reading a source excerpt next.' }] } });
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: '/home/dev/shop/src/smooth-read.ts', offset: 1, limit: 80 } }] } });
   await app.ingest.sync(recordingId);
   const read = page.locator('article.op-read').filter({ hasText: 'smooth-read.ts' });
@@ -159,13 +159,13 @@ test('actions share stable reading widths, wrap when full and restart after agen
   expect(boxes[1]!.x).toBeGreaterThan(boxes[0]!.x);
   expect(boxes[4]!.y).toBeGreaterThan(boxes[0]!.y + boxes[0]!.height);
   const passageId = await last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]').getAttribute('data-passage-id');
-  append({ type: 'assistant', message: { id: 'row-prose', role: 'assistant', content: [{ type: 'text', text: 'Captured reasoning punctuates this action row.' }] } });
+  append({ type: 'assistant', message: { id: 'row-prose', role: 'assistant', content: [{ type: 'text', text: 'Reasoning punctuates this action row.' }] } });
   append({ type: 'assistant', message: { id: 'row-after-prose', role: 'assistant', content: [call(5)] } });
   await app.ingest.sync(recordingId);
   const next = page.locator('article.op-shell').filter({ hasText: 'row-allocation-5' });
   await expect(next).toBeAttached();
   expect(await next.locator('xpath=ancestor::*[contains(@class,"passage-slot")]').getAttribute('data-passage-id')).not.toBe(passageId);
-  await expect(last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]')).toContainText('Captured reasoning punctuates this action row.');
+  await expect(last.locator('xpath=ancestor::*[contains(@class,"passage-slot")]')).toContainText('Reasoning punctuates this action row.');
 });
 
 for (const interruption of ['reading', 'reduced motion'] as const) test('one real material arrival survives hover and cancels for ' + interruption, async ({ page }) => {
@@ -199,7 +199,7 @@ for (const interruption of ['reading', 'reduced motion'] as const) test('one rea
   await expect.poll(() => operation.evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m11)).toBe(1);
 });
 
-test('patch layouts retain captured changes and adapt without overflowing a narrow screen', async ({ page }) => {
+test('patch layouts retain changes and adapt without overflowing a narrow screen', async ({ page }) => {
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(demo.href);
@@ -245,11 +245,11 @@ test('terminal folding is reversible and keyboard map search targets a real file
   await match.focus();
   await match.press('Enter');
   await expect(page.locator('.map-tip-path')).toHaveText('src/checkout/guard.ts');
-  await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
+  await page.getByRole('button', { name: 'Open agent work on this file' }).click();
   await expect(page.locator('.file-workspace')).toContainText('guard.ts');
 });
 
-test('reduced motion keeps captured history and suppresses relationship animations', async ({ page }) => {
+test('reduced motion keeps history and suppresses relationship animations', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
@@ -332,7 +332,7 @@ test('file relationships start at measured renderer nodes and fall back when the
   await expect(page.locator('.origin-thread[data-origin-type="File tree row"]')).toHaveCount(1);
 });
 
-test('verification marks represent recorded counts and open the captured failing assertion', async ({ page }) => {
+test('verification marks represent recorded counts and open the failing assertion', async ({ page }) => {
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
   await expect(page.locator('article.op-test').last().locator('.verification-tile.passed')).toHaveCount(7);
@@ -347,7 +347,7 @@ test('verification marks represent recorded counts and open the captured failing
   await expect(failed.locator('.op-expanded .output')).toContainText('FAIL');
 });
 
-test('MCP input and captured result can be read in the history passage', async ({ page }) => {
+test('MCP input and result can be read in the history passage', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   await page.getByRole('button', { name: 'Search', exact: true }).click();
@@ -356,7 +356,7 @@ test('MCP input and captured result can be read in the history passage', async (
   const operation = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
   await expect(operation).toContainText('context7CompatibleLibraryID');
   // CONTENT-14: the expanded result is the stored reader, which says whether it holds the complete result, not a "preview".
-  await expect(operation.getByRole('region', { name: 'Stored captured result' })).toContainText('Complete stored result');
+  await expect(operation.getByRole('region', { name: 'Stored result' })).toContainText('Complete stored result');
   await expect(operation.locator('.op-expanded .result-prose')).toContainText('TypeScript handbook');
 });
 
@@ -505,7 +505,7 @@ test('every observed action kind can arrive as a real surface without removing i
     { name: 'Bash', input: { command: 'npm test' }, kind: 'test' },
     { name: 'WebSearch', input: { query: 'synthetic arrival documentation' }, kind: 'web' },
     { name: 'Task', input: { subagent_type: 'Explore', description: 'Synthetic arrival review', prompt: 'Read the fixture only' }, kind: 'spawn' },
-    { name: 'TodoWrite', input: { todos: [{ content: 'Review captured evidence', status: 'in_progress' }] }, kind: 'plan' },
+    { name: 'TodoWrite', input: { todos: [{ content: 'Review evidence', status: 'in_progress' }] }, kind: 'plan' },
     { name: 'SyntheticUnknownTool', input: { captured: 'synthetic action' }, kind: 'other' },
     { name: 'mcp__arrival__inspect', input: { fixture: 'synthetic' }, kind: 'mcp' },
   ];
@@ -533,9 +533,9 @@ test('every observed action kind can arrive as a real surface without removing i
     await expect(operation).toBeVisible();
     await expect.poll(() => operation.evaluate(el => el.getAnimations().some(animation => animation.id.startsWith('surface-')))).toBe(false);
     append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Synthetic recorded completion' }] } });
-    append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', content: [{ type: 'text', text: `Captured outcome for ${call.name}.` }] } });
+    append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', content: [{ type: 'text', text: `Outcome for ${call.name}.` }] } });
     await app.ingest.sync(recordingId);
-    await expect(page.locator('.prose').last()).toContainText(`Captured outcome for ${call.name}`);
+    await expect(page.locator('.prose').last()).toContainText(`Outcome for ${call.name}`);
     await page.keyboard.press('Escape');
   }
 });
@@ -595,8 +595,8 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
     const id = `p1-soak-${rounds}`;
     append({ type: 'assistant', message: { id, role: 'assistant', model: 'synthetic', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: `printf synthetic-round-${rounds}` } }] } });
-    append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: `synthetic captured output ${rounds}` }] } });
-    append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', model: 'synthetic', content: [{ type: 'text', text: `Captured explanation for synthetic round ${rounds}.` }] } });
+    append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: `synthetic output ${rounds}` }] } });
+    append({ type: 'assistant', message: { id: `${id}-prose`, role: 'assistant', model: 'synthetic', content: [{ type: 'text', text: `Explanation for synthetic round ${rounds}.` }] } });
     await app.ingest.sync(recordingId);
     await expect(steps).toContainText(`${before + 3} recorded steps`);
     await expect(pinned).toHaveText(pinnedLabel);
@@ -604,13 +604,13 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
     await expect.poll(() => history.evaluate((el, anchor) => {
       const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.dataset.passageId === anchor.id);
       return node ? Math.abs(node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset) : Infinity;
-    }, anchor), { message: `Round ${rounds}: preserve the captured passage and reading offset` }).toBeLessThan(2);
+    }, anchor), { message: `Round ${rounds}: preserve the passage and reading offset` }).toBeLessThan(2);
     const nodes = await page.evaluate(() => document.querySelectorAll('*').length);
     peakNodes = Math.max(peakNodes, nodes);
     expect(nodes).toBeLessThan(2500);
     await expect.poll(() => page.locator('.origins').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length), { message: 'Finite visible arrivals settle even while Follow is off' }).toBe(0);
     await page.getByRole('button', { name: /Back to latest/ }).click();
-    await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight)), { message: `Round ${rounds}: explicit return reaches the latest captured work` }).toBeLessThan(2);
+    await expect.poll(() => history.evaluate((el) => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight)), { message: `Round ${rounds}: explicit return reaches the latest work` }).toBeLessThan(2);
     rounds++;
     await page.waitForTimeout(5000);
   }
@@ -651,7 +651,7 @@ test('following completed arrivals does not bounce the history camera backward',
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
-  append({ type: 'assistant', message: { id: 'camera-intro', role: 'assistant', content: [{ type: 'text', text: Array.from({ length: 35 }, (_, i) => `Synthetic camera context ${i}: previous captured work remains above this arriving tool.`).join('\n\n') }] } });
+  append({ type: 'assistant', message: { id: 'camera-intro', role: 'assistant', content: [{ type: 'text', text: Array.from({ length: 35 }, (_, i) => `Synthetic camera context ${i}: previous work remains above this arriving tool.`).join('\n\n') }] } });
   await app.ingest.sync(recordingId);
   const history = page.locator('.history');
   await expect.poll(() => history.evaluate(el => Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop))).toBeLessThan(2);
@@ -699,7 +699,7 @@ test('sequence replay arrivals keep a steady forward camera', async ({ page }) =
   const reverse = Math.max(0, ...samples.slice(1).map((sample, i) => samples[i]!.top - sample.top));
   expect(reverse, JSON.stringify(samples.filter((_, i) => i % 5 === 0))).toBeLessThan(3);
 });
-test('paged replay retains its history and camera while the next captured page loads', async ({ page }) => {
+test('paged replay retains its history and camera while the next page loads', async ({ page }) => {
   await page.route('**/v1/recordings', async route => {
     const response = await route.fetch();
     const body = await response.json();
@@ -736,7 +736,7 @@ test('paged replay retains its history and camera while the next captured page l
     expect(await page.evaluate(() => (window as any).originalReplayHistory.isConnected)).toBe(true);
     await expect(page.locator('.viewer')).toHaveAttribute('inert', '');
     await expect(page.locator('.history')).toBeHidden();
-    await expect(page.getByRole('status')).toContainText('Loading captured history');
+    await expect(page.getByRole('status')).toContainText('Loading history');
   } finally { release(); }
   await expect(page.locator('.viewer')).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator('.history')).toBeVisible();

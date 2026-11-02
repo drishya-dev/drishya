@@ -8,7 +8,7 @@ import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts
 let dir: string, app: App, server: RunningServer;
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-navigation-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-nav' }); });
 test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
-test('keyboard navigation opens exact captured file work and keeps underlying reading on Escape', async ({ page }) => {
+test('keyboard navigation opens exact file work and keeps underlying reading on Escape', async ({ page }) => {
   await page.goto(new URL('/?demo', server.launchUrl).href);
   await expect(page.locator('.viewer')).toBeVisible();
   await page.keyboard.press('Control+k');

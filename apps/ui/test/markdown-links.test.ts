@@ -26,7 +26,7 @@ it('still renders plain bold, code inside bold and unterminated markers as text'
   expect(html('2 ** 3 and [x(y)')).toContain('2 ** 3 and [x(y)');
 });
 
-it('resolves local file links and line anchors only inside their captured workspace',()=>{
+it('resolves local file links and line anchors only inside their workspace',()=>{
   expect(prosePath('/C:/Work/App/src/file.ts:12:3','c:\\work\\app')).toEqual({path:'src/file.ts',line:12});
   expect(prosePath('C:\\Work\\App\\docs\\report (copy).md#L4-L9','C:/Work/App/')).toEqual({path:'docs/report (copy).md',line:4});
   expect(prosePath('/home/dev/app/src/file.ts#L28','/home/dev/app')).toEqual({path:'src/file.ts',line:28});
@@ -45,10 +45,10 @@ it('opens emphasis-wrapped local links with one semantic button and leaves exter
   const render=(text:string)=>renderToStaticMarkup(createElement(Markdown,{text,workspaceRoot:'C:/Work/App',onPath:()=>{}}));
   const output=render('**[source](/C:/Work/App/src/file.ts#L12)** and [`source.ts`](src/file.ts)');
   expect(output.match(/<button/g)).toHaveLength(2);
-  expect(output).toContain('Open captured work for src/file.ts at line 12');
+  expect(output).toContain('Open work on src/file.ts at line 12');
   expect(output).toContain('<code>source.ts</code></button>');
   expect(render('[other](C:/Elsewhere/secret.txt) [web](https://host/file.ts)')).not.toContain('<button');
-  expect(render('`C:\\Work\\App\\src\\file.ts:12`')).toContain('Open captured work for src/file.ts at line 12');
+  expect(render('`C:\\Work\\App\\src\\file.ts:12`')).toContain('Open work on src/file.ts at line 12');
 });
 
 it('retains workspace resolution through nested lists, headings and document quotes',()=>{

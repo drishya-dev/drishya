@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { testTiles } from '../src/lib/test-tiles.ts';
 const summary = { framework: 'node', passed: 2, failed: 1, skipped: 0, failures: [], passing: [], basis: 'derived' as const };
-test('only complete flat captured TAP can locate a failure by runner index', () => {
+test('only complete flat TAP can locate a failure by runner index', () => {
   const result = testTiles(summary, 'TAP version 13\nok 1 - alpha\nnot ok 2 - beta\nok 3 - gamma\n1..3');
   expect(result.ordered).toBe(true);
   expect(result.tiles[1]).toEqual({ index: 2, state: 'failed', name: 'beta' });

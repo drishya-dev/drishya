@@ -15,7 +15,7 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
 
-test('map and verification failures offer local retry without replacing captured history', async ({ page }) => {
+test('map and verification failures offer local retry without replacing history', async ({ page }) => {
   let mapFails = true, verificationFails = true;
   await page.route('**/v1/recordings/*/graph', route => mapFails ? route.fulfill({ status: 500, json: { error: 'Synthetic map error' } }) : route.continue());
   await page.route('**/v1/recordings/*/verification/*', route => verificationFails ? route.fulfill({ status: 500, json: { error: 'Synthetic verification error' } }) : route.continue());

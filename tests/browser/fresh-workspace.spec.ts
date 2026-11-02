@@ -202,7 +202,7 @@ test('workspace destinations leave the previous owner and reveal the requested v
 });
 test('Home dense sessions remain reachable through virtualization and responsive resizing',async({page})=>{
   const base=app.store.getRecording(ids.codex!)!;
-  const recordings=Array.from({length:160},(_,index)=>({...base,id:`density-${index}`,title:`Session ${String(index).padStart(3,'0')} · ${index%3===0?'Review a long workspace path and its complete captured verification — परीक्षण 🚀':'Read changes'}`,workspaceRoot:index%2===0?'/work/alpha':'/work/beta',lastSourceTime:new Date(Date.now()-index*3600000).toISOString()}));
+  const recordings=Array.from({length:160},(_,index)=>({...base,id:`density-${index}`,title:`Session ${String(index).padStart(3,'0')} · ${index%3===0?'Review a long workspace path and its complete verification — परीक्षण 🚀':'Read changes'}`,workspaceRoot:index%2===0?'/work/alpha':'/work/beta',lastSourceTime:new Date(Date.now()-index*3600000).toISOString()}));
   await page.route(/\/v1\/recordings$/,route=>route.fulfill({json:{recordings}}));
   await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[],errors:[]}}));
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
@@ -426,7 +426,7 @@ test('structured shell output renders decoded newlines and retains the exact raw
   await expect(card.locator('.structured-tool-output .output')).toContainText(raw);
 });
 
-test('long captured at-sign scripts retain real syntax colors and exact command copy',async({page})=>{
+test('long at-sign scripts retain real syntax colors and exact command copy',async({page})=>{
   const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
   const op=bundle.projection.operations.find((item:any)=>item.kind==='shell');
   const script="@'\nfrom pathlib import Path\n"+'project description '.repeat(180)+"\n'@ | python -";
@@ -445,11 +445,11 @@ test('long captured at-sign scripts retain real syntax colors and exact command 
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(script);
   await card.getByRole('button',{name:'Show raw request',exact:true}).click();
   await expect(material.locator('.tk-num')).toHaveText('500');
-  await material.getByRole('button',{name:'Copy captured request',exact:true}).click();
+  await material.getByRole('button',{name:'Copy request',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
 });
 
-test('multi-statement captured requests keep every command visible and copyable',async({page})=>{
+test('multi-statement requests keep every command visible and copyable',async({page})=>{
   const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
   const op=bundle.projection.operations.find((item:any)=>item.kind==='shell');
   const command='text(await tools.exec_command({cmd:"git status"})); text(await tools.exec_command({cmd:"git diff"}));';
@@ -732,7 +732,7 @@ test('Modern keeps file evidence, search controls and reading position across se
   await row.click();
   // Approved workspace state can differ between isolated journeys; follow its explicit captured destination.
   const disk = page.getByRole('dialog', {name:'src/cart/total.ts',exact:true});
-  if(await disk.isVisible()) await disk.getByRole('button',{name:'Recorded work on this file'}).click();
+  if(await disk.isVisible()) await disk.getByRole('button',{name:'Agent work on this file'}).click();
   const reader=page.getByRole('dialog',{name:'Work on src/cart/total.ts',exact:true});
   await expect(reader).toBeVisible();
   await reader.getByLabel('Filter actions on this file').fill('Read');
@@ -871,14 +871,14 @@ test('Modern offline bundle keeps keyboard review destinations and bounded phone
 });
 
 
-test('Modern Changes reaches every captured check as one list and returns to the row that was opened', async ({page}) => {
+test('Modern Changes reaches every check as one list and returns to the row that was opened', async ({page}) => {
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.review}`);
   await expect(page.locator('.history')).toBeVisible();
   await page.keyboard.press('Control+k');
   const commands=page.getByRole('dialog',{name:'Navigate workspace'});
-  await commands.getByRole('combobox').fill('Review recorded changes');
-  await commands.getByRole('option',{name:/Review recorded changes and checks/}).click();
+  await commands.getByRole('combobox').fill('Review changes');
+  await commands.getByRole('option',{name:/Review changes and checks/}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});
   const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
@@ -984,7 +984,7 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await expect(comparison.locator('.diff-scroll')).toContainText('43');
   await comparison.getByRole('button',{name:'Side by side',exact:true}).click();
   await expect(comparison.getByRole('region',{name:'Local draft side by side'})).toBeVisible();
-  await expect(comparison).not.toContainText('Captured patch only');
+  await expect(comparison).not.toContainText('Patch only');
   await comparison.getByRole('searchbox',{name:'Find in patch',exact:true}).fill('total');
   const other=desk.getByRole('region',{name:'Workspace file src/cart/discount.ts',exact:true});
   await other.getByRole('button',{name:'Edit file',exact:true}).click();
@@ -1206,7 +1206,7 @@ test('Modern restores source tabs, reading page and Home resume after a hard rel
   await expect(page.getByRole('button',{name:/Resume your last workspace/})).toBeVisible();
 });
 
-test('Modern Home keeps captured sessions on discovery failure and reaches deep matching sessions',async({page})=>{
+test('Modern Home keeps sessions on discovery failure and reaches deep matching sessions',async({page})=>{
   await page.route('**/v1/sources',route=>route.fulfill({status:500,json:{error:'Synthetic discovery failure'}}));
   await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
   await expect(page.locator('.mh-session')).not.toHaveCount(0);await expect(page.getByRole('alert')).toContainText('Local discovery');
@@ -1470,14 +1470,14 @@ test('a real pending-input shape expands the composer and replies to that reques
   expect(prompts).toBe(0);await expect(form).toHaveCount(0);
 });
 
-test('completed native turns open chronological captured review without implying attribution',async({page})=>{
+test('completed native turns open chronological review without implying attribution',async({page})=>{
   const status={available:true,state:'completed',runId:'finished-input',afterSequence:0,harness:'codex',output:'',tools:[],inventory:'runtime',approvals:[]};
   let after:string|null=null;
   await page.route('**/controller',route=>route.fulfill({json:status}));
   await page.route('**/since?*',route=>{after=new URL(route.request().url()).searchParams.get('after');return route.continue();});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await page.getByLabel('More workspace options').click();
-  await page.getByRole('button',{name:'Review new captured activity',exact:true}).click();
+  await page.getByRole('button',{name:'Review new activity',exact:true}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review).toContainText('Since this turn began');
   await expect(review.locator('.review-counts')).toBeVisible();expect(after).toBe('0');
 });
@@ -1511,7 +1511,7 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
   const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
   const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('This session',{exact:true})).toBeVisible();await expect(menu.getByText('Move around',{exact:true})).toBeVisible();await expect(menu.getByText('Share',{exact:true})).toBeVisible();await expect(menu.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await page.keyboard.press('ArrowDown');await expect(menu.locator('.workspace-utilities').locator('button:not(:disabled),a[href],summary').filter({visible:true}).first()).toBeFocused();
-  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values captured for this session.',{exact:true})).toBeVisible();
+  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values recorded for this session.',{exact:true})).toBeVisible();
   await page.keyboard.press('End');await expect(menu.getByRole('link',{name:'Export recording',exact:true}).or(menu.getByRole('button',{name:'Rescan original journal',exact:true})).last()).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
   for(const width of [1440,600]) {
@@ -1535,9 +1535,9 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
   await expect(page.locator('.history')).toBeVisible();
-  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');
-  await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();
-  const dialog=page.getByRole('dialog',{name:'Captured commands',exact:true});await expect(dialog).toContainText('71 matching commands');
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Find commands');
+  await nav.getByRole('option').filter({hasText:'Find commands'}).click();
+  const dialog=page.getByRole('dialog',{name:'Commands',exact:true});await expect(dialog).toContainText('71 matching commands');
   const cards=dialog.locator('.captured-command');await expect(cards).toHaveCount(25);
   const first=cards.first();await expect(first.locator('.commands-limit')).toContainText('Preview');
   await expect(first.getByRole('button',{name:'Copy command',exact:true})).toHaveCount(0);
@@ -1547,13 +1547,13 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await dialog.getByRole('button',{name:'Older',exact:true}).click();await expect(cards).toHaveCount(21);await expect(cards.last()).toContainText('ledger-command-0');
   const newerResponse=page.waitForResponse(response=>response.url().includes('/commands?')&&response.url().includes('direction=newer'));
   await dialog.getByRole('button',{name:'Newer',exact:true}).click();expect((await (await newerResponse).json()).items[0].command).toBe('echo ledger-command-45');await expect(cards.first()).toContainText('ledger-command-45');
-  await dialog.getByRole('searchbox',{name:'Filter captured command previews',exact:true}).fill('ledger-command-1');await expect(dialog).toContainText('11 matching commands');
+  await dialog.getByRole('searchbox',{name:'Filter command previews',exact:true}).fill('ledger-command-1');await expect(dialog).toContainText('11 matching commands');
   await dialog.getByRole('combobox',{name:'Command outcome',exact:true}).selectOption('error');await expect(dialog.locator('.command-outcome').first()).toHaveText('Failed');
   await page.setViewportSize({width:390,height:844});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
-  await cards.first().getByRole('button',{name:'Open captured activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
+  await cards.first().getByRole('button',{name:'Open activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
   await page.keyboard.press('Escape');await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Captured commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
+  const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
 
 });
 
@@ -1563,7 +1563,7 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   const journal=join(dir,'review-insights.jsonl'),timestamp='2026-10-18T00:00:00Z';
   const rows=[JSON.stringify({timestamp,type:'session_meta',payload:{id:'review-insights',cwd:root}})];
   for(let n=0;n<45;n++){
-    rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:`PROMPT_OVERVIEW_${n} — inspect the captured check`}]}}));
+    rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:`PROMPT_OVERVIEW_${n} — inspect the check`}]}}));
     rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`overview-${n}`,arguments:JSON.stringify({cmd:'npm test'})}}));
     rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call_output',call_id:`overview-${n}`,output:JSON.stringify({output:n%7?'1 passed':'1 failed',metadata:{exit_code:n%7?0:1}})}}));
   }
@@ -1572,7 +1572,7 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   const launch=async(name:string)=>{await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(name);await nav.getByRole('option').filter({hasText:name}).click();};
   await launch('Review findings');let dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await expect(dialog).toContainText('Same command failed 7 of 45 runs');await expect(dialog).toContainText('npm test');
   await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
-  await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open captured prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
+  await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
   await page.evaluate(({recordingId})=>localStorage.setItem(`drishya-review-questions-v1:daemon:${recordingId}`,JSON.stringify([{id:'note',operationId:'captured-review-op',sequence:1,title:'Review note',question:'Check the edge condition. sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'Reviewer',status:'open',createdAt:'',updatedAt:''}])),{recordingId});
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Review packet',exact:true});await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const preview=dialog.getByRole('textbox',{name:'Review packet preview',exact:true}),text=await preview.inputValue();expect(text).toContain('45 test runs');expect(text).toContain('Open reviewer questions (1)');expect(text).not.toContain('abcdefghijklmnop');
@@ -1592,7 +1592,7 @@ test('captured changes lead to typed map connections, current reading and a pers
   const connections=page.getByRole('region',{name:'Direct import connections',exact:true});await expect(connections.locator('.map-connection-root')).toHaveText(path);
   await expect(connections).toContainText('static relationships');await connections.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/}).click();
   const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button[aria-label^="Close "]').click();
-  await connections.getByRole('button',{name:'Show full map',exact:true}).click();const changes=page.getByRole('button',{name:/^Changes /});await changes.click();await expect(changes).toHaveAttribute('aria-pressed','true');await expect(page.locator('.map-scope-note')).toContainText('Captured change locations');
+  await connections.getByRole('button',{name:'Show full map',exact:true}).click();const changes=page.getByRole('button',{name:/^Changes /});await changes.click();await expect(changes).toHaveAttribute('aria-pressed','true');await expect(page.locator('.map-scope-note')).toContainText('Change locations');
   const toggle=page.getByRole('switch',{name:'Import paths',exact:true});if(await toggle.getAttribute('aria-checked')==='true')await toggle.click();
   await page.getByRole('button',{name:'Back to work',exact:true}).click();await page.getByRole('button',{name:'Explore repository map',exact:true}).click();await expect(changes).toHaveAttribute('aria-pressed','true');
   await page.getByRole('textbox',{name:'Find a file on the map',exact:true}).fill(path);await page.locator('.map-matches').getByRole('button',{name:path,exact:true}).click();if(await toggle.getAttribute('aria-checked')!=='true')await toggle.click();
@@ -1600,16 +1600,16 @@ test('captured changes lead to typed map connections, current reading and a pers
 });
 
 
-test('saved captured file selections recover as references and unavailable selections do not crash',async({page})=>{
+test('saved file selections recover as references and unavailable selections do not crash',async({page})=>{
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
-  const reader=page.locator('dialog.file-workspace'),choice=reader.getByRole('combobox',{name:'First evidence',exact:true});await expect(choice.locator('option').first()).toBeAttached();
+  const reader=page.locator('dialog.file-workspace'),choice=reader.getByRole('combobox',{name:'First step',exact:true});await expect(choice.locator('option').first()).toBeAttached();
   const key=(await choice.locator('option').last().getAttribute('value'))!;await choice.selectOption(key);
   await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain(key);
   await page.reload();await expect(reader).toBeVisible();await expect(choice).toHaveValue(key);await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries:[['location',{filePanel:'src/checkout/guard.ts'}],['evidence/trail',{cursor:0,visits:[{id:0,location:{filePanel:'src/checkout/guard.ts'},memory:[['file/left','missing/read']]}]}]]}]}}):route.continue());
-  await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('status').filter({hasText:'Saved captured evidence is unavailable'})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+  await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('status').filter({hasText:'This saved item is unavailable'})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
 });
 
 
@@ -1637,7 +1637,7 @@ test('a failed reader screen can recover by navigating to a healthy session',asy
 });
 
 
-test('finding membership reaches every captured operation with filters, exact opening and phone bounds',async({page})=>{
+test('finding membership reaches every operation with filters, exact opening and phone bounds',async({page})=>{
   const journal=join(dir,'finding-members.jsonl'),rows:unknown[]=[{type:'session_meta',payload:{id:'finding-members',cwd:root}}];
   for(let n=0;n<70;n++){rows.push({type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`member-${n}`,arguments:JSON.stringify({cmd:'npm test -- stable-command'})}});rows.push({type:'response_item',payload:{type:'function_call_output',call_id:`member-${n}`,output:JSON.stringify({output:n?'1 passed':'1 failed',metadata:{exit_code:n?0:1}})}});}
   writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const {recordingId:id}=await app.ingest.importSource('codex',journal);
@@ -1652,7 +1652,7 @@ test('finding membership reaches every captured operation with filters, exact op
   await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.getByText('Page 2 of 3 · up to 25 per page',{exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.locator('.finding-member')).toHaveCount(20);
   const filter=dialog.getByRole('searchbox',{name:'Filter finding members',exact:true});await filter.fill('no such member');await expect(dialog.locator('.finding-member')).toHaveCount(0);await filter.fill('');await expect(dialog.locator('.finding-member')).toHaveCount(25);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/finding-members-${width}.png`)});}
-  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toContainText('stable-command');
+  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toContainText('stable-command');
 });
 
 
@@ -1703,9 +1703,9 @@ test('captured excerpt comparison uses current reader consent, exact positions a
   await expect(page.locator('.history')).toBeVisible();
   const grant=page.getByRole('button',{name:/^Enable workspace reading/});await expect(grant).toBeVisible();await grant.click();await expect(grant).toHaveCount(0);
   await page.getByRole('treeitem',{name:'comparison.ts',exact:true}).click();
-  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();
-  const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare captured source with disk',exact:true}).click();
-  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('placed by matching its lines');
+  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Agent work on this file',exact:true}).click();
+  const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare with disk',exact:true}).click();
+  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('placed by matching its lines');
   expect(await comparison.locator('.diff-scroll').textContent()).not.toContain('untouched');
   await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-disk-comparison-phone.png')});
@@ -1794,7 +1794,7 @@ test('file peek keeps tabs beside agent, replaces preview and anchors all four r
 });
 
 
-test('last captured material clears the prompt without an oversized gap',async({page})=>{
+test('last material clears the prompt without an oversized gap',async({page})=>{
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:960});

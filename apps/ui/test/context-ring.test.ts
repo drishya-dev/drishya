@@ -7,12 +7,12 @@ const cumulative = (total: number, contextWindow?: number): UsagePayload => ({ s
 const usage = (byTurn: Record<string, UsagePayload>, latest?: UsagePayload): Projection['usage'] => ({ byTurn, ...(latest ? { latest } : {}) });
 
 describe('context occupancy', () => {
-  it('is the last request’s input over the recorded window', () => {
+  it('is the last request’s input over the context window', () => {
     const c = contextOccupancy(usage({ a: request(40_000, 258_400), b: request(129_200, 258_400) }, cumulative(900_000, 258_400)));
     expect(c).toEqual({ used: 129_200, window: 258_400, fraction: .5 });
     expect(contextLabel(c!)).toContain('50%');
-    expect(contextLabel(c!)).toContain('129,200 of 258,400 recorded window tokens');
-    expect(contextLabel(c!)).toContain('ratio, derived');
+    expect(contextLabel(c!)).toContain('129,200 of 258,400 context window tokens');
+    expect(contextLabel(c!)).toContain('ratio, computed');
     expect(contextLabel(c!)).not.toContain('Context in use');
   });
   it('takes the window from the session point when the request carries none', () => {

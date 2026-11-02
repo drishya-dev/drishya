@@ -9,7 +9,7 @@ export function ReplayEntry(){
  return <button className="btn ghost" disabled={!available} onClick={event=>{
   event.currentTarget.closest('details.workspace-menu')?.removeAttribute('open');
   const app=useApp.getState();app.set({replayDiagnostics:true});if(app.mode==='history')app.togglePlay();
- }}>Replay captured work</button>;
+ }}>Replay this session</button>;
 }
 
 export function ModernReplayTransport({scene,markers}:{scene:Scene;markers:readonly Marker[]}){
@@ -21,7 +21,7 @@ export function ModernReplayTransport({scene,markers}:{scene:Scene;markers:reado
  const turns=markers.filter(marker=>marker.type==='turn').map(marker=>`M${marker.step/total*1000} 0v6`).join('');
  return <footer className="transport modern-replay-transport" aria-label="Replay controls">
   <div className="modern-replay-row">
-   <span className="modern-replay-caption" title="Captured event order; playback is paced for reading, not original execution time.">Replay</span>
+   <span className="modern-replay-caption" title="Event order; playback is paced for reading, not original execution time.">Replay</span>
    <div className="t-controls modern-replay-buttons" role="group" aria-label="Playback">
     <button className="icon-btn" aria-label="Step back" title="Step back (←)" disabled={!position} onClick={()=>useApp.getState().stepBy(-1)}>‹</button>
     <button ref={play} className="play" aria-label={playing?'Pause':'Play'} title="Play / pause (Space)" disabled={!scene.total} onClick={()=>useApp.getState().togglePlay()}>{playing?<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>:<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg>}</button>
@@ -35,7 +35,7 @@ export function ModernReplayTransport({scene,markers}:{scene:Scene;markers:reado
    <button className="icon-btn modern-replay-exit" aria-label="Exit replay" title="Back to live history" onClick={()=>{const app=useApp.getState();app.set({replayDiagnostics:false});app.showHistory();}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5-7 7 7 7M2 12h20"/></svg></button>
   </div>
   <div className="modern-replay-position">
-   <div className="modern-replay-scrubber"><svg viewBox="0 0 1000 8" preserveAspectRatio="none" aria-hidden="true"><path d={turns}/></svg><input type="range" min={0} max={total} step={1} value={position} disabled={!scene.total} aria-label="Timeline" aria-valuemin={0} aria-valuemax={scene.total} aria-valuenow={position} aria-valuetext={`${position} of ${scene.total} captured steps`} onChange={event=>useApp.getState().seek(Number(event.target.value),{hold:true})}/></div>
+   <div className="modern-replay-scrubber"><svg viewBox="0 0 1000 8" preserveAspectRatio="none" aria-hidden="true"><path d={turns}/></svg><input type="range" min={0} max={total} step={1} value={position} disabled={!scene.total} aria-label="Timeline" aria-valuemin={0} aria-valuemax={scene.total} aria-valuenow={position} aria-valuetext={`${position} of ${scene.total} steps`} onChange={event=>useApp.getState().seek(Number(event.target.value),{hold:true})}/></div>
    <output aria-label="Replay position">{position.toLocaleString()} / {scene.total.toLocaleString()}</output>
   </div>
  </footer>;

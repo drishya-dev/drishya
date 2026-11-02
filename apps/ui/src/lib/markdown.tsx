@@ -114,7 +114,7 @@ function inline(s: string, onPath?: PathAction, workspaceRoot?:string): ReactNod
       const reference = prosePath(code,workspaceRoot);
       out.push(
         reference && onPath ? (
-          <button type="button" key={k++} className="md-path" aria-label={`Open captured work for ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path, reference.line)}><code>{code}</code></button>
+          <button type="button" key={k++} className="md-path" aria-label={`Open work on ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path, reference.line)}><code>{code}</code></button>
         ) : (
           <code key={k++}>{code}</code>
         ),
@@ -123,7 +123,7 @@ function inline(s: string, onPath?: PathAction, workspaceRoot?:string): ReactNod
     else if (m[6]) out.push(<em key={k++}>{inline(m[6].slice(1,-1), onPath, workspaceRoot)}</em>);
     else if (m[3]) {
       const reference=prosePath(m[5]!,workspaceRoot);
-      out.push(reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open captured work for ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>);
+      out.push(reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open work on ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>);
     }
     last = i + m[0].length;
   }

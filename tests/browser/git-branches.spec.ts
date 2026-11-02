@@ -35,7 +35,7 @@ test.describe('branch selection fixture',()=>{
     app=new App(join(dir,'store'));id=(await app.ingest.importSource('claude-code',journal)).recordingId;server=await startServer({app,port:0,token:'synthetic-branches-ui'});
   });
   test.afterAll(async()=>{await server?.close();await app?.close();if(dir)remove(dir);});
-  for(const width of [1440,600])test(`reads topic commits and keeps captured links at ${width}px`,async({page})=>{
+  for(const width of [1440,600])test(`reads topic commits and keeps links at ${width}px`,async({page})=>{
     const before=git(root,'rev-parse','HEAD'),dialog=await open(page,server,id,width),picker=dialog.getByRole('combobox',{name:'Read local Git branch'});
     expect(await picker.locator('option').first().textContent()).toBe('main · checked out');
     if(width===600)await dialog.locator('.atlas-references>summary').click();

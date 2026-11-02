@@ -3,7 +3,7 @@ import { contextReport } from '../src/lib/context-report.ts';
 const table = `# Context Usage\n| Category | Tokens | Usage |\n|:---|---:|---:|\n| Messages | 24.0k | 12.0% |\n| Unknown recorded category | unavailable | — |\n| Free space | 150k | 75% |`;
 const captured = (s: string) => `<local-command-stdout>${s}</local-command-stdout>`;
 describe('captured context report', () => {
-  it('requires captured stdout plus the report heading and table, never a prose mention or quoted example', () => {
+  it('requires stdout plus the report heading and table, never a prose mention or quoted example', () => {
     expect(contextReport(table)).toBeUndefined();
     expect(contextReport(`Please explain ${captured(table)}`)).toBeUndefined();
     expect(contextReport(captured('A note about /context\n' + table.replace('# Context Usage','')))).toBeUndefined();

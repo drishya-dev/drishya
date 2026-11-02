@@ -18,17 +18,17 @@ export function capturedContent(text:string,evidence:CapturedContentEvidence={})
  const data:CapturedDataCandidate[]=[],delimited:DelimitedBlock[]=[];
  let limited=false,visited=0;
  const rootMime=mimeOf(evidence.mime);
- const result=()=>({json:data.length>0,data,delimited,resources:capturedResources(text),documents:capturedDocuments(text)??(!limited&&rootMime?.startsWith('text/')?{items:[{field:'Supplied captured text',text,mime:rootMime}],limited:false}:undefined),limited,...(evidence.partial?{partial:evidence.partial}:{}),...(evidence.unavailable?{unavailable:evidence.unavailable}:{})});
+ const result=()=>({json:data.length>0,data,delimited,resources:capturedResources(text),documents:capturedDocuments(text)??(!limited&&rootMime?.startsWith('text/')?{items:[{field:'Text as supplied',text,mime:rootMime}],limited:false}:undefined),limited,...(evidence.partial?{partial:evidence.partial}:{}),...(evidence.unavailable?{unavailable:evidence.unavailable}:{})});
  if(text.length>byteLimit||new TextEncoder().encode(text).length>byteLimit){limited=true;return result();}
  const add=(body:string,field:string,mime:string|undefined,representation:CapturedDataCandidate['representation'])=>{
   if((jsonMime(mime)||/^\s*[\[{]/.test(body))&&!data.some(item=>item.field===field)){
    if(data.length<9)data.push({field,text:body,...(mime?{mime}:{}),representation});else limited=true;
   }
-  if(mime==='text/csv'||mime==='text/tab-separated-values'||(field!=='Whole captured result'&&representation==='captured text'&&/[\r\n]/.test(body)&&/[,\t]/.test(body))){
+  if(mime==='text/csv'||mime==='text/tab-separated-values'||(field!=='Whole result'&&representation==='captured text'&&/[\r\n]/.test(body)&&/[,\t]/.test(body))){
    if(delimited.length<8)delimited.push({field,text:body});else limited=true;
   }
  };
- add(text,'Whole captured result',rootMime,'captured text');
+ add(text,'Whole result',rootMime,'captured text');
  const nested=(body:string,path:string,depth:number)=>{try{visit(parseCapturedJson(body),path,depth+1);}catch{/* Keep incomplete/non-JSON text in its original owner. */}};
  const visit=(value:unknown,path:string,depth:number)=>{
   if(++visited>1024||depth>8){limited=true;return;}

@@ -21,7 +21,7 @@ test('an image known only by its path says so and opens today\'s file only after
  writeFileSync(source,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('claude-code',source)).recordingId;
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator('article.op').filter({hasText:'mockup.png'}).first();
- await expect(card.locator('.path-image-line').first()).toContainText('image bytes not captured');
+ await expect(card.locator('.path-image-line').first()).toContainText('image bytes not recorded');
  await card.getByRole('button',{name:'Open current file'}).click();
  await expect(card.locator('.path-image')).toContainText('Allow workspace reading');
  await expect(card.locator('.path-image-current')).toHaveCount(0);

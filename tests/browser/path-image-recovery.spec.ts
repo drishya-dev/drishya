@@ -21,13 +21,13 @@ async function open(page:import('@playwright/test').Page,id:string){await page.g
 
 test('a refused current image can be retried after consent without reloading or changing the recorded path',async({page})=>{
  const path=await open(page,ids.consent!);await path.getByRole('button',{name:'Open current file',exact:true}).click();await expect(path).toContainText('Allow workspace reading');await expect(path.locator('figure')).toHaveCount(0);
- await approve(page,ids.consent!);await path.getByRole('button',{name:'Retry current file',exact:true}).click();await expect(path.locator('figcaption')).toContainText('It may differ from what the agent saw');await expect.poll(()=>path.locator('img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBe(2);await expect(path).toContainText('image bytes not captured');
+ await approve(page,ids.consent!);await path.getByRole('button',{name:'Retry current file',exact:true}).click();await expect(path.locator('figcaption')).toContainText('It may differ from what the agent saw');await expect.poll(()=>path.locator('img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBe(2);await expect(path).toContainText('image bytes not recorded');
 });
 
 for(const kind of ['missing','corrupt'])test(`a current image ${kind} after the successful probe explains failure and retries only on click`,async({page})=>{
  let requests=0,available=false;await page.route('**/workspace/image?*',async route=>{requests++;if(route.request().resourceType()==='image'&&!available)await route.fulfill({status:kind==='missing'?404:200,contentType:'image/png',body:'invalid image bytes'});else await route.continue();});
  const path=await open(page,ids[kind]!);await approve(page,ids[kind]!);await path.getByRole('button',{name:'Open current file',exact:true}).click();await expect(path.getByRole('status')).toContainText('could not be loaded');await expect(path.locator('figure')).toHaveCount(0);const before=requests;await page.waitForTimeout(150);expect(requests).toBe(before);
- available=true;await path.getByRole('button',{name:'Retry current file',exact:true}).click();await expect.poll(()=>path.locator('img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBe(2);await expect(path.getByRole('status')).toHaveCount(0);await expect(path.locator('figcaption')).toContainText('Current file');await expect(path).toContainText('image bytes not captured');
+ available=true;await path.getByRole('button',{name:'Retry current file',exact:true}).click();await expect.poll(()=>path.locator('img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBe(2);await expect(path.getByRole('status')).toHaveCount(0);await expect(path.locator('figcaption')).toContainText('Current file');await expect(path).toContainText('image bytes not recorded');
  await page.setViewportSize({width:390,height:844});expect(await path.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/path-image-${kind}-phone.png`)});
 });
 

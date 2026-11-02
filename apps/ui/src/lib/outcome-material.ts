@@ -10,7 +10,7 @@ export function outcomeMaterial(preview:string,head:Slice={},tail:Slice={}):Outc
   const report=capturedOutcomes(tail.text,{runner});
   if(report.runs.some(run=>!run.observedOnly)){
    for(const run of report.runs)for(const item of run.cases??[])item.line+=tail.start??0;
-   report.notes.push('Summary from the last captured output slice; earlier case rows are not mapped onto these totals.');return report;
+   report.notes.push('Summary from the last output slice; earlier case rows are not mapped onto these totals.');return report;
   }
  }
  return initial;

@@ -19,7 +19,7 @@ describe('captured material presentation', () => {
   it('retains the original structured preview and escapes content rather than executing markup', () => {
     const text = JSON.stringify([{ path: '<script>bad()</script>', extra: { nested: true } }]);
     const html = renderToStaticMarkup(createElement(StructuredResult, { text }));
-    expect(html).toContain('Original captured preview');
+    expect(html).toContain('Original preview');
     expect(html).toContain('&lt;script&gt;');
     expect(html).toContain('nested');
     expect(html).not.toContain('<script>');
@@ -36,9 +36,9 @@ describe('captured material presentation', () => {
     expect(html).toContain('<th>later</th>');
     expect(html).toContain('<td>null</td>');
     expect(html).toContain('not present');
-    expect(html).toContain('Original captured preview');
+    expect(html).toContain('Original preview');
     const fields = renderToStaticMarkup(createElement(StructuredResult, { text: '{"value":null}' }));
     expect(fields).toContain('<dd>null</dd>');
-    expect(fields).toContain('Original captured preview');
+    expect(fields).toContain('Original preview');
   });
 });

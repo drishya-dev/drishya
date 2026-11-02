@@ -10,7 +10,7 @@ const states: Record<string, OutcomeState> = { passed: 'passed', pass: 'passed',
  * changes an operation's kind, executes wrappers or alters stored evidence. */
 export function capturedOutcomes(raw: string, context: {runner?: 'TAP'|'Playwright'} = {}): OutcomeReport {
   const runs: CapturedOutcome[] = [], notes: string[] = [], outputs: string[] = [];
-  if (raw.length > 131_072) notes.push('Parsing limited to the first 128 KiB of captured preview.');
+  if (raw.length > 131_072) notes.push('Parsing limited to the first 128 KiB of preview.');
   const input = raw.slice(0, 131_072);
   let visited = 0;
   const walk = (value: unknown, depth: number, textAllowed = false): void => {
@@ -112,7 +112,7 @@ export function capturedOutcomes(raw: string, context: {runner?: 'TAP'|'Playwrig
         if(runs.length<8)runs.push({runner,output:index+1,counts,unit:'tests',cases:selected,observedOnly:true});
       }
     }
-    if (suites && !runs.some(run => run.output === index + 1)) notes.push(`Only suite totals reported in captured output ${index + 1}; no test counts inferred.`);
+    if (suites && !runs.some(run => run.output === index + 1)) notes.push(`Only suite totals reported in output ${index + 1}; no test counts inferred.`);
   });
   return { runs, notes: [...new Set(notes)].slice(0, 8) };
 }

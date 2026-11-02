@@ -13,19 +13,19 @@ export function sessionDiff(p: Projection, path: string, after = -1): SessionDif
   const unavailable = (note: string): SessionDiff => ({ basis: 'derived', status: 'unavailable', note, lines: [] });
   const { starts, ends } = operationObservations(p);
   const edits = p.operations.filter(o => o.detail.kind === 'edit' && o.detail.path === path && !o.declined && o.status !== 'error' && o.status !== 'running' && (after < 0 || (ends.get(o.id) ?? starts.get(o.id) ?? -1) > after));
-  if (!edits.length) return unavailable('No completed captured patches.');
-  if (edits.some(o => starts.get(o.id) === undefined)) return unavailable('An edit lacks its captured position; net order is unattributed.');
+  if (!edits.length) return unavailable('No completed patches.');
+  if (edits.some(o => starts.get(o.id) === undefined)) return unavailable('An edit lacks its position; net order is unattributed.');
   edits.sort((a, b) => starts.get(a.id)! - starts.get(b.id)!);
   for (let i = 1; i < edits.length; i++) if ((ends.get(edits[i - 1]!.id) ?? starts.get(edits[i - 1]!.id)!) >= starts.get(edits[i]!.id)!) return unavailable('Overlapping edit intervals do not establish one exact patch order.');
   const first = starts.get(edits[0]!.id)!, last = ends.get(edits.at(-1)!.id) ?? starts.get(edits.at(-1)!.id)!;
-  if (p.timeline.some(t => t.type === 'gap' && t.sequence >= first && t.sequence <= last)) return unavailable('A capture gap interrupts the patch chain. Inspect the captured edits.');
+  if (p.timeline.some(t => t.type === 'gap' && t.sequence >= first && t.sequence <= last)) return unavailable('A capture gap interrupts the patch chain. Inspect the edits.');
   let extent = 0, material = 0;
   for (const op of edits) {
     if (op.detail.kind !== 'edit') continue;
     if (op.status !== 'ok' || !op.detail.hunks.length) return unavailable('A patch outcome or its material is missing.');
-    if (!op.detail.created && op.detail.reconstruction !== 'complete' && op.detail.hunks.every(h => !h.oldLines && !h.oldStart)) return unavailable('A replacement write lacks its captured before-state.');
+    if (!op.detail.created && op.detail.reconstruction !== 'complete' && op.detail.hunks.every(h => !h.oldLines && !h.oldStart)) return unavailable('A replacement write lacks its before-state.');
     for (const h of op.detail.hunks) {
-      if ((h.oldLines > 0 && h.oldStart < 1) || (h.newLines > 0 && h.newStart < 1)) return unavailable('A captured replacement has no exact file line position.');
+      if ((h.oldLines > 0 && h.oldStart < 1) || (h.newLines > 0 && h.newStart < 1)) return unavailable('A replacement has no exact file line position.');
       extent = Math.max(extent, h.oldStart + h.oldLines, h.newStart + h.newLines);
       material += h.lines.length;
     }
@@ -52,19 +52,19 @@ export function sessionDiff(p: Projection, path: string, after = -1): SessionDif
     for (const h of [...op.detail.hunks].sort((a, b) => a.oldStart - b.oldStart)) {
       const oldLines = h.lines.filter(l => l[0] === ' ' || l[0] === '-');
       const newLines = h.lines.filter(l => l[0] === ' ' || l[0] === '+');
-      if (oldLines.length !== h.oldLines || newLines.length !== h.newLines) return unavailable('A captured hunk is incomplete.');
+      if (oldLines.length !== h.oldLines || newLines.length !== h.newLines) return unavailable('A hunk is incomplete.');
       const at = (h.oldLines ? h.oldStart - 1 : h.oldStart) + shift;
       if (h.oldStart < previousEnd) return unavailable('Overlapping hunks do not establish one exact patch.');
       previousEnd = h.oldStart + h.oldLines;
-      if (h.newStart !== at + (h.newLines ? 1 : 0)) return unavailable('Captured old and new hunk positions disagree.');
-      if (at < 0 || at + h.oldLines > current.length) return unavailable('A patch falls outside its captured line range.');
+      if (h.newStart !== at + (h.newLines ? 1 : 0)) return unavailable('Old and new hunk positions disagree.');
+      if (at < 0 || at + h.oldLines > current.length) return unavailable('A patch falls outside its line range.');
       const replacement: Token[] = []; let offset = 0;
       for (const line of h.lines) {
         if (line === '\\ No newline at end of file') continue;
         if (line[0] === '+') { replacement.push({ text: line.slice(1), attribution }); continue; }
-        if (line[0] !== ' ' && line[0] !== '-') return unavailable('A captured hunk contains unsupported material.');
+        if (line[0] !== ' ' && line[0] !== '-') return unavailable('A hunk contains unsupported material.');
         const token = current[at + offset++]!;
-        if (token.text !== undefined && token.text !== line.slice(1)) return unavailable('Captured patches do not form one continuous file state.');
+        if (token.text !== undefined && token.text !== line.slice(1)) return unavailable('Patches do not form one continuous file state.');
         token.text = line.slice(1);
         if (line[0] === ' ') replacement.push(token);
         else if (token.base !== undefined) removed.set(token.base, attribution);
@@ -105,11 +105,11 @@ export function sessionDiff(p: Projection, path: string, after = -1): SessionDif
     while (suffix < Math.min(deleted.length, added.length) - prefix && deleted[deleted.length - 1 - suffix]!.text === added[added.length - 1 - suffix]!.token.text) suffix++;
     for (let i = prefix; i < deleted.length - suffix; i++) {
       const t = deleted[i]!, attribution = removed.get(t.base!);
-      if (t.text === undefined || !attribution) return unavailable('A removed line has no captured material or operation.');
+      if (t.text === undefined || !attribution) return unavailable('A removed line has no material or operation.');
       lines.push({ kind: 'remove', text: t.text, oldLine: t.base! + 1, attribution });
     }
     for (const { token: t, line } of added.slice(prefix, added.length - suffix)) lines.push({ kind: 'add', text: t.text!, newLine: line, attribution: t.attribution! });
     oldAt = stop;
   }
-  return { basis: 'derived', status: 'complete', lines, note: 'Net text of the consistent captured patch chain, not independent verification of disk state. Final newline differences are not represented.' };
+  return { basis: 'derived', status: 'complete', lines, note: 'Net text of the consistent patch chain, not independent verification of disk state. Final newline differences are not represented.' };
 }

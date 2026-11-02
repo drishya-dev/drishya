@@ -32,7 +32,7 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
     try {
       const next = await source.queue(owner, {through, before});
       if (active.current && token === request.current) {setLoaded({key, page: next}); setError('');}
-    } catch {if (active.current && token === request.current) setError('Recorded queue receipts could not be loaded.');}
+    } catch {if (active.current && token === request.current) setError('Queue receipts could not be loaded.');}
   };
   useEffect(() => {void load(); return () => {request.current++;};}, [source, key, mode === 'history' ? revision : undefined]);
   useEffect(() => {setOpen(false); select(undefined); setChunk(undefined); setError(''); reading.current++;}, [key]);
@@ -42,7 +42,7 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
     setChunk(undefined); setBusy(true); setCopied(false); setError('');
     void source.queueInput(owner, selected.id, through).then(next => {
       if (active.current && token === reading.current) setChunk(next);
-    }).catch(() => {if (active.current && token === reading.current) setError('The recorded input text is unavailable. Its image references remain below.');})
+    }).catch(() => {if (active.current && token === reading.current) setError('The input text is unavailable. Its image references remain below.');})
       .finally(() => {if (active.current && token === reading.current) setBusy(false);});
     return () => {reading.current++;};
   }, [selected?.id, source, owner, through]);
@@ -62,7 +62,7 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
       if (!active.current || token !== reading.current) return;
       setChunk(next);
       if (copy) {await navigator.clipboard.writeText(next.text); if (active.current && token === reading.current) setCopied(true);}
-    } catch {if (active.current && token === reading.current) setError('The complete recorded input could not be read or copied. Retry the reading.');}
+    } catch {if (active.current && token === reading.current) setError('The complete input could not be read or copied. Retry the reading.');}
     finally {if (active.current && token === reading.current) setBusy(false);}
   };
   if (!source?.queue || !owner || mode === 'replay' && !through || !data?.total && !error) return null;
@@ -70,15 +70,15 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   // Replay hides the composer, so its receipts sit on the page itself, like an exported bundle's.
   const floating = standalone || mode === 'replay';
   const view = <div className="queued-input-receipts" data-waiting={waiting || undefined} style={floating ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', padding: '0 4px'}}>
-    <button type="button" className="btn ghost small" aria-label="Read recorded queued inputs" style={floating || waiting || following ? undefined : {visibility: 'hidden'}} onClick={() => {setOpen(true); if (latest) select(latest);}}>
+    <button type="button" className="btn ghost small" aria-label="Read queued inputs" style={floating || waiting || following ? undefined : {visibility: 'hidden'}} onClick={() => {setOpen(true); if (latest) select(latest);}}>
       <span aria-live="polite">{waiting ? 'Queued input recorded' : `Queued inputs${data?.total ? ` · ${data.total}` : ''}`}</span>
     </button>
-    {open && <ReadingDialog title="Recorded queued inputs" close={() => {setOpen(false); select(undefined); setError('');}} className="queue-input-reader" style={{width: 'min(880px, calc(100vw - 32px))'}}>
+    {open && <ReadingDialog title="Queued inputs" close={() => {setOpen(false); select(undefined); setError('');}} className="queue-input-reader" style={{width: 'min(880px, calc(100vw - 32px))'}}>
       <div style={{padding: '16px 20px', minWidth: 0}}>
         <p className="muted small">Receipts show what the harness recorded in its queue. They do not establish delivery or inclusion in context. Delivered prompts appear separately in History.</p>
         {!!data?.items.length && <div aria-label="Queued input receipts" style={{maxHeight: '160px', overflow: 'auto', display: 'grid', gap: 4, marginBottom: 14}}>
           {data.items.map(item => <button type="button" key={item.id} className={`btn ghost small${selected?.id === item.id ? ' active' : ''}`} aria-pressed={selected?.id === item.id} onClick={() => select(item)} style={{textAlign: 'left', justifyContent: 'flex-start', whiteSpace: 'normal', overflowWrap: 'anywhere'}}>
-            {item.preview || (item.images?.length ? 'Image input' : 'Input without recorded text')} · {labels[item.state]}
+            {item.preview || (item.images?.length ? 'Image input' : 'Input with no text')} · {labels[item.state]}
           </button>)}
         </div>}
         <div style={{display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12}}>
@@ -86,16 +86,16 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
           {!!data && cursor.current.before !== undefined && <button type="button" className="btn small" onClick={() => {cursor.current = {key}; select(undefined); void load();}}>Newest receipts</button>}
           <small className="muted">{data?.total ?? 0} recorded enqueue receipts{mode === 'replay' ? ' at this replay point' : ''}</small>
         </div>
-        {selected && <section aria-label="Recorded queued input">
+        {selected && <section aria-label="Queued input">
           <p className="small"><strong>{labels[(data?.items.find(item => item.id === selected.id) ?? selected).state]}</strong>{selected.time && <> · <time dateTime={selected.time}>{new Date(selected.time).toLocaleString()}</time></>}</p>
           {chunk && <><pre data-queued-input-text style={{whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '48dvh', overflow: 'auto', userSelect: 'text', margin: '12px 0'}}>{chunk.text || 'No text recorded.'}</pre>
             <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>{chunk.hasMore && <button type="button" className="btn small" disabled={busy} onClick={() => void more()}>Read more input</button>}<button type="button" className="btn ghost small" disabled={busy} onClick={() => void more(true)}>{copied ? 'Copied' : 'Copy complete input'}</button></div>
           </>}
           {selected.images?.map((image, index) => image.sha && source.imageUrl
-            ? <img key={image.sha + index} alt={`Captured queued input image ${index + 1}`} src={source.imageUrl(owner, image.sha)} style={{display: 'block', maxWidth: '100%', maxHeight: '65dvh', objectFit: 'contain', margin: '12px auto'}} />
+            ? <img key={image.sha + index} alt={`Queued input image ${index + 1}`} src={source.imageUrl(owner, image.sha)} style={{display: 'block', maxWidth: '100%', maxHeight: '65dvh', objectFit: 'contain', margin: '12px auto'}} />
             : <p key={index} className="muted small">Image bytes not kept{image.omitted ? `: ${image.omitted}` : ''}.</p>)}
         </section>}
-        {busy && <p className="muted small" role="status">Reading captured input…</p>}
+        {busy && <p className="muted small" role="status">Reading input…</p>}
         {error && <p className="bad small" role="alert">{error} <button type="button" className="btn ghost small" onClick={() => void load()}>Retry receipts</button></p>}
       </div>
     </ReadingDialog>}

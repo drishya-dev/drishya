@@ -33,16 +33,16 @@ export function excerptSpan(excerpt:string[],file:string[],first:number) {
 export function capturedDiskPair(captured:ArtifactSlice,disk:CurrentFile,startLine?:number) {
   if(!captured.available||captured.start!==0||captured.hasMore||captured.truncated||captured.totalBytes>256*1024)throw new Error('Compare requires complete stored material up to256 KiB. Read its available source pages instead.');
   const artifact=captured.artifact;
-  if(!['snapshot','excerpt'].includes(artifact.kind)||artifact.availability!=='complete')throw new Error('This captured material is not a complete source snapshot or excerpt.');
+  if(!['snapshot','excerpt'].includes(artifact.kind)||artifact.availability!=='complete')throw new Error('This material is not a complete source snapshot or excerpt.');
   if(disk.hasMore||disk.start!==0)throw new Error('Current source is incomplete. Read the file separately.');
   const before=plain(captured.text);
-  let after=plain(disk.text),afterLabel='Current disk',label=artifact.provenance.kind==='derived'?'Reconstructed source snapshot':'Captured whole-file snapshot';
+  let after=plain(disk.text),afterLabel='Current disk',label=artifact.provenance.kind==='derived'?'Reconstructed source snapshot':'Whole-file snapshot';
   if(artifact.kind==='excerpt'){
     const first=artifact.range?.start??startLine;
-    if(!Number.isSafeInteger(first)||first!<1)throw new Error('Captured excerpt has no exact file-line position.');
+    if(!Number.isSafeInteger(first)||first!<1)throw new Error('Excerpt has no exact file-line position.');
     const file=after.split('\n'),span=excerptSpan(before.replace(/\n$/,'').split('\n'),file,first!-1);
     after=file.slice(span.start,span.end).join('\n');
-    label=`Captured lines ${first}–${first!+captured.returnedLines-1}`;
+    label=`Lines ${first}–${first!+captured.returnedLines-1}`;
     afterLabel=span.found?`Current disk · lines ${span.start+1}–${span.end}`:'Current disk · same line numbers, none of these lines were found';
   }
   if(new TextEncoder().encode(after).length>256*1024)throw new Error('Current comparison exceeds256 KiB. Read source separately.');

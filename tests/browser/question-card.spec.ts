@@ -8,7 +8,7 @@ let dir:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-question-'));app=new App(dir);server=await startServer({app,port:0});});
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 
-test('a captured AskUserQuestion reads as a question with its answer, not raw JSON',async({page})=>{
+test('a AskUserQuestion reads as a question with its answer, not raw JSON',async({page})=>{
  const timestamp='2026-10-18T00:00:00Z',session='ask-q',source=join(dir,session+'.jsonl');
  const question='Which area should the fix start in?';
  const rows=[

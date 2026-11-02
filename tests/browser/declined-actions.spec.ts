@@ -34,5 +34,5 @@ test('declined and blocked actions say they did not run and are not counted as f
  await expect(page.locator('.state-declined')).toHaveCount(2);
  await expect(page.locator('.state-error')).toHaveCount(1);
  await expect(page.locator('.turn-ledger').first()).toContainText('1 failed');await expect(page.locator('.turn-ledger').first()).toContainText('2 declined');
- if(process.env.IMG_SHOT)await page.getByRole('region',{name:'Captured work'}).screenshot({path:resolve('.local/declined.png')});
+ if(process.env.IMG_SHOT)await page.getByRole('region',{name:'Session work'}).screenshot({path:resolve('.local/declined.png')});
 });

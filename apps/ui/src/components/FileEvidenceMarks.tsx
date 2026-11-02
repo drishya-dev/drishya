@@ -31,9 +31,9 @@ export function useFileEvidence(paths: string[], projection: Projection, shown: 
 }
 
 export function fileEvidenceDescription(evidence?: FileEvidence, count?: number): string | undefined {
-  if (count) return `${count} file${count===1?'':'s'} with captured activity`;
+  if (count) return `${count} file${count===1?'':'s'} with activity`;
   if (!evidence) return undefined;
-  return [evidence.readCalls ? `${evidence.readCalls} captured read calls` : '', evidence.change ? `Captured ${evidence.change==='A'?'creation':evidence.change==='D'?'deletion':'edit/write'}${evidence.changeStatus==='unknown'?', outcome not reported':''}` : '', evidence.outside ? outsideLabel(evidence.outside) : '', evidence.now ? 'Open captured tool call' : ''].filter(Boolean).join('; ') || undefined;
+  return [evidence.readCalls ? `${evidence.readCalls} read calls` : '', evidence.change ? `Captured ${evidence.change==='A'?'creation':evidence.change==='D'?'deletion':'edit/write'}${evidence.changeStatus==='unknown'?', outcome not reported':''}` : '', evidence.outside ? outsideLabel(evidence.outside) : '', evidence.now ? 'Open tool call' : ''].filter(Boolean).join('; ') || undefined;
 }
 
 const outsideLabel = (n: number) => `Changed on disk outside Claude Code’s edits${n > 1 ? ` (${n} times)` : ''}: by you, another program or a command`;
@@ -43,8 +43,8 @@ export function FileEvidenceMarks({ evidence }: { evidence?: FileEvidence }) {
   if (!evidence || !evidence.change && !evidence.now && !evidence.outside) return null;
   const change = evidence.change === 'A' ? 'creation' : evidence.change === 'D' ? 'deletion' : 'edit/write';
   return <span className="file-evidence">
-    {evidence.change && <span className={`file-change change-${evidence.change}`} title={`Captured ${change}${evidence.changeStatus === 'unknown' ? ' · outcome not reported' : ''}`} aria-label={`Captured ${change}${evidence.changeStatus === 'unknown' ? ', outcome not reported' : ''}`}>{evidence.change}</span>}
+    {evidence.change && <span className={`file-change change-${evidence.change}`} title={`${change[0]!.toUpperCase()+change.slice(1)}${evidence.changeStatus === 'unknown' ? ' · outcome not reported' : ''}`} aria-label={`${change[0]!.toUpperCase()+change.slice(1)}${evidence.changeStatus === 'unknown' ? ', outcome not reported' : ''}`}>{evidence.change}</span>}
     {!!evidence.outside && <span className="file-outside" title={outsideLabel(evidence.outside)} aria-label={outsideLabel(evidence.outside)}>≠</span>}
-    {evidence.now && <span className="file-now" title="Open captured tool call" aria-label="Open captured tool call">now</span>}
+    {evidence.now && <span className="file-now" title="Open tool call" aria-label="Open tool call">now</span>}
   </span>;
 }

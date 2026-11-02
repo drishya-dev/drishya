@@ -172,7 +172,7 @@ function WorkspaceViewer() {
     return () => ro.disconnect();
   }, [!!projection, foldersHidden, explore, experience]);
 
-  if (!projection || !scene || !historical) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
+  if (!projection || !scene || !historical) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading history…'}</div>;
   // Keep the viewport and finite arrivals alive across paged forward steps.
   // A backward seek must conceal later evidence until its as-of page arrives.
   const awaitingEarlierPage = !!historyPage && scene.step > step;
@@ -204,7 +204,7 @@ function WorkspaceViewer() {
       <Search projection={projection} />
       <ScreenHost />
     </div>
-    {awaitingEarlierPage && <div className="center notice" style={{ position: 'absolute', inset: 0 }} role="status">{error ? <><p role="alert">History update failed: {error}</p><button className="btn" onClick={() => void useApp.getState().loadHistoryWindow({ step }).catch(failure => useApp.setState({ error: failure.message }))}>Retry</button><button className="btn" onClick={() => useApp.setState({ screen: 'home', playing: false })}>Back to sessions</button></> : 'Loading captured history…'}</div>}
+    {awaitingEarlierPage && <div className="center notice" style={{ position: 'absolute', inset: 0 }} role="status">{error ? <><p role="alert">History update failed: {error}</p><button className="btn" onClick={() => void useApp.getState().loadHistoryWindow({ step }).catch(failure => useApp.setState({ error: failure.message }))}>Retry</button><button className="btn" onClick={() => useApp.setState({ screen: 'home', playing: false })}>Back to sessions</button></> : 'Loading history…'}</div>}
     </>
   );
 }
@@ -259,12 +259,12 @@ function SessionLine({ projection }: { projection: Projection }) {
   const revealBranch = (element: HTMLElement) => { const box = element.getBoundingClientRect(); element.style.setProperty('--branch-reading-width', box.width + 'px'); element.style.setProperty('--branch-reading-left', box.left + 'px'); element.dataset.reading = ''; };
   const dismissBranch = (element: HTMLElement) => { if (!element.matches(':hover,:focus')) delete element.dataset.reading; };
   const branch = mode === 'history' && !selectedId?.includes('+') && !recording.privacyOutdated && projection.recordedBranch && rootKey(projection.recordedBranch.workspaceRoot) === rootKey(recording.workspaceRoot) ? projection.recordedBranch : undefined;
-  const meta = [repo ?? (source?.kind === 'bundle' ? 'Offline evidence' : undefined), HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ');
+  const meta = [repo ?? (source?.kind === 'bundle' ? 'Offline session' : undefined), HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ');
   const state = !recording.live ? undefined : working ? 'working' : 'watching';
   const stateText = state === 'working' ? 'Agent working now' : state === 'watching' ? 'Watching the journal; the agent is quiet' : undefined;
   return <div className="session-line" title={[title, meta, stateText].filter(Boolean).join('\n')}>
     <span className="session-line-title">{title}</span>
-    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}<ContextRing usage={projection.usage} /><span className="session-line-repo">{repo ?? (source?.kind === 'bundle' ? 'Offline evidence' : '')}</span>{branch && <span className="session-line-branch" tabIndex={0} onMouseEnter={event => revealBranch(event.currentTarget)} onFocus={event => revealBranch(event.currentTarget)} onMouseLeave={event => dismissBranch(event.currentTarget)} onBlur={event => dismissBranch(event.currentTarget)} aria-label={`Recorded branch: ${branch.name}. Last branch captured in session metadata; not current Git`} title="Last branch captured in session metadata; not current Git"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="19" r="2.5"/><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6"/></svg><span className="session-branch-name">{branch.name}</span></span>}<span className="session-line-harness">{[HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ')}</span></span>
+    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}<ContextRing usage={projection.usage} /><span className="session-line-repo">{repo ?? (source?.kind === 'bundle' ? 'Offline session' : '')}</span>{branch && <span className="session-line-branch" tabIndex={0} onMouseEnter={event => revealBranch(event.currentTarget)} onFocus={event => revealBranch(event.currentTarget)} onMouseLeave={event => dismissBranch(event.currentTarget)} onBlur={event => dismissBranch(event.currentTarget)} aria-label={`Branch: ${branch.name}. Last branch in session metadata; not current Git`} title="Last branch in session metadata; not current Git"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="19" r="2.5"/><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6"/></svg><span className="session-branch-name">{branch.name}</span></span>}<span className="session-line-harness">{[HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ')}</span></span>
   </div>;
 }
 
@@ -283,10 +283,10 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
   return <header className={`studio-header crown${modern ? ' modern-session-header' : ''}`}>
     {modern ? <div className="modern-identity"><button className="brand" aria-label="Drishya" title="All sessions" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button><SessionLine projection={projection} /></div>
       : <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>}
-    {!modern&&<div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline evidence' : 'Local workspace'}</span><h1 title={projection.title || recording?.title}>{projection.title || recording?.title || 'Untitled session'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>}
+    {!modern&&<div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline session' : 'Local workspace'}</span><h1 title={projection.title || recording?.title}>{projection.title || recording?.title || 'Untitled session'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>}
     {modern&&connection==='reconnecting'&&<span role="status" className="session-connection">Reconnecting…</span>}
     <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}{modern && <EvidenceReview key={`changes-${id}`} projection={projection} label="Changes" />}{modern && <span className="workspace-view-slot" ref={registerHeaderSlot} />}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu" onToggle={event => { if (event.target === event.currentTarget) setMenuOpen(event.currentTarget.open); }}><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div className={modern?"workspace-utilities":undefined}>{modern&&<span className="utility-heading">This session</span>}<NativeReturnEntry deferMoments={modern}/><SessionSegments/>{modern && <div className="modern-evidence-actions"><ReviewQuestionsEntry key={`questions/${id}`} /><SavedMomentsEntry/><SessionIdentity/></div>}<UsagePeek />{modern ? <><span className="utility-heading">Move around</span><ReplayEntry/><ScreenEntry menuOpen={menuOpen} /><SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><span className="utility-heading">Share</span><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<RescanEntry menuOpen={menuOpen} /></> : <><ScreenEntry menuOpen={menuOpen} /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><RescanEntry menuOpen={menuOpen} /></>}</div></details></div>
-    {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Recorded agent shortcuts">{scene.agents.map(state => {
+    {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Agent shortcuts">{scene.agents.map(state => {
       const agent = projection.agents.find(a => a.id === state.id);
       const parent = projection.agents.find(a => a.id === state.parentId);
       return <button key={state.id} data-origin-agent={state.id} role="switch" aria-checked={filter?.agentId === state.id} aria-label={`Focus ${agentName(agent)} from agent bar`} title={`${agentName(agent)} · ${state.state}${liveMetadata&&agent?.model ? ` · ${agent.model}` : ''}${liveMetadata&&agent?.effort ? ` · ${agent.effort} effort` : ''}${parent ? ` · child of ${agentName(parent)}` : ''}`} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}><span className="agent-dot" /><span>{agentName(agent)}</span><small>{[state.state,liveMetadata&&agent?.model,liveMetadata&&agent?.effort&&`${agent.effort} effort`].filter(Boolean).join(' · ')}</small></button>;
@@ -333,7 +333,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
         {recording && recording.health?.state !== 'following' && recording.health?.state !== 'idle' && <HealthTag r={recording} />}
         {recording?.privacyOutdated && <span className="tag warn" title="Imported under an older privacy policy. Forget it and import it again to apply the current redaction.">older privacy policy</span>}
       </div>
-      {scene.agents.length > 1 && <div className="agents" role="group" aria-label="Recorded agents">
+      {scene.agents.length > 1 && <div className="agents" role="group" aria-label="Agents">
         {scene.agents.map((a) => {
           const agent = projection.agents.find((x) => x.id === a.id);
           const on = filter?.agentId === a.id;
@@ -386,7 +386,7 @@ function SessionIdentity() {
   const recording=useApp(s=>s.recording),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
   const [status,setStatus]=useState('');
   if(!recording||!id)return null;
-  return <Disclosure surface="session/details" className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline evidence bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span></Disclosure>;
+  return <Disclosure surface="session/details" className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline session bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span></Disclosure>;
 }
 
 // ─── dock: native instruments, then MCP servers by name ──────────────────────────────────
@@ -475,7 +475,7 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
   );
   return (
     <footer className="transport">
-      <button className="btn ghost" onClick={() => { setDiagnostic(false); showHistory(); }} title="Show all recorded work">← History</button>
+      <button className="btn ghost" onClick={() => { setDiagnostic(false); showHistory(); }} title="Show all work">← History</button>
       <button className="icon-btn txt" aria-pressed={lowResource} onClick={() => setLowResource(!lowResource)}>{lowResource ? 'Low resource' : 'Standard'}</button>
       <div className="t-controls">
         <button className="icon-btn" onClick={() => stepBy(-1)} aria-label="Step back" title="Step back (←)">‹</button>
@@ -562,10 +562,10 @@ function PromptNavigation({ scene, projection }: { scene: Scene; projection: Pro
     try { const step = await source.historyMarker(recordingId, chosen ?? (direction > 0 ? 0 : scene.total + 1), ['turn'], direction); if (step !== undefined && useApp.getState().recordingId === recordingId) await open(step); }
     catch(e) { if (useApp.getState().recordingId === recordingId) useApp.setState({error:(e as Error).message}); }
   };
-  return <nav className="prompt-navigation" aria-label="Captured prompts">
-    {navigateAll && <button className="icon-btn" aria-label="Previous captured prompt" onClick={() => void adjacent(-1)}>‹</button>}
-    <div className="prompt-chapters" title={navigateAll ? 'Sampled chapters; Previous/Next visits every captured prompt' : undefined}>{sampled.map((turn, i) => <button key={turn.step} aria-pressed={chosen === turn.step} title={turn.label} onClick={() => void open(turn.step)}><span>{page ? 'Prompt' : turns.indexOf(turn) + 1}</span><span className="prompt-copy">{turn.label}</span></button>)}</div>
-    {navigateAll && <button className="icon-btn" aria-label="Next captured prompt" onClick={() => void adjacent(1)}>›</button>}
+  return <nav className="prompt-navigation" aria-label="Prompts">
+    {navigateAll && <button className="icon-btn" aria-label="Previous prompt" onClick={() => void adjacent(-1)}>‹</button>}
+    <div className="prompt-chapters" title={navigateAll ? 'Sampled chapters; Previous/Next visits every prompt' : undefined}>{sampled.map((turn, i) => <button key={turn.step} aria-pressed={chosen === turn.step} title={turn.label} onClick={() => void open(turn.step)}><span>{page ? 'Prompt' : turns.indexOf(turn) + 1}</span><span className="prompt-copy">{turn.label}</span></button>)}</div>
+    {navigateAll && <button className="icon-btn" aria-label="Next prompt" onClick={() => void adjacent(1)}>›</button>}
     {chosen !== undefined && <button className="btn ghost" onClick={() => { const state=useApp.getState();state.set({selectedOp:undefined,expandedOp:undefined,follow:true,held:false,playing:true});state.seek(chosen - 1); }}>Follow from prompt</button>}
   </nav>;
 }
@@ -595,11 +595,11 @@ function ActivityTimeline({ scene, projection }: { scene: Scene; projection: Pro
   const edits = count('edit');
   if (!all.length) return <div className="transport-spacer" />;
   return (
-    <div className="activity" role="group" aria-label="Recorded activity">
+    <div className="activity" role="group" aria-label="Activity">
       <div className="activity-jump">
-        <button onClick={() => go(['fail'], -1)} disabled={!failures} aria-label="Previous failure" title="Previous recorded failure">‹</button>
-        <button onClick={() => go(['fail'], 1)} disabled={!failures} title="Next recorded failure"><span className="k-fail-dot" />Next failure</button>
-        <button onClick={() => go(['edit'], 1)} disabled={!edits} title="Next recorded edit"><span className="k-edit-dot" />Next edit</button>
+        <button onClick={() => go(['fail'], -1)} disabled={!failures} aria-label="Previous failure" title="Previous failure">‹</button>
+        <button onClick={() => go(['fail'], 1)} disabled={!failures} title="Next failure"><span className="k-fail-dot" />Next failure</button>
+        <button onClick={() => go(['edit'], 1)} disabled={!edits} title="Next edit"><span className="k-edit-dot" />Next edit</button>
       </div>
       {/* Pointer shortcut only: keyboard and screen-reader users have the jump buttons, so the
           ticks stay out of the accessibility tree rather than adding hundreds of unnamed stops. */}
@@ -667,12 +667,12 @@ function Briefing({ projection }: { projection: Projection }) {
         <button className={range === 'since' ? 'on' : ''} onClick={() => setRange('since')}>Since step {step}</button>
       </div>
       <div className="facts">
-        <p className="muted small">Captured facts — counted directly from the recording.</p>
+        <p className="muted small">Counted directly from the session.</p>
         <ul>
           {counts ? <><li>{counts.edits} file{counts.edits === 1 ? '' : 's'} changed: {counts.editedFiles.slice(0, 6).join(', ')}{counts.editedFiles.length > 6 ? '…' : ''}</li>
           <li>{counts.tests} test run{counts.tests === 1 ? '' : 's'} — last: {counts.lastTest ?? 'none'}</li>
           <li>{counts.errors} failed operation{counts.errors === 1 ? '' : 's'}</li>
-          <li>{counts.agents} agent{counts.agents === 1 ? '' : 's'} active</li></> : <li>Loading recorded facts…</li>}
+          <li>{counts.agents} agent{counts.agents === 1 ? '' : 's'} active</li></> : <li>Loading…</li>}
         </ul>
       </div>
       {source?.kind === 'daemon' ? (
@@ -794,8 +794,8 @@ function Search({ projection }: { projection: Projection }) {
         <input autoFocus aria-label="Search prose, commands, paths" placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="search-close" aria-label="Close search" popoverTarget="recording-search" popoverTargetAction="hide">×</button>
       </div>
-      <div className="search-scopes" role="group" aria-label="Search scope"><button aria-pressed={scope === 'captured'} onClick={() => setScope('captured')}>Captured work</button><button aria-pressed={scope === 'files'} onClick={() => setScope('files')}>Indexed files</button></div>
-      <p className="search-scope-note">{scope === 'captured' ? mode === 'replay' ? 'Captured work visible at this replay step' : 'Whole recording · up to 50 results per recording' : graph?.temporal === 'current' ? `Current index${graph.stale ? ' · out of date' : ''}${graph.truncated ? ' · partial' : ''} · first 50 matches · names only` : 'Captured file references · first 50 matches · names only'}</p>
+      <div className="search-scopes" role="group" aria-label="Search scope"><button aria-pressed={scope === 'captured'} onClick={() => setScope('captured')}>Session work</button><button aria-pressed={scope === 'files'} onClick={() => setScope('files')}>Indexed files</button></div>
+      <p className="search-scope-note">{scope === 'captured' ? mode === 'replay' ? 'Session work visible at this replay step' : 'Whole recording · up to 50 results per recording' : graph?.temporal === 'current' ? `Current index${graph.stale ? ' · out of date' : ''}${graph.truncated ? ' · partial' : ''} · first 50 matches · names only` : 'File references · first 50 matches · names only'}</p>
       <div className="search-results">
         {scope === 'captured' && visibleHits.map((h, i) => (
           <Fragment key={i}>
@@ -808,7 +808,7 @@ function Search({ projection }: { projection: Projection }) {
           </Fragment>
         ))}
         {scope === 'files' && files.map(file => <button key={file.id} onClick={() => {const ref=prosePath(file.path,useApp.getState().recording?.workspaceRoot,true);if(ref)openCapturedPath(ref);}}>{file.path}<span aria-hidden="true"> ↗</span></button>)}
-        {loading && <div role="status">Searching captured work…</div>}
+        {loading && <div role="status">Searching session…</div>}
         {error && <div role="alert">{error}</div>}
         {q.trim().length >= 2 && !loading && !error && (scope === 'captured' ? visibleHits.length === 0 : files.length === 0) && <div className="muted">No matches{scope === 'captured' && mode === 'replay' ? ' at this replay step' : ''}</div>}
       </div>

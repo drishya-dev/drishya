@@ -3,7 +3,7 @@ import {test,expect} from '@playwright/test';import {App} from '../../apps/daemo
 let dir:string,id:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-source-controls-'));writeFileSync(join(dir,'reading.ts'),Array.from({length:400},(_,i)=>`export const captured${i+1} = ${i+1};`).join('\n'));
- const journal=join(dir,'session.jsonl');writeFileSync(journal,[{type:'session_meta',payload:{id:'source-controls',cwd:dir}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Inspect the reading file'}]}},{type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'Captured fixture response'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
+ const journal=join(dir,'session.jsonl');writeFileSync(journal,[{type:'session_meta',payload:{id:'source-controls',cwd:dir}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Inspect the reading file'}]}},{type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'Fixture response'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
  app=new App(join(dir,'data'));id=(await app.ingest.importSource('codex',journal)).recordingId;server=await startServer({app,port:0});
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});

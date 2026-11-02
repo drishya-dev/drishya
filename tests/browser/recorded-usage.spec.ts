@@ -42,7 +42,7 @@ test('recorded usage stays sourced and hides absent values', async ({ page }) =>
       await expect(usage).toContainText('29,250');
       await expect(usage.getByText('Cost · harness estimate')).toHaveCount(0);
     } else if (name === 'missing') {
-      await expect(usage).toContainText('No usage values captured');
+      await expect(usage).toContainText('No usage values recorded');
       await expect(usage.locator('dt')).toHaveCount(0);
     } else {
       await expect(usage).toContainText('Recorded · Claude cost-state');
@@ -74,7 +74,7 @@ test('existing local recorded usage reads through an isolated copy without nativ
       await page.getByLabel('More workspace options', { exact: true }).click();
       if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();
       await expect(page.locator('.usage-peek')).toContainText(row.harness === 'codex' ? 'Recorded · Codex token_count' : 'Recorded · Claude');
-      await expect(page.locator('.usage-peek section[aria-label="Recorded usage"] dt').first()).toBeVisible();
+      await expect(page.locator('.usage-peek section[aria-label="Usage"] dt').first()).toBeVisible();
     }
   } finally { await local.close(); await isolated.close(); }
 });

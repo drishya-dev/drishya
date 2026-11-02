@@ -13,7 +13,7 @@ test.beforeAll(async()=>{
  writeFileSync(join(dir,'medium.ts'),Array.from({length:300},(_,i)=>`export const medium${i+1} = ${i+1};`).join('\n'));
  writeFileSync(join(dir,'notes.md'),'# Reader review\n\nA selectable **document** with `inline code`.\n\n| Name | Value |\n| --- | --- |\n| sample | one |\n\n```ts\nexport const sample = true;\n```\n');
  writeFileSync(join(dir,'long.md'),Array.from({length:6001},(_,i)=>`Document line ${i+1}`).join('\n'));
- const journal=join(dir,'session.jsonl');writeFileSync(journal,[{type:'session_meta',payload:{id:'files4-review',cwd:dir}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Review these files'}]}},{type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'Captured response'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
+ const journal=join(dir,'session.jsonl');writeFileSync(journal,[{type:'session_meta',payload:{id:'files4-review',cwd:dir}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Review these files'}]}},{type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'Response'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
  app=new App(join(dir,'data'));id=(await app.ingest.importSource('codex',journal)).recordingId;server=await startServer({app,port:0});
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});

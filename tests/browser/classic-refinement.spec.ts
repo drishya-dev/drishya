@@ -83,7 +83,7 @@ test('Classic evidence and agent rail, explicit palettes and map reading work ac
     await expect(page.locator('.workbench-station')).toBeVisible();
     const bounds = (await page.locator('.workbench-station').boundingBox())!;
     expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-    await expect(page.getByRole('group', { name: 'Recorded agents' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Agents' })).toBeVisible();
     if (width <= 820) await page.getByRole('button', { name: 'Close tools', exact: true }).click();
   }
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -91,7 +91,7 @@ test('Classic evidence and agent rail, explicit palettes and map reading work ac
   await page.getByRole('button', { name: 'Explore repository map' }).click();
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('guard.ts');
   await page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
-  await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
+  await page.getByRole('button', { name: 'Open agent work on this file' }).click();
   const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await expect(reader.locator('.file-workspace-layout')).toHaveClass(/trail-hidden/);
   await expect(reader.locator('.code .ln').first()).toBeInViewport();
@@ -160,14 +160,14 @@ test('utility menus restore nested focus, stay bounded and keep keyboard/reduced
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 });
 
-test('a captured search hit opens its exact line instead of a no-source dead end', async ({ page }) => {
+test('a search hit opens its exact line instead of a no-source dead end', async ({ page }) => {
   await page.goto(url());
   await page.getByRole('button', { name: "src/payments/charge.ts:8 if (!amount) throw new Error('amount required');", exact: true }).click();
   const reader = page.getByRole('dialog', { name: 'Work on src/payments/charge.ts' });
-  await expect(reader).toContainText('Exact captured search result');
+  await expect(reader).toContainText('Exact search result');
   await expect(reader.locator('.file-evidence-material [data-source-line="8"]')).toContainText("if (!amount) throw new Error('amount required');");
-  await expect(reader.getByRole('combobox', { name: 'First evidence' })).toContainText('Captured search match');
-  await expect(reader).not.toContainText('No source bytes or patch were captured');
+  await expect(reader.getByRole('combobox', { name: 'First step' })).toContainText('Search match');
+  await expect(reader).not.toContainText('No source bytes or patch were recorded');
   await page.keyboard.press('Escape');
   await page.locator('body').click({ position: { x: 3, y: 350 } });
   const before = await page.locator('html').getAttribute('data-motion');
@@ -177,7 +177,7 @@ test('a captured search hit opens its exact line instead of a no-source dead end
   await expect(page.getByRole('button', { name: 'Back to work', exact: true })).toHaveCount(0);
 });
 
-test('reading Back restores a captured page, search, selected line, wrap and scroll after a dependency detour', async ({ page }) => {
+test('reading Back restores a page, search, selected line, wrap and scroll after a dependency detour', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
   const read = sample.projection.operations.find((op: any) => op.detail.kind === 'read' && op.detail.path === 'src/checkout/guard.ts');
   const artifact = sample.projection.artifacts.find((item: any) => item.id === read.detail.excerptArtifactId);
@@ -199,14 +199,14 @@ test('reading Back restores a captured page, search, selected line, wrap and scr
   await sourceContent.evaluate(el => { el.scrollTop = 100; });
   await expect.poll(() => sourceContent.evaluate(el => el.scrollTop)).toBe(100);
   await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
-  const selected = await reader.getByRole('combobox', { name: 'First evidence' }).inputValue();
+  const selected = await reader.getByRole('combobox', { name: 'First step' }).inputValue();
   await reader.locator('.import-context > summary').click();
-  await reader.getByRole('button', { name: 'Captured work on src/cart/types.ts', exact: true }).click();
+  await reader.getByRole('button', { name: 'Work on src/cart/types.ts', exact: true }).click();
   const destination = page.getByRole('dialog', { name: 'Work on src/cart/types.ts' });
-  await expect(destination).toContainText('Exact captured search result');
+  await expect(destination).toContainText('Exact search result');
   await expect(destination.getByRole('button', { name: /Read current file/ })).toHaveCount(0);
   await destination.getByRole('button', { name: 'Back in reading history', exact: true }).click();
-  await expect(reader.getByRole('combobox', { name: 'First evidence' })).toHaveValue(selected);
+  await expect(reader.getByRole('combobox', { name: 'First step' })).toHaveValue(selected);
   await expect(reader.locator('[data-source-line="201"]')).toBeAttached();
   await expect(reader.getByRole('searchbox', { name: 'Find in loaded source page' })).toHaveValue('line_210');
   await expect(reader.getByRole('button', { name: 'Wrap lines', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -228,8 +228,8 @@ test('change to check to Back restores the same patch and comparison layout', as
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
-  const choice = reader.getByRole('combobox', { name: 'First evidence' });
-  const patch = await choice.locator('option').evaluateAll(options => options.find(option => option.textContent?.includes('Captured patch'))?.getAttribute('value'));
+  const choice = reader.getByRole('combobox', { name: 'First step' });
+  const patch = await choice.locator('option').evaluateAll(options => options.find(option => option.textContent?.includes('Patch'))?.getAttribute('value'));
   expect(patch).toBeTruthy();
   await choice.selectOption(patch!);
   await reader.getByRole('button', { name: 'Side by side', exact: true }).click();

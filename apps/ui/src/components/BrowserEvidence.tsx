@@ -22,12 +22,12 @@ export function BrowserEvidence({ op, full = false }: { op: Operation; full?: bo
   const step = browserStep(op);
   if (!step) return null;
   return <div className="browser-evidence">
-    <div className="browser-address">{step.url ? <RecordedUrl url={step.url}/> : <span className="muted">No URL in captured input</span>}</div>
-    <div className="browser-action"><span>{step.action}</span>{step.tab !== undefined && <small>tab {step.tab}</small>}<small>{op.status === 'running' ? 'Running' : op.status === 'error' ? 'Failed' : op.status === 'ok' ? 'Returned' : 'Outcome not captured'}</small></div>
-    {step.batch?.length ? <ol className="browser-batch">{step.batch.map((item, i) => <li key={i}><span>{item.name ?? 'Recorded action'}{item.action ? ` · ${item.action}` : ''}</span>{item.url && <RecordedUrl url={item.url}/>}</li>)}{step.batchCount! > step.batch.length && <li className="muted">{step.batchCount! - step.batch.length} more actions · expand for captured input</li>}</ol> : null}
+    <div className="browser-address">{step.url ? <RecordedUrl url={step.url}/> : <span className="muted">No URL in input</span>}</div>
+    <div className="browser-action"><span>{step.action}</span>{step.tab !== undefined && <small>tab {step.tab}</small>}<small>{op.status === 'running' ? 'Running' : op.status === 'error' ? 'Failed' : op.status === 'ok' ? 'Returned' : 'Outcome not recorded'}</small></div>
+    {step.batch?.length ? <ol className="browser-batch">{step.batch.map((item, i) => <li key={i}><span>{item.name ?? 'Recorded action'}{item.action ? ` · ${item.action}` : ''}</span>{item.url && <RecordedUrl url={item.url}/>}</li>)}{step.batchCount! > step.batch.length && <li className="muted">{step.batchCount! - step.batch.length} more actions · expand for input</li>}</ol> : null}
     {step.query && <div className="browser-query">{step.query}</div>}
-    {full&&op.detail.kind==='mcp'?<StoredToolResult op={op} full/>:step.excerpt ? <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Captured browser result excerpt"><ToolOutput text={step.excerpt}/></div> : <p className="muted">{op.status === 'running' ? 'Waiting for browser result' : 'No page text captured'}</p>}
-    {full && op.detail.kind === 'mcp' && <details><summary>Captured browser input</summary><ToolInput value={op.detail.input}/></details>}
+    {full&&op.detail.kind==='mcp'?<StoredToolResult op={op} full/>:step.excerpt ? <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Browser result excerpt"><ToolOutput text={step.excerpt}/></div> : <p className="muted">{op.status === 'running' ? 'Waiting for browser result' : 'No page text recorded'}</p>}
+    {full && op.detail.kind === 'mcp' && <details><summary>Browser input</summary><ToolInput value={op.detail.input}/></details>}
   </div>;
 }
 
@@ -60,18 +60,18 @@ function WebReading({op,detail:d,full}:{op:Operation;detail:Extract<Operation['d
   return <div className="web-evidence" aria-busy={canRead&&!page&&!error}>
     {d.url && <RecordedUrl url={d.url}/>}
     {d.query && <div className="query">{d.query}</div>}
-    {full&&<div className="web-reading-meta"><span>{displayed?`${displayed.total} recorded result${displayed.total===1?'':'s'}`:`${preview.results.length} results in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
+    {full&&<div className="web-reading-meta"><span>{displayed?`${displayed.total} result${displayed.total===1?'':'s'}`:`${preview.results.length} results in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
     {d.fetch && fetchFacts(d.fetch) && <div className="browser-action">{fetchFacts(d.fetch)}</div>}
     {full&&canRead&&(knownTotal??preview.results.length)>50&&<label className="web-result-filter">Find result<input type="search" value={query} placeholder="Title, address or snippet" onChange={event=>{setQuery(event.target.value);setStart(0);}}/></label>}
-    {full&&canRead&&!page&&!error&&<span className="muted" role="status">Opening recorded results…</span>}
-    {full&&error&&<p role="status">Could not open recorded results. <button type="button" onClick={()=>setRetry(value=>value+1)}>Retry</button></p>}
+    {full&&canRead&&!page&&!error&&<span className="muted" role="status">Opening results…</span>}
+    {full&&error&&<p role="status">Could not open results. <button type="button" onClick={()=>setRetry(value=>value+1)}>Retry</button></p>}
     {results.length ? <WebResults results={results} snippets={full} limit={full ? undefined : 5} onShowAll={open}/> : null}
-    {!full&&op.endSequence!==undefined&&results.length<=5&&<button type="button" className="web-more" onClick={event=>{event.stopPropagation();open();}}>Open recorded results</button>}
-    {full&&displayed&&(displayed.total>100||query)&&<nav className="web-result-pages" aria-label="Recorded result list"><span>{displayed.matched?`${displayed.start+1}–${displayed.start+displayed.results.length} of ${displayed.matched}${query?' matches':''}`:'No matching results'}</span><button type="button" disabled={!page||!displayed.start} onClick={()=>setStart(Math.max(0,start-100))}>Previous results</button><button type="button" disabled={!page||!displayed.hasMore} onClick={()=>setStart(start+100)}>Next results</button></nav>}
-    {full&&!results.length&&!query&&<p className="muted">{op.endSequence===undefined?'Waiting for result':page?.availability==='removed'?'Captured result is no longer stored.':d.url?'No result list recorded for this page fetch.':'No structured result list available.'}</p>}
+    {!full&&op.endSequence!==undefined&&results.length<=5&&<button type="button" className="web-more" onClick={event=>{event.stopPropagation();open();}}>Open results</button>}
+    {full&&displayed&&(displayed.total>100||query)&&<nav className="web-result-pages" aria-label="Result list"><span>{displayed.matched?`${displayed.start+1}–${displayed.start+displayed.results.length} of ${displayed.matched}${query?' matches':''}`:'No matching results'}</span><button type="button" disabled={!page||!displayed.start} onClick={()=>setStart(Math.max(0,start-100))}>Previous results</button><button type="button" disabled={!page||!displayed.hasMore} onClick={()=>setStart(start+100)}>Next results</button></nav>}
+    {full&&!results.length&&!query&&<p className="muted">{op.endSequence===undefined?'Waiting for result':page?.availability==='removed'?'Result is no longer stored.':d.url?'No result list recorded for this page fetch.':'No structured result list available.'}</p>}
     {full && <CapturedOutcomes output={d.resultPreview}/>}
-    {(full||!results.length)&&material.text&&<section className="web-response"><h4>{displayed?.availability==='captured'?(d.url?'Captured page text':'Captured response text'):'Available web preview'}</h4><div className={`browser-excerpt${full?' full':''}`} tabIndex={0} aria-label="Captured web result excerpt"><ToolOutput text={material.text}/></div></section>}
-    {full&&<details className="web-original"><summary>{displayed?.originalComplete?'Original captured result':'Original captured preview'}</summary><div className="browser-excerpt full" tabIndex={0}><pre className="output web-original-text">{material.original||'No result text captured'}</pre></div>{displayed&&!displayed.originalComplete&&<small className="muted">Text excerpt limited to 64 KiB. Result counts cover the stored list.</small>}</details>}
+    {(full||!results.length)&&material.text&&<section className="web-response"><h4>{displayed?.availability==='captured'?(d.url?'Page text':'Response text'):'Available web preview'}</h4><div className={`browser-excerpt${full?' full':''}`} tabIndex={0} aria-label="Web result excerpt"><ToolOutput text={material.text}/></div></section>}
+    {full&&<details className="web-original"><summary>{displayed?.originalComplete?'Original result':'Original preview'}</summary><div className="browser-excerpt full" tabIndex={0}><pre className="output web-original-text">{material.original||'No result text recorded'}</pre></div>{displayed&&!displayed.originalComplete&&<small className="muted">Text excerpt limited to 64 KiB. Result counts cover the stored list.</small>}</details>}
   </div>;
 }
 
@@ -94,7 +94,7 @@ export function BrowserStrip({ operations, renderOperation }: { operations: Oper
   const screenFrames = operations.filter(item => isScreenOperation(item) && item.images?.length).length;
   const choose = (next: number) => { const item = operations[next]; if (item) { setChoice(item.id); useApp.getState().set({ follow: false }); } };
   return <div className="browser-strip" data-browser-steps={operations.length} data-browser-first-op={operations[0]?.id}>
-    <nav className="browser-scrubber" aria-label="Captured browser steps" onClick={event => event.stopPropagation()}>
+    <nav className="browser-scrubber" aria-label="Browser steps" onClick={event => event.stopPropagation()}>
       <button type="button" aria-label="Previous browser step" disabled={index === 0} onClick={() => choose(index - 1)}>‹</button>
       <span>Browser · {index + 1} / {operations.length}</span>
       <input type="range" aria-label="Browser step" min={1} max={operations.length} value={index + 1} onChange={event => choose(Number(event.target.value) - 1)}/>

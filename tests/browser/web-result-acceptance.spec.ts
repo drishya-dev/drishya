@@ -7,7 +7,7 @@ import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 let dir:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-web-accept-'));app=new App(join(dir,'data'));server=await startServer({app,port:0});});
 test.afterAll(async()=>{await server?.close();await app?.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});});
-const title='A long recorded result title that must stay readable after expanding the card: '+ 'full title words '.repeat(7);
+const title='A long result title that must stay readable after expanding the card: '+ 'full title words '.repeat(7);
 for(const width of [600,1440])test(`expanded recorded web results show full supplied titles and original output at ${width}px`,async({page})=>{
  await page.setViewportSize({width,height:900});
  const links=Array.from({length:9},(_,i)=>({title:i===0?title:`Recorded result ${i}`,url:`https://example.invalid/result/${i}`}));
@@ -19,7 +19,7 @@ for(const width of [600,1440])test(`expanded recorded web results show full supp
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator('article.op').filter({hasText:'synthetic result acceptance'}).first();await expect(card.locator('.web-results li')).toHaveCount(5);await expect(card.locator('.web-more')).toContainText('4 more in preview');
  const expand=card.locator('button.op-expand');await expand.focus();await expand.press('Enter');const full=card.locator('.op-expanded .web-results');await expect(full.locator('li')).toHaveCount(9);
- await expect(card.locator('.web-reading-meta')).toContainText('9 recorded results');
+ await expect(card.locator('.web-reading-meta')).toContainText('9 results');
  const first=full.locator('.web-title').first();await expect(first).toHaveText(title);expect(await first.evaluate(el=>el.scrollWidth>el.clientWidth+1 || el.scrollHeight>el.clientHeight+1)).toBe(false);
  await expect(card.locator('.op-expanded')).toContainText('A literal recorded sibling.');
  expect(await full.evaluate(el=>el.scrollWidth>el.clientWidth+1)).toBe(false);expect(fetched).toBe(0);
@@ -30,8 +30,8 @@ for(const width of [600,1440])test(`expanded recorded web results show full supp
 for(const harness of ['claude-code','codex'] as const)for(const width of [600,1440])test(`${harness} all recorded search results are readable beyond projection limits at ${width}px`,async({page})=>{
  await page.setViewportSize({width,height:950});
  const longTitle='Literal long title '+ 'recognizable title words '.repeat(35);
- const links=Array.from({length:160},(_,index)=>({title:index===0?longTitle:`Recorded result ${index}`,url:`https://example.invalid/result/${index}`,snippet:`Captured snippet ${index}`}));
- const output=`Web search results for query: "deep synthetic search"\n\nLinks: ${JSON.stringify(links.slice(0,80))}\n\nExact captured middle paragraph.\n\nLinks: ${JSON.stringify(links.slice(80))}\n\nExact captured final paragraph.`;
+ const links=Array.from({length:160},(_,index)=>({title:index===0?longTitle:`Recorded result ${index}`,url:`https://example.invalid/result/${index}`,snippet:`Snippet ${index}`}));
+ const output=`Web search results for query: "deep synthetic search"\n\nLinks: ${JSON.stringify(links.slice(0,80))}\n\nExact middle paragraph.\n\nLinks: ${JSON.stringify(links.slice(80))}\n\nExact final paragraph.`;
  const base={timestamp:'2026-10-30T00:00:00Z',sessionId:`depth-${harness}-${width}`,cwd:dir};
  const rows=harness==='claude-code'?[
   {...base,type:'user',uuid:'p',message:{role:'user',content:'Look up the synthetic reference'}},
@@ -50,12 +50,12 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();
  await card.locator('button.web-more').press('Enter');
  const inspector=page.getByRole('region',{name:'Operation detail'});await expect(inspector).toBeVisible();
- await expect(inspector.locator('.web-reading-meta')).toContainText('160 recorded results');
+ await expect(inspector.locator('.web-reading-meta')).toContainText('160 results');
  await expect(inspector.locator('.web-results li')).toHaveCount(100);
  await expect(inspector.locator('.web-title').first()).toHaveText(longTitle);
  await expect(inspector.locator('.web-domain').first()).toHaveText('example.invalid');
- await expect(inspector.locator('.web-response')).toContainText('Exact captured middle paragraph.');
- await expect(inspector.locator('.web-response')).toContainText('Exact captured final paragraph.');
+ await expect(inspector.locator('.web-response')).toContainText('Exact middle paragraph.');
+ await expect(inspector.locator('.web-response')).toContainText('Exact final paragraph.');
  await expect(inspector.locator('.web-response')).not.toContainText('Links: [');
  await page.screenshot({path:resolve(`.local/web-fixture-${harness}-${width}.png`)});
  await inspector.getByRole('button',{name:'Next results',exact:true}).press('Enter');
@@ -65,17 +65,17 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  let failedOnce=false;await page.route('**/web-result/**',route=>{if(!failedOnce){failedOnce=true;return route.fulfill({status:503,json:{error:'Synthetic temporary read failure'}});}return route.continue();});
  await filter.fill('temporary failure');await expect(inspector.getByRole('button',{name:'Retry',exact:true})).toBeVisible();await expect(filter).toBeFocused();
  await filter.fill('result 159');await expect(inspector.locator('.web-results li')).toHaveCount(1);await expect(inspector.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
- await inspector.getByText('Original captured result',{exact:true}).click();await expect(inspector.locator('.web-original')).toContainText(output);
+ await inspector.getByText('Original result',{exact:true}).click();await expect(inspector.locator('.web-original')).toContainText(output);
  expect(await inspector.locator('.web-original-text').evaluate(el=>el.textContent)).toBe(output);
  expect(external).toBe(0);expect(await inspector.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
  // The same Inspector survives a seek before its result; cached future material must disappear.
  const end=projection.timeline.findIndex(item=>item.type==='op-end'&&item.operationId===op.id);
  await page.goto(`${server.url}/?experience=modern&motion=0&at=${end+1}#/r/${id}`);
  const replayCard=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await replayCard.scrollIntoViewIfNeeded();await replayCard.press('Enter');
- const replayInspector=page.getByRole('region',{name:'Operation detail'});await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 recorded results');
+ const replayInspector=page.getByRole('region',{name:'Operation detail'});await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 results');
  const timeline=page.getByRole('slider',{name:'Timeline',exact:true});await timeline.press('ArrowLeft');await expect(timeline).toHaveAttribute('aria-valuenow',String(end));
- await expect(replayInspector.locator('.web-results li')).toHaveCount(0);await expect(replayInspector).toContainText('Waiting for result');await expect(replayInspector).not.toContainText('Exact captured final paragraph.');
- await timeline.press('ArrowRight');await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 recorded results');
+ await expect(replayInspector.locator('.web-results li')).toHaveCount(0);await expect(replayInspector).toContainText('Waiting for result');await expect(replayInspector).not.toContainText('Exact final paragraph.');
+ await timeline.press('ArrowRight');await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 results');
  const api=`/v1/recordings/${id}/web-result/${encodeURIComponent(op.id)}`;
  expect((await fetch(server.url+api)).status).toBe(401);
  expect((await page.request.get(server.url+api+'?count=NaN')).status()).toBe(400);

@@ -9,7 +9,7 @@ let dir: string, app: App, server: RunningServer;
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-questions-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-questions' }); });
 test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
 
-test('review questions survive reload, return to the captured action and resolve only explicitly', async ({ page }) => {
+test('review questions survive reload, return to the action and resolve only explicitly', async ({ page }) => {
   await page.goto(new URL('/?demo&experience=classic', server.launchUrl).href);
   const op = page.locator('article.op-edit').first();
   // Keyboard, not a pointer: moving the pointer over the card can start hover reading, which moves it under the click.
@@ -26,7 +26,7 @@ test('review questions survive reload, return to the captured action and resolve
   const queue = page.getByRole('dialog', { name: 'Review questions', exact: true });
   await expect(queue).toContainText('Check the zero-total path');
   await queue.getByRole('button', { name: 'Preview open questions' }).click();
-  await expect(queue.getByRole('textbox', { name: 'Question handoff preview' })).toHaveValue(/Captured action reference:/);
+  await expect(queue.getByRole('textbox', { name: 'Question handoff preview' })).toHaveValue(/Step reference:/);
   await queue.locator('.question-target').click();
   await expect(page.locator('article.op.expanded .op-title').first()).toHaveText(targetTitle);
   await page.keyboard.press('Escape');

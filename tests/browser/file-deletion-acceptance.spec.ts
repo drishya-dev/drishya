@@ -25,13 +25,13 @@ test('explicit deletions update live, survive missing disk files, and never leak
  const before=app.projection(id).timeline.length;
  await append(change(2,{'src/gone.ts':{type:'delete'},'src/failed.ts':{type:'delete'}},'failed'));
  await expect(gone.locator('.file-change')).toHaveText('A');await expect(explorer.locator('[data-spine-path="src/failed.ts"] .file-change')).toHaveCount(0);
- await append(change(3,{'src/gone.ts':{type:'delete'}}));await expect(gone.locator('.file-change')).toHaveText('D');await expect(gone.getByLabel('Captured deletion',{exact:true})).toBeVisible();
+ await append(change(3,{'src/gone.ts':{type:'delete'}}));await expect(gone.locator('.file-change')).toHaveText('D');await expect(gone.getByLabel('Deletion',{exact:true})).toBeVisible();
  const deleted=app.projection(id).timeline.length;
  const evidence=async(step?:number)=>{const q=new URLSearchParams({path:'src/gone.ts',...(step===undefined?{}:{step:String(step)})});const r=await page.request.get(`${server.url}/v1/recordings/${id}/file-evidence?${q}`);expect(r.ok()).toBe(true);return r.json();};
  expect((await evidence(before))[0].change).toBe('A');expect((await evidence(deleted))[0].change).toBe('D');
  await append(change(4,{'src/gone.ts':{type:'add',content:'export const restored = 2;\n'}}));await expect(gone.locator('.file-change')).toHaveText('A');expect((await evidence(deleted))[0].change).toBe('D');
  const p=app.projection(id),paths=p.files.map(f=>f.path),all=await app.history.fileEvidence(id,paths);expect(all.filter(f=>f.change).map(f=>f.path).sort()).toEqual(sinceSnapshot(p,-1).editedFiles.sort());
- expect((await app.ingest.sync(id)).added).toBe(0);await find.fill('');await expect(explorer.locator('[aria-description="4 files with captured activity"]')).toBeVisible();
+ expect((await app.ingest.sync(id)).added).toBe(0);await find.fill('');await expect(explorer.locator('[aria-description="4 files with activity"]')).toBeVisible();
  await find.fill('src/gone.ts');await explorer.getByLabel('File filters',{exact:true}).click();await explorer.getByRole('button',{name:'Touched',exact:true}).click();await expect(gone).toBeVisible();
  for(const width of [390,320]){await page.setViewportSize({width,height:844});if(!await explorer.isVisible())await page.getByRole('button',{name:'Show files',exact:true}).click();await expect(gone).toBeVisible();await expect(gone.locator('.file-change')).toHaveText('A');expect(await gone.evaluate(e=>e.scrollWidth-e.clientWidth)).toBeLessThanOrEqual(1);}
  expect(errors).toEqual([]);

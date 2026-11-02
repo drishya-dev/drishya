@@ -29,7 +29,7 @@ export function contextReport(captured: string): ContextReport | undefined {
       header = true;
       if (table === 'categories') { categories = true; current = rows; }
       else if (sections.length === SECTIONS) { clipped = true; current = []; }
-      else { current = []; sections.push({ title: title || 'Recorded table', rows: current }); }
+      else { current = []; sections.push({ title: title || 'Table', rows: current }); }
       continue;
     }
     if (header && cells.every(c => /^[:\s-]*$/.test(c))) { header = false; continue; }

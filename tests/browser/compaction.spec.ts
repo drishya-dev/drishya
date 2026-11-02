@@ -38,14 +38,14 @@ for(const width of [600,1440]) test(`captured metrics, summaries and categories 
   expect(await boundary.locator('.context-track > span').first().evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
   expect(await boundary.locator('.context-foot').evaluate(el=>getComputedStyle(el).display)).toBe('flex');
   await page.screenshot({path:resolve(`.local/content12-synthetic-receipt-${width}.png`)});
-  const summary=boundary.getByRole('button',{name:'Read captured summary'});await summary.focus();await page.keyboard.press('Enter');
+  const summary=boundary.getByRole('button',{name:'Read summary'});await summary.focus();await page.keyboard.press('Enter');
   await expect(boundary).toContainText('Synthetic retained line 1');await expect(boundary).toContainText('200 of 350');
   await boundary.getByRole('button',{name:'Next lines',exact:true}).click();await expect(boundary).toContainText('Synthetic retained line 350');
   await page.keyboard.press('Escape');await expect(summary).toBeFocused();await expect(boundary.locator('.context-summary-reader')).toHaveCount(0);
   const nearby=page.getByText('Summary recorded nearby · link not recorded',{exact:false});await nearby.scrollIntoViewIfNeeded();await expect(nearby).toBeVisible();
-  const report=page.getByRole('region',{name:'Captured context report'});await report.scrollIntoViewIfNeeded();await expect(report).toContainText('Memory files');await expect(report).toContainText('Unknown recorded row');await expect(report).toContainText('Report from');
+  const report=page.getByRole('region',{name:'Context report'});await report.scrollIntoViewIfNeeded();await expect(report).toContainText('Memory files');await expect(report).toContainText('Unknown recorded row');await expect(report).toContainText('Report from');
   await page.screenshot({path:resolve(`.local/content12-synthetic-report-${width}.png`)});
-  await page.getByLabel('More workspace options',{exact:true}).click();if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();await expect(page.getByRole('region',{name:'Recorded request input'})).toContainText('80,000 tokens');await expect(page.getByRole('region',{name:'Recorded request input'})).toContainText('derived');
+  await page.getByLabel('More workspace options',{exact:true}).click();if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();await expect(page.getByRole('region',{name:'Request input'})).toContainText('80,000 tokens');await expect(page.getByRole('region',{name:'Request input'})).toContainText('computed');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:resolve(`.local/content12-synthetic-${width}.png`)});
 });
@@ -58,7 +58,7 @@ test('Codex request readings, encrypted/missing states and replay cutoffs',async
   await open(page,clean);await expect(page.locator('.context-evidence,.context-report')).toHaveCount(0);
 });
 test('a later summary stays hidden and live append does not change past evidence',async({page})=>{
-  const p=app.projection(claude), c=p.compactions![0]!;await open(page,claude,c.step+1);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await expect(receipt.getByRole('button',{name:'Read captured summary'})).toHaveCount(0);await expect(page.locator('.context-summary-reader')).toHaveCount(0);
+  const p=app.projection(claude), c=p.compactions![0]!;await open(page,claude,c.step+1);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await expect(receipt.getByRole('button',{name:'Read summary'})).toHaveCount(0);await expect(page.locator('.context-summary-reader')).toHaveCount(0);
   await open(page,codex,app.projection(codex).compactions![0]!.step+1);
   appendFileSync(livePath,JSON.stringify(usage(6,12345))+'\n');await app.ingest.sync(codex);
   await expect(page.getByRole('region',{name:'Compaction',exact:true})).not.toContainText('12,345');
@@ -66,7 +66,7 @@ test('a later summary stays hidden and live append does not change past evidence
 
 test('summary paging never takes focus from a deliberate outside control',async({page})=>{
   await open(page,claude);
-  const boundary=page.getByRole('region',{name:'Compaction',exact:true});await boundary.getByRole('button',{name:'Read captured summary'}).click();
+  const boundary=page.getByRole('region',{name:'Compaction',exact:true});await boundary.getByRole('button',{name:'Read summary'}).click();
   await expect(boundary.getByRole('button',{name:'Next lines',exact:true})).toBeEnabled();
   let release!:()=>void;const waiting=new Promise<void>(resolve=>{release=resolve;});
   await page.route('**/artifacts/**?start=200&count=200',async route=>{await waiting;await route.continue();});

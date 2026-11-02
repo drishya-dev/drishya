@@ -34,7 +34,7 @@ function Rows({ rows }: { rows: Row[] }) {
 }
 function RecordedPoint({ point }: { point: UsagePayload }) {
   const tokens = point.tokens;
-  return <section aria-label="Recorded usage"><strong>Recorded · {point.source === 'codex-token-count' ? 'Codex token_count' : point.source === 'claude-cost-state' ? 'Claude cost-state' : 'Claude message.usage'}</strong>
+  return <section aria-label="Usage"><strong>Recorded · {point.source === 'codex-token-count' ? 'Codex token_count' : point.source === 'claude-cost-state' ? 'Claude cost-state' : 'Claude message.usage'}</strong>
     <small>{point.cumulative ? 'Session cumulative' : point.source === 'claude-message-usage' ? 'One assistant message' : 'Last model request'}{point.model ? ` · ${point.model}` : ''}</small>
     <Rows rows={[
       ['Input tokens', count(tokens?.input)], ['Output tokens', count(tokens?.output)], ['Cached input', count(tokens?.cachedInput)], ['Cache write', count(tokens?.cacheWrite)],
@@ -65,8 +65,8 @@ export function UsagePeek() {
       ['Input tokens', count(native.input)], ['Output tokens', count(native.output)], ['Cached input', count(native.cached)], ['Cost · harness estimate', native.costUsd === undefined ? undefined : money(native.costUsd)],
       ['Context input', count(native.contextInput)], ['Context window', count(native.contextWindow)], ['Thread tokens so far', count(native.threadTotal)], ['Reasoning output tokens', count(native.reasoningOutput)],
     ]} /></section>}
-    {!recorded && !native && !context && <p>{mode === 'replay' ? 'Recorded accounting is available in full session history.' : 'No usage values captured for this session.'}</p>}
-    <small>Only reported values are shown as captured; derived request input is labelled. Cumulative tokens are usage, not occupied context. Subscription billing is not inferred.</small>
+    {!recorded && !native && !context && <p>{mode === 'replay' ? 'Recorded accounting is available in full session history.' : 'No usage values recorded for this session.'}</p>}
+    <small>Only reported values are shown as reported; computed request input is labelled. Cumulative tokens are usage, not occupied context. Subscription billing is not inferred.</small>
   </div></Disclosure>;
 }
 

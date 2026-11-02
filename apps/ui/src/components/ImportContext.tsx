@@ -35,8 +35,8 @@ export function ImportContext({ path, current = false, openCurrent, hideEmpty = 
     {entries.slice(pageWindow.start,pageWindow.end).map(item => <div className="import-destination" key={`${item.direction}/${item.path}`}>
       <div><FileIcon path={item.path} /><span title={item.path}>{item.path}</span><small>{item.direction}</small></div>
       <div className="import-destination-actions">
-        <button className="btn ghost small" aria-label={`Captured work on ${item.path}`} onClick={() => useApp.getState().set({ developerWorkspace: false, filePanel: item.path, filePanelFocus: undefined, filePanelEvidence: undefined, currentFile: undefined })}>Captured work</button>
-        {canReadDisk && <button className={`btn ghost small${current ? ' current-destination' : ''}`} aria-label={`Read current file ${item.path}`} title="Current disk file · not captured historical source" disabled={!!opening} onClick={() => void readDisk(item.path)}>{opening === item.path ? 'Opening…' : 'Read current file ↗'}</button>}
+        <button className="btn ghost small" aria-label={`Work on ${item.path}`} onClick={() => useApp.getState().set({ developerWorkspace: false, filePanel: item.path, filePanelFocus: undefined, filePanelEvidence: undefined, currentFile: undefined })}>Session work</button>
+        {canReadDisk && <button className={`btn ghost small${current ? ' current-destination' : ''}`} aria-label={`Read current file ${item.path}`} title="Current file on disk, not what the agent saw" disabled={!!opening} onClick={() => void readDisk(item.path)}>{opening === item.path ? 'Opening…' : 'Read current file ↗'}</button>}
       </div>
     </div>)}
     {error && <p className="bad small" role="alert">{error}</p>}

@@ -36,7 +36,7 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); } });
 
-test('a commit hunk the agent wrote exactly links to its captured edit; a hand-written commit does not', async ({ page }) => {
+test('a commit hunk the agent wrote exactly links to its edit; a hand-written commit does not', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl); await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
@@ -57,15 +57,15 @@ test('a commit hunk the agent wrote exactly links to its captured edit; a hand-w
   await expect(atlas.locator('.git-patch-reader')).toContainText('cart.items.reduce');
   const recorded = atlas.locator('.hunk-recorded');
   await expect(recorded).toHaveCount(1);
-  await expect(recorded).toHaveText('Recorded work');
+  await expect(recorded).toHaveText('Agent work');
   await recorded.press('Enter');
   const work = page.getByRole('dialog', { name: 'Work on src/total.ts' });
   await expect(work).toBeVisible();
   await expect(work).toContainText('cart.items.reduce');
-  await expect(work).toContainText('Captured patch');
+  await expect(work).toContainText('Patch');
 });
 
-test('several captured edits wrote a commit hunk: the Git graph offers them as a menu, newest first', async ({ page }) => {
+test('several edits wrote a commit hunk: the Git graph offers them as a menu, newest first', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl); await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
@@ -82,7 +82,7 @@ test('several captured edits wrote a commit hunk: the Git graph offers them as a
   await atlas.locator('.atlas-files>button').filter({ hasText: 'twice.ts' }).click();
   await expect(atlas.locator('.git-patch-reader')).toContainText('values.map');
   const trigger = atlas.locator('.recorded-work-menu > summary');
-  await expect(trigger).toHaveText('Recorded work · 2 edits');
+  await expect(trigger).toHaveText('Agent work · 2 edits');
   await trigger.focus(); await page.keyboard.press('Enter');
   const items = atlas.locator('.recorded-work-menu .desk-options-body button');
   await expect(items).toHaveCount(2);
@@ -91,7 +91,7 @@ test('several captured edits wrote a commit hunk: the Git graph offers them as a
   await items.nth(0).click();
   const work = page.getByRole('dialog', { name: 'Work on src/twice.ts' });
   await expect(work).toBeVisible();
-  await expect(work).toContainText('Captured patch');
+  await expect(work).toContainText('Patch');
   await expect(work).toContainText('second pass');
   await expect(work).not.toContainText('first pass');
 });

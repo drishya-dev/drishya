@@ -35,7 +35,7 @@ test('repeated TodoWrite lists show the current checklist by default and earlier
  await expect(cards.nth(0)).toContainText('Revision 1 · 0 of 3 done');
  await expect(cards.nth(1)).toContainText('Revision 2 · 1 of 3 done');await expect(cards.nth(1)).toContainText('completed Read the cart code');
  await expect(cards.nth(2)).toContainText('Revision 3 · 2 of 4 done');await expect(cards.nth(2).locator('li').filter({hasText:'Fix the total check'})).toHaveAttribute('data-change','completed');
- if(process.env.IMG_SHOT)await page.getByRole('region',{name:'Captured work'}).screenshot({path:resolve('.local/plan-pinned.png')});
+ if(process.env.IMG_SHOT)await page.getByRole('region',{name:'Session work'}).screenshot({path:resolve('.local/plan-pinned.png')});
  // Expanded, the list steps back through the updates it went through.
  // Keyboard, not a pointer: moving the pointer over the card can start hover reading, which moves it under the click.
  const expand=cards.nth(2).locator('button.op-expand');await expand.focus();await page.keyboard.press('Enter');await expect(expand).toHaveAttribute('aria-expanded','true');

@@ -49,9 +49,9 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
   const [all, setAll] = useDisclosureChoice(`plan-items/${position?.thread.revisions[0]?.operationId ?? op.id}`, false);
   if (op.detail.kind === 'plan' && op.detail.document) {
     const doc = op.detail.document;
-    return <section className="plan-card plan-document" aria-label={doc.source === 'file' ? 'Captured plan file' : 'Proposed plan'}><small className="plan-basis">{doc.source === 'file' ? 'Captured file · plan-path convention' : 'Captured proposal'} · not an approval</small>{doc.truncated ? <ArtifactReader id={doc.artifactId} kind="output" fallback={doc.text} /> : <Markdown text={doc.text} document />}</section>;
+    return <section className="plan-card plan-document" aria-label={doc.source === 'file' ? 'Plan file' : 'Proposed plan'}><small className="plan-basis">{doc.source === 'file' ? 'File · plan-path convention' : 'Proposal'} · not an approval</small>{doc.truncated ? <ArtifactReader id={doc.artifactId} kind="output" fallback={doc.text} /> : <Markdown text={doc.text} document />}</section>;
   }
-  if (!position && op.detail.kind === 'plan' && op.detail.scope && op.endSequence === undefined) return <small className="plan-basis">Waiting for the recorded task result</small>;
+  if (!position && op.detail.kind === 'plan' && op.detail.scope && op.endSequence === undefined) return <small className="plan-basis">Waiting for the task result</small>;
   if (!position) return <ul className="plan-list">{(op.detail.kind === 'plan' ? op.detail.items : []).slice(0, full ? undefined : 8).map((item, i) => <li key={item.id ?? i} className={`plan-${item.status}`}><span className="plan-mark" aria-hidden="true">{MARK[item.status] ?? '·'}</span><span className="plan-text">{item.text}</span></li>)}</ul>;
   const { thread, index } = position;
   const latest = index === thread.revisions.length - 1;
@@ -77,9 +77,9 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
     {(full || open) && <><Items revision={revision} limit={full || all ? undefined : 10} />
       {!full && revision.items.length > 10 && <button type="button" className="link plan-pinned-more" aria-expanded={all} onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${revision.items.length} items · ${revision.items.length - 10} more`}</button>}
     </>}
-    {!!revision.omittedItems && <small className="plan-basis">{revision.omittedItems} additional tasks outside the bounded list; recorded result retained in details.</small>}
+    {!!revision.omittedItems && <small className="plan-basis">{revision.omittedItems} additional tasks outside the bounded list; result retained in details.</small>}
     {full && revision.removed.length > 0 && <small className="plan-removed">Left out of this revision: {revision.removed.join(' · ')}</small>}
-    <small className="plan-basis">Captured task facts, compared with the revision before</small>
+    <small className="plan-basis">Task facts, compared with the revision before</small>
   </div>;
 }
 
@@ -88,7 +88,7 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
  * owns the list. This avoids both duplicate text and an offscreen-only home.
  */
 export function PinnedPlanList({ plan }: { plan: PinnedPlan }) {
-  return <div className="plan-pinned" title={`The agent's newest captured todo list, revision ${plan.revision} of ${plan.revisions}`} onClick={(e) => e.stopPropagation()}>
+  return <div className="plan-pinned" title={`The agent's newest todo list, revision ${plan.revision} of ${plan.revisions}`} onClick={(e) => e.stopPropagation()}>
     <span className="plan-head"><b>Plan</b> · {plan.done} of {plan.total}{plan.omittedItems ? ' shown' : ''} done{plan.revisions > 1 ? ` · revision ${plan.revision}` : ''}</span>
     <button type="button" className="link plan-pinned-more" onClick={() => window.dispatchEvent(new CustomEvent('drishya-reading-navigate', {detail: {type: 'operation', id: plan.operationId}}))}>Go to checklist</button>
   </div>;
