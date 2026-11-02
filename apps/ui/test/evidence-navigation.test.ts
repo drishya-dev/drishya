@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EvidenceTrail, type EvidenceLocation } from '../src/lib/evidence-navigation.ts';
 
-const location = (path?: string): EvidenceLocation => ({ filePanel: path, explore: false, inspectorTab: 'detail', inspectorWidth: 700 });
+const location = (path?: string): EvidenceLocation => ({ filePanel: path, explore: false });
 describe('bounded evidence navigation', () => {
   it('restores exact visit controls and cuts forward history on a new destination', () => {
     const trail = new EvidenceTrail();
@@ -15,12 +15,11 @@ describe('bounded evidence navigation', () => {
     expect(trail.canForward).toBe(false);
     expect(trail.move(-1)).toBe(first);
   });
-  it('does not add visits for inspector tab and width changes, and retains only eight', () => {
+  it('does not add a visit for the same place, and retains only eight', () => {
     const trail = new EvidenceTrail();
     const first = trail.visit(location('a.ts'));
-    expect(trail.visit({ ...location('a.ts'), inspectorTab: 'evidence', inspectorWidth: 1000 })).toBe(first);
+    expect(trail.visit(location('a.ts'))).toBe(first);
     expect(trail.canBack).toBe(false);
-    expect(trail.current?.location.inspectorTab).toBe('evidence');
     for (let n = 0; n < 20; n++) trail.visit(location(`${n}.ts`));
     let count = 1;
     while (trail.move(-1)) count++;

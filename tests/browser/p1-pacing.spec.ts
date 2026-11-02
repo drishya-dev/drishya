@@ -217,8 +217,7 @@ test('patch layouts retain captured changes and adapt without overflowing a narr
   await expect(edit.locator('.unified-change')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await edit.getByRole('button', { name: 'Open details' }).click();
-  const inspector = page.locator('.inspector');
+  const inspector = page.getByRole('region',{name:'Operation detail'});
   await expect(inspector.getByRole('button', { name: 'Changes', exact: true })).toHaveCount(1);
   await inspector.getByRole('button', { name: 'Side by side', exact: true }).click();
   await expect(inspector.locator('.split-change')).toBeVisible();
@@ -430,7 +429,7 @@ test('the dock keeps observed identities readable at rest and remains accessible
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('get-library-docs');
   await page.locator('.search-results button').first().click();
-  await page.locator('.inspector').getByRole('button', { name: 'Close', exact: true }).click();
+  await page.keyboard.press('Escape');
   const call = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
   // The current evidence desk scrolls; a clipped instrument is not a true origin.
   await dock.locator('[data-mcp-tool="get-library-docs"]').scrollIntoViewIfNeeded();

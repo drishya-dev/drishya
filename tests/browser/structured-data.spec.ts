@@ -26,7 +26,7 @@ test('JSON reading reaches late rows and fields with bounded DOM and exact origi
  await dialog.getByRole('button',{name:'Original',exact:true}).click();await expect(dialog.locator('.data-original')).toHaveText(raw);
  for(const width of [1440,390,320]){await page.setViewportSize({width,height:900});const box=(await dialog.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);expect(await dialog.evaluate(element=>element.scrollWidth-element.clientWidth)).toBeLessThanOrEqual(1);}
  await page.screenshot({path:resolve('.local/structured-data-phone.png')});
- await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toHaveCount(0);
+ await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toHaveCount(0);
 });
 
 test('reading windows reverse from their actual entrance and dismiss immediately for keyboard or reduced motion',async({page})=>{
@@ -78,7 +78,7 @@ for(const kind of ['mcp','shell'] as const)test(`${kind} captured delimited text
  await dialog.getByRole('button',{name:'Original',exact:true}).click();await dialog.getByRole('button',{name:'Copy original',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe(csv);
  await dialog.getByRole('button',{name:'CSV',exact:true}).click();await find.fill('last, captured');await dialog.getByRole('button',{name:'Inspect record 1201, column 3'}).click();await page.screenshot({path:resolve(`.local/delimited-${kind}-desktop.png`)});
  for(const width of [1440,390,320]){await page.setViewportSize({width,height:900});const bounds=(await dialog.boundingBox())!;expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(width+1);expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);}
- expect(remote).toBe(0);await page.screenshot({path:resolve(`.local/delimited-${kind}-phone.png`)});await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();await expect(page.getByRole('complementary',{name:'Operation detail'})).toHaveCount(0);
+ expect(remote).toBe(0);await page.screenshot({path:resolve(`.local/delimited-${kind}-phone.png`)});await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();await expect(page.getByRole('region',{name:'Operation detail'})).toHaveCount(0);
 });
 
 
@@ -100,5 +100,5 @@ for(const kind of ['shell','wrapped-shell','mcp'] as const)test(`${kind} offers 
  const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();const views=card.getByRole('group',{name:'Captured result views',exact:true});await expect(views).toHaveCount(1);
  const trigger=card.getByRole('button',{name:/^(Open larger|Inspect data)$/});await expect(trigger).toHaveCount(1);await trigger.click();
  const reader=page.getByRole('dialog',{name:'Captured data',exact:true});await expect(reader).toBeVisible();await reader.getByRole('button',{name:'Original',exact:true}).click();await expect(reader.locator('.data-original')).toHaveText(raw);
- await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(trigger).toBeFocused();await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toHaveCount(0);
+ await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(trigger).toBeFocused();await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toHaveCount(0);
 });

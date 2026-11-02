@@ -124,8 +124,6 @@
 .history .passage.settled .ops-row::before { content: ''; position: absolute; left: 0; right: 12px; top: -4px; border-top: 1px solid var(--line); pointer-events: none; }
 .viewer :focus-visible { outline: 1px solid var(--focus); outline-offset: 3px; }
 @media (min-width: 821px) {
-  .viewer .inspector { width: 380px; }
-  .viewer:has(.inspector) .history { right: max(0px, calc(380px - var(--dock-w))); }
 }
 @container passage (min-width: 880px) {
   .diff-auto .split-change { display: block; }

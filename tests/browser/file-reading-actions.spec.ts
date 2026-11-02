@@ -48,7 +48,7 @@ for(const width of [600,1440])test(`Workspace, Changes and Git review find captu
     await route.fulfill({response,json:body});
   });
   await open(page,sample.id,[['location',{selectedOp:op.id,follow:false,held:true}]]);
-  const inspector=page.getByRole('complementary',{name:'Operation detail'});await expect(inspector).toBeVisible();
+  const inspector=page.getByRole('region',{name:'Operation detail'});await expect(inspector).toBeVisible();
   await inspector.getByRole('button',{name:'Open current file for correction',exact:true}).click();
   const desk=page.locator('.developer-workspace'),approval=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(approval.or(desk.getByRole('tablist'))).toBeVisible();if(await approval.isVisible())await approval.click();
   await expect(desk.locator('.desk-code')).toContainText('CURRENT_WORKTREE_CHANGE');
@@ -73,7 +73,7 @@ test('an off-page captured version is selected exactly and cached later bytes do
   const root=join(dir,'versioned');mkdirSync(root);const path=join(root,'file.ts'),rows:unknown[]=[];
   for(let n=0;n<30;n++){const call='version-'+n,content=`export const revision = 'VERSION_${n}';\n`,timestamp=new Date(Date.UTC(2026,9,31,0,n)).toISOString();rows.push({type:'assistant',uuid:call,sessionId:'versions',cwd:root,timestamp,message:{content:[{type:'tool_use',id:call,name:'Write',input:{file_path:path,content}}]}},{type:'user',uuid:call+'-result',sessionId:'versions',cwd:root,timestamp,message:{content:[{type:'tool_result',tool_use_id:call,content:'Written.'}]},toolUseResult:{type:n?'update':'create',originalFile:n?`export const revision = 'VERSION_${n-1}';\n`:null,content}});}
   const source=join(dir,'versions.jsonl');writeFileSync(source,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('claude-code',source)).recordingId,p=app.projection(id),op=p.operations.at(-1)!;
-  await open(page,id,[['location',{selectedOp:op.id,follow:false,held:true}]]);await page.getByRole('complementary',{name:'Operation detail'}).getByRole('button',{name:'View captured file',exact:true}).click();const captured=page.locator('.file-workspace');await expect(captured.locator('.file-evidence-material')).toContainText('VERSION_29');await expect(captured.getByLabel('First evidence',{exact:true})).toHaveValue(`${op.id}/after`);
+  await open(page,id,[['location',{selectedOp:op.id,follow:false,held:true}]]);await page.getByRole('region',{name:'Operation detail'}).getByRole('button',{name:'View captured file',exact:true}).click();const captured=page.locator('.file-workspace');await expect(captured.locator('.file-evidence-material')).toContainText('VERSION_29');await expect(captured.getByLabel('First evidence',{exact:true})).toHaveValue(`${op.id}/after`);
   await captured.getByRole('button',{name:/^Close Work on/}).click();await page.goto(`${server.url}/?experience=modern&motion=0&at=end#/r/${id}`);const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Open captured work for file.ts',exact:true}).click();await expect(captured).toContainText('VERSION_29');await captured.getByRole('button',{name:/^Close Work on/}).click();
   await page.getByRole('slider',{name:'Timeline',exact:true}).press('ArrowLeft');await card.getByRole('button',{name:'Open captured work for file.ts',exact:true}).click();await expect(captured).toBeVisible();await expect(captured.locator('.file-evidence-material')).toBeVisible();await expect(captured).not.toContainText('VERSION_29');
 });
@@ -82,7 +82,7 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440]){
     await page.setViewportSize({width,height:950});const sample=samples.get(harness)!;
     for(const op of sample.ops){
       await page.unroute('**/v1/working-locations');await open(page,sample.id,[['location',{selectedOp:op.id,follow:false,held:true}]]);
-      const inspector=page.getByRole('complementary',{name:'Operation detail'});await expect(inspector).toBeVisible();await inspector.getByRole('button',{name:'Close',exact:true}).click();
+      const inspector=page.getByRole('region',{name:'Operation detail'});await expect(inspector).toBeVisible();await page.keyboard.press('Escape');
       const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:`Open captured work for ${op.path}`,exact:true}).click();
       const file=page.locator('.file-workspace');await expect(file.locator('.file-evidence-material')).toContainText('CAPTURED_');
       if(op.location==='outside'){

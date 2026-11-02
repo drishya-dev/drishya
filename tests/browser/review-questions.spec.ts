@@ -14,9 +14,8 @@ test('review questions survive reload, return to the captured action and resolve
   const op = page.locator('article.op-edit').first();
   // Keyboard, not a pointer: moving the pointer over the card can start hover reading, which moves it under the click.
   const expand = op.locator('button.op-expand'); await expand.focus(); await page.keyboard.press('Enter'); await expect(expand).toHaveAttribute('aria-expanded', 'true');
-  await op.getByRole('button', { name: 'Open details' }).focus(); await page.keyboard.press('Enter');
-  const inspector = page.getByRole('complementary', { name: 'Operation detail' });
-  const targetTitle = await inspector.locator('.insp-title').innerText();
+  const inspector = page.getByRole('region', { name: 'Operation detail' });
+  const targetTitle = await page.locator('article.op.expanded .op-title').first().innerText();
   await inspector.getByText('Leave a review question', { exact: true }).click();
   await inspector.getByRole('textbox', { name: 'Review question', exact: true }).fill('Check the zero-total path before approving');
   await inspector.getByRole('textbox', { name: 'Question owner' }).fill('Reviewer');
@@ -29,8 +28,8 @@ test('review questions survive reload, return to the captured action and resolve
   await queue.getByRole('button', { name: 'Preview open questions' }).click();
   await expect(queue.getByRole('textbox', { name: 'Question handoff preview' })).toHaveValue(/Captured action reference:/);
   await queue.locator('.question-target').click();
-  await expect(inspector.locator('.insp-title')).toHaveText(targetTitle);
-  await inspector.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.locator('article.op.expanded .op-title').first()).toHaveText(targetTitle);
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Review questions · 1', exact: true }).click();
   await queue.getByRole('button', { name: 'Resolve question', exact: true }).click();
   await expect(queue.getByRole('region', { name: 'Open review questions' })).toContainText('No open review questions');

@@ -90,8 +90,6 @@ interface State {
   /** Explicit prose reference, never an inferred captured source range. */
   filePanelLine?: number;
   filter?: ComposeInput['filter'];
-  inspectorTab: 'detail' | 'evidence' | 'explain';
-  inspectorWidth: number;
   briefingOpen: boolean;
   searchOpen: boolean;
   /** SCREEN-1: the computer-use reader; `opId` opens it on that step. */
@@ -158,8 +156,6 @@ export const useApp = create<State>((set, get) => ({
   compareAgents: false,
   theme: storedTheme(),
   settingsOpen: false,
-  inspectorTab: 'detail',
-  inspectorWidth: 760,
   briefingOpen: false,
   searchOpen: false,
 
@@ -177,7 +173,6 @@ export const useApp = create<State>((set, get) => ({
         filePanel: before.filePanel, filePanelFocus: before.filePanelFocus, filePanelEvidence: before.filePanelEvidence, filePanelLine: before.filePanelLine,
         explore: before.explore, compareAgents: before.compareAgents, mapFocusPath: before.mapFocusPath,
         filter: before.filter, follow: before.follow, held: before.held,
-        inspectorTab: before.inspectorTab, inspectorWidth: before.inspectorWidth,
         readingPassageId: before.readingPassageId, start: before.historyPage?.start,
       });
     }
@@ -295,7 +290,7 @@ export const useApp = create<State>((set, get) => ({
 
   select(opId) {
     const clockRunning = get().mode === 'replay' && get().playing;
-    set({ selectedOp: opId, promptStep: undefined, ...(opId ? { expandedOp: undefined, ...(!clockRunning ? { playing: false, held: true } : {}), inspectorTab: 'detail' } : {}) });
+    set({ selectedOp: opId, expandedOp: undefined, promptStep: undefined, ...(opId && !clockRunning ? { playing: false, held: true } : {}) });
     if (opId && get().historyPage && !get().projection?.operations.some((op) => op.id === opId)) void get().loadHistoryWindow({ selectedOperationId: opId }).catch((error) => set({ error: error.message }));
   },
 

@@ -22,7 +22,6 @@
 @media(max-width:600px) {
   :root[data-ui-version=modern][data-experience=classic] .workspace-secondary {flex-wrap:wrap;justify-content:flex-end;min-width:0;}
   :root[data-ui-version=modern] .developer-workspace>.native-return-actions {padding:6px 10px;}
-  :root[data-ui-version=modern] .inspector {max-width:calc(100vw - 16px);}
 }
 @media(prefers-reduced-motion:reduce) {
   :root[data-ui-version=modern] :is(.btn,.icon-btn,.theme-option,.setting-row input,.setting-row input::before) {transition:none!important;}

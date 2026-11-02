@@ -75,7 +75,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   const sourceId = await source.getAttribute('data-op-id');
   await page.locator(`article[data-op-id="${sourceId}"] .code .ln-tx`).filter({ hasText: /\S/ }).first().click({ clickCount: 3 });
   await expect.poll(() => page.evaluate(() => window.getSelection()?.toString().trim().length ?? 0)).toBeGreaterThan(0);
-  await expect(page.getByRole('complementary', { name: 'Operation detail' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Operation detail' })).toHaveCount(0);
   await expect(latest).toHaveCount(0); // Selection keeps Follow on; only scrolling upward holds it.
   await pointAtHistory(page, history);
   await page.mouse.wheel(0, -300);
@@ -128,7 +128,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   await page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' }).locator('[data-file-op]').first().click();
-  await expect(page.getByRole('complementary', { name: 'Operation detail' }).getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText("if (!cart.total)");
+  await expect(page.getByRole('region', { name: 'Operation detail' }).getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText("if (!cart.total)");
 
   await page.reload(); // a new browser connection must reload the same committed history.
   await expect(steps).toContainText('924 recorded steps');
@@ -306,7 +306,7 @@ test('B3 expands captured content in place, pages it, and bounds file navigation
   await panel.getByRole('textbox', { name: 'Filter actions on this file' }).fill('Read');
   await expect.poll(() => panel.locator('[data-file-op]').count()).toBeGreaterThan(0);
   await panel.locator('[data-file-op]').first().click();
-  await expect(page.getByRole('complementary', { name: 'Operation detail' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Operation detail' })).toBeVisible();
   await page.getByTitle('All recordings').click();
   await expect(pinned).toHaveCount(0);
 });

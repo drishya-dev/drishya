@@ -225,7 +225,7 @@ body { font-size: 14px; letter-spacing: -.01em; }
 .theme-dark { --sw-bg: #0d0d0d; --sw-s: #252525; --sw-line: #454545; --sw-accent: #a6ddb8; }
 .theme-midnight { --sw-bg: #11141a; --sw-s: #272e39; --sw-line: #48576b; --sw-accent: #afc5e1; }
 .theme-light { --sw-bg: #f4f3f0; --sw-s: #fdfcf9; --sw-line: #cfcec6; --sw-accent: #39744e; }
-:root[data-experience] :is(.inspector,.sheet,.file-workspace,.map-reader) { background: var(--s1); border-color: var(--line-2); }
+:root[data-experience] :is(.sheet,.file-workspace,.map-reader) { background: var(--s1); border-color: var(--line-2); }
 :root[data-experience] :is(.source-reading,.current-file-code,.git-patch-reader) .code { font-size: 13px; line-height: 1.8; }
 :root[data-experience] .connected-workspace .search { background: var(--s1); border-radius: 10px; }
 :root[data-experience] .connected-workspace .search input { height: 48px; font-size: 15px; }

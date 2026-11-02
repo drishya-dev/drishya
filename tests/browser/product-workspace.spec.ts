@@ -38,7 +38,7 @@ test('completed evidence links keep full history and the chosen live-demo design
   await page.goto(`${demoUrl()}&experience=classic`);
   await page.getByRole('button', { name: 'Review work', exact: true }).click();
   await page.getByRole('region', { name: 'Failures', exact: true }).getByRole('button').first().click();
-  const detail = page.getByRole('complementary', { name: 'Operation detail' });
+  const detail = page.getByRole('region', { name: 'Operation detail' });
   await detail.getByRole('tab', { name: /^Links/ }).click();
   await detail.locator('.link-row').filter({ hasText: 'Read test/checkout.test.ts' }).click();
   await expect(detail).toContainText('canCheckout');
@@ -138,7 +138,7 @@ test('failed shell preview surfaces buried captured errors and preserves the ful
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill(shell.title);
   await page.locator('.search-results button').first().click();
-  await page.getByRole('complementary', { name: 'Operation detail' }).getByRole('button', { name: 'Close', exact: true }).click();
+  await page.keyboard.press('Escape');
   const action = page.locator(`article[data-op-id="${shell.id}"]`);
   await expect(action).toContainText('Error · output lines');
   await expect(action).toContainText('TypeError: cannot read cart.total');
@@ -316,7 +316,7 @@ test('source preview opens the exact stored range and keeps pending replay evide
   await ranges.getByRole('button', { name: 'Pin range', exact: true }).click();
   await expect(pinned).toHaveCount(1);
   await expect(pinned).toContainText('Pinned source · 90–91');
-  await expect(page.getByRole('complementary', { name: 'Operation detail' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Operation detail' })).toHaveCount(0);
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/captured-range-reader.png') });
   await page.setViewportSize({ width: 390, height: 844 });
   await read.scrollIntoViewIfNeeded();
@@ -526,14 +526,14 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   const id = await action.getAttribute('data-file-op');
   await action.click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('complementary', { name: 'Operation detail' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Operation detail' })).toBeVisible();
   await expect(page.locator(`[data-op-id="${id}"]`).first()).toBeAttached();
-  await page.getByRole('complementary', { name: 'Operation detail' }).getByRole('button', { name: 'Close', exact: true }).click();
+  await page.keyboard.press('Escape');
   await file.click();
   await dialog.getByRole('button', { name: 'Compare evidence' }).click();
   await dialog.locator('.verify-open').first().click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('complementary', { name: 'Operation detail' })).toContainText('npm test');
+  await expect(page.getByRole('region', { name: 'Operation detail' })).toContainText('npm test');
 });
 
 test('agent ownership shares one history, and replay file choices obey the historical boundary', async ({ page }) => {
@@ -720,12 +720,12 @@ test('prompt chapters review captured work without movie controls and resize det
   await page.getByLabel('More workspace options').click();
   const read = page.locator('article.op-read').first();
   await read.locator('.op-head .op-kind').first().click();
-  const inspector = page.getByRole('complementary',{name:'Operation detail'});
+  const inspector = page.getByRole('region',{name:'Operation detail'});
   const before = (await inspector.boundingBox())!.width;
   const handle = inspector.getByRole('separator',{name:'Resize operation detail'});
   await handle.focus(); await page.keyboard.press('ArrowLeft');
   await expect.poll(async() => (await inspector.boundingBox())!.width).toBeGreaterThan(before);
-  await inspector.getByRole('button',{name:'Close',exact:true}).click();
+  await page.keyboard.press('Escape');
   await page.getByLabel('More workspace options').click();
   await page.locator('.prompt-menu > summary').click();
   await navigation.locator('.prompt-chapters button').first().click();
@@ -750,9 +750,9 @@ test('a write with an after-state and no patch opens its actual source instead o
   await page.getByRole('button',{name:'Search',exact:true}).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill(write.title);
   await page.locator('.search-results button').first().click();
-  const inspector = page.getByRole('complementary',{name:'Operation detail'});
+  const inspector = page.getByRole('region',{name:'Operation detail'});
   await expect(inspector).toContainText('cart.total == null');
-  await inspector.getByRole('button',{name:'Close',exact:true}).click();
+  await page.keyboard.press('Escape');
   const action = page.locator(`article[data-op-id="${write.id}"]`);
   await expect(action).toContainText('cart.total == null');
   await action.getByRole('button',{name:/Expand/}).click();

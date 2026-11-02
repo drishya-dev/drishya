@@ -119,7 +119,7 @@ test('the session menu opens the same reader, and reduced motion keeps the swap 
  await expect(reader.locator('.screen-leaving')).toHaveCount(0);
  await reader.getByRole('button',{name:'Open operation'}).click();
  await expect(reader).toHaveCount(0);
- await expect(page.locator('aside.inspector')).toBeVisible();
+ await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
 });
 
 test('playback advances through captured steps and stops at the end',async({page})=>{

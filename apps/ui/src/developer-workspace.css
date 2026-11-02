@@ -4,7 +4,7 @@
 .folder-explorer>.reading-resize {left:auto;right:0;width:8px;}
 .folder-explorer>.reading-resize::after {left:3px;}
 @media(min-width:821px) {
-  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.inspecting) .history {left:var(--files-rail,var(--stage-rail));}
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .history {left:var(--files-rail,var(--stage-rail));}
   :root[data-ui-version=modern] .developer-workspace {left:var(--files-rail,calc(var(--stage-rail,220px) + 6px));}
   :root[data-ui-version=modern] .folders-hidden .developer-workspace {left:18px;}
 }
@@ -166,7 +166,6 @@
 @media(pointer:coarse) {.native-return-actions .btn {min-height:44px;}}
 
 .current-document-views {display:flex;gap:3px;padding:4px 12px;flex:none;}
-.connected-workspace .inspector {top:var(--workspace-tools-bottom,calc(var(--workspace-header-h,64px) + 68px));}
 .current-document-views .btn {min-height:30px;padding:5px 10px;font:12px var(--sans);border-radius:6px;}
 .current-document-views [aria-pressed=true] {background:var(--s2);color:var(--t1);}
 .current-file-reader .current-file-code.desk-markdown {overflow:auto;padding:20px 28px;max-height:none;}

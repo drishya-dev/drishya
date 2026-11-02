@@ -64,7 +64,7 @@ test('real Codex and Claude sessions navigate paged edges without inspector or s
   test.skip(!actualStore||!actualIds.length,'Requires explicit local redacted data');const actual=new App(actualStore!),running=await startServer({app:actual,port:0}),errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   try{for(const recording of actualIds){await open(page,running,recording);const ops=[...actual.projection(recording).operations].sort((a,b)=>a.startSequence-b.startSequence);if(!ops.length)continue;
     await press(page,'g',ops[0]!.id);await press(page,'j',ops[1]!.id);await press(page,'G',ops.at(-1)!.id);await press(page,'k',ops.at(-2)!.id);
-    await expect(page.locator('.inspector')).toHaveCount(0);await expect(focused(page)).toBeInViewport();expect(await page.locator('.history').evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(page.getByRole('region',{name:'Operation detail'})).toHaveCount(0);await expect(focused(page)).toBeInViewport();expect(await page.locator('.history').evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
     await page.keyboard.press('?');await expect(page.getByRole('dialog',{name:'Reading shortcuts',exact:true})).toBeVisible();await page.screenshot({path:resolve(`.local/turn2-${recording}.png`)});await page.keyboard.press('Escape');
   }expect(errors).toEqual([]);}finally{await running.close();await actual.close();}
 });

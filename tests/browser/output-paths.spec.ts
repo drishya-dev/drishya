@@ -30,7 +30,7 @@ test('diagnostic paths retain output, open captured ranges and keep disk separat
  await page.keyboard.press('Escape');await material.getByRole('button',{name:'Open captured work for src/source.test.ts',exact:true}).click();
  reader=page.getByRole('dialog',{name:'Work on src/source.test.ts',exact:true});await expect(reader).toContainText('No matching captured actions');expect(disk).toEqual([]);await page.keyboard.press('Escape');
  await card.locator('.case-bar').first().click();const caseReader=page.getByRole('dialog',{name:'Captured test result',exact:true});await expect(caseReader.getByRole('button',{name:'Open captured work for src/source.test.ts at line 2',exact:true})).toBeVisible();await page.keyboard.press('Escape');
- const search=page.locator('article.op-search');await search.focus();await search.press('Enter');const inspector=page.getByRole('complementary',{name:'Operation detail'});await inspector.locator('.hit-row').click();
+ const search=page.locator('article.op-search');await search.focus();await search.press('Enter');const inspector=page.getByRole('region',{name:'Operation detail'});await inspector.locator('.search-bead').click();
  reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toHaveValue(/\/search\/0$/);await expect(reader).toContainText('Exact captured search result');expect(disk).toEqual([]);
  for(const width of [1440,390,320]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:`.local/files2-output-reader-${width}.png`});}
 });

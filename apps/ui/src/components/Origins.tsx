@@ -243,7 +243,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
               const r = el.getBoundingClientRect();
               const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
               const overview = el.dataset.originRenderer === 'overview' && hit?.closest('.repo-lens-world');
-              return visible(el, false) && !!hit && (overview || !hit.closest('.op, .prose, .turn, .passage-head, .spine, .dock, .crown, .inspector, .sheet, .file-panel, .map-legend, .map-tip'));
+              return visible(el, false) && !!hit && (overview || !hit.closest('.op, .prose, .turn, .passage-head, .spine, .dock, .crown, .sheet, .file-panel, .map-legend, .map-tip'));
             }) : undefined;
             label = origin ? 'Repository node' : 'File reference';
             origin ??= fileTreeOrigin(viewer, path);

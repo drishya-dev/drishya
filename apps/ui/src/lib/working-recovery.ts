@@ -18,7 +18,7 @@ function checkpoint():WorkingLocations|undefined {
   if(s.recordingId&&s.projection&&s.mode==='history') {
     const session=snapshot.sessions.find(item=>item.id===s.recordingId);
     if(session) {
-      const location={developerWorkspace:s.developerWorkspace,selectedOp:s.selectedOp,expandedOp:s.expandedOp,currentFile:s.currentFile,filePanel:s.filePanel,filePanelFocus:s.filePanelFocus,filePanelEvidence:s.filePanelEvidence,filePanelLine:s.filePanelLine,explore:s.explore,compareAgents:s.compareAgents,mapFocusPath:s.mapFocusPath,filter:s.filter,follow:s.follow,held:s.held,inspectorTab:s.inspectorTab,inspectorWidth:s.inspectorWidth,readingPassageId:s.readingPassageId,start:s.historyPage?.start};
+      const location={developerWorkspace:s.developerWorkspace,selectedOp:s.selectedOp,expandedOp:s.expandedOp,currentFile:s.currentFile,filePanel:s.filePanel,filePanelFocus:s.filePanelFocus,filePanelEvidence:s.filePanelEvidence,filePanelLine:s.filePanelLine,explore:s.explore,compareAgents:s.compareAgents,mapFocusPath:s.mapFocusPath,filter:s.filter,follow:s.follow,held:s.held,readingPassageId:s.readingPassageId,start:s.historyPage?.start};
       session.entries=session.entries.filter(([key])=>key!=='location');session.entries.push(['location',location]);snapshot.last=s.recordingId;
     }
   }

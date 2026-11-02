@@ -26,7 +26,7 @@ import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { setLowResource, setMapVisible, setMotion, useApp } from '../state.ts';
 import { Kbd, timeOf } from './common.tsx';
 import { History } from './History.tsx';
-import { ExplanationView, Inspector } from './Inspector.tsx';
+import { ExplanationView } from './ExplanationView.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 import { MaterialGlyph } from './MaterialGlyph.tsx';
@@ -77,7 +77,6 @@ function WorkspaceViewer() {
   const mapReading = useApp(s => !!(s.currentFile || s.filePanel));
   const compareAgents = useApp((s) => s.compareAgents);
   const motion = useApp((s) => s.motion);
-  const inspectorWidth = useApp(s => s.inspectorWidth);
   const foldersHidden = useApp(s => s.foldersHidden);
   const main = useRef<HTMLDivElement>(null);
   const currentFile=useApp(s=>s.currentFile);
@@ -171,7 +170,7 @@ function WorkspaceViewer() {
     const column = el.querySelector('.history-inner');
     if (column) ro.observe(column);
     return () => ro.disconnect();
-  }, [!!projection, foldersHidden, explore, inspectorWidth, experience]);
+  }, [!!projection, foldersHidden, explore, experience]);
 
   if (!projection || !scene || !historical) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading captured history…'}</div>;
   // Keep the viewport and finite arrivals alive across paged forward steps.
@@ -181,7 +180,7 @@ function WorkspaceViewer() {
 
   return (
     <><CapturedCommands/><ReviewInsights/><GitHistory/>
-    <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--inspector-width': `${inspectorWidth}px`, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${developerWorkspace ? ' developer-workspace-open' : ''}${filePeek?' file-peek-open':''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${selectedOp ? ' inspecting' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${developerWorkspace ? ' developer-workspace-open' : ''}${filePeek?' file-peek-open':''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <WorkspaceHeader scene={scene} projection={projection} />{experience === 'studio' ? <WorkbenchSources projection={historical} /> : <WorkspaceBar />}
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       {catchupError&&<div className="notice bad" role="alert">Local journal refresh failed: {catchupError} <button className="btn" onClick={()=>setCatchupRetry(n=>n+1)}>Retry journal refresh</button></div>}
@@ -201,7 +200,6 @@ function WorkspaceViewer() {
       <TurnsWatcher key={`turns/${recordingId}`} />
       <PromptComposer key={`composer/${recordingId}`} />
       <DeveloperWorkspace />
-      <Inspector projection={historical} />
       <Briefing projection={projection} />
       <Search projection={projection} />
       <ScreenHost />
