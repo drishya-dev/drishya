@@ -85,7 +85,7 @@ export function BrowserStrip({ operations, renderOperation }: { operations: Oper
   const observation = useApp(s => s.focusObservationId);
   const [lastTarget, setLastTarget] = useState<string>();
   const targeted = operations.find(op => op.id === target || observation && op.observationIds.includes(observation))?.id;
-  // A new explicit navigation wins once. Scrubbing afterwards remains free even with an Inspector open.
+  // A new explicit navigation wins once. Scrubbing afterwards remains free.
   if (targeted !== lastTarget) { setLastTarget(targeted); if (targeted) setChoice(targeted); }
   const index = Math.max(0, operations.findIndex(op => op.id === choice));
   const op = operations[index];

@@ -6,7 +6,7 @@ import {DelimitedInspection} from './DelimitedDataReader.tsx';
 import {DocumentInspection,ResourceInspection} from './CapturedResources.tsx';
 import './captured-content.css';
 
-/** History and Inspector share the same choices; raw material retains its existing owner. */
+/** Every reading shares the same choices; raw material retains its existing owner. */
 /** `fallback` is the result's own body. When given and the whole captured result is one complete JSON value with no other candidate readings, an inline reading replaces it
  *  (CONTENT-10) and the "Inspect data" row disappears; a field inside a wrapper never replaces its siblings; everything else keeps its explicit, hover-revealed choices. */
 export function CapturedResultViews({text,evidence,argumentsView=false,fallback,inlineReading=true}:{text:string;evidence?:CapturedContentEvidence;argumentsView?:boolean;fallback?:ReactNode;inlineReading?:boolean}){

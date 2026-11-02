@@ -100,7 +100,7 @@ for (const [adapterId, original] of sessions) {
       const opened = (await op.count()) > 0;
       if (opened) {
         await op.click();
-        await expect(page.getByRole('complementary', { name: 'Operation detail' })).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Operation detail' })).toBeVisible();
       }
 
       // A new browser connection reloads the same committed history; a resync adds nothing.

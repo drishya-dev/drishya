@@ -75,7 +75,7 @@
 :root[data-ui-version=modern] .modern-session-header .studio-session {padding:10px 18px;}
 :root[data-ui-version=modern] .modern-session-header .studio-session h1 {font-size:15px;font-weight:550;line-height:1.5;margin:0;}
 @media(max-width:700px) {:root[data-ui-version=modern] .modern-session-header .studio-session h1 {font-size:13px;}}
-:root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.inspecting) .history {right:0;padding-right:var(--stage-rail);}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history {right:0;padding-right:var(--stage-rail);}
 :root[data-ui-version=modern] .developer-workspace-open .complete-prompt-rail {display:none;}
 .prompt-rail-preview>time {display:block;color:var(--t2);font:11px/1.6 var(--mono);margin:3px 0 6px;}
 

@@ -62,7 +62,7 @@ test('native and MCP test bars preserve captured indices, support keyboard selec
   await page.getByRole('button',{name:'Close Captured test result'}).click();
   const mcp=page.locator('article.op').filter({hasText:'first captured case'}).first();await expect(mcp.locator('.case-bar')).toHaveCount(3);await mcp.getByRole('button',{name:/Test 2: failed/}).click();await expect(page.getByRole('region',{name:'Selected captured test result'})).toContainText('captured assertion detail');
   for(const width of [1440,390,320]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/test-bars-${adapter}-${width}.png`)});}
-  await page.getByRole('button',{name:'Close Captured test result'}).click();await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toHaveCount(0);await page.setViewportSize({width:1440,height:900});await failed.click();await page.getByRole('button',{name:'Open full captured output'}).click();await expect(native.locator('.op-expanded')).toContainText('AssertionError: expected true to be false');
+  await page.getByRole('button',{name:'Close Captured test result'}).click();await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toHaveCount(0);await page.setViewportSize({width:1440,height:900});await failed.click();await page.getByRole('button',{name:'Open full captured output'}).click();await expect(native.locator('.op-expanded')).toContainText('AssertionError: expected true to be false');
  }
 });
 

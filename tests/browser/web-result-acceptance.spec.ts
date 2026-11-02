@@ -49,7 +49,7 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();
  await card.locator('button.web-more').press('Enter');
- const inspector=page.getByRole('complementary',{name:'Operation detail'});await expect(inspector).toBeVisible();
+ const inspector=page.getByRole('region',{name:'Operation detail'});await expect(inspector).toBeVisible();
  await expect(inspector.locator('.web-reading-meta')).toContainText('160 recorded results');
  await expect(inspector.locator('.web-results li')).toHaveCount(100);
  await expect(inspector.locator('.web-title').first()).toHaveText(longTitle);
@@ -72,7 +72,7 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  const end=projection.timeline.findIndex(item=>item.type==='op-end'&&item.operationId===op.id);
  await page.goto(`${server.url}/?experience=modern&motion=0&at=${end+1}#/r/${id}`);
  const replayCard=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await replayCard.scrollIntoViewIfNeeded();await replayCard.press('Enter');
- const replayInspector=page.getByRole('complementary',{name:'Operation detail'});await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 recorded results');
+ const replayInspector=page.getByRole('region',{name:'Operation detail'});await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 recorded results');
  const timeline=page.getByRole('slider',{name:'Timeline',exact:true});await timeline.press('ArrowLeft');await expect(timeline).toHaveAttribute('aria-valuenow',String(end));
  await expect(replayInspector.locator('.web-results li')).toHaveCount(0);await expect(replayInspector).toContainText('Waiting for result');await expect(replayInspector).not.toContainText('Exact captured final paragraph.');
  await timeline.press('ArrowRight');await expect(replayInspector.locator('.web-reading-meta')).toContainText('160 recorded results');

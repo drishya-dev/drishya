@@ -44,6 +44,6 @@ for(const width of [1440,600])test(`Git evidence opens captured commands and new
   const rows=dialog.getByRole('button',{name:/Commits ·/});await expect(rows).toBeVisible();if(await rows.getAttribute('aria-expanded')!=='true')await rows.click();
   await dialog.locator(`[data-row-hash="${tip}"]`).click();
   const command=dialog.getByRole('button',{name:'Command matches turn 1',exact:true});await expect(command).toBeVisible();await expect(command).toHaveAttribute('title',/not proof of authorship/);
-  await command.click();await expect(dialog).toHaveCount(0);await expect(page.locator('.inspector')).toBeVisible();
+  await command.click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

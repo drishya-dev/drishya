@@ -83,8 +83,6 @@ test.describe('genuine cross-tool content parity',()=>{
       await findCard(page,strip??card,scene.passages.map(ps=>ps.id),target.id,app.paged(sample.recording));
       if(strip&&group){const slider=strip.getByRole('slider',{name:'Browser step',exact:true});await slider.press('Home');for(let n=0;n<group.findIndex(item=>item.id===op.id);n++)await slider.press('ArrowRight');await reveal(card);}
       const expand=card.locator('button.op-expand');if(await expand.count()&&await expand.getAttribute('aria-expanded')!=='true')await expand.press('Enter');
-      // Expansion pins the virtual passage before closing the restored inspector selection.
-      const inspector=page.locator('.inspector');if(await inspector.count())await inspector.getByRole('button',{name:'Close',exact:true}).press('Enter');
       const material=card.locator(sample.selector).last();await reveal(material);
       if(sample.family!=='image')expect(await material.evaluate(el=>!!el.textContent?.trim())).toBe(true);
       const view=replay?asOfProjection(projection,end+1):projection;
@@ -214,9 +212,9 @@ test.describe('genuine cross-tool content parity',()=>{
        if(await link.count()){const href=await link.getAttribute('href');await link.press('Enter');await expect.poll(()=>new URL(page.url()).hash).toBe(href);await page.locator('.history').waitFor();}
       }
       if(op.detail.kind==='search'&&op.detail.hits.length){
-       await card.press('Enter');const inspector=page.locator('.inspector');
-       await expect(inspector.locator('.hit-row')).toHaveCount(op.detail.hits.length);
-       expect(await inspector.locator('.hit-path').evaluateAll((nodes,hits)=>nodes.every((node,i)=>node.textContent===hits[i]?.path),op.detail.hits)).toBe(true);
+       await card.press('Enter');const inspector=page.getByRole('region',{name:'Operation detail'});
+       await expect(inspector.locator('.search-bead')).toHaveCount(op.detail.hits.length);
+       expect(await inspector.locator('.search-bead').evaluateAll((nodes,hits)=>nodes.every((node,i)=>node.textContent?.startsWith(hits[i]?.path??'')),op.detail.hits)).toBe(true);
       }
       results.push({prefix:sample.recording.slice(4,12),family:sample.family,width,replay,observations:projection.observationCount,errors,external});
      }catch(error){

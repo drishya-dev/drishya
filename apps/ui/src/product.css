@@ -85,7 +85,7 @@
 .dock .server-tool { font-size: 10px; }
 .dock .dock-head { font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--t2); }
 .dock .dock-basis { font-size: 10px; }
-.inspector, .sheet { top: calc(var(--crown-h) + var(--workspace-h)); background: var(--s1); box-shadow: -12px 0 36px #00000026; }
+.sheet { top: calc(var(--crown-h) + var(--workspace-h)); background: var(--s1); box-shadow: -12px 0 36px #00000026; }
 .map-legend, .map-tools, .map-tip { background: var(--s1); color: var(--t1); border-color: var(--line-2); }
 .map-matches { background: var(--s1); }
 .catalog-toggle { bottom: calc(var(--transport-h) + 14px); }

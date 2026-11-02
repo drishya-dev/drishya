@@ -17,8 +17,6 @@ export function EvidenceNavigationProvider({ children }: { children: ReactNode }
   const currentFile = useApp(s => s.currentFile);
   const selectedOp = useApp(s => s.selectedOp);
   const explore = useApp(s => s.explore);
-  const inspectorTab = useApp(s => s.inspectorTab);
-  const inspectorWidth = useApp(s => s.inspectorWidth);
   const loaded = useApp(s => !!s.projection);
   // Replay movement invalidates retained evidence before rendering. Live capture
   // does not erase the user's independent reading trail.
@@ -29,7 +27,7 @@ export function EvidenceNavigationProvider({ children }: { children: ReactNode }
     if (mode === 'history') memory.set('evidence/trail', value);
     return value;
   }, [memory, source, id, mode, cutoff]);
-  const location: EvidenceLocation = { filePanel, filePanelFocus, filePanelEvidence, filePanelLine, currentFile, selectedOp, explore, inspectorTab, inspectorWidth };
+  const location: EvidenceLocation = { filePanel, filePanelFocus, filePanelEvidence, filePanelLine, currentFile, selectedOp, explore };
   if (!loaded) return <>{children}</>;
   const visit = trail.visit(location);
   return <NavigationContext.Provider value={{ trail, visit }}>{children}</NavigationContext.Provider>;

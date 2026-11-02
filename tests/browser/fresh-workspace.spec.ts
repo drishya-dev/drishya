@@ -880,7 +880,7 @@ test('Modern Changes reaches every captured check as one list and returns to the
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
   await checks.getByRole('button',{name:/review-case-69/}).click();
   await expect(review).toHaveCount(0);
-  await expect(page.getByRole('complementary',{name:'Operation detail'})).toContainText('review-case-69');
+  await expect(page.getByRole('region',{name:'Operation detail'})).toContainText('review-case-69');
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
   await expect(checks.locator('.review-item')).toHaveCount(70);
   await expect(checks.getByRole('button',{name:/review-case-69/})).toBeInViewport();
@@ -1541,7 +1541,7 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await dialog.getByRole('combobox',{name:'Command outcome',exact:true}).selectOption('error');await expect(dialog.locator('.command-outcome').first()).toHaveText('Failed');
   await page.setViewportSize({width:390,height:844});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
-  await cards.first().getByRole('button',{name:'Open captured activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.inspector')).toBeVisible();
+  await cards.first().getByRole('button',{name:'Open captured activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
   await page.keyboard.press('Escape');await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Captured commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
 
@@ -1629,7 +1629,7 @@ test('finding membership reaches every captured operation with filters, exact op
   await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.getByText('Page 2 of 3 · up to 25 per page',{exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.locator('.finding-member')).toHaveCount(20);
   const filter=dialog.getByRole('searchbox',{name:'Filter finding members',exact:true});await filter.fill('no such member');await expect(dialog.locator('.finding-member')).toHaveCount(0);await filter.fill('');await expect(dialog.locator('.finding-member')).toHaveCount(25);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/finding-members-${width}.png`)});}
-  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toContainText('stable-command');
+  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toContainText('stable-command');
 });
 
 
@@ -1667,7 +1667,7 @@ test('a restored current reader requests fresh consent and keeps inspector navig
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   const reader=page.locator('.current-file-reader');await expect(reader.getByRole('region',{name:'Current file access',exact:true})).toBeVisible();expect(reads).toBe(0);await expect(page.locator('dialog[open]')).toHaveCount(1);
   await reader.getByRole('button',{name:'Approve current-file reading',exact:true}).click();await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();expect(reads).toBeGreaterThan(0);await expect(reader.getByRole('alert')).toHaveCount(0);
-  await reader.locator(':scope>header button[aria-label^="Close "]').click();const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
+  await reader.locator(':scope>header button[aria-label^="Close "]').click();const inspector=page.getByRole('region',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
   await workspace.click();await expect(inspector).toHaveCount(0);const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk.getByRole('tablist')).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(inspector).toBeVisible();
 });
 
