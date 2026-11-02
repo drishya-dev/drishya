@@ -30,7 +30,7 @@ async function open(page: Page, width: number) {
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await openGitDestination(page, 'Git graph');
   const dialog = page.getByRole('dialog', { name: 'Git history', exact: true });
-  const approve = dialog.getByRole('button', { name: 'Approve read-only Git history', exact: true });
+  const approve = dialog.getByRole('button', { name: 'Approve read-only Git', exact: true });
   await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible(); if (await approve.isVisible()) await approve.click();
   await expect(dialog.locator('.thread-graph')).toBeVisible({ timeout: 40_000 });
   await expect(dialog.locator('.thread-commit')).toHaveCount(8);

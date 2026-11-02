@@ -42,7 +42,7 @@ test('a commit hunk the agent wrote exactly links to its captured edit; a hand-w
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await openGitDestination(page, 'Git graph');
   const atlas = page.getByRole('dialog', { name: 'Git history', exact: true });
-  const approve = atlas.getByRole('button', { name: 'Approve read-only Git history', exact: true });
+  const approve = atlas.getByRole('button', { name: 'Approve read-only Git', exact: true });
   await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible(); if (await approve.isVisible()) await approve.click();
   const rows = atlas.getByRole('button', { name: /Commits ·/ }); await expect(rows).toBeVisible();
   if (await rows.getAttribute('aria-expanded') !== 'true') await rows.click();
@@ -74,7 +74,7 @@ test('several captured edits wrote a commit hunk: the Git graph offers them as a
   if (await stale.count()) { await page.keyboard.press('Escape'); await expect(stale).toHaveCount(0); }
   await openGitDestination(page, 'Git graph');
   const atlas = page.getByRole('dialog', { name: 'Git history', exact: true });
-  const approve = atlas.getByRole('button', { name: 'Approve read-only Git history', exact: true });
+  const approve = atlas.getByRole('button', { name: 'Approve read-only Git', exact: true });
   await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible(); if (await approve.isVisible()) await approve.click();
   const rows = atlas.getByRole('button', { name: /Commits ·/ }); await expect(rows).toBeVisible();
   if (await rows.getAttribute('aria-expanded') !== 'true') await rows.click();

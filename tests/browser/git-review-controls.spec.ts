@@ -37,9 +37,7 @@ async function openReview(page:import('@playwright/test').Page){
   await page.goto(`${server.url}/?experience=modern#/r/${id}`);
   await openGitDestination(page, 'Git review');
   const reader=page.getByRole('dialog',{name:'Git review',exact:true});
-  const workspace=reader.getByRole('button',{name:'Approve current workspace'}),git=reader.getByRole('button',{name:'Approve read-only Git'}),refresh=reader.getByRole('button',{name:'Refresh changes',exact:true});
-  await expect(workspace.or(git).or(refresh)).toBeVisible();
-  if(await workspace.isVisible())await workspace.click();
+  const git=reader.getByRole('button',{name:'Approve read-only Git'}),refresh=reader.getByRole('button',{name:'Refresh changes',exact:true});
   await expect(git.or(refresh)).toBeVisible();if(await git.isVisible())await git.click();
   await expect(reader.locator('.git-patch')).toContainText('value = 2');return reader;
 }

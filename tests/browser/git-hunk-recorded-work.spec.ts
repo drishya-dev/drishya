@@ -56,11 +56,8 @@ async function openReview(page: Page) {
   await openGitDestination(page, 'Git review');
   const review = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(review).toBeVisible();
-  const workspaceConsent = review.getByRole('button', { name: 'Approve current workspace' });
   const gitConsent = review.getByRole('button', { name: 'Approve read-only Git' });
   const refresh = review.getByRole('button', { name: 'Refresh changes' });
-  await expect(workspaceConsent.or(gitConsent).or(refresh)).toBeVisible();
-  if (await workspaceConsent.isVisible()) await workspaceConsent.click();
   await expect(gitConsent.or(refresh)).toBeVisible();
   if (await gitConsent.isVisible()) await gitConsent.click(); else await refresh.click();
   return review;

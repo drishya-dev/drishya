@@ -16,6 +16,7 @@ import { FileIcon } from './FileIcon.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { WorkspaceOptions } from './WorkspaceOptions.tsx';
 import './git-review-controls.css';
+import { GitAccess, grantGit } from './GitAccess.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { readReviewMarks, previousReviewNote, updateReviewMark, type ReviewMark } from '../lib/git-review-marks.ts';
 
@@ -81,7 +82,7 @@ function GitReader({ close }: { close: () => void }) {
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const current = () => alive.current && useApp.getState().recordingId === id && useApp.getState().source === source;
   const { workspace, approve } = useSessionWorkspace();
-  const [consent, setConsent] = useState(false);
+  const [consent, setConsent] = useState<boolean>();
   const [snapshot, setSnapshot] = useState<GitSnapshot>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -153,7 +154,7 @@ function GitReader({ close }: { close: () => void }) {
   return <ReadingDialog title="Git review" windowId="Git review" resetWindow={()=>{setWidth(680);setFilesHidden(false);}} close={close} modeless={modern} headerIcon={modern ? <GitBranchGlyph /> : undefined} style={modern ? {'--git-reader-width': `${readingWidth}px`} as CSSProperties : undefined} resizeControl={modern ? <ReadingResize value={readingWidth} minimum={420} maximum={maximumWidth} change={setWidth} reset={()=>setWidth(680)} label="Resize Git reading space" fromRight /> : undefined} className={`git-review-dialog${modern ? ' modern-git-drawer' : ''}`}>
     {!modern && <div className="git-history-entry"><button className="btn ghost" disabled={busy||checking} onClick={()=>{close();requestAnimationFrame(openGitHistory);}}>Branches &amp; commits ↗</button></div>}
     {modern && (!workspace?.approved || !consent) && <div className="modern-git-context"><strong>{workspaceName}</strong><small>Read-only · current changes</small></div>}
-    {!workspace?.approved ? <section><p>Inspect the selected workspace first. Git access has separate consent.</p><button className="btn" disabled={busy || checking} onClick={() => { setBusy(true); void approve().catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve current workspace</button></section> : !consent ? <section><p>Read local branches, commits, status and bounded staged / working-tree patches from this repository. No repository writes. This is current Git, separate from captured history.</p><button className="btn" disabled={busy || checking} onClick={() => { setBusy(true); void workspaceApi.approveGit(id).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }}>Approve read-only Git</button></section> : <>
+    {consent === undefined && !error ? <section aria-busy="true"><p>Checking Git access…</p></section> : !workspace?.approved || !consent ? <GitAccess workspaceApproved={!!workspace?.approved} busy={busy} disabled={busy || checking} grant={() => { setBusy(true); void grantGit(id, !!workspace?.approved, approve).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }} /> : <>
       {modern ? <nav className="git-review-toolbar git-review-compact" aria-label="Git review controls">
         <div className="git-review-identity"><strong title={workspace?.root}>{workspaceName}</strong><span title={snapshot ? `${snapshot.branch} · ${snapshot.head}` : 'Current Git'}>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span><small>Read-only · current changes</small></div>
         {snapshot && <button className="btn git-file-toggle" aria-expanded={!filesHidden} aria-controls="git-changed-files" onClick={() => setFilesHidden(!filesHidden)} title={filesHidden ? 'Show changed files' : 'Hide changed files'}><InterfaceGlyph name="folder"/>Files <span>{snapshot.files.length}</span></button>}

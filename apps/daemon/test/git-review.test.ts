@@ -49,6 +49,22 @@ it('changes the review content identity on an edit without changing HEAD', { tim
   expect(after.files.find(f => f.path === 'a.ts')?.fingerprint).not.toBe(before.files.find(f => f.path === 'a.ts')?.fingerprint);
   review.revoke(id); await expect(review.snapshot(id)).rejects.toMatchObject({ status: 403 });
 });
+it('reads one at a time, so a second Git surface waits its turn instead of failing', { timeout: 20_000 }, async () => {
+  await access.approve(id);
+  let running = 0, most = 0;
+  const queued = new GitReview(access, async (root, args, signal) => { running++; most = Math.max(most, running); try { return await readGit(root, args, signal); } finally { running--; } });
+  await queued.approve(id);
+  const [first, second] = await Promise.all([queued.snapshot(id), queued.snapshot(id)]);
+  expect(first.head).toBe(second.head);
+  expect(most).toBeLessThanOrEqual(4);
+  let release = () => {}; const held = new Promise<void>(done => { release = done; });
+  const blocked = new GitReview(access, async (root, args, signal) => { await held; return readGit(root, args, signal); });
+  await blocked.approve(id);
+  const waiting = Array.from({ length: 8 }, () => blocked.snapshot(id).catch(() => undefined));
+  await expect(blocked.snapshot(id)).rejects.toThrow('already running');
+  release(); await Promise.all(waiting);
+});
+
 it('parses NUL-delimited rename paths and unusual filenames without whitespace splitting', () => {
   expect(parseStatus('R  new name.ts\0old name.ts\0?? odd\nfile.ts\0')).toEqual([{ path: 'new name.ts', previousPath: 'old name.ts', status: 'R ' }, { path: 'odd\nfile.ts', previousPath: undefined, status: '??' }]);
 });

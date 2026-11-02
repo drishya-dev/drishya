@@ -15,7 +15,7 @@ async function open(page:Page,server:RunningServer,id:string,width:number){
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await openGitDestination(page, 'Git graph');
   const dialog=page.getByRole('dialog',{name:'Git history',exact:true});
-  const approve=dialog.getByRole('button',{name:'Approve read-only Git history',exact:true});
+  const approve=dialog.getByRole('button',{name:'Approve read-only Git',exact:true});
   await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
   try{await expect(dialog.getByRole('combobox',{name:'Read local Git branch'})).toBeEnabled({timeout:40_000});}
   catch(error){if(process.env.DRISHYA_GIT_BRANCH_SESSIONS)await page.screenshot({path:resolve(`.local/git5-open-failure-${id.slice(0,12)}-${width}.png`)});throw error;}
