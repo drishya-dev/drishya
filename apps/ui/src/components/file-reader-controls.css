@@ -52,3 +52,33 @@
 :root[data-ui-version=modern] :is(.file-evidence-material,.read-material) .captured-result-views>.material-context { display:none; }
 :root[data-ui-version=modern] .reading-window-actions .desk-options>summary>span { display:none; }
 :root[data-ui-version=modern] .current-file-reader .document-limit-note { flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--line);font:var(--text-2xs)/1.5 var(--sans);color:var(--t3); }
+
+/* UI-8, file work. The file is the window's title, the rail is what happened to it, and the right reads one step:
+   one row of controls, then the material filling what is left. */
+:root[data-ui-version=modern] .file-workspace .file-evidence-reading { display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto minmax(0,1fr);align-items:center;gap:8px 12px;padding:10px 16px 12px;min-height:0;overflow:hidden; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-actions>.file-evidence-toolbar { display:contents; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-actions { grid-column:3;grid-row:1;display:flex;flex-wrap:nowrap;align-items:center;gap:4px;margin:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-reading>.file-timeline-steps { order:0;grid-column:2;grid-row:1;margin:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired),:root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired)>.file-evidence-column { display:contents; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-choice { grid-column:1;grid-row:1;min-width:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-material { grid-column:1/-1;grid-row:2;align-self:stretch; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-columns.paired { grid-column:1/-1;grid-row:2;min-height:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-material { display:flex;flex-direction:column;min-height:0;margin:0;padding:0;overflow:hidden; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-material>.artifact-reader { flex:1;display:flex;flex-direction:column;min-height:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-material .diff-scroll { flex:1;min-height:0;max-height:none; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-choice select { width:100%;min-height:var(--control-md);padding-inline:0;border-color:transparent;background:none;appearance:none;color:var(--t1);font-weight:var(--weight-medium);text-overflow:ellipsis; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-choice select:is(:hover,:focus-visible) { border-color:var(--line); }
+:root[data-ui-version=modern] .file-workspace .file-filter { padding-inline:8px;border-color:transparent;border-bottom-color:var(--line);border-radius:0;background:transparent;font-size:var(--text-xs); }
+/* A whole new file is text, not a change against anything: the sign says so without flooding the page. */
+:root[data-ui-version=modern] .diff-reader[data-new-file] .diff .add { background:transparent; }
+@media(max-width:899px) {
+ :root[data-ui-version=modern] .file-workspace .file-evidence-reading { grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr); }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-reading>.file-timeline-steps { grid-column:1;grid-row:2; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-actions { grid-column:2;grid-row:2; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-choice { grid-column:1/-1; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-material,:root[data-ui-version=modern] .file-workspace .file-evidence-columns.paired { grid-row:3; }
+}
+:root[data-ui-version=modern] .file-workspace>header h2 { display:flex;align-items:center;gap:10px;min-width:0; }
+:root[data-ui-version=modern] .file-workspace>header .evidence-navigation { padding:0;gap:2px; }
+:root[data-ui-version=modern] .file-workspace>header .evidence-navigation button { width:var(--control-sm);min-width:var(--control-sm);min-height:var(--control-sm);padding:0; }
+.file-heading:focus { outline:none; }
