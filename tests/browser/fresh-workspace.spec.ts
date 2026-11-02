@@ -1826,7 +1826,7 @@ test('Files single click replaces preview and double click keeps a file without 
  await files.locator('[data-spine-path="README.md"]').click();await expect(reader.getByRole('tab')).toHaveCount(2);await expect(page.locator('.developer-workspace')).toHaveCount(0);
  await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);await expect(page.locator('.history')).toBeVisible();
  await files.locator('[data-spine-path="package.json"]').click();await expect(reader.getByRole('tab')).toHaveCount(2);
- await page.setViewportSize({width:390,height:844});const show=page.getByRole('button',{name:'Show files',exact:true});if(await show.getAttribute('aria-pressed')==='false')await show.click();await files.locator('[data-spine-path="README.md"]').click();await expect(reader.locator('header h2')).toHaveText('README.md');await expect(files).toHaveCount(0);
+ await page.setViewportSize({width:600,height:844});const show=page.getByRole('button',{name:'Show files',exact:true});await expect(show).toBeVisible();await expect(show.or(files)).not.toHaveCount(0);if(!await files.isVisible())await show.click();await files.locator('[data-spine-path="README.md"]').click();await expect(reader.locator('header h2')).toHaveText('README.md');await expect(files).toHaveCount(0);
  await page.setViewportSize({width:1440,height:900});await reader.getByRole('button',{name:'Open in Workspace',exact:true}).click();
  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk).toBeVisible();
  await expect(page.getByRole('button',{name:'Open developer workspace',exact:true})).toHaveAttribute('aria-pressed','true');

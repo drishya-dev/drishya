@@ -763,6 +763,8 @@ export interface RecordingSummary {
   title: string;
   harness: HarnessId;
   workspaceRoot?: string;
+  /** The repository `workspaceRoot` is a linked worktree of, when that is known. */
+  repositoryRoot?: string;
   /** A user-chosen root for the repository map, when the captured workspace is elsewhere. */
   graphRoot?: string;
   sourcePath?: string;
@@ -814,6 +816,8 @@ export interface DiscoveredSource {
   modifiedAt: string;
   /** Best-effort, read from the first records only. */
   cwd?: string;
+  /** The repository `cwd` is a linked worktree of, when that is known. */
+  repositoryRoot?: string;
   title?: string;
   importedRecordingId?: string;
   /** Related files the adapter reads together with this one (e.g. subagent transcripts). */

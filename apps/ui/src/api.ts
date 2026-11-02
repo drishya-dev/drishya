@@ -87,6 +87,7 @@ export interface DataSource {
   recordings(): Promise<ReaderRecording[]>;
   sources(): Promise<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>;
   importSource(path: string, adapterId: string, live: boolean): Promise<{ recordingId: string }>;
+  imports?(): Promise<{ path: string; bytes: number; total: number }[]>;
   projection(id: string): Promise<Projection>;
   history?(id: string, query?: HistoryQuery): Promise<HistoryPage>;
   findingMembers?(id:string,key:string,page?:number,q?:string):Promise<FindingMembers>;
@@ -272,6 +273,7 @@ export const daemon: DataSource = {
   recordings: async () => (await req<{ recordings: ReaderRecording[] }>('/v1/recordings')).recordings,
   sources: () => req<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>('/v1/sources'),
   importSource: (path, adapterId, live) => req('/v1/import', { method: 'POST', json: { path, adapterId, live } }),
+  imports: async () => (await req<{ imports: { path: string; bytes: number; total: number }[] }>('/v1/imports')).imports,
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
   history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
   historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,

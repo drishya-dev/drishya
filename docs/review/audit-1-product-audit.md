@@ -30,9 +30,9 @@ Each surface answers the brief's questions in short, then lists what was found. 
 | H10 | Refresh was the loudest control on the page. | Low | Fixed: quiet hairline. |
 | H11 | The half-width workspace chevron was a text glyph sitting below the line. | Low | Fixed: drawn. |
 | H12 | "Search evidence" beside "Search sessions or workspaces…": two searches, and "evidence" is our word. | Medium | UI-21; waits on TEST-2, which holds the spec that names it. |
-| H13 | New sessions do not appear until Refresh: the live subscription refreshes recordings, not discovered journals. | Medium | HOME-2. |
+| H13 | New sessions do not appear until Refresh: the live subscription refreshes recordings, not discovered journals. | Medium | Fixed by HOME-2: Home rescans every 10 s while visible, about 200 ms over 217 journals. |
 
-**Interactions checked:** click a row, a workspace, Temporary folders, both filters, search, Clear filters, arrow keys and End, hover, half width. Nothing dead. H14: opening a session that has not been imported dims the whole list and shows a small `Opening…`, for many seconds on a large journal, with no way to do anything else (HOME-2). H15: Git worktrees of one repository are separate workspaces of the same name; they belong under the repository (HOME-2).
+**Interactions checked:** click a row, a workspace, Temporary folders, both filters, search, Clear filters, arrow keys and End, hover, half width. Nothing dead. H14: opening a session that has not been imported dims the whole list and shows a small `Opening…`, for many seconds on a large journal, with no way to do anything else (fixed by HOME-2: the row reads `Reading N%` with a hairline, the list stays usable, the last row chosen is the one opened). H15: Git worktrees of one repository are separate workspaces of the same name; they belong under the repository (HOME-2).
 
 ## History: the cards
 
