@@ -32,6 +32,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
+| HOME-2 | @yash + Claude Opus 5.5 | `claude/home-2` | 2026-11-02 | `Home.tsx`, `modern/SessionHome.tsx`, `session-home.css`, `lib/home-groups.ts`, discovery and import in `packages/ingest` and `apps/daemon/src/server.ts`, their specs. |
 
 
 ---
