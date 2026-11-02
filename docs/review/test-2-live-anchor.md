@@ -170,3 +170,10 @@ The driver now settles Fit's layout and performs **one pointer move** to the mid
 These are test-only corrections in the already-approved Fresh Workspace file. The application/packages/lockfile are identical to fully checked b607f95, so the passing types, 1,174 units/one skip, build/package and six genuine journeys remain valid. The two clean commands above are **not** borrowed: the strict streak restarts from zero on the newly sealed candidate.
 
 The earlier predecessor standard command a9dda1f is also retained: parallel **586 passed / 27 skipped / two failed / one timed out**, serial **33 passed / one skipped**, exit 1, **652.57 seconds**. Those are the three initial blocking cases this continuation repaired.
+
+
+### Manual execution handoff (2 November)
+
+Harsh elected to run the gate himself and return the output. The automatic attempt on 9236f13 is **interrupted, not accepted**. Windows Power-Troubleshooter reports sleep **18:15:51–18:30:54 IST**, and Kernel-Power records **Button or Lid**. That run includes ERR_NETWORK_IO_SUSPENDED and two 90-second timeouts; no software cause is inferred for each timeout. Its partial log and power-event fields remain private. The owned gate process tree was stopped for handoff; no other application/agent session or power setting was changed.
+
+The prepared local manual command runs the unchanged full browser command three times at DRISHYA_WORKERS=3, with the normal one-worker serial pass. It saves unique per-run logs, summaries and result metadata; stops on the first nonzero exit; and restores its process environment afterwards. No retries, larger timeouts, new skips or relaxed assertions. The whole completed script was parsed without running another suite. **No three-clean-run claim, TEST-2 checkbox or ready-for-review transition is made until Harsh returns the results.**

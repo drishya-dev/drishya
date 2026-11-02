@@ -39,6 +39,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — TEST-2 repaired, manual three-run gate pending (#314)
+
+- Home results settle independently; storage walks coalesce per daemon. Files readiness passes 24/24 at four workers. Actual expansion traces prove pending keyboard navigation closes or steals focus from an explicit action; control focus/Escape cancellation, controlled regressions and genuine Claude/Codex 600/1440 journeys pass.
+- A later atlas failure is a test choosing consent while Git access is unknown; held-response proof confirms it. Its separate neighbour-strand probe is replaced by one pointer move on the rendered feature-parent edge. The full atlas case passes 24/24 at four workers, with original content/geometry/timeouts.
+- Types, 1,174 units/one skip, build and package pass on identical application code. Two clean three-worker commands were followed by a failed third, so they do not complete the streak. The next attempt crossed a Windows button/lid sleep and is retained as interrupted. [Every result and trace](review/test-2-live-anchor.md).
+- Harsh will run the prepared manual three-command gate and send its output. Background test execution was stopped for that handoff. TEST-2 stays claimed/unchecked and #314 stays draft; worker-count acceptance is pending, not certified.
+
 ### Yash with Claude — AUDIT-1, first batch
 
 - Yash changed the method on 1 November: walk the product as a developer and fix presentation in place, recording everything in [the audit](review/audit-1-product-audit.md), rather than record first and fix later. AUDIT-1 stays open: live, the review tools, the peek, compare and the written interaction inventory are not walked yet.
