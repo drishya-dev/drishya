@@ -51,6 +51,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - Yash changed the method on 1 November: walk the product as a developer and fix presentation in place, recording everything in [the audit](review/audit-1-product-audit.md), rather than record first and fix later. AUDIT-1 stays open: live, the review tools, the peek, compare and the written interaction inventory are not walked yet.
 - Walked on the real library (Claude `c8e5c9c8`, 2,695 operations; Codex `32f628ee` with 30 sub-agents) at 1440 and 600 px: Home, History cards, Inspector, file work, Workspace, Changes, the palette, Git review and history, search, Settings, composer, map, replay.
 - Biggest changes: Home's untitled rows were sub-agent threads, now nested with their journals in a Sub-agents group; 105 sessions in 96 scratch folders fold into one group; cards are named by the file or Claude's own command description (reducer r32); bounded previews end in a fade; the file view went from 390 px of chrome to one row; Ctrl+K lands in its input (it opened on the close button).
+- Impeccable's detector ran with Yash's yes (#318): 15 scans on real sessions, 196 findings, five rules fixed, Home now clean, the rest judged in the audit.
+- Second batch, 2 November: UI-22 (#320), CONTENT-15 (#321), REVIEW-6 (#322), UI-20 (#323), UI-23 (#324) and DATA-13 are done. A failure says why and a run that reports failures no longer reads as passed; Changes is one list; the Inspector is gone and Expand is the one reading of a step; comparing with disk places an excerpt by its lines and ignores line endings; two tabs on one session save without conflict.
+- Next: UI-21 and HOME-2 after TEST-2 lands; `git-session-evidence` fails on clean main (race, N5 in the audit, `GitHistory.tsx` held by TEST-2).
 - Eight findings became items: UI-20, UI-21, UI-22, HOME-2, REVIEW-6, CONTENT-15, GIT-7, DATA-13. UI-20 and GIT-7 need a builder decision. `GitHistory.tsx` and the specs naming `Search evidence`, `Recorded checks` and `Ask harness` wait on TEST-2 (#314).
 
 ### Harsh with Codex — LIVE-5 complete, PR #312
@@ -1358,6 +1361,10 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **1 November — UI-20, one reading of a step (Yash):** Expand stays and takes the Inspector's test runs, links, Save moment, Investigate and review notes; then the Inspector goes. Two readings of one step meant nobody could guess which held what, and the side panel is what squeezed the history.
+
+- **1 November — GIT-7, two approvals (Yash; Harsh to confirm):** one for files, one for Git shared by Git review and Git history. Git stays separate because history can show deleted files and other branches. It is a privacy decision, so it is not built until Harsh confirms.
 
 - **29 October — HOME-1 legacy Codex enrichment (Harsh):** after raw counts showed pre-DATA-3 imports lack turn.detail, Harsh chose automatic one-time rescan and approved a new focused regression file. Use initial import time before the verified DATA-3 commit, keep stats rules unchanged, process serially after server listen, persist success only after healthy source reads, retain failures/missing journals for later startup and await shutdown. Reason: normal cursors never enrich consumed bytes; missing source facts cannot be fabricated. The three originals are currently unavailable, so their enrichment remains NOT VERIFIED.
 

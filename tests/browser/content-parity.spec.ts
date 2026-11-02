@@ -15,7 +15,7 @@ for(const width of[600,1440])for(const surface of paritySurfaces)test(`${surface
  switch(surface){
   case 'read':await expect(material.locator('[data-source-line="1"]')).toBeAttached();await expect(material.getByRole('button',{name:'Next lines',exact:true})).toBeEnabled();break;
   case 'edit':await expect(material).toContainText('could not be verified');await expect(material.getByRole('button',{name:'Next change lines',exact:true})).toBeEnabled();break;
-  case 'search':await expect(material).toContainText('123 recorded results');await expect(material.locator('.search-bead')).toHaveCount(50);await expect(material).toContainText('73 more recorded hits');break;
+  case 'search':await expect(material).toContainText('123 recorded results');await expect(material.locator('.search-bead')).toHaveCount(123);break;
   case 'test':await expect(material).toContainText('literal captured failure');await expect(material).toContainText('fixture test');break;
   case 'plan':await expect(material.locator('.plan-list li')).toHaveCount(80);await expect(material).toContainText('Captured step 80');break;
   case 'delegation':await expect(material).toContainText('Captured delegated task');await expect(material).toContainText(/acknowledgement|returned/);break;

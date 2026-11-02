@@ -178,9 +178,7 @@
 .connected-workspace .workspace-bar { z-index: 7; }
 
 @media (min-width: 821px) {
-  .connected-workspace:has(.inspector) .history { right: min(var(--inspector-width, 760px), 96vw); left: var(--stage-rail); }
 }
-.connected-workspace:has(.inspector) .prompt-composer { visibility: hidden; }
 
 .connected-workspace .crown:has(details[open]) { z-index: 35; }
 .workspace-menu > div { max-height: 70dvh; overflow: auto; }
@@ -201,7 +199,7 @@
 .history-prompt-marks button { position: absolute; left: 0; width: 12px; height: 12px; padding: 0; transform: translateY(-50%); pointer-events: auto; }
 .history-prompt-marks button::before { content: ''; display: block; width: 5px; height: 2px; margin: auto; border-radius: 2px; background: var(--t3); }
 .history-prompt-marks button:hover::before, .history-prompt-marks button:focus-visible::before { background: var(--t1); height: 4px; }
-.connected-workspace.exploring .history-prompt-marks, .connected-workspace:has(.inspector) .history-prompt-marks { display: none; }
+.connected-workspace.exploring .history-prompt-marks { display: none; }
 .native-live-work { padding: 12px 0; }
 .native-live-work pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
 .native-phase { font-size: 12px; color: var(--t2); margin: 8px 0; }
@@ -413,7 +411,7 @@
 .connected-workspace .map-tools, .connected-workspace.map-reading .map-tools { top: calc(var(--workspace-header-h, 140px) + 12px); }
 .connected-workspace .search { top: calc(var(--workspace-header-h, 140px) + 8px); }
 .connected-workspace .search-results { max-height: min(50dvh, calc(100dvh - var(--workspace-header-h, 140px) - 80px)); }
-.connected-workspace .inspector, .connected-workspace .sheet { top: var(--workspace-header-h, 140px); }
+.connected-workspace .sheet { top: var(--workspace-header-h, 140px); }
 @media (max-width: 820px) {
   .connected-workspace .workspace-header .crown,
   .connected-workspace.multi-agent .workspace-header .crown { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 24px; padding: 8px 12px 6px; gap: 6px 8px; }
@@ -548,7 +546,7 @@
 .prompt-rail-preview small { display: block; color: var(--t3); font-size: 10px; margin-bottom: 4px; }
 .prompt-rail-preview > span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .history-prompt-marks button:is(:hover,:focus-visible) .prompt-rail-preview { visibility: visible; opacity: 1; transform: none; }
-.connected-workspace.exploring .history-prompt-marks, .connected-workspace:has(.inspector) .history-prompt-marks { display: none; }
+.connected-workspace.exploring .history-prompt-marks { display: none; }
 @media(max-width: 820px) { .connected-workspace .history-prompt-marks { right: 8px; } }
 /* Evidence-first reading: fewer competing surfaces, useful source width and quiet controls. */
 .evidence-review { width: min(1060px, calc(100vw - 40px)); max-height: 88dvh; }
@@ -573,12 +571,6 @@
 @media(hover:hover) and (pointer:fine) {.review-file-map:hover {color:var(--t1);background:var(--s2);}}
 @media(pointer:coarse) {.review-file-map {width:44px;height:44px;}}
 .review-outcomes { display: grid; align-content: start; gap: 24px; }
-.product-dialog.evidence-review .review-pagination { display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 8px;margin:0;padding:8px 16px;border-top:0;border-bottom:1px solid var(--line); }
-.review-pagination>.btn { display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:32px;padding:5px 8px;white-space:nowrap;font-size:12px; }
-.review-pagination svg { width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;flex:none; }
-.review-pagination>span { text-align:center;font:12px/1.5 var(--sans);font-variant-numeric:tabular-nums; }
-.review-pagination>small { grid-column:1/-1;text-align:center;font:11px/1.5 var(--sans);color:var(--t3); }
-@media(pointer:coarse) { .review-pagination>.btn {min-height:44px;} }
 .review-item { padding: 9px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .review-item button { display: flex; width: 100%; gap: 12px; justify-content: space-between; text-align: left; font-size: 12px; line-height: 1.6; }
 .review-item small { display: block; color: var(--t2); margin-top: 3px; font-size: 11px; }

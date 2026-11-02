@@ -62,6 +62,9 @@ export interface SinceSnapshot extends SinceDigest {
 export const FILE_EDIT_LIMIT = 20;
 
 /** Per-file +/- from captured hunks and each edit's turn and next test run, in capture order. */
+/** A gap is named by what it means to a reader. */
+const gapTitle = (reason: string) => reason === 'compaction' ? 'Earlier context compacted' : reason === 'unsupported-record' ? 'Record Drishya does not read yet' : `Gap: ${reason.replace(/-/g, ' ')}`;
+
 export function sinceFileStats(p: Projection, edits: SinceItem[], paths: string[]): Record<string, SinceFileStat> {
   const wanted = new Set(paths), ops = new Map(p.operations.map((o) => [o.id, o])), stats: Record<string, SinceFileStat> = {};
   const { starts, ends } = operationObservations(p);
@@ -117,8 +120,9 @@ export function sinceSnapshot(p: Projection, after: number, page = 0): SinceSnap
 /** Where an operation's outcome landed: its result if it has one, else where it started. */
 function item(kind: SinceItem['kind'], o: Operation, sequence:number,sequenceBasis:SinceItem['sequenceBasis']): SinceItem {
   let detail: string | undefined;
-  if (o.detail.kind === 'test' && o.detail.summary) detail = `${o.detail.summary.passed} passed, ${o.detail.summary.failed} failed`;
+  if (o.detail.kind === 'test' && o.detail.summary && o.detail.summary.passed + o.detail.summary.failed > 0) detail = `${o.detail.summary.passed} passed, ${o.detail.summary.failed} failed`;
   else if (o.detail.kind === 'test' || o.detail.kind === 'shell') detail = o.detail.exitCode === undefined || o.detail.exitCode === null ? undefined : `exit ${o.detail.exitCode}`;
+  if (kind === 'failure' && o.failure) detail = detail ? `${detail} · ${o.failure}` : o.failure;
   return { kind, operationId: o.id, sequence, sequenceBasis, title: o.title, detail, paths: o.paths.map((p) => p.path), status: o.status };
 }
 
@@ -146,7 +150,7 @@ export function sinceBoundary(p: Projection, after: number): SinceDigest {
     unfinished: p.operations.filter((o) => o.status === 'running').map((o) => make('unfinished', o)).sort(bySeq),
     gaps: gaps
       .filter((g) => after<0||g.observation!==undefined&&g.observation>after)
-      .map((g) => ({ kind: 'gap' as const, sequence: g.observation??g.sequence,sequenceBasis:g.observation===undefined?'timeline-position' as const:'captured-observation' as const, title: `Capture gap: ${g.reason.replace(/-/g, ' ')}`, detail: g.detail, paths: [] }))
+      .map((g) => ({ kind: 'gap' as const, sequence: g.observation??g.sequence,sequenceBasis:g.observation===undefined?'timeline-position' as const:'captured-observation' as const, title: gapTitle(g.reason), detail: g.detail, paths: [] }))
       .sort(bySeq),
     editedFiles: [...new Set(edits.flatMap((e) => e.paths))],
   };

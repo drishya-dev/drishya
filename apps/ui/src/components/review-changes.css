@@ -27,3 +27,7 @@
 .review-net-source button:hover,.review-net-toggle:hover {color:var(--source);}
 .review-net-source .passed {color:var(--pass);}.review-net-source .failed {color:var(--fail);}
 .review-net button:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
+/* REVIEW-6: one list. Rows off screen cost no layout or paint, and keep their room for a focus ring. */
+.review-file,.review-item {content-visibility:auto;contain-intrinsic-block-size:auto 56px;margin-inline:-4px;padding-inline:4px;}
+.review-file:has(.desk-options[open]) {content-visibility:visible;}
+.review-more {padding:12px 0;}

@@ -872,7 +872,7 @@ test('Modern offline bundle keeps keyboard review destinations and bounded phone
 });
 
 
-test('Modern review pages reach every captured check beyond the first twenty without changing global counts', async ({page}) => {
+test('Modern Changes reaches every captured check as one list and returns to the row that was opened', async ({page}) => {
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.review}`);
   await expect(page.locator('.history')).toBeVisible();
@@ -882,29 +882,19 @@ test('Modern review pages reach every captured check beyond the first twenty wit
   await commands.getByRole('option',{name:/Review recorded changes and checks/}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});
   const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
-  await expect(checks.locator('.review-item')).toHaveCount(20);
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
-  await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toContainText('Page 1 of 4');
-  for(const width of [390,320,1440]) {
-    await page.setViewportSize({width,height:900});
-    const pages=review.getByRole('navigation',{name:'Recorded review pages'});
-    expect((await pages.boundingBox())!.height).toBeLessThanOrEqual(90);
-    expect(await pages.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
-    await expect(review.getByRole('button',{name:'Previous review page',exact:true})).toBeDisabled();
-  }
-  await review.getByRole('button',{name:'Next review page',exact:true}).click();
-  await expect(checks).toContainText('review-case-20');
-  await expect(checks).not.toContainText('review-case-0 ');
-  await review.getByRole('button',{name:'Next review page',exact:true}).click();
-  await expect(checks).toContainText('review-case-40');
-  await review.getByRole('button',{name:'Next review page',exact:true}).click();
-  await expect(checks.locator('.review-item')).toHaveCount(10);
+  await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toHaveCount(0);
+  await expect.poll(async()=>{await review.evaluate(dialog=>{dialog.scrollTop=dialog.scrollHeight;});return checks.locator('.review-item').count();}).toBe(70);
+  await expect(checks).toContainText('review-case-0');
   await expect(checks).toContainText('review-case-69');
+  await expect(review.locator('.review-more')).toHaveCount(0);
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
-  await expect(review.getByRole('button',{name:'Next review page',exact:true})).toBeDisabled();
   await checks.getByRole('button',{name:/review-case-69/}).click();
   await expect(review).toHaveCount(0);
-  await expect(page.getByRole('complementary',{name:'Operation detail'})).toContainText('review-case-69');
+  await expect(page.getByRole('region',{name:'Operation detail'})).toContainText('review-case-69');
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  await expect(checks.locator('.review-item')).toHaveCount(70);
+  await expect(checks.getByRole('button',{name:/review-case-69/})).toBeInViewport();
 });
 
 
@@ -1562,7 +1552,7 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await dialog.getByRole('combobox',{name:'Command outcome',exact:true}).selectOption('error');await expect(dialog.locator('.command-outcome').first()).toHaveText('Failed');
   await page.setViewportSize({width:390,height:844});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
-  await cards.first().getByRole('button',{name:'Open captured activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.inspector')).toBeVisible();
+  await cards.first().getByRole('button',{name:'Open captured activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
   await page.keyboard.press('Escape');await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Captured commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
 
@@ -1581,12 +1571,12 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   writeFileSync(journal,rows.join('\n')+'\n');const {recordingId}=await app.ingest.importSource('codex',journal);
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);await expect(page.locator('.history')).toBeVisible();
   const launch=async(name:string)=>{await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(name);await nav.getByRole('option').filter({hasText:name}).click();};
-  await launch('Review findings');let dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await expect(dialog).toContainText('Same captured command · 45 runs');await expect(dialog).toContainText('npm test');
+  await launch('Review findings');let dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await expect(dialog).toContainText('Same command failed 7 of 45 runs');await expect(dialog).toContainText('npm test');
   await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
   await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open captured prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
   await page.evaluate(({recordingId})=>localStorage.setItem(`drishya-review-questions-v1:daemon:${recordingId}`,JSON.stringify([{id:'note',operationId:'captured-review-op',sequence:1,title:'Review note',question:'Check the edge condition. sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'Reviewer',status:'open',createdAt:'',updatedAt:''}])),{recordingId});
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
-  dialog=page.getByRole('dialog',{name:'Review packet',exact:true});await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const preview=dialog.getByRole('textbox',{name:'Review packet preview',exact:true}),text=await preview.inputValue();expect(text).toContain('45 recorded checks');expect(text).toContain('Open reviewer questions (1)');expect(text).not.toContain('abcdefghijklmnop');
+  dialog=page.getByRole('dialog',{name:'Review packet',exact:true});await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const preview=dialog.getByRole('textbox',{name:'Review packet preview',exact:true}),text=await preview.inputValue();expect(text).toContain('45 test runs');expect(text).toContain('Open reviewer questions (1)');expect(text).not.toContain('abcdefghijklmnop');
   await dialog.getByRole('button',{name:'Copy packet',exact:true}).click();expect(await page.evaluate(()=>(window as unknown as {packetCopy:string}).packetCopy)).toBe(text);
   const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download Markdown',exact:true}).click();const file=await download;expect(readFileSync((await file.path())!,'utf8')).toBe(text);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/review-packet-${width}.png`)});}
@@ -1650,7 +1640,7 @@ test('a failed reader screen can recover by navigating to a healthy session',asy
 
 test('finding membership reaches every captured operation with filters, exact opening and phone bounds',async({page})=>{
   const journal=join(dir,'finding-members.jsonl'),rows:unknown[]=[{type:'session_meta',payload:{id:'finding-members',cwd:root}}];
-  for(let n=0;n<70;n++){rows.push({type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`member-${n}`,arguments:JSON.stringify({cmd:'npm test -- stable-command'})}});rows.push({type:'response_item',payload:{type:'function_call_output',call_id:`member-${n}`,output:JSON.stringify({output:'1 passed',metadata:{exit_code:0}})}});}
+  for(let n=0;n<70;n++){rows.push({type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`member-${n}`,arguments:JSON.stringify({cmd:'npm test -- stable-command'})}});rows.push({type:'response_item',payload:{type:'function_call_output',call_id:`member-${n}`,output:JSON.stringify({output:n?'1 passed':'1 failed',metadata:{exit_code:n?0:1}})}});}
   writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const {recordingId:id}=await app.ingest.importSource('codex',journal);
   const findings=await app.history.reviewInsights(id),finding=findings.findings.find(item=>item.kind==='repeated-command')!;
   const endpoint=`${server.url}/v1/recordings/${id}/finding-members?key=${encodeURIComponent(finding.key)}`;
@@ -1663,7 +1653,7 @@ test('finding membership reaches every captured operation with filters, exact op
   await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.getByText('Page 2 of 3 · up to 25 per page',{exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.locator('.finding-member')).toHaveCount(20);
   const filter=dialog.getByRole('searchbox',{name:'Filter finding members',exact:true});await filter.fill('no such member');await expect(dialog.locator('.finding-member')).toHaveCount(0);await filter.fill('');await expect(dialog.locator('.finding-member')).toHaveCount(25);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/finding-members-${width}.png`)});}
-  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('complementary',{name:'Operation detail',exact:true})).toContainText('stable-command');
+  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toContainText('stable-command');
 });
 
 
@@ -1701,7 +1691,7 @@ test('a restored current reader requests fresh consent and keeps inspector navig
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   const reader=page.locator('.current-file-reader');await expect(reader.getByRole('region',{name:'Current file access',exact:true})).toBeVisible();expect(reads).toBe(0);await expect(page.locator('dialog[open]')).toHaveCount(1);
   await reader.getByRole('button',{name:'Approve current-file reading',exact:true}).click();await expect(reader.getByRole('heading',{name:'Workspace guide',exact:true})).toBeVisible();expect(reads).toBeGreaterThan(0);await expect(reader.getByRole('alert')).toHaveCount(0);
-  await reader.locator(':scope>header button[aria-label^="Close "]').click();const inspector=page.getByRole('complementary',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
+  await reader.locator(':scope>header button[aria-label^="Close "]').click();const inspector=page.getByRole('region',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true}),button=(await workspace.boundingBox())!,panel=(await inspector.boundingBox())!;expect(panel.y).toBeGreaterThanOrEqual(button.y+button.height);
   await workspace.click();await expect(inspector).toHaveCount(0);const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk.getByRole('tablist')).toBeVisible();await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(inspector).toBeVisible();
 });
 
@@ -1716,7 +1706,7 @@ test('captured excerpt comparison uses current reader consent, exact positions a
   await page.getByRole('treeitem',{name:'comparison.ts',exact:true}).click();
   const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();
   const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare captured source with disk',exact:true}).click();
-  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('moved code is not mapped');
+  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('placed by matching its lines');
   expect(await comparison.locator('.diff-scroll').textContent()).not.toContain('untouched');
   await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-disk-comparison-phone.png')});

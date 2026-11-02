@@ -252,9 +252,9 @@
 .artifact-reader .reader-tools .btn { border-color: transparent; background: transparent; border-radius: 7px; font: 11px var(--sans); padding-inline: 9px; }
 .artifact-reader .reader-tools .btn[aria-pressed=true] { background: var(--s2); color: var(--t1); }
 .artifact-reader .patch-hunk-jump input { border: 1px solid var(--line); border-radius: 5px; color: var(--t1); background: var(--bg); font: 11px var(--mono); }
-:is(.product-dialog,.inspector,.history .op.expanded) .diff-scroll { max-height: min(48dvh, 520px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; border-radius: 6px; }
+:is(.product-dialog,.history .op.expanded) .diff-scroll { max-height: min(48dvh, 520px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; border-radius: 6px; }
 .diff-scroll :is(.code,.change-column-scroll) { overflow: visible; }
-:is(.product-dialog,.inspector,.history .op.expanded) .source-reading > .code,
+:is(.product-dialog,.history .op.expanded) .source-reading > .code,
 .current-file-code.source-reading { max-height: min(48dvh, 520px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; }
 .current-file-code.source-reading > .code { max-height: none; overflow: visible; }
 .source-reading > .code:focus-visible { outline: 1px solid var(--line-3); outline-offset: 2px; }

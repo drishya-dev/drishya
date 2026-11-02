@@ -27,5 +27,5 @@
 /* The reference column's content slot must share the column's height, or its bottom controls are clipped (the slot
  * is otherwise a plain block whose flex child cannot resolve a height). */
 .atlas-references::details-content {display:flex;flex-direction:column;flex:1;min-height:0;}
-.commit-row-turn {font:10px/1.5 var(--mono);color:var(--source);white-space:nowrap;}
+.commit-row-turn {font:11px/1.5 var(--mono);color:var(--source);white-space:nowrap;}
 .thread-session-link {color:var(--source);}

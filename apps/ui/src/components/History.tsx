@@ -19,8 +19,9 @@ import { QuestionCard } from './QuestionCard.tsx';
 import { isQuestionTool } from '../lib/ask-question.ts';
 import { ToolOutput } from './ToolOutput.tsx';
 import { DelegationDetail, DelegationLine } from './DelegationDetail.tsx';
-import { ScriptDetails } from './Inspector.tsx';
-import { Fragment, memo, useCallback, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { StepReading } from './StepReading.tsx';
+import { CapturedPath } from './CapturedPath.tsx';
+import { createContext, Fragment, memo, useCallback, useContext, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import type { PinnedPlan, Scene, SceneOp, ScenePassage } from '@drishya/scene';
@@ -96,7 +97,7 @@ export function History({ scene, projection, onWindow }: HistoryProps) {
     promptStep === deferred.promptStep && filter === deferred.filter;
   const shown = liveArrival ? deferred : pair;
   const artifacts = useMemo(() => new Map(shown.projection.artifacts.map(a => [a.id, a])), [shown.projection.artifacts]);
-  return <ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider></ContextEvidenceScope>;
+  return <StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider>;
 }
 
 const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: HistoryProps) {
@@ -109,7 +110,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
   const selectedOp = useApp((s) => s.selectedOp);
   const [keyboardOp, setKeyboardOp] = useState<string>();
   const readingOp = selectedOp ?? keyboardOp;
-  const expandedOp = useApp((s) => s.expandedOp);
+  const expandedOp = useApp((s) => s.expandedOp ?? s.selectedOp);
   const hoveredOp = useApp((s) => s.hoveredOp);
   const focusObservationId = useApp((s) => s.focusObservationId);
   const promptStep = useApp((s) => s.promptStep);
@@ -724,7 +725,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
           set({ follow: true, selectedOp: undefined, focusObservationId: undefined, promptStep: undefined, held: false });
           // Return the camera to the current replay/live edge, without stopping its clock.
         }}>
-          ↓
+          ↓{mode === 'history' && scene.total > seenThrough.current && <small>{scene.total - seenThrough.current}</small>}
         </button>
       )}
     </>
@@ -824,7 +825,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const workspaceRoot = useApp(s=>s.recording?.workspaceRoot);
   const card = useRef<HTMLElement>(null);
   const selected = useApp((s) => s.selectedOp === op.id);
-  const expanded = useApp((s) => s.expandedOp === op.id);
+  const expanded = useApp((s) => (s.expandedOp ?? s.selectedOp) === op.id);
   const hoveredPath = useApp((s) => s.hoveredPath);
   const select = useApp((s) => s.select);
   const set = useApp((s) => s.set);
@@ -851,11 +852,11 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const hasImage=op.images?.some(image=>image.sha);
   // Keep the same evidence readers; images get the primary allocation, not a second card.
   const imageOriginal=op.detail.kind==='read'&&!op.detail.excerptArtifactId
-    ?<ToolInput value={op.detail}/>:<ExpandedOperation op={op}/>;
+    ?<ToolInput value={op.detail}/>:<ExpandedMaterial op={op}/>;
   const imageMaterial=imagePath||hasImage?<>
     {imagePath?<PathImage op={op} path={imagePath}/>:<OpImages images={op.images!}/>}
     {!imagePath&&['mcp','web'].includes(op.detail.kind)
-      ?expanded?<ExpandedOperation op={op}/>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>
+      ?expanded?<ExpandedMaterial op={op}/>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>
       :<details className="image-original"><summary>Original input and output</summary>{imageOriginal}</details>}
   </>:null;
   return (
@@ -870,10 +871,10 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       style={{ zIndex: selected ? 50 : 10 + index, ...(readingAllocation ? { '--reading-width': `${readingAllocation}px` } : {}) } as React.CSSProperties}
       tabIndex={0}
       onClick={(e) => {
-        // Reading or selecting captured content must not open an inspector and reflow
-        // the text between pointer events. The heading and Enter still inspect it.
-        if ((e.target as HTMLElement).closest('.op-body, .op-expanded')) return;
-        select(selected ? undefined : op.id);
+        // Reading or selecting captured content must not open the step and reflow
+        // the text between pointer events. The heading and Enter still open it.
+        if ((e.target as HTMLElement).closest('.op-body, .op-expanded, .step-reading')) return;
+        select(expanded ? undefined : op.id);
       }}
       onKeyDown={(e) => e.target === e.currentTarget && e.key === 'Enter' && select(op.id)}
       onMouseEnter={() => set({ hoveredOp: op.id, hoveredPath: op.paths.find((p) => p.role !== 'search-hit')?.path })}
@@ -896,21 +897,29 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       {!expanded && <div className="op-body">
         {imageMaterial??<><OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
       </div>}
-      {expanded&&(imageMaterial?<div className="image-material-expanded">{imageMaterial}</div>:<ExpandedOperation op={op}/>)}
+      {expanded&&<ExpandedOperation op={op} image={imageMaterial}/>}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Shortened · Expand to read all of it</div>}
       <EvidenceNote op={op} />
     </article>
   );
 });
 
-function ExpandedOperation({ op }: { op: Operation }) {
-  const projection = useApp(state => state.projection);
-  return <><ExpandedMaterial op={op} />{projection && <ScriptDetails op={op} projection={projection} />}</>;
+const StepProjection = createContext<Projection | undefined>(undefined);
+
+function ScriptDetails({ op, projection }: { op: Operation; projection: Projection }) {
+  const parent = op.parentOperationId ? projection.operations.find(item => item.id === op.parentOperationId) : undefined;
+  const script = projection.artifacts.find(artifact => op.artifactIds.includes(artifact.id) && artifact.id.endsWith('_script'));
+  const relation = parent && projection.links.find(link => link.from === parent.id && link.to === op.id && link.relation === 'tool-result');
+  return parent || script ? <details className="captured-script" onClick={event => event.stopPropagation()}><summary>Script</summary><p className="insp-note">{parent ? `${relation?.explanation ?? 'Captured script reference.'} This relationship does not assert which instruction caused the work.` : 'The captured script containing this patch.'}</p>{parent ? <><ExpandedMaterial op={parent} />{parent.images?.length ? <OpImages key={parent.id} images={parent.images} /> : null}</> : <ArtifactReader key={script?.id} id={script?.id} kind="code" />}</details> : null;
+}
+
+function ExpandedOperation({ op, image }: { op: Operation; image?: React.ReactNode }) {
+  const projection = useContext(StepProjection);
+  return <section aria-label="Operation detail">{image ? <div className="image-material-expanded">{image}</div> : <><ExpandedMaterial op={op} />{op.images?.length ? <OpImages key={op.id} images={op.images} /> : null}</>}{projection && <><ScriptDetails op={op} projection={projection} /><StepReading op={op} projection={projection} /></>}</section>;
 }
 
 function ExpandedMaterial({ op }: { op: Operation }) {
   const d = op.detail;
-  const select = useApp((s) => s.select);
   const input = op.artifactIds.find((id) => id.endsWith('_input'));
   if (browserStep(op)) return <div className="op-expanded mcp-material" onClick={e => e.stopPropagation()}><BrowserEvidence op={op} full/></div>;
   switch (d.kind) {
@@ -921,17 +930,15 @@ function ExpandedMaterial({ op }: { op: Operation }) {
       </div>;
     case 'edit':
       return <div className="op-expanded edit-material" onClick={(e) => e.stopPropagation()}>
-        {d.reconstruction !== 'complete' && <div className="material-context">The file after this edit could not be verified</div>}
+        {d.reconstruction !== 'complete' && <div className="material-context">The file after this edit could not be verified{d.reconstructionNote ? `: ${d.reconstructionNote}` : ''}</div>}
         <FileReadingActions path={d.path} op={op}/><ReadBeforePanel op={op} />
         <BeforeTurnPanel op={op} />
         {d.hunks.length ? <DiffReader key={op.id} hunks={d.hunks} path={d.path} /> : op.artifactIds.some(id => id.endsWith('_after')) ? <ArtifactReader id={op.artifactIds.find(id => id.endsWith('_after'))} kind="code" path={d.path} provenance /> : <p className="muted">No source bytes or patch captured.</p>}
-        <button className="material-more" onClick={() => select(op.id)}>Open details</button>
       </div>;
     case 'search':
       return <div className="op-expanded search-material" onClick={(e) => e.stopPropagation()}>
         <div className="query">{d.query} · {d.total ?? d.hits.length} recorded result{(d.total ?? d.hits.length) === 1 ? '' : 's'}</div>
-        {d.hits.slice(0, 50).map((hit, i) => <button type="button" className="hit search-bead" key={i} title={`Open captured match on ${hit.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(hit.path,hit.line,`${op.id}/search/${i}`);}}>{hit.path}{hit.line ? `:${hit.line}` : ''}{hit.text ? ` · ${hit.text}` : ''}</button>)}
-        {d.hits.length > 50 && <div className="muted">{d.hits.length - 50} more recorded hits · open details to inspect all</div>}
+        {d.hits.map((hit, i) => <button type="button" className="hit search-bead" key={i} title={`Open captured match on ${hit.path}`} onClick={event=>{event.stopPropagation();openCapturedFile(hit.path,hit.line,`${op.id}/search/${i}`);}}>{hit.path}{hit.line ? `:${hit.line}` : ''}{hit.text ? ` · ${hit.text}` : ''}</button>)}
         <CommandRunNotes op={op} />
       </div>;
     case 'test':
@@ -940,9 +947,10 @@ function ExpandedMaterial({ op }: { op: Operation }) {
         <FixChainPanel op={op} />
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">derived from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not captured'}</div>} />
-        {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
+        {d.summary?.failures.map((failure, i) => <div className="failure" key={i}><div className="failure-name">{failure.name}</div>{failure.file && <div className="muted"><CapturedPath path={failure.file} line={failure.line}>{failure.file}{failure.line ? `:${failure.line}` : ''}</CapturedPath></div>}{failure.message && <div className="failure-msg">{failure.message}</div>}</div>)}
         <ArtifactReader key={d.outputArtifactId} id={d.outputArtifactId} kind="output" fallback={d.outputPreview} />
         <CommandRunNotes op={op} />
+        <div className="muted small">Exit {d.exitCode ?? 'not captured'}</div>
       </div>;
     case 'shell':
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
@@ -981,7 +989,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
 function StateMark({ state,op }: { state: SceneOp['state'];op:Operation }) {
   if (op.declined) return <span className="state state-declined" aria-label="declined" title={op.declined.by === 'person' ? 'You declined this action; it did not run.' : 'Claude Code’s auto mode blocked this action; it did not run.'}>⊘</span>;
   const outcome=operationOutcome({...op,status:state});
-  if(outcome.tone==='returned')return <span className="state state-returned" aria-label={outcome.label} title={outcome.explanation}>{outcome.mark}</span>;
+  if(outcome.tone==='returned'||outcome.tone==='reported')return <span className={`state state-${outcome.tone}`} aria-label={outcome.label} title={outcome.explanation}>{outcome.mark}</span>;
   if (state === 'running') return <span className="state state-running" aria-label="running" />;
   if (state === 'error') return <span className="state state-error" aria-label="failed">✕</span>;
   if (state === 'ok') return <span className="state state-ok" aria-label="done">✓</span>;
@@ -1033,7 +1041,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       const s = d.summary;
       return (
         <div className="test">
-          <CommandText text={d.command}/>
+          <CommandText text={d.command} compact/>
           <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} fallback={s ? (
             <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
@@ -1053,7 +1061,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'shell':
       return (
         <div className="shell">
-          <CommandText text={d.command}/>
+          <CommandText text={d.command} compact/>
           <ResultArea state={op.status} resolving={resolving}>
             <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
             {d.outputPreview ? <TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={operationFailed(op)} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output captured'}</span>}

@@ -79,7 +79,7 @@ export function ReviewQuestionsEntry() {
   </article>);
   return <><button className="btn ghost" data-review-questions disabled={mode === 'replay'} onClick={() => setOpen(true)}>Review questions{mode !== 'replay' && unresolved.length ? ` · ${unresolved.length}` : ''}</button>
     {open && mode !== 'replay' && <ReadingDialog title="Review questions" close={() => setOpen(false)} className="review-questions-dialog">
-      <p className="review-question-scope">Your local questions for this recording. Resolve decisions explicitly; agent activity never resolves them automatically.</p>
+      <p className="review-question-scope">Your questions about this session. They stay open until you resolve them.</p>
       {error && <p role="alert">{error}</p>}
       {targetError && <p role="alert">{targetError}</p>}
       <section aria-label="Open review questions">{rows(unresolved)}{!unresolved.length && <p>No open review questions. Leave one from an action's detail.</p>}</section>

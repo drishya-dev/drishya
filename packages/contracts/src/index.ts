@@ -476,6 +476,8 @@ export interface Operation {
   status: OperationStatus;
   /** CONTENT-3: set when the action was stopped by a permission decision before it ran. `status` stays 'error', but it is not a failure; see operationFailed. */
   declined?: OperationDeclined;
+  /** A failed action's own first error line, as captured; never a diagnosis. */
+  failure?: string;
   startSequence: number;
   endSequence?: number;
   startTime?: string;

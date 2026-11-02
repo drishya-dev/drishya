@@ -75,6 +75,7 @@ Append at the end of every phase and read at the start of every phase; do not re
 | 1 Nov | AUDIT-1 | Bounded previews | The end fade is driven by the scroller with no script and exists only while there is more to read. Reuse it for every bounded surface; it must not animate. | UI, motion | UI-8, MOTION-1 |
 | 1 Nov | AUDIT-1 | Expand and Inspector | Two readings of one step. Decide before UI-8 touches either. | UI | UI-20 |
 | 1 Nov | AUDIT-1 | Foundations | 11 font sizes, 11 radii and 20 button heights on one History screen. This batch added rules to the override pile on purpose; the token sheet absorbs them first. | UI | UI-8 |
+| 1 Nov | AUDIT-1 | Every surface | Run Impeccable's detector through `--cdp` after finishing each surface, panels open, on a real session: `undersized`, `line-length`, `straggler`, `low-contrast` and `tight-leading` were all right. Its results stay in `.local/`. Half-width floating controls over text remain open. | UI | UI-8 |
 | 1 Nov | AUDIT-1 | All copy | The word `captured` carries nothing on screen. Provenance moves to tooltips and details. | Content | UI-21 |
 
 ## 6. Who runs it

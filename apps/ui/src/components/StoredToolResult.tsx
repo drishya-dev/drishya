@@ -9,7 +9,7 @@ import {CapturedResultViews} from './CapturedResultViews.tsx';
 import {ArtifactReader} from './ArtifactReader.tsx';
 import {ProvenanceBadge} from './common.tsx';
 
-/** The same captured output owns compact, expanded and Inspector readings. No current-file fallback. */
+/** The same captured output owns compact and expanded readings. No current-file fallback. */
 export function StoredToolResult({op,full=false}:{op:Operation;full?:boolean}) {
   const source=useApp(s=>s.source);
   const history=useContext(HistoryArtifacts);

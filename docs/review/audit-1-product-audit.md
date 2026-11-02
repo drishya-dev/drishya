@@ -53,7 +53,7 @@ Each surface answers the brief's questions in short, then lists what was found. 
 | C5 | Every bounded preview ended in half a line of text. | High | Fixed: a fade that exists only while there is more to scroll, driven by the scroller itself, no script. |
 | C6 | `Expand` on every card at rest. | Medium | Fixed: on hover and focus. |
 | C7 | `Vitest · captured output 1 · tests`, `5 captured result rows · select to inspect`, `Derived · grouped counts, not execution order`, `13 captured lines between · show preview`, `Captured input preview · expand for full text`. | High | Fixed: `Vitest`, `5 results · hover to read, click to open`, `13 more lines`, `Shortened · Expand to read all of it`. The basis moved to the tooltip on the counts, so provenance is still stated. |
-| C8 | A run with one failed suite read as green `5 passed` with `Suite summary: 1 failed` in grey. | High | Fixed: `Suites: 1 failed…` reads red. The card's own ✓ still comes from the exit code (CONTENT-15). |
+| C8 | A run with one failed suite read as green `5 passed` with `Suite summary: 1 failed` in grey. | High | Fixed: `Suites: 1 failed…` reads red. The card's mark follows it since CONTENT-15: a red `!`, not a ✓. |
 | C9 | `Queue receipts · 145` sat over the text while reading back. | Medium | Fixed: past receipts show at the end of the session only; a waiting input always shows. |
 | C10 | The jump-to-latest button overlapped the corner of the toolbox in accent purple. | Medium | Fixed: neutral, beside Follow. |
 | C11 | `get_worktree_creati/on_status` broke mid-word in the toolbox. | Medium | Fixed: one line, ellipsis. |
@@ -76,7 +76,7 @@ Each surface answers the brief's questions in short, then lists what was found. 
 | I3 | Connector lines ran across the panel. | Medium | Fixed. |
 | I4 | `Edit Edit docs/…`, a `Captured` pill on everything, `Evidence · 2 relationships`. | Medium | Fixed: one title, the pill only for what is not captured, `Links · 2`. |
 | I5 | `A test run was recorded after this change` beside `· 673 runs`, and `Recorded order · coverage not established`; `Later changes` listed identical lines. | High | Fixed: the sentence is gone, the caveat is the heading's tooltip, later changes are numbered links. |
-| I6 | Expand and Inspector show the same diff in two places. Expand has the file actions and the read-before facts; Inspector has the test runs, links and notes. Nobody can guess which holds what. | High | UI-20. A decision for Yash. |
+| I6 | Expand and Inspector show the same diff in two places. Expand has the file actions and the read-before facts; Inspector has the test runs, links and notes. Nobody can guess which holds what. | High | Fixed by UI-20: Expand is the one reading, and the Inspector is gone. |
 
 ## File work
 
@@ -117,8 +117,8 @@ The brief's worked example, and the most changed surface.
 | R1 | `Start with the change. Follow the evidence.`, a paging bar, and a bounds sentence all above the counts. | High | Fixed: counts first, paging after the lists. |
 | R2 | `144 files with change inputs`, `90 failed operations`. | Medium | Fixed: `144 files changed`, `90 failed`. |
 | R3 | `18 entries lack captured observation positions…`, flush against the dialog edge, shown even where it could not matter. | Medium | Fixed: plain, aligned, only when it applies. |
-| R4 | 144 files are paged 50 at a time. | Medium | REVIEW-6. |
-| R5 | A failure row is its title and nothing about why it failed. | High | CONTENT-15. |
+| R4 | 144 files are paged 50 at a time. | Medium | Fixed by REVIEW-6: one list that fills as it is read, and back to the row that was opened. Claude `c8e5c9c8`: 144 files, 90 failures, 15 checks at 600 and 1440. Codex `32f628ee`: 272 files, 630 failures, 717 checks, 17,800 nodes, longest frame 18 ms. |
+| R5 | A failure row is its title and nothing about why it failed. | High | Fixed by CONTENT-15: the row shows the exit code and the output's own first error line. On a real session every row carries one or the other (Codex `32f628ee`: 530 lines and 100 exit codes of 630; Claude `c8e5c9c8`: 89 and 1 of 90). |
 
 ## Command palette
 
@@ -159,8 +159,8 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 
 | # | Found | Severity | State |
 |---|---|---|---|
-| B2 | Reading position saves fail with 409 while two tabs of one session are open: found by having two tabs open during this walk. | Low | DATA-13. |
-| B3 | A failed suite does not change a command's outcome, because the outcome is the exit code. | Medium | CONTENT-15. |
+| B2 | Reading position saves fail with 409 while two tabs of one session are open: found by having two tabs open during this walk. | Low | Fixed by DATA-13: the later write wins. Two tabs on Claude `31c2a5` and Codex `8b720a`: 109 saves, none refused. |
+| B3 | A failed suite does not change a command's outcome, because the outcome is the exit code. | Medium | Fixed by CONTENT-15: `operationOutcome` reports `Output reports failures` with a red `!` when a clean exit's output has a runner's failed summary. Status stays as captured; 133 of 8,111 Codex commands in `32f628ee`, and a genuine Claude run piped through `tail`. |
 
 ## Composer, map, replay, half width
 
@@ -185,15 +185,123 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 | # | Found | Severity | State |
 |---|---|---|---|
 | V1 | Prompt overview is the best summary in the product: every prompt with what it led to. It is buried in the palette, paged 7 times, and its counts include `0 change calls · 0 checks · 0 failed outcomes`. | Medium | UI-8: hide zeros, one list, a real way in. |
-| V2 | Review findings: 44 findings, led by `Same captured command · 3 runs` for harmless commands like `git status`. Repetition alone says nothing, as the dialog itself admits. | Medium | UI-22: does this earn its place? Rank by what failed, or cut. |
+| V2 | Review findings: 44 findings, led by `Same captured command · 3 runs` for harmless commands like `git status`. Repetition alone says nothing, as the dialog itself admits. | Medium | Fixed (UI-22): a repeat is a finding only if a run failed, and the most failures lead. |
 | V3 | `through observation 39156` on every review dialog. | Low | Fixed. |
 | V4 | Review packet: each checkbox sat on its own line above its label. | Low | Fixed. |
-| V5 | The packet reports `6462 capture gaps` on one Codex session. A number that large either means something is wrong or that the word does not mean what a reader thinks. | Medium | UI-22: find out what they are before anyone is shown that number. |
+| V5 | The packet reported `6462 capture gaps` on one Codex session. | High | Fixed (UI-22), see below: 74. |
 
-## Not yet walked
+## Live
 
-This is the first batch, not the end of the audit. **Still to walk:** a live session as it runs; Review questions, Saved moments and Export; side-by-side compare; every toolbox state; the A2 interaction inventory (right click, drag, resize and every keyboard route, per component) as a written table; the same walk on a Codex session at 600 px; light themes. AUDIT-1 stays open until these are done.
+Two genuine Claude Code runs on a throwaway repository (`live-repo`, haiku, about 90 seconds each, with deliberately slow commands), watched from Home to finish at 1440 px.
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| L1 | A new session needs Refresh, and a running session does not appear in `Running now` until it has been opened. | High | HOME-2. |
+| L2 | Once open, following held across arrivals; wheel up detached it; the new-step count and return to latest both worked. Opening took 0.8 s. | | Checked, nothing found. |
+| L3 | Toolbox said `active` on every finished session, including sessions weeks old, because the last agent counts as active. | High | Fixed: `active` needs a followed session or an open call. |
+| L4 | Command previews led with `cd "C:/Users/…long path" &&` and faded out before the command. | High | Fixed: `cd workspace &&` in the preview when the path is the session's own folder. Copy and Expand stay exact. |
+| L5 | A running command's time sat at the end of the pill, where it was always cut off. | Medium | Fixed: time first, and the agent's description instead of the command. |
+| L6 | A short command gave a narrow card that cut the agent's description. | Medium | Fixed: the card is as wide as its title needs. |
+| L7 | `Queued inputs · 1` stayed above the composer with nothing queued. | Medium | Fixed: past receipts show on composer hover or focus; a waiting input always shows. |
+| L8 | The toolbox was vertically centred, so it moved every time a tool appeared. | Medium | Fixed: fixed top edge. |
+| L9 | `16 new steps` existed only for screen readers. | Low | Fixed: the count shows beside the arrow. |
+| L10 | Notices sat 6 px left of the prose. | Low | Fixed. |
+
+## Review questions, Saved moments, compare, themes, Codex at half width
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| M1 | Saved moments ran flush against the dialog edge. | Medium | Fixed. |
+| M2 | `Captured action · observation 10832`; a two-clause scope sentence on Review questions. | Low | Fixed: `Step 10832`, one plain sentence. |
+| M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20 both sit on one row of the open step. The two lists remain: UI-25. |
+| M4 | The Source versions toolbar sat flush against the dialog edge. | Low | Fixed. |
+| M5 | Comparing a read with disk matches by line position, so a shifted file reads as all changed. The dialog says so; a real line diff would be better. | Medium | Fixed by UI-23: an excerpt is placed by its own lines, then diffed, and line endings are ignored. A genuine Claude read of lines 15–20, seven lines later on disk with one edit, shows that one line. Codex `8b720a` has no read excerpts; its six whole-file snapshots read 78 changed lines instead of 586. |
+| M7 | Light theme (Porcelain): Home, History, file view, palette and Changes read well. The detector's only new rule, `cream-palette`, is fashion, and rejected. | | Checked, nothing found. |
+| M8 | Codex `32f628ee` at 600 px: no horizontal overflow, no card past the edge, failure and pass cards read correctly. | | Checked, nothing found. |
+
+## What the capture gaps were (UI-22)
+
+Codex `32f628ee` reported 6,462 gaps. 31 were compactions and 6,431 were records the reader does not parse, and 6,388 of those were Codex repeating itself as `item_completed`. Measured across all 59 local Codex journals, with hashes and lengths only:
+
+| Record | Count | Finding |
+|---|---|---|
+| `Reasoning` | 8,925 | 8,171 empty, 754 match a kept summary, none differ, and `raw_content` is empty on every one |
+| `AgentMessage` | 1,106 | 1,092 identical to a kept message. The other 14 are questions, and each also appears in the tool call before it |
+| `UserMessage` | 224 | 211 identical, 13 contained in a kept prompt |
+| `ContextCompaction` | 41 | Only an id |
+| `CollabAgentToolCall` | 54 | All `wait`, already a tool card |
+| `Extension` | 146 | 79 `web.search` and 1 image are read; 66 `clock.sleep` are not, and stay gaps |
+
+Current Claude Code journals add `api-request`, `api-request-blob`, `api-request-shape` and `tools-used`: its request log beside the conversation (6,848 blobs across 40 recent journals, up to 1.7 MB each). They hold no work the conversation lacks. Their field names suggest they could give the exact tools offered per request, a possible later source for TOOLS-1. Only their field names and sizes were read here, and reading the rest would be a privacy decision.
+
+None of those are gaps in the work, so reducer r33 stops counting them. An unknown future record still counts. Real result: Codex `32f628ee` 6,462 to 74 (31 compactions, 43 sleep calls), Claude `c8e5c9c8` 25 to 7 (all compactions).
+
+## Second batch, 2 November
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| N1 | A selected card widened the history under the file rail, because `.inspecting` dropped the rail's offset. | High | Fixed by UI-20: the class is gone. |
+| N2 | A step of a read image rendered its reading twice, once inside `Original input and output`. | Medium | Fixed by UI-20. |
+| N3 | `View captured file` showed twice in one step, in the material and under Investigate. | Medium | Fixed by UI-20: Investigate adds only the correction when the step already has the file's actions. |
+| N4 | A failed run with no parsed counts read `0 passed, 0 failed`. | High | Fixed by CONTENT-15: it reads its exit code. |
+| N5 | The Git consent shows Approve until the status arrives, so a click can land on a button about to be removed. Fails `git-session-evidence` on clean main, 0 clean runs of 4. | Medium | `GitHistory.tsx` is held by TEST-2. Needs a loading state in place of Approve. |
+| N6 | The return arrow overlaps the map's zoom controls at the bottom right. | Low | UI-8. |
+| N7 | Investigate is a titled block under every step, heavy for what it adds. | Low | UI-8. |
+
+## Interaction inventory (A2)
+
+What each component does for each kind of input, for UI-8 and the motion pass to preserve. `tested` means driven in the walk on a real session; `code` means read from the source and not driven. Right click is the browser's own menu everywhere (tested on cards and file rows): there is no product menu anywhere, which is UI-24.
+
+| Component | Pointer | Keyboard | Scroll and drag | Live and replay | Loading, empty, failing | Basis |
+|---|---|---|---|---|---|---|
+| Home row | Click opens; hover shows the arrow | Arrows, Home, End, PageUp, PageDown move; Enter opens | Virtual list; position remembered | Running strip when followed | Dim list while importing; empty and no-match states; error with Retry | tested |
+| Home rail | Click filters; title shows the full path | Tab, Enter; Esc closes at half width | Virtual list | None | Unknown remembered workspace falls back to All | tested |
+| History scroll | Wheel detaches following | `j k` step, `n p` edit, `f` failure, `t T` turn, `g G` ends, `e` expand, `o` open file, `y` copy, `c C` fold, `?` guide, Esc clears focus | Native scroll; prompts rail ticks jump | Keys only in history; replay has transport | Skeletons, gaps as notices | tested (j k n p e o ?), code (rest) |
+| Card | Click head opens details; click twice closes; click body never does; hover zooms reading | Enter opens details; Tab reaches it | Bounded preview scrolls without detaching | State mark settles once | Running: `Waiting for output`; red contour on failure | tested |
+| Expand | Click toggles | Enter on the button; `e` | Inner scroll | Same in replay, future hidden | Honest absent states | tested |
+| Open step | Click a card, a Changes row, a search result or a link; Close on the card | Enter on the card, `e`; Esc closes; Back and Forward between steps | Reads in the history, no side panel | Same in replay, future hidden | Skeletons | tested |
+| Toolbox tool | Hover draws its connector; click dims others and offers Clear focus; click again clears | Tab, Enter; Esc does not clear focus | Long lists scroll locally | Counts rise live | `Tools used 0` before the first call | tested |
+| Toolbox panel | `−` minimises | Tab, Enter | Scrolls when tall | Grows downward, top edge fixed | | tested |
+| File rail | Click opens file; double click pins it; collapse button | `Find files…` filters | Handle resizes 220 to the limit; double click resets | Marks update live | Consent prompt; empty filter state | tested |
+| File peek | Tabs, Document and Source | Esc closes, focus returns | Local scroll | Disabled in replay | Over the limit: source with a note | tested |
+| File work | Step rows; hover shows Open in history | Previous and Next change; focus kept at the ends | Trail resize; window move and reset | Replay shows steps up to now | Filter empty state; restored evidence states | tested |
+| Workspace | Tabs, Edit, Actions | Ctrl+K reaches files | Split view | Off in replay | Consent state | tested |
+| Palette | Click a row | Ctrl+K opens, typing filters, arrows, Enter, Esc | List scroll | History only | No-match line | tested |
+| Changes | Rows open a file or an edit | Tab, Esc | Dialog scroll; paged | History only | Retry; `None recorded` | tested |
+| Git menu, review, history | Click; commit rows; ref rail | `B` focuses a branch, Esc clears it | Wheel pans, zoom buttons, Fit | History only | Three consents; loading line | tested |
+| Search | Click a result | Enter, Esc | Local scroll | Replay limits to the step | Empty state | tested |
+| Composer | Click opens; hover shows past receipts | Ctrl+Shift+Enter sends | Height follows content | Pill states live; hidden in replay | Unsupported requests fail explicitly | tested at rest, not sending |
+| Follow | Toggle; `↓` returns with the count | Tab, Space | Wheel detaches it | | | tested |
+| Repository map | Drag orbits, Shift drag pans, buttons zoom and Fit | Find a file | Wheel zooms | Replay follows | `Map the whole repository` | code, one screen tested |
+| Replay transport | Scrub, play, step, speed, leave | Space and arrows | | Stops on leave | | code, one screen tested |
+| Dialogs | Close button; move and reset where offered | Esc closes the top one; focus returns to the opener | Local scroll; resize where offered | | | tested |
+
+**Not driven:** the composer's send and approval paths, and replay's keyboard. Both need a session of their own.
+
+## Impeccable's detector
+
+Run 1 November with Yash's yes to the download: `impeccable` 4.8.0, Apache-2.0, installed outside the repository with install scripts off. Nothing was written to the project, no hook or skill was installed, and the only network path in its launcher (fetching the engine) was not needed. It attached to a browser showing the real app through its `--cdp` mode, so panels could be scanned open on real sessions. Results stayed in `.local/`, and only rule names, selectors and counts were read.
+
+15 scans (Home, History at rest and among cards, an expanded card, Inspector, file work, palette, Changes, Settings, Prompt overview, Findings and Git history at 1440 px; Home, History and the palette at 600 px) gave 196 findings under 11 rules.
+
+| Rule | Found | Verdict |
+|---|---|---|
+| `undersized-ui-text` | 49, nearly all Git history's turn labels at 10 px | Fixed. All text below the 11 px floor is gone. |
+| `line-length` | 21, History prose at about 83 characters | Fixed: 540 px. Prompt overview 560 px. |
+| `straggler` | 17, paragraphs ending on one word | Fixed: `text-wrap: pretty` on prose. |
+| `low-contrast` | 12, line numbers on tinted diff rows and the reasoning note | Fixed. Our own lint missed these because it reads the wrong background. |
+| `tight-leading` | 8, Home titles at 1.29 | Fixed. Home now scans clean at both widths. |
+| `tiny-text` | 66, metadata at 11 px | Kept. 11 px is the house floor for metadata (UI-2). The rule wants 12 and up for body text; this is not body text. |
+| `overused-font` | 12, Geist | Rejected. The face is a decision, and the rule judges fashion, not reading. |
+| `text-occlusion` | 7 | Real at half width only: floating Tools and Follow controls over scrolling text. Sent to UI-8. |
+| `flat-type-hierarchy` | 2 | Recorded for the UI-8 type scale. |
+| `cramped-padding` | 1, rising to 3 | Rejected: diff rows are meant to be dense. |
+| `em-dash-overuse` | 1 | Rejected: that was captured agent text. |
+
+A scan of `apps/ui/src` gave four `side-tab` hits, all deliberate (blockquotes, the agent line on prose, a pinned reference).
+
+**Verdict:** worth running. It found real defects our own lint and eye had missed, in minutes, and five of its eleven rules were right. Use it as a check after each UI-8 surface. Its fixed type and font opinions do not outrank the doctrine. Do not install its hook or skills into this repository.
 
 ## Tools
 
-ECC was read at Yash's request (1 Nov): a general agent system of 314 skills, hooks and rules, not a design tool. It adds nothing to this pass, its hooks and rules would compete with AGENTS.md, and its motion skills target `motion/react`, which Drishya does not use. Not installed. Its `click-path-audit` skill is a useful method to read when tracing a state bug, and `frontend-a11y` and `accessibility` are worth reading for REL-3, as references. Strix is for security testing before release and `claude-seo` for the launch page; neither helps this pass. Impeccable's detector remains the one addition worth running, once Yash agrees to the download.
+ECC was read at Yash's request (1 Nov): a general agent system of 314 skills, hooks and rules, not a design tool. It adds nothing to this pass, its hooks and rules would compete with AGENTS.md, and its motion skills target `motion/react`, which Drishya does not use. Not installed. Its `click-path-audit` skill is a useful method to read when tracing a state bug, and `frontend-a11y` and `accessibility` are worth reading for REL-3, as references. Strix is for security testing before release and `claude-seo` for the launch page; neither helps this pass. Impeccable's detector is covered above.

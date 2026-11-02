@@ -15,7 +15,7 @@
 :root[data-ui-version=modern][data-experience=classic] .workspace-menu>summary { width:36px; height:36px; display:grid; place-items:center; }
 :root[data-ui-version=modern][data-experience=classic] .workspace-menu>summary:after { display:none; }
 /* A short dock is centered; long inventories grow only to their available allocation. */
-:root[data-ui-version=modern][data-experience=classic] .workbench-station { top:calc((100% + var(--workspace-header-h, 70px) - 48px)/2); bottom:auto; transform:translateY(-50%); height:max-content; max-height:calc(100% - var(--workspace-header-h, 70px) - 90px); overflow:auto; gap:12px; }
+:root[data-ui-version=modern][data-experience=classic] .workbench-station { top:calc(var(--workspace-header-h, 70px) + 14px); bottom:auto; height:max-content; max-height:calc(100% - var(--workspace-header-h, 70px) - 90px); overflow:auto; gap:12px; }
 :root[data-ui-version=modern][data-experience=classic] .workbench-station>* { flex-shrink:0; }
 :root[data-ui-version=modern][data-experience=classic] .workbench-station .workbench-review { padding-bottom:10px; }
 :root[data-ui-version=modern][data-experience=classic] .workbench-review>div { display:flex; flex-wrap:wrap; gap:5px; }

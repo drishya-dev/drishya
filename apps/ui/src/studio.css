@@ -40,7 +40,6 @@
 :root[data-experience='classic'] .folder-explorer .ux-search { background: var(--s1); border-radius: 5px; }
 :root[data-experience='classic'] .connected-workspace .history { left: var(--stage-rail); right: var(--stage-rail); }
 @media (min-width: 821px) {
-  :root[data-experience='classic'] .connected-workspace:has(.inspector) .history { right: min(var(--inspector-width, 760px), 96vw); }
 }
 :root[data-experience='classic'] .connected-workspace .history-inner { max-width: 1100px; padding: calc(var(--workspace-header-h, 64px) + 44px) 28px calc(var(--composer-gap, 120px) + 60px); }
 :root[data-experience='classic'] .history .passage { margin-bottom: 36px; }

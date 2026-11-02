@@ -159,7 +159,7 @@ describe('worker-owned history pages', () => {
     expect(digest.newSteps).toBe(page.scene.total);
     expect(digest.counts.tests).toBe(70);
     const commands=await app.history.commands(recordingId,{});
-    const insights=await app.history.reviewInsights(recordingId);expect(insights.findings.find(f=>f.kind==='repeated-command')!.count).toBe(70);expect(insights.facts.counts.tests).toBe(70);
+    const insights=await app.history.reviewInsights(recordingId);expect(insights.findings.some(finding=>finding.kind==='repeated-command')).toBe(false);expect(insights.facts.counts.tests).toBe(70);
     expect(commands.total).toBe(70);expect(commands.items).toHaveLength(25);
     expect(commands.items.every(row=>row.command==='npm test')).toBe(true);
     const older=await app.history.commands(recordingId,{cursor:commands.older});

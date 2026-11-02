@@ -217,8 +217,7 @@ test('patch layouts retain captured changes and adapt without overflowing a narr
   await expect(edit.locator('.unified-change')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await edit.getByRole('button', { name: 'Open details' }).click();
-  const inspector = page.locator('.inspector');
+  const inspector = page.getByRole('region',{name:'Operation detail'});
   await expect(inspector.getByRole('button', { name: 'Changes', exact: true })).toHaveCount(1);
   await inspector.getByRole('button', { name: 'Side by side', exact: true }).click();
   await expect(inspector.locator('.split-change')).toBeVisible();
@@ -232,6 +231,8 @@ test('terminal folding is reversible and keyboard map search targets a real file
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('git diff');
   await page.locator('.search-results button').first().click();
+  // A search result opens its step; folding belongs to the card's preview.
+  await page.keyboard.press('Escape');
   const shell = page.locator('article.op-shell');
   await expect.poll(() => shell.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
   await shell.getByRole('button', { name: /more lines/ }).click();
@@ -338,6 +339,7 @@ test('verification marks represent recorded counts and open the captured failing
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('npm test');
   await page.locator('.search-results button').first().click();
+  await page.keyboard.press('Escape');
   const failed = page.locator('article.op-test.st-error');
   await expect(failed.locator('.verification-tile.failed')).toHaveCount(1);
   await failed.getByRole('button', { name: '1 failed · inspect assertions', exact: true }).click();
@@ -352,7 +354,6 @@ test('MCP input and captured result can be read in the history passage', async (
   await page.getByPlaceholder('Search prose, commands, paths…').fill('get-library-docs');
   await page.locator('.search-results button').first().click();
   const operation = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
-  await operation.getByRole('button', { name: /Expand/ }).click();
   await expect(operation).toContainText('context7CompatibleLibraryID');
   // CONTENT-14: the expanded result is the stored reader, which says whether it holds the complete result, not a "preview".
   await expect(operation.getByRole('region', { name: 'Stored captured result' })).toContainText('Complete stored result');
@@ -430,7 +431,7 @@ test('the dock keeps observed identities readable at rest and remains accessible
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('get-library-docs');
   await page.locator('.search-results button').first().click();
-  await page.locator('.inspector').getByRole('button', { name: 'Close', exact: true }).click();
+  await page.keyboard.press('Escape');
   const call = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
   // The current evidence desk scrolls; a clipped instrument is not a true origin.
   await dock.locator('[data-mcp-tool="get-library-docs"]').scrollIntoViewIfNeeded();

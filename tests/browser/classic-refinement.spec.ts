@@ -234,7 +234,7 @@ test('change to check to Back restores the same patch and comparison layout', as
   await choice.selectOption(patch!);
   await reader.getByRole('button', { name: 'Side by side', exact: true }).click();
   await reader.locator('.verify-open').first().click();
-  const check = page.getByRole('complementary', { name: 'Operation detail' });
+  const check = page.getByRole('region', { name: 'Operation detail' });
   await expect(check).toContainText('npm test');
   await check.getByRole('button', { name: 'Back in reading history', exact: true }).click();
   await expect(choice).toHaveValue(patch!);

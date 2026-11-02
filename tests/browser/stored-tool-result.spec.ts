@@ -35,7 +35,7 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  await full.getByRole('button',{name:'Show original result',exact:true}).click();
  expect(await full.locator('.stored-result-original').evaluate(node=>node.textContent)).toBe(output);
  await full.getByRole('button',{name:'Read formatted result',exact:true}).click();
- await card.press('Enter');const inspector=page.getByRole('complementary',{name:'Operation detail'});
+ await card.press('Enter');const inspector=page.getByRole('region',{name:'Operation detail'});
  await expect(inspector.locator('.stored-tool-result')).toContainText('Complete stored result');
  await inspector.getByRole('button',{name:'Show original result',exact:true}).click();
  expect(await inspector.locator('.stored-result-original').evaluate(node=>node.textContent)).toBe(output);
@@ -44,7 +44,7 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  const end=projection.timeline.findIndex(item=>item.type==='op-end'&&item.operationId===op.id);
  await page.goto(`${server.url}/?experience=modern&motion=0&at=${end+1}#/r/${id}`);
  const replayCard=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await replayCard.scrollIntoViewIfNeeded();await replayCard.press('Enter');
- const replayInspector=page.getByRole('complementary',{name:'Operation detail'});await expect(replayInspector.locator('.stored-tool-result')).toContainText('Complete stored result');
+ const replayInspector=page.getByRole('region',{name:'Operation detail'});await expect(replayInspector.locator('.stored-tool-result')).toContainText('Complete stored result');
  const timeline=page.getByRole('slider',{name:'Timeline',exact:true});await timeline.press('ArrowLeft');
  await expect(replayInspector.locator('.stored-tool-result')).toHaveCount(0);await expect(replayInspector).not.toContainText('final text sibling');
 });
@@ -54,7 +54,7 @@ test('oversized single line and malformed output retain every byte through bound
  const artifact=projection.artifacts.find(a=>op.artifactIds.includes(a.id)&&a.kind==='output');const artifactId=artifact?.id??`result:${op.id}`;
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();await card.press('Enter');
- const inspector=page.getByRole('complementary',{name:'Operation detail'}),full=inspector.locator('.stored-tool-result');
+ const inspector=page.getByRole('region',{name:'Operation detail'}),full=inspector.locator('.stored-tool-result');
  let joined='';for(let n=0;n<100;n++){
   await expect(full).toContainText('Stored byte portion');
   const raw=full.getByRole('button',{name:'Show original result',exact:true});if(await raw.count())await raw.click();
@@ -73,7 +73,7 @@ test('missing stored result and read failure stay explicit with retry and labell
  await page.route('**/artifacts/*?byteStart=*',route=>route.fulfill({json:{available:false,reason:'no-longer-stored'}}));
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();await card.press('Enter');
- const inspector=page.getByRole('complementary',{name:'Operation detail'});await expect(inspector).toContainText('no longer stored');await expect(inspector).toContainText('Available preview');await expect(inspector.getByRole('button',{name:'Copy original result',exact:true})).toHaveCount(0);
+ const inspector=page.getByRole('region',{name:'Operation detail'});await expect(inspector).toContainText('no longer stored');await expect(inspector).toContainText('Available preview');await expect(inspector.getByRole('button',{name:'Copy original result',exact:true})).toHaveCount(0);
  await page.unroute('**/artifacts/*?byteStart=*');await page.route('**/artifacts/*?byteStart=*',route=>route.fulfill({status:503,json:{error:'synthetic temporary read failure'}}));await inspector.getByRole('button',{name:'Retry stored result',exact:true}).click();await expect(inspector).toContainText('Could not load stored result.');await page.unroute('**/artifacts/*?byteStart=*');await inspector.getByRole('button',{name:'Retry',exact:true}).click();await expect(inspector.locator('.stored-tool-result')).toContainText('Complete stored result');
 });
 
@@ -82,7 +82,7 @@ for(const text of ['', 'Literal original result text'])test(`Claude separate str
  const {id,op}=await imported('claude-code',text,`separate-${text?'mixed':'only'}`,structured);
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();await card.press('Enter');
- const full=page.getByRole('complementary',{name:'Operation detail'}).locator('.stored-tool-result');
+ const full=page.getByRole('region',{name:'Operation detail'}).locator('.stored-tool-result');
  if(text){await expect(full.getByRole('combobox',{name:'Captured result field'})).toBeVisible();await full.getByRole('button',{name:'Show original result',exact:true}).click();expect(await full.locator('.stored-result-original').textContent()).toBe(text);await full.getByRole('combobox',{name:'Captured result field'}).selectOption('structured');}
  await expect(full).toContainText('Captured structured field · JSON formatting derived');
  const raw=full.getByRole('button',{name:'Show formatted structured field',exact:true});if(await raw.count())await raw.click();

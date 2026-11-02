@@ -6,8 +6,6 @@ export interface EvidenceLocation {
   currentFile?: string;
   selectedOp?: string;
   explore: boolean;
-  inspectorTab: 'detail' | 'evidence' | 'explain';
-  inspectorWidth: number;
 }
 
 export interface EvidenceVisit {

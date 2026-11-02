@@ -36,7 +36,7 @@ const firstLine = (text: string) => text.split('\n').find((line) => line.trim())
 export function describeOpen(op: OpenOperation): string {
   if (op.asking) return 'waiting for your answer';
   switch (op.kind) {
-    case 'shell': case 'test': return `running ${clip(firstLine(op.command ? commandDisplay(op.command).text : op.title))}`;
+    case 'shell': case 'test': return op.description ? clip(firstLine(op.description)) : `running ${clip(firstLine(op.command ? commandDisplay(op.command).text : op.title))}`;
     case 'read': return `reading ${op.path ? base(op.path) : 'a file'}`;
     case 'edit': case 'write': return `editing ${op.path ? base(op.path) : 'a file'}`;
     case 'search': return `searching${op.query ? ` ${clip(op.query, 32)}` : ''}`;
@@ -62,7 +62,8 @@ export function nowView(facts: NowFacts | undefined, live: boolean, ctx: NowCont
   if (focus) {
     const age = since(focus.since);
     const more = facts.openCount > 1 ? ` +${facts.openCount - 1}` : '';
-    const text = `${who(focus)} · ${describeOpen(focus)}${age === undefined ? '' : ` · ${elapsed(age)}`}${more}`;
+    // The time goes first: a long description is cut at the end of the pill.
+    const text = `${who(focus)} ·${age === undefined ? '' : ` ${elapsed(age)} ·`} ${describeOpen(focus)}${more}`;
     const basis = focus.asking
       ? 'A question to you is open: the harness recorded the call and no answer yet.'
       : `A call is open: the harness recorded it${age === undefined ? '' : ` ${elapsed(age)} ago`} and no result yet. Long commands stay open until they finish.${turn}`;
