@@ -159,7 +159,7 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 
 | # | Found | Severity | State |
 |---|---|---|---|
-| B2 | Reading position saves fail with 409 while two tabs of one session are open: found by having two tabs open during this walk. | Low | DATA-13. |
+| B2 | Reading position saves fail with 409 while two tabs of one session are open: found by having two tabs open during this walk. | Low | Fixed by DATA-13: the later write wins. Two tabs on Claude `31c2a5` and Codex `8b720a`: 109 saves, none refused. |
 | B3 | A failed suite does not change a command's outcome, because the outcome is the exit code. | Medium | Fixed by CONTENT-15: `operationOutcome` reports `Output reports failures` with a red `!` when a clean exit's output has a runner's failed summary. Status stays as captured; 133 of 8,111 Codex commands in `32f628ee`, and a genuine Claude run piped through `tail`. |
 
 ## Composer, map, replay, half width

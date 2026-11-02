@@ -28,8 +28,7 @@ export class WorkspaceMemory {
     return workingLocations({version:1,last,sessions:[{id:'@home',revision:this.revisions['@home']??0,entries:[...this.home]},...[...this.sessions].map(([id,entries])=>({id,revision:this.revisions[id]??0,entries:[...entries].map(([key,value])=>[key,value instanceof Set?[...value]:value instanceof EvidenceTrail?value.snapshot():value])}))]});
   }
   versions(revisions:Record<string,number>,written:string[]) {
-    // A response lists remote scopes too. Advancing their versions without their
-    // contents would authorize a later stale overwrite from this window.
+    // A response lists remote scopes too; this window has not read their contents.
     for(const id of written)if(id in revisions)this.revisions[id]=revisions[id]!;
     for(const id of Object.keys(this.revisions))if(!(id in revisions))delete this.revisions[id];
   }
