@@ -37,6 +37,7 @@ import { readCheckpointFile } from './checkpoint-file.ts';
 import { readImage, referencedImagePath } from './images.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
+import { repositoryRoots } from './repository-root.ts';
 import { sessionLinks } from './git-session-links.ts';
 import { HarnessController } from './controller.ts';
 import {sessionSegments} from './session-segments.ts';
@@ -126,6 +127,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const readStorageUsage = storageUsageReader(app.store.dataDir);
   const workspace = new WorkspaceAccess(app);
   const gitReview = new GitReview(workspace,undefined,app.history);
+  const repositoryRoot = repositoryRoots();
+  const imports = new Map<string, { recordingId: string; total: number }>();
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
   app.ingest.resetLiveFlags();
   const token = opts.token ?? randomBytes(24).toString('hex');
@@ -276,7 +279,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       return;
     }
     if (a === 'revisions' && m === 'GET') return json(res, { revisions: app.store.revisions() });
-    if (a === 'sources' && m === 'GET') return json(res, await app.ingest.discoverReport());
+    if (a === 'sources' && m === 'GET') {
+      const report = await app.ingest.discoverReport();
+      return json(res, { ...report, sources: await Promise.all(report.sources.map(async s => ({ ...s, repositoryRoot: await repositoryRoot(s.cwd) }))) });
+    }
+    if (a === 'imports' && m === 'GET') return json(res, { imports: [...imports].map(([path, { recordingId, total }]) => ({ path, bytes: app.store.sourceBytes(recordingId), total })) });
     if(a==='search-library'&&m==='GET') {
       const q=url.searchParams.get('q')??'',root=url.searchParams.get('root')??undefined,harness=url.searchParams.get('harness')??undefined;
       const from=url.searchParams.get('from')??undefined,to=url.searchParams.get('to')??undefined;
@@ -292,12 +299,15 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       const sources = await app.ingest.discover();
       const src = sources.find((s) => samePath(s.path, String(body.path ?? '')) && (!body.adapterId || s.adapterId === body.adapterId));
       if (!src) throw new HttpError(400, 'not a discovered harness session');
-      const r = await app.ingest.importSource(src.adapterId, src.path, { title: src.title });
+      imports.set(src.path, { recordingId: recordingIdFor(src.adapterId, src.path), total: src.bytes });
+      const r = await app.ingest.importSource(src.adapterId, src.path, { title: src.title }).finally(() => imports.delete(src.path));
       if (body.live) app.ingest.startLive(r.recordingId);
       return json(res, { ...r, recording: app.store.getRecording(r.recordingId) });
     }
     if (a === 'recordings' && !id && m === 'GET') {
-      const result = json(res, { recordings: app.store.listRecordings().map((r) => ({ ...r, sourceBytes: (app.store.lineageView(r.id)?.recordingIds ?? [r.id]).reduce((bytes, id) => bytes + app.store.sourceBytes(id), 0), live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
+      const recordings = app.store.listRecordings();
+      const repositories = await Promise.all(recordings.map(r => repositoryRoot(r.workspaceRoot)));
+      const result = json(res, { recordings: recordings.map((r, index) => ({ ...r, repositoryRoot: repositories[index], sourceBytes: (app.store.lineageView(r.id)?.recordingIds ?? [r.id]).reduce((bytes, id) => bytes + app.store.sourceBytes(id), 0), live: app.ingest.isLive(r.id), privacyOutdated: app.ingest.privacyOutdated(r.id), health: app.ingest.health(r.id) })) });
       const sample = timings?.get(res);
       if (sample) sample.responseEndAtMs = performance.now();
       return result;

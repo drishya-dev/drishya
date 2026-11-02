@@ -7,6 +7,7 @@ import { relTime } from './common.tsx';
 import { localPreviewId } from '../lib/local-preview.ts';
 import { SessionGroups } from './SessionGroups.tsx';
 import { timestamp } from '../lib/home-groups.ts';
+import { DISCOVERY_MS, IMPORT_PROGRESS_MS, readProgress, sameSources, type ImportProgress } from '../lib/home-import.ts';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { ModernSessions } from '../modern/ModernSessions.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
@@ -23,6 +24,8 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const [sources, setSources] = useState<DiscoveredSource[]>();
   const [sourceErrors, setSourceErrors] = useState<DiscoveryError[]>([]);
   const [busy, setBusy] = useState<string>();
+  const [opening, setOpening] = useState<ImportProgress>({});
+  const openTarget = useRef<string | undefined>(undefined);
   const [err, setErr] = useState<string>();
   const [picked, setPicked] = useState<string[]>([]);
   const [q, setQ] = useState('');
@@ -62,7 +65,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     };
     await Promise.all([
       apply(0, 'Captured sessions', () => source.recordings(), recordings => set({ recordings })),
-      apply(1, 'Local discovery', () => source.sources(), found => { setSources(found.sources); setSourceErrors(found.errors); }),
+      apply(1, 'Local discovery', () => source.sources(), found => { setSources(old => sameSources(old, found.sources) ? old : found.sources); setSourceErrors(found.errors); }),
       apply(2, 'Storage information', async () => source.storage?.(), setUsage),
     ]);
   };
@@ -73,18 +76,53 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     return () => { active = false; stop?.(); };
   }, [source]);
 
+  // New journals appear on their own. A scan takes about 200 ms over 217 journals, and a hidden tab skips it.
+  useEffect(() => {
+    if (!source) return;
+    const discover = () => {
+      if (document.visibilityState !== 'visible') return;
+      void source.sources().then(found => {
+        if (useApp.getState().source !== source) return;
+        setSources(old => sameSources(old, found.sources) ? old : found.sources);
+        setSourceErrors(found.errors);
+      }).catch(() => undefined);
+    };
+    const timer = window.setInterval(discover, DISCOVERY_MS);
+    document.addEventListener('visibilitychange', discover);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', discover); };
+  }, [source]);
+
+  const importing = Object.keys(opening).length > 0;
+  useEffect(() => {
+    if (!importing || !source?.imports) return;
+    const timer = window.setInterval(() => {
+      void source.imports!().then(progress => setOpening(old => readProgress(old, progress))).catch(() => undefined);
+    }, IMPORT_PROGRESS_MS);
+    return () => window.clearInterval(timer);
+  }, [importing, source]);
+  // Leaving Home abandons the wait, not the import: it finishes and its row stays captured.
+  useEffect(() => () => { openTarget.current = undefined; }, []);
+
   const open = async (s: DiscoveredSource, live: boolean) => {
     if (!source) return;
+    openTarget.current = s.path;
+    if (opening[s.path]) return;
+    setOpening(old => ({ ...old, [s.path]: {} }));
     setBusy(s.path);
     setErr(undefined);
     try {
       const r = await source.importSource(s.path, s.adapterId, live);
-      location.hash = `#/r/${r.recordingId}`;
-      await openRecording(r.recordingId);
+      if (openTarget.current === s.path) {
+        location.hash = `#/r/${r.recordingId}`;
+        await openRecording(r.recordingId);
+      } else {
+        set({ recordings: await source.recordings() });
+      }
     } catch (e) {
       setErr((e as Error).message);
     } finally {
-      setBusy(undefined);
+      setOpening(({ [s.path]: _done, ...rest }) => rest);
+      setBusy(old => old === s.path ? undefined : old);
     }
   };
 
@@ -104,7 +142,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  if(modern)return <SessionHome recordings={recordings} sources={sources} now={now} busy={busy} error={[err,...sourceErrors.map(e=>`${HARNESS_LABEL[e.adapterId]??e.adapterId}: ${e.message}`)].filter(Boolean).join(' · ')} refresh={()=>refresh().catch(e=>setErr(e.message))} openDemo={()=>openDemo(true)} onOpen={(session,live)=>void open(session,live)}/>;
+  if(modern)return <SessionHome recordings={recordings} sources={sources} now={now} opening={opening} error={[err,...sourceErrors.map(e=>`${HARNESS_LABEL[e.adapterId]??e.adapterId}: ${e.message}`)].filter(Boolean).join(' · ')} refresh={()=>refresh().catch(e=>setErr(e.message))} openDemo={()=>openDemo(true)} onOpen={(session,live)=>void open(session,live)}/>;
 
   return (
     <div className="home">
@@ -173,7 +211,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
           ))}
           {!sources && !err && <div className="skeleton tall" role="status" aria-label="Finding local sessions" />}
           {sources && filteredSources.length === 0 && <p className="muted">{sources.length ? 'No sessions match these filters.' : 'No Claude Code or Codex journals were found in their standard local directories. Start a session in your harness, then refresh. For a journal stored elsewhere, use drishya import --help.'}</p>}
-          <SessionGroups key={`sources:${q}:${harness}:${days}`} items={filteredSources} rootOf={s => s.cwd} timeOf={s => s.modifiedAt} now={now} render={s => (
+          <SessionGroups key={`sources:${q}:${harness}:${days}`} items={filteredSources} rootOf={s => s.repositoryRoot ?? s.cwd} timeOf={s => s.modifiedAt} now={now} render={s => (
               <div key={s.path} className="row source">
                 <div className="row-main">
                   <div className="row-title">{s.title?.replace(/\s+/g, ' ') || 'Untitled session'}</div>
