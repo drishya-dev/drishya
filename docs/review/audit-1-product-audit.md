@@ -151,6 +151,21 @@ Clean. The theme grid clips its last card at 900 px by design of the scroller. `
 
 493 distinct interface strings say `captured`, `evidence`, `recorded` or `derived`. The doctrine that captured differs from derived is about what the product may claim; it was never a rule that the word must appear on screen. Everything in the product is captured, so the word carries nothing, and a screen full of it reads like a legal notice. This pass fixed the strings seen at rest on the main path. The whole sweep touches most specs, and is its own item (UI-21).
 
+**Done by UI-21, 2 November.** 477 strings carried a word; about 350 changed. A name drops the word: `Captured commands` is `Commands`. A sentence that separates the session from today's file says what the agent saw: `Its captured material is shown below` is `What the agent saw is shown below`.
+
+**What was kept, and why:**
+
+| Kept | Why |
+|---|---|
+| `not recorded`, `No … recorded` | The one word for an absence. It is a claim about the harness: the record does not hold this. |
+| `Codex recorded …`, `the harness recorded …` | Says who wrote the fact, and that it came from them. |
+| `Capture gaps`, `capture continues`, `Local capture. No telemetry.` | Capture is the activity here, not a modifier on a noun. |
+| `Computed by Drishya …`, `· computed`, `formatted by Drishya` | Replaces `derived`: captured differs from computed, and the reader is told so. |
+| `Recorded order, not wall-clock time.` and the tooltip on a later run | A limit on what the order means. |
+| `Not established by the evidence` | A limit on what can be claimed. |
+| `review-packet.ts`, `native-return.ts` | Text handed to other agents and reviewers, where provenance is the content. |
+| Spec fixtures | `Captured step 1` and `# Captured document` are fixture text, not product language. |
+
 ## Foundations
 
 Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.5`; 11 corner radii; 20 button heights. These are the UI-4b overrides stacked up (`atelier`, `ink`, `polish`, `product`, `stage`, `studio`, `classic`). This pass added to that pile, on purpose, so it could move fast; the token sheet comes first in UI-8 and absorbs these rules.
