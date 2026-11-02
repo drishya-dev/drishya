@@ -53,7 +53,7 @@ Each surface answers the brief's questions in short, then lists what was found. 
 | C5 | Every bounded preview ended in half a line of text. | High | Fixed: a fade that exists only while there is more to scroll, driven by the scroller itself, no script. |
 | C6 | `Expand` on every card at rest. | Medium | Fixed: on hover and focus. |
 | C7 | `Vitest · captured output 1 · tests`, `5 captured result rows · select to inspect`, `Derived · grouped counts, not execution order`, `13 captured lines between · show preview`, `Captured input preview · expand for full text`. | High | Fixed: `Vitest`, `5 results · hover to read, click to open`, `13 more lines`, `Shortened · Expand to read all of it`. The basis moved to the tooltip on the counts, so provenance is still stated. |
-| C8 | A run with one failed suite read as green `5 passed` with `Suite summary: 1 failed` in grey. | High | Fixed: `Suites: 1 failed…` reads red. The card's own ✓ still comes from the exit code (CONTENT-15). |
+| C8 | A run with one failed suite read as green `5 passed` with `Suite summary: 1 failed` in grey. | High | Fixed: `Suites: 1 failed…` reads red. The card's mark follows it since CONTENT-15: a red `!`, not a ✓. |
 | C9 | `Queue receipts · 145` sat over the text while reading back. | Medium | Fixed: past receipts show at the end of the session only; a waiting input always shows. |
 | C10 | The jump-to-latest button overlapped the corner of the toolbox in accent purple. | Medium | Fixed: neutral, beside Follow. |
 | C11 | `get_worktree_creati/on_status` broke mid-word in the toolbox. | Medium | Fixed: one line, ellipsis. |
@@ -118,7 +118,7 @@ The brief's worked example, and the most changed surface.
 | R2 | `144 files with change inputs`, `90 failed operations`. | Medium | Fixed: `144 files changed`, `90 failed`. |
 | R3 | `18 entries lack captured observation positions…`, flush against the dialog edge, shown even where it could not matter. | Medium | Fixed: plain, aligned, only when it applies. |
 | R4 | 144 files are paged 50 at a time. | Medium | REVIEW-6. |
-| R5 | A failure row is its title and nothing about why it failed. | High | CONTENT-15. |
+| R5 | A failure row is its title and nothing about why it failed. | High | Fixed by CONTENT-15: the row shows the exit code and the output's own first error line. On a real session every row carries one or the other (Codex `32f628ee`: 530 lines and 100 exit codes of 630; Claude `c8e5c9c8`: 89 and 1 of 90). |
 
 ## Command palette
 
@@ -160,7 +160,7 @@ Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.
 | # | Found | Severity | State |
 |---|---|---|---|
 | B2 | Reading position saves fail with 409 while two tabs of one session are open: found by having two tabs open during this walk. | Low | DATA-13. |
-| B3 | A failed suite does not change a command's outcome, because the outcome is the exit code. | Medium | CONTENT-15. |
+| B3 | A failed suite does not change a command's outcome, because the outcome is the exit code. | Medium | Fixed by CONTENT-15: `operationOutcome` reports `Output reports failures` with a red `!` when a clean exit's output has a runner's failed summary. Status stays as captured; 133 of 8,111 Codex commands in `32f628ee`, and a genuine Claude run piped through `tail`. |
 
 ## Composer, map, replay, half width
 
