@@ -25,7 +25,7 @@ export function StepNoteEditor({op}:{op:Operation}) {
   const remove=()=>{if(write(items=>items.filter(item=>item.operationId!==op.id))){setText('');setFollow(false);setOwner('');setStatus('Note removed');}};
   return <details className="review-question-editor" open={!!held||undefined}><summary>{held?'Your note':'Add a note'}</summary>
     <textarea aria-label="Note on this step" maxLength={3000} placeholder="What do you want to remember or check?" value={text} onChange={e=>{setText(e.target.value);changed();}}/>
-    <label className="step-note-follow"><input type="checkbox" checked={follow} onChange={e=>{setFollow(e.target.checked);changed();}}/>Needs follow-up</label>
+    <button type="button" className="btn ghost small step-note-follow" aria-pressed={follow} onClick={()=>{setFollow(!follow);changed();}}>Needs follow-up</button>
     {follow&&<input aria-label="Note owner" maxLength={80} placeholder="Owner (optional)" value={owner} onChange={e=>{setOwner(e.target.value);changed();}}/>}
     <div className="step-note-actions"><button className="btn" disabled={sequence===undefined} title={sequence===undefined?'This step has no position to return to':undefined} onClick={save}>Save note</button>
       {held&&<button className="btn ghost" onClick={remove}>Remove note</button>}
