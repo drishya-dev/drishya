@@ -117,7 +117,7 @@ The brief's worked example, and the most changed surface.
 | R1 | `Start with the change. Follow the evidence.`, a paging bar, and a bounds sentence all above the counts. | High | Fixed: counts first, paging after the lists. |
 | R2 | `144 files with change inputs`, `90 failed operations`. | Medium | Fixed: `144 files changed`, `90 failed`. |
 | R3 | `18 entries lack captured observation positions…`, flush against the dialog edge, shown even where it could not matter. | Medium | Fixed: plain, aligned, only when it applies. |
-| R4 | 144 files are paged 50 at a time. | Medium | REVIEW-6. |
+| R4 | 144 files are paged 50 at a time. | Medium | Fixed by REVIEW-6: one list that fills as it is read, and back to the row that was opened. Claude `c8e5c9c8`: 144 files, 90 failures, 15 checks at 600 and 1440. Codex `32f628ee`: 272 files, 630 failures, 717 checks, 17,800 nodes, longest frame 18 ms. |
 | R5 | A failure row is its title and nothing about why it failed. | High | Fixed by CONTENT-15: the row shows the exit code and the output's own first error line. On a real session every row carries one or the other (Codex `32f628ee`: 530 lines and 100 exit codes of 630; Claude `c8e5c9c8`: 89 and 1 of 90). |
 
 ## Command palette
