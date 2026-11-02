@@ -32,6 +32,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
+| UI-21 | @yash + Claude Opus 5.5 | `claude/ui-21-language` | 2026-11-02 | Interface strings across `apps/ui/src/**` and the specs and units that name them. More than 15 files by the nature of a sweep (Yash's whole-product scope). No logic changes. |
 
 
 ---
