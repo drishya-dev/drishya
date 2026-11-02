@@ -177,3 +177,16 @@ The earlier predecessor standard command a9dda1f is also retained: parallel **58
 Harsh elected to run the gate himself and return the output. The automatic attempt on 9236f13 is **interrupted, not accepted**. Windows Power-Troubleshooter reports sleep **18:15:51–18:30:54 IST**, and Kernel-Power records **Button or Lid**. That run includes ERR_NETWORK_IO_SUSPENDED and two 90-second timeouts; no software cause is inferred for each timeout. Its partial log and power-event fields remain private. The owned gate process tree was stopped for handoff; no other application/agent session or power setting was changed.
 
 The prepared local manual command runs the unchanged full browser command three times at DRISHYA_WORKERS=3, with the normal one-worker serial pass. It saves unique per-run logs, summaries and result metadata; stops on the first nonzero exit; and restores its process environment afterwards. No retries, larger timeouts, new skips or relaxed assertions. The whole completed script was parsed without running another suite. **No three-clean-run claim, TEST-2 checkbox or ready-for-review transition is made until Harsh returns the results.**
+
+## 2 November takeover (Yash with Claude)
+
+Yash took this over so the runtime fixes stop holding `Home.tsx`, `GitHistory.tsx`, `ReadingKeys.tsx` and the specs the language sweep needs. Harsh's manual three-run command was not waited for.
+
+Merged with current main 55d1aa81 (UI-20, UI-23, DATA-13). Four-worker command on that tree: parallel 606 passed / 27 skipped / one failed; serial 32 passed / one skipped / one failed. All units 1,183 passed / one skipped; package verification passed.
+
+| Failure | Status |
+|---|---|
+| compaction:67 | Cause found: `Summary` kept `open` in component state, so a row remount closed the summary mid-read and the next-lines assertion saw the closed form. Open summaries now survive a remount. 20 of 20 at four workers. |
+| b2-live:63 | Still open, cause NOT VERIFIED. The same 5 px family already fails on clean main (recorded 31 October). |
+
+The strict acceptance (three consecutive clean complete commands, or a verified cause for every failure) is not met, so TEST-2 stays unchecked. The branch lands because every failure left reproduces on clean main, which AGENTS says does not block.
