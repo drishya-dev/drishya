@@ -32,11 +32,8 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(reader).toBeVisible();
-  const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
   const refresh = reader.getByRole('button', { name: 'Refresh changes' });
-  await expect(workspaceConsent.or(gitConsent).or(refresh)).toBeVisible();
-  if (await workspaceConsent.isVisible()) await workspaceConsent.click();
   await expect(gitConsent.or(refresh)).toBeVisible();
   if (await gitConsent.isVisible()) await gitConsent.click(); else await refresh.click();
   await expect(reader.getByRole('button', { name: 'Working tree', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -79,9 +76,6 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(reader).toBeVisible();
-  const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
-  await expect(workspaceConsent.or(reader.getByRole('button', { name: 'Approve read-only Git' })).or(reader.getByRole('button', { name: 'Refresh changes' }))).toBeVisible();
-  if (await workspaceConsent.isVisible()) await workspaceConsent.click();
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
   const refresh = reader.getByRole('button', { name: 'Refresh changes' });
   await expect(gitConsent.or(refresh)).toBeVisible();
@@ -128,11 +122,8 @@ test('Git file pages reach paths past fifty through the authenticated local API'
   await page.goto(`${server.url}/?experience=classic#/r/${id}`);
   await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
-  const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
   const refresh = reader.getByRole('button', { name: 'Refresh changes' });
-  await expect(workspaceConsent.or(gitConsent).or(refresh)).toBeVisible();
-  if (await workspaceConsent.isVisible()) await workspaceConsent.click();
   await expect(gitConsent.or(refresh)).toBeVisible();
   if (await gitConsent.isVisible()) await gitConsent.click(); else await refresh.click();
   await expect(reader.getByRole('navigation', { name: 'Git file pages' })).toContainText('1–50 of 56');
@@ -154,9 +145,6 @@ for (const experience of ['classic', 'studio']) test(`${experience}: fresh hando
   await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(reader).toBeVisible();
-  const workspaceConsent = reader.getByRole('button', { name: 'Approve current workspace' });
-  await expect(workspaceConsent.or(reader.getByRole('button', { name: 'Approve read-only Git' })).or(reader.getByRole('button', { name: 'Refresh changes' }))).toBeVisible();
-  if (await workspaceConsent.isVisible()) await workspaceConsent.click();
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
   const refresh = reader.getByRole('button', { name: 'Refresh changes' });
   await expect(gitConsent.or(refresh)).toBeVisible();

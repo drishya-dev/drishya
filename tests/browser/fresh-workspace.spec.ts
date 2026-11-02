@@ -536,7 +536,7 @@ test('local Git atlas connects real branches and commits with root/merge patches
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await openGitDestination(page, 'Git graph');
   const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();
-  const historyGrant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});
+  const historyGrant=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});
   // Git access starts unknown; choose consent only after its actual status resolves.
   await expect(historyGrant.or(atlas.locator('.atlas-layout'))).toBeVisible();
   if(await historyGrant.isVisible())await historyGrant.click();
@@ -643,7 +643,6 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   expect((await git.locator(':scope > header').boundingBox())!.height).toBeLessThanOrEqual(48);
   await expect(git.locator(':scope > header .git-branch-glyph')).toBeVisible();
   await expect(page.getByRole('complementary',{name:'Tools and agents'}).getByRole('button',{name:'Git review',exact:true})).toHaveCount(0);
-  if(await git.getByRole('button',{name:'Approve current workspace'}).isVisible()) await git.getByRole('button',{name:'Approve current workspace'}).click();
   await expect(git.getByRole('button',{name:'Approve read-only Git'}).or(git.getByRole('button',{name:'Refresh changes'}))).toBeVisible();
   if(await git.getByRole('button',{name:'Approve read-only Git'}).isVisible()) await git.getByRole('button',{name:'Approve read-only Git'}).click();
   await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
@@ -1718,7 +1717,7 @@ test('Git timeline scrolls into older history without commit-range pages and kee
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await expect(page.locator('.modern-composer-identity')).toHaveText('');await expect(page.locator('.modern-composer-intro')).toHaveCount(0);await expect(page.locator('.modern-composer-location code')).toHaveCount(0);await expect(page.locator('.modern-composer-identity>svg')).toHaveCount(1);await expect(page.locator('.modern-composer-location')).not.toBeEmpty();
   for(const width of [390,320,1440]){await page.setViewportSize({width,height:960});await expect.poll(async()=>{const boxes=await page.getByRole('navigation',{name:'Workspace views',exact:true}).locator('button:visible').evaluateAll(elements=>elements.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));return boxes.every((a,index)=>a.x>=0&&a.right<=width&&boxes.slice(index+1).every(b=>a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y));}).toBe(true);}
-  await openGitDestination(page, 'Git graph');const atlas=page.getByRole('dialog',{name:'Git history',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
+  await openGitDestination(page, 'Git graph');const atlas=page.getByRole('dialog',{name:'Git history',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});if(await grant.isVisible())await grant.click();
   await expect(atlas.locator('.atlas-commit')).toHaveCount(50);await expect(atlas.getByRole('navigation',{name:'Commit pages'})).toHaveCount(0);
   const graph=atlas.getByLabel('Commits, oldest on the left; drag to pan, pinch or Ctrl + wheel to zoom',{exact:true});await graph.focus();await page.keyboard.press('PageUp');await expect.poll(()=>atlas.locator('.atlas-commit').count()).toBeGreaterThan(50);
   await atlas.getByLabel('Choose Git commit',{exact:true}).selectOption(tip);await expect(atlas.locator('.atlas-message')).toContainText('Continuous fixture 81');await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();

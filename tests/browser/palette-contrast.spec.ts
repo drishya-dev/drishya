@@ -212,11 +212,10 @@ test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette
   await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true }), git = (state: string) => everyPalette(page, state, found, '[data-contrast-scope=git]');
   await reader.evaluate(el => el.setAttribute('data-contrast-scope', 'git'));
-  const workspace = reader.getByRole('button', { name: 'Approve current workspace', exact: true }), gitConsent = reader.getByRole('button', { name: 'Approve read-only Git', exact: true }), refresh = reader.getByRole('button', { name: 'Refresh changes', exact: true });
-  await expect(workspace.or(gitConsent).or(refresh)).toBeVisible();
+  const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git', exact: true }), refresh = reader.getByRole('button', { name: 'Refresh changes', exact: true });
+  await expect(gitConsent.or(refresh)).toBeVisible();
   await git('Git review before consent');
-  if (await workspace.isVisible()) await workspace.click();
-  await expect(gitConsent.or(refresh)).toBeVisible(); if (await gitConsent.isVisible()) await gitConsent.click();
+  if (await gitConsent.isVisible()) await gitConsent.click();
   await expect(reader.getByRole('complementary', { name: 'Git changed files', exact: true })).toBeVisible();
   await expect(reader.locator('.unified-change').first()).toBeVisible();
   await git('Git review patch (unified)');

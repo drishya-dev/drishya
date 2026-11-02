@@ -32,7 +32,7 @@ for(const width of [1440,600])test(`Git evidence opens captured commands and new
   const open=async()=>{
     await openGitDestination(page, 'Git graph');
     const dialog=page.getByRole('dialog',{name:'Git history',exact:true});
-    const approve=dialog.getByRole('button',{name:'Approve read-only Git history',exact:true});
+    const approve=dialog.getByRole('button',{name:'Approve read-only Git',exact:true});
     await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
     return dialog;
   };

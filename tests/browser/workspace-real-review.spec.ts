@@ -140,9 +140,6 @@ test('actual current Git review supports expanded patch reading without reposito
   await page.goto(`${server.url}/?experience=modern#/r/${encodeURIComponent(id)}`);
   await openGitDestination(page, 'Git review');
   const reader=page.getByRole('dialog',{name:'Git review',exact:true});
-  const workspace=reader.getByRole('button',{name:'Approve current workspace',exact:true});
-  await expect(workspace.or(reader.getByRole('button',{name:'Approve read-only Git',exact:true})).or(reader.getByRole('button',{name:'Refresh changes',exact:true}))).toBeVisible();
-  if(await workspace.isVisible())await workspace.click();
   const consent=reader.getByRole('button',{name:'Approve read-only Git',exact:true});
   await expect(consent.or(reader.getByRole('button',{name:'Refresh changes',exact:true}))).toBeVisible();
   if(await consent.isVisible())await consent.click();
@@ -181,7 +178,7 @@ test('actual local Git histories expose connected commits and bounded desktop/ph
   for(const id of ids){
     await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
     await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Explore Git branches and commits');await nav.getByRole('option').filter({hasText:'Explore Git branches and commits'}).click();
-    const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();const grant=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});if(await grant.isVisible())await grant.click();
+    const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();const grant=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});if(await grant.isVisible())await grant.click();
     await expect(atlas.locator('.atlas-commit').first()).toBeVisible();await expect(atlas.getByRole('alert')).toHaveCount(0);expect(await atlas.locator('.atlas-commit').count()).toBeLessThanOrEqual(50);
     await atlas.locator('.atlas-commit').first().hover();await expect(atlas.locator('.thread-peek')).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-desktop.png`)});
     await page.setViewportSize({width:390,height:844});await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-phone-graph.png`)});

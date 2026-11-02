@@ -20,7 +20,7 @@ test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!res
 async function openGraph(page:Page){
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern#/r/${id}`);
  await openGitDestination(page, 'Git graph');const atlas=page.getByRole('dialog',{name:'Git history',exact:true});
- const approve=atlas.getByRole('button',{name:'Approve read-only Git history',exact:true});await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
+ const approve=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
  await expect(atlas.locator('.thread-commit')).toHaveCount(3);
  const rows=atlas.getByRole('button',{name:/Commits ·/});if(await rows.getAttribute('aria-expanded')!=='true')await rows.click();
  await expect(atlas.locator('.commit-row')).toHaveCount(3);return atlas;
