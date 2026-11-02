@@ -91,6 +91,7 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440]){
       }else{
         await expect(file.getByRole('button',{name:'Open in Workspace',exact:true})).toBeEnabled();
         if(op.location==='inside'){
+          await file.getByLabel('File actions',{exact:true}).click();
           await file.getByRole('button',{name:'Show in Files',exact:true}).click();await expect(page.getByRole('textbox',{name:'Find repository files',exact:true})).toHaveValue(op.path);
           await expect(page.locator(`[data-spine-path="${op.path}"]`)).toBeVisible();
         }

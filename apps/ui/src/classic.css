@@ -196,7 +196,7 @@
 .captured-outcomes .verification-caption { flex-wrap: wrap; }
 .verification-tile.cancelled, .verification-tile.unknown { background: var(--t3); opacity: .7; }
 .verification-tile.errors { background: var(--fail); }
-.map-recovery { position: absolute; z-index: 6; top: 12px; left: 12px; max-width: min(360px, calc(100% - 24px)); padding: 12px; border: 1px solid var(--line-2); background: var(--s1); color: var(--t2); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.map-recovery { position: absolute; z-index: 34; top: calc(var(--workspace-header-h, 64px) + 12px); left: 50%; transform: translateX(-50%); max-width: min(360px, calc(100% - 24px)); padding: 12px; border: 1px solid var(--line-2); background: var(--s1); color: var(--t2); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .map-recovery .btn { display: block; margin-top: 8px; }
 .verification-tile.deselected, .verification-tile.xfailed, .verification-tile.xpassed { background: var(--t3); }
 .connected-workspace :is(.search input, .prompt-composer textarea):focus-visible { outline: none; }
