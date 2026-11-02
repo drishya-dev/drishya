@@ -120,8 +120,9 @@ export function sinceSnapshot(p: Projection, after: number, page = 0): SinceSnap
 /** Where an operation's outcome landed: its result if it has one, else where it started. */
 function item(kind: SinceItem['kind'], o: Operation, sequence:number,sequenceBasis:SinceItem['sequenceBasis']): SinceItem {
   let detail: string | undefined;
-  if (o.detail.kind === 'test' && o.detail.summary) detail = `${o.detail.summary.passed} passed, ${o.detail.summary.failed} failed`;
+  if (o.detail.kind === 'test' && o.detail.summary && o.detail.summary.passed + o.detail.summary.failed > 0) detail = `${o.detail.summary.passed} passed, ${o.detail.summary.failed} failed`;
   else if (o.detail.kind === 'test' || o.detail.kind === 'shell') detail = o.detail.exitCode === undefined || o.detail.exitCode === null ? undefined : `exit ${o.detail.exitCode}`;
+  if (kind === 'failure' && o.failure) detail = detail ? `${detail} · ${o.failure}` : o.failure;
   return { kind, operationId: o.id, sequence, sequenceBasis, title: o.title, detail, paths: o.paths.map((p) => p.path), status: o.status };
 }
 

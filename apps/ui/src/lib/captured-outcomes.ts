@@ -84,7 +84,7 @@ export function capturedOutcomes(raw: string, context: {runner?: 'TAP'|'Playwrig
       if(summary&&!duplicate)add('Playwright',index+1,counts,undefined,'tests');
     }
     // TAP/node:test totals are distinct from suite lines; avoid inferring cases from nested ok lines.
-    if (context.runner==='TAP'||/^TAP version \d+\s*$/m.test(text)) {
+    if (context.runner==='TAP'||/^TAP version \d+\s*$/m.test(text)||/^# tests \d+\s*$/m.test(text)&&/^# fail \d+\s*$/m.test(text)) {
       const counts = empty(), seen = new Set<string>(); let total: number | undefined;
       for (const line of text.split('\n')) {
         const m = /^# (tests|pass|fail|skipped|todo|cancelled|suites) (\d+)\s*$/.exec(line);

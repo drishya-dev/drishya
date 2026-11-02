@@ -51,7 +51,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r33';
+export const REDUCER_VERSION = 'r35';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -895,6 +895,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
 
     for (const op of operations) {
       if (op.status === 'running' && !live) op.status = 'unknown';
+      if (op.status === 'error' && !op.failure && !op.declined) op.failure = failureLine('outputPreview' in op.detail ? op.detail.outputPreview : 'resultPreview' in op.detail ? op.detail.resultPreview : undefined, op.detail.kind === 'shell' || op.detail.kind === 'test');
     }
     if (!live) {
       for (const a of finalAgents.values()) if (a.stoppedSequence === undefined && a.id.endsWith('.agent:main')) a.stoppedSequence = Math.max(0, timeline.length - 1);
@@ -1119,6 +1120,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
   const { op } = st;
   const outcome = (p.outcome ?? { kind: 'other' }) as ToolOutcome & Rec;
   const resultText = c.text(p.text);
+  if (p.isError && !op.declined) op.failure = failureLine(resultText, op.detail.kind === 'shell' || op.detail.kind === 'test');
   const redacted = o.redactions.length > 0;
   const omitted = (s: string | undefined) => !!s && s.startsWith('[OMITTED');
   const seq = op.endSequence ?? op.startSequence;
@@ -1433,6 +1435,18 @@ function resolveBlobs<T>(v: T, text: (v: TextValue) => string | undefined): T {
   if (Array.isArray(v)) return v.map((x) => resolveBlobs(x, text)) as T;
   if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, resolveBlobs(x, text)])) as T;
   return v;
+}
+
+const FAILURE_LINE = /(?:\b(?:[a-z]*error|failed|failure|[a-z]*exception|traceback|panic|fatal)\b|✕|✖|FAIL\s)/i;
+/**
+ * The harness's own words for what went wrong. A tool's error text is the error; a command's output is
+ * mostly not, so a command needs a line that says so. A Python traceback ends on its error, not begins.
+ */
+function failureLine(text: string | undefined, command: boolean): string | undefined {
+  const lines = text?.replace(/<\/?tool_use_error>/g, '').split('\n').map(line => line.trim()).filter(line => line && !/^exit code:? -?\d+$/i.test(line)) ?? [];
+  const errors = lines.filter(line => FAILURE_LINE.test(line));
+  const line = errors[0]?.startsWith('Traceback') ? errors.at(-1) : errors[0] ?? (command ? undefined : lines[0]);
+  return line === undefined ? undefined : clip(line, 200);
 }
 
 function clip(s: string, n: number): string {
