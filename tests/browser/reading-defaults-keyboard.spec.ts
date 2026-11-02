@@ -34,16 +34,16 @@ for (const width of [600, 1440]) {
     test(`direct JSON reading retains keyboard Original and larger view at ${width}px`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
         const raw = JSON.stringify({ profile: { name: 'Captured', nested: { value: 2 } }, events: [{ name: 'first' }, { name: 'last' }] });
-        const card = await open(page, raw), reading = card.getByRole('region', { name: 'Captured data reading', exact: true });
+        const card = await open(page, raw), reading = card.getByRole('region', { name: 'Data reading', exact: true });
         await expect(reading).toBeVisible();
-        await expect(reading.getByRole('tree', { name: 'Captured JSON tree', exact: true })).toBeVisible();
+        await expect(reading.getByRole('tree', { name: 'JSON tree', exact: true })).toBeVisible();
         await expect(card.getByRole('button', { name: 'Inspect data', exact: true })).toHaveCount(0);
         await reading.getByRole('button', { name: 'Original', exact: true }).focus();
         await page.keyboard.press('Enter');
         await expect(reading.locator('.data-original')).toHaveText(raw);
         await reading.getByRole('button', { name: 'Open larger', exact: true }).focus();
         await page.keyboard.press('Enter');
-        const dialog = page.getByRole('dialog', { name: 'Captured data', exact: true });
+        const dialog = page.getByRole('dialog', { name: 'Data', exact: true });
         await expect(dialog).toBeVisible();
         await dialog.getByRole('button', { name: 'Original', exact: true }).press('Enter');
         await expect(dialog.locator('.data-original')).toHaveText(raw);
@@ -54,19 +54,19 @@ for (const width of [600, 1440]) {
         await page.setViewportSize({ width, height: 900 });
         const raw = 'name,value\nfirst,2\nlast,3';
         const card = await open(page, raw, true);
-        await expect(card.getByRole('table', { name: 'Captured delimited records', exact: true })).toHaveCount(0);
+        await expect(card.getByRole('table', { name: 'Delimited records', exact: true })).toHaveCount(0);
         await expect(card.locator('.output')).toContainText(raw.trim());
         const choice = card.getByRole('button', { name: 'Inspect delimited text', exact: true }).first();
         await choice.focus();
         await expect.poll(() => choice.locator('xpath=ancestor::*[contains(@class,"captured-result-views")][1]').evaluate(el => getComputedStyle(el).opacity)).toBe('1');
         await page.keyboard.press('Enter');
-        const dialog = page.getByRole('dialog', { name: 'Captured delimited text', exact: true });
+        const dialog = page.getByRole('dialog', { name: 'Delimited text', exact: true });
         await expect(dialog.locator('.data-original')).toHaveText(raw);
         await expect(dialog.getByRole('button', { name: 'Original', exact: true })).toHaveAttribute('aria-pressed', 'true');
         await expect(dialog.getByRole('button', { name: 'CSV', exact: true })).toHaveAttribute('aria-pressed', 'false');
         await expect(dialog.getByRole('button', { name: 'TSV', exact: true })).toHaveAttribute('aria-pressed', 'false');
         await dialog.getByRole('button', { name: 'CSV', exact: true }).press('Enter');
-        await expect(dialog.getByRole('table', { name: 'Captured delimited records', exact: true })).toHaveAttribute('aria-colcount', '3');
+        await expect(dialog.getByRole('table', { name: 'Delimited records', exact: true })).toHaveAttribute('aria-colcount', '3');
         await dialog.getByRole('button', { name: 'Original', exact: true }).press('Enter');
         await expect(dialog.locator('.data-original')).toHaveText(raw);
         await page.keyboard.press('Escape');
@@ -77,8 +77,8 @@ test('terminal JSON, MCP envelopes and unrecognised log/error text keep their ow
     await page.setViewportSize({ width: 1440, height: 900 });
     for (const [raw, terminal] of [[JSON.stringify({ result: { value: 2 }, items: [1, 2] }), true], [JSON.stringify({ content: [{ type: 'text', text: 'Sibling stays readable' }, { type: 'text', text: '{"value":2}' }] }), false], ['INFO starting\nWARN retrying\nError: captured failure remains literal', true]] as const) {
         const card = await open(page, raw, terminal);
-        await expect(card.getByRole('region', { name: 'Captured data reading', exact: true })).toHaveCount(0);
-        const choices = card.locator('.captured-result-views[aria-label="Captured result views"]');
+        await expect(card.getByRole('region', { name: 'Data reading', exact: true })).toHaveCount(0);
+        const choices = card.locator('.captured-result-views[aria-label="Result views"]');
         expect(await choices.evaluateAll(items => items.every(el => getComputedStyle(el).position === 'absolute'))).toBe(true);
         const inspect = card.getByRole('button', { name: 'Inspect data', exact: true });
         if (await inspect.count()) {
@@ -91,7 +91,7 @@ test('terminal JSON, MCP envelopes and unrecognised log/error text keep their ow
             await page.keyboard.press('Enter');
             await choices.getByRole('button', { name: 'Read as JSON', exact: true }).press('Enter');
         }
-        const dialog = page.getByRole('dialog', { name: 'Captured data', exact: true });
+        const dialog = page.getByRole('dialog', { name: 'Data', exact: true });
         await expect(dialog).toBeVisible();
         await dialog.getByRole('button', { name: 'Original', exact: true }).press('Enter');
         await expect(dialog.locator('.data-original')).toHaveText(raw);

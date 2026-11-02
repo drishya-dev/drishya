@@ -63,7 +63,7 @@ async function openReview(page: Page) {
   return review;
 }
 
-test('a Git hunk the agent wrote exactly links to that captured edit; a hand change does not', async ({ page }) => {
+test('a Git hunk the agent wrote exactly links to that edit; a hand change does not', async ({ page }) => {
   const review = await openReview(page);
   const files = review.getByRole('complementary', { name: 'Git changed files' });
   await files.getByRole('button', { name: /manual\.ts/ }).click();
@@ -73,22 +73,22 @@ test('a Git hunk the agent wrote exactly links to that captured edit; a hand cha
   await expect(review.locator('.git-patch')).toContainText('cart.items.reduce');
   const recorded = review.locator('.hunk-recorded');
   await expect(recorded).toHaveCount(1);
-  await expect(recorded).toHaveText('Recorded work');
+  await expect(recorded).toHaveText('Agent work');
   await expect(recorded).toHaveAttribute('title', /exactly these added lines/);
   await review.screenshot({ path: resolve('.local/git-hunk-recorded.png') });
   await recorded.press('Enter');
   const work = page.getByRole('dialog', { name: 'Work on src/total.ts' });
   await expect(work).toBeVisible();
   await expect(work).toContainText('cart.items.reduce');
-  await expect(work).toContainText('Captured patch');
+  await expect(work).toContainText('Patch');
 });
 
-test('several captured edits wrote a hunk: Recorded work is a keyboard menu, newest first, inside a phone viewport', async ({ page }) => {
+test('several edits wrote a hunk: Agent work is a keyboard menu, newest first, inside a phone viewport', async ({ page }) => {
   const review = await openReview(page);
   await review.getByRole('complementary', { name: 'Git changed files' }).getByRole('button', { name: /twice\.ts/ }).click();
   await expect(review.locator('.git-patch')).toContainText('values.map');
   const trigger = review.locator('.recorded-work-menu > summary');
-  await expect(trigger).toHaveText('Recorded work · 2 edits');
+  await expect(trigger).toHaveText('Agent work · 2 edits');
   const items = review.locator('.recorded-work-menu .desk-options-body button');
   await expect(items.first()).toBeHidden();
   await trigger.focus(); await page.keyboard.press('Enter');
@@ -127,7 +127,7 @@ test('several captured edits wrote a hunk: Recorded work is a keyboard menu, new
   await items.nth(1).focus(); await page.keyboard.press('Enter');
   const work = page.getByRole('dialog', { name: 'Work on src/twice.ts' });
   await expect(work).toBeVisible();
-  await expect(work).toContainText('Captured patch');
+  await expect(work).toContainText('Patch');
   await expect(work).toContainText('first pass');
   await expect(work).not.toContainText('second pass');
 });

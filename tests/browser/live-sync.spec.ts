@@ -26,7 +26,7 @@ test('opening starts independent capture and keeps refreshing with Follow off wh
     let finished=false;
     const producer=(async()=>{
       for(let i=0;i<35;i++) {
-        appendFileSync(journal,JSON.stringify({type:'assistant',uuid:`continuous-${i}`,cwd:'/home/dev/shop',timestamp:new Date().toISOString(),message:{id:`continuous-${i}`,role:'assistant',content:[{type:'text',text:`Continuous captured update ${i}`} ]}})+'\n');
+        appendFileSync(journal,JSON.stringify({type:'assistant',uuid:`continuous-${i}`,cwd:'/home/dev/shop',timestamp:new Date().toISOString(),message:{id:`continuous-${i}`,role:'assistant',content:[{type:'text',text:`Continuous update ${i}`} ]}})+'\n');
         await app.ingest.sync(recordingId);
         await new Promise(r=>setTimeout(r,50));
       }

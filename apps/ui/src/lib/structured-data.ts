@@ -14,7 +14,7 @@ export function dataText(value:unknown):string{
 }
 export const pointerKey=(key:string)=>key.replaceAll('~','~0').replaceAll('/','~1');
 export function parseCapturedJson(text:string):unknown{
- if(text.length>262144||new TextEncoder().encode(text).byteLength>262144)throw new Error('Captured JSON exceeds limit');return JSON.parse(text,(_key,value,context?:{source?:string})=>{
+ if(text.length>262144||new TextEncoder().encode(text).byteLength>262144)throw new Error('JSON exceeds limit');return JSON.parse(text,(_key,value,context?:{source?:string})=>{
   if(typeof value!=='number')return value;
   // Source-aware parsing keeps large ids, under/overflow and decimal spelling literal.
   // Older parsers must leave inspection unavailable rather than silently round evidence.

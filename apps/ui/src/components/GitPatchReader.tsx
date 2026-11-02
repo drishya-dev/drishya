@@ -17,7 +17,7 @@ export function GitPatchReader({ file, openRecorded }: { file: GitFile; openReco
     const latest = matches.at(-1);
     if (!latest) return null;
     if (matches.length > 1) return <RecordedWorkMenu matches={matches} open={key => openRecorded(file.path, key)} />;
-    return <button className="btn ghost small hunk-recorded" title="Open the captured edit that wrote exactly these added lines" onClick={() => openRecorded(file.path, patchEvidenceKey(latest))}>Recorded work</button>;
+    return <button className="btn ghost small hunk-recorded" title="Open the edit that wrote exactly these added lines" onClick={() => openRecorded(file.path, patchEvidenceKey(latest))}>Agent work</button>;
   } : undefined;
   const sections = useMemo(() => gitPatchSections(file.patch), [file.patch]);
   const key = `git/${file.path}/${file.fingerprint}`;

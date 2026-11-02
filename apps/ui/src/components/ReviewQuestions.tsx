@@ -40,7 +40,7 @@ export function ReviewQuestionEditor({ op }: { op: Operation }) {
   const [text, setText] = useState(existing?.question ?? ''), [owner, setOwner] = useState(existing?.owner ?? ''), [saved, setSaved] = useState(false);
   if (mode === 'replay') return null;
   return <details className="review-question-editor"><summary>Leave a review question</summary>
-    <p>Your note · anchored to this captured action, separate from agent output.</p>
+    <p>Your note · on this step, separate from agent output.</p>
     <textarea aria-label="Review question" maxLength={2000} placeholder="What still needs checking or a decision?" value={text} onChange={e => { setText(e.target.value); setSaved(false); }} />
     <input aria-label="Question owner" maxLength={80} placeholder="Owner (optional)" value={owner} onChange={e => { setOwner(e.target.value); setSaved(false); }} />
     <button className="btn" disabled={!text.trim()||sequence===undefined} onClick={() => {
@@ -66,13 +66,13 @@ export function ReviewQuestionsEntry() {
       const state = useApp.getState();
       if (!state.projection?.operations.some(op => op.id === item.operationId) && state.historyPage) await state.loadHistoryWindow({ selectedOperationId: item.operationId });
       if (useApp.getState().recordingId !== id) return;
-      if (!useApp.getState().projection?.operations.some(op => op.id === item.operationId)) { setTargetError('Captured action is unavailable. Your question remains saved.'); return; }
+      if (!useApp.getState().projection?.operations.some(op => op.id === item.operationId)) { setTargetError('Action is unavailable. Your question remains saved.'); return; }
       useApp.getState().select(item.operationId); setOpen(false);
-    } catch { setTargetError('Could not open captured action · try again. Your question remains saved.'); }
+    } catch { setTargetError('Could not open action · try again. Your question remains saved.'); }
     finally { setOpening(undefined); }
   };
   const rows = (questions: ReviewQuestion[]) => questions.slice(0, shown).map(item => <article key={item.id} className="review-question-row">
-    <button className="question-target" disabled={!!opening} onClick={() => void openTarget(item)}>{opening === item.id ? 'Opening captured action…' : `Captured action · ${item.title} ↗`}</button>
+    <button className="question-target" disabled={!!opening} onClick={() => void openTarget(item)}>{opening === item.id ? 'Opening action…' : `Action · ${item.title} ↗`}</button>
     <p>{item.question}</p><small>{item.owner ? `Owner: ${item.owner}` : 'Unassigned'} · Your review note</small>
     <button className="btn ghost small" onClick={() => update({ ...item, status: item.status === 'open' ? 'resolved' : 'open', updatedAt: new Date().toISOString() })}>{item.status === 'open' ? 'Resolve question' : 'Reopen question'}</button>
     {item.status === 'resolved' && <button className="btn ghost small" onClick={() => remove(item.id)}>Remove resolved question</button>}

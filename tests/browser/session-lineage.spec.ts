@@ -61,8 +61,8 @@ for (const width of [600, 1440]) {
 }
 test('live append remains joined while current physical control identity stays selected', async ({ page }) => {
   const item = await linked(); await open(page, item.id);
-  appendFileSync(item.child, JSON.stringify(user(4, 'Synthetic newly captured chapter')) + '\n'); await app.ingest.sync(item.id);
-  await expect(page.locator('.turn-text').filter({ hasText: 'Synthetic newly captured chapter' })).toHaveCount(1);
+  appendFileSync(item.child, JSON.stringify(user(4, 'Synthetic newly chapter')) + '\n'); await app.ingest.sync(item.id);
+  await expect(page.locator('.turn-text').filter({ hasText: 'Synthetic newly chapter' })).toHaveCount(1);
   await expect(page.locator('.turn-text').filter({ hasText: 'Synthetic earlier chapter' })).toHaveCount(1);
   const projection = await (await page.request.get(`${server.url}/v1/recordings/${item.id}/projection`)).json();
   expect(projection.recordingId).toBe(item.id); expect(projection.lineage.recordingIds).toEqual([item.parent, item.id]);

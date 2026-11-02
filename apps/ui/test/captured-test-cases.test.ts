@@ -22,7 +22,7 @@ it('handles pytest, Cargo and flat TAP while refusing nested TAP indices',()=>{
  const tap='TAP version 13\nok 1 - first\nnot ok 2 - broken\n# tests 2\n# pass 1\n# fail 1';expect(capturedOutcomes(tap).runs[0]?.cases?.[1]?.index).toBe(2);
  expect(capturedTestCases(tap.replace('ok 1 - first','    ok 1 - nested'))).toEqual([]);
 });
-it('labels partial case-only output as captured rows rather than complete run totals',()=>{
+it('labels partial case-only output as rows rather than complete run totals',()=>{
  const run=capturedOutcomes('tests/a.py::test_one PASSED [ 12%]').runs[0]!;expect(run.observedOnly).toBe(true);expect(run.counts.passed).toBe(1);expect(run.cases).toHaveLength(1);
 });
 it('does not attach ambiguous or contradictory case rows to a summary',()=>{
@@ -45,7 +45,7 @@ it('recovers complete wrapped artifact material without joining disjoint slices'
 });
 
 it('keeps pytest warnings outside test counts in real-style stdout and stderr envelopes',()=>{
- const text='142 passed, 4 warnings in 12.49s',run=capturedOutcomes(JSON.stringify({stdout:text,stderr:'a captured warning'})).runs[0]!;
+ const text='142 passed, 4 warnings in 12.49s',run=capturedOutcomes(JSON.stringify({stdout:text,stderr:'a warning'})).runs[0]!;
  expect(run.runner).toBe('pytest');expect(run.counts.passed).toBe(142);expect(run.warnings).toBe(4);expect(Object.values(run.counts).reduce((a,b)=>a+b,0)).toBe(142);
  expect(capturedOutcomes('1 failed, 141 passed, 4 warnings in 9.77s').runs[0]?.counts.failed).toBe(1);
  expect(capturedOutcomes('2 passed, 1 warning, 2 warnings in 1.1s').runs).toHaveLength(0);

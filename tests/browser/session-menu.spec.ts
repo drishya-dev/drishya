@@ -30,7 +30,7 @@ for (const [width, height] of [[1440, 900], [600, 720]] as const) for (const har
     await expect(list.getByRole('button', { name: 'Changes', exact: true })).toHaveCount(0);
     await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeVisible();
     // Every former action is still here.
-    for (const name of ['Review questions', 'Saved moments', 'Replay captured work']) await expect(list.getByRole('button', { name, exact: true })).toBeVisible();
+    for (const name of ['Review questions', 'Saved moments', 'Replay this session']) await expect(list.getByRole('button', { name, exact: true })).toBeVisible();
     await expect(list.getByText('Session details', { exact: true })).toBeVisible();
     await expect(list.getByText('Navigate history', { exact: true })).toBeVisible();
     await expect(list.getByText('Usage', { exact: true })).toBeVisible();

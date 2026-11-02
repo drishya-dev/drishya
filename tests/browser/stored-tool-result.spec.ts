@@ -83,8 +83,8 @@ for(const text of ['', 'Literal original result text'])test(`Claude separate str
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();await card.press('Enter');
  const full=page.getByRole('region',{name:'Operation detail'}).locator('.stored-tool-result');
- if(text){await expect(full.getByRole('combobox',{name:'Captured result field'})).toBeVisible();await full.getByRole('button',{name:'Show original result',exact:true}).click();expect(await full.locator('.stored-result-original').textContent()).toBe(text);await full.getByRole('combobox',{name:'Captured result field'}).selectOption('structured');}
- await expect(full).toContainText('Captured structured field · JSON formatting derived');
+ if(text){await expect(full.getByRole('combobox',{name:'Result field'})).toBeVisible();await full.getByRole('button',{name:'Show original result',exact:true}).click();expect(await full.locator('.stored-result-original').textContent()).toBe(text);await full.getByRole('combobox',{name:'Result field'}).selectOption('structured');}
+ await expect(full).toContainText('Structured field · formatted by Drishya');
  const raw=full.getByRole('button',{name:'Show formatted structured field',exact:true});if(await raw.count())await raw.click();
  const serialized=await full.locator('.stored-result-original').textContent();expect(JSON.parse(serialized!)).toEqual(structured);await expect(full.getByRole('button',{name:'Copy original result',exact:true})).toHaveCount(0);
  await page.context().grantPermissions(['clipboard-read','clipboard-write']);await full.getByRole('button',{name:'Copy formatted structured field',exact:true}).click();expect(JSON.parse(await page.evaluate(()=>navigator.clipboard.readText()))).toEqual(structured);
@@ -95,8 +95,8 @@ test('reader invalidates replacement sources and unresolved revisions without re
  const fixture=await build({stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import{StoredToolResult}from ${component};import{useApp}from ${state};
  const artifact={id:'art_op_out',kind:'output',blob:'a'.repeat(64),availability:'complete',provenance:{kind:'captured',observationIds:['receipt']}};
  const answer=text=>({artifact,available:true,text,start:0,next:text.length,totalBytes:text.length,hasMore:false});
- let calls=0,late=false;const first={kind:'daemon',artifactChunk:async()=>answer('First source captured text')};
- const second={kind:'daemon',artifactChunk:()=>{calls++;return new Promise(resolve=>{window.resolveSecond=()=>resolve(answer('Second source captured text'));});}};
+ let calls=0,late=false;const first={kind:'daemon',artifactChunk:async()=>answer('First source text')};
+ const second={kind:'daemon',artifactChunk:()=>{calls++;return new Promise(resolve=>{window.resolveSecond=()=>resolve(answer('Second source text'));});}};
  const third={kind:'daemon',artifactChunk:async()=>late?answer('Newly retained original bytes'):{available:false,reason:'not-captured'}};
  useApp.setState({source:first,recordingId:'rec_fixture',projection:{artifacts:[artifact]},renderedRevisions:{rec_fixture:1}});
  const op={id:'rec_fixture.op',detail:{kind:'mcp',resultPreview:'Preview'},artifactIds:[artifact.id],observationIds:['receipt'],status:'ok',endSequence:2};
@@ -104,8 +104,8 @@ test('reader invalidates replacement sources and unresolved revisions without re
  window.unresolved=()=>useApp.setState({source:third});window.retain=()=>{late=true;useApp.setState({renderedRevisions:{rec_fixture:3}});};
  createRoot(document.getElementById('root')).render(<StoredToolResult op={op} full/>);`,loader:'tsx',resolveDir:resolve('apps/ui')},bundle:true,write:false,format:'iife',platform:'browser',loader:{'.css':'empty'},define:{'process.env.NODE_ENV':'"production"'}});
  await page.route('**/stored-source-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><div id="root"></div><script>${fixture.outputFiles[0]!.text}</script>`}));await page.goto(server.url+'/stored-source-fixture');
- const reading=page.getByRole('region',{name:'Stored captured result'});await expect(reading).toContainText('First source captured text');await page.evaluate(()=>{(window as any).swap();});await expect(reading).toContainText('Opening stored result');await expect(reading).not.toContainText('First source captured text');await page.evaluate(()=>{(window as any).resolveSecond();});await expect(reading).toContainText('Second source captured text');
+ const reading=page.getByRole('region',{name:'Stored result'});await expect(reading).toContainText('First source text');await page.evaluate(()=>{(window as any).swap();});await expect(reading).toContainText('Opening stored result');await expect(reading).not.toContainText('First source text');await page.evaluate(()=>{(window as any).resolveSecond();});await expect(reading).toContainText('Second source text');
  await reading.getByRole('button',{name:'Show original result',exact:true}).click();await reading.locator('pre').evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);getSelection()?.removeAllRanges();getSelection()?.addRange(range);});
- const before=await page.evaluate(()=>(window as any).calls());await page.evaluate(()=>{(window as any).append();});await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));expect(await page.evaluate(()=>(window as any).calls())).toBe(before);expect(await page.evaluate(()=>getSelection()?.toString())).toBe('Second source captured text');
- await page.evaluate(()=>{(window as any).unresolved();});await expect(reading).toContainText('Result bytes were not captured');await page.evaluate(()=>{(window as any).retain();});await expect(reading).toContainText('Newly retained original bytes');
+ const before=await page.evaluate(()=>(window as any).calls());await page.evaluate(()=>{(window as any).append();});await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));expect(await page.evaluate(()=>(window as any).calls())).toBe(before);expect(await page.evaluate(()=>getSelection()?.toString())).toBe('Second source text');
+ await page.evaluate(()=>{(window as any).unresolved();});await expect(reading).toContainText('Result bytes were not recorded');await page.evaluate(()=>{(window as any).retain();});await expect(reading).toContainText('Newly retained original bytes');
 });

@@ -161,9 +161,9 @@ function GitReader({ close }: { close: () => void }) {
         <button className="btn git-refresh-control" aria-label="Refresh changes" aria-busy={busy} title={busy ? 'Inspecting changes…' : 'Refresh changes'} disabled={busy || checking} onClick={() => void refresh()}><InterfaceGlyph name="refresh"/></button>
         <WorkspaceOptions label="Git review actions">
           <button className="btn ghost" disabled={!canHandoff} onClick={() => void handoff()}>Preview handoff</button>
-          <button className="btn ghost" disabled={busy || checking || !file} onClick={() => { if (!file) return; close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button>
+          <button className="btn ghost" disabled={busy || checking || !file} onClick={() => { if (!file) return; close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Agent work</button>
           <button className="btn ghost" disabled={busy || checking} onClick={() => { close(); requestAnimationFrame(openGitHistory); }}>Branches &amp; commits ↗</button>
-          <p className="git-review-menu-note">Current Git is separate from captured history. Reviewed marks apply to this exact patch; preview and save recheck content.</p>
+          <p className="git-review-menu-note">This is current Git, not the session. Reviewed marks apply to this exact patch; preview and save recheck content.</p>
         </WorkspaceOptions>
       </nav> : <nav className="git-review-toolbar"><span>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span><button className="btn" disabled={busy || checking} onClick={() => void refresh()}>{busy ? 'Inspecting…' : 'Refresh changes'}</button><button className="btn" disabled={busy || checking || !snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint)} onClick={() => void handoff()}>Preview handoff</button></nav>}
       {checking && <p role="status">Checking reviewed content…</p>}
@@ -183,11 +183,11 @@ function GitReader({ close }: { close: () => void }) {
             {snapshot.totalAllowed === undefined && snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
           </aside>
           <section>{file && <>
-            <header className={modern ? 'git-selected-file-header' : undefined}><strong title={file.path}>{file.path}</strong><FileReadingActions path={file.path} compact onNavigate={close}/><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button>{!modern && <button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Recorded work</button>}</header>
+            <header className={modern ? 'git-selected-file-header' : undefined}><strong title={file.path}>{file.path}</strong><FileReadingActions path={file.path} compact onNavigate={close}/><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button>{!modern && <button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Agent work</button>}</header>
             <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} openRecorded={(path, key) => { close(); useApp.getState().set({ filePanel: path, filePanelFocus: 'change', filePanelEvidence: key }); }} /></div>
             {file.status !== '??' && <footer>
               <label><input type="checkbox" disabled={busy || checking} checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label>
-              <textarea aria-label="Local review note" disabled={busy || checking} placeholder="Review note (local, separate from agent evidence)" maxLength={2000} value={exact ? mark?.note ?? '' : ''} onChange={e => update({ note: e.target.value })} />
+              <textarea aria-label="Local review note" disabled={busy || checking} placeholder="Review note (local, not part of the session)" maxLength={2000} value={exact ? mark?.note ?? '' : ''} onChange={e => update({ note: e.target.value })} />
               {previous?.note && <details className="git-previous-note" key={`${file.path}:${previous.fingerprint}`}>
                 <summary>Previous note · changed patch</summary>
                 <p>This note belongs to an earlier patch. Reusing it does not mark this change reviewed.</p>

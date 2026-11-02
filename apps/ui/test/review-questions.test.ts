@@ -16,7 +16,7 @@ it('refuses a new question at the bound instead of silently discarding unresolve
   expect(() => saveQuestion(full, question('new'))).toThrow('Question limit reached');
   expect(saveQuestion(full, { ...full[0]!, status: 'resolved' })).toHaveLength(100);
 });
-it('does not relabel old saved timeline positions as captured observations',()=>{
+it('does not relabel old saved timeline positions as observations',()=>{
   expect(readQuestions(JSON.stringify([question('old')]))[0]!.sequenceBasis).toBe('timeline-position');
   expect(saveQuestion([],{...question('new'),sequenceBasis:'captured-observation'})[0]!.sequenceBasis).toBe('captured-observation');
 });

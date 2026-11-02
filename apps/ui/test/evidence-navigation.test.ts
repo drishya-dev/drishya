@@ -26,7 +26,7 @@ describe('bounded evidence navigation', () => {
     expect(count).toBe(8);
     expect(trail.move(-1)).toBeUndefined();
   });
-  it('distinguishes disk, captured evidence, exact matches and map reading', () => {
+  it('distinguishes disk, evidence, exact matches and map reading', () => {
     const trail = new EvidenceTrail();
     const captured = trail.visit(location('a.ts'));
     const disk = trail.visit({ ...location(), currentFile: 'a.ts' });
@@ -37,7 +37,7 @@ describe('bounded evidence navigation', () => {
     expect(trail.move(-1)).toBe(captured);
     expect(map).not.toBe(match);
   });
-  it('retains separate line-reference visits in the same captured file', () => {
+  it('retains separate line-reference visits in the same file', () => {
     const trail=new EvidenceTrail();
     const first=trail.visit({...location('a.ts'),filePanelLine:250});
     trail.visit({...location('a.ts'),filePanelLine:400});
@@ -46,7 +46,7 @@ describe('bounded evidence navigation', () => {
   });
 });
 
-it('a repeated current-file selection restores metadata while captured source visits stay distinct',()=>{
+it('a repeated current-file selection restores metadata while source visits stay distinct',()=>{
  const trail=new EvidenceTrail(),disk={...location(),currentFile:'a.ts'};
  const first=trail.visit(disk);first.memory.set('disk/query','needle');first.memory.set('scroll/disk/source',{top:80,left:0});
  trail.visit({...disk,currentFile:'b.ts'});

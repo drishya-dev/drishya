@@ -15,7 +15,7 @@ it('keeps reported native process exits and errors distinct from unreported exit
 
 it('shows neutral evidence explanations for unverified changes and missing results across classes',()=>{
   for(const created of [true,false])expect(operationOutcome({status:'unknown',tool:'exec',detail:{kind:'edit',path:'a.ts',hunks:[],created,reconstruction:'complete'}})).toMatchObject({label:'Change unverified',mark:'—',tone:'unknown'});
-  for(const detail of [{kind:'read',path:'a.ts',startLine:1,lineCount:1},{kind:'mcp',server:'s',tool:'t',input:{}},{kind:'other',input:{}}] as const){expect(operationOutcome({status:'unknown',tool:'tool',detail})).toMatchObject({label:'Result not captured',mark:'—'});}
+  for(const detail of [{kind:'read',path:'a.ts',startLine:1,lineCount:1},{kind:'mcp',server:'s',tool:'t',input:{}},{kind:'other',input:{}}] as const){expect(operationOutcome({status:'unknown',tool:'tool',detail})).toMatchObject({label:'Result not recorded',mark:'—'});}
   expect(operationOutcome({status:'error',tool:'Write',detail:{kind:'edit',path:'a.ts',hunks:[],created:true,reconstruction:'complete'}})).toMatchObject({mark:'✕',label:'Failed'});
 });
 

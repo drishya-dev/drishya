@@ -18,4 +18,4 @@ export function contextOccupancy(usage: Projection['usage']): ContextOccupancy |
 }
 
 export const contextLabel = (c: ContextOccupancy) =>
-  `Last request input: ${c.used.toLocaleString('en-US')} of ${c.window.toLocaleString('en-US')} recorded window tokens. ${Math.round(c.fraction * 100)}% ratio, derived from the harness's recorded values.`;
+  `Last request input: ${c.used.toLocaleString('en-US')} of ${c.window.toLocaleString('en-US')} context window tokens. ${Math.round(c.fraction * 100)}% ratio, computed from the harness’s values.`;

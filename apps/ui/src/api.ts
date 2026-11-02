@@ -369,9 +369,9 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
       const all = bundle.projection.timeline.filter((item): item is QueueTimelineItem => item.type === 'queue' && item.ownerRecordingId === id);
       const visible = queuePage(bundle.projection.timeline, id, {through, receiptId, count: 1});
       const item = all.find(item => item.sourceObservationId === receiptId && item.operation === 'enqueue');
-      if (!item?.inputArtifactId || !visible.items.length) throw Error('Input not captured at this point.');
+      if (!item?.inputArtifactId || !visible.items.length) throw Error('Input not recorded at this point.');
       const text = bundle.artifactText[item.inputArtifactId];
-      if (text === undefined) throw Error('Captured input is no longer stored.');
+      if (text === undefined) throw Error('Input is no longer stored.');
       if (!Number.isSafeInteger(start) || start < 0) throw Error('Invalid input range.');
       const bytes = new TextEncoder().encode(text), begin = Math.min(start, bytes.length);
       if (begin < bytes.length && (bytes[begin]! & 0xc0) === 0x80) throw Error('Invalid UTF-8 boundary.');

@@ -28,7 +28,7 @@ it('preserves nested document headings and quotes and escapes unsafe markup',()=
   expect(html).not.toContain('<script>');
 });
 
-it('bounds nesting while retaining deeply nested captured text',()=>{
+it('bounds nesting while retaining deeply nested text',()=>{
   const html=render(Array.from({length:100},(_,i)=>`${'  '.repeat(i)}- item ${i}`).join('\n'));
   expect(html.match(/class="md-list"/g)!.length).toBeLessThanOrEqual(32);
   expect(html).toContain('item 99');

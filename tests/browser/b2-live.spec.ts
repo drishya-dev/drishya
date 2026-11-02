@@ -190,7 +190,7 @@ test('long history mounts only nearby work while selected evidence and live upda
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
 });
 
-test('B3 expands captured content in place, pages it, and bounds file navigation', async ({ page }) => {
+test('B3 expands content in place, pages it, and bounds file navigation', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text: string) => { (window as unknown as { copiedSource: string }).copiedSource = text; } } });
   });

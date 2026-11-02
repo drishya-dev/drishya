@@ -10,17 +10,17 @@ test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-data-'));app=new
 test.afterAll(async()=>{await server.close();await app.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('unsafe path');rmSync(dir,{recursive:true,force:true});});
 test('JSON reading reaches late rows and fields with bounded DOM and exact original access',async({page})=>{
  const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
- const op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.title='Captured records';op.artifactIds=[];
- const raw=JSON.stringify({items:Array.from({length:1200},(_,index)=>({id:index,name:`record ${index}`,nested:{text:'line one\nline two'},...(index===1199?{late:'last captured field'}:{})}))});
+ const op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.title='Records';op.artifactIds=[];
+ const raw=JSON.stringify({items:Array.from({length:1200},(_,index)=>({id:index,name:`record ${index}`,nested:{text:'line one\nline two'},...(index===1199?{late:'last field'}:{})}))});
  op.detail={kind:'mcp',server:'records',tool:'list',input:{},resultPreview:raw};
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));
  await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);
  const card=page.locator(`article[data-op-id="${op.id}"]`);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);await expect(card).toBeAttached();await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:/^(Open larger|Inspect data)$/}).first().press('Enter');
- const dialog=page.getByRole('dialog',{name:'Captured data'}),viewport=dialog.locator('.data-viewport');
+ const dialog=page.getByRole('dialog',{name:'Data'}),viewport=dialog.locator('.data-viewport');
  await expect(dialog.getByRole('table')).toBeVisible();await expect(dialog.getByRole('columnheader',{name:'late',exact:true})).toHaveCount(1);
  expect(await dialog.getByRole('row').count()).toBeLessThan(30);
  await viewport.evaluate(element=>{element.scrollTop=element.scrollHeight;element.scrollLeft=element.scrollWidth;});
- await dialog.getByRole('button',{name:'last captured field',exact:true}).click();await expect(dialog.getByRole('region',{name:'Selected data value'})).toContainText('/items/1199/late');
+ await dialog.getByRole('button',{name:'last field',exact:true}).click();await expect(dialog.getByRole('region',{name:'Selected data value'})).toContainText('/items/1199/late');
  await dialog.getByRole('button',{name:'Tree',exact:true}).click();await dialog.getByRole('textbox',{name:'Find key or value'}).fill('record 1199');await dialog.locator('.data-value').click();await expect(dialog.locator('.data-selection')).toContainText('record 1199');
  await dialog.getByRole('textbox',{name:'Find key or value'}).fill('');await dialog.getByRole('button',{name:'Expand items',exact:true}).click();await dialog.locator('[role=treeitem]').first().focus();await page.keyboard.press('End');await expect(dialog.locator('[role=treeitem][aria-selected=true]')).toBeFocused();
  await dialog.getByRole('button',{name:'Original',exact:true}).click();await expect(dialog.locator('.data-original')).toHaveText(raw);
@@ -39,7 +39,7 @@ test('reading windows reverse from their actual entrance and dismiss immediately
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));
  await page.goto(new URL('/?demo&experience=modern',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
  const trigger=page.locator(`article[data-op-id="${op.id}"]`).getByRole('button',{name:/^(Open larger|Inspect data)$/}).first();await trigger.focus();await trigger.click();
- const dialog=page.getByRole('dialog',{name:'Captured data'});
+ const dialog=page.getByRole('dialog',{name:'Data'});
  const before=await dialog.evaluate(element=>{const animation=element.getAnimations()[0];animation.pause();animation.currentTime=70;(window as any).__holdReaderArrival=false;const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};});
  await dialog.getByRole('button',{name:'Close Captured data'}).click({force:true});
  const frames=await page.evaluate(()=>(window as any).__readerMotion.at(-1).frames);
@@ -68,13 +68,13 @@ for(const kind of ['mcp','shell'] as const)test(`${kind} captured delimited text
  await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
  const card=page.locator(`article[data-op-id="${op.id}"]`);await expect(card).toBeAttached();await card.scrollIntoViewIfNeeded();
  const trigger=card.getByRole('button',{name:'Inspect delimited text',exact:true});await expect(trigger).toHaveCount(1);await trigger.press('Enter');
- const dialog=page.getByRole('dialog',{name:'Captured delimited text'});await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog.locator('.data-original')).toHaveText(csv);
- await dialog.getByRole('button',{name:'CSV',exact:true}).click();const table=dialog.getByRole('table',{name:'Captured delimited records'});await expect(table).toBeVisible();await expect(table).toHaveAttribute('aria-rowcount','1203');expect(await dialog.getByRole('row').count()).toBeLessThan(31);
+ const dialog=page.getByRole('dialog',{name:'Delimited text'});await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog.locator('.data-original')).toHaveText(csv);
+ await dialog.getByRole('button',{name:'CSV',exact:true}).click();const table=dialog.getByRole('table',{name:'Delimited records'});await expect(table).toBeVisible();await expect(table).toHaveAttribute('aria-rowcount','1203');expect(await dialog.getByRole('row').count()).toBeLessThan(31);
  await dialog.getByRole('checkbox',{name:'First record contains column names'}).check();await expect(dialog.getByRole('columnheader',{name:'name',exact:true})).toHaveCount(2);
  const find=dialog.getByRole('searchbox',{name:'Find delimited cells'});await find.fill('last, captured');await dialog.getByRole('button',{name:'Inspect record 1201, column 3'}).click();await expect(dialog.getByRole('region',{name:'Selected delimited cell'})).toContainText('last, captured\nvalue');await dialog.getByRole('button',{name:'Copy cell',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe('last, captured\nvalue');
  await find.fill('');const viewport=dialog.locator('.data-viewport');await viewport.focus();await page.keyboard.press('Control+End');await expect(dialog.getByRole('button',{name:'Inspect record 1202, column 3'})).toBeFocused();await expect(dialog.getByRole('region',{name:'Selected delimited cell'})).toContainText('Cell not present');await expect(dialog.getByRole('button',{name:'Copy cell',exact:true})).toBeDisabled();
  await find.fill('=SUM');await dialog.getByRole('button',{name:'Inspect record 2, column 3'}).click();await dialog.getByRole('button',{name:'Copy cell',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe('=SUM(A1:A2)');
- if(kind==='mcp'){await dialog.getByRole('combobox',{name:'Captured text block'}).selectOption('1');await dialog.getByRole('button',{name:'TSV',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect record 2, column 2'})).toHaveText('right');await dialog.getByRole('combobox',{name:'Captured text block'}).selectOption('0');}
+ if(kind==='mcp'){await dialog.getByRole('combobox',{name:'Text block'}).selectOption('1');await dialog.getByRole('button',{name:'TSV',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect record 2, column 2'})).toHaveText('right');await dialog.getByRole('combobox',{name:'Text block'}).selectOption('0');}
  await dialog.getByRole('button',{name:'Original',exact:true}).click();await dialog.getByRole('button',{name:'Copy original',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).copied)).toBe(csv);
  await dialog.getByRole('button',{name:'CSV',exact:true}).click();await find.fill('last, captured');await dialog.getByRole('button',{name:'Inspect record 1201, column 3'}).click();await page.screenshot({path:resolve(`.local/delimited-${kind}-desktop.png`)});
  for(const width of [1440,390,320]){await page.setViewportSize({width,height:900});const bounds=(await dialog.boundingBox())!;expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(width+1);expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);}
@@ -86,7 +86,7 @@ test('malformed delimited text keeps the exact source and never shows a partial 
  const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8')),op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.artifactIds=[];
  const raw='a,b\n1,2\n"unfinished';op.detail={kind:'mcp',server:'records',tool:'unknown',input:{},resultPreview:raw};
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
- const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Inspect delimited text'}).press('Enter');const dialog=page.getByRole('dialog',{name:'Captured delimited text'});await dialog.getByRole('button',{name:'CSV',exact:true}).click();await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog).toContainText('Unclosed quoted cell');await expect(dialog.locator('.data-original')).toHaveText(raw);await page.screenshot({path:resolve('.local/delimited-malformed.png')});
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Inspect delimited text'}).press('Enter');const dialog=page.getByRole('dialog',{name:'Delimited text'});await dialog.getByRole('button',{name:'CSV',exact:true}).click();await expect(dialog.getByRole('table')).toHaveCount(0);await expect(dialog).toContainText('Unclosed quoted cell');await expect(dialog.locator('.data-original')).toHaveText(raw);await page.screenshot({path:resolve('.local/delimited-malformed.png')});
 });
 
 for(const kind of ['shell','wrapped-shell','mcp'] as const)test(`${kind} offers one complete JSON view even when its text preview is folded`,async({page})=>{
@@ -95,10 +95,10 @@ for(const kind of ['shell','wrapped-shell','mcp'] as const)test(`${kind} offers 
  const body=JSON.stringify({items:Array.from({length:20},(_,i)=>({id:i,label:`captured row ${i}`}))},null,2);
  const raw=kind==='wrapped-shell'?JSON.stringify({output:body,exit_code:0}):body;
  if(kind==='mcp')op.detail={kind:'mcp',server:'records',tool:'list',input:{},resultPreview:raw};
- else{op.kind='shell';op.origin={type:'native',tool:'shell_command'};op.detail={kind:'shell',command:'read captured data',outputPreview:raw,exitCode:0};}
+ else{op.kind='shell';op.origin={type:'native',tool:'shell_command'};op.detail={kind:'shell',command:'read data',outputPreview:raw,exitCode:0};}
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);
- const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();const views=card.getByRole('group',{name:'Captured result views',exact:true});await expect(views).toHaveCount(1);
+ const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();const views=card.getByRole('group',{name:'Result views',exact:true});await expect(views).toHaveCount(1);
  const trigger=card.getByRole('button',{name:/^(Open larger|Inspect data)$/});await expect(trigger).toHaveCount(1);await trigger.press('Enter');
- const reader=page.getByRole('dialog',{name:'Captured data',exact:true});await expect(reader).toBeVisible();await reader.getByRole('button',{name:'Original',exact:true}).click();await expect(reader.locator('.data-original')).toHaveText(raw);
+ const reader=page.getByRole('dialog',{name:'Data',exact:true});await expect(reader).toBeVisible();await reader.getByRole('button',{name:'Original',exact:true}).click();await expect(reader.locator('.data-original')).toHaveText(raw);
  await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(trigger).toBeFocused();await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toHaveCount(0);
 });

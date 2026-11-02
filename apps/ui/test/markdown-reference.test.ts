@@ -5,9 +5,9 @@ import {Markdown} from '../src/lib/markdown.tsx';
 import {useApp} from '../src/state.ts';
 import {workingLocations} from '../../../packages/contracts/src/working-locations.ts';
 
-it('exposes captured references as native keyboard buttons with exact line labels',()=>{
+it('exposes references as native keyboard buttons with exact line labels',()=>{
   const html=renderToStaticMarkup(createElement(Markdown,{text:'Inspect `src/actual.ts:250` and `src/My file.ts:3`.',onPath:()=>{}}));
-  expect(html).toContain('type="button"');expect(html).toContain('Open captured work for src/actual.ts at line 250');expect(html).toContain('Open captured work for src/My file.ts at line 3');expect(html).toContain('<code>src/actual.ts:250</code>');
+  expect(html).toContain('type="button"');expect(html).toContain('Open work on src/actual.ts at line 250');expect(html).toContain('Open work on src/My file.ts at line 3');expect(html).toContain('<code>src/actual.ts:250</code>');
   expect(renderToStaticMarkup(createElement(Markdown,{text:'`src/actual.ts:250`'}))).not.toContain('<button');
 });
 

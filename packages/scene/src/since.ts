@@ -111,7 +111,7 @@ export function sinceSnapshot(p: Projection, after: number, page = 0): SinceSnap
   for (const path of pageFiles) if (fileStats[path]) {
     const diff = sessionDiff(p, path, after);
     const characters = diff.lines.reduce((n, line) => n + line.text.length, 0);
-    if (diff.lines.length > remainingLines || characters > remainingCharacters) fileStats[path].netDiff = {basis:'derived',status:'unavailable',lines:[],note:'This review page exceeds the bounded net-diff material limit; inspect the individual captured edits.'};
+    if (diff.lines.length > remainingLines || characters > remainingCharacters) fileStats[path].netDiff = {basis:'derived',status:'unavailable',lines:[],note:'This review page exceeds the bounded net-diff material limit; inspect the individual edits.'};
     else { fileStats[path].netDiff = diff; remainingLines -= diff.lines.length; remainingCharacters -= characters; }
   }
   return { fileStats, gapGroups: [...gapCounts].map(([title, count]) => ({ title, count })).sort((a, b) => b.count - a.count), ...digest, ...Object.fromEntries(groups.map((key) => [key, digest[key].slice(offset * 20, offset * 20 + 20)])), counts, editedFiles: digest.editedFiles.slice(offset * 50, offset * 50 + 50), editedFileCount: digest.editedFiles.length };

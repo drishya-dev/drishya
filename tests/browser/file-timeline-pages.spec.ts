@@ -47,7 +47,7 @@ async function openWork(page: Page) {
   await page.getByRole('textbox', { name: 'Find repository files', exact: true }).fill('src/total.ts');
   await page.locator('[data-spine-path="src/total.ts"]').first().click();
   const disk = page.getByRole('dialog', { name: 'src/total.ts', exact: true });
-  if (await disk.isVisible()) await disk.getByRole('button', { name: 'Recorded work on this file' }).click();
+  if (await disk.isVisible()) await disk.getByRole('button', { name: 'Agent work on this file' }).click();
   const work = page.getByRole('dialog', { name: 'Work on src/total.ts', exact: true });
   await expect(work).toBeVisible();
   return work;
@@ -55,7 +55,7 @@ async function openWork(page: Page) {
 
 test('Next and Previous change retain a session ordinal across search-only and edit pages', async ({ page }) => {
   const work = await openWork(page);
-  const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
+  const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true }), next = steps.getByRole('button', { name: 'Next change', exact: true });
   const label = steps.getByRole('status');
   await expect(label).toHaveText(/ of 31/);
@@ -88,7 +88,7 @@ test('Next and Previous change retain a session ordinal across search-only and e
 
 test('the page label keeps the type floor and explains the page crossing', async ({ page }) => {
   const work = await openWork(page);
-  const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
+  const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const size = await steps.getByRole('status').evaluate(el => getComputedStyle(el).fontSize);
   expect(size).toBe('11px');
   await expect(steps.getByRole('status')).toHaveAttribute('title', /whole session/);
@@ -97,7 +97,7 @@ test('the page label keeps the type floor and explains the page crossing', async
 
 test('retained off-page selection keeps its ordinal and steps relative to itself, not the action page', async ({ page }) => {
   const work = await openWork(page);
-  const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
+  const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true });
   while (await previous.isEnabled()) await previous.click();
   await expect(steps.getByRole('status')).toHaveText('1 of 31');
@@ -134,14 +134,14 @@ test('daemon timeline metadata stays bounded and respects replay visibility, fil
 
 test('off-page evidence waits for its own ordinal before a rapid next click', async ({ page }) => {
   const work = await openWork(page);
-  const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
+  const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true });
   while (await previous.isEnabled()) await previous.click();
-  const readKey = await work.getByRole('combobox', { name: 'First evidence', exact: true }).inputValue();
+  const readKey = await work.getByRole('combobox', { name: 'First step', exact: true }).inputValue();
   const pageNext = work.locator('.file-pagination').getByRole('button', { name: 'Next', exact: true });
   for (let n = 0; n < 3; n++) { await pageNext.click(); await expect(work.locator('.file-pagination span')).toContainText(`${25 + 24*n}`); }
   await work.getByRole('button', { name: 'Compare evidence', exact: true }).click();
-  const select = work.getByRole('combobox', { name: 'First evidence', exact: true });
+  const select = work.getByRole('combobox', { name: 'First step', exact: true });
   const other = await select.locator('option').evaluateAll((options, current) => options.map(op => (op as HTMLOptionElement).value).find(value => value !== current), readKey);
   const editedSelection = page.waitForResponse(response => response.url().includes('/file-operations?') && new URL(response.url()).searchParams.get('selected') === other!.replace(/\/patch$/, ''));
   await select.selectOption(other!);

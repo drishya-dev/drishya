@@ -29,10 +29,10 @@ export function delimitedBlocks(text:string):DelimitedBlock[]{
  if(text.length>262144||new TextEncoder().encode(text).length>262144)return [];
  const blocks:DelimitedBlock[]=[];
  const add=(value:unknown,field:string)=>{if(blocks.length<8&&typeof value==='string'&&/[\r\n]/.test(value)&&/[,\t]/.test(value))blocks.push({text:value,field});};
- let value:unknown;try{value=JSON.parse(text);}catch{add(text,'Captured text');return blocks;}
+ let value:unknown;try{value=JSON.parse(text);}catch{add(text,'Text');return blocks;}
  const visit=(value:unknown,path:string,depth:number)=>{
   if(depth>4||blocks.length>=8)return;
-  if(typeof value==='string'){add(value,path||'Captured JSON string');return;}
+  if(typeof value==='string'){add(value,path||'JSON string');return;}
   if(Array.isArray(value)){for(let i=0;i<Math.min(value.length,64);i++)visit(value[i],`${path}/${i}`,depth+1);return;}
   if(!record(value))return;
   if(typeof value.output==='string'&&['exit_code','wall_time_seconds','chunk_id','session_id'].some(key=>key in value))add(value.output,`${path}/output`);

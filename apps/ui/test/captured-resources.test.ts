@@ -1,12 +1,12 @@
 import {it,expect} from 'vitest';
 import {capturedResources,resourceHref} from '../src/lib/captured-resources.ts';
-it('preserves ordered MCP links, captured text, mixed siblings and exact field provenance',()=>{
+it('preserves ordered MCP links, text, mixed siblings and exact field provenance',()=>{
  const value={content:[{type:'text',text:'not JSON'},{type:'resource_link',uri:'https://example.org/a',name:'Reference',mimeType:'application/pdf'},{type:'image',data:'omitted'},{type:'resource',resource:{uri:'resource://notes',mimeType:'text/markdown',text:'# Captured\n\nExact **text**'}}]};
  expect(capturedResources(JSON.stringify(value))?.items).toEqual([{field:'/content/1',uri:'https://example.org/a',title:'Reference',mime:'application/pdf'},{field:'/content/3/resource',uri:'resource://notes',title:'resource://notes',mime:'text/markdown',text:'# Captured\n\nExact **text**'}]);
  expect(value.content).toHaveLength(4);
 });
 it('recognizes explicit result URL metadata without scraping arbitrary prose or unknown objects',()=>{
- expect(capturedResources(JSON.stringify({results:[{url:'https://example.org',title:'Title',snippet:'Captured snippet'}]}))?.items[0]).toMatchObject({field:'/results/0',uri:'https://example.org',title:'Title',description:'Captured snippet'});
+ expect(capturedResources(JSON.stringify({results:[{url:'https://example.org',title:'Title',snippet:'Snippet'}]}))?.items[0]).toMatchObject({field:'/results/0',uri:'https://example.org',title:'Title',description:'Snippet'});
  for(const text of ['https://example.org','<a href="https://example.org">x</a>','{"uri":"https://example.org"}','{"unknown":{"type":"resource_link","uri":"https://example.org"}}','{"content":'])expect(capturedResources(text)).toBeUndefined();
 });
 it('opens only explicit clean absolute HTTP(S) destinations',()=>{
@@ -25,7 +25,7 @@ it('bounds bytes, references and traversal; malformed entries do not manufacture
  let nested:unknown={type:'resource_link',uri:'https://example.org'};for(let n=0;n<12;n++)nested={status:'fulfilled',value:nested};expect(capturedResources(JSON.stringify(nested))).toBeUndefined();
 });
 
-it('keeps empty captured text distinct from absent text and retains repeated URI identities',()=>{
+it('keeps empty text distinct from absent text and retains repeated URI identities',()=>{
  const raw=JSON.stringify({content:[null,{type:'resource',resource:{uri:'resource://same',title:'First',text:''}},{type:'resource',resource:{uri:'resource://same',title:'Second',text:'literal second body'}},{type:'resource_link',uri:'resource://same',title:'Reference only'}]});
  const items=capturedResources(raw)!.items;expect(items.map(i=>i.field)).toEqual(['/content/1/resource','/content/2/resource','/content/3']);expect(items.map(i=>i.text)).toEqual(['','literal second body',undefined]);
 });
@@ -52,7 +52,7 @@ it('preserves document wrapper provenance, duplicate fields, raw limits and sour
  const many=capturedDocuments(JSON.stringify({content:Array.from({length:10},()=>document)}))!;expect(many.items).toHaveLength(8);expect(many.limited).toBe(true);
  expect(capturedDocuments(raw.slice(0,-1))).toBeUndefined();expect(capturedDocuments(JSON.stringify({type:'text',text:'界'.repeat(90000)}))).toBeUndefined();
 });
-it('distinguishes captured binary resources and reported sizes from absent bodies',()=>{
+it('distinguishes binary resources and reported sizes from absent bodies',()=>{
  expect(capturedResources(JSON.stringify({type:'resource',resource:{uri:'resource://pdf',mimeType:'application/pdf',blob:'YWJj',size:3}}))?.items[0]).toEqual({field:'/resource',uri:'resource://pdf',title:'resource://pdf',mime:'application/pdf',binary:true,size:3});
  expect(capturedResources(JSON.stringify({type:'resource_link',uri:'resource://pdf',size:-1}))?.items[0]?.size).toBeUndefined();
 });

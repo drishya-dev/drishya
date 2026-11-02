@@ -19,7 +19,7 @@ test.beforeEach(async({page})=>{
 });
 const bar=(page:Page)=>page.getByRole('contentinfo',{name:'Replay controls'});
 const step=(page:Page)=>bar(page).getByRole('slider',{name:'Timeline'}).getAttribute('aria-valuenow').then(Number);
-async function start(page:Page){await page.getByLabel('More workspace options',{exact:true}).click();await page.getByRole('button',{name:'Replay captured work',exact:true}).click();await expect(bar(page)).toBeVisible();await expect(bar(page).getByRole('button',{name:'Pause',exact:true})).toBeVisible();}
+async function start(page:Page){await page.getByLabel('More workspace options',{exact:true}).click();await page.getByRole('button',{name:'Replay this session',exact:true}).click();await expect(bar(page)).toBeVisible();await expect(bar(page).getByRole('button',{name:'Pause',exact:true})).toBeVisible();}
 
 test('Modern replay is explicit and has working play, step, speed, outcome, timeline and exit controls',async({page})=>{
  await expect(bar(page)).toHaveCount(0);await start(page);await bar(page).getByRole('button',{name:'Pause',exact:true}).click();
@@ -42,7 +42,7 @@ test('hover and upward history scrolling leave replay running; capture can grow 
  await bar(page).getByRole('button',{name:'Play',exact:true}).click();const before=await step(page);const card=page.locator('.history .op-head').last();await card.hover();await expect.poll(()=>step(page)).toBeGreaterThan(before);await expect(bar(page).getByRole('button',{name:'Pause',exact:true})).toBeVisible();
  const history=page.locator('.history'),box=(await history.boundingBox())!;await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.wheel(0,-500);const scrolled=await step(page);await expect.poll(()=>step(page)).toBeGreaterThan(scrolled);await expect(bar(page).getByRole('button',{name:'Pause',exact:true})).toBeVisible();
  await bar(page).getByRole('button',{name:'Pause',exact:true}).click();const paused=await step(page),total=Number(await slider.getAttribute('aria-valuemax'));
- appendFileSync(journal,[{...base,type:'user',uuid:'new-prompt',cwd:dir,message:{role:'user',content:'New captured work during replay'}},{...base,type:'assistant',uuid:'new-response',message:{role:'assistant',content:[{type:'text',text:'Captured appended response'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');await app.ingest.importSource('claude-code',journal);
+ appendFileSync(journal,[{...base,type:'user',uuid:'new-prompt',cwd:dir,message:{role:'user',content:'New work during replay'}},{...base,type:'assistant',uuid:'new-response',message:{role:'assistant',content:[{type:'text',text:'Appended response'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');await app.ingest.importSource('claude-code',journal);
  await expect.poll(async()=>Number(await slider.getAttribute('aria-valuemax'))).toBeGreaterThan(total);expect(await step(page)).toBe(paused);
- await bar(page).getByRole('button',{name:'Exit replay'}).click();await expect(bar(page)).toHaveCount(0);await expect(page.locator('.history')).toContainText('New captured work during replay');
+ await bar(page).getByRole('button',{name:'Exit replay'}).click();await expect(bar(page)).toHaveCount(0);await expect(page.locator('.history')).toContainText('New work during replay');
 });

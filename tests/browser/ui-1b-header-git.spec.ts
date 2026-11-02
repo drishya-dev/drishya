@@ -34,7 +34,7 @@ for (const width of [600, 1440]) {
     await page.setViewportSize({ width, height: 900 }); await open(page);
     const identity = page.locator('.session-line-branch');
     await expect(identity).toBeVisible(); await expect(identity).toHaveText(branch);
-    await expect(identity).toHaveAccessibleName('Recorded branch: ' + branch + '. Last branch captured in session metadata; not current Git');
+    await expect(identity).toHaveAccessibleName('Branch: ' + branch + '. Last branch in session metadata; not current Git');
     const restingWidth = (await identity.boundingBox())!.width; await identity.hover();
     await expect.poll(async () => Math.abs((await identity.boundingBox())!.width - restingWidth)).toBeLessThan(1);
     await expect(identity.locator('.session-branch-name')).toHaveCount(1);

@@ -73,10 +73,10 @@ export function nowView(facts: NowFacts | undefined, live: boolean, ctx: NowCont
   }
 
   const last = facts.last, age = since(last?.time);
-  if (!last || age === undefined) return { tone: 'quiet', text: `${ctx.harness} · live`, basis: 'Watching the journal. No timed event has been captured yet.' };
-  if (last.what === 'reply') return { tone: 'replied', text: `${ctx.harness} · replied ${elapsed(age)} ago`, basis: 'The newest captured event is an agent reply and no call is open.' };
+  if (!last || age === undefined) return { tone: 'quiet', text: `${ctx.harness} · live`, basis: 'Watching the journal. No timed event has been recorded yet.' };
+  if (last.what === 'reply') return { tone: 'replied', text: `${ctx.harness} · replied ${elapsed(age)} ago`, basis: 'The newest event is an agent reply and no call is open.' };
   if (age < WORKING_WINDOW_MS) {
     return { tone: 'working', text: `${ctx.harness} · working`, basis: `No call is open and the newest event is ${last.what === 'prompt' ? 'a prompt' : last.what === 'reasoning' ? 'reasoning' : 'a tool result'} from ${elapsed(age)} ago, so the model is most likely still going.${turn}`, tab: `◐ Working${where}`, mark: 'working' };
   }
-  return { tone: 'quiet', text: `${ctx.harness} · no activity for ${elapsed(age)}`, basis: `No call is open and nothing new was captured for ${elapsed(age)}.` };
+  return { tone: 'quiet', text: `${ctx.harness} · no activity for ${elapsed(age)}`, basis: `No call is open and nothing new was recorded for ${elapsed(age)}.` };
 }

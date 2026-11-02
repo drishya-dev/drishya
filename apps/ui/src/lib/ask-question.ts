@@ -3,7 +3,7 @@ export const isQuestionTool = (tool: unknown) => tool === 'AskUserQuestion' || t
 
 /** A question read from its captured input and result text (Claude's AskUserQuestion, Codex's request_user_input_async). Display only; unknown shapes return nothing. */
 export interface AskOption { label: string; description?: string }
-export interface AskQuestion { id?: string; question: string; header?: string; multiSelect: boolean; options: AskOption[]; /** The captured answer text, when the result names this question. */ answer?: string; chosen: string[]; /** Answer words that are not one of the offered options (the person typed their own). */ typed?: string }
+export interface AskQuestion { id?: string; question: string; header?: string; multiSelect: boolean; options: AskOption[]; /** The answer text, when the result names this question. */ answer?: string; chosen: string[]; /** Answer words that are not one of the offered options (the person typed their own). */ typed?: string }
 
 const text = (value: unknown, max = 600) => typeof value === 'string' ? value.slice(0, max) : undefined;
 

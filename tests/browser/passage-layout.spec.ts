@@ -45,10 +45,10 @@ test.beforeAll(async () => {
   row({ type: 'assistant', message: { id: 'wrap-b', role: 'assistant', content: [{ type: 'text', text: 'Done with the wrap passage.' }] } });
   ids.wrap = (await app.ingest.importSource('claude-code', wrap)).recordingId;
   // A longer captured checklist changes the prompt allocation without changing card sizes.
-  const todos = Array.from({length: 12}, (_, i) => ({content: `Captured task ${i + 1}`, status: i ? 'pending' : 'in_progress'}));
+  const todos = Array.from({length: 12}, (_, i) => ({content: `Task ${i + 1}`, status: i ? 'pending' : 'in_progress'}));
   const pinned = join(dir, 'pinned-wrap.jsonl');
   const pinnedRows = [
-    {type:'user',message:{role:'user',content:'Review the captured work'}},
+    {type:'user',message:{role:'user',content:'Review the work'}},
     {type:'assistant',message:{id:'pin-a',role:'assistant',content:[{type:'tool_use',id:'pin',name:'TodoWrite',input:{todos}},...uses]}},
     {type:'user',message:{role:'user',content:[{type:'tool_result',tool_use_id:'pin',content:'Updated'},...results]}},
   ];

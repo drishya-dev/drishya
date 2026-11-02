@@ -25,7 +25,7 @@ export function OpImages({ images, compact = false }: { images: OperationImage[]
   return <div className={`op-images${compact ? ' compact' : ''}`} onClick={(e) => e.stopPropagation()}>
     {shown.map((img, i) => {
       const src = url(img);
-      const label = `Captured image${img.width && img.height ? ` · ${img.width}×${img.height}` : ''}${img.bytes ? ` · ${size(img.bytes)}` : ''}`;
+      const label = `Image${img.width && img.height ? ` · ${img.width}×${img.height}` : ''}${img.bytes ? ` · ${size(img.bytes)}` : ''}`;
       return src
         ? <ImageThumbnail key={`${i}:${src}`} src={src} image={img} label={label} onOpen={() => setOpen(img)} />
         : <div key={i} className="op-image-missing" title={label}>Image {img.omitted ? `not kept: ${WHY[img.omitted] ?? img.omitted}` : 'not available here'}{img.bytes ? ` · ${size(img.bytes)}` : ''}</div>;
@@ -54,8 +54,8 @@ function ImageReader({ src, image, onClose, currentCaption }: { src: string; ima
   // Explicit retry bypasses a cached failed response without changing the image's hash/owner.
   const imageSrc = retry ? `${src}${src.includes('?') ? '&' : '?'}retry=${retry}` : src;
   useEffect(() => { dialog.current?.showModal(); }, []);
-  const caption = currentCaption ?? `Captured image${image.width && image.height ? ` · ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${size(image.bytes)}` : ''}`;
-  return <dialog ref={dialog} className="image-reader" aria-label={currentCaption ? 'Current image reader' : 'Captured image reader'} onClose={onClose} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
+  const caption = currentCaption ?? `Image${image.width && image.height ? ` · ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${size(image.bytes)}` : ''}`;
+  return <dialog ref={dialog} className="image-reader" aria-label={currentCaption ? 'Current image reader' : 'Image reader'} onClose={onClose} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
     <div className="image-reader-bar">
       <span title={caption}>{caption}</span>
       <button type="button" disabled={failed} aria-pressed={actual} onClick={() => setActual((v) => !v)}>{actual ? 'Fit' : 'Actual size'}</button>
@@ -63,9 +63,9 @@ function ImageReader({ src, image, onClose, currentCaption }: { src: string; ima
     </div>
     {currentCaption && <p className="image-reader-context">Current file. It may differ from what the agent saw.</p>}
     <div className={`image-reader-stage${actual ? ' actual' : ''}`}>
-      {failed ? <div className="op-image-missing"><p role="status">{currentCaption ? 'Current file could not be loaded. It may have changed or become unavailable.' : 'Captured image could not be loaded. It may no longer be available.'}</p>
+      {failed ? <div className="op-image-missing"><p role="status">{currentCaption ? 'Current file could not be loaded. It may have changed or become unavailable.' : 'Image could not be loaded. It may no longer be available.'}</p>
         <button type="button" className="btn ghost" onClick={() => { setFailed(false); setRetry((value) => value + 1); }}>Retry image</button></div>
-        : <img key={retry} src={imageSrc} alt={currentCaption ? 'Current file' : 'Captured image'} onError={() => setFailed(true)} onClick={() => setActual((v) => !v)} />}
+        : <img key={retry} src={imageSrc} alt={currentCaption ? 'Current file' : 'Image'} onError={() => setFailed(true)} onClick={() => setActual((v) => !v)} />}
     </div>
   </dialog>;
 }
@@ -128,11 +128,11 @@ export function PathImage({ op, path }: { op: Operation; path: string }) {
     {op.images?.length?<OpImages images={op.images} compact/>:null}
     <div className="path-image-line">
       <span className="path-image-path">{path}</span>
-      <span>image bytes not captured</span>
+      <span>image bytes not recorded</span>
       {canOpen && (state === undefined || typeof state === 'object' && 'error' in state) && <button type="button" className="path-image-open" onClick={() => void open()}>{state ? 'Retry current file' : 'Open current file'}</button>}
     </div>
     {state&&typeof state==='object'&&'error'in state&&state.consent&&source?.approveCurrentImage&&<div className="path-image-consent">
-      <p>This recorded image is outside ordinary workspace reading. Allow only this file's current image bytes for this server session? Its contents may have changed.</p>
+      <p>This image is outside ordinary workspace reading. Allow only this file's current image bytes for this server session? Its contents may have changed.</p>
       <button type="button" onClick={()=>void open(true)}>Allow this image only</button>
     </div>}
     {remote && <div className="path-image-line">Remote image reference · never fetched automatically.</div>}

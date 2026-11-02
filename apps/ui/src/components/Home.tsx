@@ -64,7 +64,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
       }
     };
     await Promise.all([
-      apply(0, 'Captured sessions', () => source.recordings(), recordings => set({ recordings })),
+      apply(0, 'Sessions', () => source.recordings(), recordings => set({ recordings })),
       apply(1, 'Local discovery', () => source.sources(), found => { setSources(old => sameSources(old, found.sources) ? old : found.sources); setSourceErrors(found.errors); }),
       apply(2, 'Storage information', async () => source.storage?.(), setUsage),
     ]);
@@ -165,7 +165,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
       </div>
       {usage && <details className={`home-storage${usage.overBudget ? ' bad' : ''}`}><summary>Local store · {(usage.bytes / 1024 ** 3).toFixed(2)} GiB{usage.overBudget ? ' · advisory budget exceeded' : ''}</summary><p>{(usage.budgetBytes / 1024 ** 3).toFixed(0)} GiB advisory budget. Nothing is deleted automatically. Remove selected recordings with <code>drishya forget &lt;recording&gt;</code>.</p></details>}
       {!preview && new URLSearchParams(location.search).get('demo') === 'local' && <p className="notice">Choose a local recording, then use More → Use this session as local preview. A missing or deleted recording is never replaced with a synthetic conversation.</p>}
-      {preview && <div className="local-preview-card"><strong>Your local preview</strong><span>{preview.title ?? 'Selected recording'}</span><button className="btn" onClick={() => { location.hash = `#/r/${preview.id}`; void openRecording(preview.id); }}>Open real recording</button><small>Already-redacted local evidence. Nothing is published or copied into the synthetic sample.</small></div>}
+      {preview && <div className="local-preview-card"><strong>Your local preview</strong><span>{preview.title ?? 'Selected recording'}</span><button className="btn" onClick={() => { location.hash = `#/r/${preview.id}`; void openRecording(preview.id); }}>Open real recording</button><small>Redacted local sessions. Nothing is published or copied into the synthetic sample.</small></div>}
       <div className="home-filters">
         <label className="home-search"><InterfaceGlyph name="search" /><input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         <select aria-label="Harness" value={harness} onChange={(e) => setHarness(e.target.value)}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>
@@ -185,7 +185,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
           </div>
           {recordings.length === 0 && (!modern || sources?.length === 0) && <div className="home-empty"><InterfaceGlyph name="local" /><h3>Your work starts here.</h3><p>Nothing imported yet. Open a session from this machine, or try the demo.</p><button className="btn" onClick={() => openDemo()}>Explore the synthetic demo<InterfaceGlyph name="arrow" /></button></div>}
           {(!modern && recordings.length > 0 && filteredRecordings.length === 0 || modern && sessionCount > 0 && matchingCount === 0) && <p className="muted">{modern ? 'No sessions match these filters.' : 'No imported recordings match these filters.'}</p>}
-          {modern ? <><p className="modern-sessions-note">Open captured work or continue a local harness session. Your workspace and date keep everything together.</p>{err && <p role="alert" className="bad">{err}</p>}{sourceErrors.map(e => <p key={e.adapterId} className="bad small">{e.adapterId}: {e.message}</p>)}<ModernSessions recordings={filteredRecordings} sources={filteredSources} now={now} busy={busy} renderRecording={r => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />} onOpen={s => void open(s, true)} />{!sources && !err && <p role="status" className="muted small">Finding local sessions…</p>}</> : <>
+          {modern ? <><p className="modern-sessions-note">Open a session or continue it in your harness. Workspace and date keep everything together.</p>{err && <p role="alert" className="bad">{err}</p>}{sourceErrors.map(e => <p key={e.adapterId} className="bad small">{e.adapterId}: {e.message}</p>)}<ModernSessions recordings={filteredRecordings} sources={filteredSources} now={now} busy={busy} renderRecording={r => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />} onOpen={s => void open(s, true)} />{!sources && !err && <p role="status" className="muted small">Finding local sessions…</p>}</> : <>
           <SessionGroups key={`recordings:${q}:${harness}:${days}`} items={filteredRecordings} rootOf={r => r.workspaceRoot} timeOf={r => r.lastSourceTime} now={now} render={r => <RecordingRow key={r.id} r={r} picked={picked.includes(r.id)} onPick={() => toggle(r.id)} />} /></>}
 
           <div className="demo-card">
@@ -261,7 +261,7 @@ function RecordingRow({ r, picked, onPick }: { r: RecordingSummary; picked: bool
         <div className="row-sub">
           <span className={`harness h-${r.harness}`}>{HARNESS_LABEL[r.harness] ?? r.harness}</span>
           <span>{r.workspaceRoot ?? ''}</span>
-          <span title="Last captured source time">{timestamp(r.lastSourceTime) === undefined ? 'Time unavailable' : relTime(r.lastSourceTime)}</span>
+          <span title="Last source time">{timestamp(r.lastSourceTime) === undefined ? 'Time unavailable' : relTime(r.lastSourceTime)}</span>
           <span>{r.observationCount} observations</span>
         </div>
       </button>

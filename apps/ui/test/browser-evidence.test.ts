@@ -10,7 +10,7 @@ describe('captured browser presentation', () => {
   expect(browserStep(op('1','browser','navigate', 'const url="https://invented.invalid"'))?.url).toBeUndefined();
   expect(browserStep(op('1','playwright','browser_navigate','{"url":"https://captured.invalid"}'))?.url).toBe('https://captured.invalid');
  });
- it('retains captured batch actions and limits presentation without dropping raw input', () => {
+ it('retains batch actions and limits presentation without dropping raw input', () => {
   const input={actions:Array.from({length:20},(_,i)=>({name:'computer',input:{action:`step ${i}`}}))};
   const item=op('1','Claude_Browser','browser_batch',input), step=browserStep(item)!;
   expect(step.batch).toHaveLength(12);expect(step.batchCount).toBe(20);expect(step.batch![0]?.action).toBe('step 0');expect(item.detail.kind==='mcp'&&item.detail.input).toBe(input);

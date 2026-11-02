@@ -16,7 +16,7 @@ describe('opt-in notifications (LIVE-3)', () => {
     expect(notifyKind('running', undefined)).toBeUndefined();
     expect(notifyKind('running', 'working')).toBeUndefined();
   });
-  it('names the session and state, never captured content', () => {
+  it('names the session and state, never content', () => {
     expect(notification('finished', { harness: 'Codex', title: 'Fix cart totals' })).toEqual({ title: 'Fix cart totals', body: 'Codex finished its turn' });
     expect(notification('asking', { harness: 'Claude', workspace: 'shop' })).toEqual({ title: 'shop', body: 'Claude is waiting for your answer' });
     expect(notification('asking', { harness: 'Claude', title: 'x'.repeat(200) }).title).toHaveLength(80);

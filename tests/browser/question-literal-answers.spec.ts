@@ -32,5 +32,5 @@ for(const width of [1440,390])test(`captured answers keep literal words and do n
  const next=group.locator('section.question').filter({hasText:'Next?'});await expect(next.locator('.question-typed')).toHaveText('Wrote "Keep quotes", and punctuation...');
  const ambiguous=group.locator('section.question').filter({hasText:'Choose?'});await expect(ambiguous.locator('[data-chosen]')).toHaveCount(0);await expect(ambiguous.locator('.question-typed')).toHaveText('Wrote A, B');
  const named=group.locator('section.question').filter({hasText:'Name?'});await expect(named.locator('[data-chosen]')).toHaveCount(1);await expect(named.locator('[data-chosen]')).toContainText('Alpha');await expect(named.locator('.question-typed')).toHaveCount(0);
- await expect(group).not.toContainText('example command');await expect(group).not.toContainText('You can now continue');await expect(group).toContainText('Captured question and answer');
+ await expect(group).not.toContainText('example command');await expect(group).not.toContainText('You can now continue');await expect(group).toContainText('Question and answer');
 });

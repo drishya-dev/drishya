@@ -37,7 +37,7 @@ describe('semantic choreography', () => {
 });
 describe('captured patch columns', () => {
   const hunks = [{ oldStart: 10, oldLines: 3, newStart: 20, newLines: 3, lines: [' same', '-old one', '-old two', '+new one', '+new two'] }];
-  it('keeps captured text and old/new numbers, pairing by patch order', () => {
+  it('keeps text and old/new numbers, pairing by patch order', () => {
     expect(splitDiffRows(hunks)).toEqual([
       { before: { number: 10, text: 'same', kind: 'context' }, after: { number: 20, text: 'same', kind: 'context' } },
       { before: { number: 11, text: 'old one', kind: 'removed' }, after: { number: 21, text: 'new one', kind: 'added' } },

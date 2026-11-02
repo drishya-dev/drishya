@@ -123,7 +123,7 @@ for (const width of [600, 1440]) {
     await desk.getByRole('button', { name: 'Back to agent', exact: true }).click();
     await expect(page.locator('.history')).toContainText(marker);
     await page.getByLabel('More workspace options', { exact: true }).press('Enter');
-    await page.getByRole('button', { name: 'Replay captured work', exact: true }).press('Enter');
+    await page.getByRole('button', { name: 'Replay this session', exact: true }).press('Enter');
     await expect(page.getByLabel('Replay controls', { exact: true })).toBeVisible();
     await expect(desk).toHaveCount(0);
     expect(Number(await page.getByRole('slider', { name: 'Timeline', exact: true }).getAttribute('aria-valuemax'))).toBeGreaterThan(0);

@@ -11,7 +11,7 @@ test.beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-home-floor-')); app = new App(join(dir, 'store'));
   const timestamp = '2026-10-17T00:00:00Z';
   for (const name of ['first', 'second', 'third']) {
-    const path = join(dir, `${name}.jsonl`), text = (i: number) => name === 'third' && i === 0 ? `FAIL src/a.ts:12 sharedneedle ${name}` : `FINDME_${name}_${i} sharedneedle captured evidence`;
+    const path = join(dir, `${name}.jsonl`), text = (i: number) => name === 'third' && i === 0 ? `FAIL src/a.ts:12 sharedneedle ${name}` : `FINDME_${name}_${i} sharedneedle evidence`;
     writeFileSync(path, [{ type: 'session_meta', timestamp, payload: { id: name, cwd: join(dir, name) } }, ...Array.from({ length: name === 'first' ? 60 : 4 }, (_, i) => ({ type: 'response_item', timestamp, payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: text(i) }] } }))].map(r => JSON.stringify(r)).join('\n') + '\n');
     await app.ingest.importSource('codex', path);
   }
@@ -133,10 +133,10 @@ test('Home with a resume card keeps the floor on desktop and phone', async ({ pa
   await home(page, 390, 844); await expect(page.locator('.mh-resume')).toBeVisible(); await everyPalette(page, '390 resume');
 });
 for (const [width, height] of sizes) {
-  test(`Search evidence dialog keeps metadata at 11 px, controls at 12 px and the raised text at 4.5:1 at ${width}px`, async ({ page }) => {
+  test(`Search sessions dialog keeps metadata at 11 px, controls at 12 px and the raised text at 4.5:1 at ${width}px`, async ({ page }) => {
     await home(page, width, height); await expect(page.locator('.home')).toBeVisible();
-    const open = page.getByRole('button', { name: 'Search evidence', exact: true }); await open.focus(); await page.keyboard.press('Enter');
-    const dialog = page.getByRole('dialog', { name: 'Search session evidence' }); await expect(dialog).toBeVisible();
+    const open = page.getByRole('button', { name: 'Search sessions', exact: true }); await open.focus(); await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog', { name: 'Search sessions' }); await expect(dialog).toBeVisible();
     await everyPalette(page, `${width} search (empty)`);
     // Filters are a disclosure; open it with the keyboard so no pointer rests on the dialog.
     await dialog.locator('summary').focus(); await page.keyboard.press('Enter'); await expect(dialog.getByLabel('Exact workspace path')).toBeVisible();
@@ -147,7 +147,7 @@ for (const [width, height] of sizes) {
     await everyPalette(page, `${width} search (results)`);
     await dialog.getByRole('button', { name: 'Next results' }).focus(); await page.keyboard.press('Enter');
     await expect(dialog.getByRole('button', { name: 'First page' })).toBeEnabled(); await everyPalette(page, `${width} search (next page)`);
-    await dialog.getByRole('searchbox').fill('qqqq-nothing-matches'); await expect(dialog.getByText('No indexed evidence matched these filters.')).toBeVisible();
+    await dialog.getByRole('searchbox').fill('qqqq-nothing-matches'); await expect(dialog.getByText('Nothing matched these filters.')).toBeVisible();
     await everyPalette(page, `${width} search (no results)`);
     await page.route('**/v1/search-library?**', route => route.fulfill({ status: 500, json: { error: 'search is down' } }));
     await dialog.getByRole('searchbox').fill('sharedneedle again'); await expect(dialog.getByRole('alert')).toBeVisible();

@@ -56,7 +56,7 @@ test('Studio native workspace connects its composer, attachments, approval and e
   await page.goto(new URL('/?experience=studio', server.launchUrl).href + new URL(server.launchUrl).hash);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
   await expect(page.locator('.workbench-header')).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Recorded agents' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Agents' })).toHaveCount(0);
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
   await expect(composer.getByRole('button', { name: 'Add files or folders' })).toBeEnabled();
@@ -76,7 +76,7 @@ test('Studio native workspace connects its composer, attachments, approval and e
   await expect(page.getByRole('dialog', { name: 'src/actual.ts', exact: true })).toContainText('fromSelectedWorkspace');
 });
 
-for(const version of ['classic','modern']) test(`${version}: current source reading finds, navigates and wraps bounded disk pages without replacing captured evidence`, async ({ page }) => {
+for(const version of ['classic','modern']) test(`${version}: current source reading finds, navigates and wraps bounded disk pages without replacing evidence`, async ({ page }) => {
   const target=new URL(server.launchUrl);target.searchParams.set('experience',version);
   await page.goto(target.href);
   // Home also lists sessions discovered on this machine and pages long lists, so a fixture dated in the past may sit
@@ -127,7 +127,7 @@ for(const version of ['classic','modern']) test(`${version}: current source read
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
   await page.screenshot({ path: resolve('.local/source-reader-narrow.png') });
-  await reader.getByRole('button', { name: 'Recorded work on this file' }).click();
+  await reader.getByRole('button', { name: 'Agent work on this file' }).click();
   const historical = page.getByRole('dialog', { name: 'Work on src/actual.ts' });
   await expect(historical).toContainText('recorded historical bytes');
   await expect(historical).not.toContainText('fromSelectedWorkspace');
@@ -215,7 +215,7 @@ test('selected workspace folders read current files separately from the exact hi
   const folder = page.getByRole('complementary',{name:'Session folders'});
   await expect(folder).toHaveCount(1);
   await expect(folder).toContainText('session-repository');
-  await expect(page.getByRole('group', { name: 'Recorded agents' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Agents' })).toHaveCount(0);
   await expect(page.locator('.history-transport .prompt-menu')).toHaveCount(0);
   const centre = () => page.locator('.history-inner').evaluate(el => { const r = el.getBoundingClientRect(); return r.x + r.width / 2; });
   const before = await centre();
@@ -234,7 +234,7 @@ test('selected workspace folders read current files separately from the exact hi
   await expect(reader).not.toContainText('recorded historical bytes');
   await reader.getByRole('textbox',{name:'Go to current source line'}).fill('205');await reader.getByRole('button',{name:'Go to line',exact:true}).click();
   await expect(reader).toContainText('251 lines');
-  await reader.getByRole('button',{name:'Recorded work on this file'}).click();
+  await reader.getByRole('button',{name:'Agent work on this file'}).click();
   const historical=page.getByRole('dialog',{name:'Work on src/actual.ts'});
   await expect(historical).toContainText('recorded historical bytes');
   await expect(historical).not.toContainText('fromSelectedWorkspace');
@@ -470,7 +470,7 @@ test('a large repository groups spatial density and reveals files at the zoomed 
 });
 
 
-test('long captured labels and inputs remain inside material allocations on desktop and mobile', async ({ page }) => {
+test('long labels and inputs remain inside material allocations on desktop and mobile', async ({ page }) => {
   await page.route('**/demo/bundle.json', async route => {
     const response = await route.fetch(); const bundle = await response.json();
     for (const op of bundle.projection.operations) {
@@ -499,7 +499,7 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
   const selectedPoint = page.locator('.map-origin-point[data-origin-file="src/actual.ts"]');
   await expect(selectedPoint).toHaveAttribute('data-origin-visible', 'true');
   await expect.poll(async () => { const point = (await selectedPoint.boundingBox())!, world = (await page.locator('.map').boundingBox())!; return Math.round((point.x + point.width / 2 - world.x) / world.width * 100); }).toBe(50);
-  await page.getByRole('button', { name: 'Open recorded work on this file' }).click();
+  await page.getByRole('button', { name: 'Open agent work on this file' }).click();
   const reader = page.getByRole('dialog', { name: 'Work on src/actual.ts' });
   await expect(reader).toContainText('recorded historical bytes');
   await expect(reader).toHaveClass(/map-reader/);
@@ -516,9 +516,9 @@ test('map file reading leaves a usable graph beside the bounded reader', async (
 });
 
 
-test('a recording without a captured workspace has a compact read-only state instead of dead prompt controls', async ({ page }) => {
+test('a recording without a workspace has a compact read-only state instead of dead prompt controls', async ({ page }) => {
   const journal = join(dir, 'no-workspace.jsonl');
-  writeFileSync(journal, JSON.stringify({ type: 'user', uuid: 'no-workspace-user', sessionId: '99999999-9999-4999-8999-999999999999', message: { role: 'user', content: 'Captured recording without workspace' } }) + '\n');
+  writeFileSync(journal, JSON.stringify({ type: 'user', uuid: 'no-workspace-user', sessionId: '99999999-9999-4999-8999-999999999999', message: { role: 'user', content: 'Recording without workspace' } }) + '\n');
   await app.ingest.importSource('claude-code', journal);
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Captured recording without workspace/ }).click();
@@ -536,7 +536,7 @@ test('compact native composer contains its decoration and narrow form without ar
   const base = { sessionId: '77777777-7777-4777-8777-777777777777', cwd: root, timestamp: '2026-10-07T12:00:00Z' };
   writeFileSync(journal, [
     { ...base, type: 'user', uuid: 'glass-user', message: { role: 'user', content: 'Glass proof synthetic session' } },
-    { ...base, type: 'assistant', uuid: 'glass-prose', message: { role: 'assistant', content: [{ type: 'text', text: Array.from({ length: 20 }, (_, n) => `Captured explanation ${n}: the source remains available as the developer reads earlier work. These paragraphs are actual synthetic journal content, not cloned overlay text or a fake backdrop.`).join('\n\n') }] } },
+    { ...base, type: 'assistant', uuid: 'glass-prose', message: { role: 'assistant', content: [{ type: 'text', text: Array.from({ length: 20 }, (_, n) => `Explanation ${n}: the source remains available as the developer reads earlier work. These paragraphs are actual synthetic journal content, not cloned overlay text or a fake backdrop.`).join('\n\n') }] } },
   ].map(row => JSON.stringify(row)).join('\n') + '\n');
   await app.ingest.importSource('claude-code', journal);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -585,7 +585,7 @@ test('compact native composer contains its decoration and narrow form without ar
 
 });
 
-test('submission is visible before native output, exposed reasoning hands off to captured history', async ({ page }) => {
+test('submission is visible before native output, exposed reasoning hands off to history', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });

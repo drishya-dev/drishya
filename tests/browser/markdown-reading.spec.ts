@@ -7,8 +7,8 @@ import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 let dir:string,app:App,server:RunningServer,id:string;
 test.beforeAll(async()=>{
   dir=mkdtempSync(join(tmpdir(),'drishya-markdown-reading-'));const path=join(dir,'reading.jsonl');
-  const text='3. Inspect source\n   - Read the implementation\n   - Inspect its callers\n     7. Check the contract\n     8. Check captured evidence\n8. Verify the result\n- Independent note\n\nA separate paragraph.';
-  writeFileSync(path,[{type:'session_meta',payload:{id:'reading',cwd:dir}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Review the captured plan'}]}},{type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
+  const text='3. Inspect source\n   - Read the implementation\n   - Inspect its callers\n     7. Check the contract\n     8. Check evidence\n8. Verify the result\n- Independent note\n\nA separate paragraph.';
+  writeFileSync(path,[{type:'session_meta',payload:{id:'reading',cwd:dir}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Review the plan'}]}},{type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
   app=new App(join(dir,'store'));id=(await app.ingest.importSource('codex',path)).recordingId;server=await startServer({app,port:0,token:'synthetic-markdown-reading'});
 });
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary directory');rmSync(dir,{recursive:true,force:true});}});
