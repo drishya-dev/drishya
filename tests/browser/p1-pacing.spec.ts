@@ -231,6 +231,8 @@ test('terminal folding is reversible and keyboard map search targets a real file
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('git diff');
   await page.locator('.search-results button').first().click();
+  // A search result opens its step; folding belongs to the card's preview.
+  await page.keyboard.press('Escape');
   const shell = page.locator('article.op-shell');
   await expect.poll(() => shell.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
   await shell.getByRole('button', { name: /more lines/ }).click();
@@ -337,6 +339,7 @@ test('verification marks represent recorded counts and open the captured failing
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('npm test');
   await page.locator('.search-results button').first().click();
+  await page.keyboard.press('Escape');
   const failed = page.locator('article.op-test.st-error');
   await expect(failed.locator('.verification-tile.failed')).toHaveCount(1);
   await failed.getByRole('button', { name: '1 failed · inspect assertions', exact: true }).click();
@@ -351,7 +354,6 @@ test('MCP input and captured result can be read in the history passage', async (
   await page.getByPlaceholder('Search prose, commands, paths…').fill('get-library-docs');
   await page.locator('.search-results button').first().click();
   const operation = page.locator('article.op-mcp').filter({ hasText: 'get-library-docs' });
-  await operation.getByRole('button', { name: /Expand/ }).click();
   await expect(operation).toContainText('context7CompatibleLibraryID');
   // CONTENT-14: the expanded result is the stored reader, which says whether it holds the complete result, not a "preview".
   await expect(operation.getByRole('region', { name: 'Stored captured result' })).toContainText('Complete stored result');

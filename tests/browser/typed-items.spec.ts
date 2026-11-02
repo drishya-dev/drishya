@@ -54,6 +54,7 @@ test('typed child cards show true commands and tests, with the wrapper reachable
   const first = cards.filter({ hasText: 'pnpm test' });
   await expandCard(first);
   await first.locator('.captured-script>summary').press('Enter');
+  await first.locator('.captured-script').getByRole('button', { name: 'Show raw request' }).click();
   await expect(first.locator('.captured-script')).toContainText('tools.exec_command');
   const summary = await page.request.get(`${server.url}/v1/recordings/${ids['three-commands']}/summary`);
   expect(await summary.json()).toMatchObject({ tests: 2, errors: 1 });
