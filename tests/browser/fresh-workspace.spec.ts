@@ -1511,7 +1511,7 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
   const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
   const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('This session',{exact:true})).toBeVisible();await expect(menu.getByText('Move around',{exact:true})).toBeVisible();await expect(menu.getByText('Share',{exact:true})).toBeVisible();await expect(menu.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await page.keyboard.press('ArrowDown');await expect(menu.locator('.workspace-utilities').locator('button:not(:disabled),a[href],summary').filter({visible:true}).first()).toBeFocused();
-  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values for this session.',{exact:true})).toBeVisible();
+  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values recorded for this session.',{exact:true})).toBeVisible();
   await page.keyboard.press('End');await expect(menu.getByRole('link',{name:'Export recording',exact:true}).or(menu.getByRole('button',{name:'Rescan original journal',exact:true})).last()).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
   for(const width of [1440,600]) {
