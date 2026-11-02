@@ -1,3 +1,4 @@
+import { NotesEntry } from './StepNotes.tsx';
 import { ModernToolStation } from '../modern/ModernToolStation.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
@@ -9,7 +10,6 @@ import { FileIcon } from './FileIcon.tsx';
 import { WorkspaceBar } from './Workspace.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
-import { ReviewQuestionsEntry } from './ReviewQuestions.tsx';
 import { agentColor, agentName } from '../lib/identity.ts';
 import { localPreviewId, saveLocalPreview } from '../lib/local-preview.ts';
 import { HealthTag } from './Home.tsx';
@@ -80,7 +80,7 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
   const filter = useApp(s => s.filter);
   if (document.documentElement.dataset.uiVersion === 'modern') return <ModernToolStation projection={projection} scene={scene} agents={<AgentFamilies projection={projection} scene={scene} />} />;
   return <div className="workbench-station">
-    <section className="workbench-review" aria-label="Work desk"><span className="desk-caption">Review</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><ReviewQuestionsEntry key={id} /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Recorded changes and checks.'}</p></section>
+    <section className="workbench-review" aria-label="Work desk"><span className="desk-caption">Review</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><NotesEntry key={id}  /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Recorded changes and checks.'}</p></section>
     <button className="btn ghost workspace-navigation-open" onClick={() => window.dispatchEvent(new Event('drishya-navigate-workspace'))}>Navigate workspace <kbd>Ctrl/⌘ K</kbd></button>
     {scene.agents.length === 1 && <div className="workbench-runtime"><span className="runtime-dot" /><span>{agentName(primary)}<small>{scene.agents.some(a => a.state === 'active') ? 'Activity in progress' : 'Agent work'}</small></span></div>}
     {scene.agents.length > 1 && <details className="station-agent-menu"><summary>Agents <span>{scene.agents.length}{filter?.agentId ? ' · focused' : ''}</span></summary><AgentFamilies projection={projection} scene={scene} /></details>}

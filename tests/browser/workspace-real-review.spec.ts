@@ -74,9 +74,9 @@ test('actual product surfaces keep evidence, current source, review and map navi
       await frame(`captured-file-${width}`);await evidence.locator(':scope>header button[aria-label^="Close "]').click();
     } else await review.getByRole('button',{name:'Close Review work',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
-    await page.locator('.workspace-menu[open]').getByRole('button',{name:/^Review questions/}).click();
-    const questions=page.getByRole('dialog',{name:'Review questions',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
-    await questions.getByRole('button',{name:'Close Review questions',exact:true}).click();
+    await page.locator('.workspace-menu[open]').getByRole('button',{name:/^Notes/}).click();
+    const questions=page.getByRole('dialog',{name:'Notes',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
+    await questions.getByRole('button',{name:'Close Notes',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
     if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.workspace-menu[open] .usage-peek>summary').click();await frame(`usage-${width}`);
     await page.keyboard.press('Escape');await page.keyboard.press('Escape');

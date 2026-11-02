@@ -9,3 +9,6 @@
 .step-reading .investigation-entry {margin:0;}
 .captured-script {margin:12px 16px 0;}
 .captured-script>summary {cursor:pointer;width:max-content;font:12px/1.6 var(--sans);color:var(--t2);}
+.step-note-follow {display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--t2);font-size:12px;}
+.step-note-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
+.step-notes-dialog h3 {margin:0 0 4px;color:var(--t3);font:500 11px/1.5 var(--sans);}

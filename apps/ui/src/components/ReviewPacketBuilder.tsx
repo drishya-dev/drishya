@@ -1,22 +1,22 @@
+import {useStepNotes} from './StepNotes.tsx';
+import {packetQuestions} from '../lib/step-notes.ts';
 import {useEffect,useRef,useState} from 'react';
 import type {ReviewInsightsPage} from '../../../../packages/scene/src/review-insights.ts';
 import {useApp} from '../state.ts';
-import {readQuestions} from '../lib/review-questions.ts';
 import {reviewPacket,type PacketEvidence} from '../lib/review-packet.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
-import {useSavedMoments} from './SavedMoments.tsx';
 import {operationObservation} from '../../../../packages/scene/src/operation-observations.ts';
 
 export function ReviewPacketBuilder({data}:{data:ReviewInsightsPage}) {
   const source=useApp(s=>s.source)!,id=useApp(s=>s.recordingId)!,projection=useApp(s=>s.projection),recording=useApp(s=>s.recording);
-  const {items,error:storageError}=useSavedMoments();
+  const {items,error:storageError}=useStepNotes();
   const [samples,setSamples]=useState(true),[questions,setQuestions]=useState(true),[selected,setSelected]=useState<string[]>([]),[packet,setPacket]=useState(''),[error,setError]=useState(''),[status,setStatus]=useState(''),[busy,setBusy]=useState(false);
   const request=useRef(0);
   useEffect(()=>{request.current++;setPacket('');setBusy(false);},[samples,questions,selected,items,data]);
   useEffect(()=>()=>{request.current++;},[]);
   const prepare=async()=>{const generation=++request.current;setBusy(true);setError('');setStatus('');try{
     if(storageError)throw new Error(storageError);
-    const notes=questions?readQuestions(localStorage.getItem(`drishya-review-questions-v1:${source.kind}:${id}`)??'[]'):[];
+    const notes=questions?packetQuestions(items):[];
     const evidence:PacketEvidence[]=[];
     // At most four bounded history requests in flight, twenty selected references total.
     const targets=items.filter(item=>selected.includes(item.operationId)).slice(0,20);
