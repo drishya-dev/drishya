@@ -26,7 +26,7 @@ test('review questions survive reload, return to the action and resolve only exp
   const queue = page.getByRole('dialog', { name: 'Review questions', exact: true });
   await expect(queue).toContainText('Check the zero-total path');
   await queue.getByRole('button', { name: 'Preview open questions' }).click();
-  await expect(queue.getByRole('textbox', { name: 'Question handoff preview' })).toHaveValue(/Action reference:/);
+  await expect(queue.getByRole('textbox', { name: 'Question handoff preview' })).toHaveValue(/Step reference:/);
   await queue.locator('.question-target').click();
   await expect(page.locator('article.op.expanded .op-title').first()).toHaveText(targetTitle);
   await page.keyboard.press('Escape');

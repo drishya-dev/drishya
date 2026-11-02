@@ -408,7 +408,7 @@ test('connected action flow and agent switches replace tabs without inventing ca
     expect(await route.evaluate(el => getComputedStyle(el).stroke)).not.toBe('none');
   }
 
-  await expect(page.locator('.flow-connections')).toContainText(/Recorded sequence|same-artifact/);
+  await expect(page.locator('.flow-connections')).toContainText(/Order, not a causal link|same-artifact/);
   const chrome = await page.locator('.history .op').evaluateAll(nodes => nodes.map(n => ({ error: n.classList.contains('st-error'), border: getComputedStyle(n).borderColor, header: getComputedStyle(n.querySelector('.op-head')!).backgroundColor })));
   expect(new Set(chrome.filter(n => !n.error).map(n => n.border)).size).toBe(1);
   expect(new Set(chrome.map(n => n.header)).size).toBe(1);

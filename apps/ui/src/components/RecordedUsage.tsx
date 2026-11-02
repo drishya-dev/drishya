@@ -65,7 +65,7 @@ export function UsagePeek() {
       ['Input tokens', count(native.input)], ['Output tokens', count(native.output)], ['Cached input', count(native.cached)], ['Cost · harness estimate', native.costUsd === undefined ? undefined : money(native.costUsd)],
       ['Context input', count(native.contextInput)], ['Context window', count(native.contextWindow)], ['Thread tokens so far', count(native.threadTotal)], ['Reasoning output tokens', count(native.reasoningOutput)],
     ]} /></section>}
-    {!recorded && !native && !context && <p>{mode === 'replay' ? 'Recorded accounting is available in full session history.' : 'No usage values for this session.'}</p>}
+    {!recorded && !native && !context && <p>{mode === 'replay' ? 'Recorded accounting is available in full session history.' : 'No usage values recorded for this session.'}</p>}
     <small>Only reported values are shown as reported; computed request input is labelled. Cumulative tokens are usage, not occupied context. Subscription billing is not inferred.</small>
   </div></Disclosure>;
 }

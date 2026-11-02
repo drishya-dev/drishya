@@ -201,7 +201,7 @@ test('reading Back restores a page, search, selected line, wrap and scroll after
   await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
   const selected = await reader.getByRole('combobox', { name: 'First step' }).inputValue();
   await reader.locator('.import-context > summary').click();
-  await reader.getByRole('button', { name: 'Session work on src/cart/types.ts', exact: true }).click();
+  await reader.getByRole('button', { name: 'Work on src/cart/types.ts', exact: true }).click();
   const destination = page.getByRole('dialog', { name: 'Work on src/cart/types.ts' });
   await expect(destination).toContainText('Exact search result');
   await expect(destination.getByRole('button', { name: /Read current file/ })).toHaveCount(0);

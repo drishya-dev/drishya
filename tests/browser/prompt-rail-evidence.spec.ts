@@ -28,7 +28,7 @@ test('rail ticks are uniform and plain at rest; the ledger appears on hover',asy
  const widths=await rail.locator('.prompt-rail-tick').evaluateAll(ticks=>ticks.map(tick=>Math.round(tick.getBoundingClientRect().width)));expect(new Set(widths).size).toBe(1);
  await failure.hover();await expect(page.locator('.prompt-rail-ledger')).toContainText('12 captured operations');await expect(page.locator('.prompt-rail-ledger')).toContainText('1 failed');
  await edited.hover();await expect(page.locator('.prompt-rail-ledger')).toContainText('80 captured operations');await expect(page.locator('.prompt-rail-ledger')).toContainText('edited 1 file');
- await expect(edited).toHaveAttribute('aria-description',/80 captured operations/);
+ await expect(edited).toHaveAttribute('aria-description',/80 operations/);
  await page.screenshot({path:'.local/turn3-ledger.png'});
 });
 test('full rail remains virtualized, keyboard addressable and readable at supported desktop widths',async({page})=>{

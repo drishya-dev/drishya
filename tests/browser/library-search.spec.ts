@@ -41,5 +41,5 @@ test('changed queries ignore stale search responses and filters remain explicit'
   await query.fill('sharedneedle');await started;await query.fill('FINDME_second_7');await expect(dialog.locator('.library-search-results>button')).toHaveCount(1);
   const stale=page.waitForResponse(response=>new URL(response.url()).pathname==='/v1/search-library'&&new URL(response.url()).searchParams.get('q')==='sharedneedle');release();await stale;
   await expect(dialog.locator('.library-search-results>button')).toContainText('FINDME_second_7');
-  await dialog.locator('summary').click();await dialog.getByLabel('Harness').selectOption('claude-code');await expect(dialog).toContainText('No indexed evidence matched');
+  await dialog.locator('summary').click();await dialog.getByLabel('Harness').selectOption('claude-code');await expect(dialog).toContainText('Nothing matched');
 });

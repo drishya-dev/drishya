@@ -26,7 +26,7 @@ test('JSON reading reaches late rows and fields with bounded DOM and exact origi
  await dialog.getByRole('button',{name:'Original',exact:true}).click();await expect(dialog.locator('.data-original')).toHaveText(raw);
  for(const width of [1440,390,320]){await page.setViewportSize({width,height:900});const box=(await dialog.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);expect(await dialog.evaluate(element=>element.scrollWidth-element.clientWidth)).toBeLessThanOrEqual(1);}
  await page.screenshot({path:resolve('.local/structured-data-phone.png')});
- await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toHaveCount(0);
+ await dialog.getByRole('button',{name:'Close Data'}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toHaveCount(0);
 });
 
 test('reading windows reverse from their actual entrance and dismiss immediately for keyboard or reduced motion',async({page})=>{
@@ -41,13 +41,13 @@ test('reading windows reverse from their actual entrance and dismiss immediately
  const trigger=page.locator(`article[data-op-id="${op.id}"]`).getByRole('button',{name:/^(Open larger|Inspect data)$/}).first();await trigger.focus();await trigger.click();
  const dialog=page.getByRole('dialog',{name:'Data'});
  const before=await dialog.evaluate(element=>{const animation=element.getAnimations()[0];animation.pause();animation.currentTime=70;(window as any).__holdReaderArrival=false;const style=getComputedStyle(element);return {opacity:style.opacity,transform:style.transform};});
- await dialog.getByRole('button',{name:'Close Captured data'}).click({force:true});
+ await dialog.getByRole('button',{name:'Close Data'}).click({force:true});
  const frames=await page.evaluate(()=>(window as any).__readerMotion.at(-1).frames);
  expect(frames[0].opacity).toBe(before.opacity);expect(frames[0].transform).toBe(before.transform);
  await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
  await trigger.focus();await trigger.click();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
  const exits=await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length);expect(exits).toBe(1);
- await page.emulateMedia({reducedMotion:'reduce'});await trigger.focus();await trigger.click();await dialog.getByRole('button',{name:'Close Captured data'}).click();await expect(dialog).toHaveCount(0);
+ await page.emulateMedia({reducedMotion:'reduce'});await trigger.focus();await trigger.click();await dialog.getByRole('button',{name:'Close Data'}).click();await expect(dialog).toHaveCount(0);
  expect(await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length)).toBe(1);
  await page.emulateMedia({reducedMotion:'no-preference'});await page.getByRole('button',{name:'Workspace settings',exact:true}).click();const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});await settings.getByRole('button',{name:'Close Workspace settings'}).click();await expect(settings).toHaveCount(0);
  expect(await page.evaluate(()=>(window as any).__readerMotion.filter((item:any)=>item.options.duration===140).length)).toBe(2);

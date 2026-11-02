@@ -33,7 +33,7 @@ export function useFileEvidence(paths: string[], projection: Projection, shown: 
 export function fileEvidenceDescription(evidence?: FileEvidence, count?: number): string | undefined {
   if (count) return `${count} file${count===1?'':'s'} with activity`;
   if (!evidence) return undefined;
-  return [evidence.readCalls ? `${evidence.readCalls} captured read calls` : '', evidence.change ? `Captured ${evidence.change==='A'?'creation':evidence.change==='D'?'deletion':'edit/write'}${evidence.changeStatus==='unknown'?', outcome not reported':''}` : '', evidence.outside ? outsideLabel(evidence.outside) : '', evidence.now ? 'Open tool call' : ''].filter(Boolean).join('; ') || undefined;
+  return [evidence.readCalls ? `${evidence.readCalls} read calls` : '', evidence.change ? `Captured ${evidence.change==='A'?'creation':evidence.change==='D'?'deletion':'edit/write'}${evidence.changeStatus==='unknown'?', outcome not reported':''}` : '', evidence.outside ? outsideLabel(evidence.outside) : '', evidence.now ? 'Open tool call' : ''].filter(Boolean).join('; ') || undefined;
 }
 
 const outsideLabel = (n: number) => `Changed on disk outside Claude Code’s edits${n > 1 ? ` (${n} times)` : ''}: by you, another program or a command`;

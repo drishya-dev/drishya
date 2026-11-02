@@ -306,7 +306,7 @@ test('actual command review uses whole-session worker pages with bounded desktop
     expect(await dialog.locator('.captured-command').count()).toBeLessThanOrEqual(25);await expect(dialog.getByRole('alert')).toHaveCount(0);
     for(const width of [1440,390]) {await page.setViewportSize({width,height:900});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/commands-actual-${id}-${width}.png`)});}
     if(await dialog.getByRole('button',{name:'Older',exact:true}).isEnabled()){await dialog.getByRole('button',{name:'Older',exact:true}).click();await expect(dialog.getByRole('button',{name:'Newer',exact:true})).toBeEnabled();}
-    await dialog.getByRole('button',{name:'Close Captured commands',exact:true}).click();
+    await dialog.getByRole('button',{name:'Close Commands',exact:true}).click();
   }
 });
 
@@ -406,7 +406,7 @@ test('actual Codex and Claude test outputs expose bounded result bars and compac
   await commands.locator(`[data-command-id="${target}"]`).getByRole('button',{name:'Open activity',exact:false}).click();
   const inspector=page.getByRole('region',{name:'Operation detail',exact:true});await expect(inspector.locator('.captured-outcomes').first()).toBeVisible();expect(await inspector.locator('.verification-tile').count()).toBeGreaterThan(0);
   for(const width of [1440,390]){await page.setViewportSize({width,height:960});expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/test-bars-actual-${id}-${width}.png`)});}
-  const bar=inspector.locator('.case-bar').first();if(await bar.count()){await bar.click();await expect(page.getByRole('dialog',{name:'Test result',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close Captured test result'}).click();}
+  const bar=inspector.locator('.case-bar').first();if(await bar.count()){await bar.click();await expect(page.getByRole('dialog',{name:'Test result',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close Test result'}).click();}
  }
 });
 

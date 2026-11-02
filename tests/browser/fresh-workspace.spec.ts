@@ -877,7 +877,7 @@ test('Modern Changes reaches every check as one list and returns to the row that
   await expect(page.locator('.history')).toBeVisible();
   await page.keyboard.press('Control+k');
   const commands=page.getByRole('dialog',{name:'Navigate workspace'});
-  await commands.getByRole('combobox').fill('Review recorded changes');
+  await commands.getByRole('combobox').fill('Review changes');
   await commands.getByRole('option',{name:/Review changes and checks/}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});
   const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
@@ -1535,7 +1535,7 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
   await expect(page.locator('.history')).toBeVisible();
-  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Find commands');
   await nav.getByRole('option').filter({hasText:'Find commands'}).click();
   const dialog=page.getByRole('dialog',{name:'Commands',exact:true});await expect(dialog).toContainText('71 matching commands');
   const cards=dialog.locator('.captured-command');await expect(cards).toHaveCount(25);
@@ -1609,7 +1609,7 @@ test('saved file selections recover as references and unavailable selections do 
   await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain(key);
   await page.reload();await expect(reader).toBeVisible();await expect(choice).toHaveValue(key);await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries:[['location',{filePanel:'src/checkout/guard.ts'}],['evidence/trail',{cursor:0,visits:[{id:0,location:{filePanel:'src/checkout/guard.ts'},memory:[['file/left','missing/read']]}]}]]}]}}):route.continue());
-  await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('status').filter({hasText:'Saved evidence is unavailable'})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+  await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('status').filter({hasText:'This saved item is unavailable'})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
 });
 
 
