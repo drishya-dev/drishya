@@ -4,7 +4,7 @@ import {capturedOutcomes} from './captured-outcomes.ts';
 /** A clean exit does not make a run clean: a pipe can hide the runner's own exit code. The preview is the tail, so a runner's header may be gone and only its footer says what ran. */
 export function outputReportsFailure(output?:string):boolean {
   if(!output||!/\d+ failed|\bfail \d+/i.test(output))return false;
-  if(/^\s*(?:(?:Test Files|Test Suites:)\s+[1-9]\d* failed|[1-9]\d* failed\s*$)/m.test(output.replace(/\x1b\[[0-9;?]*[A-Za-z]/g,'').replace(/\r/g,'')))return true;
+  if(/^\s*(?:(?:Test Files|Test Suites:)\s+[1-9]\d* failed|[1-9]\d* failed\s*$|# fail [1-9]\d*\s*$)/m.test(output.replace(/\x1b\[[0-9;?]*[A-Za-z]/g,'').replace(/\r/g,'')))return true;
   return capturedOutcomes(output).runs.some(run=>run.counts.failed>0);
 }
 
