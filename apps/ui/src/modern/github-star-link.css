@@ -2,8 +2,8 @@
 .home-github-star {
   position:relative; isolation:isolate; display:inline-flex; align-items:center; justify-content:center;
   gap:7px; min-height:34px; padding:6px 12px; overflow:hidden; flex:none;
-  border:1px solid var(--line-2); border-radius:999px; background:var(--s1); color:var(--t2);
-  font:500 12px/20px var(--sans); text-decoration:none;
+  border:1px solid var(--line-2); border-radius:var(--round-full); background:var(--s1); color:var(--t2);
+  font:var(--weight-medium) var(--text-xs)/20px var(--sans); text-decoration:none;
   transition:color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 .home-github-star svg { width:15px; height:15px; flex:none; transition:color 160ms ease, fill 160ms ease; }

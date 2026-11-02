@@ -1,0 +1,28 @@
+/* The one scale. Every stylesheet takes its type and corner values from here (UI-8 foundations). */
+:root {
+  --text-2xs: 11px; /* Marks, counts, the smallest meta. The type floor. */
+  --text-xs: 12px;  /* Secondary text and controls. */
+  --text-sm: 13px;  /* Interface body. */
+  --text-md: 15px;  /* Section titles; the default reading size. */
+  --text-lg: 17px;  /* Dialog titles. */
+  --text-xl: 20px;  /* Page sections. */
+  --text-2xl: 24px; /* Page titles. */
+  --text-3xl: 32px;
+
+  --round-xs: 4px;  /* Marks, chips. */
+  --round-sm: 6px;  /* Controls, list rows. */
+  --round-md: 8px;  /* Cards. */
+  --round-lg: 12px; /* Panels, dialogs. */
+  --round-full: 999px;
+
+  --control-sm: 24px;
+  --control-md: 28px;
+  --control-lg: 32px;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-strong: 600;
+}
+
+/* `<small>` otherwise shrinks relative to its parent, which lands off the scale. */
+small { font-size: var(--text-2xs); }

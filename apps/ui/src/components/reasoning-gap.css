@@ -1,7 +1,7 @@
 /* CONTENT-9: reasoning the harness recorded without text. One muted line; the reason opens on click. */
-.reasoning-gap-line {display:inline-flex;align-items:baseline;gap:8px;max-width:100%;padding:0;border:0;background:none;color:var(--t3);font:12px/1.6 var(--sans);text-align:left;cursor:pointer;}
-.reasoning-gap-line small {font:11px/1.6 var(--mono);color:var(--t4, var(--t3));}
-.reasoning-gap-info {font-size:11px;color:var(--t3);transition:opacity 150ms ease;}
+.reasoning-gap-line {display:inline-flex;align-items:baseline;gap:8px;max-width:100%;padding:0;border:0;background:none;color:var(--t3);font:var(--text-xs)/1.6 var(--sans);text-align:left;cursor:pointer;}
+.reasoning-gap-line small {font:var(--text-2xs)/1.6 var(--mono);color:var(--t4, var(--t3));}
+.reasoning-gap-info {font-size:var(--text-2xs);color:var(--t3);transition:opacity 150ms ease;}
 .reasoning-gap-line:hover, .reasoning-gap-line:focus-visible {color:var(--t2);}
 .reasoning-gap-line:hover .reasoning-gap-info, .reasoning-gap-line:focus-visible .reasoning-gap-info {opacity:1;}
-.reasoning-gap-why {margin:4px 0 0;max-width:62ch;color:var(--t3);font:12px/1.6 var(--sans);}
+.reasoning-gap-why {margin:4px 0 0;max-width:62ch;color:var(--t3);font:var(--text-xs)/1.6 var(--sans);}

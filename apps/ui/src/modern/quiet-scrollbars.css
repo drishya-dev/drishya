@@ -1,7 +1,7 @@
 /* Keep gutters stable. The native scroll mechanics remain available while idle. */
 :root[data-ui-version=modern] * {--scroll-thumb:transparent;scrollbar-color:var(--scroll-thumb) transparent;}
 :root[data-ui-version=modern] [data-scroll-active],:root[data-ui-version=modern] :focus-visible {--scroll-thumb:var(--line-3);}
-:root[data-ui-version=modern] ::-webkit-scrollbar-thumb {background:var(--scroll-thumb);border-radius:8px;}
+:root[data-ui-version=modern] ::-webkit-scrollbar-thumb {background:var(--scroll-thumb);border-radius:var(--round-md);}
 :root[data-ui-version=modern] ::-webkit-scrollbar-track {background:transparent;}
 :root[data-ui-version=modern] ::-webkit-scrollbar-button {display:none;}
 /* A real hit target and keyboard separator, with no resident decorative grip. */

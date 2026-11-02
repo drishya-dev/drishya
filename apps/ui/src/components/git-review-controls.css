@@ -3,10 +3,10 @@
   flex-wrap:nowrap; gap:8px; padding:10px 14px; min-width:0;
 }
 .git-review-identity { display:grid; grid-template-columns:minmax(0,max-content) minmax(0,1fr); align-items:baseline; gap:2px 9px; min-width:0; flex:1; }
-.git-review-identity strong { font:550 13px/20px var(--sans); color:var(--t1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.git-review-identity>span { font:11px/18px var(--mono); color:var(--t2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.git-review-identity small { grid-column:1/-1; font:11px/16px var(--sans); color:var(--t3); }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-compact>.btn { flex:none; min-height:34px; font-size:12px; }
+.git-review-identity strong { font:var(--weight-medium) var(--text-sm)/20px var(--sans); color:var(--t1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.git-review-identity>span { font:var(--text-2xs)/18px var(--mono); color:var(--t2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.git-review-identity small { grid-column:1/-1; font:var(--text-2xs)/16px var(--sans); color:var(--t3); }
+:root[data-ui-version=modern] .modern-git-drawer .git-review-compact>.btn { flex:none; min-height:var(--control-lg); font-size:var(--text-xs); }
 .git-review-compact .interface-glyph { width:16px; height:16px; flex:none; }
 .git-review-compact .git-file-toggle { display:inline-flex; align-items:center; gap:6px; }
 .git-file-toggle>span { color:var(--t3); font-variant-numeric:tabular-nums; }
@@ -14,18 +14,15 @@
 .git-review-compact .desk-options>summary { padding:7px; width:34px; min-height:34px; justify-content:center; }
 .git-review-compact .desk-options>summary>span { display:none; }
 .git-review-compact .desk-options-body { width:min(252px,var(--menu-inline-space,calc(100vw - 40px))); }
-.git-review-compact .desk-options-body>.btn { min-height:36px; font:12px/18px var(--sans); padding:8px 10px; }
-.git-review-menu-note { margin:4px 8px 6px; padding-top:8px; border-top:1px solid var(--line); font:11px/17px var(--sans); color:var(--t3); }
+.git-review-compact .desk-options-body>.btn { min-height:var(--control-lg); font:var(--text-xs)/18px var(--sans); padding:8px 10px; }
+.git-review-menu-note { margin:4px 8px 6px; padding-top:8px; border-top:1px solid var(--line); font:var(--text-2xs)/17px var(--sans); color:var(--t3); }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout .git-selected-file-header { flex-wrap:nowrap; padding-block:9px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout .git-selected-file-header>strong { min-width:0; font:12px/20px var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-:root[data-ui-version=modern] .modern-git-drawer .git-selected-file-header>.btn { flex:none; font-size:12px; min-height:32px; }
+:root[data-ui-version=modern] .modern-git-drawer .git-review-layout .git-selected-file-header>strong { min-width:0; font:var(--text-xs)/20px var(--mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:root[data-ui-version=modern] .modern-git-drawer .git-selected-file-header>.btn { flex:none; font-size:var(--text-xs); min-height:var(--control-lg); }
 @media(max-width:450px) {
   .git-review-identity { grid-template-columns:minmax(0,1fr); }
-  .git-review-identity>span { font-size:11px; }
-  .git-review-identity small { font-size:11px; }
+  .git-review-identity>span { font-size:var(--text-2xs); }
+  .git-review-identity small { font-size:var(--text-2xs); }
   :root[data-ui-version=modern] .modern-git-drawer .git-review-compact { padding-inline:10px; gap:5px; }
 }
-@media(pointer:coarse) {
-  :root[data-ui-version=modern] .modern-git-drawer .git-review-compact>.btn,
-  .git-review-compact .desk-options>summary { min-width:40px; min-height:40px; }
-}
+
