@@ -171,3 +171,5 @@
 .command-cd { color:var(--t3); }
 :root[data-ui-version=modern] .connected-workspace .follow-pill { width:auto;min-width:30px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding-inline:9px; }
 :root[data-ui-version=modern] .connected-workspace .follow-pill>small { font:11px/1 var(--mono);color:var(--t2); }
+:root[data-ui-version=modern] .state.state-reported,.pill.st-reported,.command-outcome.outcome-reported { color:var(--fail);font-weight:600; }
+.pill.st-reported { border-color:color-mix(in srgb,var(--fail) 35%,transparent);font-weight:inherit; }

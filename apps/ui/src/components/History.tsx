@@ -981,7 +981,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
 function StateMark({ state,op }: { state: SceneOp['state'];op:Operation }) {
   if (op.declined) return <span className="state state-declined" aria-label="declined" title={op.declined.by === 'person' ? 'You declined this action; it did not run.' : 'Claude Code’s auto mode blocked this action; it did not run.'}>⊘</span>;
   const outcome=operationOutcome({...op,status:state});
-  if(outcome.tone==='returned')return <span className="state state-returned" aria-label={outcome.label} title={outcome.explanation}>{outcome.mark}</span>;
+  if(outcome.tone==='returned'||outcome.tone==='reported')return <span className={`state state-${outcome.tone}`} aria-label={outcome.label} title={outcome.explanation}>{outcome.mark}</span>;
   if (state === 'running') return <span className="state state-running" aria-label="running" />;
   if (state === 'error') return <span className="state state-error" aria-label="failed">✕</span>;
   if (state === 'ok') return <span className="state state-ok" aria-label="done">✓</span>;

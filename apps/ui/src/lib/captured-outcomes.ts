@@ -94,7 +94,7 @@ export function capturedOutcomes(raw: string, context: {runner?: 'TAP'|'Playwrig
         if (seen.has(m[1]!)) { notes.push('Repeated TAP totals retained as raw output.'); return; }
         seen.add(m[1]!);
         if (m[1] === 'tests') total = Number(m[2]);
-        else if (m[1] === 'suites') suites = `${m[2]} suites reported`;
+        else if (m[1] === 'suites') { if (m[2] !== '0') suites = `${m[2]} suites reported`; }
         else counts[states[m[1]!]!] += Number(m[2]);
       }
       if (total !== undefined) add('TAP', index + 1, counts, total, 'tests', suites, text);
