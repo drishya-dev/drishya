@@ -573,12 +573,6 @@
 @media(hover:hover) and (pointer:fine) {.review-file-map:hover {color:var(--t1);background:var(--s2);}}
 @media(pointer:coarse) {.review-file-map {width:44px;height:44px;}}
 .review-outcomes { display: grid; align-content: start; gap: 24px; }
-.product-dialog.evidence-review .review-pagination { display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 8px;margin:0;padding:8px 16px;border-top:0;border-bottom:1px solid var(--line); }
-.review-pagination>.btn { display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:32px;padding:5px 8px;white-space:nowrap;font-size:12px; }
-.review-pagination svg { width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;flex:none; }
-.review-pagination>span { text-align:center;font:12px/1.5 var(--sans);font-variant-numeric:tabular-nums; }
-.review-pagination>small { grid-column:1/-1;text-align:center;font:11px/1.5 var(--sans);color:var(--t3); }
-@media(pointer:coarse) { .review-pagination>.btn {min-height:44px;} }
 .review-item { padding: 9px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .review-item button { display: flex; width: 100%; gap: 12px; justify-content: space-between; text-align: left; font-size: 12px; line-height: 1.6; }
 .review-item small { display: block; color: var(--t2); margin-top: 3px; font-size: 11px; }

@@ -151,7 +151,7 @@
 .verify-later>.verify-open { min-width:22px;min-height:22px;text-align:center; }
 @media(min-width:821px) { :root[data-ui-version=modern]:has(.inspector) svg.origins { display:none; } }
 
-/* AUDIT-1: Changes opens on the counts and the lists, with paging at the end of what is being read. */
+/* AUDIT-1: Changes opens on the counts and the lists. */
 :root[data-ui-version=modern] .evidence-review .review-intro { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px 0; }
 :root[data-ui-version=modern] .evidence-review .review-note { padding-inline:24px; }
 :root[data-ui-version=modern] .evidence-review .review-counts { padding-block:8px 16px; }

@@ -861,7 +861,7 @@ test('Modern offline bundle keeps keyboard review destinations and bounded phone
 });
 
 
-test('Modern review pages reach every captured check beyond the first twenty without changing global counts', async ({page}) => {
+test('Modern Changes reaches every captured check as one list and returns to the row that was opened', async ({page}) => {
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.review}`);
   await expect(page.locator('.history')).toBeVisible();
@@ -871,29 +871,19 @@ test('Modern review pages reach every captured check beyond the first twenty wit
   await commands.getByRole('option',{name:/Review recorded changes and checks/}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});
   const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
-  await expect(checks.locator('.review-item')).toHaveCount(20);
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
-  await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toContainText('Page 1 of 4');
-  for(const width of [390,320,1440]) {
-    await page.setViewportSize({width,height:900});
-    const pages=review.getByRole('navigation',{name:'Recorded review pages'});
-    expect((await pages.boundingBox())!.height).toBeLessThanOrEqual(90);
-    expect(await pages.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
-    await expect(review.getByRole('button',{name:'Previous review page',exact:true})).toBeDisabled();
-  }
-  await review.getByRole('button',{name:'Next review page',exact:true}).click();
-  await expect(checks).toContainText('review-case-20');
-  await expect(checks).not.toContainText('review-case-0 ');
-  await review.getByRole('button',{name:'Next review page',exact:true}).click();
-  await expect(checks).toContainText('review-case-40');
-  await review.getByRole('button',{name:'Next review page',exact:true}).click();
-  await expect(checks.locator('.review-item')).toHaveCount(10);
+  await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toHaveCount(0);
+  await expect.poll(async()=>{await review.evaluate(dialog=>{dialog.scrollTop=dialog.scrollHeight;});return checks.locator('.review-item').count();}).toBe(70);
+  await expect(checks).toContainText('review-case-0');
   await expect(checks).toContainText('review-case-69');
+  await expect(review.locator('.review-more')).toHaveCount(0);
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
-  await expect(review.getByRole('button',{name:'Next review page',exact:true})).toBeDisabled();
   await checks.getByRole('button',{name:/review-case-69/}).click();
   await expect(review).toHaveCount(0);
   await expect(page.getByRole('complementary',{name:'Operation detail'})).toContainText('review-case-69');
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  await expect(checks.locator('.review-item')).toHaveCount(70);
+  await expect(checks.getByRole('button',{name:/review-case-69/})).toBeInViewport();
 });
 
 
