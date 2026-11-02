@@ -33,12 +33,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | TEST-2 | @harsh + Codex | `codex/test2-source-readiness` | 2026-11-02 | Whole TEST-2 completion continues after merged #314. Harsh approved up to 26 files on 2 Nov after the manual gate returned two clean commands then a Workspace line-1200 failure. Current verified repair: tests/browser/workspace-shared-draft.spec.ts, one Go-enabled readiness assertion; controlled held-response proof and numeric traces are private. docs/review/test-2-live-anchor.md, STATUS/TASKS, AGENTS only when the measured worker gate is established. Retain the unresolved clean-main b2-live anchor diagnosis and all failed runs; any further reading/source edit must first have actual cause evidence and stay within the approved 26-path ceiling. Coordinate UI-21 string changes in the shared spec; this claim changes readiness logic only. No retries, relaxed assertions, larger timeouts or hidden failures. Full acceptance remains three consecutive complete commands; Harsh runs the manual full gate. |
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
-| UI-24 | @yash + Claude Opus 5.5 | `claude/ui-24-menu` | 2026-11-02 | New `ProductMenu.tsx`, `product-menu.css`; `FileReadingActions.tsx`, `ReadingKeys.tsx`, `Viewer.tsx`; a new spec. |
+| UI-8 | @yash + Claude Opus 5.5 | `claude/ui-8-*`, one branch per surface family | 2026-11-02 | The whole-product UI pass (Yash's scope, more than 15 files by nature). Foundations first: `apps/ui/src/**` CSS and components, one PR per surface family. Not touching `tests/browser/workspace-shared-draft.spec.ts` (TEST-2). Screenshots stay in `.local/`. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude — the feature queue before UI-8 is done
+
+- Yash, 2 Nov: Harsh approves GIT-7, and anything blocking on Harsh is taken over; the goal is the UI and motion passes. TEST-2 (#314) landed that way, with its strict three-clean-runs acceptance not met and said so. Harsh continues TEST-2 on `codex/test2-source-readiness`.
+- Merged: GIT-7 (#326), HOME-2 (#327), UI-21 (#328), UI-25 (#329), UI-24 (#330). One Git approval on both surfaces; Home stays current, imports without blocking and groups worktrees; the language sweep; one note on a step; a right-click menu.
+- Last full browser run (UI-21, before UI-25 and UI-24): 612 + 33 passed, one spec corrected after. UI-25 and UI-24 ran their specs only: 86 and 103 passed. A full gate on main is due before the first UI-8 surface lands.
+- Next: UI-8, foundations first. Measured on one real History screen: 13 font sizes, 13 radii, 19 control heights, 13 line heights.
+- Found while walking: Codex `:codex-file-citation{…}` directives show as raw text in prose. Recorded in the audit, third batch.
 
 ### Harsh with Codex — TEST-2 repaired, manual three-run gate pending (#314)
 

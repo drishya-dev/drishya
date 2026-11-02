@@ -263,6 +263,14 @@ None of those are gaps in the work, so reducer r33 stops counting them. An unkno
 | N6 | The return arrow overlaps the map's zoom controls at the bottom right. | Low | UI-8. |
 | N7 | Investigate is a titled block under every step, heavy for what it adds. | Low | UI-8. |
 
+## Third batch, 2 November
+
+| # | Finding | Severity | Status |
+|---|---|---|---|
+| N8 | Codex prose shows `:codex-file-citation{path="…" purpose="output"}` as raw text, where the app renders a file chip. Found on Codex `58787f`. | Medium | UI-8, history cards and prose. |
+| N9 | Git history shows its branch select and Refresh above the approval prompt, where they do nothing yet. Git review boxes the prompt. | Low | UI-8, Git. |
+| N10 | Notes and the menu were checked on seeded notes on real steps; no real session held real saved notes. | Low | Recorded in #329. |
+
 ## Interaction inventory (A2)
 
 What each component does for each kind of input, for UI-8 and the motion pass to preserve. `tested` means driven in the walk on a real session; `code` means read from the source and not driven. Right click is the browser's own menu everywhere (tested on cards and file rows): there is no product menu anywhere, which is UI-24.
