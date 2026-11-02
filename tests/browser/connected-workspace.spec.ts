@@ -521,7 +521,7 @@ test('a recording without a workspace has a compact read-only state instead of d
   writeFileSync(journal, JSON.stringify({ type: 'user', uuid: 'no-workspace-user', sessionId: '99999999-9999-4999-8999-999999999999', message: { role: 'user', content: 'Recording without workspace' } }) + '\n');
   await app.ingest.importSource('claude-code', journal);
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Captured recording without workspace/ }).click();
+  await page.getByRole('button', { name: /Recording without workspace/ }).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   await expect(composer).toContainText('Read-only here');
   await expect(composer.locator('textarea')).toHaveCount(0);
