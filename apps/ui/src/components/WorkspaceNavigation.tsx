@@ -47,8 +47,7 @@ export function WorkspaceNavigation() {
       for(const [view,name,detail] of [['findings','Review findings','Commands that keep failing, missing outcomes and gaps'],['prompts','Prompt overview','Prompts and activity counts'],['packet','Prepare review packet','Changes, checks, gaps and your open reviewer questions']] as const)all.push({key:`review-${view}`,name,detail,run:()=>requestAnimationFrame(()=>openReviewTool(view))});
       all.push({key:'commands',name:'Find commands',detail:'Search, copy and inspect shell and test runs',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-commands')))});
       all.push({ key: 'review', name: 'Review changes and checks', detail: 'Outcomes, not coverage', run: () => click('.review-open') });
-      all.push({ key: 'questions', name: 'Review questions', detail: 'Your unresolved review decisions', run: () => click('button[data-review-questions]') });
-      all.push({key:'moments',name:'Saved moments',detail:'Your saved steps and notes',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-saved-moments')))});
+      all.push({key:'notes',name:'Notes',detail:'Your notes and saved steps',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-notes-open')))});
       if (kind === 'daemon' && id && !id.includes('+')) {
         all.push({key:'git-history',name:'Explore Git branches and commits',detail:'Local parent topology, refs and commit changes',run:()=>requestAnimationFrame(openGitHistory)});
         all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => requestAnimationFrame(openGitReview) });

@@ -1,11 +1,10 @@
 import type { EvidenceLink, Operation, Projection } from '@drishya/contracts';
+import { StepNoteEditor } from './StepNotes.tsx';
 import { stepOfOperation } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import { ProvenanceBadge } from './common.tsx';
 import { EvidenceNavigation } from './EvidenceNavigation.tsx';
 import { InvestigationActions } from './InvestigationActions.tsx';
-import { ReviewQuestionEditor } from './ReviewQuestions.tsx';
-import { SaveMoment } from './SavedMoments.tsx';
 import { VerificationPanel } from './Verification.tsx';
 import './step-reading.css';
 
@@ -29,7 +28,7 @@ export function StepReading({ op, projection }: { op: Operation; projection: Pro
     <VerificationPanel op={op} />
     {links.length > 0 && <details className="step-links"><summary>Links · {links.length}</summary><StepLinks op={op} links={links} projection={projection} /></details>}
     <InvestigationActions key={`investigate/${op.id}`} op={op} />
-    <div className="step-notes"><SaveMoment op={op} /><ReviewQuestionEditor key={op.id} op={op} /></div>
+    <div className="step-notes"><StepNoteEditor key={op.id} op={op} /></div>
   </div>;
 }
 

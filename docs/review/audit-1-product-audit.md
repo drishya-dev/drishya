@@ -228,7 +228,7 @@ Two genuine Claude Code runs on a throwaway repository (`live-repo`, haiku, abou
 |---|---|---|---|
 | M1 | Saved moments ran flush against the dialog edge. | Medium | Fixed. |
 | M2 | `Captured action · observation 10832`; a two-clause scope sentence on Review questions. | Low | Fixed: `Step 10832`, one plain sentence. |
-| M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20 both sit on one row of the open step. The two lists remain: UI-25. |
+| M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20 both sit on one row of the open step. Fixed by UI-25: one note on a step, one list called Notes. |
 | M4 | The Source versions toolbar sat flush against the dialog edge. | Low | Fixed. |
 | M5 | Comparing a read with disk matches by line position, so a shifted file reads as all changed. The dialog says so; a real line diff would be better. | Medium | Fixed by UI-23: an excerpt is placed by its own lines, then diffed, and line endings are ignored. A genuine Claude read of lines 15–20, seven lines later on disk with one edit, shows that one line. Codex `8b720a` has no read excerpts; its six whole-file snapshots read 78 changed lines instead of 586. |
 | M7 | Light theme (Porcelain): Home, History, file view, palette and Changes read well. The detector's only new rule, `cream-palette`, is fashion, and rejected. | | Checked, nothing found. |

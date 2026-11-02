@@ -672,15 +672,15 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   const utilities=page.locator('.workspace-menu[open]');
   // The menu no longer repeats Changes (the header has it); the reading entries that are not in the header stay.
   await expect(utilities.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
-  await expect(utilities.getByRole('button',{name:'Review questions',exact:true})).toBeVisible();
+  await expect(utilities.getByRole('button',{name:'Notes',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Close Changes',exact:true}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
-  await utilities.getByRole('button',{name:'Review questions',exact:true}).click();
-  await expect(page.getByRole('dialog',{name:'Review questions',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Close Review questions',exact:true}).click();
+  await utilities.getByRole('button',{name:'Notes',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Notes',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Close Notes',exact:true}).click();
   await page.setViewportSize({width:390,height:844});
   await openGitDestination(page, 'Git review');
   await expect(git).toBeVisible();
@@ -859,9 +859,9 @@ test('Modern offline bundle keeps keyboard review destinations and bounded phone
   await expect(page.locator('.history')).toBeVisible();
   await page.keyboard.press('Control+k');
   const command=page.getByRole('dialog',{name:'Navigate workspace'});
-  await command.getByRole('combobox').fill('Review questions');
-  await command.getByRole('option',{name:/Review questions/}).click();
-  await expect(page.getByRole('dialog',{name:'Review questions',exact:true})).toBeVisible();
+  await command.getByRole('combobox').fill('Notes');
+  await command.getByRole('option',{name:/Notes/}).click();
+  await expect(page.getByRole('dialog',{name:'Notes',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
   await page.context().setOffline(true);
   await page.getByRole('button',{name:'Explore repository map'}).click();
