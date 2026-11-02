@@ -15,12 +15,12 @@ for(const width of[600,1440])for(const surface of paritySurfaces)test(`${surface
  switch(surface){
   case 'read':await expect(material.locator('[data-source-line="1"]')).toBeAttached();await expect(material.getByRole('button',{name:'Next lines',exact:true})).toBeEnabled();break;
   case 'edit':await expect(material).toContainText('could not be verified');await expect(material.getByRole('button',{name:'Next change lines',exact:true})).toBeEnabled();break;
-  case 'search':await expect(material).toContainText('123 recorded results');await expect(material.locator('.search-bead')).toHaveCount(123);break;
+  case 'search':await expect(material).toContainText('123 results');await expect(material.locator('.search-bead')).toHaveCount(123);break;
   case 'test':await expect(material).toContainText('literal captured failure');await expect(material).toContainText('fixture test');break;
   case 'plan':await expect(material.locator('.plan-list li')).toHaveCount(80);await expect(material).toContainText('Captured step 80');break;
   case 'delegation':await expect(material).toContainText('Captured delegated task');await expect(material).toContainText(/acknowledgement|returned/);break;
-  case 'question':await expect(material.getByRole('group',{name:'Question to you'})).toContainText('No answer was captured');await expect(material.locator('.question-options li')).toHaveCount(2);break;
-  case 'process':await expect(material).toContainText('Still waiting for a recorded outcome');await expect(material).toContainText('Exit not captured');await expect(material).toContainText('Running session: 731');await expect(card.locator('.state-returned')).toHaveCount(1);break;
+  case 'question':await expect(material.getByRole('group',{name:'Question to you'})).toContainText('No answer was recorded');await expect(material.locator('.question-options li')).toHaveCount(2);break;
+  case 'process':await expect(material).toContainText('Still waiting for a recorded outcome');await expect(material).toContainText('Exit not recorded');await expect(material).toContainText('Running session: 731');await expect(card.locator('.state-returned')).toHaveCount(1);break;
   case 'unknown-mcp':await expect(material).toContainText('Captured mixed sibling');await expect(material.getByRole('button',{name:'Inspect resources · 1',exact:true})).toBeVisible();break;
   case 'orchestration':await expect(card.locator('.state-returned')).toHaveCount(1);await expect(material).toContainText('Captured sibling failed');await expect(material.getByRole('button',{name:'Inspect data',exact:true})).toHaveCount(1);break;
   case 'truncated':await expect(material).toContainText('captured incomplete source');break;
