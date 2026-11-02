@@ -374,7 +374,7 @@ function LiveWatch() {
   const follow = useApp(s => s.follow);
   const mode = useApp(s => s.mode);
   const enabled = follow;
-  return <button className={`btn ghost live workspace-follow${enabled ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={enabled} onClick={() => useApp.setState({follow:!enabled})} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${enabled ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow live'}</button>;
+  return <button className={`btn ghost live workspace-follow${enabled ? ' on' : ''}`} role="switch" aria-label="Automatically follow new work" aria-checked={enabled} onClick={() => useApp.setState({follow:!enabled})} title="Follow new work; scrolling upward holds your reading position"><span className={`mini-switch${enabled ? ' on' : ''}`} />{mode === 'replay' ? 'Follow replay' : 'Follow latest'}</button>;
 }
 
 function NativeReturnEntry({deferMoments=false}:{deferMoments?:boolean}={}) {

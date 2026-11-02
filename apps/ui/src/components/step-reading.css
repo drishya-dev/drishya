@@ -12,3 +12,5 @@
 .step-note-follow {margin-top:8px;}.step-note-follow[aria-pressed=true] {color:var(--t1);border-color:var(--modern-accent,var(--line));}
 .step-note-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
 .step-notes-dialog h3 {margin:0 0 4px;color:var(--t3);font:var(--weight-medium) var(--text-2xs)/1.5 var(--sans);}
+
+:root[data-ui-version=modern] .step-reading .investigation-entry {border:0;padding-top:0;}
