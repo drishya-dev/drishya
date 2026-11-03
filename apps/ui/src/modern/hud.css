@@ -107,3 +107,8 @@
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace[data-toolbox-minimized] { --stage-rail: 76px; }
  :root[data-ui-version=modern][data-experience=classic] .modern-tool-station.toolbox-minimized { top:calc(50% - 21px); bottom:auto; }
 }
+/* UI-8: every header panel hangs from the cluster's right edge, 6 px below it: Search, the session menu and the Git menu share one edge. */
+@media (min-width: 821px) {
+ :root[data-ui-version=modern][data-experience=classic] .modern-session-header ~ * .search, :root[data-ui-version=modern][data-experience=classic] .connected-workspace>.search, :root[data-ui-version=modern][data-experience=classic] .search { top:60px; right:24px; }
+ :root[data-ui-version=modern] .modern-session-header .workspace-menu[open]>.workspace-utilities { top:calc(100% + 12px); right:-6px; }
+}
