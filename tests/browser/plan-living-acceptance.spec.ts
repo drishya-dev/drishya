@@ -40,6 +40,7 @@ for (const width of [600, 1440]) test(`reading choices survive new plan data, re
   const serverTools = page.locator('.md-server').filter({has:page.locator('summary span', {hasText:'fixture'})});
   const tools = page.getByRole('button',{name:'Tools',exact:true});
   if (await tools.isVisible()) await tools.click();
+  if (!await serverTools.evaluate(el => (el as HTMLDetailsElement).open)) await serverTools.locator(':scope>summary').click();
   await expect(serverTools).toHaveAttribute('open','');
   await expect(serverTools.getByRole('button', {name:/probe/})).toBeVisible();
   const inventory = page.locator('.tool-list');
