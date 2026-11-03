@@ -41,7 +41,7 @@ test('a commit hunk the agent wrote exactly links to its edit; a hand-written co
   await page.goto(server.launchUrl); await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await openGitDestination(page, 'Git graph');
-  const atlas = page.getByRole('dialog', { name: 'Git history', exact: true });
+  const atlas = page.getByRole('dialog', { name: 'Git graph', exact: true });
   const approve = atlas.getByRole('button', { name: 'Approve read-only Git', exact: true });
   await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible(); if (await approve.isVisible()) await approve.click();
   const rows = atlas.getByRole('button', { name: /Commits ·/ }); await expect(rows).toBeVisible();
@@ -73,7 +73,7 @@ test('several edits wrote a commit hunk: the Git graph offers them as a menu, ne
   const stale = page.getByRole('dialog', { name: /^Work on / }); // the daemon restores the panel an earlier test left open
   if (await stale.count()) { await page.keyboard.press('Escape'); await expect(stale).toHaveCount(0); }
   await openGitDestination(page, 'Git graph');
-  const atlas = page.getByRole('dialog', { name: 'Git history', exact: true });
+  const atlas = page.getByRole('dialog', { name: 'Git graph', exact: true });
   const approve = atlas.getByRole('button', { name: 'Approve read-only Git', exact: true });
   await expect(approve.or(atlas.locator('.atlas-layout'))).toBeVisible(); if (await approve.isVisible()) await approve.click();
   const rows = atlas.getByRole('button', { name: /Commits ·/ }); await expect(rows).toBeVisible();

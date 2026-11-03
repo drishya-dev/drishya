@@ -14,7 +14,7 @@ async function open(page:Page,server:RunningServer,id:string,width:number){
   await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await openGitDestination(page, 'Git graph');
-  const dialog=page.getByRole('dialog',{name:'Git history',exact:true});
+  const dialog=page.getByRole('dialog',{name:'Git graph',exact:true});
   const approve=dialog.getByRole('button',{name:'Approve read-only Git',exact:true});
   await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
   try{await expect(dialog.getByRole('combobox',{name:'Read local Git branch'})).toBeEnabled({timeout:40_000});}

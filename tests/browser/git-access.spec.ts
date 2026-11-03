@@ -31,7 +31,7 @@ const open=async(page:import('@playwright/test').Page,recording:string)=>{
 };
 const grant=(scope:import('@playwright/test').Locator)=>scope.getByRole('button',{name:'Approve read-only Git',exact:true});
 
-for(const [first,firstTitle,second,secondTitle] of [['Git review','Git review','Git graph','Git history'],['Git graph','Git history','Git review','Git review']] as const){
+for(const [first,firstTitle,second,secondTitle] of [['Git review','Git review','Git graph','Git graph'],['Git graph','Git graph','Git review','Git review']] as const){
   test(`one approval in ${firstTitle} opens ${secondTitle} and the workspace without asking again`,async({page})=>{
     const recording=await session(first.replace(' ','-'),first==='Git review'?'77777777-7777-4777-8777-777777777772':'77777777-7777-4777-8777-777777777773');
     await page.request.get(`${server.url}/v1/recordings/${recording}/git`,{headers:{authorization:`Bearer ${server.token}`}});
@@ -58,7 +58,7 @@ test('a held status read shows no approval to click',async({page})=>{
   let release=()=>{};const held=new Promise<void>(done=>{release=done;});
   await page.route(`**/v1/recordings/*/git`,async route=>{await held;await route.continue();});
   await open(page,id);
-  for(const [destination,title] of [['Git review','Git review'],['Git graph','Git history']] as const){
+  for(const [destination,title] of [['Git review','Git review'],['Git graph','Git graph']] as const){
     await openGitDestination(page,destination);
     const dialog=page.getByRole('dialog',{name:title,exact:true});
     await expect(dialog.getByText('Checking Git access…')).toBeVisible();

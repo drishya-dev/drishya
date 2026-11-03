@@ -25,4 +25,5 @@
   .git-review-identity small { font-size:var(--text-2xs); }
   :root[data-ui-version=modern] .modern-git-drawer .git-review-compact { padding-inline:10px; gap:5px; }
 }
-
+/* UI-8: an untracked file has no patch; a sentence says so instead of posing as one. */
+:root[data-ui-version=modern] .git-untracked-note { margin:16px; color:var(--t3); font:var(--text-xs)/1.6 var(--sans); }

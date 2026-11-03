@@ -54,10 +54,10 @@ for (const width of [600, 1440]) {
     await openGitDestination(page, 'Git review'); const reader = page.getByRole('dialog', { name: 'Git review', exact: true }); await expect(reader).toBeVisible();
     await expect(reader.getByRole('button', { name: 'Approve read-only Git', exact: true })).toBeVisible();
     await reader.getByRole('button', { name: 'Close Git review', exact: true }).click(); await expect(git).toBeFocused();
-    await openGitDestination(page, 'Git graph'); const atlas = page.getByRole('dialog', { name: 'Git history', exact: true }); await expect(atlas).toBeVisible();
+    await openGitDestination(page, 'Git graph'); const atlas = page.getByRole('dialog', { name: 'Git graph', exact: true }); await expect(atlas).toBeVisible();
     await expect(atlas.getByRole('button', { name: 'Approve read-only Git', exact: true })).toBeVisible();
     await page.setViewportSize({ width: width === 600 ? 1440 : 600, height: 900 }); await expect(atlas).toHaveCount(1); await expect(atlas).toBeVisible();
-    await atlas.getByRole('button', { name: 'Close Git history', exact: true }).click(); await expect(git).toBeFocused();
+    await atlas.getByRole('button', { name: 'Close Git graph', exact: true }).click(); await expect(git).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
   test('replay, combined sessions, absent metadata and offline evidence at ' + width, async ({ page }) => {
@@ -85,7 +85,7 @@ test('the two readers retain loading, empty, failure and command-palette behavio
   await reader.getByRole('button', { name: 'Refresh changes' }).click(); await expect(reader).toContainText('Synthetic inspection conflict.');
   await reader.getByRole('button', { name: 'Close Git review', exact: true }).click();
   await page.route('**/git/history?*', route => route.fulfill({ status: 500, json: { error: 'Synthetic history unavailable.' } }));
-  await openGitDestination(page, 'Git graph'); const atlas = page.getByRole('dialog', { name: 'Git history', exact: true });
+  await openGitDestination(page, 'Git graph'); const atlas = page.getByRole('dialog', { name: 'Git graph', exact: true });
   const approve = atlas.getByRole('button', { name: 'Approve read-only Git', exact: true }); if (await approve.isVisible()) await approve.click();
   await expect(atlas.getByRole('alert')).toContainText('Synthetic history unavailable.');
 });
@@ -94,7 +94,7 @@ test('Git destinations switch readers without leaving another open', async ({ pa
   await open(page);
   await openGitDestination(page, 'Git review');
   const review = page.getByRole('dialog', { name: 'Git review', exact: true });
-  const graph = page.getByRole('dialog', { name: 'Git history', exact: true });
+  const graph = page.getByRole('dialog', { name: 'Git graph', exact: true });
   await expect(review).toBeVisible();
   await openGitDestination(page, 'Git graph');
   await expect(graph).toBeVisible(); await expect(review).toHaveCount(0);
