@@ -1371,6 +1371,10 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 ## Decisions made
 
+- **3 Nov, Yash with Claude: the stage takes the room minimised panels give back.** Reverses the earlier rule that minimising Files keeps the agent's allocation stable. Minimised Files moves the stage's left edge to the window margin; a minimised Toolbox moves its right edge, and the prompt rail with it, out to the button, which waits at the middle of its edge. Why: on a small laptop screen people who are not reading the surroundings want the work as wide as possible. 600 px is unchanged (panels there are overlays).
+
+- **3 Nov, Yash: plans and Toolbox lists start folded in every session.** A plan shows its heading (revision, done of total) and opens on request; MCP servers, Agents and Available tools show their counts. An explicit open is remembered per session. Why: the old open default plus per-session memory made the same surface look different from one session to the next.
+
 - **2 Nov, Yash with Claude: Home reads one line of a workspace before approval.** To group a linked worktree under its repository the daemon reads that folder's `.git` pointer. It is a path, not workspace content, and it is only used for the grouping, so workspace consent stays the boundary for file bytes. Agent worktrees under `.claude/worktrees/` are grouped from the path alone, so they stay grouped after deletion. Any other deleted worktree stays its own group rather than being guessed.
 
 - **1 November — UI-20, one reading of a step (Yash):** Expand stays and takes the Inspector's test runs, links, Save moment, Investigate and review notes; then the Inspector goes. Two readings of one step meant nobody could guess which held what, and the side panel is what squeezed the history.
