@@ -19,7 +19,7 @@
 .mh-search input:focus-visible { outline:0!important;box-shadow:none!important; }.mh-search:focus-within { box-shadow:0 1px 0 var(--modern-accent); }.mh-header .brand-mark { width:28px;height:28px;flex:none; }
 
 /* Retain the browser's select semantics, focus handling and outside dismissal. */
-.mh-row-stats {display:flex;align-items:center;gap:8px;white-space:nowrap;font:var(--text-xs)/18px var(--mono);font-variant-numeric:tabular-nums;color:var(--t2);}
+.mh-row-stats {display:flex;align-items:center;gap:8px;white-space:nowrap;font:var(--text-xs)/18px var(--sans);font-variant-numeric:tabular-nums;color:var(--t2);}
 .mh-stat-added {color:var(--pass);}
 .mh-stat-removed {color:var(--fail);}
 

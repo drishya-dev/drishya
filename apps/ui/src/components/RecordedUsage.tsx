@@ -58,7 +58,7 @@ export function UsagePeek() {
   const recorded = mode === 'history' ? projection?.usage?.latest : undefined;
   const native = controller?.usage;
   const brief = usageBrief(recorded);
-  return <Disclosure surface="session/usage" className="usage-peek"><summary>Usage{brief && <small className="usage-brief">{brief}</small>}</summary><div>
+  return <Disclosure surface="session/usage" initiallyOpen={false} className="usage-peek"><summary>Usage{brief && <small className="usage-brief">{brief}</small>}</summary><div>
     {context && <RequestContextLine reading={context} />}
     {recorded && <RecordedPoint point={recorded} />}
     {native && <section aria-label="Native runtime usage"><strong>Native runtime · {controller?.harness === 'codex' ? 'Last model request' : 'Connected turn'}</strong><Rows rows={[

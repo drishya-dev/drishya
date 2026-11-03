@@ -66,7 +66,7 @@ for(const width of [600,1440])test(`Workspace, Changes and Git review find files
   // Consent is shared by the daemon across these viewport cases. Wait for its
   // actual receipt, not the reader's provisional unapproved first frame.
   const status=await (await statusResponse).json();if(status.approved)await expect(refresh).toBeVisible();else await consent.click();
-  await expect(git.locator('.git-selected-file-header')).toContainText(op.path);await git.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await git.getByRole('button',{name:'View what the agent saw',exact:true}).click();await expect(git).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
+  await expect(git.locator('.git-selected-file-header strong')).toHaveAttribute('title',op.path);await git.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await git.getByRole('button',{name:'View what the agent saw',exact:true}).click();await expect(git).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
 });
 
 test('an off-page version is selected exactly and cached later bytes do not leak across replay',async({page})=>{

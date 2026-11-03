@@ -2,7 +2,7 @@ import type {GitHistoryPage,GitBranchComparison} from '../../../daemon/src/git-t
 import './git-branches.css';
 
 function Comparison({label,value}:{label:string;value?:GitBranchComparison}) {
-  return <span>{label}{value?` · ${value.name}`:''}{value?.basis==='conventional-name'?' (local convention)':''}: {value?.state==='known'?`ahead ${value.ahead} · behind ${value.behind}`:value?.state==='shallow'?'unavailable in shallow history':value?.state==='unrelated'?'no merge-base':value?.state==='unavailable'?'comparison unavailable':'unknown locally'}</span>;
+  return <span>{label}{value?` · ${value.name}`:''}{value?.basis==='conventional-name'?' (local convention)':''}: {value?.state==='known'?value.ahead||value.behind?`ahead ${value.ahead} · behind ${value.behind}`:'same commit':value?.state==='shallow'?'unavailable in shallow history':value?.state==='unrelated'?'no merge-base':value?.state==='unavailable'?'comparison unavailable':'unknown locally'}</span>;
 }
 
 /** Selection only changes the read request. Checked-out state always remains explicit. */

@@ -1,4 +1,7 @@
 .git-access { padding:20px; max-width:64ch; color:var(--t2); font:var(--text-xs)/1.7 var(--sans); }
 .git-access h3 { margin:0 0 6px; color:var(--t1); font:var(--weight-medium) var(--text-md)/1.5 var(--sans); }
-.git-access p { margin:0 0 8px; }
+section.git-access p { margin:0 0 8px; font:inherit; }
 .git-access .btn { margin-top:6px; }
+/* UI-8: the one question this window asks before anything is read, centred in the room the answer will fill. */
+.git-atlas .git-access, .git-review-dialog .git-access { margin:min(12vh,96px) auto 32px; padding:0 20px; }
+:root[data-ui-version=modern] .modern-git-drawer>section.git-access { margin:min(8vh,56px) auto 32px; padding:0 20px; border:0; background:none; }

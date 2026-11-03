@@ -12,6 +12,7 @@ import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { ReadingDialog } from './ProductShell.tsx';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { GitPatchReader } from './GitPatchReader.tsx';
+import { fileName } from '../lib/file-identity.ts';
 import { FileIcon } from './FileIcon.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { WorkspaceOptions } from './WorkspaceOptions.tsx';
@@ -26,6 +27,19 @@ function readMarks(key: string): Record<string, ReviewMark> {
 
 function GitBranchGlyph() {
   return <svg className="git-branch-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="6" cy="19" r="2.5" /><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6" /></svg>;
+}
+
+/** Porcelain codes are Git's shorthand; the list says what happened to the file. */
+function gitStatusWord(status: string): string {
+  const code = status.trim();
+  if (code === '??') return 'untracked';
+  if (code.includes('U')) return 'conflict';
+  if (code.includes('D')) return 'deleted';
+  if (code.includes('R')) return 'renamed';
+  if (code.includes('C')) return 'copied';
+  if (code.includes('A')) return 'added';
+  if (code.includes('M') || code.includes('T')) return 'modified';
+  return code;
 }
 
 export const openGitReview = () => window.dispatchEvent(new Event('drishya-git-review'));
@@ -176,15 +190,15 @@ function GitReader({ close }: { close: () => void }) {
         </nav>}
         <div className={`git-review-layout${modern && filesHidden ? ' git-files-hidden' : ''}`}>
           <aside id="git-changed-files" data-size={modern?fileBounds.state:undefined} style={modern&&fileBounds.maxBlockSize?{'--collection-cap':`${fileBounds.maxBlockSize}px`} as CSSProperties:undefined} hidden={modern && filesHidden} aria-label="Git changed files">
-            {snapshot.files.map(f => <button key={f.path} title={f.path} disabled={busy || checking} aria-pressed={f.path === selected} onClick={() => { setSelected(f.path); setPacket(undefined); }}><FileIcon path={f.path} /><span className="git-file-name">{modern ? <><strong>{f.path.split('/').at(-1)}</strong>{f.path.includes('/') && <small>{f.path.slice(0, f.path.lastIndexOf('/'))}</small>}</> : f.path}</span><small>{marks[f.path]?.fingerprint === f.fingerprint && marks[f.path]?.reviewed ? 'Reviewed' : marks[f.path] ? 'Changed' : f.status}</small></button>)}
+            {snapshot.files.map(f => <button key={f.path} title={f.path} disabled={busy || checking} aria-pressed={f.path === selected} onClick={() => { setSelected(f.path); setPacket(undefined); }}><FileIcon path={f.path} /><span className="git-file-name">{modern ? <><strong>{f.path.split('/').at(-1)}</strong>{f.path.includes('/') && <small>{f.path.slice(0, f.path.lastIndexOf('/'))}</small>}</> : f.path}</span><small>{marks[f.path]?.fingerprint === f.fingerprint && marks[f.path]?.reviewed ? 'Reviewed' : marks[f.path] ? 'Changed' : modern ? <span title={`Git status ${f.status.trim()}`}>{gitStatusWord(f.status)}</span> : f.status}</small></button>)}
             {!snapshot.files.length && <p>No visible changes.</p>}
             {!!snapshot.protectedCount && <p>{snapshot.protectedCount} protected paths excluded.</p>}
             {snapshot.omissions?.map(item => <div className="git-omission" key={item.path}><strong>{item.path}</strong><span>{item.reason === 'content-limit' ? 'Patch exceeds remaining 1 MiB response budget' : 'Patch exceeds the Git process output limit'}</span><button className="btn ghost small" disabled={busy || checking} onClick={() => { close(); useApp.setState({ currentFile: item.path }); }}>Open current file instead</button></div>)}
             {snapshot.totalAllowed === undefined && snapshot.omitted > 0 && <p>{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
           </aside>
           <section>{file && <>
-            <header className={modern ? 'git-selected-file-header' : undefined}><strong title={file.path}>{file.path}</strong><FileReadingActions path={file.path} compact onNavigate={close}/><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button>{!modern && <button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Agent work</button>}</header>
-            <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} openRecorded={(path, key) => { close(); useApp.getState().set({ filePanel: path, filePanelFocus: 'change', filePanelEvidence: key }); }} /></div>
+            <header className={modern ? 'git-selected-file-header' : undefined}><strong title={file.path}>{modern ? fileName(file.path) : file.path}</strong><FileReadingActions path={file.path} compact onNavigate={close}/><button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ currentFile: file.path }); }}>Open on disk</button>{!modern && <button className="btn" disabled={busy || checking} onClick={() => { close(); useApp.getState().set({ filePanel: file.path, filePanelFocus: 'change' }); }}>Agent work</button>}</header>
+            {modern && file.status === '??' ? <p className="git-untracked-note">Git does not track this file yet, so there is no patch. Open it on disk to read it.</p> : <div className="git-patch"><GitPatchReader key={`${file.path}:${file.fingerprint}`} file={file} openRecorded={(path, key) => { close(); useApp.getState().set({ filePanel: path, filePanelFocus: 'change', filePanelEvidence: key }); }} /></div>}
             {file.status !== '??' && <footer>
               <label><input type="checkbox" disabled={busy || checking} checked={exact && !!mark?.reviewed} onChange={e => update({ reviewed: e.target.checked })} /> Reviewed displayed patch</label>
               <textarea aria-label="Local review note" disabled={busy || checking} placeholder="Review note (local, not part of the session)" maxLength={2000} value={exact ? mark?.note ?? '' : ''} onChange={e => update({ note: e.target.value })} />
