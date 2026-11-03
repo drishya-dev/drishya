@@ -49,3 +49,33 @@ The opened step already identifies its file and has a note editor. A second Inve
 Opening a named file before consent must keep that filename visible; consent is an explicit prerequisite, not an anonymous empty Workspace. The layout menu is called Layout and the active file menu File, so their scope is visible as well as accessible. A Markdown file past the rendered-document limit opens directly as Source with one factual note; its text is available and is not an error or an apology requiring another click. Document stays disabled with its reason until the existing limit permits it. Draft editing, current-source conflicts, split panes, keyboard tab behavior and native submission are unchanged.
 
 The recorded-file reader keeps Workspace and Compare steps as its primary actions; reading today's disk file moves into its existing File actions menu. Compare with disk remains beside the exact recorded version it acts on. The step selector names the action/time/version, not the filename already in the header and trail. Source, comparison, trail and overflow states must still be reachable by keyboard. No source geometry or scroll-anchor ownership changes.
+
+## 3 November, Claude takes over: review of the Codex stack and what it left
+
+The three drafts were sound and followed the codebase's own idioms. Two gaps were fixed before merging them as #332: the image-title change in the reducer had no `REDUCER_VERSION` bump (now `r36`, so stored sessions re-project), and the MCP-name check in `History.tsx` read `document` during server rendering, which broke the as-of renderer unit. Three specs were updated to the stack's own decisions (name-first file title, reading on disk inside File actions, Modern naming an MCP tool once).
+
+**The 403 Codex could not explain.** Not a regression and not ancestor graph ownership. The continued Claude session `061e5f2d` worked in two worktrees, so the reducer leaves its projection without a single root (`multipleWorktrees`); the daemon then serves a files-only map, and a current file the session never touched is refused as outside the indexed workspace, even with both consents. The large-Markdown check was rerun on a single-root Claude session recorded for it (`0f901fc6`, 423,707 bytes, in the main checkout) and on Codex `546c410f`: 8 of 8 journeys pass at 600 and 1440.
+
+**Detector findings.** The 600 px "text occlusion" on an image summary is History content passing under the fixed header's session title, which is the intended edge veil, not a defect. The 11 px settings footnote is advisory and on the scale's smallest step; kept.
+
+**Also fixed:** a Codex session whose journal was deleted after import showed "Newer session work" with an error; the segment lookup now treats a missing parent journal as having no newer work.
+
+## Changes, Git, session menu, Home (draft #335)
+
+| Surface | Before | After | Why |
+| --- | --- | --- | --- |
+| Changes file rows | Full path in mono wrapping over three lines; every edit listed open; the actions menu on its own line | One line: file name, then folder (ellipsis), +/−, turn, actions, map; "N edits" opens the edits and net diff | A 124-file session read as a wall of edit lines; the list is of files |
+| Changes notes | Net-diff note at 15 px (`.product-dialog p` outranked it) | 11 px muted, like the other review notes | A footnote should not outweigh the file it annotates |
+| Git graph, Git review before approval | Branch select, refs note and Refresh shown on an unreadable history; consent boxed and left-aligned | Only the question, centred; controls appear once Git is readable (audit N9) | Controls that cannot work are clutter |
+| Git window name | Menu item "Git graph" opened a window titled "Git history" | Both "Git graph"; the saved window position keeps its old key | Words say what opens |
+| Git review list | Raw porcelain codes (`??`, ` M`) | untracked, modified, added, deleted, renamed, conflict (code kept in the title) | Text says what it is |
+| Untracked file | A sentence typeset as a one-line syntax-coloured patch | A plain sentence: no patch yet, open it on disk | Never pose a message as captured material |
+| Branch facts | "ahead 0 · behind 0" | "same commit" | Same fact, fewer numbers |
+| Session menu | Session details and Usage open by default; actions below the fold (187 px inner scroll on a real session) | Both closed by default and remembered once opened; the spec now asserts no inner scroll at rest | The menu leads with what it does |
+| Home row stats | Duration and counts in mono ("31 h 17 m" spread wide) | Same values in the reading face, tabular figures; reported zeros stay | A zero that was reported is a fact |
+
+Composer, Search, Notes and Settings were walked at 600 and 1440 on real sessions and needed no change in this family.
+
+**Checked:** Claude `ab475ed8` and Codex `6375533e` (scratch home), at 600 and 1440: Changes, Git review and graph before and after read-only approval (no horizontal overflow), session menu, Home, Settings, composer, Search, Notes. Focused specs: Changes 31, Git 28, menu 28, Home 3.
+
+**Still open in UI-8:** stylesheet ownership and dead Modern overrides; plans and toolbox lists; a light-palette pass over the new rows; the final batch gate. Then MOTION-1 and MOTION-3.
