@@ -1,0 +1,7 @@
+/* UI-8: the one switch to a recorded original. Quiet at rest; pressed reads as "showing the original". */
+.reading-caption { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.reading-caption>span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--t3); font:var(--text-2xs)/1.6 var(--sans); }
+.original-toggle { flex:none; min-height:var(--control-sm); padding:0 8px; border:1px solid transparent; border-radius:var(--round-sm); background:transparent; color:var(--t3); font:var(--weight-medium) var(--text-2xs)/1 var(--sans); cursor:pointer; }
+.original-toggle:hover { color:var(--t1); border-color:var(--line); }
+.original-toggle[aria-pressed=true] { color:var(--t1); border-color:var(--line-2,var(--line)); background:var(--s2); }
+.original-toggle:focus-visible { outline:1px solid var(--t2); outline-offset:2px; }
