@@ -64,8 +64,6 @@
 :root[data-palette="jet"] .history .cmd { background: #0b0b0b; border-color: #242424; }
 :root[data-palette="jet"] .history .op.selected { outline-color: var(--gold); }
 :root[data-palette="jet"] .history .op.selected, :root[data-palette="jet"] .history .op.lit { box-shadow: var(--lift-strong); border-color: #3a3a3a; }
-:root[data-palette="jet"] .workspace-views { background: #101010; border-color: #1f1f1f; }
-:root[data-palette="jet"] .workspace-views [aria-pressed="true"] { background: #1a1a1a; box-shadow: inset 0 -2px var(--gold); color: #f4f1eb; }
 :root[data-palette="jet"] .dock { background: #0d0d0d; }
 :root[data-palette="jet"] .dock .instrument.on, :root[data-palette="jet"] .dock .instrument:hover { background: #161616; }
 :root[data-palette="jet"] .repo-lens { background: #101010; }
@@ -86,7 +84,7 @@
 
 body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-rendering: optimizeLegibility; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.inst-uses, .reading-status, .passage-time, .activity-count { font-variant-numeric: tabular-nums; }
+.inst-uses, .reading-status, .activity-count { font-variant-numeric: tabular-nums; }
 * { scrollbar-width: thin; scrollbar-color: var(--line-3) transparent; }
 ::selection { background: color-mix(in srgb, var(--focus) 32%, transparent); }
 
@@ -101,9 +99,6 @@ body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-re
 .crown-actions .btn.ghost { color: var(--t2); border-radius: var(--round-sm); }
 .crown-actions .btn.ghost:hover { color: var(--t1); background: var(--s2); }
 .workspace-bar { border-bottom: 1px solid var(--line); }
-.workspace-views { background: var(--s1); border: 1px solid var(--line); border-radius: var(--round-md); }
-.workspace-views button { border-radius: var(--round-sm); }
-.workspace-views [aria-pressed="true"] { background: var(--s3); box-shadow: inset 0 -2px var(--focus); }
 
 /* ── the reading column: more room for actual source and output ───────────────────────── */
 .history-inner { max-width: 1360px; padding: 26px 32px 160px; }
@@ -133,7 +128,6 @@ body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-re
 /* ── the tool dock: compact rows, like a real toolbox ─────────────────────────────────── */
 .dock { padding: 16px 12px 20px 10px; border-left: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 60%, var(--s1)); }
 .dock .dock-head { font-size: var(--text-2xs); font-weight: var(--weight-medium); color: var(--t3); margin: 2px 8px 4px; }
-.dock .dock-basis { margin: 0 8px 10px; color: var(--t4); }
 .dock .instrument { padding: 6px 8px; gap: 1px 8px; border-radius: var(--round-sm); }
 .dock .instrument .op-kind { font-size: var(--text-xs); color: var(--t2); }
 .dock .inst-tools { grid-column: 1 / -1; font-size: var(--text-2xs); color: var(--t4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 30px; line-height: 1.5; }
@@ -150,11 +144,8 @@ body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-re
 
 /* ── left working set ─────────────────────────────────────────────────────────────────── */
 .spine { border-right: 1px solid var(--line); }
-.spine-head { font-weight: var(--weight-medium); color: var(--t3); }
 .repo-lens { border-radius: var(--radius); border-color: var(--line-2); box-shadow: var(--lift); overflow: hidden; }
 .spine .spine-file { gap: 2px 8px; }
-.spine .spine-file.edited .spine-name { color: var(--edited); }
-.spine .spine-file.tone-fail .spine-name { color: var(--fail); }
 
 /* ── transport and the history activity timeline ──────────────────────────────────────── */
 .transport { border-top: 1px solid var(--line); background: var(--chrome); }
@@ -206,8 +197,6 @@ body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-re
 .theme-option.theme-system i { background: linear-gradient(90deg, #0b0b0b 50%, #f1f0ea 50%); --sw-s: #8888; --sw-line: #8886; --sw-accent: #d4b98a; }
 
 /* ── motion: a file lifts from its real origin and travels into the action ─────────────── */
-.origin-file-transfer > path { fill: var(--s1); stroke: currentColor; stroke-width: 1.2; stroke-linejoin: round; }
-.origin-file-transfer > path + path { fill: none; stroke-width: 1; opacity: .75; }
 
 @media (prefers-reduced-motion: reduce) {
   .history .op, .activity-mark, .op-expand, .crown .agent { transition: none; }
