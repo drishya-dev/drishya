@@ -22,8 +22,8 @@ function SessionStats({stats}: {stats: RecordingSummary['stats']}) {
   const basis = stats.source === 'claude-cost-state' ? 'reported by Claude Code' : 'recorded by Codex';
   return <span className="mh-row-stats">
     {stats.durationMs !== undefined && <span title={`${stats.durationMs} ms · ${basis}`}>{elapsed(stats.durationMs)}</span>}
-    {stats.source === 'claude-cost-state' && stats.linesAdded !== undefined && <span className="mh-stat-added" title={`${stats.linesAdded} lines added · ${basis}`}>+{statCount.format(stats.linesAdded)}</span>}
-    {stats.source === 'claude-cost-state' && stats.linesRemoved !== undefined && <span className="mh-stat-removed" title={`${stats.linesRemoved} lines removed · ${basis}`}>−{statCount.format(stats.linesRemoved)}</span>}
+    {stats.source === 'claude-cost-state' && !!stats.linesAdded && <span className="mh-stat-added" title={`${stats.linesAdded} lines added · ${basis}`}>+{statCount.format(stats.linesAdded)}</span>}
+    {stats.source === 'claude-cost-state' && !!stats.linesRemoved && <span className="mh-stat-removed" title={`${stats.linesRemoved} lines removed · ${basis}`}>−{statCount.format(stats.linesRemoved)}</span>}
     {stats.source === 'codex-turns' && stats.lastOutcome !== undefined && stats.lastOutcome !== 'completed' && <span title={`Last turn ${stats.lastOutcome} · ${basis}`}>{stats.lastOutcome}</span>}
   </span>;
 }
