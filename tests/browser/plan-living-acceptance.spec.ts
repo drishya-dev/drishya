@@ -68,14 +68,14 @@ for (const width of [600, 1440]) test(`reading choices survive new plan data, re
   await open(page,id); await expect(checklist.locator('li')).toHaveCount(12);
   await page.reload(); await expect(checklist.locator('li')).toHaveCount(12);
   await page.locator('.workspace-menu > summary[aria-label="More workspace options"]').click();
-  await expect(page.locator('.usage-peek')).toHaveAttribute('open','');
-  await expect(page.locator('.session-identity')).toHaveAttribute('open','');
+  await expect(page.locator('.usage-peek')).not.toHaveAttribute('open');
+  await expect(page.locator('.session-identity')).not.toHaveAttribute('open');
   await page.locator('.usage-peek summary').click();
   await page.locator('.session-identity summary').click();
   await page.reload();
   await page.locator('.workspace-menu > summary[aria-label="More workspace options"]').click();
-  await expect(page.locator('.usage-peek')).not.toHaveAttribute('open');
-  await expect(page.locator('.session-identity')).not.toHaveAttribute('open');
+  await expect(page.locator('.usage-peek')).toHaveAttribute('open','');
+  await expect(page.locator('.session-identity')).toHaveAttribute('open','');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
   await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Go to checklist',exact:true}).press('Enter');
