@@ -1,0 +1,26 @@
+/* UI-8 (Yash, 3 Nov): the plain network graph. One line per lane, rounded corners where a branch leaves or rejoins,
+   a soft halo under each line (the only texture kept from the thread art), commits as dots, labels on branch heads. */
+.network-viewport { position:relative; flex:1; min-height:180px; overflow:auto; overscroll-behavior:contain; padding:8px 0 12px; }
+.network-world { position:relative; margin:0 auto 0 0; }
+.network-links { position:absolute; inset:0 auto auto 0; overflow:visible; }
+.network-edge path { fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.network-halo { stroke-width:9; opacity:.16; filter:blur(3px); }
+.network-core { stroke-width:2; pointer-events:stroke; cursor:pointer; }
+.network-edge.lane-0 :is(.network-halo,.network-core) { stroke:var(--graph-node,var(--t1)); }
+.network-edge.lane-0 .network-core { stroke-width:2.5; }
+.network-edge.lane-1 :is(.network-halo,.network-core) { stroke:var(--source); }
+.network-edge.lane-2 :is(.network-halo,.network-core) { stroke:var(--pass); }
+.network-edge.lane-3 :is(.network-halo,.network-core) { stroke:var(--edited); }
+.network-edge.lane-4 :is(.network-halo,.network-core) { stroke:var(--external); }
+.network-edge.lane-5 :is(.network-halo,.network-core) { stroke:var(--focus); }
+.network-edge.muted { opacity:.28; }
+:root[data-low-resource] .network-halo { display:none; }
+.network-commit { position:absolute; width:12px; height:12px; margin:-6px 0 0 -6px; padding:0; border:2px solid var(--bg); border-radius:50%; background:var(--graph-node,var(--t1)); cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb,var(--graph-node,var(--t1)) 40%,transparent); }
+.network-commit:not(.thread-primary) { background:var(--t2); }
+.network-commit.linked { box-shadow:0 0 0 2px var(--focus); }
+.network-commit[aria-pressed=true] { box-shadow:0 0 0 3px var(--focus); }
+.network-commit:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
+.network-commit.muted { opacity:.35; }
+.network-label { position:absolute; transform:translate(-50%,12px); padding:1px 6px; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s2); color:var(--t2); font:var(--text-2xs)/1.5 var(--mono); white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+.network-label.main { color:var(--t1); border-color:var(--line-3); }
+.network-graph .thread-zoom output { min-width:4ch; text-align:center; font-variant-numeric:tabular-nums; }
