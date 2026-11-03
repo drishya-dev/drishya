@@ -170,6 +170,9 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   const gap = gapLabel(gapBefore(steps, shownIndex));
   const frameNote = !frameStep ? 'No frame recorded yet' : shown.image ? 'Frame returned by this step' : `No new frame recorded · showing step ${shown.frame! + 1}`;
   const ratio = image?.width && image.height ? { aspectRatio: `${image.width} / ${image.height}` } : undefined;
+  // UI-8 (Yash, 3 Nov): what the agent did to reach this screen, the recorded steps since the previous frame, up to this one.
+  let since = shownIndex; while (since > 0 && !steps[since - 1]!.image) since--;
+  const earlier = Math.max(0, shownIndex + 1 - since - 12), trail = steps.slice(since + earlier, shownIndex + 1);
   return <dialog ref={dialog} className={`screen-view${full ? ' full' : ''}`} aria-label="Screen view" onClose={onClose}
     onClick={event => { if (event.target === dialog.current) dialog.current.close(); }}>
     <div className="screen-bar">
@@ -182,9 +185,16 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
       <button type="button" aria-pressed={full} title="Full window (F)" onClick={() => setFull(v => !v)}>{full ? 'Window' : 'Full window'}</button>
       <button type="button" onClick={() => dialog.current?.close()}>Close</button>
     </div>
+    <div className="screen-body">
     <div className="screen-stage">
       {url && image ? <Frame key={shown.frame} url={url} image={image} ratio={ratio} step={shown} previous={shown.frame !== steps[shownIndex - 1]?.frame && sameShape(steps[steps[shownIndex - 1]?.frame ?? -1]?.image, image) ? imageUrl(steps[steps[shownIndex - 1]!.frame!]!.image) : undefined}/>
         : <div className="screen-missing" role="status" style={ratio}>{image ? `Image not retained${image.omitted ? `: ${WHY[image.omitted] ?? image.omitted}` : ''}${image.width && image.height ? ` · recorded ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${bytesLabel(image.bytes)}` : ''}` : 'No frame recorded yet'}</div>}
+    </div>
+    <section className="screen-trail" aria-label="How the agent reached this screen">
+      <h3>To reach this screen</h3>
+      {earlier > 0 && <button type="button" className="screen-trail-earlier" onClick={() => go(since)}>{earlier} earlier {earlier === 1 ? 'step' : 'steps'}</button>}
+      <ol>{trail.map(s => { const i = steps.indexOf(s); return <li key={s.id}><button type="button" aria-current={i === shownIndex ? 'step' : undefined} className={s.status === 'error' ? 'failed' : undefined} onClick={() => go(i)}><small>{i + 1}</small><span>{describe(s)}</span>{s.status === 'error' && <em>failed</em>}</button></li>; })}</ol>
+    </section>
     </div>
     <div className="screen-caption">
       <strong>{describe(shown)}</strong>
