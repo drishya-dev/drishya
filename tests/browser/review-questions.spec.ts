@@ -22,9 +22,9 @@ test('a note survives reload, returns to its step and resolves only explicitly',
   const targetTitle = await page.locator('article.op.expanded .op-title').first().innerText();
   await step.getByText('Add a note', { exact: true }).click();
   await step.getByRole('textbox', { name: 'Note on this step', exact: true }).fill('Check the zero-total path before approving');
-  await step.getByRole('button', { name: 'Needs follow-up' }).click();
+  await step.getByRole('button', { name: 'Needs follow-up' }).focus(); await page.keyboard.press('Enter');
   await step.getByRole('textbox', { name: 'Note owner' }).fill('Reviewer');
-  await step.getByRole('button', { name: 'Save note', exact: true }).click();
+  await step.getByRole('button', { name: 'Save note', exact: true }).focus(); await page.keyboard.press('Enter');
   await expect(step).toContainText('Saved locally');
   await page.reload();
   await page.getByRole('button', { name: 'Notes · 1', exact: true }).click();
