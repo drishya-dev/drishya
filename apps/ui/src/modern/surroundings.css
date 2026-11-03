@@ -43,7 +43,6 @@
 :root[data-ui-version=modern][data-experience=classic] .workbench-station .instrument[aria-pressed=true] { background:var(--modern-raised); box-shadow:inset 2px 0 var(--modern-accent); }
 :root[data-ui-version=modern][data-experience=classic] .workbench-station :is(.server,.station-agent-menu) { border-color:var(--line); }
 :root[data-ui-version=modern][data-experience=classic] .station-agent-menu>summary { padding:9px 6px; border-radius:var(--round-md); }
-:root[data-ui-version=modern][data-experience=classic] .station-agent-row { border-radius:var(--round-sm); }
 /* One restrained composer surface; the shared resize/permission/attachment logic owns it. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .prompt-composer.open { border:1px solid var(--modern-hairline); border-radius:var(--round-lg); background:color-mix(in srgb,var(--modern-surface) 94%,transparent); padding:13px 17px 11px; box-shadow:0 12px 40px #0003,inset 0 1px #ffffff06; backdrop-filter:blur(12px); }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .prompt-composer:focus-within { border-color:color-mix(in srgb,var(--t2) 34%,transparent); box-shadow:0 12px 40px #0003,inset 0 1px #ffffff08; }

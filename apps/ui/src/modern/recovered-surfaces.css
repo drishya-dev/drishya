@@ -51,7 +51,6 @@
 .modern-toolbox .md-server>div>button { width:100%; display:flex; align-items:center; gap:5px; padding:8px 3px; font:var(--text-2xs)/1.6 var(--sans); color:var(--t2); text-align:left; border-radius:var(--round-sm); }
 .modern-toolbox .md-server>div>button>span { flex:1; min-width:0; overflow-wrap:anywhere; }
 .modern-toolbox .md-runtime-tool { display:block; font:var(--text-2xs)/1.6 var(--mono); color:var(--t3); padding:6px 0; overflow-wrap:anywhere; }
-.md-dock-foot { font-size:var(--text-2xs); color:var(--t3); padding:10px 8px 5px; }
 .md-clear-filter { width:100%; padding:8px; font:var(--text-2xs)/1.5 var(--sans); color:var(--focus); }
 :root[data-ui-version=modern] .modern-toolbox [aria-pressed=true] { background:color-mix(in srgb,var(--focus) 10%,var(--s1)); }
 /* A compact right reader; metadata must not take the patch's reading space. */
@@ -73,8 +72,6 @@
 :root[data-ui-version=modern] .modern-git-drawer .btn { font-size:var(--text-xs); min-height:var(--control-md); padding:5px 8px; border-radius:var(--round-sm); }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-toolbar { display:flex; align-items:center; flex-wrap:wrap; padding:9px 14px; gap:6px; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-toolbar>span { flex:1 1 170px; min-width:0; overflow-wrap:anywhere; margin-right:auto; font:var(--text-2xs)/1.6 var(--mono); }
-.modern-git-scope { padding:9px 14px; color:var(--t3); font:var(--text-2xs)/1.6 var(--sans); }
-.modern-git-scope summary { cursor:pointer; }.modern-git-scope p { margin:8px 0 0; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout { grid-template-columns:clamp(146px,22%,220px) minmax(0,1fr); align-items:start; gap:12px; padding:0 12px 14px; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside { background:var(--s1); border:1px solid var(--line); border-radius:var(--round-md); padding:4px; }
 :root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside button { min-height:32px; gap:6px; border:0; border-radius:var(--round-sm); font-size:var(--text-2xs); padding:7px 5px; }
@@ -128,7 +125,6 @@
 :root[data-ui-version=modern] .modern-session-header .studio-session { grid-column:2; grid-row:1; }
 :root[data-ui-version=modern] .modern-session-header .studio-actions { grid-column:3; grid-row:1; }
 
-@media(max-width:600px) { .modern-composer-intro {display:none;} }
 
 /* Ordinary phone controls share a floating row above the measured composer. */
 @media(max-width:820px) {

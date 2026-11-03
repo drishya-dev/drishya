@@ -25,7 +25,6 @@
 .connected-workspace.exploring .folder-explorer { animation: none; opacity: 0; pointer-events: none; }
 .folder-explorer header .icon-btn { height: 22px; }
 .connected-workspace .dock { background: linear-gradient(to left, var(--bg), color-mix(in srgb, var(--bg) 75%, transparent)); }
-.connected-workspace .folder-explorer .spine-name { font-size: var(--text-xs); }
 .connected-workspace .folder-tree button { font-size: var(--text-xs); padding-block: 5px; }
 .connected-workspace .folder-explorer .file-icon { width: 17px; height: 17px; }
 .connected-workspace .dock .instrument .op-kind { font-size: var(--text-2xs); }
@@ -177,8 +176,6 @@
 
 .connected-workspace .workspace-bar { z-index: 7; }
 
-@media (min-width: 821px) {
-}
 
 .connected-workspace .crown:has(details[open]) { z-index: 35; }
 .workspace-menu > div { max-height: 70dvh; overflow: auto; }
@@ -218,12 +215,7 @@
 .connected-workspace .history .op-head > .state { flex-shrink: 0; }
 .connected-workspace .history .op > .material-context,
 .connected-workspace .history .op > .op-foot { flex: 0 0 auto; padding: 4px 8px; margin: 0; }
-.connected-workspace .history .request-fields,
-.connected-workspace .history .result-fields,
-.connected-workspace .history .request-fields > div,
-.connected-workspace .history .result-fields > div,
-.connected-workspace .history .request-fields dd,
-.connected-workspace .history .result-fields dd { min-width: 0; overflow-wrap: anywhere; }
+.connected-workspace .history .result-fields, .connected-workspace .history .result-fields > div, .connected-workspace .history .result-fields dd { min-width: 0; overflow-wrap: anywhere; }
 .connected-workspace .history .structured-result { min-width: 0; max-width: 100%; }
 .connected-workspace .history .structured-result table { min-width: 0; width: 100%; table-layout: fixed; }
 .connected-workspace .history .structured-result th,
@@ -312,7 +304,6 @@
 
 .connected-workspace .history { scroll-padding-top: calc(var(--crown-h) + 36px); }
 
-.prompt-composer .controller-receipt .output { font: var(--text-md)/1.75 var(--sans); }
 .hover-reading-slot { border: 1px solid var(--line); border-radius: var(--round-lg); }
 
 .connected-workspace .history-prompt-marks { top: calc(var(--crown-h) + 16px); }
@@ -504,7 +495,7 @@
 .send-confirmation { position: absolute; bottom: calc(100% + 10px); right: 0; padding: 12px; width: min(340px, 100%); background: var(--s1); border: 1px solid var(--line-2); border-radius: var(--round-md); font-size: var(--text-xs); box-shadow: 0 12px 32px #0005; }
 .send-confirmation label { display: flex; align-items: center; gap: 6px; }.send-confirmation small { display: block; margin: 8px 0; font-size: var(--text-2xs); color: var(--t3); }.send-confirmation button { padding: 5px 8px; }
 .native-turn-details { position: absolute; bottom: calc(100% + 12px); left: 0; right: 0; max-height: 38dvh; overflow: auto; background: var(--s1); border-radius: var(--round-md); }
-.native-turn-details:empty { display: none; }.native-turn-details .controller-receipt { margin: 0; font-size: var(--text-2xs); }.native-turn-details summary { padding: 7px 10px; cursor: pointer; }.native-turn-details pre { padding: 8px 12px; font-size: var(--text-2xs); overflow-wrap: anywhere; white-space: pre-wrap; }
+.native-turn-details:empty { display: none; }.native-turn-details summary { padding: 7px 10px; cursor: pointer; }.native-turn-details pre { padding: 8px 12px; font-size: var(--text-2xs); overflow-wrap: anywhere; white-space: pre-wrap; }
 .cli-setup { font-size: var(--text-2xs); max-height: 180px; overflow: auto; }.cli-setup code { display: block; user-select: all; margin: 6px 0; }.cli-setup p code { display: inline; }
 .runtime-tools { flex: none; }.runtime-tools summary { padding: 7px 0; }.runtime-tools ol { margin: 4px 0; padding-left: 22px; max-height: min(34dvh, 280px); overflow: auto; overscroll-behavior: contain; }.runtime-tools li { padding: 4px 5px; overflow-wrap: anywhere; }.runtime-tools li::marker { color: var(--t3); font-size: var(--text-2xs); }
 
