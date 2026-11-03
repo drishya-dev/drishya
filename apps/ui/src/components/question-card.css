@@ -1,16 +1,16 @@
 /* CONTENT-3: a question is material, not a form. Flat rows; the chosen option is the only coloured thing. */
 .question-card {display:grid;gap:14px;padding:6px 0 2px;min-width:0;}
 .question {display:grid;gap:6px;min-width:0;}
-.question-header {font:10px/1.5 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--t3);}
-.question-text {margin:0;font:13px/1.55 var(--sans);color:var(--t1);overflow-wrap:anywhere;}
+.question-header {font:var(--text-2xs)/1.5 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--t3);}
+.question-text {margin:0;font:var(--text-sm)/1.55 var(--sans);color:var(--t1);overflow-wrap:anywhere;}
 .question-options {list-style:none;margin:2px 0 0;padding:0;display:grid;gap:2px;}
 .question-options li {display:grid;grid-template-columns:12px minmax(0,1fr);column-gap:8px;row-gap:1px;padding:5px 2px;color:var(--t3);}
 .question-mark {width:8px;height:8px;margin-top:6px;border-radius:50%;border:1px solid var(--line-2);}
 .question-options li[data-chosen] {color:var(--t1);}.question-options li[data-chosen] .question-mark {background:var(--pass);border-color:var(--pass);}
-.question-label {font:12.5px/1.5 var(--sans);overflow-wrap:anywhere;}
-.question-description {grid-column:2;font:11px/1.5 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
-.question-typed {margin:0;font:12.5px/1.55 var(--sans);color:var(--t1);overflow-wrap:anywhere;}.question-typed small {color:var(--t3);margin-right:4px;}
-.question-state {font:11px/1.5 var(--sans);color:var(--t3);}
+.question-label {font:var(--text-sm)/1.5 var(--sans);overflow-wrap:anywhere;}
+.question-description {grid-column:2;font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
+.question-typed {margin:0;font:var(--text-sm)/1.55 var(--sans);color:var(--t1);overflow-wrap:anywhere;}.question-typed small {color:var(--t3);margin-right:4px;}
+.question-state {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}
 @media(forced-colors:active){.question-options li[data-chosen] .question-mark {background:Highlight;}}
 
 .tool-approval .approval-path {display:block;overflow-wrap:anywhere;color:var(--t3);margin-top:6px;}

@@ -1,14 +1,16 @@
 /* UI-20: a step's one reading. What is known around it sits under its own material, quietly. */
 .step-reading {display:grid;gap:12px;margin:12px 16px 16px;padding-top:12px;border-top:1px solid var(--line);min-width:0;}
 .step-reading .evidence-navigation,.step-reading .prov {justify-self:start;}
-.step-links>summary {cursor:pointer;width:max-content;font:12px/1.6 var(--sans);color:var(--t2);}
+.step-links>summary {cursor:pointer;width:max-content;font:var(--text-xs)/1.6 var(--sans);color:var(--t2);}
 .step-links>summary:hover {color:var(--t1);}
 .step-links>.links {margin-top:8px;}
 .step-notes {display:flex;flex-wrap:wrap;align-items:start;gap:8px 16px;min-width:0;}
 .step-notes .review-question-editor {flex:1 1 280px;min-width:0;margin:0;padding:0;border:0;}
 .step-reading .investigation-entry {margin:0;}
 .captured-script {margin:12px 16px 0;}
-.captured-script>summary {cursor:pointer;width:max-content;font:12px/1.6 var(--sans);color:var(--t2);}
+.captured-script>summary {cursor:pointer;width:max-content;font:var(--text-xs)/1.6 var(--sans);color:var(--t2);}
 .step-note-follow {margin-top:8px;}.step-note-follow[aria-pressed=true] {color:var(--t1);border-color:var(--modern-accent,var(--line));}
 .step-note-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
-.step-notes-dialog h3 {margin:0 0 4px;color:var(--t3);font:500 11px/1.5 var(--sans);}
+.step-notes-dialog h3 {margin:0 0 4px;color:var(--t3);font:var(--weight-medium) var(--text-2xs)/1.5 var(--sans);}
+
+:root[data-ui-version=modern] .step-reading .investigation-entry {border:0;padding-top:0;}

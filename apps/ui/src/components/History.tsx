@@ -1072,7 +1072,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'mcp':
       return (
         <div className="mcp">
-          <div className="mcp-tool">{d.tool}</div>
+          {(typeof document==='undefined'||document.documentElement.dataset.uiVersion!=='modern')&&<div className="mcp-tool">{d.tool}</div>}
           <ToolInput value={d.input}/>
           <ResultArea state={op.status} resolving={resolving}>
             <div className="mcp-result"><StoredToolResult op={op}/></div>

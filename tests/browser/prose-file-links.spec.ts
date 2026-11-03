@@ -58,9 +58,9 @@ test('local prose links open exact source without current-file IO or browser nav
  for(const index of [0,1,2]){
   const link=local.nth(index);await link.focus();await page.keyboard.press('Enter');
   const reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});await expect(reader).toBeVisible();
-  await expect(reader).toContainText('src/source.ts');
+  await expect(reader).toContainText('source.ts');
   await expect(reader).toContainText('capturedValue');
-  await expect(reader.getByRole('button',{name:'Enable workspace reading',exact:true})).toBeVisible();
+  await reader.getByLabel('File actions',{exact:true}).click();await expect(reader.getByRole('button',{name:'Enable workspace reading',exact:true})).toBeVisible();
   expect(page.url()).toBe(url);expect(diskRequests).toEqual([]);
   await reader.getByRole('button',{name:'Close Work on src/source.ts',exact:true}).click();await expect(reader).toHaveCount(0);
  }

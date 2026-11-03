@@ -10,7 +10,7 @@
   --mono: 'Geist Mono', 'JetBrains Mono', 'Cascadia Code', 'Cascadia Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
   --ease-out: cubic-bezier(.16, 1, .3, 1);
   --ease-move: cubic-bezier(.4, 0, .2, 1);
-  --radius: 10px;
+  --radius: var(--round-md);
   --surface-edge: color-mix(in srgb, var(--t1) 4%, transparent);
   --lift: 0 1px 0 var(--surface-edge) inset, 0 10px 28px -16px #000000b3;
   --lift-strong: 0 1px 0 var(--surface-edge) inset, 0 18px 44px -18px #000000cc;
@@ -84,7 +84,7 @@
 :root[data-palette="jet"] .tk-com { color: #85817a; font-style: italic; }
 :root[data-theme="light"] { --surface-edge: #ffffff; }
 
-body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering: optimizeLegibility; }
+body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-rendering: optimizeLegibility; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .inst-uses, .reading-status, .passage-time, .activity-count { font-variant-numeric: tabular-nums; }
 * { scrollbar-width: thin; scrollbar-color: var(--line-3) transparent; }
@@ -92,17 +92,17 @@ body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering:
 
 /* ── crown and workspace bar ──────────────────────────────────────────────────────────── */
 .crown { background: var(--chrome); border-bottom: 1px solid var(--line); }
-.brand { font-size: 13.5px; letter-spacing: -.01em; }
-.crown-title { font-weight: 500; font-size: 12.5px; }
+.brand { font-size: var(--text-sm); letter-spacing: -.01em; }
+.crown-title { font-weight: var(--weight-medium); font-size: var(--text-sm); }
 .crown .agent { padding: 4px 10px; border: 1px solid var(--line-2); background: var(--s1); transition: background-color 160ms ease-out, border-color 160ms ease-out; }
 .crown .agent:hover { background: var(--s2); border-color: var(--line-3); }
 .crown .agent.on { border-color: var(--agent); background: color-mix(in srgb, var(--agent) 12%, var(--s1)); }
 .crown .agent-dot { background: var(--agent); }
-.crown-actions .btn.ghost { color: var(--t2); border-radius: 7px; }
+.crown-actions .btn.ghost { color: var(--t2); border-radius: var(--round-sm); }
 .crown-actions .btn.ghost:hover { color: var(--t1); background: var(--s2); }
 .workspace-bar { border-bottom: 1px solid var(--line); }
-.workspace-views { background: var(--s1); border: 1px solid var(--line); border-radius: 8px; }
-.workspace-views button { border-radius: 5px; }
+.workspace-views { background: var(--s1); border: 1px solid var(--line); border-radius: var(--round-md); }
+.workspace-views button { border-radius: var(--round-sm); }
 .workspace-views [aria-pressed="true"] { background: var(--s3); box-shadow: inset 0 -2px var(--focus); }
 
 /* ── the reading column: more room for actual source and output ───────────────────────── */
@@ -118,39 +118,39 @@ body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering:
   background: linear-gradient(180deg, var(--s2), color-mix(in srgb, var(--s2) 70%, var(--s1)));
   padding: 9px 12px; min-height: 40px;
 }
-.history .op-kind { font-size: 10.5px; font-weight: 500; letter-spacing: .01em; }
-.history .op-title { font-size: 11.5px; }
-.history .code, .history .diff { font-size: 12px; line-height: 1.7; }
-.history .op-foot { font-size: 10.5px; }
-.history .prose { font-size: 13.5px; line-height: 1.8; max-width: 78ch; }
+.history .op-kind { font-size: var(--text-2xs); font-weight: var(--weight-medium); letter-spacing: .01em; }
+.history .op-title { font-size: var(--text-xs); }
+.history .code, .history .diff { font-size: var(--text-xs); line-height: 1.7; }
+.history .op-foot { font-size: var(--text-2xs); }
+.history .prose { font-size: var(--text-sm); line-height: 1.8; max-width: 78ch; }
 .history .passage-head { margin-bottom: 10px; }
-.history .passage-agent { font-weight: 500; color: var(--t1); }
-.op-expand { border-radius: 5px; transition: color 140ms ease-out, background-color 140ms ease-out; }
+.history .passage-agent { font-weight: var(--weight-medium); color: var(--t1); }
+.op-expand { border-radius: var(--round-sm); transition: color 140ms ease-out, background-color 140ms ease-out; }
 .op-expand:hover { color: var(--t1); background: var(--s3); }
 .history .cmd { background: color-mix(in srgb, var(--bg) 70%, var(--s1)); }
-.search-bead { border-radius: 6px; }
+.search-bead { border-radius: var(--round-sm); }
 
 /* ── the tool dock: compact rows, like a real toolbox ─────────────────────────────────── */
 .dock { padding: 16px 12px 20px 10px; border-left: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 60%, var(--s1)); }
-.dock .dock-head { font-size: 11px; font-weight: 500; color: var(--t3); margin: 2px 8px 4px; }
+.dock .dock-head { font-size: var(--text-2xs); font-weight: var(--weight-medium); color: var(--t3); margin: 2px 8px 4px; }
 .dock .dock-basis { margin: 0 8px 10px; color: var(--t4); }
-.dock .instrument { padding: 6px 8px; gap: 1px 8px; border-radius: 7px; }
-.dock .instrument .op-kind { font-size: 12px; color: var(--t2); }
-.dock .inst-tools { grid-column: 1 / -1; font-size: 10px; color: var(--t4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 30px; line-height: 1.5; }
-.dock .inst-uses { font-size: 11px; color: var(--t3); }
+.dock .instrument { padding: 6px 8px; gap: 1px 8px; border-radius: var(--round-sm); }
+.dock .instrument .op-kind { font-size: var(--text-xs); color: var(--t2); }
+.dock .inst-tools { grid-column: 1 / -1; font-size: var(--text-2xs); color: var(--t4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 30px; line-height: 1.5; }
+.dock .inst-uses { font-size: var(--text-2xs); color: var(--t3); }
 .dock .tool-mark { width: 22px; height: 22px; border-color: transparent; background: transparent; }
 .dock .instrument:hover .tool-mark, .dock .instrument.on .tool-mark { background: var(--s1); }
 .dock .instrument.active .op-kind, .dock .instrument.on .op-kind { color: var(--t1); }
 .dock .server { border: 0; background: transparent; padding: 2px 0; }
-.dock .server-name { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 7px; font: 12px var(--mono); color: var(--t2); }
+.dock .server-name { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: var(--round-sm); font: var(--text-xs) var(--mono); color: var(--t2); }
 .dock .server-name:hover { background: var(--s2); color: var(--t1); }
-.dock .server-tool { position: relative; padding: 2px 8px 2px 30px; border-radius: 6px; }
+.dock .server-tool { position: relative; padding: 2px 8px 2px 30px; border-radius: var(--round-sm); }
 .dock .server-tool::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 1px; background: var(--line-2); }
 .dock .server-tool .tool-mark { width: 20px; height: 20px; }
 
 /* ── left working set ─────────────────────────────────────────────────────────────────── */
 .spine { border-right: 1px solid var(--line); }
-.spine-head { font-weight: 500; color: var(--t3); }
+.spine-head { font-weight: var(--weight-medium); color: var(--t3); }
 .repo-lens { border-radius: var(--radius); border-color: var(--line-2); box-shadow: var(--lift); overflow: hidden; }
 .spine .spine-file { gap: 2px 8px; }
 .spine .spine-file.edited .spine-name { color: var(--edited); }
@@ -158,11 +158,11 @@ body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering:
 
 /* ── transport and the history activity timeline ──────────────────────────────────────── */
 .transport { border-top: 1px solid var(--line); background: var(--chrome); }
-.transport .icon-btn.txt, .transport .btn.ghost { border-radius: 7px; color: var(--t2); }
+.transport .icon-btn.txt, .transport .btn.ghost { border-radius: var(--round-sm); color: var(--t2); }
 .transport .icon-btn.txt:hover, .transport .btn.ghost:hover { color: var(--t1); background: var(--s2); }
 .history-transport .muted.small { display: none; }
 .activity { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 140px; }
-.activity-strip { position: relative; flex: 1; height: 30px; min-width: 80px; border-radius: 6px; }
+.activity-strip { position: relative; flex: 1; height: 30px; min-width: 80px; border-radius: var(--round-sm); }
 .activity-strip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line-2); }
 .activity-mark { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 3px; height: 12px; border-radius: 1px; padding: 0; background: var(--t3); opacity: .85; transition: transform 140ms var(--ease-out), opacity 140ms ease-out; }
 .activity-mark::after { content: ''; position: absolute; inset: -9px -4px; }
@@ -175,13 +175,13 @@ body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering:
 .activity-mark.k-gap { width: 8px; height: 3px; background: var(--fail); opacity: .55; }
 .activity-mark.current { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--t1); opacity: 1; }
 .activity-jump { display: flex; gap: 2px; flex: none; }
-.activity-jump button { padding: 4px 8px; border-radius: 6px; font-size: 11px; color: var(--t2); white-space: nowrap; }
+.activity-jump button { padding: 4px 8px; border-radius: var(--round-sm); font-size: var(--text-2xs); color: var(--t2); white-space: nowrap; }
 .activity-jump button:hover:not(:disabled) { color: var(--t1); background: var(--s2); }
 .activity-jump button:disabled { opacity: .4; cursor: default; }
 .activity-jump .k-fail-dot, .activity-jump .k-edit-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
 .activity-jump .k-fail-dot { background: var(--fail); }
 .activity-jump .k-edit-dot { background: var(--edited); }
-.activity-count { font: 10.5px var(--mono); color: var(--t3); white-space: nowrap; }
+.activity-count { font: var(--text-2xs) var(--mono); color: var(--t3); white-space: nowrap; }
 @media (max-width: 1100px) { .activity-count { display: none; } }
 /* A phone keeps the existing compact transport; search and Briefing remain the way to jump.
    Agent chips shrink and scroll sideways rather than running off the crown. */
@@ -195,9 +195,9 @@ body { font-size: 13.5px; font-feature-settings: "cv11", "ss01"; text-rendering:
 /* ── settings: theme swatches show each palette's world, surface and accent ───────────── */
 .theme-options { flex-wrap: wrap; }
 .theme-option { min-width: 120px; padding: 8px 8px 10px; }
-.theme-option small { display: block; margin-top: 2px; color: var(--t3); font-size: 10.5px; }
+.theme-option small { display: block; margin-top: 2px; color: var(--t3); font-size: var(--text-2xs); }
 .theme-option i { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 5px; padding: 7px; background: var(--sw-bg); border-color: var(--sw-line); }
-.theme-option i b { border-radius: 3px; background: var(--sw-s); border: 1px solid var(--sw-line); }
+.theme-option i b { border-radius: var(--round-xs); background: var(--sw-s); border: 1px solid var(--sw-line); }
 .theme-option i b:first-child { grid-row: 1 / 3; }
 .theme-option i b:last-child { background: var(--sw-accent); border-color: transparent; height: 5px; align-self: end; }
 .theme-midnight { --sw-bg: #0a0a0c; --sw-s: #16171c; --sw-line: #26272e; --sw-accent: #8b9bff; }

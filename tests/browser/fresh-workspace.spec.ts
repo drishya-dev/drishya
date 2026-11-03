@@ -267,7 +267,8 @@ test('Modern preserves Legacy action materials, layout and native graph controls
     await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBe(0);
     await expect(page.locator('.history article.op').first()).toBeVisible();
     return page.evaluate(() => [...document.querySelectorAll('.history article.op')].slice(0,6).map(el => {
-      const css=getComputedStyle(el); return { id:el.getAttribute('data-op-id'), text:el.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
+      // Modern names an MCP tool once, in the card header; Legacy repeats it above the arguments.
+      const css=getComputedStyle(el), copy=el.cloneNode(true) as Element; copy.querySelectorAll('.mcp-tool').forEach(node=>node.remove()); return { id:el.getAttribute('data-op-id'), text:copy.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
     }));
   };
   const legacy=await inspect('classic'), modern=await inspect('modern');

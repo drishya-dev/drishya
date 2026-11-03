@@ -1,26 +1,26 @@
 /* TOOLS-1: the tool list (every available tool, shown by default) and the trail through one tool's uses. */
 .tool-list { margin-top: 14px; }
-.tool-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 8px 6px; color: var(--t2); font: 500 12px/18px var(--sans); white-space: nowrap; }
-.tool-heading span { color: var(--t3); font: 11px/18px var(--mono); font-variant-numeric: tabular-nums; }
-.tool-note { margin: 4px 6px 8px; color: var(--t3); font: 11px/16px var(--sans); }
-.tool-search { box-sizing: border-box; width: 100%; margin: 4px 0 8px; padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--s1); color: var(--t1); font: 12px/18px var(--sans); }
+.tool-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 8px 6px; color: var(--t2); font: var(--weight-medium) var(--text-xs)/18px var(--sans); white-space: nowrap; }
+.tool-heading span { color: var(--t3); font: var(--text-2xs)/18px var(--mono); font-variant-numeric: tabular-nums; }
+.tool-note { margin: 4px 6px 8px; color: var(--t3); font: var(--text-2xs)/16px var(--sans); }
+.tool-search { box-sizing: border-box; width: 100%; margin: 4px 0 8px; padding: 5px 8px; border: 1px solid var(--line-2); border-radius: var(--round-sm); background: var(--s1); color: var(--t1); font: var(--text-xs)/18px var(--sans); }
 .tool-search:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .tool-groups { max-height: clamp(120px, calc(100dvh - 700px), 420px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .tool-group + .tool-group { margin-top: 8px; }
-.tool-group-name { display: flex; justify-content: space-between; padding: 4px 6px; color: var(--t3); font: 600 11px/14px var(--sans); letter-spacing: .04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tool-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 4px 6px; border: 0; border-radius: 5px; background: none; color: var(--t2); font: 12px/18px var(--sans); text-align: left; cursor: pointer; }
+.tool-group-name { display: flex; justify-content: space-between; padding: 4px 6px; color: var(--t3); font: var(--weight-strong) var(--text-2xs)/14px var(--sans); letter-spacing: .04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 4px 6px; border: 0; border-radius: var(--round-sm); background: none; color: var(--t2); font: var(--text-xs)/18px var(--sans); text-align: left; cursor: pointer; }
 .tool-row:hover { background: var(--s2); color: var(--t1); }
 .tool-row[aria-pressed="true"] { background: var(--s2); color: var(--t1); box-shadow: inset 2px 0 0 var(--t1); }
 .tool-row:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .tool-row.unused { color: var(--t3); }
 .tool-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tool-uses { font: 11px/18px var(--mono); font-variant-numeric: tabular-nums; color: var(--t3); }
-.tool-unused { grid-column: 1 / -1; color: var(--t3); font: 11px/16px var(--sans); }
-.tool-trail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin: 6px 0 8px; padding: 6px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--s1); color: var(--t2); font: 12px/18px var(--sans); }
+.tool-uses { font: var(--text-2xs)/18px var(--mono); font-variant-numeric: tabular-nums; color: var(--t3); }
+.tool-unused { grid-column: 1 / -1; color: var(--t3); font: var(--text-2xs)/16px var(--sans); }
+.tool-trail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin: 6px 0 8px; padding: 6px; border: 1px solid var(--line-2); border-radius: var(--round-md); background: var(--s1); color: var(--t2); font: var(--text-xs)/18px var(--sans); }
 .trail-head { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px 2px; }
-.trail-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t1); font-weight: 600; }
-.trail-count { flex: none; font: 11px/18px var(--mono); font-variant-numeric: tabular-nums; color: var(--t2); }
-.tool-trail button { height: 24px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--t2); font: 15px/22px var(--sans); cursor: pointer; }
+.trail-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t1); font-weight: var(--weight-strong); }
+.trail-count { flex: none; font: var(--text-2xs)/18px var(--mono); font-variant-numeric: tabular-nums; color: var(--t2); }
+.tool-trail button { height: 24px; padding: 0; border: 0; border-radius: var(--round-sm); background: none; color: var(--t2); font: var(--text-md)/22px var(--sans); cursor: pointer; }
 .tool-trail button:hover:not(:disabled) { background: var(--s3); color: var(--t1); }
 .tool-trail button:disabled { opacity: .35; cursor: default; }
 .tool-trail button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }

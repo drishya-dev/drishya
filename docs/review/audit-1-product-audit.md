@@ -328,3 +328,9 @@ A scan of `apps/ui/src` gave four `side-tab` hits, all deliberate (blockquotes, 
 ## Tools
 
 ECC was read at Yash's request (1 Nov): a general agent system of 314 skills, hooks and rules, not a design tool. It adds nothing to this pass, its hooks and rules would compete with AGENTS.md, and its motion skills target `motion/react`, which Drishya does not use. Not installed. Its `click-path-audit` skill is a useful method to read when tracing a state bug, and `frontend-a11y` and `accessibility` are worth reading for REL-3, as references. Strix is for security testing before release and `claude-seo` for the launch page; neither helps this pass. Impeccable's detector is covered above.
+
+## UI-8 continuation — recovery and file controls (2 November)
+
+The file reader keeps file identity and material first, with Open in Workspace and Compare near the selection; Show in Files and Copy path remain in its one File actions menu. Its acceptance must open that menu before using those secondary actions, rather than require resident duplicate controls.
+
+The map failure is an actionable local interruption, not a replacement for History. It belongs below the measured header, centred away from the Files dock, in a compact content-sized notice; one Retry action, readable failure text, a hairline separating it from the world. It has no arrival loop and never remounts History. Baseline running-app measurement at 1280 px: retry centre is covered by the header, trial click fails. Empty and huge error text wrap within the notice; the latest failure remains visible until recovery. Related live-history and scroll-anchor work stays with TEST-2.

@@ -1,27 +1,27 @@
 /* CONTENT-4: a todo list is material that evolves. Flat rows; only meaning is coloured; nothing moves at rest. */
 .plan-card {display:grid;gap:6px;min-width:0;padding:4px 0 2px;}
 .plan-bar {display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
-.plan-head {font:11px/1.5 var(--sans);color:var(--t3);}.plan-head b {font-weight:600;color:var(--t2);}
+.plan-head {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}.plan-head b {font-weight:var(--weight-strong);color:var(--t2);}
 .plan-steps {display:inline-flex;gap:4px;}.plan-steps .link {min-width:24px;min-height:24px;}
 .plan-list {list-style:none;margin:0;padding:0;display:grid;gap:1px;}
-.plan-list li {display:grid;position:relative;grid-template-columns:14px minmax(0,1fr);column-gap:8px;align-items:baseline;padding:3px 0;color:var(--t1);font:12.5px/1.5 var(--sans);}
-.plan-mark {font:11px/1.5 var(--mono);color:var(--t3);text-align:center;}
+.plan-list li {display:grid;position:relative;grid-template-columns:14px minmax(0,1fr);column-gap:8px;align-items:baseline;padding:3px 0;color:var(--t1);font:var(--text-sm)/1.5 var(--sans);}
+.plan-mark {font:var(--text-2xs)/1.5 var(--mono);color:var(--t3);text-align:center;}
 .plan-text {overflow-wrap:anywhere;}
 .plan-list li.plan-completed {color:var(--t3);}.plan-list li.plan-completed .plan-text {text-decoration:line-through;text-decoration-color:var(--line-2);}
 .plan-list li.plan-completed .plan-mark {color:var(--pass);}
-.plan-list li.plan-in_progress .plan-mark {color:var(--t1);}.plan-list li.plan-in_progress .plan-text {font-weight:600;}
+.plan-list li.plan-in_progress .plan-mark {color:var(--t1);}.plan-list li.plan-in_progress .plan-text {font-weight:var(--weight-strong);}
 .plan-list li.plan-pending {color:var(--t2);}
-.plan-change {position:absolute;right:0;top:3px;padding-left:8px;background:var(--bg-1,var(--bg));font:10px/1.5 var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);opacity:0;transition:opacity .12s ease;}
+.plan-change {position:absolute;right:0;top:3px;padding-left:8px;background:var(--bg-1,var(--bg));font:var(--text-2xs)/1.5 var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);opacity:0;transition:opacity .12s ease;}
 .plan-list li:hover .plan-change,.plan-list li:focus-within .plan-change {opacity:1;}
-.plan-more,.plan-basis,.plan-removed {font:11px/1.5 var(--sans);color:var(--t3);}
+.plan-more,.plan-basis,.plan-removed {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}
 .plan-earlier {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:2px 0;}
-.plan-delta {font:11px/1.5 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
+.plan-delta {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
 @media(prefers-reduced-motion:reduce){.plan-change{transition:none;}}
 /* CONTENT-4: the turn's checklist pinned under the prompt; rewritten in place, quiet at rest. */
 .history .plan-pinned {flex:1 0 100%;display:grid;gap:4px;min-width:0;margin:6px 0 0;padding-left:calc(3ch + 12px);}
 .plan-pinned .plan-list li {transition:color .15s ease;}
 .plan-pinned .plan-list li .plan-text {transition:text-decoration-color .15s ease;}
-.plan-pinned-more {justify-self:start;font:11px/1.5 var(--sans);color:var(--t3);}
+.plan-pinned-more {justify-self:start;font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}
 .history .plan-pinned {display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
 /* Current content is readable at its arrival; prior revisions stay quiet receipts. */
 .connected-workspace .history .op.op-plan:has(.plan-card:not(.plan-earlier)) {flex:0 1 min(620px,100%);max-width:100%;max-height:none;}
@@ -33,8 +33,8 @@
 
 /* Plan documents need reading width; revision receipts keep their compact allocation. */
 .connected-workspace .history .op.op-plan:has(.plan-document) {flex:0 1 min(620px,100%);max-width:100%;}
-.plan-document :is(h1,h2,h3,h4) {margin:4px 0;font:600 15px/1.4 var(--sans);color:var(--t1);}
-.plan-document :is(p,li) {font:12.5px/1.65 var(--sans);overflow-wrap:anywhere;}
+.plan-document :is(h1,h2,h3,h4) {margin:4px 0;font:var(--weight-strong) var(--text-md)/1.4 var(--sans);color:var(--t1);}
+.plan-document :is(p,li) {font:var(--text-sm)/1.65 var(--sans);overflow-wrap:anywhere;}
 .plan-document :is(ol,ul) {margin:4px 0;padding-inline-start:1.6em;}
 
 /* The checklist has one home. Earlier updates remain selectable reading receipts. */

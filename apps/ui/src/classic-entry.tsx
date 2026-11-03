@@ -1,3 +1,4 @@
+import './tokens.css';
 import './styles.css';
 import './p1.css';
 import './product.css';

@@ -51,7 +51,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r35';
+export const REDUCER_VERSION = 'r36';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -494,7 +494,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           st.op.observationIds = [...new Set([...st.op.observationIds, o.id])];
           st.op.endTime = o.sourceTime;
           if (!same) { st.op.startTime = undefined; st.op.endSequence = step(); }
-          if (item.image) { st.op.title = `${item.item === 'image-view' ? 'View image' : 'Generated image'} · ${item.image.path ?? item.image.savedPath ?? 'reference'}`; st.op.detail = { kind: 'other', input: { image: item.image } }; }
+          if (item.image) { st.op.title = `${item.item === 'image-view' ? 'View image' : 'Generated image'} · ${imageReferenceName(item.image.path ?? item.image.savedPath)}`; st.op.detail = { kind: 'other', input: { image: item.image } }; }
           const output = item.mcp?.result ?? item.output ?? (item.web ? JSON.stringify(item.web) : undefined);
           completeOp(st, o, { text: output, exitCode: item.exitCode, outcome: { kind: 'other' } }, { text, rel, addArtifact, knownFull, link, fileKey });
           if (output !== undefined && item.item !== 'command') st.op.artifactIds.push(addArtifact({ id: `art_${st.op.id}_out`, kind: 'output', observedAtSequence: st.op.endSequence ?? st.op.startSequence, availability: o.availability, provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content: text(output) }));
@@ -1447,6 +1447,16 @@ function failureLine(text: string | undefined, command: boolean): string | undef
   const errors = lines.filter(line => FAILURE_LINE.test(line));
   const line = errors[0]?.startsWith('Traceback') ? errors.at(-1) : errors[0] ?? (command ? undefined : lines[0]);
   return line === undefined ? undefined : clip(line, 200);
+}
+
+/** Titles identify the image; its original reference remains in captured arguments. */
+function imageReferenceName(reference: string | undefined): string {
+  if (!reference) return 'reference';
+  let path = reference.replace(/\\/g, '/');
+  if (/^file:\/\//i.test(path)) {
+    try { path = decodeURIComponent(new URL(path).pathname); } catch { /* Keep malformed native text inert. */ }
+  }
+  return path.replace(/\/+$/, '').split('/').at(-1) || 'reference';
 }
 
 function clip(s: string, n: number): string {
