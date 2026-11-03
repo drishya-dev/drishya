@@ -1,5 +1,4 @@
 /* One world; source surfaces carry boundaries, surrounding navigation stays quiet. */
-.origin-material { fill-opacity: .12; stroke-width: 1.5; }
 :root {
   --bg: #0e1014; --s1: #181b21; --s2: #232730; --s3: #2e3440;
   --line: #292e38; --line-2: #353d49; --line-3: #596575;
@@ -17,13 +16,11 @@
 .viewer { --spine-w: 190px; --dock-w: 230px; }
 .brand-mark { border-color: var(--edited); }
 .crown, .workspace-bar, .transport { background: transparent; }
-.workspace-views { background: color-mix(in srgb, var(--s2) 65%, transparent); border: 1px solid var(--line); }
-.workspace-views button { transition: border-color 140ms ease-out; }
 .agent { border-color: var(--line); background: transparent; }
 .crown .agent { transition: border-color 160ms ease-out; }
 .agent.st-active { border-color: color-mix(in srgb, var(--agent) 55%, var(--line)); }
 .spine, .dock { background: color-mix(in srgb, var(--bg) 80%, transparent); }
-.spine-head, .dock > h3 { letter-spacing: .07em; font-size: var(--text-2xs); text-transform: uppercase; }
+.dock > h3 { letter-spacing: .07em; font-size: var(--text-2xs); text-transform: uppercase; }
 .spine .repo-lens { margin-inline: 0; border: 1px solid var(--line); border-radius: var(--round-md); background: color-mix(in srgb, var(--s1) 80%, transparent); padding: 12px; }
 .spine .spine-file { padding-block: 9px; border-left: 1px solid transparent; }
 .spine .spine-file.on, .spine .spine-file:hover { border-left-color: var(--focus); background: var(--s1); }
@@ -72,9 +69,6 @@
 .source-utilities[open] > summary { margin-bottom: 8px; color: var(--focus); }
 .source-utilities > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .map-file-label { position: absolute; pointer-events: none; color: var(--t3); font: var(--text-2xs)/1.5 var(--mono); white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; background: var(--bg); padding: 2px 4px; }
-.map-file-label.tone-write { color: var(--edited); }
-.map-file-label.tone-fail { color: var(--fail); }
-.map-file-label.tone-pass { color: var(--pass); }
 .pinned-reference { border-radius: var(--round-md); box-shadow: 0 10px 28px -20px #000; }
 @media (min-width: 1500px) { .viewer { --spine-w: 220px; --dock-w: 252px; } .history .ops-row { gap: 18px; } }
 @media (max-width: 1100px) and (min-width: 821px) { .viewer { --spine-w: 166px; --dock-w: 210px; } .history { padding-right: 12px; } }
@@ -121,10 +115,10 @@
 .history-transport .reading-status, .history-transport > .muted { display: none; }
 .history-transport .activity { flex: 0 1 290px; }
 .history-transport .activity-strip, .history-transport .activity-count { display: none; }
-.replay-diagnostics { position: relative; font-size: var(--text-2xs); color: var(--t3); }
-.replay-diagnostics summary { cursor: pointer; }
-.replay-diagnostics[open] > button { position: absolute; bottom: 28px; right: 0; background: var(--s1); border: 1px solid var(--line); width: 140px; }
-@media (max-width: 820px) { .history .op.shape-source { flex-basis: min(480px, 100%); } .reading-resize { display: none; } .file-workspace-layout { display: block; } .prompt-chapters button { max-width: 140px; } .history-transport .activity, .replay-diagnostics { display: none; } }
+
+
+
+@media (max-width: 820px) { .history .op.shape-source { flex-basis: min(480px, 100%); } .reading-resize { display: none; } .file-workspace-layout { display: block; } .prompt-chapters button { max-width: 140px; } .history-transport .activity { display: none; } }
 .history .op.shape-source { flex-basis: var(--reading-width, 480px); }
 .history .op.shape-wide { max-width: 100%; }
 @media (max-width: 820px) { .history .op.shape-source { flex-basis: min(var(--reading-width, 480px), 100%); } }
@@ -148,7 +142,6 @@
 .dock .server-name { padding: 5px; font-size: var(--text-2xs); }
 .dock .server-tool { padding: 5px 4px; gap: 5px; }
 .dock .dock-head { font-size: var(--text-2xs); }
-.dock .dock-basis { padding-bottom: 6px; font-size: var(--text-2xs); }
 .history .op.shape-compact { flex-basis: var(--reading-width, 210px); }
 .history .op.shape-medium { flex-basis: var(--reading-width, 280px); }
 .history .op.shape-source { flex-basis: var(--reading-width, 360px); }
@@ -191,17 +184,10 @@
 .folder-tree { overflow: auto; flex: 1; min-height: 0; }
 .folder-tree button { width: 100%; display: flex; align-items: flex-start; gap: 6px; text-align: left; font: var(--text-2xs)/1.6 var(--mono); color: var(--t2); padding: 4px 6px; border-radius: var(--round-xs); overflow-wrap: anywhere; }
 .folder-tree button:hover, .folder-tree button:focus-visible { background: var(--s2); color: var(--t1); }
-.folder-icon { flex: none; color: var(--source); width: 12px; }
-.folder-icon.directory { color: var(--edited); }
 .workspace-grant { font-size: var(--text-xs); text-align: left; color: var(--source); padding: 8px; border: 1px solid var(--line-2); border-radius: var(--round-sm); }
 .workspace-grant small { display: block; font-size: var(--text-2xs); color: var(--t3); margin-top: 3px; }
-.folder-map-link { display: grid; grid-template-columns: 20px 1fr; text-align: left; padding: 10px 0; border-top: 1px solid var(--line); color: var(--source); font-size: var(--text-2xs); }
-.folder-map-link small { grid-column: 2; font-size: var(--text-2xs); color: var(--t3); margin-top: 5px; }
 .folder-pages { display: flex; justify-content: space-between; font-size: var(--text-2xs); gap: 5px; color: var(--t2); }
-.folder-reading-context { flex: none; max-height: 230px; overflow: auto; font-size: var(--text-2xs); color: var(--t2); }
-.folder-reading-context summary { cursor: pointer; padding: 6px 0; }
 .folder-explorer .spine-file { white-space: normal; flex: none; min-width: 0; }
-.folder-explorer .repo-context { font-size: var(--text-2xs); }
 .connected-workspace.exploring .folder-explorer { opacity: 0; pointer-events: none; }
 .connected-workspace .dock { padding: 12px 8px; }
 .connected-workspace .dock .instrument { padding: 5px; }
@@ -221,7 +207,6 @@
 .flow-connections > g > path { fill: none; stroke: var(--source); stroke-width: 1.3; opacity: .45; }
 .flow-connections > g > path.focused { opacity: 1; stroke-width: 1.6; }
 .flow-connections marker path { fill: var(--source); }
-.flow-order-label { color: var(--t3); font-size: var(--text-2xs); margin-left: 4px; }
 .current-file-reader { width: min(1200px, calc(100vw - 28px)); }
 .current-file-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 16px; font-size: var(--text-2xs); }
 .current-file-code { overflow: auto; max-height: 65dvh; padding: 10px 16px; background: var(--bg); }
@@ -229,12 +214,7 @@
 .current-file-reader footer { display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--text-2xs); padding: 12px 16px; color: var(--t2); }
 .current-file-reader footer span { margin-right: auto; }
 .prompt-composer { position: fixed; bottom: calc(var(--transport-h) + 12px); left: calc(var(--spine-w) + 24px); width: min(680px, calc(100vw - var(--spine-w) - var(--dock-w) - 56px)); z-index: 9; border: 1px solid var(--line-2); border-radius: var(--round-lg); background: var(--s1); box-shadow: 0 12px 40px #00000040; }
-.composer-toggle { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; font-size: var(--text-2xs); color: var(--t1); }
-.composer-toggle > span:first-child { color: var(--source); }
-.composer-toggle > span:last-child { margin-left: auto; }
-.composer-toggle small { font-size: var(--text-2xs); color: var(--t3); }
 .prompt-composer.open { padding: 0 12px 10px; max-height: 72dvh; overflow: auto; }
-.prompt-composer.open .composer-toggle { padding-inline: 0; }
 .composer-target { display: flex; justify-content: space-between; gap: 12px; font-size: var(--text-2xs); padding: 5px 0 9px; color: var(--t2); }
 .composer-target small { max-width: 50%; overflow-wrap: anywhere; color: var(--t3); }
 .prompt-composer textarea { display: block; width: 100%; min-height: 78px; max-height: 28dvh; resize: vertical; padding: 10px; font: var(--text-sm)/1.6 var(--sans); color: var(--t1); background: var(--bg); border: 1px solid var(--line); border-radius: var(--round-sm); }
@@ -242,11 +222,9 @@
 .composer-actions label { display: flex; align-items: center; gap: 6px; color: var(--t2); }
 .send-prompt { padding: 7px 12px; border-radius: var(--round-sm); background: var(--focus); color: #071014; font-weight: var(--weight-strong); white-space: nowrap; }
 .send-prompt:disabled { background: var(--s3); color: var(--t3); }
-.composer-note { color: var(--t3); font-size: var(--text-2xs); line-height: 1.5; margin-top: 9px; }
 .tool-approval { margin-top: 10px; padding: 10px; border: 1px solid var(--edited); border-radius: var(--round-sm); font-size: var(--text-xs); }
-.tool-approval pre, .controller-receipt pre { max-height: 24dvh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--text-2xs)/1.6 var(--mono); padding-block: 9px; }
+.tool-approval pre { max-height: 24dvh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--text-2xs)/1.6 var(--mono); padding-block: 9px; }
 .tool-approval button { padding: 5px 10px; margin-right: 8px; border: 1px solid var(--line-2); border-radius: var(--round-sm); }
-.controller-receipt { margin-top: 10px; font-size: var(--text-2xs); color: var(--t2); }
 .connected-workspace .map-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .connected-workspace .map-tools .map-matches { flex-basis: 100%; }
 @media (prefers-reduced-motion: no-preference) {
@@ -260,7 +238,7 @@
   .connected-workspace { --spine-w: 0px; --dock-w: 0px; }
   .folder-explorer { display: none; width: min(240px, 80vw); box-shadow: 4px 0 30px #00000040; }
   .connected-workspace.folders-shown .folder-explorer { display: flex; }
-  .connected-workspace .workspace-recording-title, .connected-workspace .workspace-context { display: none; }
+  .connected-workspace .workspace-context { display: none; }
   .connected-workspace .history-inner { padding-inline: 12px; }
   .prompt-composer { left: 12px; width: calc(100vw - 24px); }
   .composer-target { flex-wrap: wrap; }
@@ -276,7 +254,6 @@
 .format-py { color: #72bfdc; } .format-rs { color: #e7a17b; } .format-css { color: #c995f2; } .format-md { color: #a3d6ff; }
 .folder-disclosure { flex: 0 0 9px; color: var(--t3); }
 .folder-tree button { gap: 5px; min-height: 26px; }
-.folder-reading-context:not([open]) { flex: 0 0 auto; }
 .map-group { position: absolute; display: grid; text-align: left; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--round-md); background: var(--s1); color: var(--t1); max-width: 200px; cursor: zoom-in; }
 .map-group small { color: var(--t3); font-size: var(--text-2xs); margin-top: 3px; }
 .map-group:hover { border-color: var(--focus); }
@@ -287,11 +264,9 @@
 .prompt-menu .prompt-chapters button { max-width: none; width: 100%; border: none; text-align: left; }
 .history-transport { justify-content: flex-end; min-height: 32px; padding: 4px 12px; gap: 8px; }
 .prompt-composer.open { width: min(700px, calc(100% - var(--spine-w, 220px) - var(--dock-w, 166px) - 32px)); padding: 8px 12px; }
-.prompt-composer .composer-toggle { padding: 0 0 6px; font-size: var(--text-2xs); border: none; background: transparent; }
 .prompt-composer textarea { min-height: 52px; max-height: 140px; padding: 10px 12px; font-size: var(--text-sm); border-radius: var(--round-md); background: #101010; }
 .prompt-composer .composer-target { padding: 0 0 6px; font-size: var(--text-2xs); }
 .prompt-composer .composer-target strong { display: none; }
-.composer-note { font-size: var(--text-2xs); color: var(--t3); }
 .prompt-composer .composer-actions label { font-size: var(--text-2xs); }
 .usage-peek { position: relative; font-size: var(--text-2xs); }
 .usage-peek > summary { cursor: pointer; padding: 6px; }
@@ -330,7 +305,6 @@
 .prompt-composer.open { padding: 8px 12px; }
 .prompt-composer .composer-target { margin: 0 0 4px; }
 .prompt-composer textarea { min-height: 38px; padding: 8px 10px; resize: none; }
-.prompt-composer .composer-note { display: none; }
 .prompt-composer .composer-actions { margin-top: 4px; }
 .map.exploring .map-group { width: auto; min-width: 32px; max-width: 115px; padding: 4px 7px; border-radius: var(--round-lg); border: 1px solid #527792; background: #101c27; box-shadow: none; }
 .map.exploring .map-group strong { color: #8fd2ff; font: var(--text-2xs) var(--mono); }

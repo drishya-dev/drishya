@@ -66,7 +66,6 @@
 .theme-midnight { --sw-bg: #090d16; --sw-s: #1b2637; --sw-line: #39485e; --sw-accent: #b3a7ff; }
 .theme-light { --sw-bg: #f4f5f2; --sw-s: #ffffff; --sw-line: #cbd3cb; --sw-accent: #29654c; }
 .theme-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.neural-eye.brand-mark { width: 28px !important; height: 23px !important; border: 0; border-radius: 0; flex: none; color: var(--focus); }
 :root[data-experience=classic] .connected-workspace { --stage-rail: clamp(220px, 18vw, 280px); }
 :root[data-experience=classic] .studio-actions .settings-open { font-size: var(--text-2xl); width: 38px; min-height: 38px; padding: 4px; }
 :root[data-experience=classic] .connected-workspace .folder-explorer { top: var(--workspace-tools-bottom, calc(var(--workspace-header-h, 64px) + 68px)); width: calc(var(--stage-rail) - 22px); padding-inline: 5px; }
@@ -362,8 +361,6 @@
 :root[data-experience=classic] .workbench-station .studio-instrument-name { font-size: var(--text-xs); }
 :root[data-experience=classic] .workbench-station .studio-instrument-name small { font-size: var(--text-2xs); line-height: 1.5; }
 :root[data-experience=classic] .folder-explorer input { border-color: transparent; background: var(--s1); border-radius: var(--round-md); padding-inline: 10px; }
-:root[data-experience=classic] .workspace-views { border-color: transparent; border-radius: var(--round-md); padding: 3px; }
-:root[data-experience=classic] .workspace-views button { border-radius: var(--round-sm); }
 :root[data-experience=classic] .folder-tree > button { border-radius: var(--round-sm); }
 .home { padding: 32px clamp(20px, 4vw, 56px) 48px; }
 .home .home-head { align-items: center; }
