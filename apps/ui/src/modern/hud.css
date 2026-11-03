@@ -102,3 +102,8 @@
 .git-entry-choices>button {display:grid;gap:2px;justify-items:start;padding:9px 10px;min-height:48px;border:0;border-radius:var(--round-sm);background:none;color:var(--t1);text-align:left;font:var(--text-xs)/1.4 var(--sans);cursor:pointer;}
 .git-entry-choices>button:is(:hover,:focus-visible) {background:var(--s3);}
 .git-entry-choices>button>strong {font-weight:var(--weight-medium);}.git-entry-choices>button>small {color:var(--t3);font-size:var(--text-2xs);}
+/* UI-8 (Yash, 3 Nov). A minimised Toolbox waits at the middle of its edge, and the stage, with its prompt rail, widens into the room it gave back. */
+@media (min-width: 821px) {
+ :root[data-ui-version=modern][data-experience=classic] .connected-workspace[data-toolbox-minimized] { --stage-rail: 76px; }
+ :root[data-ui-version=modern][data-experience=classic] .modern-tool-station.toolbox-minimized { top:calc(50% - 21px); bottom:auto; }
+}
