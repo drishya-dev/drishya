@@ -14,7 +14,7 @@ for(const width of [600,1440]) test(`captured net lines expose edit provenance w
  expect(entry).toBeDefined();
  await page.setViewportSize({width,height:1000});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
  const changes=page.locator('button.review-open:visible').first();if(!await changes.isVisible())await page.getByLabel('More workspace options',{exact:true}).click();await changes.first().click();
- const dialog=page.getByRole('dialog',{name:'Changes',exact:true});const file=dialog.locator('.review-file').filter({has:page.locator('.review-file-entry>button').filter({hasText:entry![0]})});
+ const dialog=page.getByRole('dialog',{name:'Changes',exact:true});const file=dialog.locator(`.review-file[data-review-row="${entry![0]}"]`);await file.locator('.review-file-more>summary').click();
  const toggle=file.getByRole('button',{name:/Net diff/});await toggle.click();const lines=file.getByLabel('Net changed lines, each linked to its edit');await expect(lines.locator('.review-net-line')).toHaveCount(entry![1].netDiff!.lines.length);
  expect(await lines.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
  const edit=file.locator('.review-net-source button').first();await expect(edit).toHaveText(/turn|unattributed/);await edit.click();await expect(dialog).toBeHidden();await expect(page.locator('article.selected')).toHaveAttribute('data-op-id',entry![1].netDiff!.lines[0]!.attribution.operationId);

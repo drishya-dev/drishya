@@ -31,3 +31,24 @@
 .review-file,.review-item {content-visibility:auto;contain-intrinsic-block-size:auto 56px;margin-inline:-4px;padding-inline:4px;}
 .review-file:has(.desk-options[open]) {content-visibility:visible;}
 .review-more {padding:12px 0;}
+
+/* UI-8, Changes. A file is one line: its name, then its folder, then how much changed. Edits and the net diff open on request. */
+.evidence-review :is(.review-net-note,.review-note) {font:var(--text-2xs)/1.6 var(--sans);color:var(--t3);}
+:root[data-ui-version=modern] .review-file-entry>button:first-child {display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:baseline;gap:8px;padding:9px 0;}
+:root[data-ui-version=modern] .review-file-entry>button:first-child>svg {align-self:center;}
+:root[data-ui-version=modern] .review-file-entry>button:first-child>.review-file-name {font:var(--weight-medium) var(--text-sm)/1.5 var(--sans);color:var(--t1);overflow-wrap:anywhere;}
+:root[data-ui-version=modern] .review-file-entry>button:first-child>.review-file-folder {min-width:0;font:var(--text-2xs)/1.5 var(--mono);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+:root[data-ui-version=modern] .review-file-entry>button:first-child:hover>.review-file-name {color:var(--source);}
+:root[data-ui-version=modern] .review-file-entry>.desk-options>summary {min-height:var(--control-sm);padding:0 6px;}
+:root[data-ui-version=modern] .review-file-entry>.desk-options>summary>span {display:none;}
+:root[data-ui-version=modern] .review-file:has(.review-file-more)>.review-file-entry {border-bottom:0;}
+:root[data-ui-version=modern] .review-file-more {margin:-6px 0 0 26px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+:root[data-ui-version=modern] .review-file-more>summary {width:max-content;padding:2px 0;font:var(--text-2xs)/1.6 var(--sans);color:var(--t3);cursor:pointer;list-style:none;}
+:root[data-ui-version=modern] .review-file-more>summary::-webkit-details-marker {display:none;}
+:root[data-ui-version=modern] .review-file-more>summary::before {content:'▸';display:inline-block;width:1.2em;}
+:root[data-ui-version=modern] .review-file-more[open]>summary::before {content:'▾';}
+:root[data-ui-version=modern] .review-file-more>summary:hover {color:var(--t1);}
+:root[data-ui-version=modern] .review-file-more>summary:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
+:root[data-ui-version=modern] .review-file-more>.review-file-edits {padding:4px 0 6px;border-bottom:0;}
+:root[data-ui-version=modern] .review-file-more>.review-net {padding:0 0 4px;}
+:root[data-ui-version=modern] .review-file-more>.review-net-note {margin:4px 0;}

@@ -8,6 +8,7 @@ import { sinceSnapshot, type SinceFileStat, type SinceSnapshot } from '../../../
 import { useApp } from '../state.ts';
 import { ReadingDialog } from './ProductShell.tsx';
 import { FileIcon } from './FileIcon.tsx';
+import {fileName, fileFolder} from '../lib/file-identity.ts';
 import './review-changes.css';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
@@ -46,9 +47,19 @@ function MoreRows({ load }: { load?: () => void }) {
 
 /** One page renders alone, so the list grows without touching what is already on screen. */
 const FilesPage = memo(function FilesPage({ data, close }: { data: SinceSnapshot; close: LeaveReview }) {
+  const modern = document.documentElement.dataset.uiVersion === 'modern';
   return data.editedFiles.map(path => {
     const leave = () => close(path), stat = data.fileStats?.[path];
-    return <div className="review-file" data-review-row={path} key={path}><div className="review-file-entry"><button onClick={() => { useApp.getState().set({ filePanel: path, filePanelFocus: 'change', currentFile: undefined, explore: false }); leave(); }}><FileIcon path={path} /><span>{path}</span><span aria-hidden="true">↗</span></button>{stat&&<small className="review-file-stat" title="Counted from patches; turn is the prompt turn of the last edit"><b className="add">+{stat.added}</b> <b className="del">−{stat.removed}</b>{stat.turn?` · turn ${stat.turn}`:''}</small>}<button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={()=>{leave();useApp.setState({mapVisible:true,explore:true,developerWorkspace:false,selectedOp:undefined,expandedOp:undefined,filePanel:undefined,currentFile:undefined,mapFocusPath:path});}}><InterfaceGlyph name="map"/></button></div><FileReadingActions path={path} capturedKnown compact onNavigate={leave}/><FileEdits stat={stat} close={leave}/><SessionDiff diff={stat?.netDiff} open={operationId=>{useApp.getState().select(operationId);leave();}}/></div>;
+    const openFile = () => { useApp.getState().set({ filePanel: path, filePanelFocus: 'change', currentFile: undefined, explore: false }); leave(); };
+    const showMap = () => { leave(); useApp.setState({mapVisible:true,explore:true,developerWorkspace:false,selectedOp:undefined,expandedOp:undefined,filePanel:undefined,currentFile:undefined,mapFocusPath:path}); };
+    const edits = <FileEdits stat={stat} close={leave}/>, net = <SessionDiff diff={stat?.netDiff} open={operationId=>{useApp.getState().select(operationId);leave();}}/>;
+    // UI-8: one line per file, name first. Its edits and net diff open on request, so a long session reads as a list of files.
+    if (modern) {
+      const count = stat?.fileEdits?.length ? stat.edits : 0, folder = fileFolder(path);
+      return <div className="review-file" data-review-row={path} key={path}><div className="review-file-entry"><button title={path} aria-label={`Open ${path}`} onClick={openFile}><FileIcon path={path} /><span className="review-file-name">{fileName(path)}</span>{folder && <span className="review-file-folder">{folder}</span>}</button>{stat&&<small className="review-file-stat" title="Counted from patches; turn is the prompt turn of the last edit"><b className="add">+{stat.added}</b> <b className="del">−{stat.removed}</b>{stat.turn?` · turn ${stat.turn}`:''}</small>}<FileReadingActions path={path} capturedKnown compact onNavigate={leave}/><button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={showMap}><InterfaceGlyph name="map"/></button></div>
+        {(count > 0 || stat?.netDiff) && <details className="review-file-more"><summary>{count ? `${count} ${count === 1 ? 'edit' : 'edits'}` : 'Net diff'}</summary>{edits}{net}</details>}</div>;
+    }
+    return <div className="review-file" data-review-row={path} key={path}><div className="review-file-entry"><button onClick={openFile}><FileIcon path={path} /><span>{path}</span><span aria-hidden="true">↗</span></button>{stat&&<small className="review-file-stat" title="Counted from patches; turn is the prompt turn of the last edit"><b className="add">+{stat.added}</b> <b className="del">−{stat.removed}</b>{stat.turn?` · turn ${stat.turn}`:''}</small>}<button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={showMap}><InterfaceGlyph name="map"/></button></div><FileReadingActions path={path} capturedKnown compact onNavigate={leave}/>{edits}{net}</div>;
   });
 });
 

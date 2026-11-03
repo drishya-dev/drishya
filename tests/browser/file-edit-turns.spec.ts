@@ -35,6 +35,7 @@ test('the Changes view lists each edit with its turn, +/- and next test run, and
  if(!await changes.isVisible())await page.getByLabel('More workspace options',{exact:true}).click();
  await changes.first().click();
  const dialog=page.getByRole('dialog',{name:'Changes',exact:true});
+ await dialog.locator('.review-file-more>summary').first().click();
  const edits=dialog.getByRole('list',{name:'Edits of this file'}).getByRole('listitem');
  await expect(edits).toHaveCount(3);
  // Turn 1 edit before the failing run links it; the next edit has no later run in turn 1; turn 2 never ran a test.
