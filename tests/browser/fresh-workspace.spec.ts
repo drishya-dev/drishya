@@ -647,7 +647,7 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await expect(git.getByRole('button',{name:'Approve read-only Git'}).or(git.getByRole('button',{name:'Refresh changes'}))).toBeVisible();
   if(await git.getByRole('button',{name:'Approve read-only Git'}).isVisible()) await git.getByRole('button',{name:'Approve read-only Git'}).click();
   await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
-  await expect(git.locator('.git-review-layout')).toContainText('src/cart/total.ts');
+  await expect(git.locator('.git-selected-file-header strong')).toHaveAttribute('title','src/cart/total.ts');
   await expect(git.locator('.git-patch-reader')).toContainText('42');
   const resize=git.getByRole('separator',{name:'Resize Git review window left',exact:true});
   const grip=(await resize.boundingBox())!,edge=(await git.boundingBox())!;
