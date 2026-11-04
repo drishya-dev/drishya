@@ -1,0 +1,32 @@
+/* UI-8 (Yash, 3 Nov): the plain network graph. One line per lane, rounded corners where a branch leaves or rejoins,
+   a soft halo under each line (the only texture kept from the thread art), commits as dots, labels on branch heads. */
+.network-viewport { position:relative; flex:1; min-height:180px; overflow:auto; overscroll-behavior:contain; padding:8px 0 12px; }
+.network-world { position:relative; margin:0 auto 0 0; }
+.network-links { position:absolute; inset:0 auto auto 0; overflow:visible; }
+.network-edge path { fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.network-halo { stroke-width:9; opacity:.16; filter:blur(3px); }
+.network-core { stroke-width:2; pointer-events:stroke; cursor:pointer; }
+.network-edge.lane-0 :is(.network-halo,.network-core) { stroke:var(--graph-node,var(--t1)); }
+.network-edge.lane-0 .network-core { stroke-width:2.5; }
+.network-edge.lane-1 :is(.network-halo,.network-core) { stroke:var(--source); }
+.network-edge.lane-2 :is(.network-halo,.network-core) { stroke:var(--pass); }
+.network-edge.lane-3 :is(.network-halo,.network-core) { stroke:var(--edited); }
+.network-edge.lane-4 :is(.network-halo,.network-core) { stroke:var(--external); }
+.network-edge.lane-5 :is(.network-halo,.network-core) { stroke:var(--focus); }
+.network-edge.muted { opacity:.28; }
+:root[data-low-resource] .network-halo { display:none; }
+/* The thread stylesheet sizes .thread-graph .thread-commit for its art; the network dot is a small disc on an 18 px target. */
+.thread-graph.network-graph .network-commit { position:absolute; width:18px; height:18px; margin:-9px 0 0 -9px; padding:0; border:0; border-radius:50%; background:transparent; display:grid; place-items:center; cursor:pointer; box-shadow:none; }
+.network-graph .network-commit::before { content:""; width:9px; height:9px; border-radius:50%; background:var(--t3); box-shadow:0 0 0 2px var(--bg); }
+.network-graph .network-commit.thread-primary::before { width:10px; height:10px; background:var(--graph-node,var(--t1)); }
+.network-graph .network-commit.linked::before { box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--focus); }
+.network-graph .network-commit:hover::before { background:var(--t1); }
+.network-graph .network-commit[aria-pressed=true]::before { width:12px; height:12px; background:var(--t1); box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus); }
+.thread-graph.network-graph .network-commit:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.network-graph .network-commit.muted { opacity:.35; }
+.network-label { position:absolute; transform:translate(-50%,10px); padding:1px 6px; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s2); color:var(--t2); font:var(--text-2xs)/1.5 var(--mono); white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+.network-label.main { transform:translate(-50%,calc(-100% - 10px)); color:var(--t1); border-color:var(--line-3); }
+.network-graph .thread-zoom output { min-width:4ch; text-align:center; font-variant-numeric:tabular-nums; }
+.network-viewport { cursor:grab; } .network-viewport:active { cursor:grabbing; }
+/* The network graph names its controls in text (−, +, Fit), so they take the 12 px control size, not the 11 px of the old icon buttons. */
+.network-graph .thread-zoom>button { width:auto; min-width:28px; padding:0 8px; font:var(--text-xs)/1 var(--sans); }

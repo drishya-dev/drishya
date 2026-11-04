@@ -547,35 +547,23 @@ test('local Git atlas connects real branches and commits with root/merge patches
   await mergeRow.click();await expect(mergeRow).toHaveAttribute('aria-pressed','true');await expect(merged).toHaveAttribute('aria-pressed','true');
   await expect(atlas.getByRole('button',{name:'In view',exact:true})).toHaveAttribute('aria-pressed','true');await expect(atlas.getByRole('navigation',{name:'Reference pages'})).toHaveCount(0);
   await atlas.getByRole('button',{name:/^All \d+/}).click();await expect(atlas.getByRole('navigation',{name:'Reference pages'})).toBeVisible();await atlas.getByRole('button',{name:'In view',exact:true}).click();
-  // GIT-1: with WebGL2 the graph is filament light under DOM commits; without it the SVG ribbon (and its orbit) remains.
-  const lit=await atlas.locator('.thread-stage.lit').count()>0;
-  if(lit){
-    const viewport=atlas.locator('.thread-viewport');await expect.poll(async()=>Number(await viewport.getAttribute('data-light-segments'))).toBeGreaterThan(100);
-    await expect(atlas.locator('.thread-links')).toHaveCount(0);await expect(atlas.getByRole('button',{name:'Orbit 3D Git ribbon',exact:true})).toHaveCount(0);
-    expect(await atlas.locator('.thread-light').evaluate(node=>node.closest('[aria-hidden]')!==null||node.getAttribute('aria-hidden')==='true')).toBe(true);
-    await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});
-    // Panning redraws the light from the new view; nothing is stale.
-    const before=await viewport.getAttribute('data-light-segments');await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await expect.poll(async()=>await viewport.getAttribute('data-light-segments')).not.toBe(before);await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
-    // Zoom keeps the commit under the anchor where it was; Ctrl + wheel zooms the graph, never the page.
-    const centre=async()=>{const b=(await merged.boundingBox())!;return b.x+b.width/2;};const zoomLabel=atlas.getByRole('group',{name:'Git graph view'}).locator('output');
-    const x0=await centre(),v=(await viewport.boundingBox())!;await page.mouse.move(x0,v.y+v.height/2);const label0=await zoomLabel.textContent();
-    await page.keyboard.down('Control');await page.mouse.wheel(0,-240);await page.keyboard.up('Control');await expect(zoomLabel).not.toHaveText(label0!);
-    expect(Math.abs(await centre()-x0)).toBeLessThan(12);expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
-    // A branch strand between commits names its branch and lists its commits, from Git alone.
-    await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
-    await settled(viewport);
-    // This fixture's feature strand runs from base to feature. Aim between its
-    // rendered endpoints instead of stopping on the first neighbouring tooltip.
-    const branchPoint=await viewport.evaluate((el,{feature,base})=>{
-      const centre=(hash:string)=>{const node=el.querySelector<HTMLElement>('[data-commit-hash="'+hash+'"]');if(!node)throw new Error('Branch endpoint is not mounted');const box=node.getBoundingClientRect();return{x:box.x+box.width/2,y:box.y+box.height/2};};
-      const a=centre(feature),b=centre(base);return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-    },{feature,base});
-    await page.mouse.move(branchPoint.x,branchPoint.y);
-    await expect(atlas.locator('.thread-branch-peek')).toBeVisible();await expect(atlas.locator('.thread-branch-peek')).toContainText('atlas-feature');await expect(atlas.locator('.thread-branch-peek')).toContainText('Atlas feature fixture');await page.mouse.move(v.x+4,v.y+4);
-  } else {
-    await expect(atlas.locator('.thread-links')).toBeVisible();await expect(atlas.locator('.thread-fiber')).toHaveCount(0);expect(await atlas.locator('.ribbon-lamina').count()).toBeGreaterThan(0);expect(await atlas.locator('.thread-links path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
-    const surface=atlas.locator('.thread-ribbon').first(),beforeOrbit=await surface.getAttribute('d'),orbit=atlas.getByRole('button',{name:'Orbit 3D Git ribbon',exact:true});await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','true');const view=(await atlas.locator('.thread-viewport').boundingBox())!;await page.mouse.move(view.x+40,view.y+40);await page.mouse.down();await page.mouse.move(view.x+40,view.y+110,{steps:5});await page.mouse.up();await expect(surface).not.toHaveAttribute('d',beforeOrbit!);await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','false');await page.screenshot({path:resolve('.local/git-spatial-orbit.png')});
-  }
+  // UI-8: a plain network graph. Every line is a real parent link drawn in SVG under DOM commits; branch heads carry their names.
+  const viewport=atlas.locator('.thread-viewport');
+  expect(await atlas.locator('.network-edge').count()).toBeGreaterThan(1);expect(await atlas.locator('.network-core').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');
+  expect(await atlas.locator('.network-links').evaluate(node=>node.getAttribute('aria-hidden'))).toBe('true');
+  await expect(atlas.locator('.network-label').filter({hasText:'atlas-feature'})).toHaveCount(1);
+  await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-network-overview.png')});
+  // Ctrl + wheel zooms the graph, never the page (the anchor is checked on the long history below, where the graph scrolls).
+  await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await settled(viewport);
+  const zoomLabel=atlas.getByRole('group',{name:'Git graph view'}).locator('output'),v=(await viewport.boundingBox())!;
+  const m0=(await merged.boundingBox())!;await page.mouse.move(m0.x+m0.width/2,v.y+v.height/2);const label0=await zoomLabel.textContent();
+  await page.keyboard.down('Control');await page.mouse.wheel(0,240);await page.keyboard.up('Control');await expect(zoomLabel).not.toHaveText(label0!);await settled(viewport);
+  expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
+  // A branch line names its branch and lists its commits, from Git alone. Aim at the middle of the line that leaves base for the feature.
+  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await settled(viewport);
+  const branchPoint=await atlas.locator(`.network-edge[data-edge="${base}>${feature}"] .network-core`).evaluate(node=>{const path=node as SVGPathElement,at=path.getPointAtLength(path.getTotalLength()/2),m=path.getScreenCTM()!;return{x:at.x*m.a+at.y*m.c+m.e,y:at.x*m.b+at.y*m.d+m.f};});
+  await page.mouse.move(branchPoint.x,branchPoint.y);
+  await expect(atlas.locator('.thread-branch-peek')).toBeVisible();await expect(atlas.locator('.thread-branch-peek')).toContainText('atlas-feature');await expect(atlas.locator('.thread-branch-peek')).toContainText('Atlas feature fixture');await page.mouse.move(v.x+4,v.y+4);
   await merged.click();
   const parents=atlas.getByRole('combobox',{name:'Commit comparison parent',exact:true});await expect(parents.locator('option')).toHaveCount(2);await parents.selectOption('1');await expect(parents).toHaveValue('1');
   await expect(atlas.locator('.atlas-message pre')).toContainText('Atlas merge fixture');await expect(atlas).toContainText('No changed paths against this parent.');
@@ -1722,7 +1710,12 @@ test('Git timeline scrolls into older history without commit-range pages and kee
   await expect(atlas.locator('.atlas-commit')).toHaveCount(50);await expect(atlas.getByRole('navigation',{name:'Commit pages'})).toHaveCount(0);
   const graph=atlas.getByLabel('Commits, oldest on the left; drag to pan, pinch or Ctrl + wheel to zoom',{exact:true});await graph.focus();await page.keyboard.press('PageUp');await expect.poll(()=>atlas.locator('.atlas-commit').count()).toBeGreaterThan(50);
   await atlas.getByLabel('Choose Git commit',{exact:true}).selectOption(tip);await expect(atlas.locator('.atlas-message')).toContainText('Continuous fixture 81');await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();
-  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await page.screenshot({path:resolve('.local/git-thread-continuous.png')});
+  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await settled(graph);await page.screenshot({path:resolve('.local/git-network-continuous.png')});
+  // Ctrl + wheel zooms about the pointer: the commit under it stays where it was.
+  const anchor=atlas.locator(`[data-commit-hash="${tip}"]`),centre=async()=>{const b=(await anchor.boundingBox())!;return b.x+b.width/2;},zoomLabel=atlas.getByRole('group',{name:'Git graph view'}).locator('output');
+  await anchor.scrollIntoViewIfNeeded();const x0=await centre(),box=(await graph.boundingBox())!,label0=await zoomLabel.textContent();await page.mouse.move(x0,box.y+box.height/2);
+  await page.keyboard.down('Control');await page.mouse.wheel(0,-240);await page.keyboard.up('Control');await expect(zoomLabel).not.toHaveText(label0!);await settled(graph);
+  expect(Math.abs(await centre()-x0)).toBeLessThan(12);expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
 });
 
 

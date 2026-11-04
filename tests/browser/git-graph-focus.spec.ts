@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
-// GIT-6: the graph's controls, branch focus, and the cached light that makes panning and hovering cheap.
+// GIT-6, UI-8: the graph's controls, the plain network layout (main on the top lane), and branch focus.
 const git = (root: string, ...args: string[]) => execFileSync('git', args, { cwd: root, windowsHide: true, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
 let dir: string, app: App, server: RunningServer, id: string;
 // Each width owns its daemon: a commit read can outlive a page and retain the Git inspection lock.
@@ -45,13 +45,14 @@ for (const width of [1440, 700]) test(`the graph's controls are one quiet group,
   await view.getByRole('button', { name: 'Zoom in Git graph' }).click();
   expect(await view.locator('output').innerText()).not.toBe(before);
   await view.getByRole('button', { name: 'Fit graph' }).click();
-  // Panning moves the cached light; it does not rebuild it.
-  const viewport = dialog.locator('.thread-viewport'), builds = () => viewport.getAttribute('data-light-builds');
-  // Fit scrolls the graph and rebuilds once it settles: read the count only after two equal reads.
-  let last = ''; await expect.poll(async () => { const now = (await builds()) ?? ''; const same = now === last; last = now; return same; }, { intervals: [300] }).toBe(true);
-  const built = last;
-  await viewport.hover(); await page.mouse.wheel(40, 0); await page.mouse.wheel(-40, 0);
-  await expect.poll(builds).toBe(built);
+  // Main is one straight line on the top lane: base, main one, main two, the merge and main three share a height; the feature runs below it.
+  const top = (name: string) => dialog.locator('.thread-commit').and(dialog.getByRole('button', { name: new RegExp(`^${name} · `) })).evaluate((node) => (node as HTMLElement).offsetTop);
+  const mainTop = await top('Base');
+  for (const name of ['Main one', 'Main two', 'Merge feature', 'Main three']) expect(await top(name)).toBe(mainTop);
+  for (const name of ['Feature one', 'Feature two', 'Feature three']) expect(await top(name)).toBeGreaterThan(mainTop);
+  // Only real parent links are drawn: one line per parent, eight commits with eight parent links between them.
+  await expect(dialog.locator('.network-edge')).toHaveCount(8);
+  await expect(dialog.locator('.network-label').filter({ hasText: 'feature/focus' })).toHaveCount(1);
   // B on a commit of the feature branch focuses that branch.
   const chip = dialog.getByRole('group', { name: /Focused branch/ });
   await expect(chip).toHaveCount(0);
