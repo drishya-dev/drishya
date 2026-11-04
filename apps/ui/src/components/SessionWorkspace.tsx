@@ -174,11 +174,10 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   useLayoutEffect(() => {
     const viewer = document.querySelector<HTMLElement>('.viewer');
     if (!viewer || !modern || narrow) return;
-    // Keep the agent's allocation stable when Files is minimized; an explicit
-    // resize changes its rail, while Workspace can reclaim hidden Files space.
-    viewer.style.setProperty('--files-rail', `${readingWidth + 34}px`);
+    // Minimised, Files gives its width to the stage (Yash, 3 Nov: a small screen can give the work the whole width).
+    viewer.style.setProperty('--files-rail', shown ? `${readingWidth + 34}px` : '24px');
     return () => { viewer.style.removeProperty('--files-rail'); };
-  }, [modern, narrow, readingWidth]);
+  }, [modern, narrow, readingWidth, shown]);
   useEffect(() => {
     if (graph || !source || !id) return;
     let active = true; setError(undefined);

@@ -30,6 +30,8 @@ test('repeated TodoWrite lists show the current checklist by default and earlier
  const latest=cards.last().getByRole('group',{name:'Plan checklist'});
  await expect(page.getByRole('group',{name:'Plan checklist'})).toHaveCount(1);
  await expect(latest).toContainText('Revision 3 · 2 of 4 done');
+ // A plan starts folded to its heading in every session (Yash, 3 Nov).
+ await expect(latest.locator('li')).toHaveCount(0);await latest.getByRole('button',{name:'Show plan',exact:true}).click();
  await expect(latest.locator('li.plan-completed')).toHaveCount(2);await expect(latest.locator('li.plan-in_progress')).toContainText('Add a regression test');
  await expect(cards.locator('.plan-list')).toHaveCount(1);
  await expect(cards.nth(0)).toContainText('Revision 1 · 0 of 3 done');
