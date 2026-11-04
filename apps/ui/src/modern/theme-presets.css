@@ -96,3 +96,12 @@
 :root[data-ui-version=modern] .theme-nord {--swatch-bg:#050a08;--swatch-node:#0c1310;--swatch-raised:#131c18;--swatch-accent:#10b981;--swatch-border:#1f2d27;}
 :root[data-ui-version=modern] .theme-gruvbox {--swatch-bg:#0c0908;--swatch-node:#15110e;--swatch-raised:#1e1814;--swatch-accent:#fc734d;--swatch-border:#2f2620;}
 :root[data-ui-version=modern][data-theme=light] .modern-native-composer.open {box-shadow:0 12px 30px #30271e14!important;}
+/* UI-8: on the four dark accent palettes, controls take the palette's own accent; --source keeps its meaning (a file read). Jet Black is unchanged,
+   and the light palettes' --source is already in their accent's family. */
+:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) :is(.workspace-header,.folder-explorer,.workbench-station,.prompt-composer,.workspace-bar,.product-dialog,.search,.home) { --modern-surface:color-mix(in srgb,var(--s1) 95%,var(--focus) 5%); --modern-raised:color-mix(in srgb,var(--s2) 96%,var(--focus) 4%); }
+:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .mini-switch.on { background:color-mix(in srgb,var(--focus) 22%,var(--bg)); border-color:var(--focus); }
+:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .mini-switch.on::before { background:var(--focus); }
+:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) :is(.workspace-grant,.runtime-tools summary,.workspace-toggles button[aria-pressed="true"],.atlas-eyebrow,.atlas-ref>span) { color:var(--focus); }
+:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .atlas-commit[aria-pressed=true] { box-shadow:inset -2px 0 var(--focus); }
+:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .commit-row[aria-pressed=true] { box-shadow:inset 2px 0 var(--focus); }
+:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .history article.op[data-search-hit] { box-shadow:0 0 0 1px var(--focus); }
