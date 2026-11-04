@@ -1119,7 +1119,7 @@ test('Files control tracks the responsive default without changing an explicit p
   await page.setViewportSize({width:390,height:844});await page.setViewportSize({width:1440,height:960});
   await expect(trigger).toHaveAttribute('aria-pressed','false');await expect(page.locator('.folder-explorer')).toHaveCount(0);
 });
-test('Files width is adjustable without covering Workspace or moving history on minimize',async({page})=>{
+test('Files width is adjustable without covering Workspace, and minimized Files gives the stage its width',async({page})=>{
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
@@ -1130,7 +1130,7 @@ test('Files width is adjustable without covering Workspace or moving history on 
   const history=page.locator('.history'), before=(await history.boundingBox())!;
   expect(before.x).toBeGreaterThan((await files.boundingBox())!.x+420);
   await files.getByRole('button',{name:'Minimize files',exact:true}).click();
-  await expect(files).toHaveCount(0);expect((await history.boundingBox())!.x).toBe(before.x);
+  await expect(files).toHaveCount(0);await expect.poll(async()=>(await history.boundingBox())!.x).toBe(24);
   await page.getByRole('button',{name:'Show files',exact:true}).click();
   await expect.poll(()=>files.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(420);
   const grip=(await resize.boundingBox())!,left=(await files.boundingBox())!.x;

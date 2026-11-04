@@ -108,7 +108,8 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440]){
       const area=page.locator(surface==='workspace'?'.developer-workspace':'.current-file-reader');
       const approval=area.getByRole('button',{name:surface==='workspace'?'Approve workspace reading':'Approve current-file reading',exact:true});await expect(approval.or(area.getByRole('region',{name:'File fallback'}))).toBeVisible();if(await approval.isVisible())await approval.click();
       const fallback=area.getByRole('region',{name:'File fallback'});await expect(fallback).toBeVisible();await expect(fallback.locator('.file-evidence-material')).toContainText('CAPTURED_');
-      await expect(fallback).toContainText(location==='outside'?'Outside this workspace':'no longer on disk');await expect(fallback.getByRole('button',{name:'Open in Workspace',exact:true})).toBeDisabled();
+      await expect(fallback).toContainText(location==='outside'?'Outside this workspace':'no longer on disk');// A file that cannot be read offers no Workspace button that cannot act (UI-8).
+      await expect(fallback.getByRole('button',{name:'Open in Workspace',exact:true})).toHaveCount(0);
       await expect(area.getByRole('button',{name:/Retry (current )?source/})).toHaveCount(0);await expect(area.getByText(/Reading current (source|file)…/)).toHaveCount(0);
       expect(await area.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
     }

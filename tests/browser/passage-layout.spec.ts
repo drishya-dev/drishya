@@ -63,6 +63,7 @@ test('visible checklist expansion and rapid history scrolling retain wire geomet
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${pinnedId}`);
   await expect(page.locator('.history .op .skeleton')).toHaveCount(0);
   await page.evaluate(()=>document.fonts.ready);
+  await page.locator('.plan-card[role=group]').getByRole('button',{name:'Show plan',exact:true}).click();
   const more=page.locator('.plan-card[role=group]').getByRole('button',{name:'Show all 12 items · 2 more',exact:true});
   await expect(more).toBeVisible();
   // Let the finite arrival observer finish before causing a position-only reflow.

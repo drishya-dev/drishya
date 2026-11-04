@@ -35,11 +35,14 @@ for (const width of [600, 1440]) test(`reading choices survive new plan data, re
   const id = (await app.ingest.importSource('claude-code', source)).recordingId;
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page, id);
   const checklist = page.locator('.plan-card[role=group]');
+  await expect(checklist.locator('li')).toHaveCount(0);
+  await checklist.getByRole('button',{name:'Show plan',exact:true}).click();
   await expect(checklist.locator('li')).toHaveCount(10);
   await expect(checklist.getByRole('button', {name:'Show all 12 items · 2 more',exact:true})).toBeVisible();
   const serverTools = page.locator('.md-server').filter({has:page.locator('summary span', {hasText:'fixture'})});
   const tools = page.getByRole('button',{name:'Tools',exact:true});
   if (await tools.isVisible()) await tools.click();
+  if (!await serverTools.evaluate(el => (el as HTMLDetailsElement).open)) await serverTools.locator(':scope>summary').click();
   await expect(serverTools).toHaveAttribute('open','');
   await expect(serverTools.getByRole('button', {name:/probe/})).toBeVisible();
   const inventory = page.locator('.tool-list');
@@ -92,6 +95,7 @@ for (const width of [600, 1440]) test(`thirteen revisions keep one live checklis
   const pinned = page.locator('.turn .plan-pinned');
   await expect(pinned).toHaveCount(1); await expect(pinned).toContainText('Plan · 0 of 12 done');
   await pinned.evaluate(el => el.setAttribute('data-acceptance-stable', 'yes'));
+  await page.locator('.plan-card[role=group]').getByRole('button',{name:'Show plan',exact:true}).click();
   for (let revision = 1; revision < PLAN_REVISIONS; revision++) {
     // Only this synthetic scratch journal is appended. Native journals are never written.
     appendFileSync(source, serialize(planRows(dir, session, revision)));
@@ -176,6 +180,7 @@ test('unknown and empty states use a neutral mark, retain literal accessible sta
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page, id);
   const pinned = page.locator('.plan-card[role=group]');
   await expect(pinned).toContainText('0 of 3 done');
+  await pinned.getByRole('button',{name:'Show plan',exact:true}).click();
   const unfamiliar = pinned.locator('li').filter({ hasText: 'Still unfamiliar' });
   const missing = pinned.locator('li').filter({ hasText: 'Missing state' });
   await expect(unfamiliar.locator('.plan-mark')).toHaveText('·');
@@ -203,7 +208,7 @@ for (const width of [600, 1440]) test(`native task results update one checklist 
  writeFileSync(source,serialize([planPrompt(dir,session),...first,...second]));
  const id=(await app.ingest.importSource('claude-code',source)).recordingId;
  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page,id);
- const pinned=page.locator('.plan-card[role=group]'); await expect(pinned).toHaveCount(1);
+ const pinned=page.locator('.plan-card[role=group]'); await expect(pinned).toHaveCount(1); await pinned.getByRole('button',{name:'Show plan',exact:true}).click();
  await expect(pinned.locator('li')).toHaveCount(2); await expect(pinned.locator('.plan-mark')).toHaveText(['·','·']);
  const progress=page.locator('.turn .plan-pinned'); await progress.evaluate(el=>el.setAttribute('data-stable-native','yes'));
  for(let revision=0;revision<12;revision++){

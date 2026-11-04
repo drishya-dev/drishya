@@ -1,0 +1,21 @@
+/* UI-8: queued inputs read as a list beside the selected input. One line of caveat; notification markup shows as its kind. */
+.queue-reader { padding:14px 20px 18px; min-width:0; }
+.queue-reader .queue-caveat { margin:0 0 12px; color:var(--t3); font:var(--text-xs)/1.6 var(--sans); }
+.queue-columns { display:grid; grid-template-columns:minmax(220px,300px) minmax(0,1fr); gap:20px; align-items:start; }
+@media (max-width:760px) { .queue-columns { grid-template-columns:minmax(0,1fr); } }
+.queue-list { display:grid; gap:2px; max-height:min(52dvh,420px); overflow:auto; }
+.queue-row { display:grid; gap:2px; width:100%; padding:7px 8px; border:0; border-radius:var(--round-sm); background:transparent; color:var(--t1); text-align:left; cursor:pointer; }
+.queue-row:hover { background:var(--s2); }
+.queue-row[aria-pressed=true] { background:var(--s2); box-shadow:inset 2px 0 var(--modern-accent,var(--t2)); }
+.queue-row:focus-visible { outline:1px solid var(--t2); outline-offset:1px; }
+.queue-row-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:var(--text-sm)/1.5 var(--sans); }
+.queue-row>small { color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }
+.queue-textless { display:block; padding:6px 8px; color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }
+.queue-pages { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.queue-pages small { font-size:var(--text-2xs); }
+.queue-detail { min-width:0; }
+.product-dialog .queue-detail p.queue-detail-head { margin:0 0 10px; color:var(--t2); font:var(--text-xs)/1.6 var(--sans); }
+.queue-detail-head strong { color:var(--t1); font-weight:var(--weight-medium); }
+.queue-text { margin:0 0 12px; max-height:48dvh; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; color:var(--t1); font:var(--text-sm)/1.7 var(--sans); background:none; border:0; padding:0; }
+.product-dialog .queue-reader p:is([role=alert],[role=status],.queue-empty) { margin:8px 0 0; font:var(--text-xs)/1.6 var(--sans); }
+.product-dialog .queue-reader p.queue-empty { color:var(--t3); }
