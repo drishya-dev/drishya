@@ -28,3 +28,5 @@
 .network-label.main { transform:translate(-50%,calc(-100% - 10px)); color:var(--t1); border-color:var(--line-3); }
 .network-graph .thread-zoom output { min-width:4ch; text-align:center; font-variant-numeric:tabular-nums; }
 .network-viewport { cursor:grab; } .network-viewport:active { cursor:grabbing; }
+/* The network graph names its controls in text (−, +, Fit), so they take the 12 px control size, not the 11 px of the old icon buttons. */
+.network-graph .thread-zoom>button { width:auto; min-width:28px; padding:0 8px; font:var(--text-xs)/1 var(--sans); }
