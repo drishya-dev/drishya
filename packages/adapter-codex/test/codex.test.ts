@@ -22,10 +22,12 @@ describe('Codex adapter', () => {
     expect(observations).toHaveLength(7);
     expect(observations[0]!.payload).toMatchObject({ source: 'codex-token-count', cumulative: true, turnId: 'turn-u1', limits: { usedPercent: 3, windowMinutes: 300, plan: 'plus' } });
     expect(observations[0]!.payload).not.toHaveProperty('tokens');
+    // USAGE-1: the weekly window travels through the same allowlist, without the plan.
+    expect(observations[0]!.payload).toMatchObject({ secondaryLimits: { usedPercent: 12.5, windowMinutes: 10080, resetsAt: 1792900000 } });
     expect(observations.at(-2)!.payload).toMatchObject({ cumulative: true, tokens: { input: 28800, total: 29250 }, contextWindow: 272000 });
     expect(observations.at(-1)!.payload).toMatchObject({ cumulative: false, tokens: { input: 9900, output: 30 }, turnId: 'turn-u2' });
     const text = JSON.stringify(observations);
-    for (const forbidden of ['credits', '17.25', 'limit_id', 'synthetic-limit-id', 'secondary', 'account']) expect(text).not.toContain(forbidden);
+    for (const forbidden of ['credits', '17.25', 'limit_id', 'synthetic-limit-id', 'account']) expect(text).not.toContain(forbidden);
   });
   it('captures the actual model on same-workspace turn changes without confusing it with the provider', () => {
     const parser = createParser(ctx);

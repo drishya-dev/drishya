@@ -46,7 +46,9 @@ function Limits({ point, harness }: { point?: UsagePayload; harness?: string }) 
   const limits = point?.limits;
   return <section aria-label="Limits"><h4>Limits</h4>
     {limits ? <><Share label={`${windowWords(limits.windowMinutes) ?? ''} window`.trim()} value={`${limits.usedPercent}% used`} percent={limits.usedPercent} title={`Recorded by ${sourceName(point!.source)} · rate_limits.primary`} />
-      <small>{limits.resetsAt ? `Resets ${resetTime(limits.resetsAt)}` : 'Reset time not recorded'}{limits.plan ? ` · ${limits.plan} plan` : ''}</small></>
+      <small>{limits.resetsAt ? `Resets ${resetTime(limits.resetsAt)}` : 'Reset time not recorded'}{limits.plan ? ` · ${limits.plan} plan` : ''}</small>
+      {point?.secondaryLimits && <><Share label={`${windowWords(point.secondaryLimits.windowMinutes) ?? ''} window`.trim()} value={`${point.secondaryLimits.usedPercent}% used`} percent={point.secondaryLimits.usedPercent} title={`Recorded by ${sourceName(point.source)} · rate_limits.secondary`} />
+      <small>Resets {resetTime(point.secondaryLimits.resetsAt)}</small></>}</>
       : <p className="usage-absent">{harness === 'claude-code' ? 'Claude Code does not record plan limits in its journal.' : 'No plan limit recorded for this session.'}</p>}
   </section>;
 }

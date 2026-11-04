@@ -238,6 +238,8 @@ export interface UsagePayload {
   cost?: { usd: number; basis: 'harness-estimate'; modelCostUnknown?: boolean };
   work?: { linesAdded?: number; linesRemoved?: number; durationMs?: number; apiDurationMs?: number; toolDurationMs?: number };
   limits?: { usedPercent: number; windowMinutes: number; resetsAt: number; plan?: string };
+  /** USAGE-1: a second reported window (Codex's weekly limit), same fields as `limits` without the plan. */
+  secondaryLimits?: { usedPercent: number; windowMinutes: number; resetsAt: number };
 }
 
 /** Optional enrichment of an existing compaction record; its original observation stays immutable. */
