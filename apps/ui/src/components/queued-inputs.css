@@ -19,3 +19,9 @@
 .queue-text { margin:0 0 12px; max-height:48dvh; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; user-select:text; color:var(--t1); font:var(--text-sm)/1.7 var(--sans); background:none; border:0; padding:0; }
 .product-dialog .queue-reader p:is([role=alert],[role=status],.queue-empty) { margin:8px 0 0; font:var(--text-xs)/1.6 var(--sans); }
 .product-dialog .queue-reader p.queue-empty { color:var(--t3); }
+/* A notification reads as its named fields; the Original switch above them swaps in the recorded markup. */
+.queue-detail>.original-toggle { float:right; margin:-4px 0 4px 12px; }
+.queue-fields { display:grid; gap:10px; margin:0 0 12px; clear:both; }
+.queue-fields>div { display:grid; grid-template-columns:minmax(80px,max-content) minmax(0,1fr); gap:4px 12px; }
+.queue-fields dt { color:var(--t3); font:var(--text-2xs)/1.6 var(--sans); }
+.queue-fields dd { margin:0; color:var(--t1); font:var(--text-sm)/1.55 var(--sans); white-space:pre-wrap; overflow-wrap:anywhere; }
