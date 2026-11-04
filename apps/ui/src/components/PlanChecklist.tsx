@@ -45,7 +45,7 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
     ? planThreads(projection, candidate => (candidate.detail.kind === 'plan' && candidate.detail.scope ? candidate.endSequence ?? Infinity : candidate.startSequence) < step)
     : threadsOf(projection)).get(op.id) : undefined), [projection, op.id, mode, step]);
   const [at, setAt] = useState<number>();
-  const [open, setOpen] = useDisclosureChoice(`plan/${position?.thread.revisions[0]?.operationId ?? op.id}`);
+  const [open, setOpen] = useDisclosureChoice(`plan/${position?.thread.revisions[0]?.operationId ?? op.id}`, false);
   const [all, setAll] = useDisclosureChoice(`plan-items/${position?.thread.revisions[0]?.operationId ?? op.id}`, false);
   if (op.detail.kind === 'plan' && op.detail.document) {
     const doc = op.detail.document;
