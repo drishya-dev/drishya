@@ -1,4 +1,5 @@
 import {StoredToolResult} from './StoredToolResult.tsx';
+import {OriginalToggle} from './OriginalToggle.tsx';
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Operation } from '@drishya/contracts';
 import { isScreenOperation } from '@drishya/scene';
@@ -39,7 +40,7 @@ export function WebEvidence({ op, full = false }: { op: Operation; full?: boolea
 
 function WebReading({op,detail:d,full}:{op:Operation;detail:Extract<Operation['detail'],{kind:'web'}>;full:boolean}) {
   const source=useApp(s=>s.source),recordingId=useApp(s=>s.recordingId);
-  const [start,setStart]=useState(0),[query,setQuery]=useState(''),[retry,setRetry]=useState(0);
+  const [start,setStart]=useState(0),[query,setQuery]=useState(''),[retry,setRetry]=useState(0),[original,setOriginal]=useState(false);
   const [knownTotal,setKnownTotal]=useState<number>();
   const [loaded,setLoaded]=useState<{key:string;page?:WebResultPage;error?:boolean}>();
   const preview=useMemo(()=>webMaterial(d.resultPreview??'',d.results??[]),[d.resultPreview,d.results]);
@@ -60,8 +61,9 @@ function WebReading({op,detail:d,full}:{op:Operation;detail:Extract<Operation['d
   return <div className="web-evidence" aria-busy={canRead&&!page&&!error}>
     {d.url && <RecordedUrl url={d.url}/>}
     {d.query && <div className="query">{d.query}</div>}
-    {full&&<div className="web-reading-meta"><span>{displayed?`${displayed.total} result${displayed.total===1?'':'s'}`:`${preview.results.length} results in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
+    {full&&<div className="web-reading-meta"><OriginalToggle original={original} onToggle={()=>setOriginal(value=>!value)}/><span>{displayed?`${displayed.total} result${displayed.total===1?'':'s'}`:`${preview.results.length} results in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
     {d.fetch && fetchFacts(d.fetch) && <div className="browser-action">{fetchFacts(d.fetch)}</div>}
+    {full&&original?<div className="web-original"><div className="browser-excerpt full" tabIndex={0}><pre className="output web-original-text">{material.original||'No result text recorded'}</pre></div>{displayed&&!displayed.originalComplete&&<small className="muted">Original preview · text excerpt limited to 64 KiB. Result counts cover the stored list.</small>}</div>:<>
     {full&&canRead&&(knownTotal??preview.results.length)>50&&<label className="web-result-filter">Find result<input type="search" value={query} placeholder="Title, address or snippet" onChange={event=>{setQuery(event.target.value);setStart(0);}}/></label>}
     {full&&canRead&&!page&&!error&&<span className="muted" role="status">Opening results…</span>}
     {full&&error&&<p role="status">Could not open results. <button type="button" onClick={()=>setRetry(value=>value+1)}>Retry</button></p>}
@@ -71,7 +73,7 @@ function WebReading({op,detail:d,full}:{op:Operation;detail:Extract<Operation['d
     {full&&!results.length&&!query&&<p className="muted">{op.endSequence===undefined?'Waiting for result':page?.availability==='removed'?'Result is no longer stored.':d.url?'No result list recorded for this page fetch.':'No structured result list available.'}</p>}
     {full && <CapturedOutcomes output={d.resultPreview}/>}
     {(full||!results.length)&&material.text&&<section className="web-response"><h4>{displayed?.availability==='captured'?(d.url?'Page text':'Response text'):'Available web preview'}</h4><div className={`browser-excerpt${full?' full':''}`} tabIndex={0} aria-label="Web result excerpt"><ToolOutput text={material.text}/></div></section>}
-    {full&&<details className="web-original"><summary>{displayed?.originalComplete?'Original result':'Original preview'}</summary><div className="browser-excerpt full" tabIndex={0}><pre className="output web-original-text">{material.original||'No result text recorded'}</pre></div>{displayed&&!displayed.originalComplete&&<small className="muted">Text excerpt limited to 64 KiB. Result counts cover the stored list.</small>}</details>}
+    </>}
   </div>;
 }
 

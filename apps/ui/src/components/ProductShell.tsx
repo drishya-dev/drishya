@@ -81,9 +81,11 @@ export function ProductShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const apply = () => {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
-      const scheme = theme === 'light' || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      // Royal keeps its saved id (tokyo) but is a light palette since UI-8.
+      const lightPalette = theme === 'tokyo';
+      const scheme = theme === 'light' || lightPalette || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       document.documentElement.dataset.theme = scheme;
-      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'dark' || theme === 'system' ? 'jet' : theme;
+      document.documentElement.dataset.palette = lightPalette ? 'tokyo' : scheme === 'light' ? 'paper' : theme === 'dark' || theme === 'system' ? 'jet' : theme;
     };
     apply();
     const preference = matchMedia('(prefers-color-scheme: light)');
@@ -102,12 +104,12 @@ const THEMES = [
 // Modern names describe our materials, without claiming another theme's identity.
 const MODERN_THEMES = [
   ['dark', 'Jet Black', 'Neutral graphite · indigo'],
-  ['midnight', 'Deep Ocean', 'Petrol black · sea glass'],
-  ['light', 'Porcelain', 'Warm off-white · ink blue'],
-  ['mocha', 'Orchid', 'Aubergine charcoal · rose'],
-  ['tokyo', 'Blueprint', 'Ink navy · cornflower'],
-  ['nord', 'Evergreen', 'Mineral charcoal · celadon'],
-  ['gruvbox', 'Copper', 'Espresso · warm copper'],
+  ['midnight', 'Midnight', 'Midnight black · electric blue'],
+  ['light', 'Daylight', 'White · sky blue'],
+  ['mocha', 'Orchid', 'Violet black · hot pink'],
+  ['tokyo', 'Royal', 'Pure white · deep blue'],
+  ['nord', 'Emerald', 'Green black · emerald'],
+  ['gruvbox', 'Ember', 'Warm black · cantaloupe orange'],
 ] as const;
 
 function Settings() {

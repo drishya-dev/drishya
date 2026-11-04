@@ -194,7 +194,7 @@ export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary
 }
 
 /** What a branch strand is, from Git alone: its name if a ref names its head, where it left and rejoined, and its commits. */
-function BranchPeek({branch,byHash,primary,focused,open}:{branch:LightBranch;byHash:Map<string,GitCommit>;primary?:string;focused?:boolean;open?:()=>void}) {
+export function BranchPeek({branch,byHash,primary,focused,open}:{branch:LightBranch;byHash:Map<string,GitCommit>;primary?:string;focused?:boolean;open?:()=>void}) {
   const commits=branch.members.map(hash=>byHash.get(hash)).filter((commit):commit is GitCommit=>!!commit);
   const head=byHash.get(branch.head),fork=branch.fork?byHash.get(branch.fork):undefined,merge=branch.merge?byHash.get(branch.merge):undefined;
   const authors=[...new Set(commits.map(commit=>commit.author))];
@@ -210,7 +210,7 @@ function BranchPeek({branch,byHash,primary,focused,open}:{branch:LightBranch;byH
 }
 
 /** The focused branch, with previous and next along its commits and a way out. The name is the ref that points at its head, when one does. */
-function BranchChip({branch,byHash,selected,step,clear}:{branch:LightBranch;byHash:Map<string,GitCommit>;selected:string;step:(direction:1|-1)=>void;clear:()=>void}) {
+export function BranchChip({branch,byHash,selected,step,clear}:{branch:LightBranch;byHash:Map<string,GitCommit>;selected:string;step:(direction:1|-1)=>void;clear:()=>void}) {
   const head=byHash.get(branch.head),name=head?.labels[0]??'Unnamed branch',at=branch.members.indexOf(selected);
   return <div className="thread-branch-chip" role="group" aria-label={`Focused branch ${name}`} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.stopPropagation();clear();}}}>
     <code title={name}>{name}</code>

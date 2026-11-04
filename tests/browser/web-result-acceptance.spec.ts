@@ -65,7 +65,7 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  let failedOnce=false;await page.route('**/web-result/**',route=>{if(!failedOnce){failedOnce=true;return route.fulfill({status:503,json:{error:'Synthetic temporary read failure'}});}return route.continue();});
  await filter.fill('temporary failure');await expect(inspector.getByRole('button',{name:'Retry',exact:true})).toBeVisible();await expect(filter).toBeFocused();
  await filter.fill('result 159');await expect(inspector.locator('.web-results li')).toHaveCount(1);await expect(inspector.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
- await inspector.getByText('Original result',{exact:true}).click();await expect(inspector.locator('.web-original')).toContainText(output);
+ await inspector.locator('.web-reading-meta').getByRole('button',{name:'Original',exact:true}).click();await expect(inspector.locator('.web-original')).toContainText(output);
  expect(await inspector.locator('.web-original-text').evaluate(el=>el.textContent)).toBe(output);
  expect(external).toBe(0);expect(await inspector.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
  // The same Inspector survives a seek before its result; cached future material must disappear.

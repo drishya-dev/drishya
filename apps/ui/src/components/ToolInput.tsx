@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {CapturedResultViews} from './CapturedResultViews.tsx';
+import {ReadingCaption} from './OriginalToggle.tsx';
 import {dataLabel,dataText,isDataRecord,parseCapturedJson} from '../lib/structured-data.ts';
 
 /** Decode actual JSON arguments once; never replace literal backslash sequences. */
@@ -8,7 +9,7 @@ export function ToolInput({ value }: { value: unknown }) {
   const original=typeof value==='string' ? value : JSON.stringify(value,null,2) ?? String(value);
   let input=value;
   if(typeof value==='string') { try { const parsed=parseCapturedJson(value); if(isDataRecord(parsed)||Array.isArray(parsed)) input=parsed; } catch { /* Literal text remains literal. */ } }
-  return <div className="tool-input"><div className="structured-output-controls"><span>Arguments</span><button aria-pressed={raw} onClick={e=>{e.stopPropagation();setRaw(!raw);}}>{raw?'Show fields':'Show raw'}</button></div>{raw?<pre className="json">{original}</pre>:<InputValue value={input}/>}<CapturedResultViews text={original} argumentsView/></div>;
+  return <div className="tool-input"><ReadingCaption label="Arguments" original={raw} onToggle={()=>setRaw(!raw)}/>{raw?<pre className="json">{original}</pre>:<InputValue value={input}/>}<CapturedResultViews text={original} argumentsView/></div>;
 }
 
 function InputValue({value,depth=0}:{value:unknown;depth?:number}) {

@@ -3,6 +3,7 @@ import {createPortal} from 'react-dom';
 import type {QueueInputChunk, QueuePage, QueueReceipt} from '@drishya/contracts';
 import {useApp} from '../state.ts';
 import {ReadingDialog} from './ProductShell.tsx';
+import {OriginalToggle} from './OriginalToggle.tsx';
 import './queued-inputs.css';
 
 const labels = {recorded: 'Queue receipt recorded', unknown: 'Queue changed · item outcome unknown', removed: 'Removed from queue', delivered: 'Delivered · native identity confirmed'};
@@ -14,6 +15,14 @@ function receiptName(item: QueueReceipt): string {
   return item.preview || (item.images?.length ? 'Image input' : 'Input with no text');
 }
 const textless = (item: QueueReceipt) => !item.preview && !item.images?.length;
+/** A notification the harness wrapped in one element whose children are named fields reads as those fields; anything else stays as recorded.
+ *  Only the loaded text is read, and the fields are shown exactly as written; nothing is inferred. */
+function notificationFields(text: string): {name: string; value: string}[] | undefined {
+  const body = text.match(/^\s*<([a-z][\w-]*)>([\s\S]*)<\/\1>\s*$/i)?.[2];
+  if (body === undefined) return undefined;
+  const fields = [...body.matchAll(/<([a-z][\w-]*)>([\s\S]*?)<\/\1>/gi)].map(match => ({name: match[1]!.replace(/[-_]+/g, ' ').replace(/^./, c => c.toUpperCase()), value: match[2]!.trim()}));
+  return fields.length ? fields : undefined;
+}
 
 /** A provisional receipt never becomes a prompt by inference. Reading it does not send anything. */
 export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
@@ -24,7 +33,8 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   const revision = useApp(s => s.recording?.revision);
   const [loaded, setLoaded] = useState<{key: string; page: QueuePage}>(), [open, setOpen] = useState(false);
   const [selected, select] = useState<QueueReceipt>(), [chunk, setChunk] = useState<QueueInputChunk>();
-  const [error, setError] = useState(''), [busy, setBusy] = useState(false), [copied, setCopied] = useState(false);
+  const [error, setError] = useState(''), [busy, setBusy] = useState(false), [copied, setCopied] = useState(false), [original, setOriginal] = useState(false);
+  const fields = chunk && !chunk.hasMore ? notificationFields(chunk.text) : undefined;
   const cursor = useRef<{key: string; before?: number}>({key: ''});
   const request = useRef(0), reading = useRef(0), active = useRef(true);
   useEffect(() => {active.current = true; return () => {active.current = false; request.current++; reading.current++;};}, []);
@@ -103,9 +113,11 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
         </div>
         </div>
         {selected && <section className="queue-detail" aria-label="Queued input">
+          {chunk && fields && <OriginalToggle original={original} onToggle={() => setOriginal(value => !value)}/>}
           <p className="queue-detail-head"><strong>{labels[(data?.items.find(item => item.id === selected.id) ?? selected).state]}</strong>{selected.time && <> · <time dateTime={selected.time}>{new Date(selected.time).toLocaleString()}</time></>}</p>
           {textless(selected) && <p className="queue-empty">No text recorded with this receipt.</p>}
-          {chunk && <><pre className="queue-text" data-queued-input-text>{chunk.text || 'No text recorded.'}</pre>
+          {chunk && <>
+            {fields && !original ? <dl className="queue-fields">{fields.map((field, index) => <div key={index}><dt>{field.name}</dt><dd>{field.value || '—'}</dd></div>)}</dl> : <pre className="queue-text" data-queued-input-text>{chunk.text || 'No text recorded.'}</pre>}
             <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>{chunk.hasMore && <button type="button" className="btn small" disabled={busy} onClick={() => void more()}>Read more input</button>}<button type="button" className="btn ghost small" disabled={busy} onClick={() => void more(true)}>{copied ? 'Copied' : 'Copy complete input'}</button></div>
           </>}
           {selected.images?.map((image, index) => image.sha && source.imageUrl

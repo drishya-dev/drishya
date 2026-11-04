@@ -135,6 +135,9 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   // The strip keeps the current cell in view without moving the page.
   const strip = useRef<HTMLDivElement>(null);
   useEffect(() => { strip.current?.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [shownIndex]);
+  // The trail ends at the step shown; keep that end in view when the list is taller than its room.
+  const trailEl = useRef<HTMLElement>(null);
+  useEffect(() => { const el = trailEl.current; if (el) el.scrollTop = el.scrollHeight; }, [shownIndex]);
 
   // The reader owns the keyboard while it is open. A document listener, because focus can be nowhere inside it
   // (the dialog is first shown empty and its controls arrive with the run).
@@ -170,6 +173,13 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   const gap = gapLabel(gapBefore(steps, shownIndex));
   const frameNote = !frameStep ? 'No frame recorded yet' : shown.image ? 'Frame returned by this step' : `No new frame recorded · showing step ${shown.frame! + 1}`;
   const ratio = image?.width && image.height ? { aspectRatio: `${image.width} / ${image.height}` } : undefined;
+  // UI-8 (Yash, 3 Nov): what the agent did to reach this screen, the recorded steps since the previous frame, up to this one.
+  // The frame shown is the one this step's tab last returned (screen.ts), so the trail starts after that frame and keeps to that tab.
+  const sameTab = (s: ScreenStep) => s === shown || s.tab === undefined || shown.tab === undefined || s.tab === shown.tab;
+  let after = shown.image ? -1 : shown.frame ?? -1;
+  if (shown.image) for (let i = shownIndex - 1; i >= 0; i--) if (steps[i]!.image && sameTab(steps[i]!)) { after = i; break; }
+  const reached = steps.slice(after + 1, shownIndex + 1).filter(sameTab);
+  const earlier = Math.max(0, reached.length - 12), trail = reached.slice(earlier), since = steps.indexOf(reached[0] ?? shown);
   return <dialog ref={dialog} className={`screen-view${full ? ' full' : ''}`} aria-label="Screen view" onClose={onClose}
     onClick={event => { if (event.target === dialog.current) dialog.current.close(); }}>
     <div className="screen-bar">
@@ -182,9 +192,16 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
       <button type="button" aria-pressed={full} title="Full window (F)" onClick={() => setFull(v => !v)}>{full ? 'Window' : 'Full window'}</button>
       <button type="button" onClick={() => dialog.current?.close()}>Close</button>
     </div>
+    <div className="screen-body">
     <div className="screen-stage">
       {url && image ? <Frame key={shown.frame} url={url} image={image} ratio={ratio} step={shown} previous={shown.frame !== steps[shownIndex - 1]?.frame && sameShape(steps[steps[shownIndex - 1]?.frame ?? -1]?.image, image) ? imageUrl(steps[steps[shownIndex - 1]!.frame!]!.image) : undefined}/>
         : <div className="screen-missing" role="status" style={ratio}>{image ? `Image not retained${image.omitted ? `: ${WHY[image.omitted] ?? image.omitted}` : ''}${image.width && image.height ? ` · recorded ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${bytesLabel(image.bytes)}` : ''}` : 'No frame recorded yet'}</div>}
+    </div>
+    <section ref={trailEl} className="screen-trail" aria-label="How the agent reached this screen">
+      <h3>To reach this screen</h3>
+      {earlier > 0 && <button type="button" className="screen-trail-earlier" onClick={() => go(since)}>{earlier} earlier {earlier === 1 ? 'step' : 'steps'}</button>}
+      <ol>{trail.map(s => { const i = steps.indexOf(s); return <li key={s.id}><button type="button" aria-current={i === shownIndex ? 'step' : undefined} className={s.status === 'error' ? 'failed' : undefined} onClick={() => go(i)}><small>{i + 1}</small><span>{describe(s)}</span>{s.status === 'error' && <em>failed</em>}</button></li>; })}</ol>
+    </section>
     </div>
     <div className="screen-caption">
       <strong>{describe(shown)}</strong>
