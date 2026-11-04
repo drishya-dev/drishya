@@ -8,7 +8,7 @@ import {BranchChip,BranchPeek} from './GitThreadGraph.tsx';
 import {useApp} from '../state.ts';
 import './git-network-graph.css';
 
-const MIN_SCALE=.3,MAX_SCALE=3,clampScale=(value:number)=>Math.max(MIN_SCALE,Math.min(MAX_SCALE,value)),zoomStep=1.25;
+const PAD=28,MIN_SCALE=.3,MAX_SCALE=3,clampScale=(value:number)=>Math.max(MIN_SCALE,Math.min(MAX_SCALE,value)),zoomStep=1.25;
 
 /** Runs of first-parent commits off the main line: where each left, what it holds, and where it rejoined. Git links only. */
 function networkBranches(commits:GitCommit[],main:Set<string>,lanes:Map<string,number>):LightBranch[]{
@@ -45,11 +45,17 @@ export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primar
   useLayoutEffect(()=>{seeds.clear();for(const hash of mainSeeds)seeds.add(hash);},[mainSeeds,seeds]);
   // A new reference opens at the newest commit, on the right.
   useLayoutEffect(()=>{if(previous.current===resetKey)return;previous.current=resetKey;setPinnedKey('');setBranchKey('');setHovered('');setScale(1);requestAnimationFrame(()=>{const el=viewport.current;if(el)el.scrollLeft=el.scrollWidth;});},[resetKey]);
-  const zoom=(factor:number)=>{const el=viewport.current;const centre=el?(el.scrollLeft+el.clientWidth/2)/Math.max(1,el.scrollWidth):1;setScale(value=>clampScale(value*factor));requestAnimationFrame(()=>{if(el)el.scrollLeft=centre*el.scrollWidth-el.clientWidth/2;});};
+  // Zoom about an anchor (the pointer for Ctrl + wheel, the view centre otherwise) so the commit under it stays where it was.
+  // The scroll is corrected after React lays out the new width; quick wheel bursts compound on the latest requested scale.
+  const target=useRef(1),pending=useRef<{at:number;ax:number}|null>(null);
+  const zoom=(factor:number,anchor?:number)=>{const el=viewport.current,from=target.current,next=clampScale(from*factor);if(next===from||!el)return;const ax=anchor??el.clientWidth/2;
+    if(!pending.current||pending.current.ax!==ax)pending.current={at:(el.scrollLeft+ax-PAD)/from,ax};target.current=next;setScale(next);};
+  useLayoutEffect(()=>{target.current=scale;const el=viewport.current,held=pending.current;pending.current=null;if(el&&held)el.scrollLeft=PAD+held.at*scale-held.ax;},[scale]);
+  const drag=useRef<{x:number;left:number;id:number}|null>(null);
   useEffect(()=>{
     const el=viewport.current;if(!el)return;
     const wheel=(event:WheelEvent)=>{
-      if(event.ctrlKey||event.metaKey){event.preventDefault();zoom(Math.exp(-event.deltaY*(event.deltaMode===1?.05:.0025)));return;}
+      if(event.ctrlKey||event.metaKey){event.preventDefault();zoom(Math.exp(-event.deltaY*(event.deltaMode===1?.05:.0025)),event.clientX-el.getBoundingClientRect().left);return;}
       const delta=event.deltaX||event.deltaY;if(!delta)return;event.preventDefault();el.scrollLeft+=delta;
       if(delta<0&&el.scrollLeft<40&&moreOlder&&!loading)extend('older');else if(delta>0&&el.scrollLeft+el.clientWidth>el.scrollWidth-40&&moreNewer&&!loading)extend('newer');
     };
@@ -78,7 +84,11 @@ export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primar
         <button type="button" aria-label="Fit graph" title="Fit the loaded history" onClick={fit}>Fit</button>
       </div>
     </div>
-    <div className="thread-viewport network-viewport atlas-commit-list" ref={viewport} tabIndex={0} aria-label="Commits, oldest on the left" onKeyDown={event=>{
+    <div className="thread-viewport network-viewport atlas-commit-list" ref={viewport} tabIndex={0} aria-label="Commits, oldest on the left; drag to pan, pinch or Ctrl + wheel to zoom"
+      onPointerDown={event=>{if(event.button!==0||(event.target as HTMLElement).closest('button,path'))return;drag.current={x:event.clientX,left:event.currentTarget.scrollLeft,id:event.pointerId};event.currentTarget.setPointerCapture(event.pointerId);}}
+      onPointerMove={event=>{const held=drag.current;if(!held||held.id!==event.pointerId)return;const el=event.currentTarget;el.scrollLeft=held.left-(event.clientX-held.x);if(el.scrollLeft<40&&moreOlder&&!loading)extend('older');else if(el.scrollLeft+el.clientWidth>el.scrollWidth-40&&moreNewer&&!loading)extend('newer');}}
+      onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}
+      onKeyDown={event=>{
       if(event.key==='PageUp'&&moreOlder){event.preventDefault();extend('older');return;}if(event.key==='PageDown'&&moreNewer){event.preventDefault();extend('newer');return;}
       if((event.key==='+'||event.key==='=')&&!event.ctrlKey&&!event.metaKey){event.preventDefault();zoom(zoomStep);return;}if(event.key==='-'&&!event.ctrlKey&&!event.metaKey){event.preventDefault();zoom(1/zoomStep);return;}
       if((event.key==='b'||event.key==='B')&&!event.altKey&&!event.ctrlKey&&!event.metaKey){const hash=(event.target as HTMLElement).closest<HTMLElement>('[data-commit-hash]')?.dataset.commitHash,found=hash?branchOf.get(hash):undefined;if(found){event.preventDefault();setPinnedKey(value=>value===found.key?'':found.key);}return;}
@@ -89,7 +99,7 @@ export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primar
     }}>
       <div className="network-world" style={{width:layout.width,height:layout.height+28}}>
         <svg className="thread-links network-links" width={layout.width} height={layout.height} aria-hidden="true">
-          {layout.edges.map(edge=><g key={`${edge.from}>${edge.to}`} className={`network-edge lane-${edge.main?0:1+(edge.lane-1)%5}${dim&&!(lit.has(edge.from)&&lit.has(edge.to))?' muted':''}`}><path className="network-halo" d={edge.path}/><path className="network-core" d={edge.path} onPointerEnter={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setBranchKey(branch.key);}} onPointerLeave={()=>setBranchKey('')} onClick={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setPinnedKey(value=>value===branch.key?'':branch.key);}}/></g>)}
+          {layout.edges.map(edge=><g key={`${edge.from}>${edge.to}`} data-edge={`${edge.from}>${edge.to}`} className={`network-edge lane-${edge.main?0:1+(edge.lane-1)%5}${dim&&!(lit.has(edge.from)&&lit.has(edge.to))?' muted':''}`}><path className="network-halo" d={edge.path}/><path className="network-core" d={edge.path} onPointerEnter={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setBranchKey(branch.key);}} onPointerLeave={()=>setBranchKey('')} onClick={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setPinnedKey(value=>value===branch.key?'':branch.key);}}/></g>)}
         </svg>
         {layout.nodes.map(node=>{const commit=byHash.get(node.hash)!,link=links?.get(node.hash);return <button key={node.hash} type="button" className={`thread-commit atlas-commit network-commit${node.main?' thread-primary':''}${dim&&!lit.has(node.hash)?' muted':''}${link?' linked':''}`} data-commit-hash={node.hash} style={{left:node.x,top:node.y}} aria-pressed={selected===node.hash} aria-label={`${commit.subject||'Untitled commit'} · ${commit.hash.slice(0,7)}${commit.labels.length?` · ${commit.labels.join(', ')}`:''}${link?` · ${gitSessionLinkDescription(link)}`:''}`} title={`${commit.hash.slice(0,10)} · ${commit.subject}`} onPointerEnter={()=>setHovered(node.hash)} onPointerLeave={()=>setHovered('')} onFocus={()=>setHovered(node.hash)} onBlur={()=>setHovered('')} onClick={()=>choose(node.hash)}/>;})}
         {layout.nodes.filter(node=>byHash.get(node.hash)!.labels.length).map(node=>{const labels=byHash.get(node.hash)!.labels;return <span key={`label-${node.hash}`} className={`network-label${node.main?' main':''}`} style={{left:node.x,top:node.y}} title={labels.join(', ')}>{labels[0]}{labels.length>1?` +${labels.length-1}`:''}</span>;})}

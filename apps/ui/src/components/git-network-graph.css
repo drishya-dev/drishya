@@ -24,3 +24,4 @@
 .network-label { position:absolute; transform:translate(-50%,12px); padding:1px 6px; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s2); color:var(--t2); font:var(--text-2xs)/1.5 var(--mono); white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
 .network-label.main { color:var(--t1); border-color:var(--line-3); }
 .network-graph .thread-zoom output { min-width:4ch; text-align:center; font-variant-numeric:tabular-nums; }
+.network-viewport { cursor:grab; } .network-viewport:active { cursor:grabbing; }
