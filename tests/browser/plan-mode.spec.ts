@@ -54,6 +54,8 @@ test('plan-mode and desktop checklist records show as one proposed plan and one 
     const pinned = page.locator('.plan-card[role=group]');
     await expect(pinned).toHaveCount(1);
     await expect(pinned).toContainText('Revision 3 · 2 of 3 done');
+    // Folded at first; the open choice is remembered on the second width.
+    const show = pinned.getByRole('button',{name:'Show plan',exact:true}); if (await show.isVisible()) await show.click();
     await expect(pinned.locator('li.plan-completed')).toHaveCount(2);
     await expect(pinned.locator('li.plan-in_progress')).toContainText('Run the tests');
   }

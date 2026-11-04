@@ -82,3 +82,8 @@
 :root[data-ui-version=modern] .file-workspace>header .evidence-navigation { padding:0;gap:2px; }
 :root[data-ui-version=modern] .file-workspace>header .evidence-navigation button { width:var(--control-sm);min-width:var(--control-sm);min-height:var(--control-sm);padding:0; }
 .file-heading:focus { outline:none; }
+/* UI-8: a file Workspace cannot read says why once, with its step arrows on the same row; the recorded material follows. */
+:root[data-ui-version=modern] .captured-fallback-head { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line); }
+:root[data-ui-version=modern] .captured-fallback-head>p { margin:0;color:var(--t2);font:var(--text-xs)/1.6 var(--sans); }
+:root[data-ui-version=modern] .captured-fallback-head .evidence-navigation { padding:0;gap:2px; }
+:root[data-ui-version=modern] .captured-file-fallback .file-reading-context:empty { display:none; }

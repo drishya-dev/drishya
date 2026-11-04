@@ -67,12 +67,12 @@ export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: 
   useEffect(() => { dismiss(); if (modern && !eligible) setOpen(false); }, [id, source, mode]);
   useEffect(() => {
     if (!choices) return;
-    const place = () => { const box = trigger.current?.getBoundingClientRect(); if (box) setPosition({ top: box.bottom + 6, left: Math.max(8, Math.min(innerWidth - 232, box.right - 224)) }); };
+    const place = () => { const box = (trigger.current?.closest('.studio-actions') ?? trigger.current)?.getBoundingClientRect(); if (box) setPosition({ top: box.bottom + 6, left: Math.max(8, Math.min(innerWidth - 232, box.right - 224)) }); };
     place(); window.addEventListener('resize', place);
     return () => window.removeEventListener('resize', place);
   }, [choices, slot]);
   const button = modern ? <button ref={trigger} className="btn ghost git-open" aria-label="Git" title={eligible ? 'Git: current changes or branches and commits' : reason} aria-describedby={!eligible ? popoverId + '-reason' : undefined} aria-expanded={choices} aria-controls={popoverId} disabled={!eligible} onClick={event => {
-    const box = event.currentTarget.getBoundingClientRect(); setPosition({ top: box.bottom + 6, left: Math.max(8, Math.min(innerWidth - 232, box.right - 224)) });
+    const box = (event.currentTarget.closest('.studio-actions') ?? event.currentTarget).getBoundingClientRect(); setPosition({ top: box.bottom + 6, left: Math.max(8, Math.min(innerWidth - 232, box.right - 224)) });
     const keyboard = event.detail === 0; popover.current?.togglePopover();
     if (keyboard) requestAnimationFrame(() => popover.current?.querySelector<HTMLButtonElement>('button')?.focus());
   }}>{icon && <GitBranchGlyph />}Git</button> : <button className="btn ghost git-open" aria-label="Git review" aria-expanded={open} onClick={() => setOpen(value => !value)}>{icon && <GitBranchGlyph />}Git review</button>;
