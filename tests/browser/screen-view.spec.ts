@@ -78,6 +78,11 @@ for(const width of [600,1440])test(`the screen reader draws each recorded action
  await page.keyboard.press('ArrowRight');
  await expect(reader.locator('.screen-caption strong')).toHaveText('Type “metformin 500”');
  expect(await page.locator('.screen-mark').count()).toBe(0);
+ // UI-8: beside the frame, the recorded steps since it was taken, ending at this one; each opens its step.
+ const trail=reader.getByRole('region',{name:'How the agent reached this screen'});
+ await expect(trail.getByRole('listitem')).toHaveCount(3);await expect(trail.locator('[aria-current=step]')).toContainText('metformin 500');
+ await trail.getByRole('button').first().click();await expect(reader.locator('.screen-caption strong')).toHaveText('Click at 100, 50');
+ await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await expect(reader.locator('.screen-caption strong')).toHaveText('Type “metformin 500”');
  // A step that names an element but no usable position draws nothing and says so.
  await page.keyboard.press('ArrowRight');
  await expect(reader.locator('.screen-caption strong')).toContainText('Click');
