@@ -19,10 +19,14 @@ export function gitNetworkLayout(commits: Pick<GitCommit, 'hash' | 'parents'>[],
   rail.rows.forEach((row, index) => {if (main.has(commits[index]!.hash)) counts.set(row.lane, (counts.get(row.lane) ?? 0) + 1);});
   const mainLane = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0;
   const laneOf = (lane: number) => lane === mainLane ? 0 : lane < mainLane ? lane + 1 : lane;
-  const count = commits.length, lanes = Math.max(1, rail.lanes);
+  const count = commits.length;
+  // Every main-line commit sits on lane 0, wherever the rail first met it; anything else the rail put there gets a lane of its own.
+  const spare = Math.max(1, rail.lanes);
+  const laneAt = (index: number) => main.has(commits[index]!.hash) ? 0 : rail.rows[index]!.lane === mainLane ? spare : laneOf(rail.rows[index]!.lane);
+  const lanes = Math.max(1, ...commits.map((_, index) => laneAt(index) + 1));
   const width = pad * 2 + Math.max(0, count - 1) * step, height = pad * 2 + (lanes - 1) * laneGap;
   const nodes = commits.map((commit, index) => {
-    const lane = laneOf(rail.rows[index]!.lane);
+    const lane = laneAt(index);
     return {hash: commit.hash, x: pad + (count - 1 - index) * step, y: pad + lane * laneGap, lane, main: main.has(commit.hash)};
   });
   const at = new Map(nodes.map(node => [node.hash, node]));
