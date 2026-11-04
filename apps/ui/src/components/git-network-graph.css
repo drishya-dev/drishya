@@ -15,13 +15,16 @@
 .network-edge.lane-5 :is(.network-halo,.network-core) { stroke:var(--focus); }
 .network-edge.muted { opacity:.28; }
 :root[data-low-resource] .network-halo { display:none; }
-.network-commit { position:absolute; width:12px; height:12px; margin:-6px 0 0 -6px; padding:0; border:2px solid var(--bg); border-radius:50%; background:var(--graph-node,var(--t1)); cursor:pointer; box-shadow:0 0 0 1px color-mix(in srgb,var(--graph-node,var(--t1)) 40%,transparent); }
-.network-commit:not(.thread-primary) { background:var(--t2); }
-.network-commit.linked { box-shadow:0 0 0 2px var(--focus); }
-.network-commit[aria-pressed=true] { box-shadow:0 0 0 3px var(--focus); }
-.network-commit:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
-.network-commit.muted { opacity:.35; }
-.network-label { position:absolute; transform:translate(-50%,12px); padding:1px 6px; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s2); color:var(--t2); font:var(--text-2xs)/1.5 var(--mono); white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
-.network-label.main { color:var(--t1); border-color:var(--line-3); }
+/* The thread stylesheet sizes .thread-graph .thread-commit for its art; the network dot is a small disc on an 18 px target. */
+.thread-graph.network-graph .network-commit { position:absolute; width:18px; height:18px; margin:-9px 0 0 -9px; padding:0; border:0; border-radius:50%; background:transparent; display:grid; place-items:center; cursor:pointer; box-shadow:none; }
+.network-graph .network-commit::before { content:""; width:9px; height:9px; border-radius:50%; background:var(--t3); box-shadow:0 0 0 2px var(--bg); }
+.network-graph .network-commit.thread-primary::before { width:10px; height:10px; background:var(--graph-node,var(--t1)); }
+.network-graph .network-commit.linked::before { box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--focus); }
+.network-graph .network-commit:hover::before { background:var(--t1); }
+.network-graph .network-commit[aria-pressed=true]::before { width:12px; height:12px; background:var(--t1); box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus); }
+.thread-graph.network-graph .network-commit:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.network-graph .network-commit.muted { opacity:.35; }
+.network-label { position:absolute; transform:translate(-50%,10px); padding:1px 6px; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s2); color:var(--t2); font:var(--text-2xs)/1.5 var(--mono); white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+.network-label.main { transform:translate(-50%,calc(-100% - 10px)); color:var(--t1); border-color:var(--line-3); }
 .network-graph .thread-zoom output { min-width:4ch; text-align:center; font-variant-numeric:tabular-nums; }
 .network-viewport { cursor:grab; } .network-viewport:active { cursor:grabbing; }

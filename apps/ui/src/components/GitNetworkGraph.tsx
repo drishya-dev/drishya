@@ -32,19 +32,31 @@ function networkBranches(commits:GitCommit[],main:Set<string>,lanes:Map<string,n
 /** UI-8 (Yash, 3 Nov): a plain network graph. Time runs left to right, main is the top line, branches leave and rejoin it on lanes below; labels name branch heads. */
 export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,mirror,onHover,reveal,links}:{select?:(hash:string)=>void;mirrorRef?:string;links?:Map<string,GitSessionLink>;mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}){
   const [scale,setScale]=useState(1),[hovered,setHovered]=useState(''),[pinnedKey,setPinnedKey]=useState(''),[branchKey,setBranchKey]=useState('');
-  const layout=useMemo(()=>gitNetworkLayout(commits,primary?.tip,{step:44*scale}),[commits,primary?.tip,scale]);
+  // The main line starts at the primary branch's tip; when that tip is older than the loaded history (a stale local branch),
+  // its remote-tracking ref stands in, then the newest commit.
+  const mainTip=useMemo(()=>{const tip=primary?.tip,name=primary?.name;if(tip&&commits.some(commit=>commit.hash===tip))return tip;
+    return (name?commits.find(commit=>commit.labels.some(label=>label===name||label.endsWith(`/${name}`))):undefined)?.hash??commits[0]?.hash;},[commits,primary?.tip,primary?.name]);
+  const layout=useMemo(()=>gitNetworkLayout(commits,mainTip,{step:44*scale}),[commits,mainTip,scale]);
   // Paging the main line still follows the first-parent seeds the history reader keeps.
   const mainSeeds=useMemo(()=>gitThreadLayout(commits,primary?.tip,seeds,offset).mainSeeds,[commits,primary?.tip,offset]);
   const main=useMemo(()=>new Set(layout.nodes.filter(node=>node.main).map(node=>node.hash)),[layout]);
   const branches=useMemo(()=>networkBranches(commits,main,new Map(layout.nodes.map(node=>[node.hash,node.lane]))),[commits,main,layout]);
   const branchOf=useMemo(()=>new Map(branches.flatMap(branch=>branch.members.map(hash=>[hash,branch] as const))),[branches]);
   const byHash=useMemo(()=>new Map(commits.map(commit=>[commit.hash,commit])),[commits]);
+  // Head labels never overlap: newest first, a label that would cover one already placed on its lane is left to the commit's peek.
+  const labels=useMemo(()=>{const taken=new Map<number,[number,number][]>(),placed:{hash:string;x:number;y:number;main:boolean;text:string;title:string}[]=[];
+    for(const node of [...layout.nodes].sort((a,b)=>b.x-a.x)){const names=byHash.get(node.hash)?.labels;if(!names?.length)continue;
+      const text=`${names[0]}${names.length>1?` +${names.length-1}`:''}`,width=Math.min(160,text.length*6.6+14),x=Math.min(Math.max(node.x,width/2+2),layout.width-width/2-2),from=x-width/2-6,to=x+width/2+6,row=taken.get(node.lane)??[];
+      if(row.some(([a,b])=>from<b&&to>a))continue;row.push([from,to]);taken.set(node.lane,row);placed.push({hash:node.hash,x,y:node.y,main:node.main,text,title:names.join(', ')});}
+    return placed;},[layout,byHash]);
   const viewport=useRef<HTMLDivElement>(null),previous=useRef('');
   const motion=useApp(state=>state.motion),lowResource=useApp(state=>state.lowResource);
   const fit=useCallback(()=>{const el=viewport.current;if(!el||!commits.length)return;setScale(clampScale((el.clientWidth-64)/Math.max(1,(commits.length-1)*44)));},[commits.length]);
   useLayoutEffect(()=>{seeds.clear();for(const hash of mainSeeds)seeds.add(hash);},[mainSeeds,seeds]);
   // A new reference opens at the newest commit, on the right.
-  useLayoutEffect(()=>{if(previous.current===resetKey)return;previous.current=resetKey;setPinnedKey('');setBranchKey('');setHovered('');setScale(1);requestAnimationFrame(()=>{const el=viewport.current;if(el)el.scrollLeft=el.scrollWidth;});},[resetKey]);
+  const toNewest=useRef(true);
+  useLayoutEffect(()=>{if(previous.current===resetKey)return;previous.current=resetKey;setPinnedKey('');setBranchKey('');setHovered('');setScale(1);target.current=1;toNewest.current=true;},[resetKey]);
+  useLayoutEffect(()=>{const el=viewport.current;if(!toNewest.current||!el||!commits.length)return;toNewest.current=false;el.scrollLeft=el.scrollWidth;},[commits.length,layout.width]);
   // Zoom about an anchor (the pointer for Ctrl + wheel, the view centre otherwise) so the commit under it stays where it was.
   // The scroll is corrected after React lays out the new width; quick wheel bursts compound on the latest requested scale.
   const target=useRef(1),pending=useRef<{at:number;ax:number}|null>(null);
@@ -102,7 +114,7 @@ export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primar
           {layout.edges.map(edge=><g key={`${edge.from}>${edge.to}`} data-edge={`${edge.from}>${edge.to}`} className={`network-edge lane-${edge.main?0:1+(edge.lane-1)%5}${dim&&!(lit.has(edge.from)&&lit.has(edge.to))?' muted':''}`}><path className="network-halo" d={edge.path}/><path className="network-core" d={edge.path} onPointerEnter={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setBranchKey(branch.key);}} onPointerLeave={()=>setBranchKey('')} onClick={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setPinnedKey(value=>value===branch.key?'':branch.key);}}/></g>)}
         </svg>
         {layout.nodes.map(node=>{const commit=byHash.get(node.hash)!,link=links?.get(node.hash);return <button key={node.hash} type="button" className={`thread-commit atlas-commit network-commit${node.main?' thread-primary':''}${dim&&!lit.has(node.hash)?' muted':''}${link?' linked':''}`} data-commit-hash={node.hash} style={{left:node.x,top:node.y}} aria-pressed={selected===node.hash} aria-label={`${commit.subject||'Untitled commit'} · ${commit.hash.slice(0,7)}${commit.labels.length?` · ${commit.labels.join(', ')}`:''}${link?` · ${gitSessionLinkDescription(link)}`:''}`} title={`${commit.hash.slice(0,10)} · ${commit.subject}`} onPointerEnter={()=>setHovered(node.hash)} onPointerLeave={()=>setHovered('')} onFocus={()=>setHovered(node.hash)} onBlur={()=>setHovered('')} onClick={()=>choose(node.hash)}/>;})}
-        {layout.nodes.filter(node=>byHash.get(node.hash)!.labels.length).map(node=>{const labels=byHash.get(node.hash)!.labels;return <span key={`label-${node.hash}`} className={`network-label${node.main?' main':''}`} style={{left:node.x,top:node.y}} title={labels.join(', ')}>{labels[0]}{labels.length>1?` +${labels.length-1}`:''}</span>;})}
+        {labels.map(label=><span key={`label-${label.hash}`} className={`network-label${label.main?' main':''}`} style={{left:label.x,top:label.y}} title={label.title}>{label.text}</span>)}
       </div>
     </div>
     {active&&<div className="thread-peek" role="status"><code>{active.hash.slice(0,10)}</code><strong>{active.subject||'Untitled commit'}</strong><span>{active.author} · {new Date(active.time).toLocaleString()}</span><span>{active.parents.length>1?`Merge · ${active.parents.length} parents`:active.parents.length?'Commit':'Root commit'}{active.labels.length?` · ${active.labels.join(', ')}`:''}</span></div>}
