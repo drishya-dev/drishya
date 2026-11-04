@@ -1,11 +1,34 @@
 // Current workspace bytes are a separate, explicitly approved reading capability.
 // They never stand in for captured historical artifacts.
-import { open, lstat, realpath } from 'node:fs/promises';
+import { open, lstat, readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep, parse } from 'node:path';
 import { MAX_IMAGE_BYTES, isDeniedPath, redactText, sniffImage } from '@drishya/privacy';
 import { App, HttpError } from './app.ts';
 import { isIndexableFile } from '@drishya/indexer';
 import { recordedFileRoots, recordedMainRootPrefixes } from './file-roots.ts';
+
+const LINKED_GITDIR = /^gitdir:\s*(.+?)\s*$/m, WORKTREE_ADMIN = /^(.*?)[\\/]\.git[\\/]worktrees[\\/][^\\/]+$/;
+
+/** FILES-11: a linked worktree of this same repository inside the approved root (an agent's `.local/wt-*` checkout) is read as a root of
+ *  its own. Its `.git` is a one-line pointer back to this repository's `.git/worktrees`; only that pointer is read to decide. Any other
+ *  nested checkout, and everything else under an ignored folder, stays refused. */
+async function nestedWorktree(root: string, path: string): Promise<{ base: string; rest: string } | undefined> {
+  const parts = path.split('/');
+  let cursor = root;
+  for (let index = 0; index < parts.length - 1; index++) {
+    cursor = join(cursor, parts[index]!);
+    // lstat: a linked folder is not a directory here, so a link can never lead into a worktree.
+    if (!(await lstat(cursor).catch(() => undefined))?.isDirectory()) return undefined;
+    const marker = await lstat(join(cursor, '.git')).catch(() => undefined);
+    if (!marker) continue;
+    if (!marker.isFile() || marker.size > 4096) return undefined;
+    const gitdir = LINKED_GITDIR.exec(await readFile(join(cursor, '.git'), 'utf8').catch(() => ''))?.[1];
+    const repository = gitdir ? WORKTREE_ADMIN.exec(resolve(cursor, gitdir))?.[1] : undefined;
+    if (!repository || await realpath(repository).catch(() => '') !== root) return undefined;
+    return { base: cursor, rest: parts.slice(index + 1).join('/') };
+  }
+  return undefined;
+}
 
 export class WorkspaceAccess {
   private grants = new Map<string, string>();
@@ -123,7 +146,9 @@ export class WorkspaceAccess {
 
   async read(id: string, path: string, start = 0, count = 200) {
     const root = await this.root(id);
-    if (!path || path.startsWith('.local/') || isAbsolute(path) || path.includes('\\') || path.split('/').some(p => !p || p === '.' || p === '..' || p.includes(':')) || isDeniedPath(path)) throw new HttpError(403, 'not a readable workspace path');
+    if (!path || isAbsolute(path) || path.includes('\\') || path.split('/').some(p => !p || p === '.' || p === '..' || p.includes(':')) || isDeniedPath(path)) throw new HttpError(403, 'not a readable workspace path');
+    const nested = await nestedWorktree(root, path);
+    if (nested ? nested.rest.startsWith('.local/') || isDeniedPath(nested.rest) : path.startsWith('.local/')) throw new HttpError(403, 'not a readable workspace path');
     const file = resolve(root, path);
     if (relative(root, file).startsWith('..') || !file.startsWith(root + sep)) throw new HttpError(403, 'outside this workspace');
     // Reject every symlink component, including links that resolve back inside the workspace.
@@ -132,6 +157,9 @@ export class WorkspaceAccess {
       cursor = join(cursor, part);
       if ((await lstat(cursor)).isSymbolicLink()) throw new HttpError(403, 'linked files are not readable');
     }
+    // A worktree's files are not in this root's map; the worktree's own index rules (its .gitignore, size, binary, links) decide instead.
+    if (nested) { if (!await isIndexableFile(nested.base, nested.rest)) throw new HttpError(403, 'file is outside the indexed workspace'); }
+    else {
     const graph = await this.app.graph(id);
     // A bounded or explicitly stale map is not a complete list of eligible current files.
     // Check only this path under the same index rules; content permission stays separate.
@@ -145,6 +173,7 @@ export class WorkspaceAccess {
         recordedMainFile = prefixes.some(prefix => graph.nodes.some(node => node.path === `${prefix}/${path}`));
       }
       if (!(recordedMainFile || graph.truncated || graph.stale) || !await isIndexableFile(root, path)) throw new HttpError(403, 'file is outside the indexed workspace');
+    }
     }
     const handle = await open(file, 'r');
     try {
