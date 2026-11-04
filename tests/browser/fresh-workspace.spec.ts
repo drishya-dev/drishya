@@ -423,7 +423,7 @@ test('structured shell output renders decoded newlines and retains the exact raw
   await card.scrollIntoViewIfNeeded();
   await expect(card.locator('.structured-tool-output .output')).toContainText('first line\nsecond line');
   await expect(card.locator('.structured-tool-output .output')).toContainText('const pattern = "\\n";');
-  await card.getByRole('button',{name:'Show raw',exact:true}).click();
+  await card.getByRole('button',{name:'Original',exact:true}).click();
   await expect(card.locator('.structured-tool-output .output')).toContainText(raw);
 });
 
@@ -444,7 +444,7 @@ test('long at-sign scripts retain real syntax colors and exact command copy',asy
   expect(await material.locator('.tk-str').first().evaluate(el=>getComputedStyle(el).color!==getComputedStyle(el.parentElement!).color)).toBe(true);
   await material.getByRole('button',{name:'Copy command',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(script);
-  await card.getByRole('button',{name:'Show raw request',exact:true}).click();
+  await card.getByRole('button',{name:'Original',exact:true}).click();
   await expect(material.locator('.tk-num')).toHaveText('500');
   await material.getByRole('button',{name:'Copy request',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
@@ -461,7 +461,7 @@ test('multi-statement requests keep every command visible and copyable',async({p
   const card=page.locator(`article[data-op-id="${op.id}"]`);
   await card.scrollIntoViewIfNeeded();
   await expect(card.locator('.command-material code')).toContainText(command);
-  await expect(card.getByRole('button',{name:'Show raw request',exact:true})).toHaveCount(0);
+  await expect(card.getByRole('button',{name:'Original',exact:true})).toHaveCount(0);
   await card.getByRole('button',{name:'Copy command',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
 });

@@ -76,7 +76,7 @@ for(const width of [600,1440])test(`approval presents the literal command or rep
  await expect(approvals.nth(2)).toContainText('did not supply a proposed diff');await expect(approvals.nth(2).getByRole('button',{name:'Allow once',exact:true})).toBeDisabled();
  await expect(approvals.nth(0).getByLabel('Command awaiting approval')).toHaveText(command);
  await expect(approvals.nth(1).getByLabel('Proposed replacement')).toContainText('- alpha');await expect(approvals.nth(1).getByLabel('Proposed replacement')).toContainText('+ beta');
- await approvals.nth(1).getByRole('button',{name:'Original request',exact:true}).click();await expect(approvals.nth(1).getByLabel('Native approval request')).toHaveText(JSON.stringify(replacement));
+ await approvals.nth(1).getByRole('button',{name:'Original',exact:true}).click();await expect(approvals.nth(1).getByLabel('Native approval request')).toHaveText(JSON.stringify(replacement));
  await approvals.nth(0).getByRole('button',{name:'Decline',exact:true}).click();await expect(approvals).toHaveCount(0);
  expect(decisions).toEqual([{runId:'exact-run',approvalId:'exact-command',allow:false}]);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
 });
