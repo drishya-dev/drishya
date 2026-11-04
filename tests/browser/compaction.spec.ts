@@ -45,7 +45,7 @@ for(const width of [600,1440]) test(`captured metrics, summaries and categories 
   const nearby=page.getByText('Summary recorded nearby · link not recorded',{exact:false});await nearby.scrollIntoViewIfNeeded();await expect(nearby).toBeVisible();
   const report=page.getByRole('region',{name:'Context report'});await report.scrollIntoViewIfNeeded();await expect(report).toContainText('Memory files');await expect(report).toContainText('Unknown recorded row');await expect(report).toContainText('Report from');
   await page.screenshot({path:resolve(`.local/content12-synthetic-report-${width}.png`)});
-  await page.getByLabel('More workspace options',{exact:true}).click();if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();await expect(page.getByRole('region',{name:'Request input'})).toContainText('80,000 tokens');await expect(page.getByRole('region',{name:'Request input'})).toContainText('computed');
+  await page.getByLabel('More workspace options',{exact:true}).click();if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();await expect(page.locator('.usage-peek').getByRole('region',{name:'Context',exact:true})).toContainText('80,000');await expect(page.locator('.usage-peek').getByRole('region',{name:'Context',exact:true}).locator('[title^="Computed"]')).toHaveCount(1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:resolve(`.local/content12-synthetic-${width}.png`)});
 });
