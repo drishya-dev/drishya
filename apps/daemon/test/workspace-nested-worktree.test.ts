@@ -38,4 +38,6 @@ it('keeps refusing plain ignored files, another repository\'s worktree and what 
  await expect(access.read(id,'.local/foreign/x.ts')).rejects.toMatchObject({status:403});
  await expect(access.read(id,'.local/wt/secret-notes.txt')).rejects.toMatchObject({status:403});
  await expect(access.read(id,'.local/wt/../scratch.txt')).rejects.toMatchObject({status:403});
+ // A file the worktree no longer has (it changed branch) is gone, not a server error.
+ await expect(access.read(id,'.local/wt/removed.ts')).rejects.toMatchObject({status:404,message:'the file is no longer there'});
 });

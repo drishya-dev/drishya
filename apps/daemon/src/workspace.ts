@@ -155,7 +155,10 @@ export class WorkspaceAccess {
     let cursor = root;
     for (const part of path.split('/')) {
       cursor = join(cursor, part);
-      if ((await lstat(cursor)).isSymbolicLink()) throw new HttpError(403, 'linked files are not readable');
+      // A worktree changes branches under the session: a file it no longer has is gone, not a server error.
+      const info = await lstat(cursor).catch(() => undefined);
+      if (!info) throw new HttpError(404, 'the file is no longer there');
+      if (info.isSymbolicLink()) throw new HttpError(403, 'linked files are not readable');
     }
     // A worktree's files are not in this root's map; the worktree's own index rules (its .gitignore, size, binary, links) decide instead.
     if (nested) { if (!await isIndexableFile(nested.base, nested.rest)) throw new HttpError(403, 'file is outside the indexed workspace'); }
