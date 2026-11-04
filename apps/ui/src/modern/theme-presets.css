@@ -12,7 +12,7 @@
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=paper] {
   --bg:#f6f9fb; --s1:#fcffff; --s2:#eef3f6; --s3:#e3eaef;
   --line:#d7e0e6; --line-2:#c2ced6; --line-3:#8796a1; --t1:#14202a;
-  --t2:#3c4a55; --t3:#55636e; --t4:#5f6c76; --focus:#0477a1;
+  --t2:#3c4a55; --t3:#55636e; --t4:#59656f; --focus:#036a8f;
   --palette-active:#0593c6; --syntax-keyword:#a62a78; --syntax-string:#1d6b3f; --syntax-function:#0a6a94;
   --syntax-number:#a14a00; --source:#0a6a94; --external:#8a2fa0; --edited:#a14a00;
   --pass:#1a7240; --fail:#b4233b; --graph-node:#2d4452; --graph-edge:#6d8593;
