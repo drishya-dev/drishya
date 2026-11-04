@@ -79,3 +79,18 @@ Composer, Search, Notes and Settings were walked at 600 and 1440 on real session
 **Checked:** Claude `ab475ed8` and Codex `6375533e` (scratch home), at 600 and 1440: Changes, Git review and graph before and after read-only approval (no horizontal overflow), session menu, Home, Settings, composer, Search, Notes. Focused specs: Changes 31, Git 28, menu 28, Home 3.
 
 **Still open in UI-8:** stylesheet ownership and dead Modern overrides; plans and toolbox lists; a light-palette pass over the new rows; the final batch gate. Then MOTION-1 and MOTION-3.
+
+## Panels, plans, Workspace fallback, Queued inputs, header panels (draft #337, Yash 3 Nov)
+
+| Surface | Before | After | Why |
+| --- | --- | --- | --- |
+| Toolbox lists | MCP servers, Agents, Available tools opened by default; a collapse was remembered per session, so sessions looked different | Folded to their counts in every session; an open is remembered | Same surface, same look, every session |
+| Plan cards | Open by default with per-session memory | Folded to the heading (revision, done of total); an open stays open (Yash chose) | Calm at rest; the list is one click away |
+| Stage and side panels | Minimising Files or the Toolbox left their room empty; the minimised Toolbox sat in the top corner | The stage widens into the room; the prompt rail moves out with the right edge; the minimised Toolbox waits mid-edge. 600 px unchanged | A small screen can give the work the whole width (decision logged in STATUS) |
+| Workspace, unreadable file | Reason, a lone arrow row, a disabled Open in Workspace and a Compare with disk that could only fail | One row: the reason with the step arrows; no control that cannot act | Say it once; offer only what works |
+| Queued inputs | A caveat paragraph, the newest receipt shown twice, raw notification markup, rows of "Input with no text" | A list beside the input, one line of caveat, notifications named by kind, textless receipts folded to a count, opening on the newest typed input | One list, readable at a glance |
+| Header panels | Search, the session menu and the Git menu each aligned differently (right edges 1298, 1410, 1423 at 1440) | All hang from the cluster's right edge, 6 px below it | One composition |
+
+**Checked:** Toolbox and plans on Claude `c6701b14` (2 plans) at 600/1440; stage widening measured at 1440/1024/600 on Claude `ab475ed8`; the Workspace fallback and Queued inputs (147 receipts) on this session's own journal imported into the scratch home (`81c22a35`, 131 MB) at 600/1440, no overflow; header panel edges measured at 1440 and 1024. Focused specs for every changed surface pass.
+
+**Not real-session-checked:** a Codex session with queued receipts (none in the scratch home has them).

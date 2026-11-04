@@ -3,8 +3,17 @@ import {createPortal} from 'react-dom';
 import type {QueueInputChunk, QueuePage, QueueReceipt} from '@drishya/contracts';
 import {useApp} from '../state.ts';
 import {ReadingDialog} from './ProductShell.tsx';
+import './queued-inputs.css';
 
 const labels = {recorded: 'Queue receipt recorded', unknown: 'Queue changed · item outcome unknown', removed: 'Removed from queue', delivered: 'Delivered · native identity confirmed'};
+
+/** A harness notification is shown by its kind, not as markup; the full recorded text stays one click away. */
+function receiptName(item: QueueReceipt): string {
+  const tag = item.preview?.match(/^\s*<([a-z][\w-]*)[\s>]/i)?.[1];
+  if (tag) return tag.replace(/[-_]+/g, ' ').replace(/^./, c => c.toUpperCase());
+  return item.preview || (item.images?.length ? 'Image input' : 'Input with no text');
+}
+const textless = (item: QueueReceipt) => !item.preview && !item.images?.length;
 
 /** A provisional receipt never becomes a prompt by inference. Reading it does not send anything. */
 export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
@@ -38,6 +47,8 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   useEffect(() => {setOpen(false); select(undefined); setChunk(undefined); setError(''); reading.current++;}, [key]);
   useEffect(() => {
     if (!selected || !source?.queueInput || !owner) return;
+    // A receipt with no text has nothing to read; asking would only report a failure.
+    if (textless(selected)) {setChunk(undefined); setError(''); return;}
     const token = ++reading.current;
     setChunk(undefined); setBusy(true); setCopied(false); setError('');
     void source.queueInput(owner, selected.id, through).then(next => {
@@ -70,31 +81,38 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   // Replay hides the composer, so its receipts sit on the page itself, like an exported bundle's.
   const floating = standalone || mode === 'replay';
   const view = <div className="queued-input-receipts" data-waiting={waiting || undefined} style={floating ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', padding: '0 4px'}}>
-    <button type="button" className="btn ghost small" aria-label="Read queued inputs" style={floating || waiting || following ? undefined : {visibility: 'hidden'}} onClick={() => {setOpen(true); if (latest) select(latest);}}>
+    <button type="button" className="btn ghost small" aria-label="Read queued inputs" style={floating || waiting || following ? undefined : {visibility: 'hidden'}} onClick={() => {setOpen(true); const first = data?.items.find(item => !textless(item) && !/^\s*</.test(item.preview ?? '')) ?? data?.items.find(item => !textless(item)) ?? latest; if (first) select(first);}}>
       <span aria-live="polite">{waiting ? 'Queued input recorded' : `Queued inputs${data?.total ? ` · ${data.total}` : ''}`}</span>
     </button>
     {open && <ReadingDialog title="Queued inputs" close={() => {setOpen(false); select(undefined); setError('');}} className="queue-input-reader" style={{width: 'min(880px, calc(100vw - 32px))'}}>
-      <div style={{padding: '16px 20px', minWidth: 0}}>
-        <p className="muted small">Receipts show what the harness recorded in its queue. They do not establish delivery or inclusion in context. Delivered prompts appear separately in History.</p>
-        {!!data?.items.length && <div aria-label="Queued input receipts" style={{maxHeight: '160px', overflow: 'auto', display: 'grid', gap: 4, marginBottom: 14}}>
-          {data.items.map(item => <button type="button" key={item.id} className={`btn ghost small${selected?.id === item.id ? ' active' : ''}`} aria-pressed={selected?.id === item.id} onClick={() => select(item)} style={{textAlign: 'left', justifyContent: 'flex-start', whiteSpace: 'normal', overflowWrap: 'anywhere'}}>
-            {item.preview || (item.images?.length ? 'Image input' : 'Input with no text')} · {labels[item.state]}
+      <div className="queue-reader">
+        <p className="queue-caveat" title="Receipts show what the harness recorded in its queue. They do not establish delivery or inclusion in context. Delivered prompts appear separately in History.">What the harness queued. Delivered prompts appear in History.</p>
+        <div className="queue-columns">
+        <div className="queue-list-column">
+        {!!data?.items.length && <div className="queue-list" aria-label="Queued input receipts">
+          {data.items.filter(item => !textless(item) || item.id === selected?.id).map(item => <button type="button" key={item.id} className="queue-row" aria-label={`${receiptName(item)} · ${labels[item.state]}`} aria-pressed={selected?.id === item.id} onClick={() => select(item)} title={item.preview}>
+            <span className="queue-row-text">{receiptName(item)}</span>
+            <small>{item.time && <time dateTime={item.time}>{new Date(item.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</time>}{item.time && ' · '}{labels[item.state]}</small>
           </button>)}
+          {data.items.some(item => textless(item) && item.id !== selected?.id) && <small className="queue-textless">{data.items.filter(item => textless(item) && item.id !== selected?.id).length} receipts with no text</small>}
         </div>}
-        <div style={{display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12}}>
-          {data?.before !== undefined && <button type="button" className="btn small" onClick={() => {select(undefined); void load(data.before);}}>Earlier receipts</button>}
-          {!!data && cursor.current.before !== undefined && <button type="button" className="btn small" onClick={() => {cursor.current = {key}; select(undefined); void load();}}>Newest receipts</button>}
+        <div className="queue-pages">
+          {data?.before !== undefined && <button type="button" className="btn ghost small" onClick={() => {select(undefined); void load(data.before);}}>Earlier receipts</button>}
+          {!!data && cursor.current.before !== undefined && <button type="button" className="btn ghost small" onClick={() => {cursor.current = {key}; select(undefined); void load();}}>Newest receipts</button>}
           <small className="muted">{data?.total ?? 0} recorded enqueue receipts{mode === 'replay' ? ' at this replay point' : ''}</small>
         </div>
-        {selected && <section aria-label="Queued input">
-          <p className="small"><strong>{labels[(data?.items.find(item => item.id === selected.id) ?? selected).state]}</strong>{selected.time && <> · <time dateTime={selected.time}>{new Date(selected.time).toLocaleString()}</time></>}</p>
-          {chunk && <><pre data-queued-input-text style={{whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '48dvh', overflow: 'auto', userSelect: 'text', margin: '12px 0'}}>{chunk.text || 'No text recorded.'}</pre>
+        </div>
+        {selected && <section className="queue-detail" aria-label="Queued input">
+          <p className="queue-detail-head"><strong>{labels[(data?.items.find(item => item.id === selected.id) ?? selected).state]}</strong>{selected.time && <> · <time dateTime={selected.time}>{new Date(selected.time).toLocaleString()}</time></>}</p>
+          {textless(selected) && <p className="queue-empty">No text recorded with this receipt.</p>}
+          {chunk && <><pre className="queue-text" data-queued-input-text>{chunk.text || 'No text recorded.'}</pre>
             <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>{chunk.hasMore && <button type="button" className="btn small" disabled={busy} onClick={() => void more()}>Read more input</button>}<button type="button" className="btn ghost small" disabled={busy} onClick={() => void more(true)}>{copied ? 'Copied' : 'Copy complete input'}</button></div>
           </>}
           {selected.images?.map((image, index) => image.sha && source.imageUrl
             ? <img key={image.sha + index} alt={`Queued input image ${index + 1}`} src={source.imageUrl(owner, image.sha)} style={{display: 'block', maxWidth: '100%', maxHeight: '65dvh', objectFit: 'contain', margin: '12px auto'}} />
             : <p key={index} className="muted small">Image bytes not kept{image.omitted ? `: ${image.omitted}` : ''}.</p>)}
         </section>}
+        </div>
         {busy && <p className="muted small" role="status">Reading input…</p>}
         {error && <p className="bad small" role="alert">{error} <button type="button" className="btn ghost small" onClick={() => void load()}>Retry receipts</button></p>}
       </div>
