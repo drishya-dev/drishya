@@ -222,7 +222,7 @@ test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette
   await reader.getByRole('button', { name: 'Side by side', exact: true }).click();
   await expect(reader.getByRole('region', { name: 'Current Git patch side by side' })).toBeVisible();
   await git('Git review patch (side by side)');
-  await reader.getByRole('button', { name: 'Raw patch', exact: true }).click();
+  await reader.getByRole('button', { name: 'Original', exact: true }).click();
   await expect(reader.locator('.code .ln').first()).toBeVisible();
   await git('Git review raw patch');
   expect(found).toEqual([]);

@@ -58,7 +58,7 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   await expect(reader.getByRole('region', { name: 'Current Git patch side by side' })).toContainText('needleLate');
   await reader.getByRole('button', { name: 'Staged', exact: true }).click();
   await expect(reader.locator('.unified-change')).toContainText('line0');
-  await reader.getByRole('button', { name: 'Raw patch', exact: true }).click();
+  await reader.getByRole('button', { name: 'Original', exact: true }).click();
   expect(await reader.locator('.code .ln').count()).toBeLessThanOrEqual(120);
   await expect(reader.getByRole('navigation', { name: 'Raw Git patch pages' })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });

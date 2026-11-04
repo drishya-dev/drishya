@@ -32,12 +32,12 @@ for(const harness of ['claude-code','codex'] as const)for(const width of [600,14
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();
  await card.locator('button.op-expand').click();const full=card.locator('.stored-tool-result');
  await expect(full).toContainText('Complete stored result');
- await full.getByRole('button',{name:'Show original result',exact:true}).click();
+ await full.locator('.reader-tools').getByRole('button',{name:'Original',exact:true}).click();
  expect(await full.locator('.stored-result-original').evaluate(node=>node.textContent)).toBe(output);
- await full.getByRole('button',{name:'Read formatted result',exact:true}).click();
+ await full.locator('.reader-tools').getByRole('button',{name:'Original',exact:true}).click();
  await card.press('Enter');const inspector=page.getByRole('region',{name:'Operation detail'});
  await expect(inspector.locator('.stored-tool-result')).toContainText('Complete stored result');
- await inspector.getByRole('button',{name:'Show original result',exact:true}).click();
+ await inspector.locator('.reader-tools').getByRole('button',{name:'Original',exact:true}).click();
  expect(await inspector.locator('.stored-result-original').evaluate(node=>node.textContent)).toBe(output);
  await page.context().grantPermissions(['clipboard-read','clipboard-write']);await inspector.getByRole('button',{name:'Copy original result',exact:true}).click();expect(await page.evaluate(()=>navigator.clipboard.readText())).toBe(output);
  expect(await inspector.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
@@ -57,7 +57,7 @@ test('oversized single line and malformed output retain every byte through bound
  const inspector=page.getByRole('region',{name:'Operation detail'}),full=inspector.locator('.stored-tool-result');
  let joined='';for(let n=0;n<100;n++){
   await expect(full).toContainText('Stored byte portion');
-  const raw=full.getByRole('button',{name:'Show original result',exact:true});if(await raw.count())await raw.click();
+  const raw=full.locator('.reader-tools').getByRole('button',{name:'Original',exact:true});if(await raw.count())await raw.click();
   const text=await full.locator('.stored-result-original').evaluate(node=>node.textContent??'');expect(new TextEncoder().encode(text).length).toBeLessThanOrEqual(256*1024);joined+=text;
   const next=full.getByRole('button',{name:'Next portion',exact:true});if(await next.isDisabled())break;await next.click();await expect(full.getByText('Opening stored result…',{exact:true})).toHaveCount(0);
  }
@@ -83,9 +83,9 @@ for(const text of ['', 'Literal original result text'])test(`Claude separate str
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const card=page.locator(`article[data-op-id=${JSON.stringify(op.id)}]`);await card.scrollIntoViewIfNeeded();await card.press('Enter');
  const full=page.getByRole('region',{name:'Operation detail'}).locator('.stored-tool-result');
- if(text){await expect(full.getByRole('combobox',{name:'Result field'})).toBeVisible();await full.getByRole('button',{name:'Show original result',exact:true}).click();expect(await full.locator('.stored-result-original').textContent()).toBe(text);await full.getByRole('combobox',{name:'Result field'}).selectOption('structured');}
+ if(text){await expect(full.getByRole('combobox',{name:'Result field'})).toBeVisible();await full.locator('.reader-tools').getByRole('button',{name:'Original',exact:true}).click();expect(await full.locator('.stored-result-original').textContent()).toBe(text);await full.getByRole('combobox',{name:'Result field'}).selectOption('structured');}
  await expect(full).toContainText('Structured field · formatted by Drishya');
- const raw=full.getByRole('button',{name:'Show formatted structured field',exact:true});if(await raw.count())await raw.click();
+ const raw=full.locator('.reader-tools').getByRole('button',{name:'Original',exact:true});if(await raw.getAttribute('aria-pressed')==='false')await raw.click();
  const serialized=await full.locator('.stored-result-original').textContent();expect(JSON.parse(serialized!)).toEqual(structured);await expect(full.getByRole('button',{name:'Copy original result',exact:true})).toHaveCount(0);
  await page.context().grantPermissions(['clipboard-read','clipboard-write']);await full.getByRole('button',{name:'Copy formatted structured field',exact:true}).click();expect(JSON.parse(await page.evaluate(()=>navigator.clipboard.readText()))).toEqual(structured);
 });
@@ -105,7 +105,7 @@ test('reader invalidates replacement sources and unresolved revisions without re
  createRoot(document.getElementById('root')).render(<StoredToolResult op={op} full/>);`,loader:'tsx',resolveDir:resolve('apps/ui')},bundle:true,write:false,format:'iife',platform:'browser',loader:{'.css':'empty'},define:{'process.env.NODE_ENV':'"production"'}});
  await page.route('**/stored-source-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><div id="root"></div><script>${fixture.outputFiles[0]!.text}</script>`}));await page.goto(server.url+'/stored-source-fixture');
  const reading=page.getByRole('region',{name:'Stored result'});await expect(reading).toContainText('First source text');await page.evaluate(()=>{(window as any).swap();});await expect(reading).toContainText('Opening stored result');await expect(reading).not.toContainText('First source text');await page.evaluate(()=>{(window as any).resolveSecond();});await expect(reading).toContainText('Second source text');
- await reading.getByRole('button',{name:'Show original result',exact:true}).click();await reading.locator('pre').evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);getSelection()?.removeAllRanges();getSelection()?.addRange(range);});
+ await reading.locator('.reader-tools').getByRole('button',{name:'Original',exact:true}).click();await reading.locator('pre').evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);getSelection()?.removeAllRanges();getSelection()?.addRange(range);});
  const before=await page.evaluate(()=>(window as any).calls());await page.evaluate(()=>{(window as any).append();});await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));expect(await page.evaluate(()=>(window as any).calls())).toBe(before);expect(await page.evaluate(()=>getSelection()?.toString())).toBe('Second source text');
  await page.evaluate(()=>{(window as any).unresolved();});await expect(reading).toContainText('Result bytes were not recorded');await page.evaluate(()=>{(window as any).retain();});await expect(reading).toContainText('Newly retained original bytes');
 });

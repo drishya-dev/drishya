@@ -1,4 +1,5 @@
 import type {ReactNode} from 'react';
+import {WithOriginal} from './OriginalToggle.tsx';
 import {CapturedResultViews} from './CapturedResultViews.tsx';
 import {useMemo} from 'react';
 import {CapturedOutcomes} from './CapturedOutcomes.tsx';
@@ -16,9 +17,9 @@ function structuredLayout(text: string): ReactNode | undefined {
   const rows = Array.isArray(value) ? value : record(value) && Array.isArray(value.items) ? value.items : undefined;
   if (rows?.length && rows.every(record)) {
     const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))].filter((key) => rows.every((row) => !Object.hasOwn(row, key) || scalar(row[key]))).slice(0, 4);
-    if (keys.length) return <div className="structured-result" onClick={(e) => e.stopPropagation()}><table><thead><tr>{keys.map((key) => <th key={key}>{key}</th>)}</tr></thead><tbody>{rows.slice(0, 8).map((row, i) => <tr key={i}>{keys.map((key) => <td key={key}>{Object.hasOwn(row, key) ? dataLabel(row[key]) : <span className="muted">not present</span>}</td>)}</tr>)}</tbody></table><div className="material-context">{rows.length} records in preview · up to 8 rows and 4 fields shown</div><OriginalPreview text={text} /></div>;
+    if (keys.length) return <WithOriginal text={text}><div className="structured-result" onClick={(e) => e.stopPropagation()}><table><thead><tr>{keys.map((key) => <th key={key}>{key}</th>)}</tr></thead><tbody>{rows.slice(0, 8).map((row, i) => <tr key={i}>{keys.map((key) => <td key={key}>{Object.hasOwn(row, key) ? dataLabel(row[key]) : <span className="muted">not present</span>}</td>)}</tr>)}</tbody></table><div className="material-context">{rows.length} records in preview · up to 8 rows and 4 fields shown</div></div></WithOriginal>;
   }
-  if (record(value) && Object.keys(value).length <= 6 && Object.values(value).every(scalar)) return <><dl className="result-fields">{Object.entries(value).map(([key, v]) => <div key={key}><dt>{key}</dt><dd>{dataLabel(v)}</dd></div>)}</dl><OriginalPreview text={text} /></>;
+  if (record(value) && Object.keys(value).length <= 6 && Object.values(value).every(scalar)) return <WithOriginal text={text}><dl className="result-fields">{Object.entries(value).map(([key, v]) => <div key={key}><dt>{key}</dt><dd>{dataLabel(v)}</dd></div>)}</dl></WithOriginal>;
   return undefined;
 }
 function ResultBody({ text,decoded }: { text: string;decoded:boolean }) {
@@ -27,6 +28,3 @@ function ResultBody({ text,decoded }: { text: string;decoded:boolean }) {
   return structuredLayout(text) ?? <pre className="output">{text}</pre>;
 }
 
-function OriginalPreview({ text }: { text: string }) {
-  return <details className="result-original"><summary>Original preview</summary><pre className="output">{text}</pre></details>;
-}

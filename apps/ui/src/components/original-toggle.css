@@ -5,3 +5,9 @@
 .original-toggle:hover { color:var(--t1); border-color:var(--line); }
 .original-toggle[aria-pressed=true] { color:var(--t1); border-color:var(--line-2,var(--line)); background:var(--s2); }
 .original-toggle:focus-visible { outline:1px solid var(--t2); outline-offset:2px; }
+/* A caption at the top of a result keeps clear of the result's floating reading choices in the same corner. */
+:is(.result-readings,.terminal-preview):has(>.captured-result-views:not(:empty)) .reading-caption { padding-right:30px; }
+/* The switch sits under the reading it swaps, where the old "Original preview" disclosure was. */
+.with-original { display:flex; flex-direction:column; min-width:0; }
+.with-original>.original-toggle { align-self:flex-end; margin-top:4px; }
+.with-original>.original-text { margin:0; max-height:min(60vh,480px); overflow:auto; }
