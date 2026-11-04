@@ -14,7 +14,7 @@
 .thread-caption select {display:block;width:100%;max-width:260px;margin-bottom:6px;background:var(--s1);border:1px solid var(--line);color:var(--t2);padding:5px 7px;border-radius:var(--round-sm);font:var(--text-2xs)/1.5 var(--sans);}
 
 .thread-graph .thread-commit {color:#edffff;}.thread-primary i {box-shadow:none;}.thread-graph .thread-commit:hover {color:#a9f5ff;}
-:root[data-palette=paper] .thread-graph .thread-commit {color:#876233;}
+:root[data-theme=light] .thread-graph .thread-commit {color:#876233;}
 @media(max-width:360px){:root[data-ui-version=modern][data-experience=classic] .workspace-toggles button {font-size:0;width:42px;min-width:42px;padding:9px;gap:0;justify-content:center;}}
 
 .git-atlas .atlas-back {display:inline-flex;}

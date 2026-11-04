@@ -61,7 +61,7 @@ test('Settings descriptions, keyboard rows and controls remain reachable at narr
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
    if(section==='Appearance'){
     await expect(dialog.locator('.theme-option small').first()).toBeVisible();
-    const last=dialog.getByRole('button',{name:'Copper',exact:true});await last.scrollIntoViewIfNeeded();await expect(last).toBeInViewport();
+    const last=dialog.getByRole('button',{name:'Ember',exact:true});await last.scrollIntoViewIfNeeded();await expect(last).toBeInViewport();
    }
    if(section==='Reading'){
     const select=dialog.getByRole('combobox',{name:'Exposed reasoning detail'});await select.scrollIntoViewIfNeeded();await select.selectOption('collapsed');await expect(select).toHaveValue('collapsed');

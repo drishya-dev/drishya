@@ -245,8 +245,8 @@ for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: importe
   await expect(page.locator('.fresh-app,.fr-action,.cv-workspace')).toHaveCount(0);
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
-  await expect(settings.getByRole('button', { name:'Deep Ocean',exact:true })).toBeVisible();
-  await settings.getByRole('button', { name:'Deep Ocean',exact:true }).click();
+  await expect(settings.getByRole('button', { name:'Midnight',exact:true })).toBeVisible();
+  await settings.getByRole('button', { name:'Midnight',exact:true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
   await settings.getByRole('button', { name:'Close Workspace settings' }).click();
   await expect(settings).toHaveCount(0);
@@ -354,7 +354,7 @@ test('Modern colour and UI versions remain separate; scoped Modern chrome does n
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings'});
-  await settings.getByRole('button',{name:'Porcelain',exact:true}).click();
+  await settings.getByRole('button',{name:'Daylight',exact:true}).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
   await settings.getByRole('tab',{name:'UI versions',exact:true}).click();
   await expect(settings.getByRole('button',{name:/^Modern/})).toHaveAttribute('aria-pressed','true');
@@ -1312,13 +1312,13 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await expect(page.locator('.mh-header').getByRole('button',{name:'Demo',exact:true})).toHaveCount(0);
   await expect(page.getByRole('link',{name:'Star on GitHub'})).toHaveAttribute('href','https://github.com/drishya-dev/drishya');
-  for(const [name,palette] of [['Jet Black','jet'],['Porcelain','paper'],['Deep Ocean','midnight'],['Orchid','mocha'],['Blueprint','tokyo'],['Evergreen','nord'],['Copper','gruvbox']]) {
+  for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight'],['Orchid','mocha'],['Royal','tokyo'],['Emerald','nord'],['Ember','gruvbox']]) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     await page.getByRole('button',{name:name!,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
-    const expectedBase:Record<string,string>={jet:'#000',paper:'#f4f2ee',midnight:'#0b1216',mocha:'#141116',tokyo:'#0c1019',nord:'#14191b',gruvbox:'#181310'};
+    const expectedBase:Record<string,string>={jet:'#000',paper:'#f6f9fb',midnight:'#02070a',mocha:'#0b090d',tokyo:'#f7f8fc',nord:'#050a08',gruvbox:'#0c0908'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
-    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#315e73',midnight:'#74d9cf',mocha:'#e4b1c2',tokyo:'#95b9ff',nord:'#b7d3bc',gruvbox:'#ecb58a'};
+    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#036a8f',midnight:'#29a9f0',mocha:'#ec5fae',tokyo:'#09318d',nord:'#34d39b',gruvbox:'#fc8a66'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
     await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     await page.screenshot({path:resolve(`.local/palette-${palette}-home.png`)});
@@ -1332,7 +1332,7 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
   await page.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeHidden();
   await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeVisible();
   await input.fill('');
-  for(const [name,palette] of [['Jet Black','jet'],['Porcelain','paper'],['Deep Ocean','midnight'],['Orchid','mocha'],['Blueprint','tokyo'],['Evergreen','nord'],['Copper','gruvbox']]) {
+  for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight'],['Orchid','mocha'],['Royal','tokyo'],['Emerald','nord'],['Ember','gruvbox']]) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();await page.getByRole('button',{name:name!,exact:true}).click();await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:resolve(`.local/palette-${palette}-session.png`)});
