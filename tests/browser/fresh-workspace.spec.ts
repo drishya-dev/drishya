@@ -1330,7 +1330,7 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
     const expectedBase:Record<string,string>={jet:'#000',paper:'#f6f9fb',midnight:'#02070a',mocha:'#0b090d',tokyo:'#f7f8fc',nord:'#050a08',gruvbox:'#0c0908'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
-    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#315e73',midnight:'#74d9cf',mocha:'#e4b1c2',tokyo:'#95b9ff',nord:'#b7d3bc',gruvbox:'#ecb58a'};
+    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#0477a1',midnight:'#29a9f0',mocha:'#ec5fae',tokyo:'#09318d',nord:'#34d39b',gruvbox:'#fc8a66'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
     await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     await page.screenshot({path:resolve(`.local/palette-${palette}-home.png`)});

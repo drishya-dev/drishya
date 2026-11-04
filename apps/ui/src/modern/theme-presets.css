@@ -40,7 +40,7 @@
   --bg:#f7f8fc; --s1:#ffffff; --s2:#eff1f8; --s3:#e5e8f3;
   --line:#dadeec; --line-2:#c4cade; --line-3:#8389a3; --t1:#111633;
   --t2:#373d5c; --t3:#50567a; --t4:#5a6083; --focus:#09318d;
-  --palette-active:#09318d; --syntax-keyword:#b4326f; --syntax-string:#2a6b3e; --syntax-function:#1747b0;
+  --palette-active:#09318d; --syntax-keyword:#a32a63; --syntax-string:#2a6b3e; --syntax-function:#1747b0;
   --syntax-number:#9a4d0b; --source:#1747b0; --external:#b4326f; --edited:#9a4d0b;
   --pass:#22703c; --fail:#b3213a; --graph-node:#1d2b5c; --graph-edge:#6a76a3;
   color-scheme:light;
