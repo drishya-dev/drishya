@@ -33,14 +33,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | TEST-2 | @harsh + Codex | `codex/test2-source-readiness` | 2026-11-02 | Whole TEST-2 completion continues after merged #314. Harsh approved up to 26 files on 2 Nov after the manual gate returned two clean commands then a Workspace line-1200 failure. Current verified repair: tests/browser/workspace-shared-draft.spec.ts, one Go-enabled readiness assertion; controlled held-response proof and numeric traces are private. docs/review/test-2-live-anchor.md, STATUS/TASKS, AGENTS only when the measured worker gate is established. Retain the unresolved clean-main b2-live anchor diagnosis and all failed runs; any further reading/source edit must first have actual cause evidence and stay within the approved 26-path ceiling. Coordinate UI-21 string changes in the shared spec; this claim changes readiness logic only. No retries, relaxed assertions, larger timeouts or hidden failures. Full acceptance remains three consecutive complete commands; Harsh runs the manual full gate. |
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
-| UI-8 | @yash + Claude Opus 5.5 (takeover from Codex, 3 Nov) | #332 merged; `claude/ui-8-changes-git` #335, then `claude/ui-8-*` per surface family | 2026-11-03 | Whole UI-8, one PR per surface family (builder-approved scope, more than 15 files by nature): `apps/ui/src/**`, focused UI and projection tests and browser specs, `packages/projection/src/reduce.ts` (image titles only), UI-8 docs. Not touching `tests/browser/workspace-shared-draft.spec.ts`, History scroll anchors or native/capture contracts (TEST-2). Real content and screenshots stay in `.local/`. MOTION-1/3 stay separate. |
-| FILES-11 | @yash + Claude Opus 5.5 | `claude/files-11-worktree` | 2026-11-04 | `apps/daemon/src/workspace.ts`, `repository-root.ts`, the Workspace current-file read and its specs |
 | USAGE-1 | @yash + Claude Opus 5.5 | `claude/usage-1` | 2026-11-04 | Usage and context surfaces (`RecordedUsage.tsx`, the context gauge and its popover), the usage projection fields they read, and their specs |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude — UI-8 complete; FILES-11 merged; USAGE-1 open
+
+- UI-8 is done: #337 (panels and header), #338 (Git network graph), #339 (one Original switch), #340 (palettes), #341 (screen trail), plus 31c866b4 on main. The four from #338 on were gated as one batch on main (types, package, 619 + 33 browser); the gate's failures were fixed on their branches before merging. What each checked on real sessions is in [the surface pass](review/ui-8-surface-pass.md).
+- FILES-11 (#342): files inside a linked worktree of this repository read whole; a missing current file answers 404. A duplicate ID was fixed on the way (it had been filed as FILES-10).
+- USAGE-1: the panel is #343, ready once its gate is read; the Codex weekly window is #344, a `schema` draft waiting for Harsh.
+- Split from UI-8: UI-26 (one Modern stylesheet layer behind a pixel-diff guard).
+- Next: MOTION-1 and MOTION-3.
 
 ### Yash with Claude — the feature queue before UI-8 is done
 
@@ -1372,6 +1378,12 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **4 Nov, Yash with Claude: formatted by default, one Original switch everywhere.** A reading that had its own raw button, or showed the original beneath the formatted view, now has one shared `Original` toggle that swaps the recorded text in place. A reader that owns the switch (a stored result) keeps nested readings from offering a second. Reason: Yash, 3 Nov, "formatted and original together doesnt look good. everywhere".
+
+- **4 Nov, Claude: on the dark accent palettes the chrome takes the palette's accent, not `--source`.** `--source` means a file read; switches, grants and pressed Git rows had borrowed it, which made Ember's controls blue. Jet Black and the light palettes are unchanged. Reason: an accent palette whose controls are another colour is not that palette.
+
+- **4 Nov, Claude: the Git graph finds main through its remote ref when the local tip is not loaded.** A stale local `main` (older than the loaded history) left no commit marked main on this repository. Reason: the graph's first promise is main as one line.
 
 - **3 Nov, Yash with Claude: the stage takes the room minimised panels give back.** Reverses the earlier rule that minimising Files keeps the agent's allocation stable. Minimised Files moves the stage's left edge to the window margin; a minimised Toolbox moves its right edge, and the prompt rail with it, out to the button, which waits at the middle of its edge. Why: on a small laptop screen people who are not reading the surroundings want the work as wide as possible. 600 px is unchanged (panels there are overlays).
 

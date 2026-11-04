@@ -94,3 +94,16 @@ Composer, Search, Notes and Settings were walked at 600 and 1440 on real session
 **Checked:** Toolbox and plans on Claude `c6701b14` (2 plans) at 600/1440; stage widening measured at 1440/1024/600 on Claude `ab475ed8`; the Workspace fallback and Queued inputs (147 receipts) on this session's own journal imported into the scratch home (`81c22a35`, 131 MB) at 600/1440, no overflow; header panel edges measured at 1440 and 1024. Focused specs for every changed surface pass.
 
 **Not real-session-checked:** a Codex session with queued receipts (none in the scratch home has them).
+
+## Git graph, one Original switch, palettes, screen trail (#338–#341, 4 Nov)
+
+| Surface | Before | After | Why |
+| --- | --- | --- | --- |
+| Git graph | Thread art with light and ribbons, hard to read; on this repository no commit was marked main | A plain network graph: time left to right, main one top line, branches on lanes, only real parent links, labels on heads that never collide; drag to pan, Ctrl + wheel about the pointer; main found through its remote ref when the local tip is not loaded | Yash: "normal graphs but with just this texture of branch and main" |
+| Original text | Each reading had its own raw button (Show raw, Raw patch, Original result, Original request, Show original result) or showed the original beneath the formatted view | One `Original` switch everywhere, swapping in place; a stored result owns it for the readings inside; queued notifications read as their fields | Yash: "formatted and original together doesnt look good. everywhere" |
+| Palettes | Six weak palettes beside Jet Black | Midnight, Daylight, Orchid, Royal, Emerald, Ember, one accent each; 4.5:1 for every text pair on all seven; dark accent palettes carry their accent into the chrome | Yash's references; every option should be a good one |
+| Screen view | A frame and its caption only | "To reach this screen": the recorded steps on the frame's tab since that frame, the current one marked; beside the frame at 1440, below it at 600 | Yash: say what the agent did to get that screen |
+
+**Checked:** Git graph on Claude `rec_81c2` and Codex `rec_99b8` (this repository, 50 commits, 11 main on one line, 5 lanes, 57 links) at 1440/600; Original on Codex `rec_93fd` (every switch tried clickable and swapping, none covered) and Claude `rec_81c2` (7 notifications); palettes on Claude `rec_81c2` and Codex `rec_93fd`, seven at 1440 and three at 600, contrast from computed tokens (lowest measured 4.78); screen trail on Claude `rec_81c2` (101 steps, 61 frames). Batch gate on the four merged onto main: types, package, 619 + 33 browser; its failures (graph zoom text at 11 px, a palette unit, two presentation units) fixed before merging, and the Original switch's 11 px found by the next gate fixed on main (31c866b4).
+
+**Not checked:** a squash-merged branch in the graph; Codex computer use; a Codex session with queued notifications (none on this machine).
