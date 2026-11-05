@@ -57,12 +57,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - Next: UI-8, foundations first. Measured on one real History screen: 13 font sizes, 13 radii, 19 control heights, 13 line heights.
 - Found while walking: Codex `:codex-file-citation{…}` directives show as raw text in prose. Recorded in the audit, third batch.
 
-### Harsh with Codex — TEST-2 final driver edit; user runs validation
+### Harsh with Codex — TEST-2 checkpoint diagnostic awaiting user
 
-- Integrated main c5c87db; independently reviewed three readiness fixes pass 72/72 and whole affected files 13/13. Both types, 1,200 units / one skip at canonical TEMP/four workers, package and four genuine Modern desktop journeys pass. The earlier alias-path failures and unbounded Git unit timeout remain recorded with exact limits.
-- Frozen 7f39c8f: full run 1 passes 621 parallel + 33 serial with 28 skips (840.20 s); run 2 passes 621 parallel but fails one serial p1 patch-layout selection (32 serial passed, 28 total skips, 822.87 s). Run 3 does not run. [Complete evidence](review/test-2-live-anchor.md).
-- The instrumented p1 file reproduces the desktop missed click: the button moves 25.25 px between down/up, click reaches its parent, same reader stays unified. The last layout selection now uses Enter like its first selection. The underlying pointer movement writer remains unknown; this is a driver correction, not a product-pointer fix.
-- Harsh requested no further agent test execution. Testing is stopped. The one-line final edit is unverified after editing; the prepared user command runs its focused check before the full three-run gate. TEST-2 stays claimed/unchecked and #331 draft. No retry, bound relaxation, longer timeout or new skip.
+- Additional returned old 7f39c8f command fails run 1: 620 parallel + 32 serial passed, two failures, 28 skips, 835.27 s. The repeated p1 click failure predates the final 3ca50c8 edit. Runs 2/3 do not run. [All results](review/test-2-live-anchor.md).
+- The new checkpoint initial-focus timeout has no saved page snapshot or trace. Both agents reviewed source/evidence read-only; no cause is proved, so no selector, timeout or product change is invented.
+- User owns test execution. A private focused diagnostic preserves original assertions and records lifecycle/HTTP/DOM counts with failure trace/screenshots. It checks checkpoints and the new layout selection; it does not launch a full gate. Agents ran no tests after the stop instruction.
+- Previous runtime verification remains: both types, 1,200 units/one skip at canonical TEMP/four workers, package and four genuine Modern journeys. TEST-2 stays claimed/unchecked and #331 draft; pointer movement remains unresolved and the final layout edit remains post-edit unverified.
 
 ### Yash with Claude — AUDIT-1, first batch
 
