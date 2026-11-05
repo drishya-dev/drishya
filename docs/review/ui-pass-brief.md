@@ -77,6 +77,8 @@ Append at the end of every phase and read at the start of every phase; do not re
 | 1 Nov | AUDIT-1 | Foundations | 11 font sizes, 11 radii and 20 button heights on one History screen. This batch added rules to the override pile on purpose; the token sheet absorbs them first. | UI | UI-8 |
 | 1 Nov | AUDIT-1 | Every surface | Run Impeccable's detector through `--cdp` after finishing each surface, panels open, on a real session: `undersized`, `line-length`, `straggler`, `low-contrast` and `tight-leading` were all right. Its results stay in `.local/`. Half-width floating controls over text remain open. | UI | UI-8 |
 | 1 Nov | AUDIT-1 | All copy | The word `captured` carries nothing on screen. Provenance moves to tooltips and details. | Content | UI-21 |
+| 5 Nov | AUDIT-1 | Live motion | Arrivals and outcomes that land in one update must each move once; the composer's last-step rule silently skips Codex's. Motion work reads the batch, not the last step. | Motion | LIVE-6 |
+| 5 Nov | AUDIT-1 | Overlays at the composer | Anything raised above the composer (approvals, queued inputs) reserves its height in the history, so it never covers the work it is about. | UI | CONNECT-2 |
 
 ## 6. Who runs it
 

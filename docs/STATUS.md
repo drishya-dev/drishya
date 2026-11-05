@@ -34,11 +34,23 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | USAGE-1 | @yash + Claude Opus 5.5 | `claude/usage-1` | 2026-11-04 | Usage and context surfaces (`RecordedUsage.tsx`, the context gauge and its popover), the usage projection fields they read, and their specs |
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
+| LIVE-6, FLOW-1 | @yash + Claude Opus 5.5 (AUDIT-1 A3) | claude/audit-1-a3 | 2026-11-05 | LIVE-6: packages/scene/src/index.ts, apps/daemon/src/history-worker.ts, Viewer.tsx; FLOW-1: FlowConnections.tsx |
+| HOME-3 | @yash + Codex (Sol 6.1) | codex/home-3 | 2026-11-05 | Home.tsx, SessionHome.tsx, home-import.ts, home-active.css, focused tests and task acceptance/docs. |
+| CONNECT-2 | @yash + Codex (Sol 6.1) | codex/connect-2 | 2026-11-05 | SessionWorkspace.tsx measured composer clearance, stage.css, modern/hud.css, focused approval test and task acceptance/docs. |
 
 
 ---
 
 ## Last session
+
+### Yash with Claude — 5 Nov: MOTION-1 merged, AUDIT-1 walk finished, A3 next
+
+- MOTION-1 merged (#345, full gate clean: 1,200 units, 653 browser, package). MOTION-3 is claimed and half run: rest and hover pass on real sessions; both ten-minute replays, reduced motion and low resource, the review doc, PR and gate remain. Its plan is in the side-session notes (`motion-3-status.md`); the evaluation must also cover TOOLS-2 and LIVE-6.
+- AUDIT-1: the remaining walk on the finished UI is recorded (audit rows W1–W13, bce3950d), including the A2 interaction inventory. In-place fixes W7–W10 are draft PR #346 (`claude/audit-1-a1`, verified on Claude `rec_81c2` and Codex `rec_6375`; waits for the A3 batch gate). A3 items LIVE-6, CONNECT-2, FLOW-1 and HOME-3 are claimed, not built.
+- Still open for AUDIT-1: eight findings handed to `UI-8` in the audit (Z1, Z2, Z4, Z5, N6, N7, N8, V1; only N9 is traced) are not traced to a fix in `ui-8-surface-pass.md`; check each in the app and mark it fixed or make it an item. Then Yash reads the ranked list, and AUDIT-1 closes.
+- LIVE-6 design notes (not started; empty branch `claude/live-6`): small sessions compose in the browser (`Viewer.tsx:108`), large ones in the worker (`history-worker.ts:196`, via `HistoryQuery` and the body check in `server.ts` ~369). Arrival is the class `ph-arriving` and Resolve the `resolving` class (`styles.css:216`). Keep `since` stable when the step has not changed, so a re-render or a scroll page never strips a running animation's class mid-run; replay keeps `step - 1`.
+- TOOLS-2: Yash chose a floating window (5 Nov), recorded in TASKS. Not claimed yet.
+- Work moved into one session; side sessions are no longer used for this queue. Order tomorrow: AUDIT-1's open findings and A3 (LIVE-6, CONNECT-2, FLOW-1, HOME-3), one gate with #346, close AUDIT-1; then TOOLS-2; then MOTION-3.
 
 ### Yash with Claude — UI-8 complete; FILES-11 merged; USAGE-1 open
 
@@ -62,7 +74,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - Measured local Windows configuration: **DRISHYA_WORKERS=3 plus serial=1**. AGENTS/TEST-3 record that limit; the four-worker default remains, without claiming a four-worker clean streak. Both types, 1,200 units/one skip and package checks passed earlier on unchanged application/package code; no agent ran tests/builds during this user-owned handoff.
 - Exact native History boundary proof and genuine Modern checks cover both harnesses at 600/1440. Go/Git/resize readiness guards retain their original assertions. Layout explicit manual reading passed 24/24, then all three full commands, with final pointer coverage restored.
 - Historical B2 5 px offset, checkpoint focus timeout and exact layout-scroll writer remain cause-unverified. Passing this strict streak meets acceptance without inventing those causes. Extra Claude Classic visibility and release/human/platform checks remain separate.
-- TEST-2 checkbox set and claim removed in this finishing PR; counts synchronized. Completion changes are documentation only. **#331 is ready for the other builder's review; not merged.**
+- TEST-2 checkbox set and claim removed in this finishing PR; counts synchronized after integrating main's documentation-only 0e9d3b71, preserving other claims. Completion changes are documentation only. **#331 is ready for the other builder's review; not merged.**
 
 ### Yash with Claude — AUDIT-1, first batch
 

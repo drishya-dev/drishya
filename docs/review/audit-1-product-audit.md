@@ -293,13 +293,19 @@ What each component does for each kind of input, for UI-8 and the motion pass to
 | Changes | Rows open a file or an edit | Tab, Esc | Dialog scroll; paged | History only | Retry; `None recorded` | tested |
 | Git menu, review, history | Click; commit rows; ref rail | `B` focuses a branch, Esc clears it | Wheel pans, zoom buttons, Fit | History only | Three consents; loading line | tested |
 | Search | Click a result | Enter, Esc | Local scroll | Replay limits to the step | Empty state | tested |
-| Composer | Click opens; hover shows past receipts | Ctrl+Shift+Enter sends | Height follows content | Pill states live; hidden in replay | Unsupported requests fail explicitly | tested at rest, not sending |
+| Composer | Click opens; hover shows past receipts; Connection & permissions holds Enable this workspace | Ctrl+Shift+Enter sends once enabled | Height follows content | Pill states live; hidden in replay; Stop while a turn runs | Send is disabled until the workspace is enabled, and its title now says so; the idle-in-other-clients acknowledgement appears before the first send | tested, sending (5 Nov) |
 | Follow | Toggle; `↓` returns with the count | Tab, Space | Wheel detaches it | | | tested |
 | Repository map | Drag orbits, Shift drag pans, buttons zoom and Fit | Find a file | Wheel zooms | Replay follows | `Map the whole repository` | code, one screen tested |
-| Replay transport | Scrub, play, step, speed, leave | Space and arrows | | Stops on leave | | code, one screen tested |
+| Replay transport | Scrub, play, step, speed, leave | Arrows step, Space plays and pauses, End and Home jump; Escape keeps replay (leaving is explicit) | | Stops on leave | Opens at step 1; Home goes to 0 (before the first step) | tested (5 Nov) |
 | Dialogs | Close button; move and reset where offered | Esc closes the top one; focus returns to the opener | Local scroll; resize where offered | | | tested |
 
-**Not driven:** the composer's send and approval paths, and replay's keyboard. Both need a session of their own.
+| Native approval | Decline, Allow once, Original | Tab, Enter | | Appears while a resumed turn waits; Allow once runs the call and the turn ends | Covers the card it asks about (CONNECT-2) | tested (5 Nov) |
+| Original switch | Click swaps formatted and recorded text in place | Tab, Enter, Space | Local scroll | Same in replay | One per reading | tested (UI-8, #339) |
+| Git graph | Drag pans, Ctrl + wheel zooms about the pointer, Fit; commit click opens; line hover peeks a branch | `B` focuses a branch, arrows, Home, End, PageUp, PageDown, + and −, Esc | Wheel scrolls time | History only | Consent, loading, start of history | tested (UI-8, #338) |
+| Screen view | Steps, trail rows, strip cells | Arrows, Home, End, `f` full window, Esc | Strip scrolls | Replay hides future steps | No steps recorded | tested (UI-8, #341) |
+| Usage | Disclosure in the session menu | Tab, Enter | | History values; replay says where they are | Says what a harness does not record | tested (USAGE-1, #343) |
+
+**Driven 5 Nov on a genuine Claude Code session** (throwaway repository): enabling the workspace, the acknowledgement, sending, a native approval and Allow once. Replay's keyboard on Codex `rec_6375` (3,206 steps).
 
 ## Impeccable's detector
 
@@ -334,3 +340,23 @@ ECC was read at Yash's request (1 Nov): a general agent system of 314 skills, ho
 The file reader keeps file identity and material first, with Open in Workspace and Compare near the selection; Show in Files and Copy path remain in its one File actions menu. Its acceptance must open that menu before using those secondary actions, rather than require resident duplicate controls.
 
 The map failure is an actionable local interruption, not a replacement for History. It belongs below the measured header, centred away from the Files dock, in a compact content-sized notice; one Retry action, readable failure text, a hairline separating it from the world. It has no arrival loop and never remounts History. Baseline running-app measurement at 1280 px: retry centre is covered by the header, trial click fails. Empty and huge error text wrap within the notice; the latest failure remains visible until recovery. Related live-history and scroll-anchor work stays with TEST-2.
+
+## The remaining walk on the finished UI and motion (5 November)
+
+The surfaces left from the first walk (live, the review tools, the peek, compare), walked again after UI-8 and MOTION-1 landed, on Claude `rec_81c2` (16k observations) and Codex `rec_6375` (4,432), at 1440 and 600 px, plus two genuine live runs on a throwaway repository (one Claude Code with haiku, one Codex), each with a failing check, a fix, a 25-second wait and a passing check.
+
+| # | Found | Severity | State |
+|---|---|---|---|
+| W1 | Live, both harnesses: the journal is discovered within one 10-second tick (Claude 12 s, Codex 9.6 s after the run starts), its row reaches the top of Home in about 19 s, opening takes 1.6 s (Claude) and 0.15 s (Codex), follow holds through the run, no horizontal overflow. | | Checked, nothing found. |
+| W2 | Live, Codex: of 5 results that landed 1.7 to 26.5 s after their calls, the Resolve move ran for 1. Claude: 5 of 5. The composer marks an operation arriving or resolving only when it lands on the very last step, and Codex writes more records (token counts) right after each result. Lift has the same rule. | High | LIVE-6 |
+| W3 | Live: a journal being written is not in `Running now` until it has been opened; its row is first on Home but unmarked. | Medium | HOME-3 |
+| W4 | Live, Claude, resumed turn: the approval request covers the lower half of the card it asks about, and the `Waiting for your approval` line is cut off behind it. | Medium | CONNECT-2 |
+| W5 | Live, Claude, resumed turn: the Toolbox shows two sections both called `Available tools` (the run's tools and the recorded list). | Medium | TOOLS-2 (the groups are rebuilt there) |
+| W6 | Faint connector lines run across the history to targets that are not on screen, one from a notice to the bottom-right corner. | Medium | FLOW-1 |
+| W7 | Prompt overview: `0 operations · 0 change calls · 0 checks · 0 failed outcomes` on most prompts (V1 was not finished in UI-8), and `prompt observations` in its intro. | Medium | Fixed: only what happened, in plain words, or `No work recorded after this prompt`. |
+| W8 | Changes: a failure's terminal colour codes printed as boxes in its summary line. | Medium | Fixed where the failure line is made (scene `since`), so every reader gets text. |
+| W9 | Changes: `−0` on files and edits with nothing removed. | Low | Fixed. |
+| W10 | Composer: a disabled Send said only `Send prompt`. | Low | Fixed: it names what it waits for. |
+| W11 | Review findings, packet and Changes fit inside the window at both widths on both sessions; the peek opens the file-work window at 1440. Compare keeps UI-23's line diff. | | Checked, nothing found. |
+| W12 | Replay opens at step 1 and Home goes to 0. | Low | Not doing: 0 is the empty start before the first step, and a person who presses Home asks for it. |
+| W13 | Escape does not leave replay. | Low | Not doing: leaving replay is an explicit control, and Escape clears focus everywhere else. |
