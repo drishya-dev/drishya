@@ -521,10 +521,28 @@ export function PromptComposer() {
     const node = element.current;
     const viewer = node?.closest<HTMLElement>('.viewer');
     if (!node || !viewer) return;
-    // The ordinary composer owns space; it must not cover the last captured result.
-    const observer = new ResizeObserver(([entry]) => viewer.style.setProperty('--composer-gap', `${(entry?.borderBoxSize?.[0]?.blockSize ?? node.offsetHeight) + 24}px`));
+    // Absolute approval/queue surfaces sit outside the composer's border box.
+    // Reserve their actual raised extent too, without feeding it back into the
+    // composer's own size constraints or changing the user's follow preference.
+    const observed = new Set<Element>();
+    const measure = () => {
+      viewer.style.setProperty('--composer-gap', `${node.offsetHeight + 24}px`);
+      const top = node.getBoundingClientRect().top;
+      let raised = 0;
+      for (const surface of node.querySelectorAll<HTMLElement>('.native-turn-details, .queued-input-receipts')) {
+        if (!observed.has(surface)) { observer.observe(surface); observed.add(surface); }
+        if (!surface.getClientRects().length) continue;
+        if (surface.matches('.queued-input-receipts') && surface.querySelector('button')?.checkVisibility({ visibilityProperty: true }) === false) continue;
+        raised = Math.max(raised, top - surface.getBoundingClientRect().top);
+      }
+      viewer.style.setProperty('--composer-raised-gap', `${Math.ceil(raised)}px`);
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(node);
-    return () => { observer.disconnect(); viewer.style.removeProperty('--composer-gap'); };
+    const children = new MutationObserver(measure);
+    children.observe(node, { childList: true, subtree: true });
+    measure();
+    return () => { observer.disconnect(); children.disconnect(); viewer.style.removeProperty('--composer-gap'); viewer.style.removeProperty('--composer-raised-gap'); };
   }, [source, id]);
   if (source?.kind !== 'daemon' || !id || id.includes('+')) return source?.kind === 'bundle' && id ? <QueuedInputs standalone/> : null;
   const running = controller && ['connecting', 'running', 'approval'].includes(controller.state);
