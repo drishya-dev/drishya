@@ -304,3 +304,28 @@ Fixed integration verification:
 The corrected private proof command finishes **three passes and one intentional original-resize failure**; the earlier original proof finishes two failures / one insufficient-control pass. Neither is represented as a clean test gate.
 
 **Next acceptance:** at Harsh's explicit request to complete the delegated task, the coordinator freezes this reviewed candidate and runs the existing three-command gate here, rather than another manual handoff. Full-run retries remain zero and the runner stops on its first failure. TEST-2 stays unchecked and #331 draft while that gate is pending; no completed streak or measured worker-count certification is claimed in advance.
+
+
+## 5 November: full preflight, interrupted clean streak and user execution handoff
+
+The first unit preflight inherited Windows' short-path TEMP alias because the coordinator omitted the canonical setup. It reports **1,195 passed / one skipped / five failed**, plus one cleanup-suite error (four failed files / 195 passed files; 48.79 seconds). The investigator verifies four failed tests and the cleanup error against the same-file identity/path-alias mismatch. The separate Git branches 5-second timeout remains cause-unverified; contention is plausible, not proven. No production path protection was weakened.
+
+With canonical TEMP/TMP and four unit workers, the four affected files pass **14/14**, then the full suite passes **1,200 / one skipped across 199 files**, 49.17 seconds. Both typechecks and package verification pass. This is measured four-worker unit acceptance, not a claim for the earlier unbounded run. Browser commands use three parallel workers / one serial worker, zero retries.
+
+Frozen runtime/test candidate **7f39c8f** complete commands:
+
+| Run | Parallel | Serial | Exit | Seconds |
+| --- | --- | --- | ---: | ---: |
+| 1 | 621 passed / 27 skipped / zero failed | 33 passed / one skipped / zero failed | 0 | 840.20 |
+| 2 | 621 passed / 27 skipped / zero failed | 32 passed / one skipped / one failed | 1 | 822.87 |
+| 3 | Not run: stopped after run 2 failed. | Not run. | — | — |
+
+The second command fails the final Side by side selection in p1-pacing:202, after the viewport has returned to **1440 x 900**. The split material exists but stays hidden; Changes remains pressed. This breaks the streak. All three earlier readiness corrections pass in both complete commands; the eight earlier missing-file diagnostics do not recur.
+
+An instrumented whole-file diagnostic retains the original inputs and assertions, reproducing the same failure: **20 passed / one failed / one skipped**, 90 seconds. It captures pointerdown on Side by side at **1980.900 ms**, button top **868.828 px**; pointerup at **1983.700 ms** hits View what the agent saw after the button moves to **894.078 px**. Click at **1983.900 ms** reaches their common op-expanded container. The layout handler never runs; the same reader (identity 1) stays unified. This proves missed pointer activation, not a layout-state reset.
+
+The exact **25.25 px movement writer remains unproven**: existing snapshots show History scrolling but do not identify the responsible callback. Hover reading is disabled while expanded, and CapturedSourceControls is not used by this Classic reader, so neither is asserted as its cause. The final selection now uses Enter, matching the first Side by side selection in the same layout test. All content, layout visibility, absent-mode assertions, existing widths and timeouts remain. This is a layout-selection driver correction; it does **not** claim the physical pointer movement is fixed or remove that observed limitation from this report.
+
+Harsh explicitly stopped agent test execution and requested commands instead. The diagnostic had already completed when its session was stopped/polled; no further tests, builds or verification commands ran after that instruction. The final one-line edit is **not post-edit verified**. A prepared local user script builds normally, runs the affected layout case 24 times at one worker with retained failure traces, then runs the existing three-command gate only if the focused check passes. It stops on the first nonzero exit and never retries a failed command.
+
+The test change is the only runtime-adjacent difference after 7f39c8f; the already-passing unit/package results apply to unchanged application/package code. TEST-2 stays claimed/unchecked, PR #331 stays draft, and no three-clean-run or four-worker full-browser certificate is claimed. Final worker measurements belong in AGENTS/TEST-3 only when a clean gate is established.
