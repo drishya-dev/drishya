@@ -35,7 +35,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | USAGE-1 | @yash + Claude Opus 5.5 | `claude/usage-1` | 2026-11-04 | Usage and context surfaces (`RecordedUsage.tsx`, the context gauge and its popover), the usage projection fields they read, and their specs |
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
-| LIVE-6, CONNECT-2, FLOW-1, HOME-3 | @yash + Claude Opus 5.5 (AUDIT-1 A3) | `claude/audit-1-a3` | 2026-11-05 | LIVE-6: `packages/scene/src/index.ts`, `apps/daemon/src/history-worker.ts`, `Viewer.tsx`; CONNECT-2: composer/history spacing CSS; FLOW-1: `FlowConnections.tsx`; HOME-3: `Home.tsx`, `SessionHome.tsx` |
+| LIVE-6, FLOW-1 | @yash + Claude Opus 5.5 (AUDIT-1 A3) | claude/audit-1-a3 | 2026-11-05 | LIVE-6: packages/scene/src/index.ts, apps/daemon/src/history-worker.ts, Viewer.tsx; FLOW-1: FlowConnections.tsx |
+| HOME-3, CONNECT-2 | @yash + Codex (Sol 6.1) | codex/home-3 and codex/connect-2 | 2026-11-05 | HOME-3: Home.tsx, SessionHome.tsx, discovery freshness and focused tests; CONNECT-2: composer/history measured spacing and focused tests; task acceptance/docs. |
 
 
 ---
