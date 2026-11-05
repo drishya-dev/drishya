@@ -37,7 +37,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
 | LIVE-6, FLOW-1 | @yash + Claude Opus 5.5 (AUDIT-1 A3) | claude/audit-1-a3 | 2026-11-05 | LIVE-6: packages/scene/src/index.ts, apps/daemon/src/history-worker.ts, Viewer.tsx; FLOW-1: FlowConnections.tsx |
 | HOME-3 | @yash + Codex (Sol 6.1) | codex/home-3 | 2026-11-05 | Home.tsx, SessionHome.tsx, home-import.ts, home-active.css, focused tests and task acceptance/docs. |
-| CONNECT-2 | @yash + Codex (Sol 6.1) | codex/connect-2 | 2026-11-05 | SessionWorkspace.tsx measured composer clearance, stage.css, modern/hud.css, focused approval test and task acceptance/docs. |
 
 
 ---
@@ -52,6 +51,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - LIVE-6 design notes (not started; empty branch `claude/live-6`): small sessions compose in the browser (`Viewer.tsx:108`), large ones in the worker (`history-worker.ts:196`, via `HistoryQuery` and the body check in `server.ts` ~369). Arrival is the class `ph-arriving` and Resolve the `resolving` class (`styles.css:216`). Keep `since` stable when the step has not changed, so a re-render or a scroll page never strips a running animation's class mid-run; replay keeps `step - 1`.
 - TOOLS-2: Yash chose a floating window (5 Nov), recorded in TASKS. Not claimed yet.
 - Work moved into one session; side sessions are no longer used for this queue. Order tomorrow: AUDIT-1's open findings and A3 (LIVE-6, CONNECT-2, FLOW-1, HOME-3), one gate with #346, close AUDIT-1; then TOOLS-2; then MOTION-3.
+
+### Yash with Codex — 5 Nov: CONNECT-2 complete
+
+- CONNECT-2: the existing approval/queue surfaces reserve their measured raised extent in history, without changing composer design or follow/approval policy. Genuine Claude approvals passed both decisions and both widths, and ordinary Codex views retained zero raised clearance. [Acceptance](review/connect-2-clearance.md). PR #348 remains separate; no PR was merged. The full gate and its clean-main comparison are recorded in the PR.
 
 ### Yash with Claude — UI-8 complete; FILES-11 merged; USAGE-1 open
 
