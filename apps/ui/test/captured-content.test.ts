@@ -18,7 +18,7 @@ it('keeps candidate hints distinct from validity and reports bounded-out inspect
 });
 it('prefers sealed MIME and content fields, even for malformed or scalar JSON',()=>{
  const raw=JSON.stringify({content:[{type:'text',mimeType:'Application/Problem+Json; charset=UTF-8',text:'incomplete'},{type:'text',mimeType:'text/csv',text:'a,b'},{type:'text',text:'{"ok":true}'},{type:'image',mimeType:'image/png',data:'not decoded'}]});
- const result=capturedContent(raw);expect(result.data.map(item=>item.field)).toEqual(['Whole captured result','/content/0/text','/content/2/text']);expect(result.data[1]?.text).toBe('incomplete');expect(result.delimited).toEqual([{field:'/content/1/text',text:'a,b'}]);
+ const result=capturedContent(raw);expect(result.data.map(item=>item.field)).toEqual(['Whole result','/content/0/text','/content/2/text']);expect(result.data[1]?.text).toBe('incomplete');expect(result.delimited).toEqual([{field:'/content/1/text',text:'a,b'}]);
  expect(capturedContent('null',{mime:'application/json'}).json).toBe(true);
  expect(capturedContent(JSON.stringify({mimeType:'application/json',text:'42'})).data[1]?.text).toBe('42');
 });
@@ -40,16 +40,16 @@ it('bounds sibling/depth/candidate traversal without losing whole original acces
  const raw=JSON.stringify({content:Array.from({length:80},(_,id)=>({type:'text',text:JSON.stringify({id})}))});const result=capturedContent(raw);expect(result.limited).toBe(true);expect(result.data).toHaveLength(9);expect(result.data[0]?.text).toBe(raw);expect(result.documents?.limited).toBe(true);
  let nested:unknown={content:[{type:'text',text:'{"deep":true}'}]};for(let index=0;index<12;index++)nested={status:'fulfilled',value:nested};expect(capturedContent(JSON.stringify(nested)).limited).toBe(true);
 });
-it('empty input and supplied unavailable/partial evidence stay distinct from empty captured content',()=>{
- expect(capturedContent('')).toMatchObject({limited:false,data:[]});expect(capturedContent('',{unavailable:'Not captured by the harness.'})).toMatchObject({unavailable:'Not captured by the harness.'});expect(capturedContent('{}',{partial:'Showing 1–20 of 200'})).toMatchObject({json:true,partial:'Showing 1–20 of 200'});
+it('empty input and supplied unavailable/partial evidence stay distinct from empty content',()=>{
+ expect(capturedContent('')).toMatchObject({limited:false,data:[]});expect(capturedContent('',{unavailable:'Not by the harness.'})).toMatchObject({unavailable:'Not by the harness.'});expect(capturedContent('{}',{partial:'Showing 1–20 of 200'})).toMatchObject({json:true,partial:'Showing 1–20 of 200'});
 });
 it('inline result fields and argument fields retain large numbers, negative zero and precise literals',()=>{
  const raw='{"id":9007199254740993,"n":-0,"d":1.2300,"x":1e999}';
  for(const Component of [StructuredResult,(props:{text:string})=>createElement(ToolInput,{value:props.text})]){const html=renderToStaticMarkup(createElement(Component,{text:raw}));for(const literal of ['9007199254740993','-0','1.2300','1e999'])expect(html).toContain(literal);expect(html).not.toContain('9007199254740992');}
  const html=renderToStaticMarkup(createElement(StructuredResult,{text:`[${raw}]`}));expect(html).toContain('<td>9007199254740993</td>');expect(html).toContain('<td>-0</td>');
 });
-it('uses supplied captured MIME before syntax hints and retains empty typed document text',()=>{
- expect(capturedContent('# Captured\n\nExact source',{mime:'text/markdown; charset=utf-8'}).documents?.items).toEqual([{field:'Supplied captured text',text:'# Captured\n\nExact source',mime:'text/markdown'}]);
+it('uses supplied MIME before syntax hints and retains empty typed document text',()=>{
+ expect(capturedContent('# Captured\n\nExact source',{mime:'text/markdown; charset=utf-8'}).documents?.items).toEqual([{field:'Text as supplied',text:'# Captured\n\nExact source',mime:'text/markdown'}]);
  expect(capturedContent('',{mime:'text/plain'}).documents?.items[0]?.text).toBe('');
  expect(capturedContent('界'.repeat(90000),{mime:'text/plain'}).documents).toBeUndefined();
  expect(capturedContent('missing.pdf',{mime:'application/pdf'}).documents).toBeUndefined();

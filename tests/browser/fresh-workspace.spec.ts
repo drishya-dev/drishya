@@ -202,7 +202,7 @@ test('workspace destinations leave the previous owner and reveal the requested v
 });
 test('Home dense sessions remain reachable through virtualization and responsive resizing',async({page})=>{
   const base=app.store.getRecording(ids.codex!)!;
-  const recordings=Array.from({length:160},(_,index)=>({...base,id:`density-${index}`,title:`Session ${String(index).padStart(3,'0')} · ${index%3===0?'Review a long workspace path and its complete captured verification — परीक्षण 🚀':'Read changes'}`,workspaceRoot:index%2===0?'/work/alpha':'/work/beta',lastSourceTime:new Date(Date.now()-index*3600000).toISOString()}));
+  const recordings=Array.from({length:160},(_,index)=>({...base,id:`density-${index}`,title:`Session ${String(index).padStart(3,'0')} · ${index%3===0?'Review a long workspace path and its complete verification — परीक्षण 🚀':'Read changes'}`,workspaceRoot:index%2===0?'/work/alpha':'/work/beta',lastSourceTime:new Date(Date.now()-index*3600000).toISOString()}));
   await page.route(/\/v1\/recordings$/,route=>route.fulfill({json:{recordings}}));
   await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[],errors:[]}}));
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
@@ -245,8 +245,8 @@ for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: importe
   await expect(page.locator('.fresh-app,.fr-action,.cv-workspace')).toHaveCount(0);
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
-  await expect(settings.getByRole('button', { name:'Deep Ocean',exact:true })).toBeVisible();
-  await settings.getByRole('button', { name:'Deep Ocean',exact:true }).click();
+  await expect(settings.getByRole('button', { name:'Midnight',exact:true })).toBeVisible();
+  await settings.getByRole('button', { name:'Midnight',exact:true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
   await settings.getByRole('button', { name:'Close Workspace settings' }).click();
   await expect(settings).toHaveCount(0);
@@ -267,7 +267,8 @@ test('Modern preserves Legacy action materials, layout and native graph controls
     await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBe(0);
     await expect(page.locator('.history article.op').first()).toBeVisible();
     return page.evaluate(() => [...document.querySelectorAll('.history article.op')].slice(0,6).map(el => {
-      const css=getComputedStyle(el); return { id:el.getAttribute('data-op-id'), text:el.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
+      // Modern names an MCP tool once, in the card header; Legacy repeats it above the arguments.
+      const css=getComputedStyle(el), copy=el.cloneNode(true) as Element; copy.querySelectorAll('.mcp-tool').forEach(node=>node.remove()); return { id:el.getAttribute('data-op-id'), text:copy.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
     }));
   };
   const legacy=await inspect('classic'), modern=await inspect('modern');
@@ -353,7 +354,7 @@ test('Modern colour and UI versions remain separate; scoped Modern chrome does n
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings'});
-  await settings.getByRole('button',{name:'Porcelain',exact:true}).click();
+  await settings.getByRole('button',{name:'Daylight',exact:true}).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
   await settings.getByRole('tab',{name:'UI versions',exact:true}).click();
   await expect(settings.getByRole('button',{name:/^Modern/})).toHaveAttribute('aria-pressed','true');
@@ -422,11 +423,11 @@ test('structured shell output renders decoded newlines and retains the exact raw
   await card.scrollIntoViewIfNeeded();
   await expect(card.locator('.structured-tool-output .output')).toContainText('first line\nsecond line');
   await expect(card.locator('.structured-tool-output .output')).toContainText('const pattern = "\\n";');
-  await card.getByRole('button',{name:'Show raw',exact:true}).click();
+  await card.getByRole('button',{name:'Original',exact:true}).click();
   await expect(card.locator('.structured-tool-output .output')).toContainText(raw);
 });
 
-test('long captured at-sign scripts retain real syntax colors and exact command copy',async({page})=>{
+test('long at-sign scripts retain real syntax colors and exact command copy',async({page})=>{
   const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
   const op=bundle.projection.operations.find((item:any)=>item.kind==='shell');
   const script="@'\nfrom pathlib import Path\n"+'project description '.repeat(180)+"\n'@ | python -";
@@ -443,13 +444,13 @@ test('long captured at-sign scripts retain real syntax colors and exact command 
   expect(await material.locator('.tk-str').first().evaluate(el=>getComputedStyle(el).color!==getComputedStyle(el.parentElement!).color)).toBe(true);
   await material.getByRole('button',{name:'Copy command',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(script);
-  await card.getByRole('button',{name:'Show raw request',exact:true}).click();
+  await card.getByRole('button',{name:'Original',exact:true}).click();
   await expect(material.locator('.tk-num')).toHaveText('500');
-  await material.getByRole('button',{name:'Copy captured request',exact:true}).click();
+  await material.getByRole('button',{name:'Copy request',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
 });
 
-test('multi-statement captured requests keep every command visible and copyable',async({page})=>{
+test('multi-statement requests keep every command visible and copyable',async({page})=>{
   const bundle=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8'));
   const op=bundle.projection.operations.find((item:any)=>item.kind==='shell');
   const command='text(await tools.exec_command({cmd:"git status"})); text(await tools.exec_command({cmd:"git diff"}));';
@@ -460,7 +461,7 @@ test('multi-statement captured requests keep every command visible and copyable'
   const card=page.locator(`article[data-op-id="${op.id}"]`);
   await card.scrollIntoViewIfNeeded();
   await expect(card.locator('.command-material code')).toContainText(command);
-  await expect(card.getByRole('button',{name:'Show raw request',exact:true})).toHaveCount(0);
+  await expect(card.getByRole('button',{name:'Original',exact:true})).toHaveCount(0);
   await card.getByRole('button',{name:'Copy command',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>(window as unknown as {copiedCommand:string}).copiedCommand)).toBe(command);
 });
@@ -535,7 +536,7 @@ test('local Git atlas connects real branches and commits with root/merge patches
   await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text:string)=>{(window as unknown as {copiedHash:string}).copiedHash=text;}}}));
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await openGitDestination(page, 'Git graph');
-  const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();
+  const atlas=page.getByRole('dialog',{name:'Git graph',exact:true});await expect(atlas).toBeVisible();
   const historyGrant=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});
   // Git access starts unknown; choose consent only after its actual status resolves.
   await expect(historyGrant.or(atlas.locator('.atlas-layout'))).toBeVisible();
@@ -546,35 +547,23 @@ test('local Git atlas connects real branches and commits with root/merge patches
   await mergeRow.click();await expect(mergeRow).toHaveAttribute('aria-pressed','true');await expect(merged).toHaveAttribute('aria-pressed','true');
   await expect(atlas.getByRole('button',{name:'In view',exact:true})).toHaveAttribute('aria-pressed','true');await expect(atlas.getByRole('navigation',{name:'Reference pages'})).toHaveCount(0);
   await atlas.getByRole('button',{name:/^All \d+/}).click();await expect(atlas.getByRole('navigation',{name:'Reference pages'})).toBeVisible();await atlas.getByRole('button',{name:'In view',exact:true}).click();
-  // GIT-1: with WebGL2 the graph is filament light under DOM commits; without it the SVG ribbon (and its orbit) remains.
-  const lit=await atlas.locator('.thread-stage.lit').count()>0;
-  if(lit){
-    const viewport=atlas.locator('.thread-viewport');await expect.poll(async()=>Number(await viewport.getAttribute('data-light-segments'))).toBeGreaterThan(100);
-    await expect(atlas.locator('.thread-links')).toHaveCount(0);await expect(atlas.getByRole('button',{name:'Orbit 3D Git ribbon',exact:true})).toHaveCount(0);
-    expect(await atlas.locator('.thread-light').evaluate(node=>node.closest('[aria-hidden]')!==null||node.getAttribute('aria-hidden')==='true')).toBe(true);
-    await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});
-    // Panning redraws the light from the new view; nothing is stale.
-    const before=await viewport.getAttribute('data-light-segments');await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await expect.poll(async()=>await viewport.getAttribute('data-light-segments')).not.toBe(before);await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
-    // Zoom keeps the commit under the anchor where it was; Ctrl + wheel zooms the graph, never the page.
-    const centre=async()=>{const b=(await merged.boundingBox())!;return b.x+b.width/2;};const zoomLabel=atlas.getByRole('group',{name:'Git graph view'}).locator('output');
-    const x0=await centre(),v=(await viewport.boundingBox())!;await page.mouse.move(x0,v.y+v.height/2);const label0=await zoomLabel.textContent();
-    await page.keyboard.down('Control');await page.mouse.wheel(0,-240);await page.keyboard.up('Control');await expect(zoomLabel).not.toHaveText(label0!);
-    expect(Math.abs(await centre()-x0)).toBeLessThan(12);expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
-    // A branch strand between commits names its branch and lists its commits, from Git alone.
-    await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
-    await settled(viewport);
-    // This fixture's feature strand runs from base to feature. Aim between its
-    // rendered endpoints instead of stopping on the first neighbouring tooltip.
-    const branchPoint=await viewport.evaluate((el,{feature,base})=>{
-      const centre=(hash:string)=>{const node=el.querySelector<HTMLElement>('[data-commit-hash="'+hash+'"]');if(!node)throw new Error('Branch endpoint is not mounted');const box=node.getBoundingClientRect();return{x:box.x+box.width/2,y:box.y+box.height/2};};
-      const a=centre(feature),b=centre(base);return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-    },{feature,base});
-    await page.mouse.move(branchPoint.x,branchPoint.y);
-    await expect(atlas.locator('.thread-branch-peek')).toBeVisible();await expect(atlas.locator('.thread-branch-peek')).toContainText('atlas-feature');await expect(atlas.locator('.thread-branch-peek')).toContainText('Atlas feature fixture');await page.mouse.move(v.x+4,v.y+4);
-  } else {
-    await expect(atlas.locator('.thread-links')).toBeVisible();await expect(atlas.locator('.thread-fiber')).toHaveCount(0);expect(await atlas.locator('.ribbon-lamina').count()).toBeGreaterThan(0);expect(await atlas.locator('.thread-links path').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-thread-overview.png')});await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();
-    const surface=atlas.locator('.thread-ribbon').first(),beforeOrbit=await surface.getAttribute('d'),orbit=atlas.getByRole('button',{name:'Orbit 3D Git ribbon',exact:true});await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','true');const view=(await atlas.locator('.thread-viewport').boundingBox())!;await page.mouse.move(view.x+40,view.y+40);await page.mouse.down();await page.mouse.move(view.x+40,view.y+110,{steps:5});await page.mouse.up();await expect(surface).not.toHaveAttribute('d',beforeOrbit!);await orbit.click();await expect(orbit).toHaveAttribute('aria-pressed','false');await page.screenshot({path:resolve('.local/git-spatial-orbit.png')});
-  }
+  // UI-8: a plain network graph. Every line is a real parent link drawn in SVG under DOM commits; branch heads carry their names.
+  const viewport=atlas.locator('.thread-viewport');
+  expect(await atlas.locator('.network-edge').count()).toBeGreaterThan(1);expect(await atlas.locator('.network-core').first().evaluate(node=>getComputedStyle(node).stroke)).not.toBe('none');
+  expect(await atlas.locator('.network-links').evaluate(node=>node.getAttribute('aria-hidden'))).toBe('true');
+  await expect(atlas.locator('.network-label').filter({hasText:'atlas-feature'})).toHaveCount(1);
+  await merged.hover();await expect(atlas.locator('.thread-peek')).toContainText('Atlas merge fixture');await page.screenshot({path:resolve('.local/git-network-overview.png')});
+  // Ctrl + wheel zooms the graph, never the page (the anchor is checked on the long history below, where the graph scrolls).
+  await atlas.getByRole('button',{name:'Zoom in Git graph',exact:true}).click();await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await settled(viewport);
+  const zoomLabel=atlas.getByRole('group',{name:'Git graph view'}).locator('output'),v=(await viewport.boundingBox())!;
+  const m0=(await merged.boundingBox())!;await page.mouse.move(m0.x+m0.width/2,v.y+v.height/2);const label0=await zoomLabel.textContent();
+  await page.keyboard.down('Control');await page.mouse.wheel(0,240);await page.keyboard.up('Control');await expect(zoomLabel).not.toHaveText(label0!);await settled(viewport);
+  expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
+  // A branch line names its branch and lists its commits, from Git alone. Aim at the middle of the line that leaves base for the feature.
+  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await settled(viewport);
+  const branchPoint=await atlas.locator(`.network-edge[data-edge="${base}>${feature}"] .network-core`).evaluate(node=>{const path=node as SVGPathElement,at=path.getPointAtLength(path.getTotalLength()/2),m=path.getScreenCTM()!;return{x:at.x*m.a+at.y*m.c+m.e,y:at.x*m.b+at.y*m.d+m.f};});
+  await page.mouse.move(branchPoint.x,branchPoint.y);
+  await expect(atlas.locator('.thread-branch-peek')).toBeVisible();await expect(atlas.locator('.thread-branch-peek')).toContainText('atlas-feature');await expect(atlas.locator('.thread-branch-peek')).toContainText('Atlas feature fixture');await page.mouse.move(v.x+4,v.y+4);
   await merged.click();
   const parents=atlas.getByRole('combobox',{name:'Commit comparison parent',exact:true});await expect(parents.locator('option')).toHaveCount(2);await parents.selectOption('1');await expect(parents).toHaveValue('1');
   await expect(atlas.locator('.atlas-message pre')).toContainText('Atlas merge fixture');await expect(atlas).toContainText('No changed paths against this parent.');
@@ -646,7 +635,7 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await expect(git.getByRole('button',{name:'Approve read-only Git'}).or(git.getByRole('button',{name:'Refresh changes'}))).toBeVisible();
   if(await git.getByRole('button',{name:'Approve read-only Git'}).isVisible()) await git.getByRole('button',{name:'Approve read-only Git'}).click();
   await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
-  await expect(git.locator('.git-review-layout')).toContainText('src/cart/total.ts');
+  await expect(git.locator('.git-selected-file-header strong')).toHaveAttribute('title','src/cart/total.ts');
   await expect(git.locator('.git-patch-reader')).toContainText('42');
   const resize=git.getByRole('separator',{name:'Resize Git review window left',exact:true});
   const grip=(await resize.boundingBox())!,edge=(await git.boundingBox())!;
@@ -672,15 +661,15 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   const utilities=page.locator('.workspace-menu[open]');
   // The menu no longer repeats Changes (the header has it); the reading entries that are not in the header stay.
   await expect(utilities.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
-  await expect(utilities.getByRole('button',{name:'Review questions',exact:true})).toBeVisible();
+  await expect(utilities.getByRole('button',{name:'Notes',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Close Changes',exact:true}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
-  await utilities.getByRole('button',{name:'Review questions',exact:true}).click();
-  await expect(page.getByRole('dialog',{name:'Review questions',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Close Review questions',exact:true}).click();
+  await utilities.getByRole('button',{name:'Notes',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Notes',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Close Notes',exact:true}).click();
   await page.setViewportSize({width:390,height:844});
   await openGitDestination(page, 'Git review');
   await expect(git).toBeVisible();
@@ -732,7 +721,7 @@ test('Modern keeps file evidence, search controls and reading position across se
   await row.click();
   // Approved workspace state can differ between isolated journeys; follow its explicit captured destination.
   const disk = page.getByRole('dialog', {name:'src/cart/total.ts',exact:true});
-  if(await disk.isVisible()) await disk.getByRole('button',{name:'Recorded work on this file'}).click();
+  if(await disk.isVisible()) await disk.getByRole('button',{name:'Agent work on this file'}).click();
   const reader=page.getByRole('dialog',{name:'Work on src/cart/total.ts',exact:true});
   await expect(reader).toBeVisible();
   await reader.getByLabel('Filter actions on this file').fill('Read');
@@ -859,9 +848,9 @@ test('Modern offline bundle keeps keyboard review destinations and bounded phone
   await expect(page.locator('.history')).toBeVisible();
   await page.keyboard.press('Control+k');
   const command=page.getByRole('dialog',{name:'Navigate workspace'});
-  await command.getByRole('combobox').fill('Review questions');
-  await command.getByRole('option',{name:/Review questions/}).click();
-  await expect(page.getByRole('dialog',{name:'Review questions',exact:true})).toBeVisible();
+  await command.getByRole('combobox').fill('Notes');
+  await command.getByRole('option',{name:/Notes/}).click();
+  await expect(page.getByRole('dialog',{name:'Notes',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
   await page.context().setOffline(true);
   await page.getByRole('button',{name:'Explore repository map'}).click();
@@ -871,14 +860,14 @@ test('Modern offline bundle keeps keyboard review destinations and bounded phone
 });
 
 
-test('Modern Changes reaches every captured check as one list and returns to the row that was opened', async ({page}) => {
+test('Modern Changes reaches every check as one list and returns to the row that was opened', async ({page}) => {
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.review}`);
   await expect(page.locator('.history')).toBeVisible();
   await page.keyboard.press('Control+k');
   const commands=page.getByRole('dialog',{name:'Navigate workspace'});
-  await commands.getByRole('combobox').fill('Review recorded changes');
-  await commands.getByRole('option',{name:/Review recorded changes and checks/}).click();
+  await commands.getByRole('combobox').fill('Review changes');
+  await commands.getByRole('option',{name:/Review changes and checks/}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});
   const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
@@ -984,7 +973,7 @@ test('developer Workspace reads two files, preserves drafts and only prepares na
   await expect(comparison.locator('.diff-scroll')).toContainText('43');
   await comparison.getByRole('button',{name:'Side by side',exact:true}).click();
   await expect(comparison.getByRole('region',{name:'Local draft side by side'})).toBeVisible();
-  await expect(comparison).not.toContainText('Captured patch only');
+  await expect(comparison).not.toContainText('Patch only');
   await comparison.getByRole('searchbox',{name:'Find in patch',exact:true}).fill('total');
   const other=desk.getByRole('region',{name:'Workspace file src/cart/discount.ts',exact:true});
   await other.getByRole('button',{name:'Edit file',exact:true}).click();
@@ -1130,7 +1119,7 @@ test('Files control tracks the responsive default without changing an explicit p
   await page.setViewportSize({width:390,height:844});await page.setViewportSize({width:1440,height:960});
   await expect(trigger).toHaveAttribute('aria-pressed','false');await expect(page.locator('.folder-explorer')).toHaveCount(0);
 });
-test('Files width is adjustable without covering Workspace or moving history on minimize',async({page})=>{
+test('Files width is adjustable without covering Workspace, and minimized Files gives the stage its width',async({page})=>{
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
@@ -1141,7 +1130,7 @@ test('Files width is adjustable without covering Workspace or moving history on 
   const history=page.locator('.history'), before=(await history.boundingBox())!;
   expect(before.x).toBeGreaterThan((await files.boundingBox())!.x+420);
   await files.getByRole('button',{name:'Minimize files',exact:true}).click();
-  await expect(files).toHaveCount(0);expect((await history.boundingBox())!.x).toBe(before.x);
+  await expect(files).toHaveCount(0);await expect.poll(async()=>(await history.boundingBox())!.x).toBe(24);
   await page.getByRole('button',{name:'Show files',exact:true}).click();
   await expect.poll(()=>files.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(420);
   const grip=(await resize.boundingBox())!,left=(await files.boundingBox())!.x;
@@ -1206,7 +1195,7 @@ test('Modern restores source tabs, reading page and Home resume after a hard rel
   await expect(page.getByRole('button',{name:/Resume your last workspace/})).toBeVisible();
 });
 
-test('Modern Home keeps captured sessions on discovery failure and reaches deep matching sessions',async({page})=>{
+test('Modern Home keeps sessions on discovery failure and reaches deep matching sessions',async({page})=>{
   await page.route('**/v1/sources',route=>route.fulfill({status:500,json:{error:'Synthetic discovery failure'}}));
   await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
   await expect(page.locator('.mh-session')).not.toHaveCount(0);await expect(page.getByRole('alert')).toContainText('Local discovery');
@@ -1323,13 +1312,13 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await expect(page.locator('.mh-header').getByRole('button',{name:'Demo',exact:true})).toHaveCount(0);
   await expect(page.getByRole('link',{name:'Star on GitHub'})).toHaveAttribute('href','https://github.com/drishya-dev/drishya');
-  for(const [name,palette] of [['Jet Black','jet'],['Porcelain','paper'],['Deep Ocean','midnight'],['Orchid','mocha'],['Blueprint','tokyo'],['Evergreen','nord'],['Copper','gruvbox']]) {
+  for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight'],['Orchid','mocha'],['Royal','tokyo'],['Emerald','nord'],['Ember','gruvbox']]) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     await page.getByRole('button',{name:name!,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
-    const expectedBase:Record<string,string>={jet:'#000',paper:'#f4f2ee',midnight:'#0b1216',mocha:'#141116',tokyo:'#0c1019',nord:'#14191b',gruvbox:'#181310'};
+    const expectedBase:Record<string,string>={jet:'#000',paper:'#f6f9fb',midnight:'#02070a',mocha:'#0b090d',tokyo:'#f7f8fc',nord:'#050a08',gruvbox:'#0c0908'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
-    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#315e73',midnight:'#74d9cf',mocha:'#e4b1c2',tokyo:'#95b9ff',nord:'#b7d3bc',gruvbox:'#ecb58a'};
+    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#036a8f',midnight:'#29a9f0',mocha:'#ec5fae',tokyo:'#09318d',nord:'#34d39b',gruvbox:'#fc8a66'};
     expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
     await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     await page.screenshot({path:resolve(`.local/palette-${palette}-home.png`)});
@@ -1343,7 +1332,7 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
   await page.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeHidden();
   await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeVisible();
   await input.fill('');
-  for(const [name,palette] of [['Jet Black','jet'],['Porcelain','paper'],['Deep Ocean','midnight'],['Orchid','mocha'],['Blueprint','tokyo'],['Evergreen','nord'],['Copper','gruvbox']]) {
+  for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight'],['Orchid','mocha'],['Royal','tokyo'],['Emerald','nord'],['Ember','gruvbox']]) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();await page.getByRole('button',{name:name!,exact:true}).click();await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:resolve(`.local/palette-${palette}-session.png`)});
@@ -1470,14 +1459,14 @@ test('a real pending-input shape expands the composer and replies to that reques
   expect(prompts).toBe(0);await expect(form).toHaveCount(0);
 });
 
-test('completed native turns open chronological captured review without implying attribution',async({page})=>{
+test('completed native turns open chronological review without implying attribution',async({page})=>{
   const status={available:true,state:'completed',runId:'finished-input',afterSequence:0,harness:'codex',output:'',tools:[],inventory:'runtime',approvals:[]};
   let after:string|null=null;
   await page.route('**/controller',route=>route.fulfill({json:status}));
   await page.route('**/since?*',route=>{after=new URL(route.request().url()).searchParams.get('after');return route.continue();});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await page.getByLabel('More workspace options').click();
-  await page.getByRole('button',{name:'Review new captured activity',exact:true}).click();
+  await page.getByRole('button',{name:'Review new activity',exact:true}).click();
   const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review).toContainText('Since this turn began');
   await expect(review.locator('.review-counts')).toBeVisible();expect(after).toBe('0');
 });
@@ -1511,7 +1500,7 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
   const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
   const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('This session',{exact:true})).toBeVisible();await expect(menu.getByText('Move around',{exact:true})).toBeVisible();await expect(menu.getByText('Share',{exact:true})).toBeVisible();await expect(menu.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await page.keyboard.press('ArrowDown');await expect(menu.locator('.workspace-utilities').locator('button:not(:disabled),a[href],summary').filter({visible:true}).first()).toBeFocused();
-  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values captured for this session.',{exact:true})).toBeVisible();
+  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values recorded for this session.',{exact:true})).toBeVisible();
   await page.keyboard.press('End');await expect(menu.getByRole('link',{name:'Export recording',exact:true}).or(menu.getByRole('button',{name:'Rescan original journal',exact:true})).last()).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
   for(const width of [1440,600]) {
@@ -1535,9 +1524,9 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
   await expect(page.locator('.history')).toBeVisible();
-  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');
-  await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();
-  const dialog=page.getByRole('dialog',{name:'Captured commands',exact:true});await expect(dialog).toContainText('71 matching commands');
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Find commands');
+  await nav.getByRole('option').filter({hasText:'Find commands'}).click();
+  const dialog=page.getByRole('dialog',{name:'Commands',exact:true});await expect(dialog).toContainText('71 matching commands');
   const cards=dialog.locator('.captured-command');await expect(cards).toHaveCount(25);
   const first=cards.first();await expect(first.locator('.commands-limit')).toContainText('Preview');
   await expect(first.getByRole('button',{name:'Copy command',exact:true})).toHaveCount(0);
@@ -1547,13 +1536,13 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await dialog.getByRole('button',{name:'Older',exact:true}).click();await expect(cards).toHaveCount(21);await expect(cards.last()).toContainText('ledger-command-0');
   const newerResponse=page.waitForResponse(response=>response.url().includes('/commands?')&&response.url().includes('direction=newer'));
   await dialog.getByRole('button',{name:'Newer',exact:true}).click();expect((await (await newerResponse).json()).items[0].command).toBe('echo ledger-command-45');await expect(cards.first()).toContainText('ledger-command-45');
-  await dialog.getByRole('searchbox',{name:'Filter captured command previews',exact:true}).fill('ledger-command-1');await expect(dialog).toContainText('11 matching commands');
+  await dialog.getByRole('searchbox',{name:'Filter command previews',exact:true}).fill('ledger-command-1');await expect(dialog).toContainText('11 matching commands');
   await dialog.getByRole('combobox',{name:'Command outcome',exact:true}).selectOption('error');await expect(dialog.locator('.command-outcome').first()).toHaveText('Failed');
   await page.setViewportSize({width:390,height:844});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
-  await cards.first().getByRole('button',{name:'Open captured activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
+  await cards.first().getByRole('button',{name:'Open activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
   await page.keyboard.press('Escape');await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Captured commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
+  const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
 
 });
 
@@ -1563,7 +1552,7 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   const journal=join(dir,'review-insights.jsonl'),timestamp='2026-10-18T00:00:00Z';
   const rows=[JSON.stringify({timestamp,type:'session_meta',payload:{id:'review-insights',cwd:root}})];
   for(let n=0;n<45;n++){
-    rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:`PROMPT_OVERVIEW_${n} — inspect the captured check`}]}}));
+    rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:`PROMPT_OVERVIEW_${n} — inspect the check`}]}}));
     rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`overview-${n}`,arguments:JSON.stringify({cmd:'npm test'})}}));
     rows.push(JSON.stringify({timestamp,type:'response_item',payload:{type:'function_call_output',call_id:`overview-${n}`,output:JSON.stringify({output:n%7?'1 passed':'1 failed',metadata:{exit_code:n%7?0:1}})}}));
   }
@@ -1572,7 +1561,7 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   const launch=async(name:string)=>{await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(name);await nav.getByRole('option').filter({hasText:name}).click();};
   await launch('Review findings');let dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await expect(dialog).toContainText('Same command failed 7 of 45 runs');await expect(dialog).toContainText('npm test');
   await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
-  await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open captured prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
+  await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
   await page.evaluate(({recordingId})=>localStorage.setItem(`drishya-review-questions-v1:daemon:${recordingId}`,JSON.stringify([{id:'note',operationId:'captured-review-op',sequence:1,title:'Review note',question:'Check the edge condition. sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'Reviewer',status:'open',createdAt:'',updatedAt:''}])),{recordingId});
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Review packet',exact:true});await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const preview=dialog.getByRole('textbox',{name:'Review packet preview',exact:true}),text=await preview.inputValue();expect(text).toContain('45 test runs');expect(text).toContain('Open reviewer questions (1)');expect(text).not.toContain('abcdefghijklmnop');
@@ -1592,7 +1581,7 @@ test('captured changes lead to typed map connections, current reading and a pers
   const connections=page.getByRole('region',{name:'Direct import connections',exact:true});await expect(connections.locator('.map-connection-root')).toHaveText(path);
   await expect(connections).toContainText('static relationships');await connections.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/}).click();
   const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button[aria-label^="Close "]').click();
-  await connections.getByRole('button',{name:'Show full map',exact:true}).click();const changes=page.getByRole('button',{name:/^Changes /});await changes.click();await expect(changes).toHaveAttribute('aria-pressed','true');await expect(page.locator('.map-scope-note')).toContainText('Captured change locations');
+  await connections.getByRole('button',{name:'Show full map',exact:true}).click();const changes=page.getByRole('button',{name:/^Changes /});await changes.click();await expect(changes).toHaveAttribute('aria-pressed','true');await expect(page.locator('.map-scope-note')).toContainText('Change locations');
   const toggle=page.getByRole('switch',{name:'Import paths',exact:true});if(await toggle.getAttribute('aria-checked')==='true')await toggle.click();
   await page.getByRole('button',{name:'Back to work',exact:true}).click();await page.getByRole('button',{name:'Explore repository map',exact:true}).click();await expect(changes).toHaveAttribute('aria-pressed','true');
   await page.getByRole('textbox',{name:'Find a file on the map',exact:true}).fill(path);await page.locator('.map-matches').getByRole('button',{name:path,exact:true}).click();if(await toggle.getAttribute('aria-checked')!=='true')await toggle.click();
@@ -1600,16 +1589,16 @@ test('captured changes lead to typed map connections, current reading and a pers
 });
 
 
-test('saved captured file selections recover as references and unavailable selections do not crash',async({page})=>{
+test('saved file selections recover as references and unavailable selections do not crash',async({page})=>{
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
-  const reader=page.locator('dialog.file-workspace'),choice=reader.getByRole('combobox',{name:'First evidence',exact:true});await expect(choice.locator('option').first()).toBeAttached();
+  const reader=page.locator('dialog.file-workspace'),choice=reader.getByRole('combobox',{name:'First step',exact:true});await expect(choice.locator('option').first()).toBeAttached();
   const key=(await choice.locator('option').last().getAttribute('value'))!;await choice.selectOption(key);
   await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain(key);
   await page.reload();await expect(reader).toBeVisible();await expect(choice).toHaveValue(key);await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries:[['location',{filePanel:'src/checkout/guard.ts'}],['evidence/trail',{cursor:0,visits:[{id:0,location:{filePanel:'src/checkout/guard.ts'},memory:[['file/left','missing/read']]}]}]]}]}}):route.continue());
-  await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('status').filter({hasText:'Saved captured evidence is unavailable'})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+  await page.reload();await expect(reader).toBeVisible();await expect(reader.getByRole('status').filter({hasText:'This saved item is unavailable'})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
 });
 
 
@@ -1637,7 +1626,7 @@ test('a failed reader screen can recover by navigating to a healthy session',asy
 });
 
 
-test('finding membership reaches every captured operation with filters, exact opening and phone bounds',async({page})=>{
+test('finding membership reaches every operation with filters, exact opening and phone bounds',async({page})=>{
   const journal=join(dir,'finding-members.jsonl'),rows:unknown[]=[{type:'session_meta',payload:{id:'finding-members',cwd:root}}];
   for(let n=0;n<70;n++){rows.push({type:'response_item',payload:{type:'function_call',name:'exec_command',call_id:`member-${n}`,arguments:JSON.stringify({cmd:'npm test -- stable-command'})}});rows.push({type:'response_item',payload:{type:'function_call_output',call_id:`member-${n}`,output:JSON.stringify({output:n?'1 passed':'1 failed',metadata:{exit_code:n?0:1}})}});}
   writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const {recordingId:id}=await app.ingest.importSource('codex',journal);
@@ -1652,7 +1641,7 @@ test('finding membership reaches every captured operation with filters, exact op
   await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.getByText('Page 2 of 3 · up to 25 per page',{exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.locator('.finding-member')).toHaveCount(20);
   const filter=dialog.getByRole('searchbox',{name:'Filter finding members',exact:true});await filter.fill('no such member');await expect(dialog.locator('.finding-member')).toHaveCount(0);await filter.fill('');await expect(dialog.locator('.finding-member')).toHaveCount(25);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/finding-members-${width}.png`)});}
-  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toContainText('stable-command');
+  await dialog.getByRole('button',{name:'← Findings',exact:true}).click();await expect(dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true})).toBeFocused();await dialog.getByRole('button',{name:'Inspect all 70 operations',exact:true}).click();await dialog.getByRole('button',{name:'Open action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toContainText('stable-command');
 });
 
 
@@ -1703,9 +1692,9 @@ test('captured excerpt comparison uses current reader consent, exact positions a
   await expect(page.locator('.history')).toBeVisible();
   const grant=page.getByRole('button',{name:/^Enable workspace reading/});await expect(grant).toBeVisible();await grant.click();await expect(grant).toHaveCount(0);
   await page.getByRole('treeitem',{name:'comparison.ts',exact:true}).click();
-  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();
-  const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare captured source with disk',exact:true}).click();
-  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Captured lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('placed by matching its lines');
+  const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await current.getByRole('button',{name:'Agent work on this file',exact:true}).click();
+  const history=page.getByRole('dialog',{name:'Work on comparison.ts',exact:true});await expect(history).toBeVisible();await history.getByRole('button',{name:'Compare with disk',exact:true}).click();
+  const comparison=page.getByRole('dialog',{name:'Source versions · comparison.ts',exact:true});await expect(comparison).toContainText('Lines 2–2');await expect(comparison).toContainText('current=2');await expect(comparison).toContainText('captured=1');await expect(comparison).toContainText('placed by matching its lines');
   expect(await comparison.locator('.diff-scroll').textContent()).not.toContain('untouched');
   await page.setViewportSize({width:390,height:844});expect(await comparison.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-disk-comparison-phone.png')});
@@ -1717,11 +1706,16 @@ test('Git timeline scrolls into older history without commit-range pages and kee
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await expect(page.locator('.modern-composer-identity')).toHaveText('');await expect(page.locator('.modern-composer-intro')).toHaveCount(0);await expect(page.locator('.modern-composer-location code')).toHaveCount(0);await expect(page.locator('.modern-composer-identity>svg')).toHaveCount(1);await expect(page.locator('.modern-composer-location')).not.toBeEmpty();
   for(const width of [390,320,1440]){await page.setViewportSize({width,height:960});await expect.poll(async()=>{const boxes=await page.getByRole('navigation',{name:'Workspace views',exact:true}).locator('button:visible').evaluateAll(elements=>elements.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));return boxes.every((a,index)=>a.x>=0&&a.right<=width&&boxes.slice(index+1).every(b=>a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y));}).toBe(true);}
-  await openGitDestination(page, 'Git graph');const atlas=page.getByRole('dialog',{name:'Git history',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});if(await grant.isVisible())await grant.click();
+  await openGitDestination(page, 'Git graph');const atlas=page.getByRole('dialog',{name:'Git graph',exact:true}),grant=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});if(await grant.isVisible())await grant.click();
   await expect(atlas.locator('.atlas-commit')).toHaveCount(50);await expect(atlas.getByRole('navigation',{name:'Commit pages'})).toHaveCount(0);
   const graph=atlas.getByLabel('Commits, oldest on the left; drag to pan, pinch or Ctrl + wheel to zoom',{exact:true});await graph.focus();await page.keyboard.press('PageUp');await expect.poll(()=>atlas.locator('.atlas-commit').count()).toBeGreaterThan(50);
   await atlas.getByLabel('Choose Git commit',{exact:true}).selectOption(tip);await expect(atlas.locator('.atlas-message')).toContainText('Continuous fixture 81');await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();
-  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await page.screenshot({path:resolve('.local/git-thread-continuous.png')});
+  await atlas.getByRole('button',{name:'Fit graph',exact:true}).click();await settled(graph);await page.screenshot({path:resolve('.local/git-network-continuous.png')});
+  // Ctrl + wheel zooms about the pointer: the commit under it stays where it was.
+  const anchor=atlas.locator(`[data-commit-hash="${tip}"]`),centre=async()=>{const b=(await anchor.boundingBox())!;return b.x+b.width/2;},zoomLabel=atlas.getByRole('group',{name:'Git graph view'}).locator('output');
+  await anchor.scrollIntoViewIfNeeded();const x0=await centre(),box=(await graph.boundingBox())!,label0=await zoomLabel.textContent();await page.mouse.move(x0,box.y+box.height/2);
+  await page.keyboard.down('Control');await page.mouse.wheel(0,-240);await page.keyboard.up('Control');await expect(zoomLabel).not.toHaveText(label0!);await settled(graph);
+  expect(Math.abs(await centre()-x0)).toBeLessThan(12);expect(await page.evaluate(()=>devicePixelRatio)).toBe(1);
 });
 
 
@@ -1794,7 +1788,7 @@ test('file peek keeps tabs beside agent, replaces preview and anchors all four r
 });
 
 
-test('last captured material clears the prompt without an oversized gap',async({page})=>{
+test('last material clears the prompt without an oversized gap',async({page})=>{
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:960});

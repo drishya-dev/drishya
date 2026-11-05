@@ -1,0 +1,8 @@
+.product-menu { position:fixed; z-index:80; display:flex; flex-direction:column; min-width:200px; max-width:min(320px,calc(100vw - 16px)); padding:4px; background:var(--s2); border:1px solid var(--line); border-radius:var(--round-md); box-shadow:0 8px 24px rgb(0 0 0 / .35); }
+.product-menu .file-evidence-toolbar { display:contents; }
+.product-menu .btn { justify-content:flex-start; width:100%; min-height:var(--control-md); padding:0 8px; border:0; background:transparent; color:var(--t1); font-size:var(--text-xs); text-align:left; }
+.product-menu .btn:is(:hover,:focus-visible):not(:disabled) { background:var(--s3,var(--line)); }
+.product-menu .btn:disabled { color:var(--t3); }
+.product-menu .btn svg { width:14px; height:14px; }
+.product-menu [role=status]:empty { display:none; }
+.product-menu [role=status] { padding:4px 8px; color:var(--t2); font-size:var(--text-2xs); }

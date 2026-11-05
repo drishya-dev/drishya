@@ -50,7 +50,7 @@ for (const width of [600, 1440]) test(`native ImageView file URL recovers with c
   const card = page.locator('.path-image').filter({ hasText: 'space%20%23%20image.png' }).first();
   await card.getByRole('button', { name: 'Open current file', exact: true }).click();
   await expect.poll(() => card.locator('figure img').evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1600);
-  await expect(card).toContainText('image bytes not captured'); await expect(card.locator('figcaption')).toContainText('It may differ from what the agent saw.');
+  await expect(card).toContainText('image bytes not recorded'); await expect(card.locator('figcaption')).toContainText('It may differ from what the agent saw.');
   const opener = card.getByRole('button', { name: 'Open current image reader' }); await opener.focus(); await opener.press('Enter');
   const reader = page.getByRole('dialog', { name: 'Current image reader' }); await expect(reader).toBeVisible(); await expect(reader).toContainText('It may differ from what the agent saw.');
   const box = (await reader.boundingBox())!; expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
@@ -70,7 +70,7 @@ test('missing, protected and remote paths remain explicit without a remote reque
   const card = page.locator('.path-image').filter({ hasText: 'example.invalid' }).first(); await expect(card).toContainText('Remote image reference'); await expect(card.locator('button')).toHaveCount(0); expect(remote).toEqual([]);
 });
 
-test('mixed captured text/images and remote omissions keep their provenance without external loads', async ({ page }) => {
+test('mixed text/images and remote omissions keep their provenance without external loads', async ({ page }) => {
   const remote: string[] = []; page.on('request', r => { if (r.url().includes('example.invalid')) remote.push(r.url()); });
   await open(page);
   await expect(page.locator('.turn-images')).toContainText('a remote reference; never fetched automatically');
@@ -78,14 +78,14 @@ test('mixed captured text/images and remote omissions keep their provenance with
   const mixed = page.locator(`article[data-op-id="${id}.mixed"]`); await expect(mixed).toContainText('Exact supplied image caption');
   await mixed.getByRole('button', { name: /^Expand/ }).click(); await expect(mixed).toContainText('a remote reference; never fetched automatically');
   const thumb = mixed.locator('.op-image').first(); await thumb.click();
-  const reader = page.getByRole('dialog', { name: 'Captured image reader' }); await expect(reader).toContainText('Captured image'); await expect(reader).not.toContainText('Current file');
+  const reader = page.getByRole('dialog', { name: 'Image reader' }); await expect(reader).toContainText('Image'); await expect(reader).not.toContainText('Current file');
   await page.keyboard.press('Escape'); expect(remote).toEqual([]); await expect(page.locator('body')).not.toContainText('must-not-persist');
 });
 
-test('the genuine generation alias retains a current-file fallback with no invented captured pixels', async ({ page }) => {
+test('the genuine generation alias retains a current-file fallback with no invented pixels', async ({ page }) => {
   await open(page); await approve(page);
   const card = page.locator('article.op').filter({ hasText: 'Generated image' }).first();
-  await expect(card).toContainText('image bytes not captured'); await expect(card.locator('.op-image')).toHaveCount(0);
+  await expect(card).toContainText('image bytes not recorded'); await expect(card.locator('.op-image')).toHaveCount(0);
   await card.getByRole('button', { name: 'Open current file', exact: true }).click();
   await expect.poll(() => card.locator('figure img').evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(1600);
   await expect(card.locator('figcaption')).toContainText('It may differ from what the agent saw.');
@@ -102,7 +102,7 @@ test('all script-result images stay at their exact parent when reading different
     await expect(script.locator('.op-image')).toHaveCount(2);
     const current = await script.locator('.op-image img').evaluateAll(imgs => imgs.map(img => img.getAttribute('src')!));
     if (urls) expect(current).toEqual(urls); else urls = current;
-    await script.locator('.op-image').last().click(); const reader = page.getByRole('dialog', { name: 'Captured image reader' });
+    await script.locator('.op-image').last().click(); const reader = page.getByRole('dialog', { name: 'Image reader' });
     await expect.poll(() => reader.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(2); await page.keyboard.press('Escape');
     await expect(card.locator(':scope > .op-body > .op-images')).toHaveCount(0);
   }
@@ -118,7 +118,7 @@ for (const failure of ['expired', 'corrupt', 'network']) test(`captured ${failur
     else await route.fulfill({ status: failure === 'expired' ? 404 : 200, contentType: 'image/png', body: 'unavailable bytes' });
   });
   await open(page); const thumb = page.locator('.turn-images .op-image').first(); await expect(thumb).toContainText('could not be loaded'); await thumb.click();
-  const reader = page.getByRole('dialog', { name: 'Captured image reader' }); await expect(reader.getByRole('status')).toContainText('may no longer be available');
+  const reader = page.getByRole('dialog', { name: 'Image reader' }); await expect(reader.getByRole('status')).toContainText('may no longer be available');
   const before = requests; await page.waitForTimeout(100); expect(requests).toBe(before);
   available = true; await reader.getByRole('button', { name: 'Retry image', exact: true }).click();
   await expect.poll(() => reader.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1600);

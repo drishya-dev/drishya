@@ -41,19 +41,21 @@ test('plan-mode and desktop checklist records show as one proposed plan and one 
     await page.setViewportSize({ width, height: 960 });
     await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-    await expect(page.getByRole('region', { name: 'Captured work' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
 
     // ExitPlanMode: the plan text as Markdown, labelled as a captured proposal, never as an approval.
     const document = page.locator('.plan-document');
     await expect(document).toHaveCount(1);
     await expect(document.locator('h1, h2').first()).toContainText('tidy the checkout guard');
-    await expect(document.locator('.plan-basis')).toHaveText('Captured proposal · not an approval');
+    await expect(document.locator('.plan-basis')).toHaveText('Proposal · not an approval');
     await expect(document).not.toContainText('approved');
 
     // update_plan: three recorded changes are one pinned list that ends with the last state.
     const pinned = page.locator('.plan-card[role=group]');
     await expect(pinned).toHaveCount(1);
     await expect(pinned).toContainText('Revision 3 · 2 of 3 done');
+    // Folded at first; the open choice is remembered on the second width.
+    const show = pinned.getByRole('button',{name:'Show plan',exact:true}); if (await show.isVisible()) await show.click();
     await expect(pinned.locator('li.plan-completed')).toHaveCount(2);
     await expect(pinned.locator('li.plan-in_progress')).toContainText('Run the tests');
   }

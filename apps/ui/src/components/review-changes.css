@@ -1,23 +1,23 @@
 /* REVIEW-1: each changed file says how much it changed and in which turn; repeated gaps collapse to one line. */
-.review-file-stat {flex:none;font:11px/1.5 var(--mono);color:var(--t3);white-space:nowrap;}
-.review-file-stat .add {font-weight:400;color:var(--pass);}.review-file-stat .del {font-weight:400;color:var(--fail);}
-.review-gap-group {display:flex;align-items:baseline;gap:8px;}.review-gap-group>small {font:11px/1.5 var(--mono);color:var(--t3);}
+.review-file-stat {flex:none;font:var(--text-2xs)/1.5 var(--mono);color:var(--t3);white-space:nowrap;}
+.review-file-stat .add {font-weight:var(--weight-regular);color:var(--pass);}.review-file-stat .del {font-weight:var(--weight-regular);color:var(--fail);}
+.review-gap-group {display:flex;align-items:baseline;gap:8px;}.review-gap-group>small {font:var(--text-2xs)/1.5 var(--mono);color:var(--t3);}
 /* READ-5: captured edits of a file as quiet mono lines under the file row; the group owns the hairline. */
 .review-file:has(.review-file-edits)>.review-file-entry {border-bottom:0;}
 .review-file-edits {list-style:none;margin:0;padding:0 0 10px 26px;border-bottom:1px solid var(--line);display:grid;gap:2px;}
-.review-file-edits li {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font:11px/1.6 var(--mono);color:var(--t3);}
+.review-file-edits li {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font:var(--text-2xs)/1.6 var(--mono);color:var(--t3);}
 .review-file-edits button {font:inherit;color:var(--t2);text-align:left;padding:2px 0;}
 .review-file-edits button:hover {color:var(--source);}.review-file-edits button:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
-.review-file-edits .add {font-weight:400;color:var(--pass);}.review-file-edits .del {font-weight:400;color:var(--fail);}
+.review-file-edits .add {font-weight:var(--weight-regular);color:var(--pass);}.review-file-edits .del {font-weight:var(--weight-regular);color:var(--fail);}
 .review-edit-test.passed>span {color:var(--pass);}.review-edit-test.failed>span {color:var(--fail);}
 
 .review-net {padding:0 0 10px 26px;}
-.review-net-toggle {display:flex;gap:8px;align-items:center;font:11px/1.6 var(--mono);color:var(--t2);padding:4px 0;text-align:left;}
+.review-net-toggle {display:flex;gap:8px;align-items:center;font:var(--text-2xs)/1.6 var(--mono);color:var(--t2);padding:4px 0;text-align:left;}
 .review-net-toggle>span {color:var(--t3);}
-.review-net-note {margin:4px 0 10px 26px;font:11px/1.6 var(--sans);color:var(--t3);}
+.review-net-note {margin:4px 0 10px 26px;font:var(--text-2xs)/1.6 var(--sans);color:var(--t3);}
 .review-net>.review-net-note {margin-left:0;}
 .review-net-lines {max-height:55vh;overflow:auto;min-width:0;}
-.review-net-line {display:grid;grid-template-columns:4ch minmax(0,1fr) auto;gap:8px;padding:3px 8px;font:11px/1.6 var(--mono);}
+.review-net-line {display:grid;grid-template-columns:4ch minmax(0,1fr) auto;gap:8px;padding:3px 8px;font:var(--text-2xs)/1.6 var(--mono);}
 .review-net-line.add {background:color-mix(in srgb,var(--pass) 7%,transparent);}
 .review-net-line.remove {background:color-mix(in srgb,var(--fail) 7%,transparent);}
 .review-net-line code {font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--t1);}
@@ -31,3 +31,24 @@
 .review-file,.review-item {content-visibility:auto;contain-intrinsic-block-size:auto 56px;margin-inline:-4px;padding-inline:4px;}
 .review-file:has(.desk-options[open]) {content-visibility:visible;}
 .review-more {padding:12px 0;}
+
+/* UI-8, Changes. A file is one line: its name, then its folder, then how much changed. Edits and the net diff open on request. */
+.evidence-review :is(.review-net-note,.review-note) {font:var(--text-2xs)/1.6 var(--sans);color:var(--t3);}
+:root[data-ui-version=modern] .review-file-entry>button:first-child {display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:baseline;gap:8px;padding:9px 0;}
+:root[data-ui-version=modern] .review-file-entry>button:first-child>svg {align-self:center;}
+:root[data-ui-version=modern] .review-file-entry>button:first-child>.review-file-name {font:var(--weight-medium) var(--text-sm)/1.5 var(--sans);color:var(--t1);overflow-wrap:anywhere;}
+:root[data-ui-version=modern] .review-file-entry>button:first-child>.review-file-folder {min-width:0;font:var(--text-2xs)/1.5 var(--mono);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+:root[data-ui-version=modern] .review-file-entry>button:first-child:hover>.review-file-name {color:var(--source);}
+:root[data-ui-version=modern] .review-file-entry>.desk-options>summary {min-height:var(--control-sm);padding:0 6px;}
+:root[data-ui-version=modern] .review-file-entry>.desk-options>summary>span {display:none;}
+:root[data-ui-version=modern] .review-file:has(.review-file-more)>.review-file-entry {border-bottom:0;}
+:root[data-ui-version=modern] .review-file-more {margin:-6px 0 0 26px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+:root[data-ui-version=modern] .review-file-more>summary {width:max-content;padding:2px 0;font:var(--text-2xs)/1.6 var(--sans);color:var(--t3);cursor:pointer;list-style:none;}
+:root[data-ui-version=modern] .review-file-more>summary::-webkit-details-marker {display:none;}
+:root[data-ui-version=modern] .review-file-more>summary::before {content:'▸';display:inline-block;width:1.2em;}
+:root[data-ui-version=modern] .review-file-more[open]>summary::before {content:'▾';}
+:root[data-ui-version=modern] .review-file-more>summary:hover {color:var(--t1);}
+:root[data-ui-version=modern] .review-file-more>summary:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
+:root[data-ui-version=modern] .review-file-more>.review-file-edits {padding:4px 0 6px;border-bottom:0;}
+:root[data-ui-version=modern] .review-file-more>.review-net {padding:0 0 4px;}
+:root[data-ui-version=modern] .review-file-more>.review-net-note {margin:4px 0;}

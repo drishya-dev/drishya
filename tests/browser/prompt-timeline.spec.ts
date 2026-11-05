@@ -8,7 +8,7 @@ let dir:string,app:App,server:RunningServer,id:string;
 test.beforeAll(async()=>{
   dir=mkdtempSync(join(tmpdir(),'drishya-prompt-rail-'));const path=join(dir,'timeline.jsonl');
   const rows=[JSON.stringify({type:'session_meta',payload:{id:'timeline',cwd:dir}})];
-  for(let n=0;n<160;n++)for(const role of ['user','assistant'])rows.push(JSON.stringify({timestamp:`2026-10-17T01:${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}Z`,type:'response_item',payload:{type:'message',role,content:[{type:role==='user'?'input_text':'output_text',text:role==='user'?`Timeline prompt ${n}`:`Response ${n}\n\n${'Readable captured work. '.repeat(20)}`}]}}));
+  for(let n=0;n<160;n++)for(const role of ['user','assistant'])rows.push(JSON.stringify({timestamp:`2026-10-17T01:${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}Z`,type:'response_item',payload:{type:'message',role,content:[{type:role==='user'?'input_text':'output_text',text:role==='user'?`Timeline prompt ${n}`:`Response ${n}\n\n${'Readable work. '.repeat(20)}`}]}}));
   writeFileSync(path,rows.join('\n')+'\n');app=new App(join(dir,'store'));id=(await app.ingest.importSource('codex',path)).recordingId;
   server=await startServer({app,port:0,token:'synthetic-prompt-timeline'});
 });

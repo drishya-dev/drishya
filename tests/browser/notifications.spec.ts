@@ -8,7 +8,7 @@ let dir:string,app:App,server:RunningServer,id:string;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-notify-'));app=new App(dir);
  const timestamp='2026-10-20T10:00:00Z',path=join(dir,'s.jsonl');
- writeFileSync(path,[{type:'session_meta',timestamp,payload:{id:'notify',cwd:dir}},{type:'response_item',timestamp,payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'a captured reply'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
+ writeFileSync(path,[{type:'session_meta',timestamp,payload:{id:'notify',cwd:dir}},{type:'response_item',timestamp,payload:{type:'message',role:'assistant',content:[{type:'output_text',text:'a reply'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
  id=(await app.ingest.importSource('codex',path)).recordingId;server=await startServer({app,port:0});
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});

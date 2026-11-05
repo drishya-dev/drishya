@@ -33,20 +33,36 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | TEST-2 | @harsh + Codex | `codex/test2-source-readiness` | 2026-11-02 | Whole TEST-2 completion continues after merged #314. Harsh approved up to 26 files on 2 Nov after the manual gate returned two clean commands then a Workspace line-1200 failure. Verified repairs: tests/browser/workspace-shared-draft.spec.ts Go-enabled readiness; apps/ui/src/components/History.tsx native start-boundary correction and tests/browser/product-workspace.spec.ts regression. Held-response proof, scroll-writer traces and failing-before/passing-after checks are private. docs/review/test-2-live-anchor.md, STATUS/TASKS, AGENTS only when the measured worker gate is established. Retain the unresolved clean-main b2-live anchor diagnosis and all failed runs; any further reading/source edit must first have actual cause evidence and stay within the approved 26-path ceiling. Coordinate UI-21 string changes in the shared spec; this claim changes readiness logic only. No retries, relaxed assertions, larger timeouts or hidden failures. Full acceptance remains three consecutive complete commands; Harsh runs the manual full gate. |
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
-| UI-25 | @yash + Claude Opus 5.5 | `claude/ui-25-notes` | 2026-11-02 | `SavedMoments.tsx`, `ReviewQuestions.tsx` become one `StepNotes.tsx`; `lib/saved-moments.ts`, `lib/review-questions.ts`, `ReviewPacketBuilder.tsx`, `StepReading.tsx`, `Viewer.tsx`, `Workbench.tsx`, `WorkspaceNavigation.tsx` and their specs. Stacked on UI-21. |
-| UI-21 | @yash + Claude Opus 5.5 | `claude/ui-21-language` | 2026-11-02 | Interface strings across `apps/ui/src/**` and the specs and units that name them. More than 15 files by the nature of a sweep (Yash's whole-product scope). No logic changes. |
+| USAGE-1 | @yash + Claude Opus 5.5 | `claude/usage-1` | 2026-11-04 | Usage and context surfaces (`RecordedUsage.tsx`, the context gauge and its popover), the usage projection fields they read, and their specs |
+| MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
 
 
 ---
 
 ## Last session
 
-### Harsh with Codex — TEST-2 native-boundary fix, manual gate pending
+### Yash with Claude — UI-8 complete; FILES-11 merged; USAGE-1 open
 
-- Returned a00af7b commands at three workers: two clean (613 parallel + 33 serial, 28 skips each); third has 612 parallel + 33 serial passed, one Pin range timeout and 28 skips. The streak resets. Line-1200 readiness and B2 serial pass all three. [Every run, cause and limit](review/test-2-live-anchor.md).
-- The reset writer is verified: History's start-boundary branch writes zero over a later native downward scroll. Preserve that boundary only for an upward/unchanged position. The exact tracked regression fails before (289 -> 0), passes after; original pointer actions, assertions and timeouts remain.
-- Unchanged original 96/96; tracked pair 48/48 at four workers; complete Workspace 35/35; B2/manual-scroll 5/5 serial; both types/build and 17 relevant units pass. Genuine Modern navigation passes both harnesses at 600/1440; Codex Classic passes too. Extra Claude Classic entry remains unverified and is recorded, not counted as passing. All frames/material stay local.
-- Draft #331 stays draft, whole TEST-2 stays claimed/unchecked. Harsh approved 26 files. No retry, relaxed assertion, longer timeout, new skip, automatic full browser command or three-worker certification. Three consecutive complete commands remain manual and pending. The earlier five-pixel B2 cause is not newly claimed fixed.
+- UI-8 is done: #337 (panels and header), #338 (Git network graph), #339 (one Original switch), #340 (palettes), #341 (screen trail), plus 31c866b4 on main. The four from #338 on were gated as one batch on main (types, package, 619 + 33 browser); the gate's failures were fixed on their branches before merging. What each checked on real sessions is in [the surface pass](review/ui-8-surface-pass.md).
+- FILES-11 (#342): files inside a linked worktree of this repository read whole; a missing current file answers 404. A duplicate ID was fixed on the way (it had been filed as FILES-10).
+- USAGE-1: the panel is #343, ready once its gate is read; the Codex weekly window is #344, a `schema` draft waiting for Harsh.
+- Split from UI-8: UI-26 (one Modern stylesheet layer behind a pixel-diff guard).
+- Next: MOTION-1 and MOTION-3.
+
+### Yash with Claude — the feature queue before UI-8 is done
+
+- Yash, 2 Nov: Harsh approves GIT-7, and anything blocking on Harsh is taken over; the goal is the UI and motion passes. TEST-2 (#314) landed that way, with its strict three-clean-runs acceptance not met and said so. Harsh continues TEST-2 on `codex/test2-source-readiness`.
+- Merged: GIT-7 (#326), HOME-2 (#327), UI-21 (#328), UI-25 (#329), UI-24 (#330). One Git approval on both surfaces; Home stays current, imports without blocking and groups worktrees; the language sweep; one note on a step; a right-click menu.
+- Last full browser run (UI-21, before UI-25 and UI-24): 612 + 33 passed, one spec corrected after. UI-25 and UI-24 ran their specs only: 86 and 103 passed. A full gate on main is due before the first UI-8 surface lands.
+- Next: UI-8, foundations first. Measured on one real History screen: 13 font sizes, 13 radii, 19 control heights, 13 line heights.
+- Found while walking: Codex `:codex-file-citation{…}` directives show as raw text in prose. Recorded in the audit, third batch.
+
+### Harsh with Codex — TEST-2 5 November gate failed; current-main integration
+
+- Manual dbc9950 run 1: 611 parallel passed / 27 skipped / three failed; serial 33 passed / one skipped. Exit 1, 873.25 seconds, three parallel workers / one serial worker / zero retries. The runner stopped; runs 2 and 3 did not run. [All evidence](review/test-2-live-anchor.md).
+- Failures: dialog-typography Git graph commits readiness; files-4 peek right edge 852 > 600 immediately after viewport resize; git-access's second Git destination missing its layout. Causes remain unverified; no assertion relaxation or retry. The two previous follow-up regressions and serial B2 pass this command.
+- Integrated main c5c87db (UI-8, worktrees, Usage and MOTION-1) after Harsh returned the completed run. Both TEST-2 fixes and the native-boundary regression survive. Only STATUS had a textual merge conflict; preserve both builders' records and current claims. Named checks/diagnosis follow before another manually run complete gate.
+- TEST-2 stays claimed/unchecked and #331 draft. The 26-file task ceiling holds for our work; upstream main changes are integration, not new TEST-2 scope. No worker-count certification or fresh full-gate pass is claimed.
 
 ### Yash with Claude — AUDIT-1, first batch
 
@@ -1363,6 +1379,16 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **4 Nov, Yash with Claude: formatted by default, one Original switch everywhere.** A reading that had its own raw button, or showed the original beneath the formatted view, now has one shared `Original` toggle that swaps the recorded text in place. A reader that owns the switch (a stored result) keeps nested readings from offering a second. Reason: Yash, 3 Nov, "formatted and original together doesnt look good. everywhere".
+
+- **4 Nov, Claude: on the dark accent palettes the chrome takes the palette's accent, not `--source`.** `--source` means a file read; switches, grants and pressed Git rows had borrowed it, which made Ember's controls blue. Jet Black and the light palettes are unchanged. Reason: an accent palette whose controls are another colour is not that palette.
+
+- **4 Nov, Claude: the Git graph finds main through its remote ref when the local tip is not loaded.** A stale local `main` (older than the loaded history) left no commit marked main on this repository. Reason: the graph's first promise is main as one line.
+
+- **3 Nov, Yash with Claude: the stage takes the room minimised panels give back.** Reverses the earlier rule that minimising Files keeps the agent's allocation stable. Minimised Files moves the stage's left edge to the window margin; a minimised Toolbox moves its right edge, and the prompt rail with it, out to the button, which waits at the middle of its edge. Why: on a small laptop screen people who are not reading the surroundings want the work as wide as possible. 600 px is unchanged (panels there are overlays).
+
+- **3 Nov, Yash: plans and Toolbox lists start folded in every session.** A plan shows its heading (revision, done of total) and opens on request; MCP servers, Agents and Available tools show their counts. An explicit open is remembered per session. Why: the old open default plus per-session memory made the same surface look different from one session to the next.
 
 - **2 Nov, Yash with Claude: Home reads one line of a workspace before approval.** To group a linked worktree under its repository the daemon reads that folder's `.git` pointer. It is a path, not workspace content, and it is only used for the grouping, so workspace consent stays the boundary for file bytes. Agent worktrees under `.claude/worktrees/` are grouped from the path alone, so they stay grouped after deletion. Any other deleted worktree stays its own group rather than being guessed.
 

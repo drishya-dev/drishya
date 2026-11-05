@@ -67,16 +67,16 @@ test('actual product surfaces keep evidence, current source, review and map navi
     await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
     const review=page.getByRole('dialog',{name:'Review work',exact:true});await expect(review.locator('.review-counts')).toBeVisible();
     await frame(`review-${width}`);
-    const changes=review.getByRole('region',{name:'Files with captured changes',exact:true}).getByRole('button');
+    const changes=review.getByRole('region',{name:'Files with changes',exact:true}).getByRole('button');
     if(await changes.count()) {
       await changes.first().click();const evidence=page.locator('dialog.file-workspace');await expect(evidence).toBeVisible();
-      await expect(evidence.getByText('Loading captured actions…',{exact:true})).toHaveCount(0);
+      await expect(evidence.getByText('Loading actions…',{exact:true})).toHaveCount(0);
       await frame(`captured-file-${width}`);await evidence.locator(':scope>header button[aria-label^="Close "]').click();
     } else await review.getByRole('button',{name:'Close Review work',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
-    await page.locator('.workspace-menu[open]').getByRole('button',{name:/^Review questions/}).click();
-    const questions=page.getByRole('dialog',{name:'Review questions',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
-    await questions.getByRole('button',{name:'Close Review questions',exact:true}).click();
+    await page.locator('.workspace-menu[open]').getByRole('button',{name:/^Notes/}).click();
+    const questions=page.getByRole('dialog',{name:'Notes',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
+    await questions.getByRole('button',{name:'Close Notes',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
     if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.workspace-menu[open] .usage-peek>summary').click();await frame(`usage-${width}`);
     await page.keyboard.press('Escape');await page.keyboard.press('Escape');
@@ -102,7 +102,7 @@ test('actual session palette and settings survey keeps readable controls at desk
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(ids[0]!)}`);
   await expect(page.locator('.history')).toBeVisible();
   const metrics=[];
-  for(const label of ['Jet Black','Deep Ocean','Porcelain','Orchid','Blueprint','Evergreen','Copper']) {
+  for(const label of ['Jet Black','Midnight','Daylight','Orchid','Royal','Emerald','Ember']) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
     await settings.getByRole('button',{name:label,exact:true}).click();
@@ -178,18 +178,18 @@ test('actual local Git histories expose connected commits and bounded desktop/ph
   for(const id of ids){
     await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
     await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Explore Git branches and commits');await nav.getByRole('option').filter({hasText:'Explore Git branches and commits'}).click();
-    const atlas=page.getByRole('dialog',{name:'Git history',exact:true});await expect(atlas).toBeVisible();const grant=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});if(await grant.isVisible())await grant.click();
+    const atlas=page.getByRole('dialog',{name:'Git graph',exact:true});await expect(atlas).toBeVisible();const grant=atlas.getByRole('button',{name:'Approve read-only Git',exact:true});if(await grant.isVisible())await grant.click();
     await expect(atlas.locator('.atlas-commit').first()).toBeVisible();await expect(atlas.getByRole('alert')).toHaveCount(0);expect(await atlas.locator('.atlas-commit').count()).toBeLessThanOrEqual(50);
     await atlas.locator('.atlas-commit').first().hover();await expect(atlas.locator('.thread-peek')).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-desktop.png`)});
     await page.setViewportSize({width:390,height:844});await expect(atlas.getByRole('region',{name:'Commit graph',exact:true})).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-phone-graph.png`)});
     await atlas.locator('.atlas-commit').first().click();await expect(atlas.getByRole('region',{name:'Selected commit',exact:true})).toBeVisible();expect(await atlas.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
-    await expect(atlas.locator('.atlas-message pre')).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-phone-detail.png`)});await atlas.getByRole('button',{name:'Close Git history',exact:true}).click();
+    await expect(atlas.locator('.atlas-message pre')).toBeVisible();await page.screenshot({path:resolve(`.local/git-atlas-actual-${id}-phone-detail.png`)});await atlas.getByRole('button',{name:'Close Git graph',exact:true}).click();
   }
 });
 test('actual imported evidence is searchable across the local library without a native turn',async({page})=>{
   const result=await app.history.searchLibrary({q:'test',count:5});test.skip(!result.items.length,'This opted-in store has no indexed test text.');
-  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.getByRole('button',{name:'Search evidence',exact:true}).click();
-  const dialog=page.getByRole('dialog',{name:'Search session evidence'});await dialog.getByRole('searchbox').fill('test');await expect(dialog.locator('.library-search-results>button').first()).toBeVisible();
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.getByRole('button',{name:'Search sessions',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'Search sessions'});await dialog.getByRole('searchbox').fill('test');await expect(dialog.locator('.library-search-results>button').first()).toBeVisible();
   await dialog.locator('.library-search-results>button').first().click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toBeVisible();
   await page.screenshot({path:resolve('.local/review-actual-library-search.png')});
 });
@@ -222,7 +222,7 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
       const top=node.getBoundingClientRect().top;await new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
       return node.isConnected?Math.abs(node.getBoundingClientRect().top-top):0;
     });
-    expect(stability,'Captured material should not snap into a whole-card position after manual scrolling').toBeLessThan(3);
+    expect(stability,'Material should not snap into a whole-card position after manual scrolling').toBeLessThan(3);
   }
   const latest=page.getByRole('button',{name:/Back to latest/});if(await latest.isVisible())await latest.click();
   await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
@@ -236,7 +236,7 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await page.waitForTimeout(300);
   const reading=await finishReadingSamples(page);
   expect(reading.frames).toBeGreaterThan(100);
-  expect(reading.jumps,'Actual captured material must not jump out and back while older pages mount').toEqual([]);
+  expect(reading.jumps,'Actual material must not jump out and back while older pages mount').toEqual([]);
   if(await latest.isVisible())await latest.click();
   await expect.poll(()=>history.evaluate(el=>Math.abs(el.scrollHeight-el.clientHeight-el.scrollTop))).toBeLessThan(2);
   const textBlocks=page.locator('.prose .md-code-text');
@@ -246,10 +246,10 @@ for(const [index,id] of ids.entries()) test(`actual recording ${index+1}: histor
   await expect(desk).toBeVisible();
   const recording=app.recording(id);
   if(!recording.workspaceRoot) {
-    await expect(desk).toContainText('no captured workspace root');
+    await expect(desk).toContainText('no workspace root');
     await expect(desk.getByRole('button',{name:'Approve workspace reading'})).toBeDisabled();
     await page.screenshot({path:resolve(`.local/review-actual-${index+1}-workspace-unavailable.png`)});
-    await desk.getByRole('button',{name:'Read captured files',exact:true}).click();
+    await desk.getByRole('button',{name:'Read session files',exact:true}).click();
     await expect(desk).toHaveCount(0);
     await expect(page.locator('.history')).toBeVisible();
     return;
@@ -301,12 +301,12 @@ test('actual command review uses whole-session worker pages with bounded desktop
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   for(const id of ids) {
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(id)}`);await expect(page.locator('.history')).toBeVisible();
-    await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();
-    const dialog=page.getByRole('dialog',{name:'Captured commands',exact:true});await expect(dialog.locator('.commands-caption')).toContainText('matching commands');
+    await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find commands'}).click();
+    const dialog=page.getByRole('dialog',{name:'Commands',exact:true});await expect(dialog.locator('.commands-caption')).toContainText('matching commands');
     expect(await dialog.locator('.captured-command').count()).toBeLessThanOrEqual(25);await expect(dialog.getByRole('alert')).toHaveCount(0);
     for(const width of [1440,390]) {await page.setViewportSize({width,height:900});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/commands-actual-${id}-${width}.png`)});}
     if(await dialog.getByRole('button',{name:'Older',exact:true}).isEnabled()){await dialog.getByRole('button',{name:'Older',exact:true}).click();await expect(dialog.getByRole('button',{name:'Newer',exact:true})).toBeEnabled();}
-    await dialog.getByRole('button',{name:'Close Captured commands',exact:true}).click();
+    await dialog.getByRole('button',{name:'Close Commands',exact:true}).click();
   }
 });
 
@@ -325,7 +325,7 @@ test('actual Review findings, prompt overview and packet stay bounded in both ha
 });
 
 
-test('actual captured changes open import neighborhoods and current source without crowded phone controls',async({page})=>{
+test('actual changes open import neighborhoods and current source without crowded phone controls',async({page})=>{
   test.setTimeout(90000);
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   for(const id of [ids[0]!,ids.at(-1)!]){
@@ -336,7 +336,7 @@ test('actual captured changes open import neighborhoods and current source witho
     const consent=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await consent.isVisible())await consent.click();
     const drawer=page.getByRole('region',{name:'Direct import connections',exact:true});
     const missing=page.locator('.map-focus-notice');await expect(drawer.locator('.map-connection-root').or(missing)).toBeVisible();
-    if(await missing.isVisible()){await missing.getByRole('button',{name:'Open captured work',exact:true}).click();await expect(page.locator('dialog.file-workspace')).toBeVisible();continue;}
+    if(await missing.isVisible()){await missing.getByRole('button',{name:'Open agent work',exact:true}).click();await expect(page.locator('dialog.file-workspace')).toBeVisible();continue;}
     await expect(drawer.locator('.map-connection-root')).toHaveText(path);await expect(drawer).toContainText('static relationships');
     const read=drawer.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/});await expect(read).toBeVisible();await read.click();
     const current=page.locator('.current-file-reader');await expect(current).toBeVisible();await expect(current.locator('.current-file-code')).toBeVisible();await current.locator(':scope>header button[aria-label^="Close "]').click();
@@ -348,12 +348,12 @@ test('actual captured changes open import neighborhoods and current source witho
 test('actual saved-file recovery and wrapper receipts stay readable without false process success',async({page})=>{
   test.setTimeout(90000);
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
-  for(const id of ids){await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);const reader=page.locator('dialog.file-workspace');if(await reader.isVisible()){await expect(reader.getByRole('combobox',{name:'First evidence',exact:true}).locator('option').first()).toBeAttached();await reader.locator(':scope>header button[aria-label^="Close "]').click();}}
+  for(const id of ids){await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);const reader=page.locator('dialog.file-workspace');if(await reader.isVisible()){await expect(reader.getByRole('combobox',{name:'First step',exact:true}).locator('option').first()).toBeAttached();await reader.locator(':scope>header button[aria-label^="Close "]').click();}}
   const id=ids[1]??ids[0]!;const p=app.projection(id),op=p.operations.find(op=>op.id.endsWith('call_11c1eb358f694f7f9615e6c41a01c28d'));
   if(op){expect(op.detail).toMatchObject({kind:'shell',exitCode:null});expect(op.status).toBe('ok');}
   const first=app.projection(ids[0]!).operations.find(op=>op.id.endsWith('call_f6888c848b4f4ae1b3c12cfa6c0ab590'));if(first)expect(first.kind).toBe('shell');
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();const commands=page.getByRole('dialog',{name:'Captured commands',exact:true});await expect(commands.locator('.commands-caption')).toContainText('Tool return does not prove');await commands.getByRole('searchbox',{name:'Filter captured command previews',exact:true}).fill('git commit');await expect(commands.locator('.command-outcome').first()).toHaveText('Tool returned');await page.screenshot({path:resolve('.local/review-wrapper-receipts.png')});
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find commands'}).click();const commands=page.getByRole('dialog',{name:'Commands',exact:true});await expect(commands.locator('.commands-caption')).toContainText('Tool return does not prove');await commands.getByRole('searchbox',{name:'Filter command previews',exact:true}).fill('git commit');await expect(commands.locator('.command-outcome').first()).toHaveText('Tool returned');await page.screenshot({path:resolve('.local/review-wrapper-receipts.png')});
 });
 
 
@@ -363,7 +363,7 @@ test('actual unknown-outcome membership reaches older actions without full-sessi
   const file=page.locator('dialog.file-workspace');if(await file.isVisible())await file.locator(':scope>header button[aria-label^="Close "]').click();
   await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('Review findings');await nav.getByRole('option').filter({hasText:'Review findings'}).click();const dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await dialog.getByRole('combobox',{name:'Finding category',exact:true}).selectOption('unknown-outcome');await expect(dialog.locator('[data-finding-members="unknown"]')).toBeVisible();await dialog.locator('[data-finding-members="unknown"]').click();await expect(dialog.locator('.finding-member')).toHaveCount(25);await dialog.getByRole('button',{name:'Next members',exact:true}).click();await expect(dialog.getByText(/Page 2 of/)).toBeVisible();await expect(dialog.locator('.finding-member')).toHaveCount(25);
   for(const width of [1440,390]){await page.setViewportSize({width,height:900});expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/findings-members-actual-${width}.png`)});}
-  await dialog.getByRole('button',{name:'Open captured action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
+  await dialog.getByRole('button',{name:'Open action ↗',exact:true}).first().click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toBeVisible();await expect(page.getByText('This view could not be displayed',{exact:true})).toHaveCount(0);
 });
 
 
@@ -398,15 +398,15 @@ test('actual Codex and Claude test outputs expose bounded result bars and compac
    }
    if(target)break;
   }
-  expect(target,`Actual recording ${id} should have a recognized captured test output`).toBeTruthy();
+  expect(target,`Actual recording ${id} should have a recognized test output`).toBeTruthy();
   await page.setViewportSize({width:1440,height:960});await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
   const icon=(await page.locator('.modern-composer-identity svg').boundingBox())!,name=(await page.locator('.modern-composer-location').boundingBox())!;expect(Math.abs(icon.y+icon.height/2-name.y-name.height/2)).toBeLessThan(2);
-  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find captured commands'}).click();
-  const commands=page.getByRole('dialog',{name:'Captured commands',exact:true});await commands.getByRole('searchbox',{name:'Filter captured command previews',exact:true}).fill(query);
-  await commands.locator(`[data-command-id="${target}"]`).getByRole('button',{name:'Open captured activity',exact:false}).click();
+  await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill('captured commands');await nav.getByRole('option').filter({hasText:'Find commands'}).click();
+  const commands=page.getByRole('dialog',{name:'Commands',exact:true});await commands.getByRole('searchbox',{name:'Filter command previews',exact:true}).fill(query);
+  await commands.locator(`[data-command-id="${target}"]`).getByRole('button',{name:'Open activity',exact:false}).click();
   const inspector=page.getByRole('region',{name:'Operation detail',exact:true});await expect(inspector.locator('.captured-outcomes').first()).toBeVisible();expect(await inspector.locator('.verification-tile').count()).toBeGreaterThan(0);
   for(const width of [1440,390]){await page.setViewportSize({width,height:960});expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/test-bars-actual-${id}-${width}.png`)});}
-  const bar=inspector.locator('.case-bar').first();if(await bar.count()){await bar.click();await expect(page.getByRole('dialog',{name:'Captured test result',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close Captured test result'}).click();}
+  const bar=inspector.locator('.case-bar').first();if(await bar.count()){await bar.click();await expect(page.getByRole('dialog',{name:'Test result',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close Test result'}).click();}
  }
 });
 

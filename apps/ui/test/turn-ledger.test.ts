@@ -25,7 +25,7 @@ describe('ledgerParts', () => {
     expect(ledgerParts(base({ tests: { runs: 1, passed: 5, failed: 0 } }))[0]).toEqual({ text: 'tests 5✓', tone: 'good' });
   });
 
-  it('says test runs without invented counts when no summary was captured', () => {
+  it('says test runs without invented counts when no summary was recorded', () => {
     expect(ledgerSummary(base({ tests: { runs: 2, passed: 0, failed: 0 } }))).toBe('2 test runs');
   });
 
@@ -41,7 +41,7 @@ describe('recorded turn facts (DATA-3)', () => {
     const ledger = base({ commands: 2, durationMs: 4_000, recorded: { durationMs: 90_000 } });
     expect(ledgerSummary(ledger)).toBe('2 commands · 1 m 30 s');
     expect(ledgerBasis(ledger)).toContain('recorded for this turn');
-    expect(ledgerBasis(base({ commands: 2, durationMs: 4_000 }))).toContain('last captured time');
+    expect(ledgerBasis(base({ commands: 2, durationMs: 4_000 }))).toContain('last time');
   });
 
   it('names an interrupted or failed turn without turning it into a count', () => {

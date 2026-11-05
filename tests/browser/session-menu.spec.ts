@@ -30,7 +30,7 @@ for (const [width, height] of [[1440, 900], [600, 720]] as const) for (const har
     await expect(list.getByRole('button', { name: 'Changes', exact: true })).toHaveCount(0);
     await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeVisible();
     // Every former action is still here.
-    for (const name of ['Review questions', 'Saved moments', 'Replay captured work']) await expect(list.getByRole('button', { name, exact: true })).toBeVisible();
+    for (const name of ['Notes', 'Replay this session']) await expect(list.getByRole('button', { name, exact: true })).toBeVisible();
     await expect(list.getByText('Session details', { exact: true })).toBeVisible();
     await expect(list.getByText('Navigate history', { exact: true })).toBeVisible();
     await expect(list.getByText('Usage', { exact: true })).toBeVisible();
@@ -38,9 +38,11 @@ for (const [width, height] of [[1440, 900], [600, 720]] as const) for (const har
     await expect(list.getByRole('link', { name: 'Export recording', exact: true })).toBeVisible();
     // At rest it fits the window without an inner scroll.
     const fit = await list.evaluate((el) => ({ scroll: el.scrollHeight - el.clientHeight, bottom: el.getBoundingClientRect().bottom, height: innerHeight }));
-    await expect(menu.locator('.usage-peek')).toHaveAttribute('open', '');
+    await expect(menu.locator('.usage-peek')).not.toHaveAttribute('open');
+    expect(fit.scroll, 'no inner scroll at rest').toBeLessThanOrEqual(1);
     expect(fit.bottom, 'menu bottom inside the window').toBeLessThanOrEqual(fit.height);
     // Usage reads as numbers and words, never as raw units.
+    await menu.locator('.usage-peek>summary').click();
     await expect(menu.locator('.usage-peek')).toHaveAttribute('open', '');
     const usage = menu.locator('.usage-peek');
     await expect(usage).not.toContainText(/Unix seconds|\(minutes\)|\bms\b\)/);

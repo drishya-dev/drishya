@@ -58,7 +58,7 @@ it('keeps typed words intact when a chosen label is a substring of earlier prose
   expect(q.chosen).toEqual(['Cart']);expect(q.typed).toBe('Cartography');
 });
 
-it('preserves punctuation and quotes inside the captured answer framing', () => {
+it('preserves punctuation and quotes inside the answer framing', () => {
   const input={questions:[{question:'Next?',options:[{label:'Continue'}]}]};
   const literal='"Keep quotes", and punctuation...';
   const q=askQuestions(input,`The user answered: "Next?"="${literal}". You can now continue.`)[0]!;

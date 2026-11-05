@@ -130,7 +130,7 @@ export function FixChainPanel({ op }: { op: Operation }) {
           <button className={`link verify-open${link.to.operationId === op.id ? ' here' : ''}`} onClick={() => select(link.to.operationId)}><span className={link.to.status === 'error' ? 'bad' : link.to.status === 'ok' ? 'good' : 'muted'}>{mark(link.to.status)}</span> {link.to.status === 'ok' ? 'passed' : link.to.status === 'error' ? 'failed again' : link.to.status}{link.to.detail ? ` · ${link.to.detail}` : ''}</button>
         </p>
       ))}
-      <small className="muted">Same command, later run · recorded order</small>
+      <small className="muted">Same command, later run</small>
     </section>
   );
 }
@@ -175,7 +175,7 @@ export function ReadBeforePanel({ op }: { op: Operation }) {
           ))}
           {found.totalReads > 2 && <span className="muted"> and {found.totalReads - 2} more</span>}
           {edited && <span className="muted"> · this edit replaces {edited}. {REL[found.coverage]}</span>}
-          {!edited && found.coverage === 'unknown' && <span className="muted"> · the lines this edit replaces were not captured.</span>}
+          {!edited && found.coverage === 'unknown' && <span className="muted"> · the lines this edit replaces were not recorded.</span>}
         </p>
       )}
     </section>

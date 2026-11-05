@@ -263,3 +263,20 @@ Genuine copies: Codex **01a1824b**, **5,011,679 bytes / 1,348 observations / 317
 Limits and failed private attempts are retained: two early extra-shell runs each gave **5 passed / three failed**. That driver selected the distinct older `legacy` experience and initially used a fixed wheel distance that did not cover the long Codex history. The matching `classic`/Modern driver gives **six passed / two failed**, both with ordinary entry and with explicit at=end entry. In each, the two failures are Claude Classic initial-card visibility, before the boundary assertion; this extra retained-shell case remains **unverified**, with no new product cause invented. All four required Modern journeys pass in those checks; no six-of-eight result is described as eight clean journeys. Private artifacts stay local.
 
 **Whole TEST-2 is still open.** The second manual streak failed and cannot be counted toward a clean streak for this new candidate. Draft #331 records both repairs and all failures. Harsh's manual runner still uses three parallel workers, one serial worker and zero retries. No automatic complete-suite command was started, no worker-count certification was added to AGENTS/TEST-3, and no TEST-2 completion checkbox or claim removal is made.
+
+
+## 5 November: returned dbc9950 manual command and current-main integration
+
+The command started at 02:30:11 UTC on dbc9950, with three parallel workers, one serial worker and zero retries. **Run 1 fails:** 611 parallel passed / 27 skipped / three failed; serial 33 passed / one skipped; exit 1, **873.25 seconds**. The runner stops without retry; runs 2 and 3 do not run. No clean streak is established.
+
+| Failure | Captured result | Cause status before integration |
+| --- | --- | --- |
+| dialog-typography:94 | Commits button not found within the existing 10-second expectation after the Git graph opens. | Unverified. |
+| files-4-reader-review:60 | Peek right edge is 852 immediately after resizing to a 600 px viewport; expected at most 600. | Unverified. |
+| git-access:35, first destination Git review | Second Git destination is visible but its atlas-layout is absent within the existing 10-second expectation. | Unverified. |
+
+The prior line-jump and source-boundary regressions pass, as does serial B2. The command also prints lstat ENOENT diagnostics; they are retained for investigation and are not silently attributed to these assertions. Git line-ending and SQLite experimental notices are recorded as warnings. Private raw log and per-project summaries remain under the unique manual evidence directory.
+
+Only after the completed run returned, current main **c5c87db** is integrated into the same claimed branch. It contains the UI-8/FILES-11/Usage/MOTION-1 changes and updated browser labels. Both existing TEST-2 fixes survive the automatic source merge. STATUS's overlapping last-session headings are resolved by preserving the other builder's current entries/claims and replacing our own handoff. No native sources or real Drishya home are changed.
+
+This integration does not establish that any of the three failures is fixed. Named checks and cause diagnosis precede another frozen manual gate. TEST-2 remains unchecked, #331 stays draft, and no worker count is certified.

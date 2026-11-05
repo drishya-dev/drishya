@@ -38,7 +38,7 @@ test('Codex questions show as question cards with their offered options and no i
   await expect(cards.nth(0)).toContainText('Codex recorded the question as accepted; the answer is not part of this record');
   await expect(cards.nth(1).locator('.question-text')).toHaveText('Anything I should avoid touching?');
   await expect(cards.nth(1).locator('.question-options li')).toHaveCount(0);
-  await expect(cards.nth(1)).toContainText('No offered options were captured.');
+  await expect(cards.nth(1)).toContainText('No offered options were recorded.');
   await expect(cards.nth(1)).not.toContainText('keeps the question and the answer');
 });
 
@@ -57,7 +57,7 @@ for(const width of [600,1440])test(`native Codex request_user_input keeps struct
   await expect(card.locator('.question-options li')).toHaveCount(2);
   await expect(card.locator('.question-description')).toHaveText(['First','Second']);
   await expect(card.locator('[data-chosen] .question-label')).toHaveText('Alpha (chosen)');
-  await expect(card).toContainText('Captured question and answer');
+  await expect(card).toContainText('Question and answer');
 });
 
 for(const width of [600,1440])test(`approval presents the literal command or replacement before an exact one-time decision at ${width}px`,async({page})=>{
@@ -76,7 +76,7 @@ for(const width of [600,1440])test(`approval presents the literal command or rep
  await expect(approvals.nth(2)).toContainText('did not supply a proposed diff');await expect(approvals.nth(2).getByRole('button',{name:'Allow once',exact:true})).toBeDisabled();
  await expect(approvals.nth(0).getByLabel('Command awaiting approval')).toHaveText(command);
  await expect(approvals.nth(1).getByLabel('Proposed replacement')).toContainText('- alpha');await expect(approvals.nth(1).getByLabel('Proposed replacement')).toContainText('+ beta');
- await approvals.nth(1).getByRole('button',{name:'Original request',exact:true}).click();await expect(approvals.nth(1).getByLabel('Native approval request')).toHaveText(JSON.stringify(replacement));
+ await approvals.nth(1).getByRole('button',{name:'Original',exact:true}).click();await expect(approvals.nth(1).getByLabel('Native approval request')).toHaveText(JSON.stringify(replacement));
  await approvals.nth(0).getByRole('button',{name:'Decline',exact:true}).click();await expect(approvals).toHaveCount(0);
  expect(decisions).toEqual([{runId:'exact-run',approvalId:'exact-command',allow:false}]);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
 });

@@ -8,7 +8,7 @@ it('clamps a saved window when the viewport, header or reader size changes',()=>
   expect(readingWindowLayout({},{width:600,height:500},{width:1440,height:900,top:76})).toEqual({});
   expect(readingWindowLayout({x:Infinity,y:NaN,height:NaN},{width:600,height:500},{width:1440,height:900,top:76})).toEqual({});
 });
-it('persists only allowed numeric window geometry without captured content',()=>{
+it('persists only allowed numeric window geometry without content',()=>{
   const clean=workingLocations({version:1,sessions:[{id:'rec_test',entries:[
     ['surface/Git review',{x:12,y:100,height:500,text:'private source',draft:'private draft'}],
     ['surface/File reader',{x:-1,y:100}],['surface/Captured file',{height:Infinity}],

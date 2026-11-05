@@ -19,7 +19,7 @@ export function QuestionCard({ op }: { op: Operation }) {
       </li>)}</ul>
       {item.typed && <p className="question-typed"><small>{!item.options.length ? 'Answer' : item.chosen.length ? 'Also wrote' : 'Wrote'}</small> {item.typed}</p>}
     </section>)}
-    {questions.some((item) => !item.options.length) && <small className="question-state">No offered options were captured.</small>}
-    <small className="question-state">{waiting ? 'Waiting for your answer' : questions.some((item) => item.answer) ? 'Captured question and answer' : accepted === true ? 'Codex recorded the question as accepted; the answer is not part of this record' : accepted === false ? 'Codex recorded the question as not accepted' : 'No answer was captured'}</small>
+    {questions.some((item) => !item.options.length) && <small className="question-state">No offered options were recorded.</small>}
+    <small className="question-state">{waiting ? 'Waiting for your answer' : questions.some((item) => item.answer) ? 'Question and answer' : accepted === true ? 'Codex recorded the question as accepted; the answer is not part of this record' : accepted === false ? 'Codex recorded the question as not accepted' : 'No answer was recorded'}</small>
   </div>;
 }

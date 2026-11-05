@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {OriginalToggle} from './OriginalToggle.tsx';
 
 /** Only the exact owned native request is actionable; presentation never changes its payload. */
 export function NativeApproval({request,busy,decide}:{request:{name:string;detail:string};busy:boolean;decide:(allow:boolean)=>void}) {
@@ -19,6 +20,6 @@ export function NativeApproval({request,busy,decide}:{request:{name:string;detai
     </>:<pre aria-label="Native approval request">{request.detail}</pre>}
     {typeof input?.reason==='string'&&<small>{input.reason}</small>}
     {missingPatch&&<small>The native request did not supply a proposed diff. Decline here and review the change in the native harness.</small>}
-    <div><button disabled={busy} onClick={()=>decide(false)}>Decline</button><button disabled={busy||missingPatch} onClick={()=>decide(true)}>Allow once</button>{structured&&<button type="button" aria-pressed={raw} onClick={()=>setRaw(!raw)}>{raw?'Show command or change':'Original request'}</button>}</div>
+    <div><button disabled={busy} onClick={()=>decide(false)}>Decline</button><button disabled={busy||missingPatch} onClick={()=>decide(true)}>Allow once</button>{structured&&<OriginalToggle original={raw} onToggle={()=>setRaw(!raw)}/>}</div>
   </div>;
 }

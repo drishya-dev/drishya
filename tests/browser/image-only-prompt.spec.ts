@@ -29,7 +29,7 @@ test('an image-only prompt is a turn with its image and no invented text', async
     await page.setViewportSize({ width, height: 960 });
     await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-    await expect(page.getByRole('region', { name: 'Captured work' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
     const turns = page.locator('.history .turn');
     await expect(turns).toHaveCount(2);
     await expect(turns.first().locator('.turn-text')).toHaveText('Describe the layout');

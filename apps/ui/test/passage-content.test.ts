@@ -19,7 +19,7 @@ test('fresh page objects and unrelated new cards preserve passage content identi
   expect(samePassageContent(a,b)).toBe(true);
 });
 
-test('every referenced captured field and passage presentation change invalidates memoization',()=>{
+test('every referenced field and passage presentation change invalidates memoization',()=>{
   const edits:((b:PassageContent)=>void)[]=[
     b=>{b.ps.id='different';},b=>{b.ps.settled=false;},b=>{b.ps.matchesFilter=false;},
     b=>{b.ps.ops.push({id:'new'} as never);},b=>{b.ops.get('op')!.status='error';},

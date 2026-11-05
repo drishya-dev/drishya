@@ -9,7 +9,7 @@ const projection = bundle.projection;
 const scene = compose(projection, { step: projection.timeline.length });
 
 describe('repository reading context', () => {
-  it('holds the captured place of an earlier passage instead of the latest file', () => {
+  it('holds the place of an earlier passage instead of the latest file', () => {
     const passage = scene.passages.find((passage) => passage.ops.some((op) => op.kind === 'read'))!;
     const context = repositoryContext(projection, scene, passage.id);
     expect(context.scope).toBe('reading');

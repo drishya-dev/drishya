@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {currentFileOrigin,rememberCurrentFileOrigin} from '../src/lib/current-file-origin.ts';
 const roots=[{root:'/repo',prefix:'main'},{root:'/other',prefix:'other'}];
-it('returns the exact captured main alias after a current read, isolated by source and session',()=>{
+it('returns the exact main alias after a current read, isolated by source and session',()=>{
  const source={},another={};rememberCurrentFileOrigin(source,'a','src/file.ts','main/src/file.ts');
  expect(currentFileOrigin(source,'a','src/file.ts',roots,'/repo')).toBe('main/src/file.ts');
  expect(currentFileOrigin(another,'a','src/file.ts',roots,'/repo')).toBe('src/file.ts');

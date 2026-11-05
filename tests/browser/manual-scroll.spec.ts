@@ -15,7 +15,7 @@ test('upward scrolling keeps visible material steady across delayed, variable-he
   const row = (payload: object) => JSON.stringify({ timestamp, type: 'response_item', payload });
   try {
     writeFileSync(journal, [JSON.stringify({ timestamp, type: 'session_meta', payload: { id: 'manual-scroll', cwd: '/home/dev/scroll' } }), ...Array.from({ length: 180 }, (_, i) => [
-      row({ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: Array.from({ length: 2 + i % 9 }, (_, n) => `Synthetic reading context ${i}.${n}: earlier captured material remains in place as this page loads.`).join('\n\n') }] }),
+      row({ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: Array.from({ length: 2 + i % 9 }, (_, n) => `Synthetic reading context ${i}.${n}: earlier material remains in place as this page loads.`).join('\n\n') }] }),
       row({ type: 'function_call', name: 'functions.exec_command', call_id: `call-${i}`, arguments: JSON.stringify({ cmd: `echo synthetic-scroll-${i}` }) }),
       row({ type: 'function_call_output', call_id: `call-${i}`, output: Array.from({ length: 1 + i % 15 }, (_, n) => `Synthetic output ${i}.${n}`).join('\n') }),
     ]).flat()].join('\n') + '\n');

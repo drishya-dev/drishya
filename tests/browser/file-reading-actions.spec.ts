@@ -39,7 +39,7 @@ async function open(page:Page,id:string,entries:[string,unknown][]){
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries}]}}):route.continue());
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
 }
-for(const width of [600,1440])test(`Workspace, Changes and Git review find captured files outside the resident file list at ${width}`,async({page})=>{
+for(const width of [600,1440])test(`Workspace, Changes and Git review find files outside the resident file list at ${width}`,async({page})=>{
   await page.setViewportSize({width,height:950});const sample=samples.get('claude-code')!,op=sample.ops.find(op=>op.location==='inside'&&op.kind==='write')!;
   // A paged History projection is not the whole recording's file index. Changes
   // owns a global path receipt; current-file/Git actions must check the bounded trail.
@@ -52,30 +52,30 @@ for(const width of [600,1440])test(`Workspace, Changes and Git review find captu
   await inspector.getByRole('button',{name:'Open current file for correction',exact:true}).click();
   const desk=page.locator('.developer-workspace'),approval=desk.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(approval.or(desk.getByRole('tablist'))).toBeVisible();if(await approval.isVisible())await approval.click();
   await expect(desk.locator('.desk-code')).toContainText('CURRENT_WORKTREE_CHANGE');
-  await desk.getByLabel(`File actions for ${op.path}`,{exact:true}).press('Enter');await desk.getByRole('button',{name:'View captured file',exact:true}).click();
+  await desk.getByLabel(`File actions for ${op.path}`,{exact:true}).press('Enter');await desk.getByRole('button',{name:'View what the agent saw',exact:true}).click();
   const captured=page.locator('.file-workspace');await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');await expect(captured).not.toContainText('CURRENT_WORKTREE_CHANGE');
-  await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
+  if(!await captured.getByRole('button',{name:'Read file on disk',exact:true}).isVisible())await captured.getByLabel('File actions',{exact:true}).click();await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
   const peek=page.locator('.current-file-reader');await expect(peek.locator('.current-file-code')).toBeVisible();
   await peek.getByLabel('Reading options',{exact:true}).or(peek.getByLabel(`File reading actions for ${op.path}`,{exact:true})).press('Enter');
   await peek.getByRole('button',{name:'Show in Files',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'Find repository files',exact:true})).toHaveValue(op.path);
-  await page.getByRole('button',{name:'Changes',exact:true}).click();const changes=page.locator('.evidence-review');await expect(changes).toBeVisible();await changes.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await changes.getByRole('button',{name:'View captured file',exact:true}).click();
+  await page.getByRole('button',{name:'Changes',exact:true}).click();const changes=page.locator('.evidence-review');await expect(changes).toBeVisible();await changes.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await changes.getByRole('button',{name:'View what the agent saw',exact:true}).click();
   await expect(changes).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');await captured.getByRole('button',{name:/^Close Work on/}).click();
   const statusResponse=page.waitForResponse(response=>response.request().method()==='GET'&&response.url().endsWith(`/recordings/${sample.id}/git`));
   await openGitDestination(page,'Git review');const git=page.getByRole('dialog',{name:'Git review',exact:true}),consent=git.getByRole('button',{name:'Approve read-only Git',exact:true}),refresh=git.getByRole('button',{name:'Refresh changes',exact:true});
   // Consent is shared by the daemon across these viewport cases. Wait for its
   // actual receipt, not the reader's provisional unapproved first frame.
   const status=await (await statusResponse).json();if(status.approved)await expect(refresh).toBeVisible();else await consent.click();
-  await expect(git.locator('.git-selected-file-header')).toContainText(op.path);await git.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await git.getByRole('button',{name:'View captured file',exact:true}).click();await expect(git).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
+  await expect(git.locator('.git-selected-file-header strong')).toHaveAttribute('title',op.path);await git.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await git.getByRole('button',{name:'View what the agent saw',exact:true}).click();await expect(git).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
 });
 
-test('an off-page captured version is selected exactly and cached later bytes do not leak across replay',async({page})=>{
+test('an off-page version is selected exactly and cached later bytes do not leak across replay',async({page})=>{
   const root=join(dir,'versioned');mkdirSync(root);const path=join(root,'file.ts'),rows:unknown[]=[];
   for(let n=0;n<30;n++){const call='version-'+n,content=`export const revision = 'VERSION_${n}';\n`,timestamp=new Date(Date.UTC(2026,9,31,0,n)).toISOString();rows.push({type:'assistant',uuid:call,sessionId:'versions',cwd:root,timestamp,message:{content:[{type:'tool_use',id:call,name:'Write',input:{file_path:path,content}}]}},{type:'user',uuid:call+'-result',sessionId:'versions',cwd:root,timestamp,message:{content:[{type:'tool_result',tool_use_id:call,content:'Written.'}]},toolUseResult:{type:n?'update':'create',originalFile:n?`export const revision = 'VERSION_${n-1}';\n`:null,content}});}
   const source=join(dir,'versions.jsonl');writeFileSync(source,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');const id=(await app.ingest.importSource('claude-code',source)).recordingId,p=app.projection(id),op=p.operations.at(-1)!;
-  await open(page,id,[['location',{selectedOp:op.id,follow:false,held:true}]]);await page.getByRole('region',{name:'Operation detail'}).getByRole('button',{name:'View captured file',exact:true}).click();const captured=page.locator('.file-workspace');await expect(captured.locator('.file-evidence-material')).toContainText('VERSION_29');await expect(captured.getByLabel('First evidence',{exact:true})).toHaveValue(`${op.id}/after`);
-  await captured.getByRole('button',{name:/^Close Work on/}).click();await page.goto(`${server.url}/?experience=modern&motion=0&at=end#/r/${id}`);const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Open captured work for file.ts',exact:true}).click();await expect(captured).toContainText('VERSION_29');await captured.getByRole('button',{name:/^Close Work on/}).click();
-  await page.getByRole('slider',{name:'Timeline',exact:true}).press('ArrowLeft');await card.getByRole('button',{name:'Open captured work for file.ts',exact:true}).click();await expect(captured).toBeVisible();await expect(captured.locator('.file-evidence-material')).toBeVisible();await expect(captured).not.toContainText('VERSION_29');
+  await open(page,id,[['location',{selectedOp:op.id,follow:false,held:true}]]);await page.getByRole('region',{name:'Operation detail'}).getByRole('button',{name:'View what the agent saw',exact:true}).click();const captured=page.locator('.file-workspace');await expect(captured.locator('.file-evidence-material')).toContainText('VERSION_29');await expect(captured.getByLabel('First step',{exact:true})).toHaveValue(`${op.id}/after`);
+  await captured.getByRole('button',{name:/^Close Work on/}).click();await page.goto(`${server.url}/?experience=modern&motion=0&at=end#/r/${id}`);const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:'Open work on file.ts',exact:true}).click();await expect(captured).toContainText('VERSION_29');await captured.getByRole('button',{name:/^Close Work on/}).click();
+  await page.getByRole('slider',{name:'Timeline',exact:true}).press('ArrowLeft');await card.getByRole('button',{name:'Open work on file.ts',exact:true}).click();await expect(captured).toBeVisible();await expect(captured.locator('.file-evidence-material')).toBeVisible();await expect(captured).not.toContainText('VERSION_29');
 });
 for(const harness of ['claude-code','codex'])for(const width of [600,1440]){
   test(`captured file actions keep full source and outside refusal ${harness} ${width}`,async({page})=>{
@@ -83,7 +83,7 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440]){
     for(const op of sample.ops){
       await page.unroute('**/v1/working-locations');await open(page,sample.id,[['location',{selectedOp:op.id,follow:false,held:true}]]);
       const inspector=page.getByRole('region',{name:'Operation detail'});await expect(inspector).toBeVisible();await page.keyboard.press('Escape');
-      const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:`Open captured work for ${op.path}`,exact:true}).click();
+      const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();await card.getByRole('button',{name:`Open work on ${op.path}`,exact:true}).click();
       const file=page.locator('.file-workspace');await expect(file.locator('.file-evidence-material')).toContainText('CAPTURED_');
       if(op.location==='outside'){
         await expect(file).toContainText('Outside this workspace');await expect(file.getByRole('button',{name:'Open in Workspace',exact:true})).toBeDisabled();
@@ -91,6 +91,7 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440]){
       }else{
         await expect(file.getByRole('button',{name:'Open in Workspace',exact:true})).toBeEnabled();
         if(op.location==='inside'){
+          await file.getByLabel('File actions',{exact:true}).click();
           await file.getByRole('button',{name:'Show in Files',exact:true}).click();await expect(page.getByRole('textbox',{name:'Find repository files',exact:true})).toHaveValue(op.path);
           await expect(page.locator(`[data-spine-path="${op.path}"]`)).toBeVisible();
         }
@@ -98,16 +99,17 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440]){
       await expect(page.getByRole('button',{name:'Retry source',exact:true})).toHaveCount(0);
     }
   });
-  test(`restored Workspace and peek retain captured files instead of dead retries ${harness} ${width}`,async({page})=>{
+  test(`restored Workspace and peek retain files instead of dead retries ${harness} ${width}`,async({page})=>{
     await page.setViewportSize({width,height:950});const sample=samples.get(harness)!;
     for(const location of ['outside','missing'])for(const surface of ['workspace','peek']){
       const op=sample.ops.find(op=>op.location===location&&op.kind==='write')!;await page.unroute('**/v1/working-locations');
       const entries:[string,unknown][]=[['location',surface==='workspace'?{developerWorkspace:true,follow:false,held:true}:{currentFile:op.path,follow:false,held:true}],['desk/files',[op.path]],['desk/primary',op.path]];
       await open(page,sample.id,entries);
       const area=page.locator(surface==='workspace'?'.developer-workspace':'.current-file-reader');
-      const approval=area.getByRole('button',{name:surface==='workspace'?'Approve workspace reading':'Approve current-file reading',exact:true});await expect(approval.or(area.getByRole('region',{name:'Captured file fallback'}))).toBeVisible();if(await approval.isVisible())await approval.click();
-      const fallback=area.getByRole('region',{name:'Captured file fallback'});await expect(fallback).toBeVisible();await expect(fallback.locator('.file-evidence-material')).toContainText('CAPTURED_');
-      await expect(fallback).toContainText(location==='outside'?'Outside this workspace':'no longer on disk');await expect(fallback.getByRole('button',{name:'Open in Workspace',exact:true})).toBeDisabled();
+      const approval=area.getByRole('button',{name:surface==='workspace'?'Approve workspace reading':'Approve current-file reading',exact:true});await expect(approval.or(area.getByRole('region',{name:'File fallback'}))).toBeVisible();if(await approval.isVisible())await approval.click();
+      const fallback=area.getByRole('region',{name:'File fallback'});await expect(fallback).toBeVisible();await expect(fallback.locator('.file-evidence-material')).toContainText('CAPTURED_');
+      await expect(fallback).toContainText(location==='outside'?'Outside this workspace':'no longer on disk');// A file that cannot be read offers no Workspace button that cannot act (UI-8).
+      await expect(fallback.getByRole('button',{name:'Open in Workspace',exact:true})).toHaveCount(0);
       await expect(area.getByRole('button',{name:/Retry (current )?source/})).toHaveCount(0);await expect(area.getByText(/Reading current (source|file)…/)).toHaveCount(0);
       expect(await area.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
     }

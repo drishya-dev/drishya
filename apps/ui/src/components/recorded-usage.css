@@ -1,0 +1,13 @@
+/* USAGE-1: Usage as a few short sections, each led by a quiet heading; a bar wherever a share exists. */
+.usage-peek section { display:grid; gap:4px; padding:8px 0; border-top:1px solid var(--line); }
+.usage-peek section:first-child { border-top:0; padding-top:0; }
+.usage-peek section>h4 { margin:0 0 2px; color:var(--t2); font:var(--weight-medium) var(--text-xs)/1.5 var(--sans); }
+.usage-peek section>small, .usage-peek .usage-report>small { color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }
+.usage-peek section>p { margin:0; color:var(--t1); font:var(--text-xs)/1.5 var(--sans); }
+.usage-peek .usage-absent { color:var(--t3); }
+.usage-share { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 8px; align-items:baseline; font:var(--text-xs)/1.5 var(--sans); color:var(--t1); }
+.usage-share>span:nth-child(2) { color:var(--t2); font-variant-numeric:tabular-nums; text-align:right; }
+.usage-track { grid-column:1 / -1; height:4px; border-radius:2px; background:var(--s3); overflow:hidden; }
+.usage-track>span { display:block; height:100%; border-radius:inherit; background:var(--focus); }
+.usage-report { display:grid; gap:6px; margin-top:4px; }
+.usage-peek .usage-note { display:block; margin-top:6px; color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }

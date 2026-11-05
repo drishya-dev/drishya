@@ -24,7 +24,7 @@ test('recorded request input and window retain their ratio and disclose its deri
   await open(page, { latest: { source: 'codex-token-count', cumulative: true, tokens: { total: 900000 }, contextWindow: 258400 }, byTurn: { t1: request(40000), t2: request(129200) } });
   const ring = page.locator('.session-line .context-ring');
   await expect(ring).toHaveCount(1);
-  await expect(ring).toHaveAttribute('aria-label', /^Last request input: 129,200 of 258,400 recorded window tokens\. 50% ratio, derived from the harness's recorded values\.$/);
+  await expect(ring).toHaveAttribute('aria-label', /^Last request input: 129,200 of 258,400 context window tokens\. 50% ratio, computed from the harness’s values\.$/);
   await expect(ring).not.toHaveAttribute('data-high', 'true');
   const box = (await ring.boundingBox())!;
   expect(box.width).toBeLessThanOrEqual(13);
@@ -33,7 +33,7 @@ test('recorded request input and window retain their ratio and disclose its deri
   await page.locator('.session-line').screenshot({ path: resolve('.local/context-ring.png') });
 });
 
-test('a high recorded request ratio turns amber, and no recorded window means no ring', async ({ page }) => {
+test('a high recorded request ratio turns amber, and no context window means no ring', async ({ page }) => {
   await open(page, { byTurn: { t1: request(245000) } });
   await expect(page.locator('.session-line .context-ring')).toHaveAttribute('data-high', 'true');
   await open(page, undefined);

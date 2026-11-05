@@ -1,8 +1,8 @@
 /* DATA-6: one muted line where the harness noticed an outside change; the snippet opens on click. */
 .notice-line {display:grid;gap:4px;margin:6px 0;min-width:0;}
-.notice-line-head {display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;max-width:100%;padding:0;border:0;background:none;color:var(--t3);font:12px/1.6 var(--sans);text-align:left;cursor:pointer;}
+.notice-line-head {display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;max-width:100%;padding:0;border:0;background:none;color:var(--t3);font:var(--text-xs)/1.6 var(--sans);text-align:left;cursor:pointer;}
 .notice-line-head:disabled {cursor:default;}
-.notice-line-path {font:11.5px/1.6 var(--mono);color:var(--t2);overflow-wrap:anywhere;}
+.notice-line-path {font:var(--text-xs)/1.6 var(--mono);color:var(--t2);overflow-wrap:anywhere;}
 .notice-line-more {text-decoration:underline;text-underline-offset:2px;}
 .notice-line-head:hover .notice-line-more, .notice-line-head:focus-visible .notice-line-more {color:var(--t1);}
-.notice-line-snippet {margin:0;max-height:240px;overflow:auto;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm, 6px);background:var(--s1);color:var(--t2);font:11.5px/1.55 var(--mono);white-space:pre;}
+.notice-line-snippet {margin:0;max-height:240px;overflow:auto;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm, 6px);background:var(--s1);color:var(--t2);font:var(--text-xs)/1.55 var(--mono);white-space:pre;}

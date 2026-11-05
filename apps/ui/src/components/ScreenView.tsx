@@ -72,9 +72,9 @@ function describe(step: ScreenStep): string {
 const UNPLACED: Record<NonNullable<ScreenStep['unplaced']>, string> = {
   'no-position': 'No position was recorded.',
   'element-only': 'Targets an element, not a position, so nothing is drawn.',
-  'no-frame': 'No earlier frame was captured to place it on.',
+  'no-frame': 'No earlier frame was recorded to place it on.',
   'result-frame': 'This image is the result of the action; its position belongs to the previous frame.',
-  'outside-frame': 'The recorded position lies outside the captured frame, so nothing is drawn.',
+  'outside-frame': 'The recorded position lies outside the frame, so nothing is drawn.',
   'frame-size-unknown': 'The frame size was not recorded, so the position is not drawn.',
   'frame-size-differs': 'The recorded frame size does not match the stored image, so the position is not drawn.',
 };
@@ -135,6 +135,9 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   // The strip keeps the current cell in view without moving the page.
   const strip = useRef<HTMLDivElement>(null);
   useEffect(() => { strip.current?.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [shownIndex]);
+  // The trail ends at the step shown; keep that end in view when the list is taller than its room.
+  const trailEl = useRef<HTMLElement>(null);
+  useEffect(() => { const el = trailEl.current; if (el) el.scrollTop = el.scrollHeight; }, [shownIndex]);
 
   // The reader owns the keyboard while it is open. A document listener, because focus can be nowhere inside it
   // (the dialog is first shown empty and its controls arrive with the run).
@@ -160,7 +163,7 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   if (!shown || !step) {
     return <dialog ref={dialog} className="screen-view" aria-label="Screen view" onClose={onClose}>
       <div className="screen-bar"><span>Screen</span><button type="button" onClick={() => dialog.current?.close()}>Close</button></div>
-      <p className="screen-empty" role="status">{error ? `The screen run could not be loaded: ${error}` : run ? 'No computer-use steps were captured in this session.' : 'Loading captured screen steps…'}</p>
+      <p className="screen-empty" role="status">{error ? `The screen run could not be loaded: ${error}` : run ? 'No computer-use steps were recorded in this session.' : 'Loading screen steps…'}</p>
     </dialog>;
   }
 
@@ -168,8 +171,15 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   const image = frameStep?.image;
   const url = imageUrl(image);
   const gap = gapLabel(gapBefore(steps, shownIndex));
-  const frameNote = !frameStep ? 'No frame captured yet' : shown.image ? 'Frame returned by this step' : `No new frame captured · showing step ${shown.frame! + 1}`;
+  const frameNote = !frameStep ? 'No frame recorded yet' : shown.image ? 'Frame returned by this step' : `No new frame recorded · showing step ${shown.frame! + 1}`;
   const ratio = image?.width && image.height ? { aspectRatio: `${image.width} / ${image.height}` } : undefined;
+  // UI-8 (Yash, 3 Nov): what the agent did to reach this screen, the recorded steps since the previous frame, up to this one.
+  // The frame shown is the one this step's tab last returned (screen.ts), so the trail starts after that frame and keeps to that tab.
+  const sameTab = (s: ScreenStep) => s === shown || s.tab === undefined || shown.tab === undefined || s.tab === shown.tab;
+  let after = shown.image ? -1 : shown.frame ?? -1;
+  if (shown.image) for (let i = shownIndex - 1; i >= 0; i--) if (steps[i]!.image && sameTab(steps[i]!)) { after = i; break; }
+  const reached = steps.slice(after + 1, shownIndex + 1).filter(sameTab);
+  const earlier = Math.max(0, reached.length - 12), trail = reached.slice(earlier), since = steps.indexOf(reached[0] ?? shown);
   return <dialog ref={dialog} className={`screen-view${full ? ' full' : ''}`} aria-label="Screen view" onClose={onClose}
     onClick={event => { if (event.target === dialog.current) dialog.current.close(); }}>
     <div className="screen-bar">
@@ -182,9 +192,16 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
       <button type="button" aria-pressed={full} title="Full window (F)" onClick={() => setFull(v => !v)}>{full ? 'Window' : 'Full window'}</button>
       <button type="button" onClick={() => dialog.current?.close()}>Close</button>
     </div>
+    <div className="screen-body">
     <div className="screen-stage">
       {url && image ? <Frame key={shown.frame} url={url} image={image} ratio={ratio} step={shown} previous={shown.frame !== steps[shownIndex - 1]?.frame && sameShape(steps[steps[shownIndex - 1]?.frame ?? -1]?.image, image) ? imageUrl(steps[steps[shownIndex - 1]!.frame!]!.image) : undefined}/>
-        : <div className="screen-missing" role="status" style={ratio}>{image ? `Image not retained${image.omitted ? `: ${WHY[image.omitted] ?? image.omitted}` : ''}${image.width && image.height ? ` · recorded ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${bytesLabel(image.bytes)}` : ''}` : 'No frame captured yet'}</div>}
+        : <div className="screen-missing" role="status" style={ratio}>{image ? `Image not retained${image.omitted ? `: ${WHY[image.omitted] ?? image.omitted}` : ''}${image.width && image.height ? ` · recorded ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${bytesLabel(image.bytes)}` : ''}` : 'No frame recorded yet'}</div>}
+    </div>
+    <section ref={trailEl} className="screen-trail" aria-label="How the agent reached this screen">
+      <h3>To reach this screen</h3>
+      {earlier > 0 && <button type="button" className="screen-trail-earlier" onClick={() => go(since)}>{earlier} earlier {earlier === 1 ? 'step' : 'steps'}</button>}
+      <ol>{trail.map(s => { const i = steps.indexOf(s); return <li key={s.id}><button type="button" aria-current={i === shownIndex ? 'step' : undefined} className={s.status === 'error' ? 'failed' : undefined} onClick={() => go(i)}><small>{i + 1}</small><span>{describe(s)}</span>{s.status === 'error' && <em>failed</em>}</button></li>; })}</ol>
+    </section>
     </div>
     <div className="screen-caption">
       <strong>{describe(shown)}</strong>
@@ -200,7 +217,7 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
       {shown.unplaced && !shown.marker && shown.unplaced !== 'no-position' && <span>{UNPLACED[shown.unplaced]}</span>}
       <button type="button" className="screen-link" onClick={() => { dialog.current?.close(); useApp.getState().select(shown.operationId); }}>Open operation</button>
     </div>
-    <div className="screen-strip" ref={strip} role="listbox" aria-label="Captured steps">
+    <div className="screen-strip" ref={strip} role="listbox" aria-label="Steps">
       {steps.map((s, i) => {
         const thumb = s.image ? imageUrl(s.image) : undefined;
         return <button type="button" role="option" key={s.id} className={`screen-cell${s.image ? ' frame' : ''}${s.status === 'error' ? ' failed' : ''}`} aria-selected={i === shownIndex} aria-current={i === shownIndex ? 'step' : undefined}
@@ -220,10 +237,10 @@ function Frame({ url, image, step, previous, ratio }: { url: string; image: Oper
   useEffect(() => { if (!leaving) return; const t = setTimeout(() => setLeaving(undefined), 220); return () => clearTimeout(t); }, [leaving]);
   const m = step.marker;
   const origin = m ? { transformOrigin: `${m.x * 100}% ${m.y * 100}%` } : undefined;
-  if (failed) return <div className="screen-missing" role="status" style={ratio}>The captured image could not be loaded.</div>;
+  if (failed) return <div className="screen-missing" role="status" style={ratio}>The image could not be loaded.</div>;
   return <div className="screen-frame">
     {leaving && <img className="screen-leaving" src={leaving} alt="" aria-hidden="true"/>}
-    <img className="screen-image" style={origin} src={url} alt={`Captured screen · ${image.width && image.height ? `${image.width}×${image.height}` : 'size not recorded'}`} width={image.width} height={image.height} decoding="async" onError={() => setFailed(true)}/>
+    <img className="screen-image" style={origin} src={url} alt={`Screen · ${image.width && image.height ? `${image.width}×${image.height}` : 'size not recorded'}`} width={image.width} height={image.height} decoding="async" onError={() => setFailed(true)}/>
     {m && <Mark step={step} x={m.x} y={m.y} fromX={m.fromX} fromY={m.fromY}/>}
   </div>;
 }

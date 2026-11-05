@@ -225,7 +225,7 @@ export function Origins({ scene, projection, stagedArrival = false, isProgrammat
           // from that captured filename, without replaying an icon or depending
           // on a newly discovered/occluded repository node becoming visible.
           const reference = target.querySelector('.op-title');
-          if (reference && visible(reference)) tether(reference, target, 'Captured read reference', 'Lift', false, true);
+          if (reference && visible(reference)) tether(reference, target, 'Read reference', 'Lift', false, true);
           continue;
         }
         let origin: HTMLElement | undefined;

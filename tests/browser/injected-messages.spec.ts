@@ -31,7 +31,7 @@ test('a background-task notice is Claude Code\'s, not a prompt from the person',
     await page.setViewportSize({ width, height: 960 });
     await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-    await expect(page.getByRole('region', { name: 'Captured work' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
     const turns = page.locator('.history .turn');
     await expect(turns).toHaveCount(3);
     // The typed prompts stay "You"; a prompt that only mentions the tag is still a prompt.

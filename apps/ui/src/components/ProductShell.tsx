@@ -20,7 +20,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
   latestClose.current=close;
   const requestClose=()=>{
     const dialog=ref.current,state=useApp.getState();
-    const animate=dialog&&!modeless&&!className.includes('workspace-navigation')&&document.documentElement.dataset.uiVersion==='modern'&&document.documentElement.hasAttribute('data-ui-press')&&state.motion&&!state.lowResource&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const animate=dialog&&!className.includes('workspace-navigation')&&document.documentElement.dataset.uiVersion==='modern'&&document.documentElement.hasAttribute('data-ui-press')&&state.motion&&!state.lowResource&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(!animate){transition.current?.cancel();latestClose.current();return;}
     if(exiting.current)return;
     exiting.current=true;dialog.dataset.readerExiting='';
@@ -28,7 +28,8 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     const computed=getComputedStyle(dialog),opacity=computed.opacity,transform=computed.transform;
     transition.current?.cancel();
     const easing=getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim()||'cubic-bezier(.23,1,.32,1)';
-    const animation=dialog.animate([{opacity,transform},{opacity:0,transform:'translateY(4px) scale(.98)'}],{duration:140,easing,fill:'forwards'});
+    // MOTION-1: a reading window beside the work (modeless) leaves faster than a modal.
+    const animation=dialog.animate([{opacity,transform},{opacity:0,transform:'translateY(4px) scale(.98)'}],{duration:modeless?120:140,easing,fill:'forwards'});
     transition.current=animation;
     void animation.finished.then(()=>{if(dialog.isConnected)latestClose.current();},()=>{});
   };
@@ -43,8 +44,10 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     dialog.querySelector<HTMLElement>('[data-dialog-focus]')?.focus({ preventScroll: true });
     const state = useApp.getState();
     // Pointer-only feedback for an occasional modal. Keyboard reading/navigation is immediate.
-    const animate = !modeless && !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const arrival = animate ? dialog.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }) : undefined;
+    // MOTION-1: modeless reading windows (Git review, Git graph, file readers) open often, so theirs is shorter and smaller than a modal's.
+    const animate = !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const easing = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.23,1,.32,1)';
+    const arrival = animate ? dialog.animate([{ opacity: 0, transform: modeless ? 'translateY(4px) scale(.99)' : 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: modeless ? 160 : 200, easing }) : undefined;
     transition.current=arrival;
     // Menus preventDefault their own Escape first, so the order is menu, then newest reader.
     const escape = (event: KeyboardEvent) => {
@@ -81,16 +84,18 @@ export function ProductShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const apply = () => {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
-      const scheme = theme === 'light' || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      // Royal keeps its saved id (tokyo) but is a light palette since UI-8.
+      const lightPalette = theme === 'tokyo';
+      const scheme = theme === 'light' || lightPalette || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       document.documentElement.dataset.theme = scheme;
-      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'dark' || theme === 'system' ? 'jet' : theme;
+      document.documentElement.dataset.palette = lightPalette ? 'tokyo' : scheme === 'light' ? 'paper' : theme === 'dark' || theme === 'system' ? 'jet' : theme;
     };
     apply();
     const preference = matchMedia('(prefers-color-scheme: light)');
     preference.addEventListener('change', apply);
     return () => preference.removeEventListener('change', apply);
   }, [theme]);
-  return <>{children}{open && <Settings />}{readingHelp && <ReadingDialog title="Reading shortcuts" className="reading-shortcuts" close={()=>setReadingHelp(false)}><p>Navigate captured work in Modern without opening the inspector. Reading keys detach Follow; capture continues.</p><dl>{READING_SHORTCUTS.map(([keys,action])=><div key={keys}><dt><kbd>{keys}</kbd></dt><dd>{action}</dd></div>)}</dl><p className="muted small">Disabled in inputs, editors, menus and readers. Replay keeps its transport controls. Copy uses a selection or the material’s existing copy action; otherwise it copies the card preview.</p></ReadingDialog>}</>;
+  return <>{children}{open && <Settings />}{readingHelp && <ReadingDialog title="Reading shortcuts" className="reading-shortcuts" close={()=>setReadingHelp(false)}><p>Move through the session. Reading keys detach Follow; capture continues.</p><dl>{READING_SHORTCUTS.map(([keys,action])=><div key={keys}><dt><kbd>{keys}</kbd></dt><dd>{action}</dd></div>)}</dl><p className="muted small">Disabled in inputs, editors, menus and readers. Replay keeps its transport controls. Copy uses a selection or the material’s existing copy action; otherwise it copies the card preview.</p></ReadingDialog>}</>;
 }
 
 const THEMES = [
@@ -102,12 +107,12 @@ const THEMES = [
 // Modern names describe our materials, without claiming another theme's identity.
 const MODERN_THEMES = [
   ['dark', 'Jet Black', 'Neutral graphite · indigo'],
-  ['midnight', 'Deep Ocean', 'Petrol black · sea glass'],
-  ['light', 'Porcelain', 'Warm off-white · ink blue'],
-  ['mocha', 'Orchid', 'Aubergine charcoal · rose'],
-  ['tokyo', 'Blueprint', 'Ink navy · cornflower'],
-  ['nord', 'Evergreen', 'Mineral charcoal · celadon'],
-  ['gruvbox', 'Copper', 'Espresso · warm copper'],
+  ['midnight', 'Midnight', 'Midnight black · electric blue'],
+  ['light', 'Daylight', 'White · sky blue'],
+  ['mocha', 'Orchid', 'Violet black · hot pink'],
+  ['tokyo', 'Royal', 'Pure white · deep blue'],
+  ['nord', 'Emerald', 'Green black · emerald'],
+  ['gruvbox', 'Ember', 'Warm black · cantaloupe orange'],
 ] as const;
 
 function Settings() {
@@ -130,19 +135,19 @@ function Settings() {
     </section>
     <section><h3>Reading and resources</h3>
       <label className="setting-row"><span>Low resource mode<small>Smaller material cache and history overscan. Turns map and motion off.</small></span><input type="checkbox" checked={low} onChange={(e) => setLowResource(e.target.checked)} /></label>
-      <label className="setting-row"><span>Repository map<small>Static imports and recorded locations. No inferred execution flow.</small></span><input type="checkbox" checked={map} onChange={(e) => setMapVisible(e.target.checked)} /></label>
+      <label className="setting-row"><span>Repository map<small>Static imports and session locations. No inferred execution flow.</small></span><input type="checkbox" checked={map} onChange={(e) => setMapVisible(e.target.checked)} /></label>
       <label className="setting-row"><span>3D repository map<small>Spatial points and connections. Drag to orbit; Shift drag to pan; wheel to zoom. Depth is layout only.</small></span><input type="checkbox" checked={depth} onChange={e => setPresentationPreferences({ mapDepth: e.target.checked })} /></label>
       <label className="setting-row"><span>Slow background orbit<small>15 fps maximum. Resumes 12 seconds after manual camera movement; off in hidden tabs, low resource mode or reduced motion.</small></span><input type="checkbox" checked={orbit} disabled={!depth} onChange={e => setPresentationPreferences({ mapOrbit: e.target.checked })} /></label>
       <label className="setting-row"><span>Exposed reasoning<small>Display only; never unlocks private reasoning or changes model effort.</small></span><span className="settings-select"><select aria-label="Exposed reasoning detail" value={reasoningDetail} onChange={e => setPresentationPreferences({ reasoningDetail: e.target.value as 'expanded' | 'collapsed' | 'hidden' })}><option value="expanded">Full available detail</option><option value="collapsed">Collapsed</option><option value="hidden">Hide</option></select></span></label>
-      <label className="setting-row"><span>Relationship motion<small>Finite origin and outcome cues; captured text is always immediately readable.</small></span><input type="checkbox" checked={motion} onChange={(e) => setMotion(e.target.checked)} /></label>
+      <label className="setting-row"><span>Relationship motion<small>Finite origin and outcome cues; text is always immediately readable.</small></span><input type="checkbox" checked={motion} onChange={(e) => setMotion(e.target.checked)} /></label>
       <label className="setting-row"><span>Largest rendered document<small>Markdown files up to this size open as a formatted document; larger ones open as Source, which is always available. Bigger limits render more slowly. Files over 2 MiB are never read.</small></span><span className="settings-select"><select aria-label="Largest rendered document" value={documentSize} onChange={e => setDocumentSize(e.target.value as DocumentSize)}>{(Object.keys(DOCUMENT_SIZES) as DocumentSize[]).map(key => <option key={key} value={key}>{DOCUMENT_SIZES[key].label}</option>)}</select></span></label>
       <label className="setting-row"><span>Hover reading focus<small>After a short dwell, enlarge the real preview within the viewport without moving history. Escape restores it. Desktop pointer only.</small></span><input type="checkbox" checked={hoverReading} onChange={e => setHoverReading(e.target.checked)} /></label>
-      <label className="setting-row"><span>Notify when the agent needs me or finishes<small>{notify.permission === 'unsupported' ? 'This browser does not support notifications.' : notify.permission === 'denied' ? 'Blocked in your browser’s site settings; allow notifications there to turn this on.' : 'Only while this tab is hidden. Shows the session title and state, never captured content. The browser asks for permission when you turn this on.'}</small></span><input type="checkbox" checked={notify.enabled} disabled={notify.permission === 'unsupported' || notify.permission === 'denied'} onChange={e => void setNotifications(e.target.checked)} /></label>
+      <label className="setting-row"><span>Notify when the agent needs me or finishes<small>{notify.permission === 'unsupported' ? 'This browser does not support notifications.' : notify.permission === 'denied' ? 'Blocked in your browser’s site settings; allow notifications there to turn this on.' : 'Only while this tab is hidden. Shows the session title and state, never content. The browser asks for permission when you turn this on.'}</small></span><input type="checkbox" checked={notify.enabled} disabled={notify.permission === 'unsupported' || notify.permission === 'denied'} onChange={e => void setNotifications(e.target.checked)} /></label>
       <p className="muted small">Low resource mode sets economical defaults; you can explicitly re-enable map or motion. Your browser's reduced-motion preference always suppresses animated cues.</p>
     </section>
-    <section className="settings-secondary"><details><summary>Sequence diagnostics</summary><p className="muted small">Optional playback for inspecting captured event order. Ordinary reading uses scroll and prompt navigation.</p><button className="btn" onClick={() => { const app = useApp.getState(); app.set({ replayDiagnostics: true, settingsOpen: false }); app.togglePlay(); }}>Replay sequence</button></details></section>
+    <section className="settings-secondary"><details><summary>Sequence diagnostics</summary><p className="muted small">Optional playback of the order things happened. Ordinary reading uses scroll and prompt navigation.</p><button className="btn" onClick={() => { const app = useApp.getState(); app.set({ replayDiagnostics: true, settingsOpen: false }); app.togglePlay(); }}>Replay sequence</button></details></section>
     <section><h3>Your data stays here</h3><p className="muted">Passive capture observes journals independently. Explicitly submitted prompts can resume the selected native session after workspace consent and an idle-client acknowledgement; the native harness owns its normal writes. Imported evidence is copied and redacted before storage. There is no telemetry.</p><p className="muted small">Pattern redaction is best effort. Review sanitized exports before sharing them. Optional model explanations require a separate exact-payload consent; core reading works offline.</p><p className="small">{source?.kind === 'bundle' ? 'Offline replay bundle' : 'Local authenticated daemon'} · {config?.version ?? 'Drishya'}</p></section>
-    <section><h3>Keyboard</h3><p className="small">Read captured work with j / k, jump to edits with n / p, and press ? for the complete guide.</p><button className="btn" onClick={()=>{useApp.setState({settingsOpen:false});window.dispatchEvent(new Event('drishya-reading-help'));}}>Reading shortcuts</button><dl className="shortcut-list"><div><dt>Ctrl / Cmd K</dt><dd>Navigate workspace</dd></div><div><dt>Ctrl / Cmd Shift Enter</dt><dd>Expand and focus the prompt without sending</dd></div><div><dt>Alt W</dt><dd>Close the active Workspace file</dd></div><div><dt>/</dt><dd>Search captured work</dd></div><div><dt>Esc</dt><dd>Close the current reading space</dd></div><div><dt>X</dt><dd>Explore / leave repository</dd></div><div><dt>M</dt><dd>Toggle relationship motion</dd></div><div><dt>Space · ← · →</dt><dd>Play / step in explicit replay diagnostics</dd></div><div><dt>E · F</dt><dd>Next edit / failure in sequence replay</dd></div></dl></section>
+    <section><h3>Keyboard</h3><p className="small">Read the session with j / k, jump to edits with n / p, and press ? for the complete guide.</p><button className="btn" onClick={()=>{useApp.setState({settingsOpen:false});window.dispatchEvent(new Event('drishya-reading-help'));}}>Reading shortcuts</button><dl className="shortcut-list"><div><dt>Ctrl / Cmd K</dt><dd>Navigate workspace</dd></div><div><dt>Ctrl / Cmd Shift Enter</dt><dd>Expand and focus the prompt without sending</dd></div><div><dt>Alt W</dt><dd>Close the active Workspace file</dd></div><div><dt>/</dt><dd>Search this session</dd></div><div><dt>Esc</dt><dd>Close the current reading space</dd></div><div><dt>X</dt><dd>Explore / leave repository</dd></div><div><dt>M</dt><dd>Toggle relationship motion</dd></div><div><dt>Space · ← · →</dt><dd>Play / step in explicit replay diagnostics</dd></div><div><dt>E · F</dt><dd>Next edit / failure in sequence replay</dd></div></dl></section>
     </SettingsSections>
   </ReadingDialog>;
 }

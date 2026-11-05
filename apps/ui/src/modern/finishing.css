@@ -1,5 +1,5 @@
 /* Native controls keep their semantics; short state transitions never move evidence. */
-:root[data-ui-version=modern] .setting-row input[type=checkbox] {appearance:none;position:relative;flex:none;inline-size:36px;block-size:22px;margin:0;border:1px solid var(--line-3);border-radius:12px;background:var(--s3);cursor:pointer;}
+:root[data-ui-version=modern] .setting-row input[type=checkbox] {appearance:none;position:relative;flex:none;inline-size:36px;block-size:22px;margin:0;border:1px solid var(--line-3);border-radius:var(--round-lg);background:var(--s3);cursor:pointer;}
 :root[data-ui-version=modern] .setting-row input[type=checkbox]::before {content:'';position:absolute;inset:3px auto auto 3px;width:14px;height:14px;border-radius:50%;background:var(--t2);}
 :root[data-ui-version=modern] .setting-row input[type=checkbox]:checked {background:var(--focus);border-color:var(--focus);}
 :root[data-ui-version=modern] .setting-row input[type=checkbox]:checked::before {transform:translateX(14px);background:var(--bg);}

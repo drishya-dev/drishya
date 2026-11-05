@@ -14,7 +14,7 @@ async function open(page:Page,server:RunningServer,id:string,width:number){
   await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await openGitDestination(page, 'Git graph');
-  const dialog=page.getByRole('dialog',{name:'Git history',exact:true});
+  const dialog=page.getByRole('dialog',{name:'Git graph',exact:true});
   const approve=dialog.getByRole('button',{name:'Approve read-only Git',exact:true});
   await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
   try{await expect(dialog.getByRole('combobox',{name:'Read local Git branch'})).toBeEnabled({timeout:40_000});}
@@ -35,7 +35,7 @@ test.describe('branch selection fixture',()=>{
     app=new App(join(dir,'store'));id=(await app.ingest.importSource('claude-code',journal)).recordingId;server=await startServer({app,port:0,token:'synthetic-branches-ui'});
   });
   test.afterAll(async()=>{await server?.close();await app?.close();if(dir)remove(dir);});
-  for(const width of [1440,600])test(`reads topic commits and keeps captured links at ${width}px`,async({page})=>{
+  for(const width of [1440,600])test(`reads topic commits and keeps links at ${width}px`,async({page})=>{
     const before=git(root,'rev-parse','HEAD'),dialog=await open(page,server,id,width),picker=dialog.getByRole('combobox',{name:'Read local Git branch'});
     expect(await picker.locator('option').first().textContent()).toBe('main · checked out');
     if(width===600)await dialog.locator('.atlas-references>summary').click();

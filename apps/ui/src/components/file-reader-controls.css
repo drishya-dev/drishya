@@ -4,20 +4,20 @@
 :root[data-ui-version=modern] .file-reading-context .evidence-navigation { padding:0;border:0;flex:none; }
 :root[data-ui-version=modern] .file-reading-context .file-workspace-intro { padding:0;border:0;flex:1;min-width:160px; }
 :root[data-ui-version=modern] .file-evidence-toolbar { justify-content:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:10px; }
-:root[data-ui-version=modern] .file-evidence-toolbar>strong { margin-right:auto;font-size:12px; }
-:root[data-ui-version=modern] .file-evidence-toolbar .btn { font-size:12px;min-height:32px; }
+:root[data-ui-version=modern] .file-evidence-toolbar>strong { margin-right:auto;font-size:var(--text-xs); }
+:root[data-ui-version=modern] .file-evidence-toolbar .btn { font-size:var(--text-xs);min-height:var(--control-lg); }
 :root[data-ui-version=modern] .file-evidence-choice { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
 :root[data-ui-version=modern] .file-evidence-choice>label { flex:1;min-width:140px; }
 :root[data-ui-version=modern] .file-evidence-choice>label>span { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
-:root[data-ui-version=modern] .file-evidence-choice select { font-size:12px;min-height:34px; }
+:root[data-ui-version=modern] .file-evidence-choice select { font-size:var(--text-xs);min-height:34px; }
 :root[data-ui-version=modern] .file-evidence-choice .captured-source-comparison { margin:0; }
 :root[data-ui-version=modern] .file-evidence-material { margin-top:8px;padding:8px;border:0;background:transparent; }
 :root[data-ui-version=modern] :is(.file-evidence-toolbar,.desk-document) .desk-options .import-context { margin:0;padding:6px 0;border:0; }
-:root[data-ui-version=modern] :is(.file-evidence-toolbar,.desk-document) .desk-options .import-context button { font-size:12px; }
-:root[data-ui-version=modern] .file-evidence-choice .captured-source-comparison [role=alert] { max-width:280px;font-size:12px; }
+:root[data-ui-version=modern] :is(.file-evidence-toolbar,.desk-document) .desk-options .import-context button { font-size:var(--text-xs); }
+:root[data-ui-version=modern] .file-evidence-choice .captured-source-comparison [role=alert] { max-width:280px;font-size:var(--text-xs); }
 .file-timeline-steps { display:flex;align-items:center;gap:6px;margin-bottom:6px; }
-:root[data-ui-version=modern] .file-timeline-steps .btn { font-size:12px;min-height:32px; }
-:root[data-ui-version=modern] .file-timeline-steps>span { font-size:11px;min-width:5ch;text-align:center;font-variant-numeric:tabular-nums; }
+:root[data-ui-version=modern] .file-timeline-steps .btn { font-size:var(--text-xs);min-height:var(--control-lg); }
+:root[data-ui-version=modern] .file-timeline-steps>span { font-size:var(--text-2xs);min-width:5ch;text-align:center;font-variant-numeric:tabular-nums; }
 @media(max-width:600px) {
  :root[data-ui-version=modern] .file-reading-context { gap:4px 10px;padding:6px 12px; }
  :root[data-ui-version=modern] .file-evidence-toolbar>strong { flex-basis:100%; }
@@ -30,8 +30,8 @@
 /* AUDIT-1: the file is the title, one toolbar row sits above the material, and the list says what differs between steps. */
 :root[data-ui-version=modern] .file-workspace>header { padding-block:12px; }
 .file-heading { display:flex;align-items:baseline;gap:10px;min-width:0; }
-.file-heading>strong { font:550 15px/1.4 var(--sans);color:var(--t1);white-space:nowrap; }
-.file-heading>small { font:12px/1.4 var(--sans);color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
+.file-heading>strong { font:var(--weight-medium) var(--text-md)/1.4 var(--sans);color:var(--t1);white-space:nowrap; }
+.file-heading>small { font:var(--text-xs)/1.4 var(--sans);color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
 :root[data-ui-version=modern] .file-reading-context:not(:has(*)) { display:none; }
 :root[data-ui-version=modern] .file-evidence-reading { display:flex;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:4px 6px;padding:10px 16px; }
 :root[data-ui-version=modern] .file-evidence-reading>.file-timeline-steps { order:-1;margin:0; }
@@ -40,15 +40,50 @@
 :root[data-ui-version=modern] .file-evidence-reading>.file-evidence-toolbar:nth-of-type(2) { order:0;margin-left:auto; }
 :root[data-ui-version=modern] .file-evidence-reading>.file-evidence-toolbar:nth-of-type(2)+* { margin-left:0; }
 :root[data-ui-version=modern] .file-evidence-reading>:not(.file-evidence-toolbar,.file-timeline-steps) { order:2;flex:1 0 100%;min-width:0; }
-:root[data-ui-version=modern] .file-evidence-choice select { background:transparent;border:0;padding-inline:0;font:500 13px/1.5 var(--sans);color:var(--t1); }
+:root[data-ui-version=modern] .file-evidence-choice select { background:transparent;border:0;padding-inline:0;font:var(--weight-medium) var(--text-sm)/1.5 var(--sans);color:var(--t1); }
 :root[data-ui-version=modern] .file-evidence-material .snapshot-provenance { display:none; }
 :root[data-ui-version=modern] .file-trail { padding:10px; }
 :root[data-ui-version=modern] .file-trail-item { position:relative;margin:0; }
 :root[data-ui-version=modern] .file-trail .file-op { display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 8px;align-items:baseline;padding:7px 8px; }
-:root[data-ui-version=modern] .file-trail .file-op-title { margin:0;font:12px/18px var(--sans);color:var(--t1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
-:root[data-ui-version=modern] .file-trail .file-op small { grid-column:2;margin:0;font:11px/16px var(--sans); }
-:root[data-ui-version=modern] .file-trail .file-inspect { position:absolute;right:4px;bottom:5px;padding:0 4px;font-size:11px;background:var(--s1);opacity:0; }
+:root[data-ui-version=modern] .file-trail .file-op-title { margin:0;font:var(--text-xs)/18px var(--sans);color:var(--t1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }
+:root[data-ui-version=modern] .file-trail .file-op small { grid-column:2;margin:0;font:var(--text-2xs)/16px var(--sans); }
+:root[data-ui-version=modern] .file-trail .file-inspect { position:absolute;right:4px;bottom:5px;padding:0 4px;font-size:var(--text-2xs);background:var(--s1);opacity:0; }
 :root[data-ui-version=modern] .file-trail-item:is(:hover,:focus-within)>.file-inspect { opacity:1; }
 :root[data-ui-version=modern] :is(.file-evidence-material,.read-material) .captured-result-views>.material-context { display:none; }
 :root[data-ui-version=modern] .reading-window-actions .desk-options>summary>span { display:none; }
-:root[data-ui-version=modern] .current-file-reader .document-limit-note { flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--line);font:11px/1.5 var(--sans);color:var(--t3); }
+:root[data-ui-version=modern] .current-file-reader .document-limit-note { flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--line);font:var(--text-2xs)/1.5 var(--sans);color:var(--t3); }
+
+/* UI-8, file work. The file is the window's title, the rail is what happened to it, and the right reads one step:
+   one row of controls, then the material filling what is left. */
+:root[data-ui-version=modern] .file-workspace .file-evidence-reading { display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto minmax(0,1fr);align-items:center;gap:8px 12px;padding:10px 16px 12px;min-height:0;overflow:hidden; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-actions>.file-evidence-toolbar { display:contents; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-actions { grid-column:3;grid-row:1;display:flex;flex-wrap:nowrap;align-items:center;gap:4px;margin:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-reading>.file-timeline-steps { order:0;grid-column:2;grid-row:1;margin:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired),:root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired)>.file-evidence-column { display:contents; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-choice { grid-column:1;grid-row:1;min-width:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-material { grid-column:1/-1;grid-row:2;align-self:stretch; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-columns.paired { grid-column:1/-1;grid-row:2;min-height:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-material { display:flex;flex-direction:column;min-height:0;margin:0;padding:0;overflow:hidden; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-material>.artifact-reader { flex:1;display:flex;flex-direction:column;min-height:0; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-material .diff-scroll { flex:1;min-height:0;max-height:none; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-choice select { width:100%;min-height:var(--control-md);padding-inline:0;border-color:transparent;background:none;appearance:none;color:var(--t1);font-weight:var(--weight-medium);text-overflow:ellipsis; }
+:root[data-ui-version=modern] .file-workspace .file-evidence-choice select:is(:hover,:focus-visible) { border-color:var(--line); }
+:root[data-ui-version=modern] .file-workspace .file-filter { padding-inline:8px;border-color:transparent;border-bottom-color:var(--line);border-radius:0;background:transparent;font-size:var(--text-xs); }
+/* A whole new file is text, not a change against anything: the sign says so without flooding the page. */
+:root[data-ui-version=modern] .diff-reader[data-new-file] .diff .add { background:transparent; }
+@media(max-width:899px) {
+ :root[data-ui-version=modern] .file-workspace .file-evidence-reading { grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr); }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-reading>.file-timeline-steps { grid-column:1;grid-row:2; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-actions { grid-column:2;grid-row:2; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-choice { grid-column:1/-1; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-material,:root[data-ui-version=modern] .file-workspace .file-evidence-columns.paired { grid-row:3; }
+}
+:root[data-ui-version=modern] .file-workspace>header h2 { display:flex;align-items:center;gap:10px;min-width:0; }
+:root[data-ui-version=modern] .file-workspace>header .evidence-navigation { padding:0;gap:2px; }
+:root[data-ui-version=modern] .file-workspace>header .evidence-navigation button { width:var(--control-sm);min-width:var(--control-sm);min-height:var(--control-sm);padding:0; }
+.file-heading:focus { outline:none; }
+/* UI-8: a file Workspace cannot read says why once, with its step arrows on the same row; the recorded material follows. */
+:root[data-ui-version=modern] .captured-fallback-head { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line); }
+:root[data-ui-version=modern] .captured-fallback-head>p { margin:0;color:var(--t2);font:var(--text-xs)/1.6 var(--sans); }
+:root[data-ui-version=modern] .captured-fallback-head .evidence-navigation { padding:0;gap:2px; }
+:root[data-ui-version=modern] .captured-file-fallback .file-reading-context:empty { display:none; }

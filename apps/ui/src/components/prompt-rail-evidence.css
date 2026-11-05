@@ -6,9 +6,9 @@
 .connected-workspace .complete-prompt-rail.turn-evidence-rail button[aria-current=location]::before {
  content:""; display:block; position:absolute; left:0; top:7px; width:3px; height:3px; border-radius:50%; background:var(--t1);
 }
-.prompt-rail-ledger { margin-top:8px; padding-top:7px; border-top:1px solid var(--line); color:var(--t2); font:11px/17px var(--sans); }
+.prompt-rail-ledger { margin-top:8px; padding-top:7px; border-top:1px solid var(--line); color:var(--t2); font:var(--text-2xs)/17px var(--sans); }
 .prompt-rail-ledger>span+span::before { content:' · '; color:var(--t3); }
 .prompt-rail-ledger .bad { color:var(--fail); }.prompt-rail-ledger .good { color:var(--pass); }
-.prompt-rail-preview>.prompt-rail-ledger>small,.prompt-rail-preview>small,.prompt-rail-preview>time { font-size:11px; }
+.prompt-rail-preview>.prompt-rail-ledger>small,.prompt-rail-preview>small,.prompt-rail-preview>time { font-size:var(--text-2xs); }
 
 .prompt-rail-preview.prompt-evidence-preview { width:min(300px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; }

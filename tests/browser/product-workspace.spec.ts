@@ -68,7 +68,7 @@ test('map file labels are keyboard reading targets beneath header clearance', as
 });
 
 for (const experience of ['classic', 'studio', 'modern']) {
-  test(`${experience}: long captured changes remain scrollable and hover expands both dimensions`, async ({ page }) => {
+  test(`${experience}: long changes remain scrollable and hover expands both dimensions`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
     const op = [...sample.projection.operations].reverse().find((item: { detail: { kind: string } }) => item.detail.kind === 'edit');
@@ -109,7 +109,7 @@ test('retained design backups remain addressable but are absent from product set
   await expect(page.locator('.crown-title')).toContainText(title!);
 });
 
-test('recording search separates captured work from indexed file navigation', async ({ page }) => {
+test('recording search separates work from indexed file navigation', async ({ page }) => {
   await page.goto(demoUrl());
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   const search = page.getByRole('dialog', { name: 'Search this recording' });
@@ -127,7 +127,7 @@ test('recording search separates captured work from indexed file navigation', as
   await expect(page.locator('.search-results')).toContainText('No matches at this replay step');
 });
 
-test('failed shell preview surfaces buried captured errors and preserves the full preview', async ({ page }) => {
+test('failed shell preview surfaces buried errors and preserves the full preview', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
   const shell = sample.projection.operations.find((op: { detail: { kind: string } }) => op.detail.kind === 'shell');
   shell.status = 'error'; shell.detail.exitCode = 1;
@@ -151,14 +151,14 @@ test('first-visit evidence review opens exact file work without a reading mark a
   await page.goto(demoUrl());
   await page.getByRole('button', { name: 'Review work', exact: true }).click();
   const review = page.getByRole('dialog', { name: 'Review work', exact: true });
-  await expect(review.getByRole('region', { name: 'Files with captured changes' })).toBeVisible();
+  await expect(review.getByRole('region', { name: 'Files with changes' })).toBeVisible();
   await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
   await expect(review).toContainText('Whole session');
   await page.screenshot({ path: resolve('.local/evidence-review-desktop.png') });
   await review.getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
   const file = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await expect(file).toBeVisible();
-  await expect(file).toContainText('Historical evidence');
+  await expect(file).toContainText('File history');
   await expect(file).toContainText('Test runs after this change');
   await expect(file.locator('.file-evidence-material')).toContainText('== null');
   await page.screenshot({ path: resolve('.local/evidence-change-reader.png') });
@@ -410,7 +410,7 @@ test('substantial external results retain structured evidence and adapt to narro
   await page.setViewportSize({ width: 1440, height: 900 });
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
   const op = sample.projection.operations.find((op: { detail: { kind: string } }) => op.detail.kind === 'mcp');
-  const records = Array.from({ length: 5 }, (_, i) => ({ path: `synthetic/file-${i}.ts`, note: `Recorded result ${i}: ${'preserve this captured evidence '.repeat(12)}`, value: i === 0 ? null : false }));
+  const records = Array.from({ length: 5 }, (_, i) => ({ path: `synthetic/file-${i}.ts`, note: `Recorded result ${i}: ${'preserve this evidence '.repeat(12)}`, value: i === 0 ? null : false }));
   op.detail.resultPreview = JSON.stringify(records);
   await page.route('**/demo/bundle.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
   await page.goto(demoUrl());
@@ -430,9 +430,9 @@ test('substantial external results retain structured evidence and adapt to narro
   await expect(external.locator('tbody tr')).toHaveCount(5);
   await expect(external.locator('tbody')).toContainText('synthetic/file-4.ts');
   await expect(external.locator('tbody')).toContainText('null');
-  await external.getByText('Original captured preview', { exact: true }).press('Enter');
-  await expect(external.locator('.result-original pre')).toHaveText(op.detail.resultPreview);
-  await external.getByText('Original captured preview', { exact: true }).press('Enter');
+  await external.locator('.with-original').getByRole('button', { name: 'Original', exact: true }).press('Enter');
+  await expect(external.locator('.with-original .original-text')).toHaveText(op.detail.resultPreview);
+  await external.locator('.with-original').getByRole('button', { name: 'Original', exact: true }).press('Enter');
   await external.locator('.op-body').evaluate((el) => { el.scrollTop = 0; });
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -537,10 +537,10 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   const file = page.locator('.spine-file[title="src/checkout/guard.ts"]');
   await file.click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
-  await expect(dialog.getByRole('region', { name: 'File evidence' })).toContainText('if (!cart.total)');
+  await expect(dialog.getByRole('region', { name: 'File history' })).toContainText('if (!cart.total)');
   await dialog.getByRole('button', { name: 'Compare evidence' }).click();
-  await expect(dialog.getByLabel('Second evidence')).toBeVisible();
-  await expect(dialog.locator('.file-evidence-columns')).toContainText('Captured patch');
+  await expect(dialog.getByLabel('Second step')).toBeVisible();
+  await expect(dialog.locator('.file-evidence-columns')).toContainText('Patch');
   await expect(dialog.locator('.file-evidence-columns')).toContainText('cart.total == null');
   await expect(dialog.getByRole('button', { name: 'Copy derived page', exact: true })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/product-file-comparison.png') });
@@ -550,8 +550,8 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   const linkBounds = (await first.locator('[data-file-op]').boundingBox())!;
   expect(buttonBounds.y + buttonBounds.height).toBeLessThanOrEqual(linkBounds.y + 1);
   await dialog.getByLabel('Filter actions on this file').fill('not-a-recorded-action');
-  await expect(dialog).toContainText('No matching captured actions');
-  await expect(dialog.getByLabel('First evidence')).toHaveCount(0);
+  await expect(dialog).toContainText('No matching actions');
+  await expect(dialog.getByLabel('First step')).toHaveCount(0);
   await dialog.getByLabel('Filter actions on this file').fill('');
   const action = dialog.locator('[data-file-op]').first();
   const id = await action.getAttribute('data-file-op');
@@ -572,7 +572,7 @@ test('agent ownership shares one history, and replay file choices obey the histo
   await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
   const overview = page.getByRole('region', { name: 'Agent comparison' });
   await expect(overview).toContainText('counts and files describe the work shown in this view');
-  await expect(overview).toContainText('Captured child of claude-opus-5');
+  await expect(overview).toContainText('Child of claude-opus-5');
   await overview.getByRole('button').last().click();
   await expect(page.getByRole('button', { name: 'Clear focus' })).toBeVisible();
   await page.getByRole('button', { name: 'Clear focus' }).click();
@@ -598,7 +598,7 @@ test('distant file moments compare across bounded trail pages', async ({ page })
   await page.locator('.spine-file[title="src/distant.ts"]').click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/distant.ts' });
   await expect(dialog.locator('.file-trail-item')).toHaveCount(24);
-  const single = dialog.getByLabel('First evidence');
+  const single = dialog.getByLabel('First step');
   const initial = await single.inputValue();
   await dialog.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(dialog.locator('.file-trail-item')).toHaveCount(2);
@@ -607,13 +607,13 @@ test('distant file moments compare across bounded trail pages', async ({ page })
   await dialog.getByRole('button', { name: 'Previous', exact: true }).click();
   await expect(dialog.locator('.file-trail-item')).toHaveCount(24);
   await dialog.getByRole('button', { name: 'Compare evidence' }).click();
-  const first = dialog.getByLabel('First evidence');
+  const first = dialog.getByLabel('First step');
   const selected = await first.inputValue();
   await dialog.getByRole('button', { name: 'Show actions', exact: true }).click();
   await dialog.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(dialog.locator('.file-trail-item')).toHaveCount(2);
   await expect(first).toHaveValue(selected);
-  const second = dialog.getByLabel('Second evidence');
+  const second = dialog.getByLabel('Second step');
   const options = await second.locator('option').evaluateAll((items) => items.map((item) => (item as HTMLOptionElement).value));
   await second.selectOption(options[1]!);
   await expect(dialog.locator('.file-evidence-column').first()).toContainText('captured distant moment 0');
@@ -628,7 +628,7 @@ test('a sanitized export opens as read-only evidence and can return to the local
   const replay = new URL('/', server.launchUrl);
   replay.searchParams.set('bundle', new URL(exportPath!, server.launchUrl).href);
   await page.goto(replay.href);
-  await expect(page.locator('.workspace-context')).toContainText('Offline evidence');
+  await expect(page.locator('.workspace-context')).toContainText('Offline session');
   await expect(page.getByRole('button', { name: 'Watch live', exact: true })).toHaveCount(0);
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
@@ -639,7 +639,7 @@ test('a sanitized export opens as read-only evidence and can return to the local
   await expect(page.getByRole('heading', { name: 'Sessions on this machine' })).toBeVisible();
 });
 
-test('view and appearance changes keep the same captured passage under the reader', async ({ page }) => {
+test('view and appearance changes keep the same passage under the reader', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(demoUrl());
   const history = page.locator('.history');
@@ -701,7 +701,7 @@ test('history activity timeline opens recorded failures and edits; named palette
   await page.goto(`${demoUrl()}&experience=classic`);
   await page.getByLabel('More workspace options').click();
   await page.locator('.prompt-menu > summary').click();
-  const timeline = page.getByRole('group', { name: 'Recorded activity' });
+  const timeline = page.getByRole('group', { name: 'Activity' });
   await expect(timeline).toContainText('2 edits · 1 failed · 2 passed');
   await timeline.getByRole('button', { name: 'Next failure' }).click();
   const failing = page.locator('article.op.selected');
@@ -735,12 +735,12 @@ test('history activity timeline opens recorded failures and edits; named palette
 });
 
 
-test('prompt chapters review captured work without movie controls and resize detail by keyboard', async ({ page }) => {
+test('prompt chapters review work without movie controls and resize detail by keyboard', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   await page.goto(demoUrl());
   await page.getByLabel('More workspace options').click();
   await page.locator('.prompt-menu > summary').click();
-  const navigation = page.getByRole('navigation', {name:'Captured prompts'});
+  const navigation = page.getByRole('navigation', {name:'Prompts'});
   await expect(navigation.locator('.prompt-chapters button').first()).toBeVisible();
   await expect(page.getByRole('button',{name:'Play',exact:true})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Pause',exact:true})).toHaveCount(0);
@@ -785,7 +785,7 @@ test('a write with an after-state and no patch opens its actual source instead o
   await expect(action).toContainText('cart.total == null');
   await action.getByRole('button',{name:/Expand/}).click();
   await expect(action.locator('.artifact-reader')).toContainText('cart.total == null');
-  await expect(action).not.toContainText('No change captured');
+  await expect(action).not.toContainText('No change recorded');
 });
 
 
@@ -827,7 +827,7 @@ test('paged prompt rail spans the full session and loads an older chapter on sel
   await expect.poll(async () => rail.locator('.prompt-rail-tick').evaluateAll(nodes => nodes.slice(0, 3).map(node => Math.round(node.getBoundingClientRect().width)))).toEqual([8, 8, 8]);
 });
 
-test('prompt marks jump to captured prompt starts without starting a native turn', async ({ page }) => {
+test('prompt marks jump to prompt starts without starting a native turn', async ({ page }) => {
   await page.goto(demoUrl());
   const rail = page.getByRole('navigation', { name: 'Prompt positions in history' });
   await rail.getByRole('button').first().click();
@@ -989,7 +989,7 @@ test('spatial camera orbits both axes and resumes after manual navigation; reduc
 });
 
 
-test('Studio working set opens captured changes and keeps explorer an explicit alternative', async ({ page }) => {
+test('Studio working set opens changes and keeps explorer an explicit alternative', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${demoUrl()}&experience=studio`);
   const sources = page.getByRole('complementary', { name: 'Working files', exact: true });
@@ -1004,7 +1004,7 @@ test('Studio working set opens captured changes and keeps explorer an explicit a
   await sources.getByRole('button', { name: 'Show session folders' }).click();
   await expect(page.getByRole('complementary', { name: 'Session folders' })).toBeVisible();
   await expect(sources.getByRole('heading', { name: 'Working set' })).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Evidence desk' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Work desk' })).toBeVisible();
 });
 
 test('Studio keeps navigation, review and the canvas usable across aspect ratios', async ({ page }) => {
@@ -1019,7 +1019,7 @@ test('Studio keeps navigation, review and the canvas usable across aspect ratios
     const review = page.getByRole('button', { name: 'Review work', exact: true }).filter({ visible: true });
     await review.click();
     const dialog = page.getByRole('dialog', { name: 'Review work' });
-    await expect(dialog.getByRole('region', { name: 'Files with captured changes' })).toBeVisible();
+    await expect(dialog.getByRole('region', { name: 'Files with changes' })).toBeVisible();
     await dialog.getByRole('button', { name: 'Close Review work' }).click();
     if (width! <= 820) {
       await page.getByRole('button', { name: 'Tools', exact: true }).click();

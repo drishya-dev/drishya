@@ -38,24 +38,24 @@ async function choose(page:Page,identity:string,keyboard=false){
  const row=page.locator(`[data-spine-path="${identity}"]`);if(keyboard)await row.press('Enter');else await row.click();
 }
 for(const width of [600,1440]){
- test(`main alias keeps captured identity through explicit current reading and back at ${width}px`,async({page})=>{
+ test(`main alias keeps identity through explicit current reading and back at ${width}px`,async({page})=>{
   const before=app.projection(id).files.map(file=>file.path);
   await open(page,width);await choose(page,alias);const captured=page.locator('.file-workspace');
   await expect(captured).toContainText('captured main source');await expect(page.locator('.current-file-reader')).toHaveCount(0);
   const enable=captured.getByRole('button',{name:'Enable workspace reading',exact:true});
-  const read=captured.getByRole('button',{name:'Read file on disk',exact:true});await expect(enable.or(read)).toBeVisible();
+  const read=captured.getByRole('button',{name:'Read file on disk',exact:true});if(!await enable.isVisible()&&!await read.isVisible())await captured.getByLabel('File actions',{exact:true}).click();await expect(enable.or(read)).toBeVisible();
   if(await enable.isVisible())await enable.click();else await read.click();
   const current=page.locator('.current-file-reader');await expect(current.locator('.current-file-code')).toContainText('currentMain');
-  const recorded=current.getByRole('button',{name:'Recorded work on this file',exact:true});
+  const recorded=current.getByRole('button',{name:'Agent work on this file',exact:true});
   if(!await recorded.isVisible())await current.getByLabel('Reading options',{exact:true}).press('Enter');
   await recorded.click();
-  await expect(captured).toContainText('captured main source');await expect(captured).not.toContainText('No matching captured actions.');
-  await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
+  await expect(captured).toContainText('captured main source');await expect(captured).not.toContainText('No matching actions.');
+  if(!await captured.getByRole('button',{name:'Read file on disk',exact:true}).isVisible())await captured.getByLabel('File actions',{exact:true}).click();await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
   await expect(current.locator('.current-file-code')).toContainText('currentMain');
-  if(width===1440){await choose(page,alias);await page.locator(`[data-spine-path="${alias}"]`).dblclick();await expect(current.locator(`[data-peek-path="${path}"]`)).not.toHaveClass(/preview/);await current.getByRole('button',{name:'Recorded work on this file',exact:true}).click();await expect(captured).toContainText('captured main source');}
+  if(width===1440){await choose(page,alias);await page.locator(`[data-spine-path="${alias}"]`).dblclick();await expect(current.locator(`[data-peek-path="${path}"]`)).not.toHaveClass(/preview/);await current.getByRole('button',{name:'Agent work on this file',exact:true}).click();await expect(captured).toContainText('captured main source');}
   expect(app.projection(id).files.map(file=>file.path)).toEqual(before);expect(before).toContain(alias);expect(before).toContain(other);
  });
- test(`approved Files alias opens Workspace with Enter and outside root stays captured at ${width}px`,async({page})=>{
+ test(`approved Files alias opens Workspace with Enter and outside root stays at ${width}px`,async({page})=>{
   await open(page,width);await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
   const desk=page.getByRole('region',{name:'Developer workspace',exact:true});const approve=desk.getByRole('button',{name:'Approve workspace reading',exact:true});
   await expect(approve.or(desk.getByRole('tablist'))).toBeVisible();if(await approve.isVisible())await approve.click();

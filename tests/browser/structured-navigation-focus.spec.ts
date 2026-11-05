@@ -12,14 +12,14 @@ test.afterAll(async()=>{await server.close();await app.close();if(!resolve(dir).
 for(const width of [1440,600])test(`Explore in tree focuses the selected late container at ${width}px`,async({page})=>{
  await page.setViewportSize({width,height:900});
  const sample=JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'),'utf8')),op=sample.projection.operations.find((item:{kind:string})=>item.kind==='mcp');op.artifactIds=[];
- const raw=JSON.stringify({items:Array.from({length:500},(_,id)=>({id,detail:id===499?{label:'last captured record',value:'literal'}:null}))});
+ const raw=JSON.stringify({items:Array.from({length:500},(_,id)=>({id,detail:id===499?{label:'last record',value:'literal'}:null}))});
  op.detail={kind:'mcp',server:'records',tool:'list',input:{},resultPreview:raw};
  await page.route('**/demo/bundle.json',route=>route.fulfill({json:sample}));await page.goto(new URL('/?demo&experience=modern&motion=0',server.launchUrl).href);
  await expect(page.locator('.history')).toBeVisible();await pointAtHistory(page);await page.mouse.wheel(0,-100000);const card=page.locator(`article[data-op-id="${op.id}"]`);await card.scrollIntoViewIfNeeded();const trigger=card.getByRole('button',{name:/^(Open larger|Inspect data)$/});await trigger.press('Enter');
- const dialog=page.getByRole('dialog',{name:'Captured data',exact:true}),viewport=dialog.locator('.data-viewport');await expect(dialog.getByRole('table')).toBeVisible();
+ const dialog=page.getByRole('dialog',{name:'Data',exact:true}),viewport=dialog.locator('.data-viewport');await expect(dialog.getByRole('table')).toBeVisible();
  await viewport.evaluate(element=>{element.scrollTop=element.scrollHeight;element.scrollLeft=element.scrollWidth;});await dialog.getByRole('button',{name:'Object · 2',exact:true}).click();
  await expect(dialog.getByRole('region',{name:'Selected data value',exact:true})).toContainText('/items/499/detail');const explore=dialog.getByRole('button',{name:'Explore in tree',exact:true});await explore.focus();await page.keyboard.press('Enter');
  const selected=dialog.locator('[role=treeitem][aria-selected=true]');await expect(selected).toBeFocused();await expect(selected).toContainText('detail');
- expect(await dialog.getByRole('treeitem').count()).toBeLessThan(29);await page.keyboard.press('ArrowRight');await expect(dialog.locator('[role=treeitem][aria-selected=true]')).toContainText('label');await expect(dialog.getByRole('region',{name:'Selected data value',exact:true})).toContainText('last captured record');
+ expect(await dialog.getByRole('treeitem').count()).toBeLessThan(29);await page.keyboard.press('ArrowRight');await expect(dialog.locator('[role=treeitem][aria-selected=true]')).toContainText('label');await expect(dialog.getByRole('region',{name:'Selected data value',exact:true})).toContainText('last record');
  await page.screenshot({path:resolve(`.local/structured-navigation-${width}.png`)});await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
 });

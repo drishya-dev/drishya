@@ -9,7 +9,7 @@ test.beforeAll(async()=>{
   const count=[2,12,80][turn]??0;if(!count)continue;
   const content=Array.from({length:count},(_,n)=>({type:'tool_use',id:`t-${turn}-${n}`,name:turn===2&&n===0?'Write':'Bash',input:turn===2&&n===0?{file_path:'src/created.ts',content:'export const created = true;\n'}:{command:`echo ${turn}-${n}`}}));
   rows.push({type:'assistant',uuid:`a-${turn}`,sessionId,message:{id:`a-${turn}`,role:'assistant',content}});
-  rows.push({type:'user',uuid:`r-${turn}`,sessionId,message:{role:'user',content:content.map((tool,n)=>({type:'tool_result',tool_use_id:tool.id,content:'Captured fixture result',is_error:turn===1&&n===0}))}});
+  rows.push({type:'user',uuid:`r-${turn}`,sessionId,message:{role:'user',content:content.map((tool,n)=>({type:'tool_result',tool_use_id:tool.id,content:'Fixture result',is_error:turn===1&&n===0}))}});
  }
  writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');app=new App(join(dir,'store'));id=(await app.ingest.importSource('claude-code',journal)).recordingId;server=await startServer({app,port:0});
 });
@@ -18,7 +18,7 @@ test.beforeEach(async({page})=>{
  let first=true;await page.route('**/v1/working-locations',async route=>{if(first&&route.request().method()==='GET'){first=false;await page.request.delete(route.request().url(),{headers:{'content-type':'application/json'}});}await route.continue();});
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/#/r/${id}`);
 });
-test('rail ticks are uniform and plain at rest; the captured ledger appears on hover',async({page})=>{
+test('rail ticks are uniform and plain at rest; the ledger appears on hover',async({page})=>{
  const rail=page.getByRole('navigation',{name:'Prompt positions in history'});await expect(rail).toBeVisible();await rail.focus();await page.keyboard.press('Home');
  const first=rail.getByRole('button',{name:'Go to prompt: Rail turn 0',exact:true});await expect(first).toHaveAttribute('data-operation-count','2');
  const failure=rail.getByRole('button',{name:'Go to prompt: Rail turn 1',exact:true}),edited=rail.getByRole('button',{name:'Go to prompt: Rail turn 2',exact:true});
@@ -28,7 +28,7 @@ test('rail ticks are uniform and plain at rest; the captured ledger appears on h
  const widths=await rail.locator('.prompt-rail-tick').evaluateAll(ticks=>ticks.map(tick=>Math.round(tick.getBoundingClientRect().width)));expect(new Set(widths).size).toBe(1);
  await failure.hover();await expect(page.locator('.prompt-rail-ledger')).toContainText('12 captured operations');await expect(page.locator('.prompt-rail-ledger')).toContainText('1 failed');
  await edited.hover();await expect(page.locator('.prompt-rail-ledger')).toContainText('80 captured operations');await expect(page.locator('.prompt-rail-ledger')).toContainText('edited 1 file');
- await expect(edited).toHaveAttribute('aria-description',/80 captured operations/);
+ await expect(edited).toHaveAttribute('aria-description',/80 operations/);
  await page.screenshot({path:'.local/turn3-ledger.png'});
 });
 test('full rail remains virtualized, keyboard addressable and readable at supported desktop widths',async({page})=>{

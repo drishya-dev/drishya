@@ -6,7 +6,7 @@ const captured:ArtifactSlice={artifact:{id:'a',kind:'excerpt',range:{start:2,end
 const disk:CurrentFile={path:'a.ts',scope:'current-workspace',text:'one\nnew2\nnew3\nfour',start:0,totalLines:4,returnedLines:4,hasMore:false,redacted:false,modifiedAt:'now'};
 const excerpt=(text:string,start:number):ArtifactSlice=>({...captured,text,returnedLines:text.split('\n').length,artifact:{...captured.artifact,range:{start,end:start+text.split('\n').length-1}}});
 const onDisk=(text:string):CurrentFile=>({...disk,text,totalLines:text.split('\n').length,returnedLines:text.split('\n').length});
-it('keeps the same line numbers when none of the captured lines remain, and says so',()=>{expect(capturedDiskPair(captured,disk)).toEqual({before:'old2\nold3',after:'new2\nnew3',label:'Captured lines 2–3',afterLabel:'Current disk · same line numbers, none of these lines were found'});});
+it('keeps the same line numbers when none of the lines remain, and says so',()=>{expect(capturedDiskPair(captured,disk)).toEqual({before:'old2\nold3',after:'new2\nnew3',label:'Lines 2–3',afterLabel:'Current disk · same line numbers, none of these lines were found'});});
 it('finds a passage that moved, so a shifted file shows no change',()=>{
   const pair=capturedDiskPair(excerpt('alpha\nbeta\ngamma',2),onDisk('zero\none\ntwo\nthree\nalpha\nbeta\ngamma\nend'));
   expect(pair).toMatchObject({before:'alpha\nbeta\ngamma',after:'alpha\nbeta\ngamma',afterLabel:'Current disk · lines 5–7'});

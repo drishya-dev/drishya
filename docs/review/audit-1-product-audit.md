@@ -151,6 +151,21 @@ Clean. The theme grid clips its last card at 900 px by design of the scroller. `
 
 493 distinct interface strings say `captured`, `evidence`, `recorded` or `derived`. The doctrine that captured differs from derived is about what the product may claim; it was never a rule that the word must appear on screen. Everything in the product is captured, so the word carries nothing, and a screen full of it reads like a legal notice. This pass fixed the strings seen at rest on the main path. The whole sweep touches most specs, and is its own item (UI-21).
 
+**Done by UI-21, 2 November.** 477 strings carried a word; about 350 changed. A name drops the word: `Captured commands` is `Commands`. A sentence that separates the session from today's file says what the agent saw: `Its captured material is shown below` is `What the agent saw is shown below`.
+
+**What was kept, and why:**
+
+| Kept | Why |
+|---|---|
+| `not recorded`, `No … recorded` | The one word for an absence. It is a claim about the harness: the record does not hold this. |
+| `Codex recorded …`, `the harness recorded …` | Says who wrote the fact, and that it came from them. |
+| `Capture gaps`, `capture continues`, `Local capture. No telemetry.` | Capture is the activity here, not a modifier on a noun. |
+| `Computed by Drishya …`, `· computed`, `formatted by Drishya` | Replaces `derived`: captured differs from computed, and the reader is told so. |
+| `Recorded order, not wall-clock time.` and the tooltip on a later run | A limit on what the order means. |
+| `Not established by the evidence` | A limit on what can be claimed. |
+| `review-packet.ts`, `native-return.ts` | Text handed to other agents and reviewers, where provenance is the content. |
+| Spec fixtures | `Captured step 1` and `# Captured document` are fixture text, not product language. |
+
 ## Foundations
 
 Measured on one History screen: 11 font sizes including `9.17`, `11.67` and `12.5`; 11 corner radii; 20 button heights. These are the UI-4b overrides stacked up (`atelier`, `ink`, `polish`, `product`, `stage`, `studio`, `classic`). This pass added to that pile, on purpose, so it could move fast; the token sheet comes first in UI-8 and absorbs these rules.
@@ -213,7 +228,7 @@ Two genuine Claude Code runs on a throwaway repository (`live-repo`, haiku, abou
 |---|---|---|---|
 | M1 | Saved moments ran flush against the dialog edge. | Medium | Fixed. |
 | M2 | `Captured action · observation 10832`; a two-clause scope sentence on Review questions. | Low | Fixed: `Step 10832`, one plain sentence. |
-| M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20 both sit on one row of the open step. The two lists remain: UI-25. |
+| M3 | Saved moments and Review questions are two notes on one step, with different lists. | Medium | With UI-20 both sit on one row of the open step. Fixed by UI-25: one note on a step, one list called Notes. |
 | M4 | The Source versions toolbar sat flush against the dialog edge. | Low | Fixed. |
 | M5 | Comparing a read with disk matches by line position, so a shifted file reads as all changed. The dialog says so; a real line diff would be better. | Medium | Fixed by UI-23: an excerpt is placed by its own lines, then diffed, and line endings are ignored. A genuine Claude read of lines 15–20, seven lines later on disk with one edit, shows that one line. Codex `8b720a` has no read excerpts; its six whole-file snapshots read 78 changed lines instead of 586. |
 | M7 | Light theme (Porcelain): Home, History, file view, palette and Changes read well. The detector's only new rule, `cream-palette`, is fashion, and rejected. | | Checked, nothing found. |
@@ -247,6 +262,14 @@ None of those are gaps in the work, so reducer r33 stops counting them. An unkno
 | N5 | The Git consent shows Approve until the status arrives, so a click can land on a button about to be removed. Fails `git-session-evidence` on clean main, 0 clean runs of 4. | Medium | Fixed: TEST-2 gave Git history its loading state, GIT-7 gave Git review the same. |
 | N6 | The return arrow overlaps the map's zoom controls at the bottom right. | Low | UI-8. |
 | N7 | Investigate is a titled block under every step, heavy for what it adds. | Low | UI-8. |
+
+## Third batch, 2 November
+
+| # | Finding | Severity | Status |
+|---|---|---|---|
+| N8 | Codex prose shows `:codex-file-citation{path="…" purpose="output"}` as raw text, where the app renders a file chip. Found on Codex `58787f`. | Medium | UI-8, history cards and prose. |
+| N9 | Git history shows its branch select and Refresh above the approval prompt, where they do nothing yet. Git review boxes the prompt. | Low | UI-8, Git. |
+| N10 | Notes and the menu were checked on seeded notes on real steps; no real session held real saved notes. | Low | Recorded in #329. |
 
 ## Interaction inventory (A2)
 
@@ -305,3 +328,9 @@ A scan of `apps/ui/src` gave four `side-tab` hits, all deliberate (blockquotes, 
 ## Tools
 
 ECC was read at Yash's request (1 Nov): a general agent system of 314 skills, hooks and rules, not a design tool. It adds nothing to this pass, its hooks and rules would compete with AGENTS.md, and its motion skills target `motion/react`, which Drishya does not use. Not installed. Its `click-path-audit` skill is a useful method to read when tracing a state bug, and `frontend-a11y` and `accessibility` are worth reading for REL-3, as references. Strix is for security testing before release and `claude-seo` for the launch page; neither helps this pass. Impeccable's detector is covered above.
+
+## UI-8 continuation — recovery and file controls (2 November)
+
+The file reader keeps file identity and material first, with Open in Workspace and Compare near the selection; Show in Files and Copy path remain in its one File actions menu. Its acceptance must open that menu before using those secondary actions, rather than require resident duplicate controls.
+
+The map failure is an actionable local interruption, not a replacement for History. It belongs below the measured header, centred away from the Files dock, in a compact content-sized notice; one Retry action, readable failure text, a hairline separating it from the world. It has no arrival loop and never remounts History. Baseline running-app measurement at 1280 px: retry centre is covered by the header, trial click fails. Empty and huge error text wrap within the notice; the latest failure remains visible until recovery. Related live-history and scroll-anchor work stays with TEST-2.

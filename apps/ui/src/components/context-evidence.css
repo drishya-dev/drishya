@@ -1,9 +1,9 @@
-.context-evidence, .context-report { max-width: 680px; min-width: 0; padding: 18px 0; color: var(--t1); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.context-evidence, .context-report { max-width: 680px; min-width: 0; padding: 18px 0; color: var(--t1); font-size: var(--text-xs); line-height: 1.6; overflow-wrap: anywhere; }
 .context-heading, .context-foot { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 20px; }
-.context-evidence strong, .context-report strong { font-weight: 500; }
+.context-evidence strong, .context-report strong { font-weight: var(--weight-medium); }
 .context-evidence small, .context-report small, .request-context small, .context-missing { display: block; color: var(--t2); }
 .context-foot { color: var(--t2); }
-.context-evidence small, .context-report small, .request-context small { font-size: 11px; }
+.context-evidence small, .context-report small, .request-context small { font-size: var(--text-2xs); }
 .context-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 12px 0; }
 .context-metric { display: grid; grid-template-columns: 1fr auto; align-content: start; gap: 5px 12px; min-width: 0; font-variant-numeric: tabular-nums; }
 .context-metric small, .context-track { grid-column: 1 / -1; }
@@ -13,7 +13,7 @@
 .context-summary { margin-top: 6px; }
 .context-summary-reader { margin-top: 10px; min-width: 0; }
 .context-summary-reader .artifact-reader { max-width: 100%; }
-.context-evidence .btn { font-size: 12px; }
+.context-evidence .btn { font-size: var(--text-xs); }
 .context-report dl { margin: 12px 0; }
 .context-report dl > div { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 1fr); gap: 2px 20px; margin: 10px 0; }
 .context-report dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }

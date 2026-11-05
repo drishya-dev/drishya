@@ -20,9 +20,9 @@ test.beforeAll(async()=>{
  const data=png(1600,1200),timestamp='2026-10-25T00:00:00Z';
  for(const harness of ['claude-code','codex']){
   const source=join(dir,harness+'.jsonl');
-  const rows=harness==='claude-code'?[{type:'user',uuid:'image-prompt',sessionId:'image-reader',timestamp,cwd:dir,message:{role:'user',content:[{type:'text',text:'Inspect the captured diagram'},{type:'image',source:{type:'base64',media_type:'image/png',data}}]}}]:[
+  const rows=harness==='claude-code'?[{type:'user',uuid:'image-prompt',sessionId:'image-reader',timestamp,cwd:dir,message:{role:'user',content:[{type:'text',text:'Inspect the diagram'},{type:'image',source:{type:'base64',media_type:'image/png',data}}]}}]:[
    {type:'session_meta',timestamp,payload:{id:'image-reader',cwd:dir}},
-   {type:'response_item',timestamp,payload:{type:'message',role:'user',content:[{type:'input_text',text:'Inspect the captured diagram'},{type:'input_image',image_url:'data:image/png;base64,'+data},{type:'input_image',image_url:'https://example.invalid/never-fetch.png'}]}},
+   {type:'response_item',timestamp,payload:{type:'message',role:'user',content:[{type:'input_text',text:'Inspect the diagram'},{type:'input_image',image_url:'data:image/png;base64,'+data},{type:'input_image',image_url:'https://example.invalid/never-fetch.png'}]}},
   ];
   writeFileSync(source,rows.map(r=>JSON.stringify(r)).join('\n')+'\n');ids[harness]=(await app.ingest.importSource(harness,source)).recordingId;
  }
@@ -50,7 +50,7 @@ for(const harness of ['claude-code','codex']){
  });
  for(const failure of ['missing','network','corrupt'])test(`${harness} ${failure} bytes explain the failure and retry only on request`,async({page})=>{
   let available=false,requests=0;await page.route('**/images/*',async route=>{requests++;if(available)await route.continue();else if(failure==='network')await route.abort('failed');else await route.fulfill({status:failure==='missing'?404:200,contentType:failure==='missing'?'text/plain':'image/png',body:'not available'});});
-  const thumb=await open(page,harness);await expect(thumb).toContainText('could not be loaded');await thumb.press('Enter');const reader=page.getByRole('dialog',{name:'Captured image reader'});await expect(reader).toBeVisible();
+  const thumb=await open(page,harness);await expect(thumb).toContainText('could not be loaded');await thumb.press('Enter');const reader=page.getByRole('dialog',{name:'Image reader'});await expect(reader).toBeVisible();
   await expect(reader.getByRole('status')).toContainText('could not be loaded');const before=requests;await page.waitForTimeout(150);expect(requests).toBe(before);
   available=true;await reader.getByRole('button',{name:'Retry image'}).click();await expect.poll(()=>reader.locator('img').evaluate((i:HTMLImageElement)=>i.naturalWidth)).toBe(1600);await expect(reader.getByRole('status')).toHaveCount(0);
   await reader.getByRole('button',{name:'Close',exact:true}).click();await expect(reader).toHaveCount(0);await expect(thumb).toBeFocused();

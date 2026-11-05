@@ -14,10 +14,10 @@ test.beforeEach(async()=>{
   const git=(...args:string[])=>execFileSync('git',args,{cwd:root,windowsHide:true,encoding:'utf8',env:{...process.env,GIT_AUTHOR_DATE:t(2),GIT_COMMITTER_DATE:t(args.includes('Base')?0:2)}}).trim();
   git('init','-b','main');git('config','user.name','Synthetic');git('config','user.email','synthetic@example.invalid');git('config','core.autocrlf','false');
   writeFileSync(join(root,'committed.ts'),'export const committedValue = 1;\n');git('add','.');git('commit','-m','Base');
-  writeFileSync(join(root,'committed.ts'),'export const committedValue = 2;\n');git('commit','-m','Captured commit','--','committed.ts');tip=git('rev-parse','HEAD');
+  writeFileSync(join(root,'committed.ts'),'export const committedValue = 2;\n');git('commit','-m','Commit','--','committed.ts');tip=git('rev-parse','HEAD');
   writeFileSync(join(root,'new.ts'),'export const newValue = true;\n');
   const common={cwd:root,sessionId:'session-git-ui'},rows:unknown[]=[{...common,type:'user',uuid:'prompt',timestamp:t(0),message:{role:'user',content:'Commit the change and create a new file'}}];
-  for(const call of [{id:'commit',name:'Bash',input:{command:'git commit -m "Captured commit" -- committed.ts'},result:'Commit completed',at:1},
+  for(const call of [{id:'commit',name:'Bash',input:{command:'git commit -m "Commit" -- committed.ts'},result:'Commit completed',at:1},
     {id:'write',name:'Write',input:{file_path:join(root,'new.ts'),content:'export const newValue = true;\n'},result:'File created successfully',at:4}]){
     rows.push({...common,type:'assistant',uuid:'a-'+call.id,timestamp:t(call.at),message:{role:'assistant',content:[{type:'tool_use',id:call.id,name:call.name,input:call.input}]}});
     rows.push({...common,type:'user',uuid:'r-'+call.id,timestamp:t(call.id==='commit'?3:4),message:{role:'user',content:[{type:'tool_result',tool_use_id:call.id,content:call.result}]},...(call.id==='commit'?{toolUseResult:{stdout:call.result,stderr:'',interrupted:false}}:{})});
@@ -26,12 +26,12 @@ test.beforeEach(async()=>{
 });
 test.afterEach(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe test directory');rmSync(dir,{recursive:true,force:true});}});
 
-for(const width of [1440,600])test(`Git evidence opens captured commands and newly written files at ${width}px`,async({page})=>{
+for(const width of [1440,600])test(`Git evidence opens commands and newly written files at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   const open=async()=>{
     await openGitDestination(page, 'Git graph');
-    const dialog=page.getByRole('dialog',{name:'Git history',exact:true});
+    const dialog=page.getByRole('dialog',{name:'Git graph',exact:true});
     const approve=dialog.getByRole('button',{name:'Approve read-only Git',exact:true});
     await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
     return dialog;

@@ -10,7 +10,7 @@ let app:App,server:RunningServer;
 test.skip(!store || !ids.length,'Opt in with a local redacted store and explicit recording IDs.');
 test.beforeAll(async()=>{if(!store || !ids.length)return;app=new App(store);server=await startServer({app,port:0});});
 test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();});
-test('actual captured command keeps balanced input and output reading space',async({page})=>{
+test('actual command keeps balanced input and output reading space',async({page})=>{
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(ids[0]!)}`);

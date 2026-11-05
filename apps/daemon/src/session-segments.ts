@@ -22,7 +22,8 @@ async function metadata(path:string) {
 
 /** Only native parent references qualify. Titles, time and workspace proximity do not. */
 export async function sessionSegments(path:string,sources:DiscoveredSource[]):Promise<{items:SessionSegment[];partial:boolean}> {
-  const parent=await metadata(path);
+  // A journal deleted since import has no newer work to find; that is not an error to show.
+  const parent=await metadata(path).catch((error:NodeJS.ErrnoException)=>{if(error.code==='ENOENT')return undefined;throw error;});
   const thread=basename(path).match(/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\.jsonl$/i)?.[1];
   if(!parent||!thread) return {items:[],partial:false};
   const parentSize=(await stat(path)).size;

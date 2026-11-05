@@ -9,7 +9,7 @@ test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-prose-links-'));const root=join(dir,'captured-root').replaceAll('\\','/');
  const common={cwd:root,sessionId:'prose-link-fixture',timestamp:'2026-10-20T10:00:00Z'};
  const rows=[
-  {...common,type:'user',uuid:'u1',message:{role:'user',content:'Read the captured source and explain the change'}},
+  {...common,type:'user',uuid:'u1',message:{role:'user',content:'Read the source and explain the change'}},
   {...common,type:'assistant',uuid:'a1',message:{role:'assistant',content:[{type:'tool_use',id:'r1',name:'Read',input:{file_path:`${root}/src/source.ts`}}]}},
   {...common,type:'user',uuid:'u2',message:{role:'user',content:[{type:'tool_result',tool_use_id:'r1',content:'1→export const capturedValue = 42;\n2→export const retainedEvidence = true;'}]}},
   {...common,type:'assistant',uuid:'search',message:{role:'assistant',content:[{type:'tool_use',id:'s1',name:'Grep',input:{pattern:'retainedEvidence',path:root,output_mode:'content','-n':true}}]}},
@@ -25,11 +25,11 @@ test.beforeAll(async()=>{
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 
-test('Modern captured reader keeps comparison and action history reachable without stacking secondary controls',async({page})=>{
+test('Modern reader keeps comparison and action history reachable without stacking secondary controls',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  await page.locator('.prose button.md-path').first().click();
- const reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true}),options=reader.getByLabel('Captured file actions',{exact:true});
+ const reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true}),options=reader.getByLabel('File actions',{exact:true});
  await expect(reader.locator('.file-workspace-layout')).toHaveClass(/trail-hidden/);
  await expect(reader).toContainText('retainedEvidence');
  await options.focus();await options.press('Enter');
@@ -37,20 +37,20 @@ test('Modern captured reader keeps comparison and action history reachable witho
  await expect(reader.getByRole('navigation',{name:'File action history'})).toBeVisible();
  await expect(reader.getByRole('button',{name:'Compare evidence',exact:true})).toBeEnabled();
  await reader.getByRole('button',{name:'Compare evidence',exact:true}).click();
- await expect(reader.getByRole('combobox',{name:'Second evidence',exact:true})).toBeVisible();
- await reader.getByRole('combobox',{name:'Second evidence',exact:true}).selectOption({index:1});
+ await expect(reader.getByRole('combobox',{name:'Second step',exact:true})).toBeVisible();
+ await reader.getByRole('combobox',{name:'Second step',exact:true}).selectOption({index:1});
  await reader.getByRole('button',{name:'Single evidence',exact:true}).click();
- await expect(reader.getByRole('combobox',{name:'Second evidence',exact:true})).toHaveCount(0);
+ await expect(reader.getByRole('combobox',{name:'Second step',exact:true})).toHaveCount(0);
  await options.focus();await options.press('Enter');await page.keyboard.press('Escape');await expect(options).toBeFocused();await expect(reader).toBeVisible();
  for(const width of [1440,900,390,320]){
   await page.setViewportSize({width,height:844});
-  await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toBeVisible();
+  await expect(reader.getByRole('combobox',{name:'First step',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:`.local/ui5-file-controls-${width}.png`});
  }
 });
 
-test('local prose links open exact captured source without current-file IO or browser navigation',async({page})=>{
+test('local prose links open exact source without current-file IO or browser navigation',async({page})=>{
  const diskRequests:string[]=[];page.on('request',request=>{if(/\/workspace\/(?:file|document|approve)/.test(request.url()))diskRequests.push(request.url());});
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const local=page.locator('.prose button.md-path');await expect(local).toHaveCount(3);
@@ -58,9 +58,9 @@ test('local prose links open exact captured source without current-file IO or br
  for(const index of [0,1,2]){
   const link=local.nth(index);await link.focus();await page.keyboard.press('Enter');
   const reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});await expect(reader).toBeVisible();
-  await expect(reader).toContainText('src/source.ts');
+  await expect(reader).toContainText('source.ts');
   await expect(reader).toContainText('capturedValue');
-  await expect(reader.getByRole('button',{name:'Enable workspace reading',exact:true})).toBeVisible();
+  await reader.getByLabel('File actions',{exact:true}).click();await expect(reader.getByRole('button',{name:'Enable workspace reading',exact:true})).toBeVisible();
   expect(page.url()).toBe(url);expect(diskRequests).toEqual([]);
   await reader.getByRole('button',{name:'Close Work on src/source.ts',exact:true}).click();await expect(reader).toHaveCount(0);
  }
@@ -68,13 +68,13 @@ test('local prose links open exact captured source without current-file IO or br
   const inert=page.locator('.prose span.md-link').filter({hasText:title});await expect(inert).toHaveCount(1);await inert.click();expect(page.url()).toBe(url);
  }
  const card=page.locator('article.op-read');await card.locator('header button.captured-file-path').focus();await page.keyboard.press('Enter');
- let reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toHaveValue(/\/read$/);
+ let reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});await expect(reader.getByRole('combobox',{name:'First step',exact:true})).toHaveValue(/\/read$/);
  await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
  for(const kind of ['edit','write']){
-  const file=kind==='edit'?'src/source.ts':'src/new.ts';const title=page.locator('article.op-edit header').getByRole('button',{name:`Open captured work for ${file}`,exact:true});await title.focus();await page.keyboard.press('Enter');
+  const file=kind==='edit'?'src/source.ts':'src/new.ts';const title=page.locator('article.op-edit header').getByRole('button',{name:`Open work on ${file}`,exact:true});await title.focus();await page.keyboard.press('Enter');
   reader=page.getByRole('dialog',{name:`Work on ${file}`,exact:true});await expect(reader).toBeVisible();
   await expect(reader).toContainText(kind==='edit'?'capturedValue':'createdByWrite');
-  if(kind==='edit')await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toHaveValue(/\/patch$/);
+  if(kind==='edit')await expect(reader.getByRole('combobox',{name:'First step',exact:true})).toHaveValue(/\/patch$/);
   await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
  }
  const search=page.locator('article.op-search');
@@ -82,8 +82,8 @@ test('local prose links open exact captured source without current-file IO or br
   if(expanded)await search.locator('[data-expand-op]').click();
   await search.locator('.search-bead').first().focus();await page.keyboard.press('Enter');
   reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});
-  await expect(reader.getByRole('combobox',{name:'First evidence',exact:true})).toHaveValue(/\/search\/0$/);
-  await expect(reader).toContainText('Exact captured search result');
+  await expect(reader.getByRole('combobox',{name:'First step',exact:true})).toHaveValue(/\/search\/0$/);
+  await expect(reader).toContainText('Exact search result');
   await expect(reader.locator('[data-source-line="2"]')).toContainText('retainedEvidence');
   await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
  }

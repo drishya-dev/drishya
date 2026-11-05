@@ -22,7 +22,7 @@ test.afterAll(async () => {
 const serialize = (rows: readonly object[]) => rows.map(row => JSON.stringify(row)).join('\n') + '\n';
 async function open(page: Page, id: string, at?: number) {
   await page.goto(`${server.url}/?experience=modern&motion=0${at === undefined ? '' : `&at=${at}`}#/r/${id}`);
-  await expect(page.getByRole('region', { name: 'Captured work' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
 }
 
 for (const width of [600, 1440]) test(`reading choices survive new plan data, replay and reload at ${width}px`, async ({page}) => {
@@ -35,11 +35,14 @@ for (const width of [600, 1440]) test(`reading choices survive new plan data, re
   const id = (await app.ingest.importSource('claude-code', source)).recordingId;
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page, id);
   const checklist = page.locator('.plan-card[role=group]');
+  await expect(checklist.locator('li')).toHaveCount(0);
+  await checklist.getByRole('button',{name:'Show plan',exact:true}).click();
   await expect(checklist.locator('li')).toHaveCount(10);
   await expect(checklist.getByRole('button', {name:'Show all 12 items · 2 more',exact:true})).toBeVisible();
   const serverTools = page.locator('.md-server').filter({has:page.locator('summary span', {hasText:'fixture'})});
   const tools = page.getByRole('button',{name:'Tools',exact:true});
   if (await tools.isVisible()) await tools.click();
+  if (!await serverTools.evaluate(el => (el as HTMLDetailsElement).open)) await serverTools.locator(':scope>summary').click();
   await expect(serverTools).toHaveAttribute('open','');
   await expect(serverTools.getByRole('button', {name:/probe/})).toBeVisible();
   const inventory = page.locator('.tool-list');
@@ -68,21 +71,21 @@ for (const width of [600, 1440]) test(`reading choices survive new plan data, re
   await open(page,id); await expect(checklist.locator('li')).toHaveCount(12);
   await page.reload(); await expect(checklist.locator('li')).toHaveCount(12);
   await page.locator('.workspace-menu > summary[aria-label="More workspace options"]').click();
-  await expect(page.locator('.usage-peek')).toHaveAttribute('open','');
-  await expect(page.locator('.session-identity')).toHaveAttribute('open','');
+  await expect(page.locator('.usage-peek')).not.toHaveAttribute('open');
+  await expect(page.locator('.session-identity')).not.toHaveAttribute('open');
   await page.locator('.usage-peek summary').click();
   await page.locator('.session-identity summary').click();
   await page.reload();
   await page.locator('.workspace-menu > summary[aria-label="More workspace options"]').click();
-  await expect(page.locator('.usage-peek')).not.toHaveAttribute('open');
-  await expect(page.locator('.session-identity')).not.toHaveAttribute('open');
+  await expect(page.locator('.usage-peek')).toHaveAttribute('open','');
+  await expect(page.locator('.session-identity')).toHaveAttribute('open','');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
   await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Go to checklist',exact:true}).press('Enter');
   await expect(page.locator('article.op-plan').last()).toBeInViewport();
 });
 
-for (const width of [600, 1440]) test(`thirteen captured revisions keep one live checklist and every earlier list readable at ${width}px`, async ({ page }) => {
+for (const width of [600, 1440]) test(`thirteen revisions keep one live checklist and every earlier list readable at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 960 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const session = `living-${width}`, source = join(dir, session + '.jsonl');
@@ -92,6 +95,7 @@ for (const width of [600, 1440]) test(`thirteen captured revisions keep one live
   const pinned = page.locator('.turn .plan-pinned');
   await expect(pinned).toHaveCount(1); await expect(pinned).toContainText('Plan · 0 of 12 done');
   await pinned.evaluate(el => el.setAttribute('data-acceptance-stable', 'yes'));
+  await page.locator('.plan-card[role=group]').getByRole('button',{name:'Show plan',exact:true}).click();
   for (let revision = 1; revision < PLAN_REVISIONS; revision++) {
     // Only this synthetic scratch journal is appended. Native journals are never written.
     appendFileSync(source, serialize(planRows(dir, session, revision)));
@@ -149,14 +153,14 @@ for (const width of [600, 1440]) test(`thirteen captured revisions keep one live
     await open(page, id, step);
     await expect(pinned).toHaveCount(1);
     await expect(pinned).toContainText(`Plan · ${revision} of 12 done`);
-    await expect(pinned).toHaveAttribute('title', `The agent's newest captured todo list, revision ${revision + 1} of ${revision + 1}`);
+    await expect(pinned).toHaveAttribute('title', `The agent's newest todo list, revision ${revision + 1} of ${revision + 1}`);
     await expect(page.locator('article.op-plan .plan-list')).toHaveCount(1);
   }
   await open(page, id, 0); await expect(pinned).toHaveCount(0);
   await open(page, id); await expect(pinned).toContainText('Plan · 12 of 12 done · revision 13');
 });
 
-test('unknown and empty captured states use a neutral mark, retain literal accessible status and claim no transition', async ({ page }) => {
+test('unknown and empty states use a neutral mark, retain literal accessible status and claim no transition', async ({ page }) => {
   const session = 'living-unknown', source = join(dir, session + '.jsonl');
   const rows: object[] = [planPrompt(dir, session)];
   for (let revision = 0; revision < 2; revision++) {
@@ -176,6 +180,7 @@ test('unknown and empty captured states use a neutral mark, retain literal acces
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page, id);
   const pinned = page.locator('.plan-card[role=group]');
   await expect(pinned).toContainText('0 of 3 done');
+  await pinned.getByRole('button',{name:'Show plan',exact:true}).click();
   const unfamiliar = pinned.locator('li').filter({ hasText: 'Still unfamiliar' });
   const missing = pinned.locator('li').filter({ hasText: 'Missing state' });
   await expect(unfamiliar.locator('.plan-mark')).toHaveText('·');
@@ -203,7 +208,7 @@ for (const width of [600, 1440]) test(`native task results update one checklist 
  writeFileSync(source,serialize([planPrompt(dir,session),...first,...second]));
  const id=(await app.ingest.importSource('claude-code',source)).recordingId;
  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible(); await open(page,id);
- const pinned=page.locator('.plan-card[role=group]'); await expect(pinned).toHaveCount(1);
+ const pinned=page.locator('.plan-card[role=group]'); await expect(pinned).toHaveCount(1); await pinned.getByRole('button',{name:'Show plan',exact:true}).click();
  await expect(pinned.locator('li')).toHaveCount(2); await expect(pinned.locator('.plan-mark')).toHaveText(['·','·']);
  const progress=page.locator('.turn .plan-pinned'); await progress.evaluate(el=>el.setAttribute('data-stable-native','yes'));
  for(let revision=0;revision<12;revision++){
@@ -220,10 +225,10 @@ for (const width of [600, 1440]) test(`native task results update one checklist 
  const receipt=page.locator('article.op-plan').first();
  await expect(receipt).toHaveCSS('border-top-width','0px');
  await expect(receipt.locator('button.op-expand')).toBeVisible();
- const path='C:/Synthetic/.claude/plans/captured.md',body='# Native plan file\n\n- Verify captured content';
+ const path='C:/Synthetic/.claude/plans/captured.md',body='# Native plan file\n\n- Verify content';
  appendFileSync(source,serialize(pair('Write',{file_path:path,content:body},{type:'create',filePath:path,content:body})));
  await app.ingest.sync(id);
- const planFile=page.getByRole('region',{name:'Captured plan file'});
+ const planFile=page.getByRole('region',{name:'Plan file'});
  await expect(planFile.getByRole('heading',{name:'Native plan file'})).toBeVisible();
  if(width===1440) expect((await planFile.locator('xpath=ancestor::article[1]').boundingBox())!.width).toBeGreaterThan(320);
  expect(await planFile.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
@@ -241,9 +246,9 @@ for (const width of [600,1440]) test(`Codex explicit proposal renders Markdown w
  const id=(await app.ingest.importSource('codex',source)).recordingId;
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await open(page,id);
  const proposal=page.getByRole('region',{name:'Proposed plan'});
- await expect(proposal.getByRole('heading',{name:'Captured proposal'})).toBeVisible();
+ await expect(proposal.getByRole('heading',{name:'Proposal'})).toBeVisible();
  await expect(proposal.locator('ol li')).toHaveCount(2);
- await expect(proposal).toContainText('Captured proposal · not an approval');
+ await expect(proposal).toContainText('Proposal · not an approval');
  await expect(page.locator('.plan-pinned')).toHaveCount(0);
  await expect(page.locator('.prose')).toHaveCount(0);
 });

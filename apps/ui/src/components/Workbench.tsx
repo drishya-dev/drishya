@@ -1,3 +1,4 @@
+import { NotesEntry } from './StepNotes.tsx';
 import { ModernToolStation } from '../modern/ModernToolStation.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
@@ -9,7 +10,6 @@ import { FileIcon } from './FileIcon.tsx';
 import { WorkspaceBar } from './Workspace.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
-import { ReviewQuestionsEntry } from './ReviewQuestions.tsx';
 import { agentColor, agentName } from '../lib/identity.ts';
 import { localPreviewId, saveLocalPreview } from '../lib/local-preview.ts';
 import { HealthTag } from './Home.tsx';
@@ -38,7 +38,7 @@ export function WorkbenchHeader({ projection, scene, children }: { projection: P
     <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark />Drishya<span className="workbench-edition">STUDIO</span></button>
     <div className="workbench-session studio-session crown-title"><h1 title={projection.title}>{projection.title ?? recording?.title ?? 'Recording'}</h1><span className={source?.sample ? 'crown-sample' : ''}>{source?.sample ? 'Synthetic sample' : source?.kind === 'bundle' ? 'Offline recording' : harnesses.join(' + ')}</span>{connection === 'reconnecting' && <span role="status">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>
     <div className="workbench-utilities">{children}</div>
-    {agents.length > 1 && <div className="workbench-agents" role="group" aria-label="Recorded agents">{agents.map(agent => <button key={agent.id} data-agent-id={agent.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === agent.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, agent.id))}><span className="agent-dot" />{agentName(agent)}</button>)}</div>}
+    {agents.length > 1 && <div className="workbench-agents" role="group" aria-label="Agents">{agents.map(agent => <button key={agent.id} data-agent-id={agent.id} role="switch" aria-label={`Filter by ${agentName(agent)} agent`} aria-checked={filter?.agentId === agent.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, agent.id))}><span className="agent-dot" />{agentName(agent)}</button>)}</div>}
   </header>;
 }
 
@@ -64,10 +64,10 @@ export function WorkbenchSources({ projection }: { projection: Projection }) {
     <WorkspaceBar />
     {!explore && foldersHidden !== false && <section className="working-set">
       <header><h2>Working set</h2><span>{files.length}</span></header>
-      <p>{paged ? 'Files in the loaded evidence window' : 'Files referenced in this recording'}</p>
+      <p>{paged ? 'Files in the loaded window' : 'Files referenced in this recording'}</p>
       <input className="ux-search" aria-label="Filter working files" placeholder="Find a source…" value={query} onChange={e => setQuery(e.target.value)} />
-      <div className="working-files">{matched.slice(0, 80).map(([path, stats]) => <button key={path} aria-pressed={selected === path} title={path} onClick={() => useApp.getState().set({ filePanel: path, filePanelFocus: stats.changes ? 'change' : undefined, currentFile: undefined, selectedOp: undefined, explore: false })}><FileIcon path={path} /><span><strong>{path.split(/[\\/]/).pop()}</strong><small>{path.replace(/[\\/][^\\/]+$/, '') === path ? 'Repository root' : path.replace(/[\\/][^\\/]+$/, '')}</small></span>{stats.changes > 0 && <i title={`${stats.changes} captured change inputs`}>{stats.changes}</i>}</button>)}</div>
-      {!matched.length && <p>No matching captured file references.</p>}
+      <div className="working-files">{matched.slice(0, 80).map(([path, stats]) => <button key={path} aria-pressed={selected === path} title={path} onClick={() => useApp.getState().set({ filePanel: path, filePanelFocus: stats.changes ? 'change' : undefined, currentFile: undefined, selectedOp: undefined, explore: false })}><FileIcon path={path} /><span><strong>{path.split(/[\\/]/).pop()}</strong><small>{path.replace(/[\\/][^\\/]+$/, '') === path ? 'Repository root' : path.replace(/[\\/][^\\/]+$/, '')}</small></span>{stats.changes > 0 && <i title={`${stats.changes} change inputs`}>{stats.changes}</i>}</button>)}</div>
+      {!matched.length && <p>No matching file references.</p>}
       {matched.length > 80 && <p>First 80 of {matched.length}. Filter to find another file.</p>}
     </section>}
   </aside>;
@@ -80,9 +80,9 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
   const filter = useApp(s => s.filter);
   if (document.documentElement.dataset.uiVersion === 'modern') return <ModernToolStation projection={projection} scene={scene} agents={<AgentFamilies projection={projection} scene={scene} />} />;
   return <div className="workbench-station">
-    <section className="workbench-review" aria-label="Evidence desk"><span className="desk-caption">Review</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><ReviewQuestionsEntry key={id} /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Recorded changes and checks.'}</p></section>
+    <section className="workbench-review" aria-label="Work desk"><span className="desk-caption">Review</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><NotesEntry key={id}  /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Recorded changes and checks.'}</p></section>
     <button className="btn ghost workspace-navigation-open" onClick={() => window.dispatchEvent(new Event('drishya-navigate-workspace'))}>Navigate workspace <kbd>Ctrl/⌘ K</kbd></button>
-    {scene.agents.length === 1 && <div className="workbench-runtime"><span className="runtime-dot" /><span>{agentName(primary)}<small>{scene.agents.some(a => a.state === 'active') ? 'Captured activity in progress' : 'Recorded work'}</small></span></div>}
+    {scene.agents.length === 1 && <div className="workbench-runtime"><span className="runtime-dot" /><span>{agentName(primary)}<small>{scene.agents.some(a => a.state === 'active') ? 'Activity in progress' : 'Agent work'}</small></span></div>}
     {scene.agents.length > 1 && <details className="station-agent-menu"><summary>Agents <span>{scene.agents.length}{filter?.agentId ? ' · focused' : ''}</span></summary><AgentFamilies projection={projection} scene={scene} /></details>}
     {children}
   </div>;
@@ -109,5 +109,5 @@ function AgentFamilies({ projection, scene }: { projection: Projection; scene: S
   const families = roots.map(render);
   // Malformed cyclic ancestry must not hide a captured identity or recurse forever.
   for (const state of scene.agents) if (!rendered.has(state.id)) families.push(render(state));
-  return <div className="station-agents" role="group" aria-label="Recorded agents">{families}{filter?.agentId && <button className="btn ghost" onClick={() => useApp.getState().setFilter(focusAgent(filter))}>Show all agents</button>}</div>;
+  return <div className="station-agents" role="group" aria-label="Agents">{families}{filter?.agentId && <button className="btn ghost" onClick={() => useApp.getState().setFilter(focusAgent(filter))}>Show all agents</button>}</div>;
 }

@@ -27,9 +27,9 @@ async function open(page: Page, at?: number) {
   await page.goto(`${server.url}/?motion=0${at === undefined ? '' : `&at=${at}`}#/r/${id}`);
   await expect(page.locator('.history')).toBeVisible();
 }
-const receipts = (page: Page) => page.getByRole('dialog', {name: 'Recorded queued inputs', exact: true});
+const receipts = (page: Page) => page.getByRole('dialog', {name: 'Queued inputs', exact: true});
 async function openReceipts(page: Page) {
-  await page.getByRole('button', {name: 'Read recorded queued inputs', exact: true}).click();
+  await page.getByRole('button', {name: 'Read queued inputs', exact: true}).click();
   await expect(receipts(page)).toBeVisible();
   return receipts(page);
 }
@@ -68,7 +68,7 @@ for (const width of [600, 1440]) {
     await append([row('attachment', {attachment: {type: 'queued_command', prompt: 'Synthetic pending input\nsecond line\t@literal', timestamp: new Date().toISOString()}})]);
     await expect.poll(() => app.projection(id).timeline.filter(t => t.type === 'turn').length).toBe(2);
     expect((await apiQueue(page)).items[0].state).toBe('unknown');
-    await dialog.getByRole('button', {name: 'Close Recorded queued inputs', exact: true}).click();
+    await dialog.getByRole('button', {name: 'Close Queued inputs', exact: true}).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
   });
 
@@ -113,12 +113,12 @@ for (const width of [600, 1440]) {
     expect(await dialog.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
   });
 
-  test(`a captured image-only queue receipt is readable without creating a delivered prompt at ${width}px`, async ({page}) => {
+  test(`a image-only queue receipt is readable without creating a delivered prompt at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 900});
     const bytes = readFileSync(resolve('apps/ui/public/brand/drishya-192.png')).toString('base64');
     await append([queue('enqueue', [{type: 'image', source: {type: 'base64', media_type: 'image/png', data: bytes}}])]);
     await open(page); const dialog = await openReceipts(page);
-    const image = dialog.getByRole('img', {name: 'Captured queued input image 1', exact: true});
+    const image = dialog.getByRole('img', {name: 'Queued input image 1', exact: true});
     await expect(image).toBeVisible();
     await expect.poll(() => image.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
     await expect(dialog.locator('[data-queued-input-text]')).toHaveText('No text recorded.');
@@ -180,7 +180,7 @@ test('paged replay retains its physical queue boundary when every queue event is
   await expect(dialog.locator('[data-queued-input-text]')).toHaveText('Synthetic old receipt 10004');
 });
 
-test('an exported bundle retains captured queue text and ambiguous outcomes without controller authority', async ({page}) => {
+test('an exported bundle retains queue text and ambiguous outcomes without controller authority', async ({page}) => {
   await append([queue('enqueue', 'Synthetic exported queue\n@literal'), queue('dequeue')]);
   const bundle = await app.exportBundle(id), bundlePath = join(dir, 'bundle.json'); writeFileSync(bundlePath, JSON.stringify(bundle));
   await page.route('**/synthetic-queue-bundle.json', route => route.fulfill({status: 200, contentType: 'application/json', body: readFileSync(bundlePath, 'utf8')}));

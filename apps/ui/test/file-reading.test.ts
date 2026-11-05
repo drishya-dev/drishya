@@ -18,16 +18,16 @@ describe('captured file navigation boundary',()=>{
     expect(currentReadingTarget('.env',roots,'C:/repo').path).toBeUndefined();
     expect(currentReadingFailure('the file is no longer there')).toContain('no longer on disk');
     expect(currentReadingFailure('not a readable workspace path')).toBe(OUTSIDE_FILE_REASON);
-    expect(currentReadingFailure('linked files are not readable')).toContain('access checks');
+    expect(currentReadingFailure('linked files are not readable')).toContain('Workspace access');
     expect(currentReadingFailure('Network unavailable')).toBeUndefined();
   });
-  it('resolves captured aliases only from existing exact main-root evidence',()=>{
+  it('resolves aliases only from existing exact main-root evidence',()=>{
     const files=['worktree-1111111111/src/a.ts','worktree-2222222222/src/b.ts'];
     expect(recordedFileIdentity('src/a.ts',files,roots,'C:/repo')).toBe(files[0]);
     expect(recordedFileIdentity('src/b.ts',files,roots,'C:/repo')).toBe('src/b.ts');
     expect(recordedFileIdentity('absent.ts',files,roots,'C:/repo')).toBe('absent.ts');
   });
-  it('prefers the actual after-state when one was captured without inventing one from a patch',()=>{
+  it('prefers the actual after-state when one was recorded without inventing one from a patch',()=>{
     const op={id:'op',detail:{kind:'edit',path:'src/a.ts',hunks:[{}]},artifactIds:['art_op_after']} as unknown as Operation;
     expect(capturedFileEvidence(op,'src/a.ts')).toBe('op/after');
     expect(capturedFileEvidence({...op,artifactIds:[]},'src/a.ts')).toBe('op/patch');

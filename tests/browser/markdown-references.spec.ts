@@ -21,13 +21,13 @@ test.afterAll(async()=>{if(server)await server.close();if(app)await app.close();
 test('keyboard references open exact stored lines without inventing unavailable source',async({page})=>{
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-  const reference=page.getByRole('button',{name:'Open captured work for src/actual.ts at line 250',exact:true});
+  const reference=page.getByRole('button',{name:'Open work on src/actual.ts at line 250',exact:true});
   await expect(reference).toBeVisible();await reference.focus();await page.keyboard.press('Enter');
   const reader=page.getByRole('dialog',{name:'Work on src/actual.ts',exact:true});await expect(reader).toBeVisible();
   await expect(reader.locator('[data-source-line="250"]')).toHaveAttribute('aria-current','location');
   await expect(reader.locator('[data-source-line="250"]')).toContainText('const captured250 = 250;');
   await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
-  const absent=page.getByRole('button',{name:'Open captured work for src/actual.ts at line 400',exact:true});await absent.focus();await page.keyboard.press('Space');
+  const absent=page.getByRole('button',{name:'Open work on src/actual.ts at line 400',exact:true});await absent.focus();await page.keyboard.press('Space');
   await expect(reader).toBeVisible();await expect(reader).toContainText('Referenced line 400 is outside this stored range (1–300).');
   await expect(reader.locator('[data-source-line="400"]')).toHaveCount(0);
 });

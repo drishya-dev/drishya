@@ -65,7 +65,7 @@ for(const width of [600,1440])test(`the screen reader draws each recorded action
  // The click sits at (100,50) of a 400x200 frame, checked against the raw input.
  await page.keyboard.press('ArrowRight');
  await expect(reader.locator('.screen-caption strong')).toHaveText('Click at 100, 50');
- await expect(reader.locator('.screen-meta')).toContainText('No new frame captured · showing step 1');
+ await expect(reader.locator('.screen-meta')).toContainText('No new frame recorded · showing step 1');
  const click=await markAt(page);expect(click.x).toBeCloseTo(0.25,2);expect(click.y).toBeCloseTo(0.25,2);
  // A drag runs from its recorded start to its recorded end.
  await page.keyboard.press('ArrowRight');
@@ -78,6 +78,11 @@ for(const width of [600,1440])test(`the screen reader draws each recorded action
  await page.keyboard.press('ArrowRight');
  await expect(reader.locator('.screen-caption strong')).toHaveText('Type “metformin 500”');
  expect(await page.locator('.screen-mark').count()).toBe(0);
+ // UI-8: beside the frame, the recorded steps since it was taken, ending at this one; each opens its step.
+ const trail=reader.getByRole('region',{name:'How the agent reached this screen'});
+ await expect(trail.getByRole('listitem')).toHaveCount(3);await expect(trail.locator('[aria-current=step]')).toContainText('metformin 500');
+ await trail.getByRole('button').first().click();await expect(reader.locator('.screen-caption strong')).toHaveText('Click at 100, 50');
+ await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await expect(reader.locator('.screen-caption strong')).toHaveText('Type “metformin 500”');
  // A step that names an element but no usable position draws nothing and says so.
  await page.keyboard.press('ArrowRight');
  await expect(reader.locator('.screen-caption strong')).toContainText('Click');
@@ -122,7 +127,7 @@ test('the session menu opens the same reader, and reduced motion keeps the swap 
  await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
 });
 
-test('playback advances through captured steps and stops at the end',async({page})=>{
+test('playback advances through steps and stops at the end',async({page})=>{
  await page.setViewportSize({width:1440,height:900});
  await open(page);
  await page.locator('summary[aria-label="More workspace options"]').click();

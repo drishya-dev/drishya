@@ -31,3 +31,6 @@ it('bounds candidate metadata reads and reports incomplete inspection',async()=>
   expect(await sessionSegments(parent,[missing])).toEqual({items:[],partial:true});
   expect((await sessionSegments(parent,Array.from({length:65},()=>child)))).toMatchObject({partial:true});
 });
+it('finds nothing, without failing, when the parent journal was deleted after import',async()=>{
+  rmSync(parent);expect(await sessionSegments(parent,[candidate()])).toEqual({items:[],partial:false});
+});

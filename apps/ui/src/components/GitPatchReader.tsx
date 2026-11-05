@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { OriginalToggle } from './OriginalToggle.tsx';
 import type { Hunk } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import { patchEvidenceKey, recordedEditsForHunk } from '../lib/hunk-evidence.ts';
@@ -17,7 +18,7 @@ export function GitPatchReader({ file, openRecorded }: { file: GitFile; openReco
     const latest = matches.at(-1);
     if (!latest) return null;
     if (matches.length > 1) return <RecordedWorkMenu matches={matches} open={key => openRecorded(file.path, key)} />;
-    return <button className="btn ghost small hunk-recorded" title="Open the captured edit that wrote exactly these added lines" onClick={() => openRecorded(file.path, patchEvidenceKey(latest))}>Recorded work</button>;
+    return <button className="btn ghost small hunk-recorded" title="Open the edit that wrote exactly these added lines" onClick={() => openRecorded(file.path, patchEvidenceKey(latest))}>Agent work</button>;
   } : undefined;
   const sections = useMemo(() => gitPatchSections(file.patch), [file.patch]);
   const key = `git/${file.path}/${file.fingerprint}`;
@@ -29,7 +30,7 @@ export function GitPatchReader({ file, openRecorded }: { file: GitFile; openReco
   return <div className="git-patch-reader">
     <nav className="reader-tools" aria-label="Git patch scope">
       {sections.map(item => <button key={item.name} className="btn ghost small" aria-pressed={section === item} onClick={() => { setScope(item.name); setPage(0); }}>{item.name}</button>)}
-      <button className="btn ghost small" aria-pressed={raw} onClick={() => { setRaw(value => !value); setPage(0); }}>Raw patch</button>
+      <OriginalToggle original={raw} onToggle={() => { setRaw(value => !value); setPage(0); }}/>
     </nav>
     {section?.partial && !raw && <p className="material-context">Some patch hunks could not be parsed safely. Raw patch retains the complete loaded output.</p>}
     {structured ? <DiffReader key={section.name} hunks={section.hunks} path={file.path} scope={section.name==='Commit'?'git-commit':'current-git'} navigationKey={`git/${file.fingerprint}/${section.name}`} hunkAction={hunkAction} /> : <>

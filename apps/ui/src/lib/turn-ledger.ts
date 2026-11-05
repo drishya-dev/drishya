@@ -56,8 +56,8 @@ export function settingsLine(change: TurnSettings): { text: string; title: strin
 export const ledgerSummary = (ledger: TurnLedger) => ledgerParts(ledger).map((part) => part.text).join(' · ');
 
 /** What the ledger means, so it never claims more than the capture shows. */
-const COUNTED = 'Counted from the operations captured in this turn. Edited files come from captured patches; ';
-const DERIVED_DURATION = 'the duration runs to the last captured time in the turn, because not every harness records where a turn ends.';
+const COUNTED = 'Counted from the operations in this turn. Edited files come from patches; ';
+const DERIVED_DURATION = 'the duration runs to the last time in the turn, because not every harness records where a turn ends.';
 
 /** What the ledger means, so it never claims more than the capture shows. */
 export const ledgerBasis = (ledger?: TurnLedger) => COUNTED + (ledger?.recorded?.durationMs !== undefined ? 'the duration is the one the harness recorded for this turn.' : DERIVED_DURATION);

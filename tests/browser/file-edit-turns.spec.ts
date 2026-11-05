@@ -26,7 +26,7 @@ function journal(){
  return rows.join('\n')+'\n';
 }
 
-test('the Changes view lists each captured edit with its turn, +/- and next test run, and opens the edit',async({page})=>{
+test('the Changes view lists each edit with its turn, +/- and next test run, and opens the edit',async({page})=>{
  const file=join(dir,'two-turns.jsonl');writeFileSync(file,journal());
  const id=(await app.ingest.importSource('claude-code',file)).recordingId;
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
@@ -35,7 +35,8 @@ test('the Changes view lists each captured edit with its turn, +/- and next test
  if(!await changes.isVisible())await page.getByLabel('More workspace options',{exact:true}).click();
  await changes.first().click();
  const dialog=page.getByRole('dialog',{name:'Changes',exact:true});
- const edits=dialog.getByRole('list',{name:'Captured edits of this file'}).getByRole('listitem');
+ await dialog.locator('.review-file-more>summary').first().click();
+ const edits=dialog.getByRole('list',{name:'Edits of this file'}).getByRole('listitem');
  await expect(edits).toHaveCount(3);
  // Turn 1 edit before the failing run links it; the next edit has no later run in turn 1; turn 2 never ran a test.
  await expect(edits.nth(0)).toContainText('turn 1');await expect(edits.nth(0)).toContainText('+2');await expect(edits.nth(0)).toContainText('−1');

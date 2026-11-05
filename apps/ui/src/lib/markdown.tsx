@@ -5,6 +5,7 @@
 import { createElement, type ReactNode } from 'react';
 import { FencedCode } from '../components/FencedCode.tsx';
 import { prosePath } from './prose-path.ts';
+import {fileName} from './file-identity.ts';
 
 type PathAction = (path: string, line?: number) => void;
 export function Markdown({ text, onPath, document = false, workspaceRoot }: { text: string; onPath?: PathAction; document?: boolean; workspaceRoot?:string }) {
@@ -103,18 +104,41 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
 function inline(s: string, onPath?: PathAction, workspaceRoot?:string): ReactNode[] {
   const out: ReactNode[] = [];
   // A link target may hold one level of parentheses, e.g. /docs/report (copy).md.
-  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(((?:[^()]|\([^()]*\))+)\))|(\*[^*\n]+\*|(?<![\w_])_[^_\n]+_(?![\w_]))/g;
+  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(((?:[^()]|\([^()]*\))+)\))|(\*[^*\n]+\*|(?<![\w_])_[^_\n]+_(?![\w_]))|(:codex-file-citation\{(?:[^}"\\]|\\.|"(?:\\.|[^"\\])*")*\})/g;
   let last = 0;
   let k = 0;
   for (const m of s.matchAll(re)) {
     const i = m.index ?? 0;
     if (i > last) out.push(s.slice(last, i));
-    if (m[1]) {
+    if (m[7]) {
+      const attributes = new Map<string,string>();
+      for (const attribute of m[7].matchAll(/([\w_]+)\s*=\s*("(?:\\.|[^"\\])*"|[^\s}]+)/g)) {
+        const value = attribute[2]!;
+        if (value.startsWith('"')) {
+          // Native Windows paths are sometimes quoted without JSON escaping.
+          // Both forms remain text, never HTML or an executable URL.
+          try {attributes.set(attribute[1]!, JSON.parse(value) as string);}
+          catch {attributes.set(attribute[1]!, value.slice(1,-1));}
+        } else attributes.set(attribute[1]!, value);
+      }
+      const path = attributes.get('path');
+      if (!path || path.length > 2000 || /[\x00-\x1f]/.test(path)) out.push(m[7]);
+      else {
+        const start = attributes.get('line_range_start'), end = attributes.get('line_range_end');
+        const line = start && /^[1-9]\d{0,8}$/.test(start) ? Number(start) : undefined;
+        const lastLine = end && /^[1-9]\d{0,8}$/.test(end) ? Number(end) : undefined;
+        const label = `${fileName(path)}${line ? `:${line}${lastLine && lastLine > line ? `–${lastLine}` : ''}` : ''}`;
+        const reference = prosePath(path, workspaceRoot, true);
+        out.push(reference && onPath
+          ? <button type="button" key={k++} className="md-path md-link" title={path} aria-label={`Open work on ${reference.path}${line ? ` at line ${line}` : ''}`} onClick={() => onPath(reference.path, line)}><code>{label}</code></button>
+          : <span key={k++} className="md-link" title={path}><code>{label}</code></span>);
+      }
+    } else if (m[1]) {
       const code = m[1].slice(1, -1);
       const reference = prosePath(code,workspaceRoot);
       out.push(
         reference && onPath ? (
-          <button type="button" key={k++} className="md-path" aria-label={`Open captured work for ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path, reference.line)}><code>{code}</code></button>
+          <button type="button" key={k++} className="md-path" aria-label={`Open work on ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path, reference.line)}><code>{code}</code></button>
         ) : (
           <code key={k++}>{code}</code>
         ),
@@ -123,7 +147,7 @@ function inline(s: string, onPath?: PathAction, workspaceRoot?:string): ReactNod
     else if (m[6]) out.push(<em key={k++}>{inline(m[6].slice(1,-1), onPath, workspaceRoot)}</em>);
     else if (m[3]) {
       const reference=prosePath(m[5]!,workspaceRoot);
-      out.push(reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open captured work for ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>);
+      out.push(reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open work on ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>);
     }
     last = i + m[0].length;
   }

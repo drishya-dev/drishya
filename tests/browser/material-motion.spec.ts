@@ -33,7 +33,7 @@ test.afterEach(async () => {
   }
 });
 
-test('whole material zoom stays continuous while the captured result changes its allocation', async ({ page }) => {
+test('whole material zoom stays continuous while the result changes its allocation', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
@@ -75,10 +75,10 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const id = 'local-scroll-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
-  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 60 }, (_, n) => `Captured documentation ${n}`).join('\n') }] } });
+  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 60 }, (_, n) => `Documentation ${n}`).join('\n') }] } });
   await app.ingest.sync(recordingId);
   const card = page.locator('article.op-mcp').filter({ hasText: id });
-  await expect(card).toContainText('Captured documentation');
+  await expect(card).toContainText('Documentation');
   const latest = page.getByRole('button', { name: /Back to latest/ });
   if (await latest.isVisible()) await latest.click();
   await expect(latest).toHaveCount(0);
@@ -104,13 +104,13 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
 });
 
 
-test('hover reading preserves live follow and safely releases when new captured work arrives', async ({ page }) => {
+test('hover reading preserves live follow and safely releases when new work arrives', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const id = 'live-hover-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'printf live-hover-proof' } }] } });
-  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Captured hover output' }] } });
+  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Hover output' }] } });
   await app.ingest.sync(recordingId);
   const card = page.locator('article.op-shell').filter({ hasText: id });
   await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
@@ -120,7 +120,7 @@ test('hover reading preserves live follow and safely releases when new captured 
   await card.locator('.op-head .op-title').hover();
   await expect(card).toHaveAttribute('data-hover-reading', 'focused');
   await expect(latest).toHaveCount(0);
-  append({ type: 'assistant', message: { id: 'hover-follow-next', role: 'assistant', content: [{ type: 'text', text: 'Captured work keeps arriving during hover.' }] } });
+  append({ type: 'assistant', message: { id: 'hover-follow-next', role: 'assistant', content: [{ type: 'text', text: 'Session work keeps arriving during hover.' }] } });
   await app.ingest.sync(recordingId);
   await expect(page.locator('.prose').last()).toContainText('during hover');
   await expect(latest).toHaveCount(0);
@@ -135,11 +135,11 @@ test('hover result boundaries scroll history without dismissing the same reading
   await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
   const id = 'hover-boundary-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
-  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 100 }, (_, n) => `Captured documentation ${n}`).join('\n') }] } });
+  append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 100 }, (_, n) => `Documentation ${n}`).join('\n') }] } });
   await app.ingest.sync(recordingId);
   const card = page.locator('article.op-mcp').filter({ hasText: id });
   const history = page.locator('.history');
-  await expect(card).toContainText('Captured documentation');
+  await expect(card).toContainText('Documentation');
   await expect.poll(() => card.evaluate(el => el.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
   await card.locator('.op-head .op-title').hover();
   await expect(card).toHaveAttribute('data-hover-reading', 'focused');

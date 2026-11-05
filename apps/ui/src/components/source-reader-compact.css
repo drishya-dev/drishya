@@ -1,29 +1,23 @@
 /* READ-9: source first on small reading surfaces; other readers retain their controls. */
 .current-reader-options{position:relative;min-width:0}
-.current-reader-options>summary{display:grid;place-items:center;width:28px;height:28px;padding:5px;list-style:none;border:0;border-radius:6px;color:var(--t2);cursor:pointer}
+.current-reader-options>summary{display:grid;place-items:center;width:28px;height:28px;padding:5px;list-style:none;border:0;border-radius:var(--round-sm);color:var(--t2);cursor:pointer}
 .current-reader-options>summary::-webkit-details-marker{display:none}
 .current-reader-options>summary svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}
-.current-reader-options>div{position:absolute;right:0;top:calc(100% + 6px);z-index:20;width:min(280px,var(--menu-inline-space,calc(100vw - 112px)));max-height:min(var(--menu-max-height,50dvh),calc(52dvh - 80px));overflow:auto;display:flex;flex-direction:column;gap:5px;padding:10px;border:1px solid var(--line-2);border-radius:10px;background:var(--s1);box-shadow:0 10px 30px #0004}
-:root[data-ui-version=modern] .file-peek-reader .current-reader-options>div>.btn{display:flex;justify-content:flex-start;width:100%;height:auto;min-height:32px;padding:6px 8px;gap:8px;text-align:left;font-size:12px}
-.reader-source-context{font:11px/1.6 var(--sans);color:var(--t2);padding:2px 8px}
+.current-reader-options>div{position:absolute;right:0;top:calc(100% + 6px);z-index:20;width:min(280px,var(--menu-inline-space,calc(100vw - 112px)));max-height:min(var(--menu-max-height,50dvh),calc(52dvh - 80px));overflow:auto;display:flex;flex-direction:column;gap:5px;padding:10px;border:1px solid var(--line-2);border-radius:var(--round-md);background:var(--s1);box-shadow:0 10px 30px #0004}
+:root[data-ui-version=modern] .file-peek-reader .current-reader-options>div>.btn{display:flex;justify-content:flex-start;width:100%;height:auto;min-height:var(--control-lg);padding:6px 8px;gap:8px;text-align:left;font-size:var(--text-xs)}
+.reader-source-context{font:var(--text-2xs)/1.6 var(--sans);color:var(--t2);padding:2px 8px}
 .current-reader-options .source-go{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:4px 0}
-.current-reader-options .source-go input{width:70px;min-width:0;min-height:32px;font:12px var(--mono)}
+.current-reader-options .source-go input{width:70px;min-width:0;min-height:32px;font:var(--text-xs) var(--mono)}
 .current-reader-options .source-go [role=status]:empty{display:none}
-.current-reader-options .source-go [role=status]{flex-basis:100%;font-size:11px;color:var(--bad)}
+.current-reader-options .source-go [role=status]{flex-basis:100%;font-size:var(--text-2xs);color:var(--bad)}
 .current-reader-options>summary:focus-visible{outline:1px solid var(--t2);outline-offset:-2px}
 @media(max-width:1100px){
  :root[data-ui-version=modern] .file-peek-reader:has(.current-reader-options)>footer{display:none}
  :root[data-ui-version=modern] .file-peek-reader .current-source-tools{display:flex;flex:none;min-width:0;padding:5px 10px;gap:0}
  :root[data-ui-version=modern] .file-peek-reader .source-find-compact{display:flex;flex:1;flex-wrap:nowrap;align-items:center;min-width:0;gap:3px}
- :root[data-ui-version=modern] .file-peek-reader .source-find-compact>input{flex:1;width:0;min-width:0;height:32px;font-size:12px;padding:5px 8px}
- :root[data-ui-version=modern] .file-peek-reader .source-find-compact>.btn{flex:none;width:28px;min-width:28px;height:32px;min-height:32px;padding:4px}
- :root[data-ui-version=modern] .file-peek-reader .source-find-compact>[role=status]{flex:none;width:auto;max-width:64px;margin:0;font:11px/1.5 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ :root[data-ui-version=modern] .file-peek-reader .source-find-compact>input{flex:1;width:0;min-width:0;height:32px;font-size:var(--text-xs);padding:5px 8px}
+ :root[data-ui-version=modern] .file-peek-reader .source-find-compact>.btn{flex:none;width:28px;min-width:28px;height:32px;min-height:var(--control-lg);padding:4px}
+ :root[data-ui-version=modern] .file-peek-reader .source-find-compact>[role=status]{flex:none;width:auto;max-width:64px;margin:0;font:var(--text-2xs)/1.5 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  :root[data-ui-version=modern] .file-peek-reader .source-find-compact>[role=status]:empty{display:none}
 }
-@media(pointer:coarse){
- .current-reader-options>summary{width:40px;height:44px}
- :root[data-ui-version=modern] .file-peek-reader .current-reader-options :is(input,button){min-height:44px}
- .current-reader-options input{font-size:16px}
- :root[data-ui-version=modern] .file-peek-reader .source-find-compact>input{font-size:16px}
- :root[data-ui-version=modern] .file-peek-reader .source-find-compact>.btn{min-height:40px;width:36px}
-}
+

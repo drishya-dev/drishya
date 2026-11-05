@@ -9,7 +9,7 @@ export function openCapturedPath(reference:ProsePath,evidence?:string){
 }
 export function CapturedPath({path,line,evidence,children}:{path:string;line?:number;evidence?:string;children?:ReactNode}){
  const root=useApp(s=>s.recording?.workspaceRoot),ref=prosePath(path,root,true);
- return ref?<button type="button" className="md-path" style={{textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:'3px'}} title="Open captured file evidence · current disk reading is separate" aria-label={`Open captured work for ${ref.path}${line??ref.line?` at line ${line??ref.line}`:''}`} onClick={event=>{event.stopPropagation();openCapturedPath({...ref,line:line??ref.line},evidence);}}>{children??path}</button>:<>{children??path}</>;
+ return ref?<button type="button" className="md-path" style={{textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:'3px'}} title="Open what the agent saw" aria-label={`Open work on ${ref.path}${line??ref.line?` at line ${line??ref.line}`:''}`} onClick={event=>{event.stopPropagation();openCapturedPath({...ref,line:line??ref.line},evidence);}}>{children??path}</button>:<>{children??path}</>;
 }
 /** Text nodes and link labels concatenate to the unchanged displayed output. */
 export function outputPathNodes(text:string,root:string|undefined,budget={remaining:64,characters:131072}):ReactNode{

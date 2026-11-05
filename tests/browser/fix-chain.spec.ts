@@ -16,5 +16,5 @@ test('an expanded failed test shows the later run of the same command and the ed
  const expand=failed.locator('button.op-expand');await expand.focus();await page.keyboard.press('Enter');await expect(expand).toHaveAttribute('aria-expanded','true');
  const chain=page.getByRole('region',{name:'Same command, later run'});
  await expect(chain).toContainText('failed');await expect(chain).toContainText('1 edit');await expect(chain).toContainText('passed');
- await expect(chain).toContainText('recorded order');
+ await expect(chain).toContainText('Same command, later run');
 });

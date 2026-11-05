@@ -28,14 +28,14 @@ export function WorkspaceNavigation() {
   const destinations = useMemo(() => {
     const click = (selector: string) => document.querySelector<HTMLButtonElement>(selector)?.click();
     const all: Destination[] = [
-      { key: 'search', name: 'Search captured work', detail: 'Recorded prose, commands and evidence', run: () => useApp.setState({ searchOpen: true }) },
-      { key: 'map', name: 'Explore repository map', detail: 'File/import relationships and captured locations', run: () => useApp.getState().set({ developerWorkspace:false, currentFile:undefined, filePanel:undefined, selectedOp:undefined, expandedOp:undefined, explore:true, mapVisible:true, follow:false, held:true }) },
-      { key: 'latest', name: 'Return to latest activity', detail: 'Leave reading spaces and follow captured work', run: () => {useApp.getState().set({developerWorkspace:false,explore:false,currentFile:undefined,filePanel:undefined});useApp.getState().showHistory();} },
+      { key: 'search', name: 'Search this session', detail: 'Prose, commands and results', run: () => useApp.setState({ searchOpen: true }) },
+      { key: 'map', name: 'Explore repository map', detail: 'File and import relationships', run: () => useApp.getState().set({ developerWorkspace:false, currentFile:undefined, filePanel:undefined, selectedOp:undefined, expandedOp:undefined, explore:true, mapVisible:true, follow:false, held:true }) },
+      { key: 'latest', name: 'Return to latest activity', detail: 'Leave reading spaces and follow the agent', run: () => {useApp.getState().set({developerWorkspace:false,explore:false,currentFile:undefined,filePanel:undefined});useApp.getState().showHistory();} },
       { key: 'settings', name: 'Workspace settings', detail: 'Theme, reading and resources', run: () => useApp.setState({ settingsOpen: true }) },
     ];
-    if(kind==='daemon')all.push({key:'library-search',name:'Search all session evidence',detail:'Find captured text across imported sessions',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-search-library')))});
+    if(kind==='daemon')all.push({key:'library-search',name:'Search all sessions',detail:'Find text across imported sessions',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-search-library')))});
     if (mode === 'history') {
-      if (document.querySelector('details.session-segments')) all.push({key:'newer-work',name:'Newer session work',detail:'Open newer captured work stored separately by the harness',run:()=>requestAnimationFrame(()=>{
+      if (document.querySelector('details.session-segments')) all.push({key:'newer-work',name:'Newer session work',detail:'Open newer work stored separately by the harness',run:()=>requestAnimationFrame(()=>{
         // Let the command dialog restore its prior focus before opening a menu;
         // otherwise that restoration immediately dismisses the new destination.
         if(useApp.getState().recordingId!==id||useApp.getState().screen!=='viewer')return;
@@ -44,17 +44,16 @@ export function WorkspaceNavigation() {
         if(menu)menu.open=true;
         if(section){section.open=true;section.querySelector<HTMLElement>('summary')?.focus();}
       })});
-      for(const [view,name,detail] of [['findings','Review findings','Commands that keep failing, missing outcomes and gaps'],['prompts','Prompt overview','Captured prompt windows and recorded activity counts'],['packet','Prepare review packet','Changes, checks, gaps and your open reviewer questions']] as const)all.push({key:`review-${view}`,name,detail,run:()=>requestAnimationFrame(()=>openReviewTool(view))});
-      all.push({key:'commands',name:'Find captured commands',detail:'Search, copy and inspect recorded shell/test activity',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-commands')))});
-      all.push({ key: 'review', name: 'Review recorded changes and checks', detail: 'Captured outcomes, not coverage', run: () => click('.review-open') });
-      all.push({ key: 'questions', name: 'Review questions', detail: 'Your unresolved review decisions', run: () => click('button[data-review-questions]') });
-      all.push({key:'moments',name:'Saved moments',detail:'Your explicit captured-action references and local notes',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-saved-moments')))});
+      for(const [view,name,detail] of [['findings','Review findings','Commands that keep failing, missing outcomes and gaps'],['prompts','Prompt overview','Prompts and activity counts'],['packet','Prepare review packet','Changes, checks, gaps and your open reviewer questions']] as const)all.push({key:`review-${view}`,name,detail,run:()=>requestAnimationFrame(()=>openReviewTool(view))});
+      all.push({key:'commands',name:'Find commands',detail:'Search, copy and inspect shell and test runs',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-commands')))});
+      all.push({ key: 'review', name: 'Review changes and checks', detail: 'Outcomes, not coverage', run: () => click('.review-open') });
+      all.push({key:'notes',name:'Notes',detail:'Your notes and saved steps',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-notes-open')))});
       if (kind === 'daemon' && id && !id.includes('+')) {
         all.push({key:'git-history',name:'Explore Git branches and commits',detail:'Local parent topology, refs and commit changes',run:()=>requestAnimationFrame(openGitHistory)});
         all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => requestAnimationFrame(openGitReview) });
         all.push({ key: 'workspace', name: 'Open developer workspace', detail: 'Read current files and prepare local drafts with workspace consent', run: () => { if(!useApp.getState().developerWorkspace)click('[aria-label="Open developer workspace"]'); } });
       }
-      all.push({key:'files',name:'Browse workspace files',detail:'Current files after consent; otherwise captured paths and work',run:()=>{useApp.getState().set({foldersHidden:false,explore:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('.folder-explorer input')?.focus({preventScroll:true}));}});
+      all.push({key:'files',name:'Browse workspace files',detail:'Current files once approved; until then, the session’s files',run:()=>{useApp.getState().set({foldersHidden:false,explore:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('.folder-explorer input')?.focus({preventScroll:true}));}});
     }
     if (kind === 'daemon') all.push({ key: 'home', name: 'Choose a session', detail: 'Workspace and local-date groups', run: () => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); } });
     const needle = query.trim().toLowerCase();
@@ -64,7 +63,7 @@ export function WorkspaceNavigation() {
         if (result.length >= 40) break;
         if (node.path.startsWith('.local/') || !node.path.toLowerCase().includes(needle)) continue;
         const currentDisk = graph?.temporal === 'current' && kind === 'daemon';
-        result.push({ key: `file/${node.id}`, name: node.path, detail: currentDisk ? 'Current indexed file · separate disk consent' : 'Recorded file work · available captured evidence only', path: node.path, run: () => useApp.getState().set(currentDisk ? { currentFile: node.id, filePanel: undefined, explore: false } : { filePanel: node.id, currentFile: undefined, explore: false }) });
+        result.push({ key: `file/${node.id}`, name: node.path, detail: currentDisk ? 'Current indexed file · separate disk consent' : 'What the agent did to each file', path: node.path, run: () => useApp.getState().set(currentDisk ? { currentFile: node.id, filePanel: undefined, explore: false } : { filePanel: node.id, currentFile: undefined, explore: false }) });
       }
       if (kind === 'daemon') for (const recording of recordings) {
         if (result.length >= 40) break;

@@ -10,7 +10,7 @@ const search = (id: string): Operation => ({ id, kind: 'search', title: `Search 
 
 describe('file timeline', () => {
   const operations = [read('r1'), search('s1'), edit('e1'), edit('e2', 0), edit('other')];
-  it('keeps one step per captured read or edit in order, preferring the patch and skipping searches', () => {
+  it('keeps one step per read or edit in order, preferring the patch and skipping searches', () => {
     const steps = fileTimeline(operations.slice(0, 4), PATH);
     expect(steps.map((step) => step.key)).toEqual(['r1/read', 'e1/patch', 'e2/before']);
     expect(fileTimeline([edit('x'), read('y')], 'elsewhere.ts')).toEqual([]);
@@ -42,7 +42,7 @@ describe('whole-session file timeline metadata', () => {
     expect(middle.timeline.positions).toEqual({});
     expect(middle.timeline.selected).toMatchObject({ position: 2, previous: { operationId: 'first', start: 0 }, next: undefined });
   });
-  it('counts only captured material of this exact path, not multi-path search hits or unavailable reads', () => {
+  it('counts only material of this exact path, not multi-path search hits or unavailable reads', () => {
     const missing = read('missing'); if (missing.detail.kind === 'read') delete missing.detail.excerptArtifactId;
     const unrelated = read('other'); if (unrelated.detail.kind === 'read') unrelated.detail.path = 'other.ts';
     const page = fileOperationPage([read('one'), missing, unrelated, search('match'), edit('two')], PATH, 0, 24);

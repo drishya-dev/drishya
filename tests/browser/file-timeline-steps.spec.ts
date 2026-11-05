@@ -47,18 +47,18 @@ async function openWork(page: Page) {
   await page.locator('[data-spine-path="src/total.ts"]').first().click();
   // Depending on workspace consent, the row opens the disk reader first; follow its captured destination.
   const disk = page.getByRole('dialog', { name: 'src/total.ts', exact: true });
-  if (await disk.isVisible()) await disk.getByRole('button', { name: 'Recorded work on this file' }).click();
+  if (await disk.isVisible()) await disk.getByRole('button', { name: 'Agent work on this file' }).click();
   const work = page.getByRole('dialog', { name: 'Work on src/total.ts', exact: true });
   await expect(work).toBeVisible();
   return work;
 }
 
-test('Previous and Next change step through every captured read and edit with its version', async ({ page }) => {
+test('Previous and Next change step through every read and edit with its version', async ({ page }) => {
   const work = await openWork(page);
-  const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
+  const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true }), next = steps.getByRole('button', { name: 'Next change', exact: true });
   const label = steps.getByRole('status');
-  const choice = work.getByRole('combobox', { name: 'First evidence', exact: true });
+  const choice = work.getByRole('combobox', { name: 'First step', exact: true });
   await expect(label).toHaveText(/\d of 4/);
   // Land on the first captured step whichever evidence the panel opened with.
   while (await previous.isEnabled()) await previous.click();
@@ -92,7 +92,7 @@ test('Previous and Next change step through every captured read and edit with it
 
 test('the stepper works from the keyboard and keeps focus on a button that still works', async ({ page }) => {
   const work = await openWork(page);
-  const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
+  const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true }), next = steps.getByRole('button', { name: 'Next change', exact: true });
   const label = steps.getByRole('status');
   while (await previous.isEnabled()) await previous.click();
@@ -119,7 +119,7 @@ test('the stepper works from the keyboard and keeps focus on a button that still
 
 test('the stepper keeps the type floor and hides while two versions are compared', async ({ page }) => {
   const work = await openWork(page);
-  const steps = work.getByRole('group', { name: /Step through captured reads and edits/ });
+  const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const sizes = await steps.evaluate(el => ({ control: getComputedStyle(el.querySelector('button')!).fontSize, meta: getComputedStyle(el.querySelector('[role=status]')!).fontSize }));
   expect(sizes).toEqual({ control: '12px', meta: '11px' });
   await work.getByRole('button', { name: 'Compare evidence', exact: true }).click();

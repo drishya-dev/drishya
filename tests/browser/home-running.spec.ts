@@ -38,7 +38,7 @@ test('Running now is absent when no journal is being followed recently', async (
   await expect(page.getByRole('region', { name: 'Running now' })).toHaveCount(0);
 });
 
-test('Running now stays above the library across repositories and opens its captured session', async ({ page }) => {
+test('Running now stays above the library across repositories and opens its session', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await home(page, true);
   const strip = page.getByRole('region', { name: 'Running now' });

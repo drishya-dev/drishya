@@ -48,7 +48,7 @@ test('Modern Git review keeps three controls, dismisses its keyboard menu and re
   await expect(reader.locator('.git-history-entry,.modern-git-context,.modern-git-scope')).toHaveCount(0);
   await actions.focus();await page.keyboard.press('Enter');
   await expect(reader.getByRole('button',{name:'Preview handoff'})).toBeDisabled();
-  await page.keyboard.press('ArrowDown');await expect(reader.getByRole('button',{name:'Recorded work',exact:true})).toBeFocused();
+  await page.keyboard.press('ArrowDown');await expect(reader.getByRole('button',{name:'Agent work',exact:true})).toBeFocused();
   await page.keyboard.press('Escape');await expect(actions).toBeFocused();
   await expect(nav.locator('.desk-options')).not.toHaveAttribute('open','');
   await actions.click();await reader.locator('.git-selected-file-header strong').click();

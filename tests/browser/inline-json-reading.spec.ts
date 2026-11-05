@@ -20,21 +20,21 @@ async function open(page:import('@playwright/test').Page,raw:string){
 for(const width of [600,1440])test(`complete JSON reads inline with exact Original at ${width}px`,async({page})=>{
  await page.setViewportSize({width,height:900});
  const raw=JSON.stringify({rows:[{id:1,name:'alpha'},{id:2,name:'beta'}],next:null});
- const card=await open(page,raw),reading=card.getByRole('region',{name:'Captured data reading',exact:true});
- await expect(reading).toBeVisible();await expect(reading.getByRole('tree',{name:'Captured JSON tree',exact:true})).toBeVisible();
+ const card=await open(page,raw),reading=card.getByRole('region',{name:'Data reading',exact:true});
+ await expect(reading).toBeVisible();await expect(reading.getByRole('tree',{name:'JSON tree',exact:true})).toBeVisible();
  await expect(card.getByRole('button',{name:'Inspect data',exact:true})).toHaveCount(0);await expect(card.getByText('Choose reading format')).toHaveCount(0);
  await reading.getByRole('button',{name:'Original',exact:true}).press('Enter');await expect(reading.locator('.data-original')).toHaveText(raw);
  await reading.getByRole('button',{name:'Open larger',exact:true}).press('Enter');
- const dialog=page.getByRole('dialog',{name:'Captured data',exact:true});await expect(dialog).toBeVisible();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
+ const dialog=page.getByRole('dialog',{name:'Data',exact:true});await expect(dialog).toBeVisible();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
 });
 test('a JSON field inside a wrapper never replaces the sibling text',async({page})=>{
  await page.setViewportSize({width:1440,height:900});
  const raw=JSON.stringify({content:[{type:'text',text:'Sibling stays visible'},{type:'text',mimeType:'application/json',text:JSON.stringify({a:1,b:[1,2,3]},null,2)}]});
  const card=await open(page,raw);
- await expect(card.getByRole('region',{name:'Captured data reading',exact:true})).toHaveCount(0);await expect(card).toContainText('Sibling stays visible');
+ await expect(card.getByRole('region',{name:'Data reading',exact:true})).toHaveCount(0);await expect(card).toContainText('Sibling stays visible');
 });
 test('text that is not complete JSON stays literal',async({page})=>{
  await page.setViewportSize({width:1440,height:900});
  const card=await open(page,'{"rows":[{"id":1,');
- await expect(card.getByRole('region',{name:'Captured data reading',exact:true})).toHaveCount(0);await expect(card).toContainText('{"rows":[{"id":1,');
+ await expect(card.getByRole('region',{name:'Data reading',exact:true})).toHaveCount(0);await expect(card).toContainText('{"rows":[{"id":1,');
 });

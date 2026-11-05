@@ -6,7 +6,7 @@ import { fileEvidence } from '../src/lib/file-evidence.ts';
 
 const bundle = JSON.parse(readFileSync(new URL('../public/demo/bundle.json', import.meta.url), 'utf8')) as ReplayBundle;
 describe('file evidence choices', () => {
-  it('keeps captured search lines independent without inventing surrounding source', () => {
+  it('keeps search lines independent without inventing surrounding source', () => {
     const search = bundle.projection.operations.find(op => op.detail.kind === 'search')!;
     if (search.detail.kind !== 'search') throw new Error('fixture search missing');
     const hit = search.detail.hits[0]!;
@@ -22,7 +22,7 @@ describe('file evidence choices', () => {
     const edit = bundle.projection.operations.find((op) => op.detail.kind === 'edit')!;
     if (edit.detail.kind !== 'edit') throw new Error('fixture edit missing');
     const choices = fileEvidence({ ...edit, artifactIds: [] }, edit.detail.path);
-    expect(choices.map((item) => item.label)).toEqual(['Captured patch']);
+    expect(choices.map((item) => item.label)).toEqual(['Patch']);
     expect(choices[0]!.artifactId).toBeUndefined();
     expect(fileEvidence(edit, 'unrelated.ts')).toEqual([]);
   });
@@ -40,6 +40,6 @@ describe('file evidence choices', () => {
     const edit = bundle.projection.operations.find((op) => op.detail.kind === 'edit')!;
     if (edit.detail.kind !== 'edit') throw new Error('fixture edit missing');
     const choices = fileEvidence({ ...edit, artifactIds: ['snapshot_before', 'derived_after'] }, edit.detail.path);
-    expect(choices.map((item) => item.label)).toEqual(['Captured patch', 'Before-state reference', 'After-state reference']);
+    expect(choices.map((item) => item.label)).toEqual(['Patch', 'Before-state reference', 'After-state reference']);
   });
 });

@@ -116,7 +116,7 @@ export function App() {
       <div className="center notice">
         <h2>Could not open this workspace</h2>
         <p className="bad" role="alert">{error}</p>
-        <p className="muted">Your captured recordings remain in the local store.</p>
+        <p className="muted">Your sessions remain in the local store.</p>
         <div className="recovery-actions">
           <button className="btn primary" onClick={() => location.reload()}>Retry connection</button>
           <button className="btn" onClick={() => location.assign(location.pathname)}>Open local workspace</button>

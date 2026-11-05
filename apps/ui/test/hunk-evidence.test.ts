@@ -9,7 +9,7 @@ const turn = (sequence: number, agentId = 'main'): TimelineItem => ({ type: 'tur
 const body = ['+export const total = (cart: Cart) => {', '+  return cart.items.reduce((sum, item) => sum + item.price, 0);', '+};'];
 
 describe('recorded edits for a Git hunk', () => {
-  it('finds the captured edit that wrote exactly those lines, even with context and removals around them', () => {
+  it('finds the edit that wrote exactly those lines, even with context and removals around them', () => {
     const wrote = edit('e1', 'src/total.ts', [hunk(' // old', '-return 0;', ...body)]);
     const other = edit('e2', 'src/other.ts', [hunk(...body)]);
     expect(recordedEditsForHunk(hunk(' context', ...body), 'src/total.ts', [other, wrote])).toEqual([wrote]);
@@ -34,7 +34,7 @@ describe('recorded edits for a Git hunk', () => {
 
 describe('recorded work picker entries', () => {
   const a = edit('a', 'f.ts', [hunk(...body)], 'ok', { startSequence: 5 }), b = edit('b', 'f.ts', [hunk(...body)], 'ok', { startSequence: 12 });
-  it('lists the newest edit first and counts turns from the edit agent captured prompts', () => {
+  it('lists the newest edit first and counts turns from the edit agent prompts', () => {
     const picks = recordedPicks([a, b], [turn(1), turn(10), turn(20)]);
     expect(picks.map(pick => [pick.key, pick.turn, pick.label])).toEqual([['b/patch', 2, 'Turn 2 · Edited f.ts'], ['a/patch', 1, 'Turn 1 · Edited f.ts']]);
     expect(picks.some(pick => pick.twin)).toBe(false);
@@ -44,7 +44,7 @@ describe('recorded work picker entries', () => {
     expect(recordedPicks([sub], [turn(1)]).map(pick => [pick.turn, pick.label])).toEqual([[undefined, 'Edited f.ts']]);
     expect(recordedPicks([a], [turn(9)]).map(pick => pick.label)).toEqual(['Edited f.ts']);
   });
-  it('marks entries that read identically so the menu can add their captured time', () => {
+  it('marks entries that read identically so the menu can add their time', () => {
     const picks = recordedPicks([a, b], [turn(1)]);
     expect(picks.map(pick => pick.twin)).toEqual([true, true]);
   });

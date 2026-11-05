@@ -2,13 +2,13 @@
 .atlas-rows {flex:none;display:flex;flex-direction:column;min-height:0;height:min(30%,210px);border-top:1px solid var(--line);background:var(--s1);}
 .commit-rows {flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable;position:relative;}
 .commit-row {display:grid;grid-template-columns:54px minmax(0,1fr) auto auto minmax(0,110px) 74px;align-items:center;gap:10px;width:100%;min-height:30px;padding:0 12px;text-align:left;color:var(--t2);border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);content-visibility:auto;contain-intrinsic-size:auto 30px;transition:background-color .12s ease;}
-.commit-row code {font:10px/1.5 var(--mono);color:var(--source);}
-.commit-row strong {font:12px/1.5 var(--sans);font-weight:450;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.commit-row code {font:var(--text-2xs)/1.5 var(--mono);color:var(--source);}
+.commit-row strong {font:var(--text-xs)/1.5 var(--sans);font-weight:var(--weight-regular);color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .commit-row-refs {display:flex;gap:4px;align-items:center;min-width:0;}
-.commit-row-refs em {font:9px/1.5 var(--mono);font-style:normal;padding:1px 5px;border-radius:4px;background:var(--s3);color:var(--t2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.commit-row-refs small {font:9px/1.5 var(--mono);color:var(--t3);}
-.commit-row-author {font:11px/1.5 var(--sans);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.commit-row time {font:11px/1.5 var(--sans);color:var(--t3);text-align:right;white-space:nowrap;}
+.commit-row-refs em {font:var(--text-2xs)/1.5 var(--mono);font-style:normal;padding:1px 5px;border-radius:var(--round-xs);background:var(--s3);color:var(--t2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.commit-row-refs small {font:var(--text-2xs)/1.5 var(--mono);color:var(--t3);}
+.commit-row-author {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.commit-row time {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);text-align:right;white-space:nowrap;}
 .commit-row[data-hover] {background:var(--s2);}
 .commit-row[aria-pressed=true] {background:var(--s3);box-shadow:inset 2px 0 var(--source);}
 .commit-row:focus-visible {outline:1px solid var(--t3);outline-offset:-2px;}
@@ -16,16 +16,16 @@
 @media(prefers-reduced-motion:reduce){.commit-row {transition:none;}}
 @media(max-width:1000px){.commit-row {grid-template-columns:54px minmax(0,1fr) auto auto 74px;}.commit-row-author {display:none;}}
 @media(max-width:820px){.atlas-rows {height:min(40%,240px);}.commit-row {grid-template-columns:minmax(0,1fr) auto auto 70px;}.commit-row code {display:none;}}
-@media(pointer:coarse){.commit-row {min-height:44px;}}
+
 
 /* Ref list: the filter toggle sits under the list, quietly. */
-.atlas-ref-scope {display:flex;align-items:center;justify-content:space-between;gap:6px;flex:none;padding:6px 4px 2px;font:10px/1.5 var(--sans);color:var(--t3);}
-.atlas-ref-scope button {font:10px/1.5 var(--sans);color:var(--t2);padding:3px 6px;border-radius:5px;}
+.atlas-ref-scope {display:flex;align-items:center;justify-content:space-between;gap:6px;flex:none;padding:6px 4px 2px;font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}
+.atlas-ref-scope button {font:var(--text-2xs)/1.5 var(--sans);color:var(--t2);padding:3px 6px;border-radius:var(--round-sm);}
 .atlas-ref-scope button[aria-pressed=true] {background:var(--s3);color:var(--t1);}
-.atlas-rows-toggle {margin-left:auto;font:10px/1.5 var(--mono);color:var(--t2);}
+.atlas-rows-toggle {margin-left:auto;font:var(--text-2xs)/1.5 var(--mono);color:var(--t2);}
 .atlas-rows-toggle[aria-expanded=true] {background:var(--s3);color:var(--t1);}
 /* The reference column's content slot must share the column's height, or its bottom controls are clipped (the slot
  * is otherwise a plain block whose flex child cannot resolve a height). */
 .atlas-references::details-content {display:flex;flex-direction:column;flex:1;min-height:0;}
-.commit-row-turn {font:11px/1.5 var(--mono);color:var(--source);white-space:nowrap;}
+.commit-row-turn {font:var(--text-2xs)/1.5 var(--mono);color:var(--source);white-space:nowrap;}
 .thread-session-link {color:var(--source);}

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Output } from './common';
 import { toolOutputText } from '../lib/tool-output';
 import type {CapturedContentEvidence} from '../lib/captured-content.ts';
+import {ReadingCaption} from './OriginalToggle.tsx';
 
 /** This display projection never changes stored bytes, source line addresses or copy/search input. */
 export function ToolOutput({text,inspect=true,evidence}:{text:string;inspect?:boolean;evidence?:CapturedContentEvidence}){
@@ -16,5 +17,5 @@ function ToolOutputBody({text}:{text:string}) {
   const lines = formatted.text.split('\n');
   const currentPage = Math.min(page, Math.max(0, Math.ceil(lines.length / 500) - 1));
   if (!formatted.decoded) return <><Output text={text} /></>;
-  return <div className="structured-tool-output"><Output text={raw ? text : lines.slice(currentPage * 500, (currentPage + 1) * 500).join('\n')} /><div className="structured-output-controls"><span>{raw ? 'Captured envelope' : 'Tool text · decoded JSON'}</span><button onClick={event => { event.stopPropagation(); setRaw(value => !value); setPage(0); }} aria-pressed={raw}>{raw ? 'Show tool text' : 'Show raw'}</button></div>{!raw && lines.length > 500 && <nav className="structured-output-controls" aria-label="Decoded output pages"><button disabled={!currentPage} onClick={e => { e.stopPropagation(); setPage(currentPage - 1); }}>Previous text</button><span>Decoded lines {currentPage * 500 + 1}–{Math.min(lines.length, (currentPage + 1) * 500)} / {lines.length}</span><button disabled={(currentPage + 1) * 500 >= lines.length} onClick={e => { e.stopPropagation(); setPage(currentPage + 1); }}>Next text</button></nav>}</div>;
+  return <div className="structured-tool-output"><ReadingCaption label={raw ? 'Envelope' : 'Tool text'} title={raw ? undefined : 'Decoded from the JSON envelope the tool returned'} original={raw} onToggle={() => { setRaw(value => !value); setPage(0); }}/><Output text={raw ? text : lines.slice(currentPage * 500, (currentPage + 1) * 500).join('\n')} />{!raw && lines.length > 500 && <nav className="structured-output-controls" aria-label="Decoded output pages"><button disabled={!currentPage} onClick={e => { e.stopPropagation(); setPage(currentPage - 1); }}>Previous text</button><span>Decoded lines {currentPage * 500 + 1}–{Math.min(lines.length, (currentPage + 1) * 500)} / {lines.length}</span><button disabled={(currentPage + 1) * 500 >= lines.length} onClick={e => { e.stopPropagation(); setPage(currentPage + 1); }}>Next text</button></nav>}</div>;
 }

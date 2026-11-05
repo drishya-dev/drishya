@@ -16,12 +16,14 @@ describe('captured material presentation', () => {
     expect(presentationOf({ ...shell, detail: { kind: 'shell', command: 'input '.repeat(30) } }).shape).toBe('wide');
     expect(presentationOf({ ...shell, detail: { kind: 'shell', command: 'pwd' } }).shape).toBe('compact');
   });
-  it('retains the original structured preview and escapes content rather than executing markup', () => {
+  it('keeps the original structured text one switch away and escapes content rather than executing markup', () => {
     const text = JSON.stringify([{ path: '<script>bad()</script>', extra: { nested: true } }]);
     const html = renderToStaticMarkup(createElement(StructuredResult, { text }));
-    expect(html).toContain('Original captured preview');
+    // UI-8: the recorded text is one Original switch away, in place of the formatted layout.
+    expect(html).toContain('class="original-toggle"');
     expect(html).toContain('&lt;script&gt;');
-    expect(html).toContain('nested');
+    // A field the table leaves out (here a nested object) is in the recorded text behind the switch, not at rest.
+    expect(html).not.toContain('nested');
     expect(html).not.toContain('<script>');
   });
   it('allocates reading width for long external content without making short receipts full width', () => {
@@ -30,15 +32,16 @@ describe('captured material presentation', () => {
     expect(presentationOf({ ...op, detail: { kind: 'mcp', server: 'docs', tool: 'query', input: { query: 'input '.repeat(40) } } }).shape).toBe('reading');
     expect(presentationOf({ ...op, detail: { kind: 'mcp', server: 'docs', tool: 'query', input: {}, resultPreview: 'result '.repeat(100) } }).shape).toBe('reading');
   });
-  it('preserves null, missing fields and the original preview in structured layouts', () => {
+  it('preserves null, missing fields and the switch to the original in structured layouts', () => {
     const text = JSON.stringify([{ name: 'first', value: null }, { name: 'second', later: false }]);
     const html = renderToStaticMarkup(createElement(StructuredResult, { text }));
     expect(html).toContain('<th>later</th>');
     expect(html).toContain('<td>null</td>');
     expect(html).toContain('not present');
-    expect(html).toContain('Original captured preview');
+    // UI-8: the recorded text is one Original switch away, in place of the formatted layout.
+    expect(html).toContain('class="original-toggle"');
     const fields = renderToStaticMarkup(createElement(StructuredResult, { text: '{"value":null}' }));
     expect(fields).toContain('<dd>null</dd>');
-    expect(fields).toContain('Original captured preview');
+    expect(fields).toContain('class="original-toggle"');
   });
 });

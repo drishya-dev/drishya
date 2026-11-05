@@ -54,7 +54,7 @@ test('clicks and downward scrolling preserve Follow; only upward scrolling or th
   await expect(follow).toHaveAttribute('aria-checked', 'true');
 });
 
-test('map scope filters captured file locations and direct imports navigate exact files', async ({ page }) => {
+test('map scope filters file locations and direct imports navigate exact files', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(new URL('/?demo', server.launchUrl).href);
   await page.getByRole('button', { name: 'Explore repository map' }).click();
@@ -76,7 +76,7 @@ test('map scope filters captured file locations and direct imports navigate exac
   await page.screenshot({ path: resolve('.local/map-import-paths.png') });
   await page.setViewportSize({ width: 390, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expect(connections.getByRole('button', { name: 'Open recorded work', exact: true })).toBeVisible();
+  await expect(connections.getByRole('button', { name: 'Open agent work', exact: true })).toBeVisible();
   await page.screenshot({ path: resolve('.local/map-import-paths-mobile.png') });
 });
 test.afterAll(async () => {
