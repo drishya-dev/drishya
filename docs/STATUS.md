@@ -36,13 +36,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | USAGE-1 | @yash + Claude Opus 5.5 | `claude/usage-1` | 2026-11-04 | Usage and context surfaces (`RecordedUsage.tsx`, the context gauge and its popover), the usage projection fields they read, and their specs |
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
 | LIVE-6, FLOW-1 | @yash + Claude Opus 5.5 (AUDIT-1 A3) | claude/audit-1-a3 | 2026-11-05 | LIVE-6: packages/scene/src/index.ts, apps/daemon/src/history-worker.ts, Viewer.tsx; FLOW-1: FlowConnections.tsx |
-| HOME-3 | @yash + Codex (Sol 6.1) | codex/home-3 | 2026-11-05 | Home.tsx, SessionHome.tsx, home-import.ts, home-active.css, focused tests and task acceptance/docs. |
 | CONNECT-2 | @yash + Codex (Sol 6.1) | codex/connect-2 | 2026-11-05 | SessionWorkspace.tsx measured composer clearance, stage.css, modern/hud.css, focused approval test and task acceptance/docs. |
 
 
 ---
 
 ## Last session
+
+### Yash with Codex — 5 Nov: HOME-3 complete
+
+- HOME-3: recently written discovered journals appear before opening, with a writing-time explanation, and open live. Both genuine harness runs passed at 600/1440 px, including expiry after the final write. [Acceptance](review/home-3-writing.md). PR #347 is separate from CONNECT-2; no PR was merged. Final gate numbers and its clean-main comparison are in the PR.
 
 ### Yash with Claude — 5 Nov: MOTION-1 merged, AUDIT-1 walk finished, A3 next
 
