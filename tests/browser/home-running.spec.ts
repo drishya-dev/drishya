@@ -59,3 +59,19 @@ test('Running now stays above the library across repositories and opens its sess
   await expect(page).toHaveURL(new RegExp(`#/r/${codexId}$`));
   await expect(page.locator('.history')).toBeVisible();
 });
+
+for(const width of [600,1440]) test(`unopened discovery enters on a tick and expires without another write at ${width}`,async({page})=>{
+  await page.setViewportSize({width,height:900});
+  const start=new Date('2026-11-05T12:00:00Z');await page.clock.install({time:start});
+  const source={path:'C:/synthetic/new.jsonl',adapterId:'codex',harness:'codex',cwd:'C:/synthetic/repo',title:'New writing journal',modifiedAt:new Date(start.getTime()-120000).toISOString(),bytes:100,companions:[]};
+  await page.route('**/v1/recordings',r=>r.fulfill({json:{recordings:[]}}));
+  await page.route('**/v1/sources',r=>r.fulfill({json:{sources:[source],errors:[]}}));
+  await page.goto(server.launchUrl);await expect(page.locator('.mh-session')).toHaveCount(1);
+  const strip=page.getByRole('region',{name:'Running now'});await expect(strip).toHaveCount(0);
+  source.modifiedAt=start.toISOString();
+  await page.clock.runFor(10000);await expect(strip).toBeVisible();
+  await expect(strip.getByRole('button')).toHaveAttribute('title',/Writing now/);
+  // Neither the file nor its bytes change again; the same discovery result must age out.
+  await page.clock.runFor(60000);await expect(strip).toHaveCount(0);
+  await expect(page.locator('.mh-session')).toHaveCount(1);
+});
