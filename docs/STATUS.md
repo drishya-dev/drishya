@@ -42,6 +42,15 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude — 5 Nov: MOTION-1 merged, AUDIT-1 walk finished, A3 next
+
+- MOTION-1 merged (#345, full gate clean: 1,200 units, 653 browser, package). MOTION-3 is claimed and half run: rest and hover pass on real sessions; both ten-minute replays, reduced motion and low resource, the review doc, PR and gate remain. Its plan is in the side-session notes (`motion-3-status.md`); the evaluation must also cover TOOLS-2 and LIVE-6.
+- AUDIT-1: the remaining walk on the finished UI is recorded (audit rows W1–W13, bce3950d), including the A2 interaction inventory. In-place fixes W7–W10 are draft PR #346 (`claude/audit-1-a1`, verified on Claude `rec_81c2` and Codex `rec_6375`; waits for the A3 batch gate). A3 items LIVE-6, CONNECT-2, FLOW-1 and HOME-3 are claimed, not built.
+- Still open for AUDIT-1: eight findings handed to `UI-8` in the audit (Z1, Z2, Z4, Z5, N6, N7, N8, V1; only N9 is traced) are not traced to a fix in `ui-8-surface-pass.md`; check each in the app and mark it fixed or make it an item. Then Yash reads the ranked list, and AUDIT-1 closes.
+- LIVE-6 design notes (not started; empty branch `claude/live-6`): small sessions compose in the browser (`Viewer.tsx:108`), large ones in the worker (`history-worker.ts:196`, via `HistoryQuery` and the body check in `server.ts` ~369). Arrival is the class `ph-arriving` and Resolve the `resolving` class (`styles.css:216`). Keep `since` stable when the step has not changed, so a re-render or a scroll page never strips a running animation's class mid-run; replay keeps `step - 1`.
+- TOOLS-2: Yash chose a floating window (5 Nov), recorded in TASKS. Not claimed yet.
+- Work moved into one session; side sessions are no longer used for this queue. Order tomorrow: AUDIT-1's open findings and A3 (LIVE-6, CONNECT-2, FLOW-1, HOME-3), one gate with #346, close AUDIT-1; then TOOLS-2; then MOTION-3.
+
 ### Yash with Claude — UI-8 complete; FILES-11 merged; USAGE-1 open
 
 - UI-8 is done: #337 (panels and header), #338 (Git network graph), #339 (one Original switch), #340 (palettes), #341 (screen trail), plus 31c866b4 on main. The four from #338 on were gated as one batch on main (types, package, 619 + 33 browser); the gate's failures were fixed on their branches before merging. What each checked on real sessions is in [the surface pass](review/ui-8-surface-pass.md).
