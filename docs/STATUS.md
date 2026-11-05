@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TEST-2 | @harsh + Codex | `codex/test2-source-readiness` | 2026-11-02 | Whole TEST-2 completion continues after merged #314. Harsh approved up to 26 files on 2 Nov after the manual gate returned two clean commands then a Workspace line-1200 failure. Verified repairs: tests/browser/workspace-shared-draft.spec.ts Go-enabled readiness; apps/ui/src/components/History.tsx native start-boundary correction and tests/browser/product-workspace.spec.ts regression. Held-response proof, scroll-writer traces and failing-before/passing-after checks are private. Current-main continuation also corrects readiness in dialog-typography.spec.ts, git-access.spec.ts and files-4-reader-review.spec.ts; p1-pacing.spec.ts enters explicit manual reading before layout selection, preserving native pointer coverage; user layout validation 24/24, strict full gate pending. No new product feature. docs/review/test-2-live-anchor.md, STATUS/TASKS, AGENTS only when the measured worker gate is established. Retain the unresolved clean-main b2-live anchor diagnosis and all failed runs; any further reading/source edit must first have actual cause evidence and stay within the approved 26-path ceiling. Coordinate UI-21 string changes in the shared spec; this claim changes readiness logic only. No retries, relaxed assertions, larger timeouts or hidden failures. Full acceptance remains three consecutive complete commands. Harsh requested two-agent completion on 5 Nov, then explicitly took test execution back. Agents finish edits and supply commands; Harsh runs validation. |
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | USAGE-1 | @yash + Claude Opus 5.5 | `claude/usage-1` | 2026-11-04 | Usage and context surfaces (`RecordedUsage.tsx`, the context gauge and its popover), the usage projection fields they read, and their specs |
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
@@ -57,12 +56,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - Next: UI-8, foundations first. Measured on one real History screen: 13 font sizes, 13 radii, 19 control heights, 13 line heights.
 - Found while walking: Codex `:codex-file-citation{…}` directives show as raw text in prose. Recorded in the audit, third batch.
 
-### Harsh with Codex — TEST-2 layout validation passed; full gate pending
+### Harsh with Codex — TEST-2 complete at three workers; PR #331 ready for review
 
-- Harsh's afaa291 layout-only command passes **24/24**, zero failures/skips/flaky results/retries, **67.585 seconds**, one worker; normal UI build succeeds. The coordinator inspected saved logs/JSON, without executing builds or tests. [Every result and limit](review/test-2-live-anchor.md).
-- Explicit manual reading preserves the original assertions and restores final pointer coverage. This repeated check validates that setup; the exact earlier scroll writer and original checkpoint initial-focus timeout remain unresolved. The earlier checkpoint diagnostic is 24/24 non-reproduction at three workers.
-- Prepared a frozen user-only three-complete-command gate: three parallel workers, one serial worker, zero retries, normal UI build each time, retained failure traces/screenshots and first-failed-command stop. No full command has started on this candidate. User runs all tests/builds.
-- TEST-2 remains claimed/unchecked and #331 draft. No full-suite streak, product-pointer fix, checkpoint fix or four-worker certification is claimed. Update measured worker documentation only after inspecting the returned gate evidence.
+- Harsh's frozen **6009c09** gate passes all three consecutive complete browser commands: each **621 parallel + 33 serial passed / 28 existing skips / zero failures/retries**. Times: **810.10 / 765.74 / 745.42 seconds**. Each rebuilds the UI first; failure evidence was enabled. Saved logs, all project summaries and same-commit records were inspected. [Full acceptance and every failed attempt](review/test-2-live-anchor.md).
+- Measured local Windows configuration: **DRISHYA_WORKERS=3 plus serial=1**. AGENTS/TEST-3 record that limit; the four-worker default remains, without claiming a four-worker clean streak. Both types, 1,200 units/one skip and package checks passed earlier on unchanged application/package code; no agent ran tests/builds during this user-owned handoff.
+- Exact native History boundary proof and genuine Modern checks cover both harnesses at 600/1440. Go/Git/resize readiness guards retain their original assertions. Layout explicit manual reading passed 24/24, then all three full commands, with final pointer coverage restored.
+- Historical B2 5 px offset, checkpoint focus timeout and exact layout-scroll writer remain cause-unverified. Passing this strict streak meets acceptance without inventing those causes. Extra Claude Classic visibility and release/human/platform checks remain separate.
+- TEST-2 checkbox set and claim removed in this finishing PR; counts synchronized. Completion changes are documentation only. **#331 is ready for the other builder's review; not merged.**
 
 ### Yash with Claude — AUDIT-1, first batch
 
@@ -1379,6 +1379,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+**5 November, TEST-2 worker measurement (Harsh with Codex):** certify the local Windows clean browser streak at `DRISHYA_WORKERS=3` plus serial=1, because the three complete commands on frozen 6009c09 each passed 654 tests with 28 existing skips and zero retries. Preserve the default four workers, but do not describe this evidence as a four-worker streak. Earlier failed runs and unknown causes remain in [the report](review/test-2-live-anchor.md).
 
 - **4 Nov, Yash with Claude: formatted by default, one Original switch everywhere.** A reading that had its own raw button, or showed the original beneath the formatted view, now has one shared `Original` toggle that swaps the recorded text in place. A reader that owns the switch (a stored result) keeps nested readings from offering a second. Reason: Yash, 3 Nov, "formatted and original together doesnt look good. everywhere".
 

@@ -1,6 +1,6 @@
 # TEST-2: live reader anchor stability
 
-Status: verified repairs integrated with current main; three clean full commands remain required. Task remains open. Claim pushed on main in 289ae6f before branch work. Branch harsh/test-2-live-anchor has its own frozen pnpm install.
+Status: TEST-2 acceptance met on frozen candidate **6009c094848f404debf9bf9c060d8d62aca7617c**: three consecutive complete browser commands, each **654 passed / 28 existing skips / zero failed / zero retries**, at **three parallel workers plus one serial worker**. PR #331 is ready for the other builder's review; not merged. Completion changes after that candidate are documentation only. Earlier investigations and failed attempts below are retained as history.
 
 ## Problem and acceptance
 
@@ -364,3 +364,27 @@ This validates the explicit manual-reading setup for this repeated layout case, 
 **Next command, supplied for Harsh to execute:** `.local/test2-integration-20261105/run-user-full-gate.ps1`. The frozen candidate differs from afaa291 only in these completion-evidence documents. It runs `pnpm test:browser --config=.local/test2-integration-20261105/full-gate.config.ts --retries=0 --reporter=list,.local/test2-completion-20261101-082934/preserve-reporter.ts` three times consecutively, with **DRISHYA_WORKERS=3**, the existing one-worker serial project, Microsoft Edge and canonical TEMP/TMP. Each complete command builds the UI first and runs both projects. The private config inherits the tracked full suite and only resolves its test directory and enables failure traces/screenshots. Failure tracing is enabled to retain evidence for an otherwise undiagnosed recurrence; it adds recording overhead compared with earlier untraced full commands. No timeout, expected bound, fixture, assertion or skip changes. There is no failed-command retry; the script records each completed command and stops after the first nonzero exit or checkout change. Per-project summaries, copied failure attachments, command logs and per-run exit/duration records stay in a unique private evidence directory.
 
 The command has only been prepared and syntax-parsed, **not executed by an agent**. No clean full run for this candidate is claimed. TEST-2 remains unchecked/claimed and #331 draft. A successful three-worker streak would certify only that measured configuration; the worker count belongs in TEST-3/AGENTS only after the returned gate evidence is inspected.
+
+
+## 5 November completion: three consecutive complete user-run commands
+
+Harsh executed the frozen runner on **6009c094848f404debf9bf9c060d8d62aca7617c**. The coordinator inspected `results.json`, all six per-project summary files, all three command/build logs and the inherited full-suite config under the private `.local/test2-integration-20261105/full-gate-20261105-044905/` directory. Each command builds the UI first, then runs the full parallel and serial projects. The checkout stayed on the same clean candidate throughout. No agent executed a build or test during this handoff.
+
+| Run | Started UTC | Parallel (3 workers) | Serial (1 worker) | Exit | Seconds |
+| --- | --- | --- | --- | ---: | ---: |
+| 1 | 2026-11-05 04:49:05 | 621 passed / 27 skipped / zero failed | 33 passed / one skipped / zero failed | 0 | 810.10 |
+| 2 | 2026-11-05 05:02:36 | 621 passed / 27 skipped / zero failed | 33 passed / one skipped / zero failed | 0 | 765.74 |
+| 3 | 2026-11-05 05:15:21 | 621 passed / 27 skipped / zero failed | 33 passed / one skipped / zero failed | 0 | 745.42 |
+
+**Three-clean-run acceptance is met for this measured configuration.** Each run has 654 passes and the same 28 existing skips; no new skip, retry, relaxed assertion or larger configured timeout was added. Explicit retries remain zero. Failure tracing/screenshots were enabled through a private config that inherits both tracked projects without filtering specs. Node's SQLite experimental notice is emitted as a PowerShell NativeCommandError wrapper in each log; the underlying notice is not a failing test or process exit. All raw notices/logs are retained.
+
+### Acceptance accounting and limits
+
+- The whole required browser command passes three consecutive times. Historical failed attempts are separate and are not counted toward this streak.
+- The native History start-boundary product correction has the exact failing-before/passing-after regression and both-harness Modern checks at 600/1440 documented above. Genuine Codex `01a1824b` (5,011,679 bytes / 1,348 observations / 317 operations) and Claude Code `3a2fb933` (3,616,835 bytes / 392 observations / 71 operations) cover the final History navigation check; raw content/frames remain private. Earlier delayed-reading/Home genuine checks and the already-merged prerequisite repairs remain recorded above.
+- Files/Git permission readiness and the three later readiness corrections retain controlled before/after evidence, original assertions and named repeats. The layout manual-reading setup passed 24/24 before this streak and passes all three complete commands.
+- Both typechecks, 1,200 units / one existing skip across 199 files at canonical TEMP/four workers, and package verification passed on unchanged application/package code after current-main integration. Subsequent changes were test drivers and completion documents; all three complete commands rebuild normally. No fresh unit/package execution is claimed during the user-only handoff.
+- The certified local Windows browser configuration is **DRISHYA_WORKERS=3 plus the one-worker serial project**, not a four-worker streak. AGENTS/TEST-3 now state that measurement while preserving the existing four-worker default. This does not prove that four workers would fail on the final source, or guarantee future runs.
+- The original isolated 5 px B2 offset, original checkpoint initial-focus timeout, and exact automatic-scroll writer from the earlier layout trace remain cause-unverified. Their passing full runs satisfy the strict acceptance alternative; they do not establish a cause or a product fix for those historical observations. Extra Claude Classic initial visibility and human/platform/ten-minute release checks remain unverified and separate.
+
+TEST-2 is checked in this completion PR and its claim row is removed here, with priority counts regenerated by `node scripts/sync-tasks.ts`. PR #331 becomes ready for the other builder's review; no merge is performed. No code, dependency, timeout or test assertion changes after the accepted frozen candidate.
