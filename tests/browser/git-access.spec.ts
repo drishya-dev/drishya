@@ -45,6 +45,8 @@ for(const [first,firstTitle,second,secondTitle] of [['Git review','Git review','
     await expect(dialog.getByRole('button',{name:/Approve/})).toHaveCount(1);
     await grant(dialog).click();
     await expect(grant(dialog)).toHaveCount(0);
+    // The approval button changes its name while the shared grant is still pending.
+    await expect(first==='Git review'?dialog.locator('.git-review-layout'):dialog.locator('.atlas-layout')).toBeVisible();
     await dialog.getByRole('button',{name:`Close ${firstTitle}`,exact:true}).click();
     await openGitDestination(page,second);
     const next=page.getByRole('dialog',{name:secondTitle,exact:true});

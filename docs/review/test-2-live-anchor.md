@@ -280,3 +280,27 @@ The prior line-jump and source-boundary regressions pass, as does serial B2. The
 Only after the completed run returned, current main **c5c87db** is integrated into the same claimed branch. It contains the UI-8/FILES-11/Usage/MOTION-1 changes and updated browser labels. Both existing TEST-2 fixes survive the automatic source merge. STATUS's overlapping last-session headings are resolved by preserving the other builder's current entries/claims and replacing our own handoff. No native sources or real Drishya home are changed.
 
 This integration does not establish that any of the three failures is fixed. Named checks and cause diagnosis precede another frozen manual gate. TEST-2 remains unchecked, #331 stays draft, and no worker count is certified.
+
+
+### Two-agent diagnosis and reviewed readiness corrections
+
+Harsh explicitly requested two subagents on 5 November: one investigates all returned errors read-only, the other makes only evidence-backed fixes. Both operated under the existing TEST-2 claim. The coordinator reviewed their work and retained all failed diagnostic attempts. No new feature or production patch was introduced in this phase.
+
+- **Git graph typography:** a held Git status response demonstrates that the original optional-approval helper returns before access is known, sends **zero approvals**, and the Commits assertion fails. Waiting for either the actual approval action or loaded Commits before deciding sends **one approval** and preserves all original palette/font checks. The generic helper is unchanged.
+- **Shared Git approval:** a held approval POST proves that an exact-name Approve button count of zero is not completion: the label changes to Approving while the grant is pending. The original sequence advances to a second consent screen; the controlled failure occurs at its existing no-second-consent assertion, before the final atlas assertion recorded in the manual run. The correction keeps that original count check and waits for the first surface's loaded layout before closing. The controlled after case passes all existing second-surface assertions.
+- **Peek resize:** the first window-listener-only control passes because ResizeObserver is another geometry-update path; that attempt is retained, not called proof. Holding both application callback paths reproduces the unchanged immediate assertion **852 <= 600**, then release produces **588**. The corrected readiness poll observes **852 -> 588** and keeps the same right-edge bound, desktop widths and configured 10-second expectation timeout. The original manual run's precise callback ordering was not recorded; this is controlled timing evidence, not a retroactive native trace.
+
+Only three spec files change in this phase: six insertions / two deletions. Native inputs, content/approval assertions, numeric bounds, fixture data and timeout configuration remain. The independent read-only reviewer approved those changes.
+
+**All additional error diagnostics accounted for:** the eight lstat ENOENT errors belong to the intentionally absent missing-write fixture in file-reading-actions. Four owning cases (both harnesses at 600/1440, two reading surfaces each) pass in the returned command. On dbc9950 the generic daemon path logs them as 500 errors. Integrated FILES-11 already handles the absent file explicitly. A fresh authenticated current-main probe returns **404**, the intended missing-file response and **zero server error diagnostics**. No evidence connects these eight messages to the three failed assertions, and no additional product change is needed.
+
+Fixed integration verification:
+
+- Three recorded failing cases, each repeated 24 times: **72/72**, **150.254 seconds**, four actual workers, zero retries/skips/flaky results.
+- All three affected files once: **13/13**, **41.265 seconds**, four configured / three actual file workers, zero retries/skips/flaky results.
+- Both typechecks and **17 relevant navigation units** pass after the main merge.
+- Genuine Modern History boundary/navigation checks still pass **4/4** after integration: both harnesses at 600/1440, using the existing private imported copies and safe reporter. Earlier source counts and extra Classic limitations remain as recorded; no native content/frames are sent or committed.
+
+The corrected private proof command finishes **three passes and one intentional original-resize failure**; the earlier original proof finishes two failures / one insufficient-control pass. Neither is represented as a clean test gate.
+
+**Next acceptance:** at Harsh's explicit request to complete the delegated task, the coordinator freezes this reviewed candidate and runs the existing three-command gate here, rather than another manual handoff. Full-run retries remain zero and the runner stops on its first failure. TEST-2 stays unchecked and #331 draft while that gate is pending; no completed streak or measured worker-count certification is claimed in advance.
