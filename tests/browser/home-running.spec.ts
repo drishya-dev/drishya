@@ -27,7 +27,7 @@ async function home(page: Page, following: boolean) {
     { ...base, id: codexId, harness: 'codex', title: 'Synthetic Codex run', workspaceRoot: '/synthetic/beta' },
   ];
   await page.route('**/v1/recordings', route => route.fulfill({ json: { recordings } }));
-  await page.route('**/v1/sources', route => route.fulfill({ json: { sources: [], errors: [] } }));
+  await page.route('**/v1/sources', route => route.fulfill({ json: { sources: recordings.map((r,i)=>({path:`C:/synthetic/${i}.jsonl`,adapterId:r.harness,harness:r.harness,cwd:r.workspaceRoot,title:r.title,modifiedAt:following?now:new Date(Date.now()-120000).toISOString(),bytes:100,companions:[],importedRecordingId:r.id})), errors: [] } }));
   await page.goto(server.launchUrl);
   await expect(page.locator('.mh-home')).toBeVisible();
 }
@@ -53,7 +53,9 @@ test('Running now stays above the library across repositories and opens its sess
   await page.locator('.mh-workspace-list button').filter({ hasText: 'alpha' }).click();
   await expect(page.locator('.mh-session')).toHaveCount(1);
   await expect(strip.getByRole('button')).toHaveCount(2);
+  let live=false;await page.route('**/v1/import',async route=>{live=route.request().postDataJSON().live;await route.fulfill({json:{recordingId:codexId}});});
   await strip.getByRole('button', { name: /Synthetic Codex run/ }).click();
+  await expect.poll(()=>live).toBe(true);
   await expect(page).toHaveURL(new RegExp(`#/r/${codexId}$`));
   await expect(page.locator('.history')).toBeVisible();
 });
