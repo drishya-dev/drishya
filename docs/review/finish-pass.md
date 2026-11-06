@@ -2,6 +2,10 @@
 
 Builder direction, Yash, 6 November 2026. This document is how the FINISH items in [TASKS](../TASKS.md) are run. It replaces "three separate passes" for everything still open. AUDIT-1, UI-8 and MOTION-1 found and fixed a lot. Yash's own ten minutes on 5 November still turned up a basic composer, unreadable menus, wasted facts, motion that opens but does not close, and a Home that "looks terrible". The answer is not a fourth pass over everything. It is to **finish each component once, to the fullest: its features, its presentation and its motion, decided together.** After that comes one integrated pass over the whole.
 
+## Where the work lands: Clarity (Yash, 6 Nov, later)
+
+Every FINISH item is built in **Clarity**, a new UI version that starts as an exact replica of Modern; Modern stays unchanged as the backup in Settings. CLARITY-1 builds the version and the guard first. Each FINISH PR proves Modern did not change. Clarity's sheets live in `apps/ui/src/clarity/` in `@layer clarity`; markup that differs branches on `useSkin()`. Shared content logic (CONTENT-16/17, FILES-12, CONNECT-3, LIVE-6) serves both versions. Full freedom in Clarity over the agent visualization, themes and palettes. Look: VISION §9. Spec: [clarity-1-version.md](finish/clarity-1-version.md).
+
 ## Why components, and why all three lenses at once
 
 - **One decision, not three.** A separate audit, UI pass and motion pass each decided part of a component and handed the rest on. The handoffs are where the 5 November findings came from: a menu restyled without its close motion, a fact kept because the UI pass did not own the decision to drop it.
@@ -106,7 +110,8 @@ UI-26 (one stylesheet layer behind a pixel guard, Harsh) is **paused until FINIS
 
 | Item | Spec | Build | Verified | Merged |
 |---|---|---|---|---|
+| CLARITY-1 | [written](finish/clarity-1-version.md) | — | — | — |
 | FINISH-0a | [written](finish/finish-0-foundations.md) | — | — | — |
 | FINISH-0b | [written](finish/finish-0-foundations.md) | — | — | — |
 | FINISH-0c | [written](finish/finish-0-foundations.md) | — | — | — |
-| FINISH-1 | — | — | — | — |
+| FINISH-1 | concept A chosen | — | — | — |

@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| CLARITY-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/clarity-1` | 2026-11-06 | `lib/ui-version.ts`, `UIVersions.tsx`, `main.tsx`, `apps/ui/vite.config.ts`, new `apps/ui/src/clarity/`, `!important` guards in legacy sheets; scripts for the pixel guard. |
 | FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
 | FINISH-0b | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0b` | 2026-11-06 | New `components/overlay/*`; every file with a native select or a details menu; `ProductMenu.tsx`, `lib/dismiss-menus.ts`; after 0a. |
 | FINISH-0c | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0c` | 2026-11-06 | New state components; the empty and error call sites; the session-open loading path in `App.tsx`/`Viewer.tsx`; after 0a. |
@@ -1397,6 +1398,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **6 Nov (later), Yash with Claude: Clarity, a new UI version; Modern is the frozen backup.** Yash liked the Home concepts' look ("clean, modern, accurate space, minimal but professional and premium") and asked for it everywhere. Rebuilding inside Modern would mean another layer over sixty, so Clarity starts as an exact replica of Modern with all older CSS in `@layer legacy` and its own winning layer, and every FINISH item lands there; Modern stays selectable in Settings. Home is concept A (Ledger + Now). The concepts looked cleaner partly because they use Inter; the app renders Outfit, a display face (Inter is named but never bundled). See [clarity-1-version.md](review/finish/clarity-1-version.md) and VISION §9.
 
 - **6 Nov, Yash with Claude: the finishing pass works one component at a time, audit, UI and motion at once; UI-26 is paused.** Separate passes left gaps at their handoffs (a menu restyled without its close, facts nobody owned the decision to drop), which Yash found within ten minutes on 5 Nov. FINISH-0 to FINISH-13 each finish one component to the fullest and absorb its open items; Opus walks, decides, specs and verifies, a fresh Sonnet session builds each spec, to save limits before the 18 Nov review. Lenses: Impeccable (Markdown only, no launcher or hooks), emil-design-eng, Taste's rules. UI-26's pixel guard would fail a pass that changes pixels on purpose, so it waits until FINISH-12 merges and then guards the finished look. See [finish-pass.md](review/finish-pass.md).
 
