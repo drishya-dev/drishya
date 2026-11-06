@@ -19,9 +19,12 @@ test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!res
 for(const count of [3,300])test(`${count} captured MCP and runtime tools stay reachable in a bounded disclosure`,async({page})=>{
  await page.route('**/controller',r=>r.fulfill({json:{harness:'claude-code',available:false,output:'',tools:Array.from({length:count},(_,n)=>`mcp__synthetic__tool_${String(n).padStart(3,'0')}`),inventory:'runtime',approvals:[],state:'idle'}}));
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/#/r/${ids.get(count)}`);
- await expect(page.locator('.modern-toolbox')).toBeVisible();const runtime=page.getByRole('region',{name:'Available runtime tools',includeHidden:true}),mcp=page.getByRole('region',{name:'MCP tools for synthetic',includeHidden:true});
+ const toolbox=page.locator('.modern-tool-station>.modern-toolbox');await expect(toolbox).toBeVisible();const runtime=page.getByRole('region',{name:'Available runtime tools',includeHidden:true}),mcp=page.getByRole('region',{name:'MCP tools for synthetic',includeHidden:true});
+ const runtimeSummary=toolbox.locator('.md-server>summary').filter({hasText:'Run tools'}),mcpSummary=toolbox.locator('summary[data-mcp-server="synthetic"]');
+ await expect(runtimeSummary).toContainText('Run tools');await expect(toolbox.locator('.tool-heading')).toContainText('recorded');
  for(const list of [mcp,runtime]){
-  const disclosure=list.locator('..'),summary=disclosure.locator(':scope>summary');await expect(disclosure).not.toHaveAttribute('open');await summary.click();await expect(disclosure).toHaveAttribute('open','');await expect(list).toBeVisible();
+  const summary=list===mcp?mcpSummary:runtimeSummary,disclosure=summary.locator('..');await expect(disclosure).not.toHaveAttribute('open');await summary.click();await expect(summary).toHaveAttribute('aria-expanded','true');await expect(list).toBeVisible();
+  const reader=page.getByRole('dialog',{name:list===mcp?'MCP tools for synthetic':'Run tools',exact:true});await expect(reader).toBeVisible();
   await expect(list).toHaveAttribute('data-size',count===3?'fit':'scroll');await expect(list.locator(':scope>button,:scope>span')).toHaveCount(count);
   expect(await list.evaluate(root=>[...root.children].filter(el=>parseFloat(getComputedStyle(el).fontSize)<12).length)).toBe(0);
   expect(await list.locator('small').evaluateAll(nodes=>nodes.filter(el=>parseFloat(getComputedStyle(el).fontSize)<11).length)).toBe(0);
@@ -33,20 +36,21 @@ for(const count of [3,300])test(`${count} captured MCP and runtime tools stay re
    await expect(list.locator(':scope>button,:scope>span').last()).toBeInViewport();
    await expect(summary).toBeInViewport();
   }
-  await summary.click();await expect(list).toBeHidden();
+  await reader.getByRole('button',{name:'Close toolbox',exact:true}).click();await expect(list).toBeHidden();await expect(summary).toBeFocused();
  }
- const toolbox=page.locator('.modern-toolbox');await expect(toolbox.locator('.md-agents')).not.toHaveAttribute('open');
+ await expect(toolbox.locator('.md-agents')).not.toHaveAttribute('open');
  for(const palette of ['jet','paper','midnight','mocha','tokyo','nord','gruvbox']){
   await page.evaluate(p=>document.documentElement.dataset.palette=p,palette);
   expect(await toolbox.evaluate(root=>[...root.querySelectorAll<HTMLElement>('*')].filter(el=>el.getClientRects().length&&el.checkVisibility()&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent?.trim())&&parseFloat(getComputedStyle(el).fontSize)<11).map(el=>({text:el.textContent?.slice(0,40),font:getComputedStyle(el).fontSize})))).toEqual([]);
   expect(await toolbox.locator('.md-server>summary').evaluateAll(nodes=>nodes.filter(el=>parseFloat(getComputedStyle(el).fontSize)<12).length)).toBe(0);
  }
- const captured=mcp.locator('..').locator(':scope>summary');await captured.click();await mcp.locator('button').first().click();
- const clear=toolbox.getByRole('button',{name:'Clear focus ×',exact:true});await expect(clear).toBeVisible();expect(await clear.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);await clear.click();await expect(clear).toHaveCount(0);await captured.click();
+ const captured=mcpSummary;await captured.click();await mcp.locator('button').first().click();
+ const mcpReader=page.getByRole('dialog',{name:'MCP tools for synthetic',exact:true});
+ const clear=mcpReader.getByRole('button',{name:'Clear focus ×',exact:true});await expect(clear).toBeVisible();expect(await clear.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);await clear.click();await expect(clear).toHaveCount(0);await mcpReader.getByRole('button',{name:'Close toolbox',exact:true}).click();
  for(const width of [1440,900,600]){
-  await page.setViewportSize({width,height:960});if(!await page.locator('.workbench-station').isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();const summary=runtime.locator('..').locator(':scope>summary');if (!await summary.locator('..').evaluate(el=>(el as HTMLDetailsElement).open)) await summary.click();
+  await page.setViewportSize({width,height:960});if(!await page.locator('.workbench-station').isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();const summary=runtimeSummary;await summary.click();
   await expect(runtime).toBeVisible();const bounds=await runtime.boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(width);
   await runtime.evaluate(e=>{e.scrollTop=e.scrollHeight;});await expect(runtime.locator('span').last()).toBeInViewport();
-  await page.screenshot({path:`.local/ui10-${count}-${width}.png`});await summary.click();
+  await page.screenshot({path:`.local/ui10-${count}-${width}.png`});await page.getByRole('dialog',{name:'Run tools',exact:true}).getByRole('button',{name:'Close toolbox',exact:true}).click();
  }
 });

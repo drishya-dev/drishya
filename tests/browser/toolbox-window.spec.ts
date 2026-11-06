@@ -10,6 +10,7 @@ import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 // Synthetic regression guards only. Genuine Claude/Codex acceptance is user-run, in a scratch home.
 let dir:string,app:App,server:RunningServer;
 const ids=new Map<string,string>();
+const mcpName=(n:number)=>`mcp__synthetic__tool_${String(n).padStart(3,'0')}${n===299?'_'+ 'long_name_'.repeat(20):''}`;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-toolbox-window-'));app=new App(join(dir,'store'));
  for(const harness of ['claude-code','codex'] as const){
@@ -18,13 +19,13 @@ test.beforeAll(async()=>{
   let sequence=0;const rows:Omit<Observation,'receivedSequence'>[]=[];
   const add=(kind:Observation['kind'],agentId:string,payload:Observation['payload'],operationId?:string)=>rows.push({id:`${id}-${sequence++}`,recordingId:id,source:{adapterId:harness,adapterVersion:'synthetic',sourceId,generation:0,byteOffset:sequence,part:0},observedAt:'2026-11-05T00:00:00Z',workspaceRoot:dir,agentId,operationId,kind,payload,privacyPolicyVersion:PRIVACY_POLICY_VERSION,redactions:[],availability:'complete'});
   add('session.meta','main',{harness});add('message.user','main',{text:'Synthetic Toolbox window regression'});
-  add('tools.snapshot','main',{source:'prompt_snapshot',tools:['Read',...Array.from({length:300},(_,n)=>`mcp__synthetic__tool_${String(n).padStart(3,'0')}`)].map(name=>({name}))});
+  add('tools.snapshot','main',{source:'prompt_snapshot',tools:['Read',...Array.from({length:300},(_,n)=>mcpName(n))].map(name=>({name}))});
   for(let n=0;n<3;n++){
    add('tool.call','main',{tool:'Read',input:{file_path:join(dir,`${n}.ts`)}},`read-${n}`);
    add('tool.result','main',{output:`Synthetic source ${n}`,isError:false},`read-${n}`);
   }
   for(let n=0;n<300;n++){
-   add('tool.call','main',{tool:`mcp__synthetic__tool_${String(n).padStart(3,'0')}`,input:{n}},`mcp-${n}`);
+   add('tool.call','main',{tool:mcpName(n),input:{n}},`mcp-${n}`);
    add('tool.result','main',{output:'Synthetic MCP result',isError:false},`mcp-${n}`);
   }
   for(let n=1;n<=3;n++){
@@ -40,7 +41,7 @@ test.beforeAll(async()=>{
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 test.beforeEach(async({page})=>{
  await page.route('**/v1/working-locations',r=>r.request().method()==='GET'?r.fulfill({json:{version:1,sessions:[]}}):r.continue());
- await page.route('**/controller',r=>r.fulfill({json:{harness:'codex',available:false,output:'',tools:Array.from({length:300},(_,n)=>`runtime_tool_${n}`),inventory:'runtime',approvals:[],state:'idle'}}));
+ await page.route('**/controller',r=>r.fulfill({json:{harness:'codex',available:false,output:'',tools:Array.from({length:300},(_,n)=>`runtime_tool_${n}${n===299?'_'+ 'long_name_'.repeat(20):''}`),inventory:'runtime',approvals:[],state:'idle'}}));
 });
 async function open(page:Page,harness='codex',motion=false){
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
@@ -61,6 +62,8 @@ async function safe(page:Page,reader:Locator){
 }
 for(const width of [600,1440])for(const harness of ['claude-code','codex'])test(`whole Toolbox and each nested real material stay centred and reversible at ${width}px (${harness})`,async({page})=>{
  await page.setViewportSize({width,height:900});await open(page,harness);
+ await expect(page.locator('.md-server>summary').filter({hasText:'Run tools'})).toBeVisible();
+ await expect(page.locator('.tool-heading')).toContainText('Available tools · recorded');
  const whole=page.getByRole('button',{name:'Open toolbox',exact:true});await whole.click();
  const reader=windowFor(page);await safe(page,reader);
  await expect(page.locator('.modern-tool-station .instrument').first()).toBeVisible();
@@ -68,17 +71,18 @@ for(const width of [600,1440])for(const harness of ['claude-code','codex'])test(
  await reader.getByRole('button',{name:'Close toolbox',exact:true}).click();await expect(reader).toHaveCount(0);await expect(whole).toBeFocused();
  for(const [trigger,title,selector,count] of [
   ['synthetic','MCP tools for synthetic','button[data-mcp-tool]',300],
-  ['Agents','Agents','[role=switch]',4],
+  ['Agents','Agents','.station-agents [role=switch]',4],
   ['Run tools','Run tools','.md-runtime-tool',300],
-  ['Recorded available tools','Recorded tools','.tool-row',302],
+  ['Available tools · recorded','Recorded tools','.tool-row',302],
  ] as const){
-  const origin=page.locator('.modern-tool-station').getByText(trigger,{exact:true}).first();await origin.click();
+  const origin=title==='Recorded tools'?page.locator('.modern-tool-station .tool-heading'):page.locator('.modern-tool-station .md-server>summary').filter({hasText:trigger}).first();await origin.click();
   const view=page.getByRole('dialog',{name:title,exact:true});await safe(page,view);
   if(title==='Agents')await view.locator('.station-subagents>summary').click();
   await expect(view.locator(selector)).toHaveCount(count);
   await expect(page.locator(selector)).toHaveCount(count);
   const scroller=view.locator(title==='Recorded tools'?'.tool-groups':'.md-inventory-list');
   await scroller.evaluate(el=>el.scrollTop=el.scrollHeight);await expect(view.locator(selector).last()).toBeInViewport();
+  expect(await scroller.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   await page.keyboard.press('Escape');await expect(view).toHaveCount(0);await expect(origin).toBeFocused();
  }
  const recorded=page.locator('.tool-heading');await recorded.click();
@@ -94,19 +98,25 @@ for(const width of [600,1440])for(const harness of ['claude-code','codex'])test(
  await inventory.getByRole('button',{name:'Clear focus ×',exact:true}).click();await expect(page.locator('.tool-trail')).toHaveCount(0);
  await page.keyboard.press('Escape');
  await page.getByRole('button',{name:'Minimize toolbox',exact:true}).click();const minimized=page.getByRole('button',{name:'Expand toolbox',exact:true});await minimized.click();await safe(page,windowFor(page));
- await page.keyboard.press('Escape');await expect(minimized).toBeFocused();
+ await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Minimize toolbox',exact:true})).toBeFocused();
 });
 
 test('motion starts at the nested origin; interruption reverses the SAME material, resize and session changes cancel',async({page})=>{
  await page.setViewportSize({width:1440,height:900});await open(page,'codex',true);
+ // Hold only Toolbox motion, so the assertion samples the first frame even on a busy machine.
+ await page.evaluate(()=>{const animate=Element.prototype.animate;Element.prototype.animate=function(frames,options){const animation=animate.call(this,frames,options);if(this.matches('[data-toolbox-window]'))animation.pause();return animation;};});
  const origin=page.locator('.md-server>summary').filter({hasText:'synthetic'});const start=(await origin.boundingBox())!;await origin.click();
  const reader=windowFor(page);await expect(reader).toBeVisible();
  const first=await reader.evaluate(el=>{const a=el.getAnimations()[0];a.pause();a.currentTime=0;const r=el.getBoundingClientRect();(window as any).__toolboxMaterial=el.querySelector('[data-toolbox-part]');return {x:r.x,y:r.y,width:r.width,height:r.height,easing:a.effect?.getTiming().easing};});
  expect(first.easing).toBe('cubic-bezier(0.16, 1, 0.3, 1)');
  for(const dimension of ['x','y','width','height'] as const)expect(Math.abs(first[dimension]-start[dimension])).toBeLessThanOrEqual(1);
- await reader.evaluate(el=>{const a=el.getAnimations()[0];a.currentTime=80;});
+ const partial=await reader.evaluate(el=>{const a=el.getAnimations()[0];a.currentTime=80;const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};});
  await reader.getByRole('button',{name:'Close toolbox',exact:true}).dispatchEvent('click',{detail:1});
+ const reversing=(await reader.boundingBox())!;
+ for(const dimension of ['x','y','width','height'] as const)expect(Math.abs(reversing[dimension]-partial[dimension])).toBeLessThanOrEqual(1);
  await origin.dispatchEvent('click',{detail:1});
+ const reopened=(await reader.boundingBox())!;
+ for(const dimension of ['x','y','width','height'] as const)expect(Math.abs(reopened[dimension]-partial[dimension])).toBeLessThanOrEqual(1);
  expect(await reader.evaluate(el=>el.querySelector('[data-toolbox-part]')===(window as any).__toolboxMaterial)).toBe(true);
  await reader.evaluate(el=>el.getAnimations().forEach(a=>a.finish()));await safe(page,reader);
  await page.setViewportSize({width:600,height:900});await safe(page,reader);expect(await reader.evaluate(el=>el.getAnimations().length)).toBe(0);
@@ -121,4 +131,50 @@ for(const fallback of ['keyboard','reduced','low-resource'] as const)test(`${fal
  const reader=windowFor(page);await expect(reader).toBeVisible();
  expect(await reader.evaluate(el=>el.getAnimations().some(a=>a.effect instanceof KeyframeEffect&&a.effect.getKeyframes().some(f=>f.transform&&f.transform!=='none')))).toBe(false);
  const close=reader.getByRole('button',{name:'Close toolbox',exact:true});await expect(close).toBeFocused();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(origin).toBeFocused();
+});
+
+
+test('the frame belongs to its viewer; closing restores the same material and removal cancels it',async({page})=>{
+ await open(page);
+ const origin=page.locator('.md-server>summary').filter({hasText:'synthetic'});
+ await page.locator('[data-toolbox-part="tools/mcp/synthetic"]').evaluate(el=>{(window as any).__originalToolboxMaterial=el;});
+ await origin.click();const reader=windowFor(page);
+ expect(await reader.evaluate(el=>el.matches(':popover-open')&&!!el.closest('.connected-workspace'))).toBe(true);
+ await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+ const restored=page.locator('[data-toolbox-part="tools/mcp/synthetic"]');
+ expect(await restored.evaluate(el=>el===(window as any).__originalToolboxMaterial&&el.parentElement?.classList.contains('toolbox-part-home'))).toBe(true);
+ await origin.click();await expect(reader).toBeVisible();await origin.evaluate(el=>el.remove());await expect(reader).toHaveCount(0);
+});
+
+test('composer layout changes re-centre the reader and an inert evidence owner dismisses it',async({page})=>{
+ await page.setViewportSize({width:600,height:900});await open(page);
+ await page.getByRole('button',{name:'Open toolbox',exact:true}).click();const reader=windowFor(page);await safe(page,reader);
+ await page.locator('.prompt-composer').evaluate(el=>{el.style.height=`${el.offsetHeight+80}px`;});await safe(page,reader);
+ await reader.evaluate(el=>{el.closest<HTMLElement>('.connected-workspace')!.inert=true;});await expect(reader).toHaveCount(0);
+});
+
+test('hiding a page settles in-flight motion without leaving a transition or losing the material',async({page})=>{
+ await open(page,'codex',true);await page.getByRole('button',{name:'Open toolbox',exact:true}).click();const reader=windowFor(page);await expect(reader).toBeVisible();
+ await page.evaluate(()=>{
+  Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));delete (document as any).hidden;
+ });
+ await expect(reader).toHaveAttribute('data-phase','open');expect(await reader.evaluate(el=>el.getAnimations().length)).toBe(0);
+ await expect(page.locator('[data-toolbox-part="toolbox"]')).toHaveCount(1);await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+});
+
+for(const width of [600,1440])test(`raised connected-turn controls reserve layout space through composer scale at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});await open(page);
+ const origin=page.locator('.md-server>summary').filter({hasText:'synthetic'});await origin.click();const reader=windowFor(page);
+ // Synthetic geometry guard for the real absolute native details and queue-receipt layout contracts.
+ const layoutTop=await page.locator('.prompt-composer').evaluate(composer=>{
+  const turn=document.createElement('div');turn.className='native-turn-details';turn.style.height='140px';turn.textContent='Synthetic native control';composer.append(turn);
+  const queue=document.createElement('div');queue.className='queued-input-receipts';queue.style.cssText='position:absolute;bottom:calc(100% + 160px);height:32px';queue.textContent='Synthetic waiting receipt';composer.append(queue);
+  const node=composer as HTMLElement;return innerHeight-node.offsetHeight-(parseFloat(getComputedStyle(node).bottom)||0);
+ });
+ await expect.poll(async()=>{const box=(await reader.boundingBox())!;return box.y+box.height;}).toBeLessThanOrEqual(layoutTop-192-12);
+ const resting=await reader.boundingBox();
+ await page.locator('.prompt-composer').evaluate(el=>{(window as any).__composerScale=el.animate([{transform:'translateX(-50%) scale(.5)'},{transform:'translateX(-50%) scale(1)'}],{duration:1000,fill:'both'});(window as any).__composerScale.pause();(window as any).__composerScale.currentTime=0;});
+ await page.evaluate(()=>window.dispatchEvent(new Event('resize')));
+ expect(await reader.boundingBox()).toEqual(resting);
+ await page.evaluate(()=>(window as any).__composerScale.cancel());await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
 });
