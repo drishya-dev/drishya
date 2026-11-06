@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 
+/** Unlayered on purpose: CodeMirror injects its own unlayered styles at runtime, which would otherwise beat every app rule written for the editor. */
+const unlayered = ['/src/components/draft-editor.css'];
 const clarityDir = fileURLToPath(new URL('./src/clarity/', import.meta.url)).replace(/\\/g, '/');
 
 /**
@@ -16,7 +18,7 @@ export function legacyLayer(): Plugin {
     enforce: 'pre',
     transform(code, id) {
       const path = id.split('?')[0]!.replace(/\\/g, '/');
-      if (!path.endsWith('.css') || path.startsWith(clarityDir) || path.includes('/node_modules/')) return null;
+      if (!path.endsWith('.css') || path.startsWith(clarityDir) || path.includes('/node_modules/') || unlayered.some(file => path.endsWith(file))) return null;
       // `@import` must precede other rules, and nothing here uses it; fail loudly if that ever changes.
       if (/^\s*@(import|charset)\b/m.test(code)) throw new Error(`${path}: @import/@charset cannot be wrapped in @layer legacy`);
       return { code: `@layer legacy {\n${code}\n}`, map: null };

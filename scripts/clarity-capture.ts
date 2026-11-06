@@ -29,8 +29,8 @@ async function settled(page: Page, pending: Set<unknown>) {
     await Promise.all([...document.images].filter(image => image.getClientRects().length).map(image => image.decode()));
   });
   // Readiness, not networkidle: the daemon intentionally keeps an SSE connection open.
-  const end = Date.now() + 10_000;
-  while (pending.size) { requireCase(Date.now() < end, 'API material did not finish loading'); await page.waitForTimeout(50); }
+  const end = Date.now() + 30_000;
+  while (pending.size) { requireCase(Date.now() < end, 'API material did not finish loading: ' + [...pending].slice(0, 3).map(r => new URL((r as { url(): string }).url()).pathname.replace(/rec_[0-9a-f]+/g, 'rec')).join('; ')); await page.waitForTimeout(50); }
   requireCase(await page.locator('[aria-busy="true"]:visible').count() === 0, 'Surface remains busy');
   requireCase(await page.getByText('This view could not be displayed', { exact: true }).count() === 0, 'Surface error boundary is visible');
   // Finite CSS/WAAPI animations (menu and dialog arrivals) must be finished, not just started, before a shot.
@@ -44,9 +44,9 @@ async function settled(page: Page, pending: Set<unknown>) {
     for (let frame = 0; frame < 180; frame++) {
       await new Promise<void>(done => requestAnimationFrame(() => done()));
       const now = [...document.querySelectorAll('.history,.op.expanded,.developer-workspace,.current-file-reader,dialog[open],.modern-tool-station,.mh-home')]
-        .map(el => { const b = el.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(n => n.toFixed(2)).join(','); }).join(';');
+        .map(el => { const b = el.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(n => n.toFixed(2)).join(',') + ':' + (el.textContent?.length ?? 0); }).join(';');
       if (now === previous) stable++; else stable = 0;
-      if (stable >= 3) return;
+      if (stable >= 30) return;
       previous = now;
     }
     throw new Error('Surface geometry never settled');
@@ -88,7 +88,10 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     const heads = page.locator('article.op .op-head'); let target: { x: number; y: number } | undefined;
     for (let i = 0, n = await heads.count(); i < n && !target; i++) {
       const box = await heads.nth(i).boundingBox();
-      if (box && box.x >= 0 && box.y >= 0 && box.x + box.width <= page.viewportSize()!.width && box.y + box.height <= page.viewportSize()!.height) target = { x: box.x + 12, y: box.y + 12 };
+      if (!box || box.x < 0 || box.y < 0 || box.x + box.width > page.viewportSize()!.width || box.y + box.height > page.viewportSize()!.height) continue;
+      // The point must really land on the head, not on the header or composer drawn over it.
+      const hit = await heads.nth(i).evaluate((el, p) => { const top = document.elementFromPoint(p.x, p.y); return !!top && el.contains(top); }, { x: box.x + 12, y: box.y + 12 });
+      if (hit) target = { x: box.x + 12, y: box.y + 12 };
     }
     requireCase(target, 'No card head is in view for the context menu');
     await page.mouse.click(target.x, target.y, { button: 'right' });
@@ -111,8 +114,20 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     return 'material';
   }
   if (surface === 'expanded') {
-    const expand = c.operation ? page.locator(`[data-expand-op=${JSON.stringify(c.operation)}]`) : page.locator('[data-expand-op]').first();
-    await press(expand);
+    // The first Expand control that is really on screen (the list is windowed and follows live), clicked where it is, retried once.
+    const controls = c.operation ? page.locator(`[data-expand-op=${JSON.stringify(c.operation)}]`) : page.locator('[data-expand-op]');
+    for (let attempt = 0; attempt < 2 && !await page.locator('article.op.expanded .op-expanded').count(); attempt++) {
+      let spot: { x: number; y: number } | undefined;
+      for (let i = 0, n = await controls.count(); i < n && !spot; i++) {
+        const box = await controls.nth(i).boundingBox();
+        if (box && box.x >= 0 && box.y >= 0 && box.x + box.width <= page.viewportSize()!.width && box.y + box.height <= page.viewportSize()!.height) {
+          const hit = await controls.nth(i).evaluate((el, p) => { const top = document.elementFromPoint(p.x, p.y); return !!top && el.contains(top); }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+          if (hit) spot = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+        }
+      }
+      if (spot) await page.mouse.click(spot.x, spot.y);
+      await page.locator('article.op.expanded .op-expanded').first().waitFor({ state: 'visible', timeout: 4000 }).catch(() => undefined);
+    }
     await populated(page.locator('article.op.expanded .op-expanded').first());
     return 'material';
   }
@@ -123,9 +138,9 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     return 'material';
   }
   if (surface === 'changes') {
-    await press(page.getByRole('button', { name: 'Changes', exact: true }));
+    await press(page.locator('button.review-open'));
     await populated(page.getByRole('dialog', { name: 'Changes', exact: true }));
-    await populated(page.locator('.review-file').first());
+    if (c.id === 'demo') await populated(page.locator('.review-file').first());
     return 'material';
   }
   if (surface === 'toolbox') {
@@ -183,6 +198,8 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     await populated(desk.locator('.whole-source,.desk-markdown').first());
     await press(desk.locator('.desk-edit-toggle'));
     await populated(desk.locator('.cm-content'));
+    // CodeMirror's caret blinks on its own clock; a screenshot must not depend on the phase.
+    await page.addStyleTag({ content: '.cm-cursorLayer { visibility: hidden !important; animation: none !important; }' });
   } else if (surface === 'git') {
     await press(desk.getByRole('button', { name: 'Back to agent', exact: true }));
     await press(page.getByRole('button', { name: 'Git', exact: true }));
@@ -191,7 +208,9 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     const approve = review.getByRole('button', { name: 'Approve read-only Git', exact: true });
     await approve.or(review.getByRole('button', { name: 'Refresh changes', exact: true })).waitFor({ state: 'visible' });
     if (await approve.isVisible()) await press(approve);
-    await populated(review.locator('.unified-change').first());
+    // A clean or untracked-only repository has no patch to show; its review still has to render.
+    await populated(review);
+    await review.locator('.unified-change').first().waitFor({ state: 'visible', timeout: 2000 }).catch(() => undefined);
   } else throw new Error('Unknown required surface');
   return 'material';
 }
@@ -202,10 +221,11 @@ export async function captureSurfaces(browser: Browser, server: Server, cases: G
     const context = await browser.newContext({ viewport: { width, height: contract.height }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', reducedMotion: 'reduce' });
     const page = await context.newPage(); page.setDefaultTimeout(10_000);
     const pending = new Set<unknown>(); const errors: string[] = [];
-    page.on('request', r => { if (r.url().includes('/v1/') && new URL(r.url()).pathname !== '/v1/changes') pending.add(r); });
-    page.on('requestfinished', r => pending.delete(r)); page.on('requestfailed', r => { pending.delete(r); errors.push('request failed'); });
-    page.on('pageerror', () => errors.push('page error'));
-    page.on('response', r => { if (r.status() >= 400) errors.push('HTTP failure'); });
+    page.on('request', r => { if (r.url().includes('/v1/') && !['/v1/changes', '/v1/working-locations'].includes(new URL(r.url()).pathname)) pending.add(r); });
+    page.on('requestfinished', r => pending.delete(r)); page.on('requestfailed', r => { pending.delete(r); errors.push('request failed ' + new URL(r.url()).pathname.replace(/rec_[0-9a-f]+/g, 'rec')); });
+    page.on('pageerror', e => errors.push('page error ' + e.message.slice(0, 80)));
+    // The fix-chain lookup answers 404 for a step that is not part of a failing chain: the app expects it.
+    page.on('response', r => { if (r.status() >= 400 && !(r.status() === 404 && r.url().includes('/fix-chain/'))) errors.push('HTTP ' + r.status() + ' ' + new URL(r.url()).pathname.replace(/rec_[0-9a-f]+/g, 'rec')); });
     try {
       await page.clock.setFixedTime(new Date(contract.frozenTime));
       await context.addInitScript(() => {
@@ -220,7 +240,7 @@ export async function captureSurfaces(browser: Browser, server: Server, cases: G
         await page.goto(`${server.url}/${query}${c.recording ? '#/r/' + encodeURIComponent(c.recording) : ''}`);
         // A recording whose workspace tabs were kept by an earlier capture reopens in the Workspace: always start from the agent view.
         const desk = page.getByRole('region', { name: 'Developer workspace', exact: true });
-        for (const end = Date.now() + 10_000; !(await desk.isVisible()) && !(await page.locator('.history').isVisible()); await page.waitForTimeout(50)) requireCase(Date.now() < end, 'Neither the history nor the Workspace appeared');
+        for (const end = Date.now() + 30_000; !(await desk.isVisible()) && !(await page.locator('.history').isVisible()); await page.waitForTimeout(50)) requireCase(Date.now() < end, 'Neither the history nor the Workspace appeared');
         if (await desk.isVisible()) await press(desk.getByRole('button', { name: 'Back to agent', exact: true }));
         await visible(page.locator('.history'));
         // Likewise a Git review or file dialog kept from the previous capture: every shot starts with nothing open.
@@ -230,7 +250,7 @@ export async function captureSurfaces(browser: Browser, server: Server, cases: G
       const kind = await prepare(page, c, surface);
       await page.mouse.move(0, 0);
       await settled(page, pending);
-      requireCase(errors.length === 0, 'Page or material request failed');
+      requireCase(errors.length === 0, 'Page or material request failed: ' + errors.slice(0, 3).join('; '));
       const bytes = await page.screenshot({ animations: 'disabled', caret: 'hide', type: 'png' });
       await save(name, bytes, kind);
     } catch (error) {

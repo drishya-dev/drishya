@@ -51,13 +51,16 @@ try {
     process.env.DRISHYA_CLAUDE_HOME = join(out, 'empty-claude-home-' + v); process.env.DRISHYA_CODEX_HOME = join(out, 'empty-codex-home-' + v);
     mkdirSync(process.env.DRISHYA_CLAUDE_HOME, { recursive: true }); mkdirSync(process.env.DRISHYA_CODEX_HOME, { recursive: true });
   }
-  await Promise.all(variantList.map(async v => {
+  const run = async (v: string) => {
     const [experience, dist] = kinds[v]!;
     const { server, cases } = await openVariant(v, dist);
     const dir = join(out, v); mkdirSync(dir); files[v] = new Map();
     await captureSurfaces(browser, server, cases, experience, async (name, bytes) => { writeFileSync(join(dir, name + '.png'), bytes); files[v]!.set(name, bytes); }, only);
     console.log(`captured ${v}: ${files[v]!.size}`);
-  }));
+  };
+  // Four browsers rendering at once starve the daemon's API answers on this machine: run the variants in small groups.
+  const group = Number(process.env.GUARD_PARALLEL || 2);
+  for (let i = 0; i < variantList.length; i += group) await Promise.all(variantList.slice(i, i + group).map(run));
 
   const comparator = await browser.newPage();
   const compare = (a: Buffer, b: Buffer) => comparator.evaluate(async ({ a, b }) => {

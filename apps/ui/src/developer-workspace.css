@@ -165,8 +165,6 @@
 .current-document-views [aria-pressed=true] {background:var(--s2);color:var(--t1);}
 .current-file-reader .current-file-code.desk-markdown {overflow:auto;padding:20px 28px;max-height:none;}
 .current-file-reader .desk-markdown>:first-child {margin-top:0;}
-:root[data-ui-version=modern] .draft-editor-host .cm-editor {font:var(--text-xs)/22px var(--mono);}
-:root[data-ui-version=modern] .draft-editor-host .cm-scroller {line-height:22px;}
 @media(max-width:600px){.current-file-reader .current-file-code.desk-markdown {padding:16px;}}
 
 

@@ -17,3 +17,8 @@
 .draft-editor-status .btn {margin-left:auto;min-height:var(--control-md);padding:3px 8px;font-size:var(--text-2xs);}
 @media(max-width:700px) {.draft-editor-status>span:nth-child(3) {display:none;}.desk-document .draft-editor-status {gap:8px;flex-wrap:wrap;}}
 
+/* CLARITY-1: CodeMirror injects its own unlayered styles, which would beat anything in `@layer legacy`; this sheet stays unlayered (see vite.config.ts) so the editor cascades as before. */
+:root[data-ui-version=modern] .draft-editor-host .cm-editor {font:var(--text-xs)/22px var(--mono);}
+:root[data-ui-version=modern] .draft-editor-host .cm-scroller {line-height:22px;}
+/* The legacy `.viewer :focus-visible` ring used to beat CodeMirror's own `outline: none` on source order; unlayered CodeMirror now beats the layered ring, so state it here. */
+.viewer .cm-content:focus-visible {outline:1px solid var(--focus);outline-offset:3px;}
