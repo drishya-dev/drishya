@@ -1,9 +1,14 @@
 # TOOLS-2 — centred floating Toolbox (draft)
 
-Source handoff, 6 November 2026. Claim `895fde2`; branch `codex/tools-2`; draft PR [349](https://github.com/drishya-dev/drishya/pull/349). **Acceptance is UNRUN. TOOLS-2 remains open.** Harsh explicitly owns all tests, typechecks, builds, scripts, native-harness calls and acceptance. No such commands were run by the implementation agent.
+Source handoff, 6 November 2026. Claim `895fde2`; branch `codex/tools-2`; draft PR [349](https://github.com/drishya-dev/drishya/pull/349). **Acceptance is in progress. TOOLS-2 remains open.** Harsh explicitly owns all tests, typechecks, builds, scripts, native-harness calls and acceptance. No such commands were run by the implementation agent.
 
 The existing synthetic demo was inspected **before** source changes at 1440 × 900; its private frame is `.local/tools-2-before-1440.png`. It showed the right-edge tall Toolbox with dock instruments, closed MCP/Agents groups and recorded tools below. It had no runtime inventory. That observation is a baseline only. No post-edit demo/fixture/native screen has been observed, and no post-edit screenshot, animation, clipping, count, focus or performance result is claimed.
 
+> Execution update, 6 November: Harsh subsequently authorized agents to run checks ("run urself and complete it"). The original user-run-only instructions below are historical. UI-26 is paused with Yash; TOOLS-2 acceptance continues independently.
+>
+> Current measured checks before main integration: own frozen install, both project typechecks, 6 geometry units, UI build, 25 named browser cases at 3 workers, and 3 affected Workspace cases at 1 worker passed, retries 0. Private results: `.local/tools-2/named-final-check.json` and `fresh-final-check.json`. Genuine-session acceptance and the finished-task full gate remain pending; TOOLS-2 stays open.
+>
+> Earlier failed executions are retained: the first run observed 8 passes/7 failures before interruption because normalized synthetic calls omitted intent; after fixing that fixture, a header-empty-space click exposed its intentional pointer passthrough, then a pre-mount visibility probe tried the narrow Tools button on a wide window. The corrected fixture/input/readiness checks preserve all content and geometry assertions. The next diagnostic run had 4 passes/1 failure/12 unrun: responsive dock hiding incorrectly dismissed the reader. Owner availability now distinguishes viewport hiding from Workspace/map navigation. The unchanged resize test and four Workspace dismissal cases passed together (5/5), followed by the complete 25+3 named checks. No retries, larger timeouts, new skips or relaxed assertions.
 ## Implementation and ownership
 
 The dock keeps its native instruments and true source attributes. Its heading opens grouped content in a content-sized, modeless native-popover window. MCP servers, Agents, Run tools and the recorded inventory open their own existing material from the exact clicked summary. Expanding the minimized Toolbox also restores the dock instruments. Closing returns material and focus; the dock preference remains reversible.

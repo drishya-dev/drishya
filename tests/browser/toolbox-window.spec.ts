@@ -21,11 +21,11 @@ test.beforeAll(async()=>{
   add('session.meta','main',{harness});add('message.user','main',{text:'Synthetic Toolbox window regression'});
   add('tools.snapshot','main',{source:'prompt_snapshot',tools:['Read',...Array.from({length:300},(_,n)=>mcpName(n))].map(name=>({name}))});
   for(let n=0;n<3;n++){
-   add('tool.call','main',{tool:'Read',input:{file_path:join(dir,`${n}.ts`)}},`read-${n}`);
+   add('tool.call','main',{tool:'Read',input:{file_path:join(dir,`${n}.ts`)},intent:{kind:'read',path:join(dir,`${n}.ts`)}},`read-${n}`);
    add('tool.result','main',{output:`Synthetic source ${n}`,isError:false},`read-${n}`);
   }
   for(let n=0;n<300;n++){
-   add('tool.call','main',{tool:mcpName(n),input:{n}},`mcp-${n}`);
+   add('tool.call','main',{tool:mcpName(n),input:{n},intent:{kind:'mcp',server:'synthetic',tool:mcpName(n).slice('mcp__synthetic__'.length)}},`mcp-${n}`);
    add('tool.result','main',{output:'Synthetic MCP result',isError:false},`mcp-${n}`);
   }
   for(let n=1;n<=3;n++){
@@ -35,6 +35,10 @@ test.beforeAll(async()=>{
    add('tool.result','main',{output:'Synthetic worker ready',isError:false},`spawn-${n}`);
   }
   app.store.appendObservations(id,sourceId,{offset:sequence,generation:0,fingerprint:'synthetic'},rows);ids.set(harness,id);
+  // These normalized observations must exercise real MCP/read material, not the reducer's other-kind fallback.
+  const projected=app.projection(id);
+  expect(projected.operations.filter(op=>op.detail.kind==='mcp')).toHaveLength(300);
+  expect(projected.operations.filter(op=>op.detail.kind==='read')).toHaveLength(3);
  }
  server=await startServer({app,port:0});
 });
@@ -46,6 +50,8 @@ test.beforeEach(async({page})=>{
 async function open(page:Page,harness='codex',motion=false){
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
  await page.goto(`${server.url}/?experience=modern&motion=${motion?1:0}#/r/${ids.get(harness)}`);
+ // Decide dock visibility only after the selected recording's Viewer is mounted.
+ await expect(page.locator('.history')).toBeVisible();
  if(!await page.locator('.modern-tool-station').isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();
  await expect(page.locator('.modern-tool-station')).toBeVisible();
 }
@@ -93,7 +99,8 @@ for(const width of [600,1440])for(const harness of ['claude-code','codex'])test(
  await trail.getByRole('button',{name:'Next use',exact:true}).click();await expect(trail.locator('.trail-count')).toHaveText('2 of 3');
  await trail.getByRole('button',{name:'Last use',exact:true}).click();await expect(trail.locator('.trail-count')).toHaveText('3 of 3');
  await trail.getByRole('button',{name:'Previous use',exact:true}).focus();await page.keyboard.press('Enter');await expect(trail.locator('.trail-count')).toHaveText('2 of 3');
- await page.locator('.workspace-header').click({position:{x:4,y:4}});await expect(inventory).toHaveCount(0);
+ // The header deliberately passes empty-area pointer events through. Use the guaranteed outside gutter.
+ await page.mouse.click(2,page.viewportSize()!.height/2);await expect(inventory).toHaveCount(0);
  await recorded.click();await expect(inventory.getByRole('searchbox')).toHaveValue('Read');await expect(inventory.locator('.tool-row')).toHaveAttribute('aria-pressed','true');
  await inventory.getByRole('button',{name:'Clear focus ×',exact:true}).click();await expect(page.locator('.tool-trail')).toHaveCount(0);
  await page.keyboard.press('Escape');

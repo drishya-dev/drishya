@@ -125,7 +125,9 @@ export function ToolboxWindowOwner({children}:{children:ReactNode}){
   if(!active)return;
   const node=frame.current!,viewer=anchor.current?.closest<HTMLElement>('.connected-workspace');
   const dock=viewer?.querySelector<HTMLElement>('.modern-tool-station');
-  const unavailable=()=>!viewer?.isConnected||viewer.inert||!viewer.checkVisibility({visibilityProperty:true})||!dock?.isConnected||dock.inert||!dock.checkVisibility({visibilityProperty:true});
+  // A narrow viewport hides the dock, but the reader must survive resize.
+  // Navigation away from the work view or an unavailable owner dismisses it.
+  const unavailable=()=>!viewer?.isConnected||viewer.inert||!viewer.checkVisibility({visibilityProperty:true})||viewer.matches('.developer-workspace-open,.exploring')||!dock?.isConnected||dock.inert||dock.hidden;
   const settle=()=>{if(closing.current){finish(false);return;}cancel();place();node.dataset.phase='open';};
   const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();close(false);}};
   const outside=(event:PointerEvent)=>{
