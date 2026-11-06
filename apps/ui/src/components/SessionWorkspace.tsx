@@ -386,6 +386,12 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   </ReadingDialog>;
 }
 
+/** Distance from the top of the offset-parent chain, ignoring CSS transforms (unlike getBoundingClientRect). */
+export function layoutTop(element: HTMLElement): number {
+  let top = 0;
+  for (let current: HTMLElement | null = element; current; current = current.offsetParent as HTMLElement | null) top += current.offsetTop;
+  return top;
+}
 export function PromptComposer() {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId);
@@ -521,10 +527,31 @@ export function PromptComposer() {
     const node = element.current;
     const viewer = node?.closest<HTMLElement>('.viewer');
     if (!node || !viewer) return;
-    // The ordinary composer owns space; it must not cover the last captured result.
-    const observer = new ResizeObserver(([entry]) => viewer.style.setProperty('--composer-gap', `${(entry?.borderBoxSize?.[0]?.blockSize ?? node.offsetHeight) + 24}px`));
+    // Absolute approval/queue surfaces sit outside the composer's border box.
+    // Reserve their actual raised extent too, without feeding it back into the
+    // composer's own size constraints or changing the user's follow preference.
+    const observed = new Set<Element>();
+    const measure = () => {
+      viewer.style.setProperty('--composer-gap', `${node.offsetHeight + 24}px`);
+      // Layout offsets, not bounding rectangles: useSurfaceReflow scales this node (and so the approval inside it) for 200 ms,
+      // and a scaled rectangle would store only a fraction of the real raised extent with nothing to remeasure afterwards.
+      const top = layoutTop(node);
+      let raised = 0;
+      for (const surface of node.querySelectorAll<HTMLElement>('.native-turn-details, .queued-input-receipts')) {
+        if (!observed.has(surface)) { observer.observe(surface); observed.add(surface); }
+        if (!surface.getClientRects().length) continue;
+        if (surface.matches('.queued-input-receipts') && surface.querySelector('button')?.checkVisibility({ visibilityProperty: true }) === false) continue;
+        raised = Math.max(raised, top - layoutTop(surface));
+      }
+      viewer.style.setProperty('--composer-raised-gap', `${Math.ceil(raised)}px`);
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(node);
-    return () => { observer.disconnect(); viewer.style.removeProperty('--composer-gap'); };
+    const children = new MutationObserver(measure);
+    // A receipt's visibility is an inline style that follows the Follow switch; it changes neither size nor children.
+    children.observe(node, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden', 'data-waiting'] });
+    measure();
+    return () => { observer.disconnect(); children.disconnect(); viewer.style.removeProperty('--composer-gap'); viewer.style.removeProperty('--composer-raised-gap'); };
   }, [source, id]);
   if (source?.kind !== 'daemon' || !id || id.includes('+')) return source?.kind === 'bundle' && id ? <QueuedInputs standalone/> : null;
   const running = controller && ['connecting', 'running', 'approval'].includes(controller.state);
