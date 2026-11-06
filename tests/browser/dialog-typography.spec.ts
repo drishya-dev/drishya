@@ -93,7 +93,9 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
 }
 test('Git graph keeps metadata at 11 px and controls at 12 px on every palette', async ({ page }) => {
   await openSession(page, 1440, 900);
-  await press(page, 'Git graph'); await approve(page, /Approve read-only Git/);
+  await press(page, 'Git graph');
+  await expect(page.getByRole('button', { name: /Approve read-only Git|Commits ·/ }).first()).toBeVisible();
+  await approve(page, /Approve read-only Git/);
   const rows = page.getByRole('button', { name: /Commits ·/ }); await expect(rows).toBeVisible();
   if (await rows.getAttribute('aria-expanded') !== 'true') await rows.click();
   await page.locator('.commit-row').first().click();

@@ -315,7 +315,9 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
       return bounds.bottom > viewport.top + 1 && bounds.top < viewport.bottom;
     });
     // The start boundary exists even while virtualization has no mounted passage there.
-    readingAtStart.current = el.scrollTop < 1 || navigating.current && readingAtStart.current;
+    // A native focus/scrollIntoView can leave the start while a scroll event is
+    // still settling. Only preserve an upward start intent; a downward move wins.
+    readingAtStart.current = el.scrollTop < 1 || navigating.current && readingAtStart.current && el.scrollTop <= lastScrollTop.current + .5;
     readingAnchor.current = node?.dataset.passageId ? { id: node.dataset.passageId, offset: node.getBoundingClientRect().top - viewport.top } : undefined;
     memory.set('history/top', el.scrollTop);
     memory.set('history/anchor', readingAnchor.current);

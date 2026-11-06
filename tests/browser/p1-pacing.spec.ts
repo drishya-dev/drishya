@@ -203,6 +203,11 @@ test('patch layouts retain changes and adapt without overflowing a narrow screen
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(demo.href);
+  // Layout selection is a reading task; automatic following can move these controls.
+  const follow = page.getByRole('switch', { name: 'Automatically follow new work', exact: true });
+  await expect(follow).toBeVisible();
+  if (await follow.getAttribute('aria-checked') === 'true') await follow.click();
+  await expect(follow).toHaveAttribute('aria-checked', 'false');
   const edit = page.locator('article.op-edit').last();
   await expandCard(edit);
   await edit.getByRole('button', { name: 'Side by side' }).press('Enter');

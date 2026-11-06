@@ -341,6 +341,38 @@ test('source preview opens the exact stored range and keeps pending replay evide
   await expect(page.getByRole('button', { name: `Read excerpt of ${op.detail.path}` })).toHaveCount(0);
 });
 
+test('native source navigation can leave the History start boundary', async ({ page }) => {
+  const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
+  const op = sample.projection.operations.find((item: { kind: string }) => item.kind === 'read');
+  const artifact = sample.projection.artifacts.find((item: { id: string }) => item.id === op.detail.excerptArtifactId);
+  artifact.range = { start: 81, end: 82 };
+  artifact.provenance = { kind: 'derived', rule: 'synthetic-reference-test', observationIds: artifact.provenance.observationIds };
+  sample.artifactText[artifact.id] = `${'x'.repeat(40_000)}\n// short derived reference`;
+  await page.route('**/demo/bundle.json', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
+  await page.goto(new URL('/?demo&at=end', server.launchUrl).href);
+  const history = page.locator('.history');
+  await expect(history).toBeVisible();
+  await expect.poll(() => history.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+  await pointAtHistory(page);
+  await page.mouse.wheel(0, -100_000);
+  const read = page.locator(`article[data-op-id="${op.id}"]`);
+  await read.scrollIntoViewIfNeeded();
+  await read.getByRole('button', { name: `Read excerpt of ${op.detail.path}` }).click();
+  const summary = read.locator('.source-utilities > summary');
+  await expect(read.locator('.artifact-reader [data-source-line="82"]')).toBeAttached();
+  // Native focus and locator navigation scroll the real History container. That
+  // movement must supersede its previous start boundary before a pointer click.
+  const targeted = await summary.evaluate(el => {
+    el.scrollIntoView({ block: 'center', behavior: 'instant' });
+    return el.closest('.history')!.scrollTop;
+  });
+  expect(targeted).toBeGreaterThan(0);
+  await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+  await expect.poll(() => history.evaluate(el => el.scrollTop)).toBe(targeted);
+  await summary.click();
+  await expect(read.locator('.source-utilities')).toHaveJSProperty('open', true);
+});
+
 test('source references reject oversized text, preserve derived provenance and clear on replay seek', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
   const op = sample.projection.operations.find((item: { kind: string }) => item.kind === 'read');
