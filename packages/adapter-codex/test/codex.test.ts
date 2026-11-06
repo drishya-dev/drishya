@@ -29,6 +29,27 @@ describe('Codex adapter', () => {
     const text = JSON.stringify(observations);
     for (const forbidden of ['credits', '17.25', 'limit_id', 'synthetic-limit-id', 'account']) expect(text).not.toContain(forbidden);
   });
+  it('parses the primary and secondary rate-limit windows independently (USAGE-1)', () => {
+    const primary = { used_percent: 4, window_minutes: 300, resets_at: 1792486800 }, secondary = { used_percent: 12.5, window_minutes: 10080, resets_at: 1792900000 };
+    const usage = (rate_limits: unknown) => createParser(ctx).parse({ type: 'event_msg', payload: { type: 'token_count', info: null, rate_limits } }).filter(o => o.kind === 'usage');
+    const only = usage({ primary, plan_type: 'plus' });
+    expect(only).toHaveLength(1);
+    expect(only[0]!.payload).toMatchObject({ limits: { usedPercent: 4, windowMinutes: 300, plan: 'plus' } });
+    expect(only[0]!.payload).not.toHaveProperty('secondaryLimits');
+    for (const absent of [{ secondary }, { primary: null, secondary }, { primary: { used_percent: 'x', window_minutes: 300, resets_at: 1 }, secondary }, { primary: { used_percent: -1, window_minutes: 300, resets_at: 1 }, secondary }]) {
+      const second = usage(absent);
+      expect(second).toHaveLength(1);
+      expect(second[0]!.payload).toMatchObject({ source: 'codex-token-count', cumulative: true, secondaryLimits: { usedPercent: 12.5, windowMinutes: 10080, resetsAt: 1792900000 } });
+      expect(second[0]!.payload).not.toHaveProperty('limits');
+    }
+    const both = usage({ primary, secondary, plan_type: 'plus' });
+    expect(both[0]!.payload).toMatchObject({ limits: { usedPercent: 4 }, secondaryLimits: { usedPercent: 12.5 } });
+    // An invalid secondary never hides a valid primary, and neither window invents the other.
+    const broken = usage({ primary, secondary: { used_percent: 12.5, window_minutes: 'x', resets_at: 1 } });
+    expect(broken[0]!.payload).toMatchObject({ limits: { usedPercent: 4 } });
+    expect(broken[0]!.payload).not.toHaveProperty('secondaryLimits');
+    expect(usage({ primary: null, secondary: null })).toHaveLength(0);
+  });
   it('captures the actual model on same-workspace turn changes without confusing it with the provider', () => {
     const parser = createParser(ctx);
     const [meta] = parser.parse({ type: 'session_meta', payload: { cwd: '/repo', model_provider: 'openai' } });

@@ -28,8 +28,9 @@ const windowWords = (minutes?: number) => {
 const resetTime = (seconds?: number) => seconds === undefined ? undefined : new Date(seconds * 1000).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 /** The one line shown beside the Usage entry while it is closed. */
 function usageBrief(point?: UsagePayload) {
-  const total = point?.tokens?.total, used = point?.limits?.usedPercent;
-  return [total !== undefined ? `${compact(total)} tokens` : '', used !== undefined ? `${used}% of limit` : ''].filter(Boolean).join(' · ') || undefined;
+  const total = point?.tokens?.total, used = point?.limits?.usedPercent, other = point?.secondaryLimits;
+  const limit = used !== undefined ? `${used}% of limit` : other ? `${other.usedPercent}% of ${windowWords(other.windowMinutes)} limit` : '';
+  return [total !== undefined ? `${compact(total)} tokens` : '', limit].filter(Boolean).join(' · ') || undefined;
 }
 const sourceName = (source: UsagePayload['source']) => source === 'codex-token-count' ? 'Codex token_count' : source === 'claude-cost-state' ? 'Claude cost-state' : 'Claude message.usage';
 function Rows({ rows }: { rows: Row[] }) {
@@ -43,12 +44,14 @@ function Share({ label, value, percent, title }: { label: string; value: string;
 /** USAGE-1 (Yash, 3 Nov): what people read about a session's spending, as a few sections with bars where a share exists. Each harness fills what
  *  it records; a section a harness does not record says so instead of staying empty. A later adapter fills the same sections. */
 function Limits({ point, harness }: { point?: UsagePayload; harness?: string }) {
-  const limits = point?.limits;
+  const limits = point?.limits, secondary = point?.secondaryLimits;
+  // Each window is shown on its own evidence: the weekly one does not depend on a primary window having been recorded.
   return <section aria-label="Limits"><h4>Limits</h4>
-    {limits ? <><Share label={`${windowWords(limits.windowMinutes) ?? ''} window`.trim()} value={`${limits.usedPercent}% used`} percent={limits.usedPercent} title={`Recorded by ${sourceName(point!.source)} · rate_limits.primary`} />
-      <small>{limits.resetsAt ? `Resets ${resetTime(limits.resetsAt)}` : 'Reset time not recorded'}{limits.plan ? ` · ${limits.plan} plan` : ''}</small>
-      {point?.secondaryLimits && <><Share label={`${windowWords(point.secondaryLimits.windowMinutes) ?? ''} window`.trim()} value={`${point.secondaryLimits.usedPercent}% used`} percent={point.secondaryLimits.usedPercent} title={`Recorded by ${sourceName(point.source)} · rate_limits.secondary`} />
-      <small>Resets {resetTime(point.secondaryLimits.resetsAt)}</small></>}</>
+    {limits || secondary ? <>
+      {limits && <><Share label={`${windowWords(limits.windowMinutes) ?? ''} window`.trim()} value={`${limits.usedPercent}% used`} percent={limits.usedPercent} title={`Recorded by ${sourceName(point!.source)} · rate_limits.primary`} />
+        <small>{limits.resetsAt ? `Resets ${resetTime(limits.resetsAt)}` : 'Reset time not recorded'}{limits.plan ? ` · ${limits.plan} plan` : ''}</small></>}
+      {secondary && <><Share label={`${windowWords(secondary.windowMinutes) ?? ''} window`.trim()} value={`${secondary.usedPercent}% used`} percent={secondary.usedPercent} title={`Recorded by ${sourceName(point!.source)} · rate_limits.secondary`} />
+        <small>Resets {resetTime(secondary.resetsAt)}</small></>}</>
       : <p className="usage-absent">{harness === 'claude-code' ? 'Claude Code does not record plan limits in its journal.' : 'No plan limit recorded for this session.'}</p>}
   </section>;
 }

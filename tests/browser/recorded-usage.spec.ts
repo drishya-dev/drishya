@@ -59,6 +59,34 @@ test('recorded usage stays sourced and hides absent values', async ({ page }) =>
   }
 });
 
+// Harsh's review of USAGE-1: Codex parses its two rate-limit windows independently, so Limits shows whichever is valid.
+test('Limits shows a primary window, a secondary window or both, each on its own evidence', async ({ page }) => {
+  await page.route(/\/v1\/.*controller/, route => route.fulfill({ status: 404, body: '{}' }));
+  await page.route('**/live', route => route.fulfill({ contentType: 'application/json', body: '{"live":false}' }));
+  const lines = readFileSync(resolve('fixtures/synthetic/usage/codex-rollout-usage.jsonl'), 'utf8').trim().split('\n');
+  const primary = { used_percent: 4, window_minutes: 300, resets_at: 1792486800 }, secondary = { used_percent: 12.5, window_minutes: 10080, resets_at: 1792900000 };
+  const cases: [string, Record<string, unknown>, RegExp, RegExp][] = [
+    ['primary-only', { plan_type: 'plus', primary }, /5-hour window/, /7-day window|rate_limits\.secondary/],
+    ['secondary-only', { primary: null, secondary }, /7-day window/, /5-hour window|rate_limits\.primary/],
+    ['both', { plan_type: 'plus', primary, secondary }, /5-hour window[\s\S]*7-day window/, /No plan limit recorded/],
+  ];
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  for (const [index, [name, limits, present, absent]] of cases.entries()) {
+    const id = `0199c0de-0000-7000-8000-0000000001${index}0`;
+    const token = JSON.stringify({ timestamp: '2026-10-20T09:00:02.000Z', type: 'event_msg', payload: { type: 'token_count', info: null, rate_limits: limits } });
+    const journal = join(dir, `${name}.jsonl`);
+    writeFileSync(journal, [...lines.slice(0, 4), token].join('\n').replaceAll('0199c0de-0000-7000-8000-0000000000aa', id) + '\n');
+    const recordingId = (await app.ingest.importSource('codex', journal)).recordingId;
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);
+    await page.getByLabel('More workspace options', { exact: true }).click();
+    if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();
+    const section = page.locator('.usage-peek section[aria-label="Limits"]');
+    await expect(section, name).toContainText(present);
+    await expect(section, name).not.toContainText(absent);
+    await expect(section.locator('.usage-share'), name).toHaveCount(name === 'both' ? 2 : 1);
+  }
+});
+
 test('existing local recorded usage reads through an isolated copy without native or live routes', async ({ page }) => {
   test.skip(!process.env.DRISHYA_USAGE_REAL_CONFIG, 'Opt-in existing redacted store copy only');
   const config = JSON.parse(readFileSync(process.env.DRISHYA_USAGE_REAL_CONFIG!, 'utf8')) as { dir: string; selected: { id: string; harness: string }[] };

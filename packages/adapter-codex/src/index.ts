@@ -259,12 +259,13 @@ export function createParser(_ctx: ParseContext): RecordParser {
         if (t === 'token_count') {
           const keys = { input_tokens: 'input', cached_input_tokens: 'cachedInput', cache_write_input_tokens: 'cacheWrite', output_tokens: 'output', reasoning_output_tokens: 'reasoningOutput', total_tokens: 'total' } as const;
           const tokens = usageTokens(p.info?.total_token_usage, keys), request = usageTokens(p.info?.last_token_usage, keys);
-          const limits = primaryUsageLimits(p.rate_limits), secondaryLimits = limits ? secondaryUsageLimits(p.rate_limits) : undefined;
+          const limits = primaryUsageLimits(p.rate_limits), secondaryLimits = secondaryUsageLimits(p.rate_limits);
           const contextWindow = Number.isSafeInteger(p.info?.model_context_window) && p.info.model_context_window > 0 ? p.info.model_context_window : undefined;
           const shared = { source: 'codex-token-count' as const, ...(model ? { model } : {}), ...(turnId ? { turnId } : {}), ...(limits ? { limits } : {}), ...(secondaryLimits ? { secondaryLimits } : {}), ...(contextWindow ? { contextWindow } : {}) };
           const out: RawObservation[] = [];
           const emit = (part: number, payload: UsagePayload) => out.push({ ...base, part, kind: 'usage', payload: { ...payload } });
-          if (tokens || limits || contextWindow) emit(0, { ...shared, cumulative: true, ...(tokens ? { tokens } : {}) });
+          // Codex parses each window on its own, so a valid weekly window is kept and emitted even when the primary is absent or invalid.
+          if (tokens || limits || secondaryLimits || contextWindow) emit(0, { ...shared, cumulative: true, ...(tokens ? { tokens } : {}) });
           if (request) emit(1, { ...shared, cumulative: false, tokens: request });
           return out;
         }
