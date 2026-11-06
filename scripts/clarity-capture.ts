@@ -77,6 +77,8 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
   if (surface === 'home') {
     await populated(page.locator('.mh-home'));
     await populated(page.locator('.mh-session').first());
+    // A watched session shows "live", then "live · idle" a few seconds later; wait for the settled badge so the shot does not depend on that clock.
+    await page.waitForFunction(() => { const t = document.querySelector('.mh-home')?.textContent ?? ''; return !/live/.test(t) || /live\s*·\s*idle/.test(t); }, undefined, { timeout: 20_000 }).catch(() => undefined);
     return 'material';
   }
   if (surface === 'history') {
