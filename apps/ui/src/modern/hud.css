@@ -80,7 +80,7 @@
 .prompt-rail-preview>time {display:block;color:var(--t2);font:var(--text-2xs)/1.6 var(--mono);margin:3px 0 6px;}
 
 /* Full-height scrolling passes beneath the prompt; reserve its measured height once at the end. */
-:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner {padding-bottom:calc(var(--composer-gap,0px) + 8px);}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner {padding-bottom:calc(var(--composer-gap,0px) + var(--composer-raised-gap,0px) + 8px);}
 :root[data-ui-version=modern][data-experience=classic] .history .passage-slot:last-of-type .passage {margin-bottom:12px;}
 :root[data-ui-version=modern] .workspace-utilities .usage-peek > summary { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 :root[data-ui-version=modern] .workspace-utilities .usage-brief { color: var(--t3); font-size: var(--text-2xs); font-weight: var(--weight-regular); white-space: nowrap; }
