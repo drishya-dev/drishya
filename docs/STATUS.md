@@ -51,6 +51,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — 6 Nov: PR #344 review revision verified, schema decision pending
+
+- Claude had already pushed the independent-window correction requested by Harsh. Codex verified it and expanded its browser cases to 600/1440, including missing/null/invalid primary, without redesign or schema expansion. Both typechecks/build, 159 targeted units and 3 usage browser checks pass (one pre-existing opt-in skip). Genuine Codex two-window and Claude /context sources pass both widths. [Exact evidence and limitations](review/usage-1-pr344-verification.md).
+- #344 stays draft: both-builder schema agreement is not recorded; final full gate waits for that decision. USAGE-1 remains unchecked and claimed for this pending review. No change to #346 or the Clarity/FINISH work.
+
 ### Yash with Claude — 6 Nov: the finishing pass moves into Clarity
 
 - **Plan:** the finishing pass is FINISH-0a to FINISH-13: one component at a time, with audit, UI and motion together. Method in [finish-pass.md](review/finish-pass.md).
