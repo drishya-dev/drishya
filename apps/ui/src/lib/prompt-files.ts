@@ -21,6 +21,20 @@ export function promptSizeNote(promptBytes: number, attachments: { count: number
 export const utf8Bytes = (text: string) => new TextEncoder().encode(text).length;
 export const attachmentBytes = (item: PromptAttachment) => item.type === 'text' ? utf8Bytes(item.data) : item.data.length * 3 / 4 - (item.data.endsWith('==') ? 2 : item.data.endsWith('=') ? 1 : 0);
 
+/** Clipboard formats vary by browser. Use one file collection so an image is never attached twice. */
+export function pastedFiles(data: Pick<DataTransfer, 'files' | 'items'>): File[] {
+  if (data.files.length) return Array.from(data.files);
+  return Array.from(data.items).filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => !!file);
+}
+
+function imageType(bytes: Uint8Array): string | undefined {
+  const matches = (signature: number[], offset = 0) => signature.every((byte, index) => bytes[offset + index] === byte);
+  if (matches([137, 80, 78, 71, 13, 10, 26, 10])) return 'image/png';
+  if (matches([255, 216, 255])) return 'image/jpeg';
+  if (matches([82, 73, 70, 70]) && matches([87, 69, 66, 80], 8)) return 'image/webp';
+  if (matches([71, 73, 70, 56]) && [55, 57].includes(bytes[4]!) && bytes[5] === 97) return 'image/gif';
+}
+
 export async function promptFiles(files: File[], existing: PromptAttachment[]): Promise<PromptAttachment[]> {
   if (files.length + existing.length > 32) throw new Error('Select at most 32 files; choose a smaller folder or individual files.');
   let total = existing.reduce((sum, a) => sum + attachmentBytes(a), 0);
@@ -30,12 +44,17 @@ export async function promptFiles(files: File[], existing: PromptAttachment[]): 
     const name = file.webkitRelativePath || file.name;
     total += file.size;
     if (total > 6 * 1024 * 1024) throw new Error('Attachments must fit within 6 MiB combined.');
-    const image = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type);
-    if (image) {
+    // Windows clipboard/file providers can omit the MIME or report application/octet-stream.
+    // Classify the recorded bytes, not a filename extension or an untrusted MIME label.
+    let header: Uint8Array;
+    try { header = new Uint8Array(await file.slice(0, 12).arrayBuffer()); } catch { throw new Error(`Cannot read ${name}; choose the file again.`); }
+    const mime = imageType(header);
+    if (mime) {
       if (file.size > 4 * 1024 * 1024) throw new Error(`${name}: images must be at most 4 MiB.`);
       const data = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(new Error(`Cannot read ${name}`)); reader.onload = () => resolve(String(reader.result).split(',')[1]!); reader.readAsDataURL(file); });
-      result.push({ name, type: 'image', mime: file.type, data });
+      result.push({ name, type: 'image', mime, data });
     } else {
+      if (file.type.startsWith('image/')) throw new Error(`${name}: attach a valid PNG, JPEG, WebP or GIF image. This image format or its bytes are not supported.`);
       text += file.size;
       if (text > 512 * 1024) throw new Error('Text/code files must fit within 512 KiB combined.');
       let data: string;
