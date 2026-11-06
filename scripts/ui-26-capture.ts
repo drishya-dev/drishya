@@ -212,10 +212,12 @@ export async function captureSurfaces(browser: Browser, server: Server, cases: G
       const saved = await locations.json();
       requireCase(saved.version === 1 && Array.isArray(saved.sessions) && saved.sessions.length === 0 && saved.last === undefined, 'Saved reading metadata leaked between captures');
       await page.clock.setFixedTime(new Date(contract.frozenTime));
-      await context.addInitScript(theme => {
+      await context.addInitScript(({ theme, origin }) => {
+        // Preference initialization belongs to the app, not the final blank document.
+        if (location.origin !== origin) return;
         localStorage.setItem('drishya.motion', '0'); localStorage.setItem('drishya.mapOrbit', 'false'); localStorage.setItem('drishya.hoverReading', '0');
         localStorage.setItem('drishya.theme', theme);
-      }, theme);
+      }, { theme, origin: new URL(server.url).origin });
       await navigate(server.launchUrl); await visible(page.locator('.mh-home'));
       await verifyTheme();
       await settled(page, pending);
