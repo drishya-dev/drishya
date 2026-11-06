@@ -10,6 +10,8 @@ Opus, 6 November 2026. Method: [finish-pass.md](../finish-pass.md). FINISH-0 is 
 
 0a merges first. 0b and 0c build on its tokens and may run in parallel, because their files do not overlap. Every later FINISH item uses these and converts its own component's literals to them.
 
+> **Lands in Clarity (6 Nov, later).** Every part below is built in the Clarity UI version ([clarity-1-version.md](clarity-1-version.md)), after CLARITY-1. Tokens go in `apps/ui/src/clarity/tokens.css` and the rules in `@layer clarity` scoped to `[data-ui-skin=clarity]`. Where this spec says to convert or delete rules in shared and modern sheets, read it as: Clarity's layer overrides them, and Modern's sheets stay untouched. New components (Switch, SearchField, Popover, Menu, Select, Tooltip, the states) render only under `useSkin() === 'clarity'`; Modern keeps its markup. **0a adds:** Inter (variable, OFL) bundled locally as Clarity's interface face, and Clarity's own palettes (Yash gave full freedom over themes and colour): one dark graphite default and one light default first, each with the full role set, every text and meaning colour at 4.5:1 or more on its canvas and both panel surfaces. The other palettes follow in FINISH-12. The token values from the closed #351 (`claude/finish-0a`, f2d4082c) may be reused.
+
 ## What the walk found (6 Nov, real sessions, 600 / 1440 / 2560 px)
 
 Evidence: screenshots in `.local/wt-v2/.local/audit/shots/f0-*` and `f1-*`, the detector JSON in `.local/audit/impeccable/f-*`, and a code inventory.

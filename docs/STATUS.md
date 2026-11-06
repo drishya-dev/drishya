@@ -51,6 +51,20 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude — 6 Nov: the finishing pass moves into Clarity
+
+- **Plan:** the finishing pass is FINISH-0a to FINISH-13: one component at a time, with audit, UI and motion together. Method in [finish-pass.md](review/finish-pass.md).
+- **Clarity:** after the Home concepts, Yash asked for that look everywhere, as a new UI version. Modern is the frozen backup. CLARITY-1 (the scaffold and pixel guard) is being built by a Sonnet session on `claude/clarity-1`.
+  - The FINISH-0 spec is written for Clarity.
+  - Home is concept A, Ledger + Now ([canvas](https://claude.ai/artifact/F7R4ZjPx9ShBjNe2Xa31AB)).
+  - The look is in VISION §9.
+- **Lenses:** Impeccable and Taste are installed as Markdown only. Impeccable's detector on real sessions is effectively clean. Its critique scored Home 19/40 and the shared controls 17/40.
+- **PRs:**
+  - Harsh's review fixes are pushed to all four (#346, #347, #348, #344). #347 and #348 are re-requested for review.
+  - #346 and #344 stay draft. #346 waits on AUDIT-1's gate; #344 waits on the schema agreement.
+  - #351 (FINISH-0a in Modern's sheets) is closed as superseded.
+- **Next:** verify CLARITY-1, then FINISH-0a in Clarity (Inter, palettes, tokens, buttons, switch, inputs), then 0b, 0c and FINISH-1 (Home A).
+
 ### Yash with Claude — 5 Nov: MOTION-1 merged, AUDIT-1 walk finished, A3 next
 
 - MOTION-1 merged (#345, full gate clean: 1,200 units, 653 browser, package). MOTION-3 is claimed and half run: rest and hover pass on real sessions; both ten-minute replays, reduced motion and low resource, the review doc, PR and gate remain. Its plan is in the side-session notes (`motion-3-status.md`); the evaluation must also cover TOOLS-2 and LIVE-6.
