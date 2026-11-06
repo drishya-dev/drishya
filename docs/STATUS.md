@@ -31,7 +31,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-17 | @yash + Codex (Sol 6.1) | `codex/content-17` | 2026-11-06 | lib/markdown.tsx, dedicated neutral table CSS only, markdown units, focused prose-table browser spec, scripts/real-cases table acceptance and docs. Behaviour only; look belongs to FINISH-3. |
+| CONTENT-17 | @yash + Codex (Sol 6.1) | `codex/content-17` | 2026-11-06 | Completed in ready PR #353; frozen pending review, no further source edits. Claim removed by that PR. |
+| CONTENT-16 | @yash + Codex (Sol 6.1) | `codex/content-16` | 2026-11-06 | New strict desktop-prompt parser and attachment presenter, History.tsx TurnBlock prompt/attachment section only (Yash explicitly approved); focused unit/browser/real-case tests and docs. No motion, scroll or layout edits. Look left to FINISH-3. |
 | CLARITY-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/clarity-1` | 2026-11-06 | `lib/ui-version.ts`, `UIVersions.tsx`, `main.tsx`, `apps/ui/vite.config.ts`, new `apps/ui/src/clarity/`, `!important` guards in legacy sheets; scripts for the pixel guard. |
 | FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
 | FINISH-0b | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0b` | 2026-11-06 | New `components/overlay/*`; every file with a native select or a details menu; `ProductMenu.tsx`, `lib/dismiss-menus.ts`; after 0a. |
