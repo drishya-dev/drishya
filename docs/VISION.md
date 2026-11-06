@@ -326,3 +326,24 @@ Hold this for every screen, every pass and every agent. It is as binding as the 
 **18 October spatial correction:** A dense volumetric many-thread bundle, not two helices/DNA and not a flat strip that pinches to zero. Retain nearly uniform main diameter while the path rises/dips/overlaps in depth; branches peel from the outer rim at real fork/merge positions. Depth is presentation only. See review112’s spatial correction.
 
 **18 October later material correction:** The builder rejected the outlined-thread implementation. Use the confirmed attached/Loki concept reference for one luminous flowing spectral material, not separated wires. Preserve a near-uniform envelope and real forks, with a broad sweep and filled layered surface. Modern prompt identity is the original symbol plus workspace basename; no harness label in that row. Review112 records this superseding correction.
+
+## 9. Clarity — the look of the finished product (Yash, 6 November 2026)
+
+Yash, on the Home concepts: "clean and modern and takes accurate space, making it minimal but professional and premium. I want that look for the whole product." Clarity is that look, built as its own UI version beside Modern ([clarity-1-version.md](review/finish/clarity-1-version.md)). It refines §5 and does not replace the doctrine.
+
+- **One face for the interface.** Inter, bundled locally, at 13 px for interface body, 12 px for meta and labels, and 15 or 20 px for the few titles. JetBrains Mono is only for code, paths, branches and commands. Tabular figures wherever numbers sit in columns. Sentence case everywhere: no tracked capitals and no kicker labels.
+- **Space is measured, not filled.**
+  - **Content:** sits in a measured column (Home 1160 px). Wide screens get a second pane, not stretched rows.
+  - **Spacing:** comes from the 4-based scale.
+  - **Rows:** have honest heights (44 px for a list row, 30 px for a table header).
+  - **Alignment:** everything aligns to a few vertical lines.
+- **Hairlines, not boxes.**
+  - **Separation:** a list is rows divided by 1 px lines, not cards in a panel in a page. One container level at most.
+  - **Floating surfaces:** a card or border only for something that floats (Running now, menus, dialogs) or that the user can open.
+- **Colour only for meaning.**
+  - **Ground:** black or graphite, with three ink levels (`--t1` to `--t3`).
+  - **Identity:** each agent has one colour (Claude Code warm, Codex cool).
+  - **Outcomes:** green for added or passed, red for removed or failed, amber for stopped or edited.
+  - **Accent:** for the selected item and the single primary action only.
+- **Every fact earns its place.** A number is shown because a developer acts on it. Paths are shown only where they tell two things apart. A count that is not known says so plainly ("Not opened yet") and never guesses.
+- **The same control everywhere.** One button system, one menu, one select, one switch, one field and one tooltip. Each has every state, and each open has its close (FINISH-0).
