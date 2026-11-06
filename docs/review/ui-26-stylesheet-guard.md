@@ -2,6 +2,8 @@
 
 Status: guard prepared, not executed. No stylesheet, component, import routing, palette, asset, contrast assertion or typography assertion has changed. UI-26 remains open and PR #350 remains draft. Harsh owns every build, test, screenshot acceptance run and real-harness call. No baseline/control result exists yet.
 
+Updated **6 November 2026**: one consolidated source-review fix wave is recorded below. Every runtime check and acceptance result remains **UNRUN**. These edits do not authorize stylesheet migration.
+
 Claim: `895fde2` on main. Implementation source before this draft: `1fb2a737fa9fed924c83ff61d53048aeb71b7fcf`. UI design authority is the installed Emil skill at upstream `c8a79627b59d72d764d6ab6f2c87c09a48169833`, plus VISION and the repo contracts. This increment is guard/inventory only, so it makes no visual design or motion change.
 
 ## Ownership and bounded files
@@ -66,6 +68,14 @@ The three source cases are demo, genuine Claude Code and genuine Codex. Each get
 
 The offline demo truthfully disables Workspace and Git. Those eight images are explicitly `unavailable` states showing the real disabled controls and their explanation attributes. No current-file/Git API is mocked into a bundle. The other **88 images require populated material**, including populated current source and an actual Git patch on each genuine daemon case. Missing cases fail; they are never skipped. Choose real sessions with edits, MCP tools and agents, a readable existing file and a meaningful expandable operation still resident at the end. If either harness lacks such a genuine capture, record it on a throwaway repository; there is no fixture fallback for native acceptance.
 
+Demo Files searches for the bundle's explicit `src/checkout/guard.ts`, which has captured read excerpts and an edit after-snapshot, then requires nonempty captured code in the file reader. It never selects an arbitrary first tree leaf. Expanded History opens the selected operation only if its real `aria-expanded` state is false and requires material in that operation's own article.
+
+Each matrix entry resets only scratch-daemon navigation metadata through the supported authenticated `DELETE /v1/working-locations` endpoint, then reads it back to require an empty result. After capture, deliberate navigation to a blank document and completion of the app's pagehide keepalive checkpoint precede the next reset. No captured/native response is replaced. This prevents Workspace, selection, expansion and reader layout from leaking through the daemon between fresh browser contexts. The genuine projection root must be a nonempty string before path resolution, both in preparation and capture validation.
+
+The supported `drishya.theme` preference is set before app boot: `dark` for Jet and `light` for Paper. Both actual `data-theme` and `data-palette` are asserted after boot and surface preparation; Settings must show exactly one selected real theme option (`theme-dark` or `theme-light`). The guard no longer writes palette DOM attributes independently of application state. Keyboard activation waits for both visibility and enabled state, including workspace consent while its root status is pending, using the existing 10-second readiness budget.
+
+Network failure classification is narrow: only `net::ERR_ABORTED` on the exact same-origin GET `/v1/changes` streams already open at a deliberate navigation is expected. Only same-origin, query-free GET 404s on the selected genuine recording's exact `/read-before/:operation`, `/fix-chain/:operation` and `/verification/:operation` endpoints are nullable, matching `api.ts`. Other HTTP errors, aborted material/assets, unexpected stream failures and page errors remain fatal, and errors are retained across navigations. Required code, artifacts and patches still have material assertions. All native failure details and images remain private.
+
 The frozen metric is normalized maximum RGBA-channel distance `> 0.1`, allowing at most `0.0005` of pixels to differ. This is a declared channel metric, not pixelmatch's perceptual threshold. There are **no masks**. Playwright captures the full viewport with transient animations disabled and caret hidden. Supported motion/map-orbit preferences stop automatic movement, and Playwright's fixed browser clock keeps time labels stable. Fonts must finish loading, visible images must decode, material/API requests must finish, busy/error surfaces must be absent, and real DOM bounds must settle. A surface that cannot load is a failed run, never a matching blank screen.
 
 The frozen manifest records full source ref, relevant source hash, stylesheet hash, guard-driver hash, lockfile hash, newly built asset/font hashes, native journal hashes/sizes, workspace hashes, captured projection hash/counts, machine/browser/environment identity, contract and each PNG hash. Comparison requires a distinct committed candidate source and explicitly named passed positive/negative controls. It never builds/captures from an independently supplied stale dist. `positive` requires unchanged product source; `negative` requires the same source and adds only a synthetic 24 px magenta outline to the expanded demo History card. The negative control passes only when that one image is rejected above the locked tolerance. Diff PNGs are private.
@@ -92,13 +102,15 @@ The repositories need an actual tracked, uncommitted patch for Git review. Keep 
 ```powershell
 Set-Location 'C:\Users\Harsh Jain\.codex\worktrees\ui-26\drishya'
 corepack pnpm install --frozen-lockfile
-corepack pnpm exec playwright install chromium
+$env:DRISHYA_BROWSER_CHANNEL = 'msedge'
 node scripts/ui-26-inputs.ts --seed .local/ui26-seed.json --out .local/ui26-inputs.json
 $ui26Baseline = (git rev-parse HEAD).Trim()
 node scripts/ui-26-guard.ts freeze --config .local/ui26-inputs.json --ref $ui26Baseline
 node scripts/ui-26-guard.ts positive --config .local/ui26-inputs.json --ref $ui26Baseline --baseline $ui26Baseline --run unchanged
 node scripts/ui-26-guard.ts negative --config .local/ui26-inputs.json --ref $ui26Baseline --baseline $ui26Baseline --run magenta
 ```
+
+On this Windows machine, the commands prefer the known installed Microsoft Edge through `DRISHYA_BROWSER_CHANNEL=msedge`; no Chromium download is needed for that channel. On another machine, bundled Chromium is optional: install it with `corepack pnpm exec playwright install chromium` and leave `DRISHYA_BROWSER_CHANNEL` unset. Keep the exact same browser/channel for freeze, both controls and every comparison; environment identity rejects changes.
 
 Freeze must report 96 images, positive must report 96 with zero outside tolerance, and negative must report one rejected image and PASS. A missing journal, missing MCP/patch/source, readiness failure or selector failure is not acceptance. Retain failed private outputs; do not loosen the tolerance, add masks, omit surfaces or change timeouts to get green. Return only the guard's count/status lines and the source ref. The coordinator records actual prefixes/sizes/counts separately when genuine cases are checked.
 
@@ -127,3 +139,16 @@ The full task/batch gate belongs to the coordinator and Harsh after whole-item a
 | Modern relies on shared globals, App component sheets and Modern overrides | Same product source and styles; a draft independent pixel guard has been prepared | Preserve all current UI details until evidence supports a mechanical move |
 | No frozen source/content identity for the planned CSS merge | Immutable source, build, capture, workspace and PNG identities in the guard contract | A comparison must compare the intended product and real material |
 | Whole task acceptance unrun | Still unrun; draft and claim retained | Prepared code is not executed evidence |
+
+## Consolidated static fix wave — 6 November, all runtime checks UNRUN
+
+| Before | After | Why |
+| --- | --- | --- |
+| Demo Files opened the first graph leaf without captured source | Supported search selects `src/checkout/guard.ts` and retains the captured-code assertion | A populated reader must show actual bundle material |
+| Every 404 and failed request was fatal, including nullable evidence and navigation-cancelled SSE | Exact nullable GET routes and tracked deliberate SSE navigation aborts are classified; every other failure and page error stays fatal | Match supported API outcomes without concealing missing required material |
+| Fresh browser contexts reused daemon reading locations; expansion always toggled | Supported metadata reset/readback per entry, unload checkpoint completion, and idempotent expansion of the chosen article | Workspace and expanded state cannot silently select a different matrix surface |
+| Palette-only DOM assignment produced a hybrid theme and stale Settings selection | Preboot saved dark/light preference, actual scheme/palette checks and the selected Settings option | Capture the real Jet/Paper application state |
+| Visible workspace consent could still be disabled while its root loaded | Activation requires enabled readiness within the same timeout | Keyboard Enter must wait for usable consent |
+| Optional projection root reached path resolution; Windows setup required a Chromium download | Root narrowed first; Windows uses installed Edge by explicit channel, bundled Chromium remains optional elsewhere | Fail explicitly on missing genuine inputs and avoid unnecessary browser setup |
+
+Source/diff inspection is the only review performed in this wave. Guard, positive/negative controls, typechecks, tests, builds, proof/check scripts, servers, browsers, real harness calls and screenshots are **UNRUN**. The matrix remains **96 = 88 material + 8 unavailable**, thresholds remain **0.1 / 0.0005**, no masks or new skips exist, and source/workspace/build/driver identities and baseline immutability remain enforced. Gate A still needs genuine stopped Claude Code and Codex journals, matching frozen throwaway Git repositories with a tracked uncommitted patch, readable selected source, edits, MCP/agent evidence and resident meaningful operations; no such inputs or returned results are claimed here. The coordinator's single scoped rereview is pending.

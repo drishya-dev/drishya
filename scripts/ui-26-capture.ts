@@ -1,4 +1,4 @@
-import type { Browser, Locator, Page } from '@playwright/test';
+import { expect, type Browser, type Locator, type Page, type Request } from '@playwright/test';
 
 // Fixed before any baseline is recorded. Changing these invalidates the frozen contract.
 export const contract = {
@@ -12,24 +12,32 @@ export const contract = {
   preferences: { motion: false, mapOrbit: false, hoverReading: false, reducedMotion: 'reduce' },
 } as const;
 export type GuardCase = { id: 'demo' | 'claude' | 'codex'; recording?: string; file?: string; operation?: string };
-type Server = { url: string; launchUrl: string };
+type Server = { url: string; launchUrl: string; token: string };
 function requireCase(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 async function visible(locator: Locator) { await locator.waitFor({ state: 'visible' }); }
-async function press(locator: Locator) { await visible(locator); await locator.press('Enter'); }
+async function press(locator: Locator) {
+  await visible(locator);
+  // Keyboard press does not perform Playwright's click actionability checks.
+  await expect(locator).toBeEnabled({ timeout: 10_000 });
+  await locator.press('Enter');
+}
 async function populated(locator: Locator) {
   await visible(locator);
   requireCase(await locator.evaluate(el => !!el.textContent?.trim()), 'Required material is empty');
 }
 
-async function settled(page: Page, pending: Set<unknown>) {
+async function requestsDone(page: Page, pending: Set<Request>) {
+  // Readiness, not networkidle: the daemon intentionally keeps an SSE connection open.
+  const end = Date.now() + 10_000;
+  while (pending.size) { requireCase(Date.now() < end, 'API material did not finish loading'); await page.waitForTimeout(50); }
+}
+async function settled(page: Page, pending: Set<Request>) {
   await page.evaluate(async () => {
     await document.fonts.ready;
     if ([...document.fonts].some(font => font.status === 'error')) throw new Error('Required font failed');
     await Promise.all([...document.images].filter(image => image.getClientRects().length).map(image => image.decode()));
   });
-  // Readiness, not networkidle: the daemon intentionally keeps an SSE connection open.
-  const end = Date.now() + 10_000;
-  while (pending.size) { requireCase(Date.now() < end, 'API material did not finish loading'); await page.waitForTimeout(50); }
+  await requestsDone(page, pending);
   requireCase(await page.locator('[aria-busy="true"]:visible').count() === 0, 'Surface remains busy');
   requireCase(await page.getByText('This view could not be displayed', { exact: true }).count() === 0, 'Surface error boundary is visible');
   await page.evaluate(async () => {
@@ -76,8 +84,10 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
   }
   if (surface === 'history') {
     const expand = c.operation ? page.locator(`[data-expand-op=${JSON.stringify(c.operation)}]`) : page.locator('[data-expand-op]').first();
-    await press(expand);
-    await populated(page.locator('article.op.expanded .op-expanded').first());
+    await visible(expand);
+    if (await expand.getAttribute('aria-expanded') === 'false') await press(expand);
+    await expect(expand).toHaveAttribute('aria-expanded', 'true', { timeout: 10_000 });
+    await populated(expand.locator('xpath=ancestor::article').locator('.op-expanded'));
     return 'material';
   }
   if (surface === 'settings') {
@@ -114,8 +124,9 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
   }
   if (surface === 'files' && c.id === 'demo') {
     await showFiles(page);
-    // Offline files must open captured material rather than fabricated current bytes.
-    const file = page.locator('[data-spine-path]').first(); await press(file);
+    // This exact bundle path has captured read excerpts and an edit after-snapshot.
+    // The first tree leaf (package.json) has no recorded source to open.
+    await chooseCurrentFile(page, 'src/checkout/guard.ts');
     await populated(page.locator('dialog.file-workspace').first());
     await populated(page.locator('dialog.file-workspace .code').first());
     return 'material';
@@ -151,30 +162,84 @@ export async function captureSurfaces(browser: Browser, server: Server, cases: G
     if (negative && name !== contract.negativeTarget) continue;
     const context = await browser.newContext({ viewport: { width, height: contract.height }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', reducedMotion: 'reduce' });
     const page = await context.newPage(); page.setDefaultTimeout(10_000);
-    const pending = new Set<unknown>(); const errors: string[] = [];
-    page.on('request', r => { if (r.url().includes('/v1/') && new URL(r.url()).pathname !== '/v1/changes') pending.add(r); });
-    page.on('requestfinished', r => pending.delete(r)); page.on('requestfailed', r => { pending.delete(r); errors.push('request failed'); });
+    const pending = new Set<Request>(), streams = new Set<Request>(), navigationStreams = new Set<Request>();
+    const errors: string[] = [];
+    const apiUrl = (request: Request) => {
+      const url = new URL(request.url());
+      return url.origin === new URL(server.url).origin && url.pathname.startsWith('/v1/') ? url : undefined;
+    };
+    page.on('request', r => {
+      const url = apiUrl(r);
+      if (url?.pathname === '/v1/changes' && r.method() === 'GET' && !url.search) streams.add(r);
+      else if (url) pending.add(r);
+    });
+    page.on('requestfinished', r => { pending.delete(r); streams.delete(r); navigationStreams.delete(r); });
+    page.on('requestfailed', r => {
+      pending.delete(r); streams.delete(r);
+      // Only the actual SSE requests open at a deliberate document navigation
+      // may be aborted. Material, assets and unexpected stream failures stay fatal.
+      if (!(navigationStreams.delete(r) && r.failure()?.errorText === 'net::ERR_ABORTED')) errors.push('request failed');
+    });
     page.on('pageerror', () => errors.push('page error'));
-    page.on('response', r => { if (r.status() >= 400) errors.push('HTTP failure'); });
+    page.on('response', r => {
+      if (r.status() < 400) return;
+      const request = r.request(), url = apiUrl(request);
+      // api.ts deliberately maps these three exact GET evidence endpoints' 404s
+      // to null. This does not excuse missing artifacts/source/patches or other statuses.
+      const optional = c.recording && url && request.method() === 'GET' && r.status() === 404 && !url.search &&
+        url.pathname.startsWith(`/v1/recordings/${encodeURIComponent(c.recording)}/`) &&
+        /^\/v1\/recordings\/[^/]+\/(read-before|fix-chain|verification)\/[^/]+$/.test(url.pathname);
+      if (!optional) errors.push('HTTP failure');
+    });
+    const navigate = async (url: string) => {
+      for (const stream of streams) navigationStreams.add(stream);
+      await page.goto(url);
+    };
+    const theme = palette === 'paper' ? 'light' : 'dark';
+    const verifyTheme = async () => {
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme, { timeout: 10_000 });
+      await expect(page.locator('html')).toHaveAttribute('data-palette', palette, { timeout: 10_000 });
+      requireCase(await page.evaluate(() => localStorage.getItem('drishya.theme')) === theme, 'Saved theme differs from the required palette');
+    };
     try {
+      // New browser contexts do not isolate the daemon's saved reading metadata.
+      // Use its supported reset, never a fabricated captured/native response.
+      const headers = { authorization: `Bearer ${server.token}`, 'content-type': 'application/json' };
+      const reset = await context.request.delete(`${server.url}/v1/working-locations`, { headers });
+      requireCase(reset.status() === 200 && (await reset.json()).cleared === true, 'Saved reading metadata could not be reset');
+      const locations = await context.request.get(`${server.url}/v1/working-locations`, { headers });
+      requireCase(locations.status() === 200, 'Saved reading metadata could not be checked');
+      const saved = await locations.json();
+      requireCase(saved.version === 1 && Array.isArray(saved.sessions) && saved.sessions.length === 0 && saved.last === undefined, 'Saved reading metadata leaked between captures');
       await page.clock.setFixedTime(new Date(contract.frozenTime));
-      await context.addInitScript(() => {
+      await context.addInitScript(theme => {
         localStorage.setItem('drishya.motion', '0'); localStorage.setItem('drishya.mapOrbit', 'false'); localStorage.setItem('drishya.hoverReading', '0');
-      });
-      await page.goto(server.launchUrl); await visible(page.locator('.mh-home'));
+        localStorage.setItem('drishya.theme', theme);
+      }, theme);
+      await navigate(server.launchUrl); await visible(page.locator('.mh-home'));
+      await verifyTheme();
       await settled(page, pending);
       if (surface !== 'home') {
         const query = c.id === 'demo' ? '?demo&experience=modern&motion=0' : '?experience=modern&motion=0';
-        await page.goto(`${server.url}/${query}${c.recording ? '#/r/' + encodeURIComponent(c.recording) : ''}`);
+        await navigate(`${server.url}/${query}${c.recording ? '#/r/' + encodeURIComponent(c.recording) : ''}`);
         await visible(page.locator('.history'));
       }
-      await page.evaluate(value => { document.documentElement.dataset.palette = value; }, palette);
       const kind = await prepare(page, c, surface);
+      await verifyTheme();
+      if (surface === 'settings') {
+        await expect(page.locator(`.theme-option.theme-${theme}`)).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
+        await expect(page.locator('.theme-option[aria-pressed="true"]')).toHaveCount(1);
+      }
       await page.mouse.move(0, 0);
       await settled(page, pending);
       requireCase(errors.length === 0, 'Page or material request failed');
       if (negative) await page.addStyleTag({ content: contract.negativeStyle });
       const bytes = await page.screenshot({ animations: 'disabled', caret: 'hide', type: 'png' });
+      // Let pagehide's supported keepalive checkpoint finish before the next
+      // entry resets metadata. A closed blank document cannot write it back later.
+      await navigate('about:blank');
+      await requestsDone(page, pending);
+      requireCase(errors.length === 0, 'Page or material request failed');
       await save(name, bytes, kind);
     } finally { await context.close(); }
   }

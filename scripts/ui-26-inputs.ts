@@ -26,7 +26,7 @@ async function main() {
     for (const c of cases) {
       if (!c.genuine || !isAbsolute(c.journal) || !isAbsolute(c.workspace) || !c.file) throw new Error('Provide genuine stopped native captures and frozen local workspaces');
       const imported = await app.ingest.importSource(c.harness, c.journal), p = app.projection(imported.recordingId);
-      if (resolve(p.workspaceRoot ?? '') !== resolve(c.workspace)) throw new Error('Captured workspace differs from the seed');
+      if (typeof p.workspaceRoot !== 'string' || !p.workspaceRoot || resolve(p.workspaceRoot) !== resolve(c.workspace)) throw new Error('Captured workspace is absent or differs from the seed');
       const candidates = p.operations.filter(op => {
         const d = op.detail;
         return d.kind === 'edit' && d.hunks.length > 0 || (d.kind === 'shell' || d.kind === 'test') && !!d.outputPreview || d.kind === 'read' && !!d.excerptArtifactId;

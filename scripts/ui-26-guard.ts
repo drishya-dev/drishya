@@ -135,6 +135,7 @@ try {
     const imported = await app.ingest.importSource(c.harness, c.journal);
     const projection = app.projection(imported.recordingId);
     assert(projection.operations.some((op: { id: string }) => op.id === c.operation), 'Chosen expanded operation is not in the genuine capture');
+    assert(typeof projection.workspaceRoot === 'string' && !!projection.workspaceRoot, 'Genuine capture has no single recorded workspace root');
     assert(resolve(projection.workspaceRoot) === resolve(c.workspace), 'Genuine captured repository and configured frozen workspace differ');
     projections.push({ id: c.id, prefix: imported.recordingId.slice(0, 12), observations: projection.observationCount, operations: projection.operations.length, content: digest(projection) });
     cases.push({ id: c.id, recording: imported.recordingId, file: c.file, operation: c.operation });
