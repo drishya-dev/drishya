@@ -2,3 +2,4 @@
    once it has rules, so Modern (which never sets that attribute) cannot be touched. */
 @import './tokens.css';
 @import './base.css';
+@import './inherited-important.css';

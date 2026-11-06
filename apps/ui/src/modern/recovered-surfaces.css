@@ -19,7 +19,7 @@
 .modern-attachment { display:grid; place-items:center; flex:none; width:28px; height:28px; padding:5px; border:0; border-radius:var(--round-sm); background:none; color:var(--t3); }
 .modern-attachment svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
 .modern-native-model { font:var(--text-2xs)/1.6 var(--sans); color:var(--t3); margin-left:4px; max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .composer-actions :is(.send-prompt,.stop-turn) { width:auto; min-width:70px; height:29px; min-height:29px; padding:4px 10px; display:flex; align-items:center; justify-content:center; gap:7px; border-radius:var(--round-md)!important; font:var(--text-xs)/1.5 var(--sans); flex:none; }
+:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .composer-actions :is(.send-prompt,.stop-turn) {width:auto;min-width:70px;height:29px;min-height:29px;padding:4px 10px;display:flex;align-items:center;justify-content:center;gap:7px;font:var(--text-xs)/1.5 var(--sans);flex:none} :root:where(:not([data-ui-skin=clarity]))[data-ui-version=modern][data-experience=classic] .modern-native-composer .composer-actions :is(.send-prompt,.stop-turn) { border-radius:var(--round-md)!important; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .send-prompt svg { width:14px; height:14px; transform:rotate(90deg); }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .stop-turn svg { width:13px; height:13px; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .prompt-attachments { padding:8px 15px 0; margin:0; }
@@ -110,8 +110,7 @@
  :root[data-ui-version=modern] .modern-session-header .search-open { width:31px; padding:7px; }
  :root[data-ui-version=modern] .modern-session-header .search-open>span,:root[data-ui-version=modern] .modern-session-header .search-open>kbd { display:none; }
  .modern-composer-top { gap:6px; padding-inline:12px; }.modern-composer-identity { font-size:var(--text-2xs); }.modern-composer-state {display:block;font-size:var(--text-2xs);max-width:82px;flex:none;}.modern-native-composer .native-options>summary>span {display:none;}.modern-native-composer .native-options-glyph {width:18px;height:18px;}
- .modern-git-context { padding:10px 14px 0; }.modern-git-context small { font-size:var(--text-2xs); }
- .modern-review-control { right:14px!important; }
+ .modern-git-context { padding:10px 14px 0; }.modern-git-context small { font-size:var(--text-2xs); } :where(:root:not([data-ui-skin=clarity])) .modern-review-control { right:14px!important; }
 }
 @media(prefers-reduced-motion:reduce) { :root[data-ui-version=modern] .workspace-header, :root[data-ui-version=modern] .modern-session-header { backdrop-filter:none!important; } }
 :root[data-ui-version=modern][data-low-resource] .workspace-header, :root[data-ui-version=modern][data-low-resource] .modern-session-header { backdrop-filter:none!important; }
