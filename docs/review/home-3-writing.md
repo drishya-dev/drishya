@@ -2,6 +2,8 @@
 
 The existing Running now strip includes discovered, unopened journals whose file modification time is less than one minute old. Its explanation says **Writing now**, based on the journal's change time; it makes no claim about the agent process. Newer writes lead the existing bounded strip. Clicking one imports or refreshes that source with passive live observation enabled.
 
+**Review fix (6 Nov, Harsh):** the strip is the union of two kinds of evidence, `writingSince()` in `home-import.ts`: the discovered parent journal's write time, and a followed recording's captured change time (`health.state === 'following'` with `lastChangeAt` under a minute old). Claude ingest also reads companion and sub-agent files, so the parent's mtime alone would drop a session that is still changing, and an imported recording outside the discovery roots has no discovered journal at all; such a row opens through its recording. Both kinds keep the one-minute expiry.
+
 Home advances its freshness clock on every visible discovery tick, including when the source list and file sizes have not changed. Old writes expire without requiring another write, Refresh or an opened session. Invalid and future timestamps do not establish writing. Sub-agent nesting and the ordinary library remain unchanged. The strip is available at the supported 600 px minimum as well as 1440 px.
 
 ## Genuine acceptance, 5 November

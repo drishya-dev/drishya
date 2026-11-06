@@ -75,3 +75,31 @@ for(const width of [600,1440]) test(`unopened discovery enters on a tick and exp
   await page.clock.runFor(60000);await expect(strip).toHaveCount(0);
   await expect(page.locator('.mh-session')).toHaveCount(1);
 });
+
+// Harsh's review of HOME-3: the discovered mtime is added to the followed-recording evidence, never substituted for it.
+test('Running now unions a changing companion, an imported recording outside discovery and an unopened journal', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const now = new Date().toISOString(), old = new Date(Date.now() - 600_000).toISOString();
+  const base = { createdAt: now, updatedAt: now, lastSourceTime: now, observationCount: 24, live: true, pinned: false };
+  const following = { state: 'following', live: true, lastChangeAt: now };
+  const recordings = [
+    { ...base, id: claudeId, harness: 'claude-code', title: 'Companion still changing', workspaceRoot: '/synthetic/alpha', health: following },
+    { ...base, id: codexId, harness: 'codex', title: 'Imported outside discovery', workspaceRoot: '/synthetic/beta', health: following },
+  ];
+  // The parent journal of the first recording was last written ten minutes ago; the second is not discovered at all.
+  const sources = [
+    { path: 'C:/synthetic/parent.jsonl', adapterId: 'claude-code', harness: 'claude-code', cwd: '/synthetic/alpha', title: 'Companion still changing', modifiedAt: old, bytes: 100, companions: [], importedRecordingId: claudeId },
+    { path: 'C:/synthetic/fresh.jsonl', adapterId: 'codex', harness: 'codex', cwd: '/synthetic/gamma', title: 'Unopened and writing', modifiedAt: now, bytes: 100, companions: [] },
+  ];
+  await page.route('**/v1/recordings', route => route.fulfill({ json: { recordings } }));
+  await page.route('**/v1/sources', route => route.fulfill({ json: { sources, errors: [] } }));
+  await page.goto(server.launchUrl);
+  const strip = page.getByRole('region', { name: 'Running now' });
+  await expect(strip.getByRole('button')).toHaveCount(3);
+  await expect(strip).toContainText('Companion still changing');
+  await expect(strip).toContainText('Imported outside discovery');
+  await expect(strip).toContainText('Unopened and writing');
+  // With no discovered journal the recording itself opens.
+  await strip.getByRole('button', { name: /Imported outside discovery/ }).click();
+  await expect(page).toHaveURL(new RegExp(`#/r/${codexId}$`));
+});
