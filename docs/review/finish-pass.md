@@ -106,5 +106,7 @@ UI-26 (one stylesheet layer behind a pixel guard, Harsh) is **paused until FINIS
 
 | Item | Spec | Build | Verified | Merged |
 |---|---|---|---|---|
-| FINISH-0 | — | — | — | — |
+| FINISH-0a | [written](finish/finish-0-foundations.md) | — | — | — |
+| FINISH-0b | [written](finish/finish-0-foundations.md) | — | — | — |
+| FINISH-0c | [written](finish/finish-0-foundations.md) | — | — | — |
 | FINISH-1 | — | — | — | — |
