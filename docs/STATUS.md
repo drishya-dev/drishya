@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| CONTENT-17 | @yash + Codex (Sol 6.1) | `codex/content-17` | 2026-11-06 | lib/markdown.tsx, dedicated neutral table CSS only, markdown units, focused prose-table browser spec, scripts/real-cases table acceptance and docs. Behaviour only; look belongs to FINISH-3. |
 | CLARITY-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/clarity-1` | 2026-11-06 | `lib/ui-version.ts`, `UIVersions.tsx`, `main.tsx`, `apps/ui/vite.config.ts`, new `apps/ui/src/clarity/`, `!important` guards in legacy sheets; scripts for the pixel guard. |
 | FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
 | FINISH-0b | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0b` | 2026-11-06 | New `components/overlay/*`; every file with a native select or a details menu; `ProductMenu.tsx`, `lib/dismiss-menus.ts`; after 0a. |
@@ -51,6 +50,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — 6 Nov: CONTENT-17 prose table behaviour complete
+
+- PR #353: tables in agent prose, horizontal containment, inline code and safe links, exact Original/Copy. Genuine Claude/Codex narrow/wide/code/link replies pass at 600/1440 on all seven palettes (28 checks). Affected checks pass: both typechecks, 38 related units and 90 browsers / 15 existing skips. Final isolated gate is recorded in the PR; no merge. [Evidence](review/content-17-prose-tables.md). Presentation remains FINISH-3; Clarity and its control/style owners are untouched.
 
 ### Yash with Claude — 6 Nov: the finishing pass moves into Clarity
 
