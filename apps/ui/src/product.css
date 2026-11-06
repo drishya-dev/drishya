@@ -25,13 +25,13 @@
 .agent-dot { box-shadow: none; }
 .crown-actions { margin-left: auto; gap: 0; }
 .crown-actions .btn { font-size: var(--text-xs); padding-inline: 9px; }
-.workspace-bar { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; gap: 22px; padding: 0 20px; min-width: 0; z-index: 5; }
+.workspace-bar { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; gap: 22px; padding: 0 20px; min-width: 0; z-index: calc(var(--z-stage) + 4); }
 .workspace-context { color: var(--t3); font-size: var(--text-2xs); min-width: 0; }
 .clear-workspace-filter { margin-left: auto; font-size: var(--text-2xs); }
 .main { grid-column: 1; grid-row: 3; }
 .dock { grid-column: 2; grid-row: 3; background: transparent; border: 0; padding: 20px 18px 24px 12px; }
 .transport { grid-row: 4; border: 0; background: var(--bg); }
-.viewer > .notice { position: absolute; top: calc(var(--crown-h) + var(--workspace-h)); left: 20px; z-index: 60; background: var(--s1); border: 1px solid var(--fail); padding: 12px; max-width: calc(100vw - 40px); }
+.viewer > .notice { position: absolute; top: calc(var(--crown-h) + var(--workspace-h)); left: 20px; z-index: var(--z-toast); background: var(--s1); border: 1px solid var(--fail); padding: 12px; max-width: calc(100vw - 40px); }
 .spine { padding: 20px 14px; background: transparent; border: 0; }
 .spine .spine-file { padding-inline: 5px; border-radius: var(--round-xs); }
 .spine .spine-file:hover { background: var(--s2); }
@@ -79,7 +79,7 @@
 .map-legend, .map-tools, .map-tip { background: var(--s1); color: var(--t1); border-color: var(--line-2); }
 .map-matches { background: var(--s1); }
 .catalog-toggle { bottom: calc(var(--transport-h) + 14px); }
-.agent-overview { position: absolute; top: 0; left: var(--spine-w); right: 0; z-index: 3; padding: 10px 24px; background: var(--bg); height: 216px; overflow: auto; }
+.agent-overview { position: absolute; top: 0; left: var(--spine-w); right: 0; z-index: calc(var(--z-stage) + 2); padding: 10px 24px; background: var(--bg); height: 216px; overflow: auto; }
 .agent-overview-caption { color: var(--t3); font-size: var(--text-2xs); margin-bottom: 10px; }
 .agent-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
 .agent-work { min-width: 0; text-align: left; border: 1px solid var(--line-2); border-radius: var(--round-md); padding: 12px; background: var(--s1); }
@@ -94,7 +94,7 @@
 .viewer.comparing-agents:not(.exploring) .history { top: 216px; }
 .product-dialog { background: var(--s1); color: var(--t1); border: 1px solid var(--line-2); border-radius: var(--round-lg); width: min(720px, calc(100vw - 32px)); max-height: 90dvh; padding: 0; box-shadow: 0 20px 80px #0005; }
 .product-dialog::backdrop { background: #0008; }
-.product-dialog > header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 24px; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; background: var(--s1); }
+.product-dialog > header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 24px; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: calc(var(--z-stage) + 1); background: var(--s1); }
 .product-dialog h2 { font-size: var(--text-lg); font-weight: var(--weight-medium); margin: 0; overflow-wrap: anywhere; }
 .settings-dialog > section { padding: 20px 24px; border-bottom: 1px solid var(--line); }
 .settings-dialog h3 { font-size: var(--text-sm); font-weight: var(--weight-strong); margin: 0; }
@@ -263,7 +263,7 @@ input:not([type="checkbox"]), select { background-color: var(--s2); border-color
 .history .prose-reasoning { border-left-color: color-mix(in srgb, var(--agent, var(--line-3)) 45%, var(--bg)); }
 .origin-thread, .origin-shell { stroke: var(--focus); }
 .crown .agent { border-radius: var(--round-sm); }
-.dock .instrument, .dock .server-tool, .spine-file, .btn, .theme-option { transition: background-color 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out; }
+.dock .instrument, .dock .server-tool, .spine-file, .btn, .theme-option { transition: background-color var(--dur-hover-in) var(--ease-out), border-color var(--dur-hover-in) var(--ease-out), color var(--dur-hover-in) var(--ease-out); }
 .theme-option[aria-pressed="true"] { background: var(--s2); box-shadow: inset 0 -2px var(--focus); }
 @media (prefers-reduced-motion: reduce) {
   .dock .instrument, .dock .server-tool, .spine-file, .btn, .theme-option { transition: none; }

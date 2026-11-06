@@ -1,7 +1,8 @@
-/* The one scale. Every stylesheet takes its type and corner values from here (UI-8 foundations). */
+/* The one scale. Every stylesheet takes its type, corner, spacing, layer, elevation and motion values from here
+   (UI-8 foundations; FINISH-0a, docs/review/finish/finish-0-foundations.md). */
 :root {
-  --text-2xs: 11px; /* Marks, counts, the smallest meta. The type floor. */
-  --text-xs: 12px;  /* Secondary text and controls. */
+  --text-2xs: 11px; /* Marks and counts only. The type floor. A sentence or label is at least --text-xs. */
+  --text-xs: 12px;  /* Secondary text, labels and controls. */
   --text-sm: 13px;  /* Interface body. */
   --text-md: 15px;  /* Section titles; the default reading size. */
   --text-lg: 17px;  /* Dialog titles. */
@@ -22,7 +23,70 @@
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-strong: 600;
+
+  /* Spacing, 4-based. --sp-0h and --sp-1h are for control internals only. 5, 7, 9, 10 and 14 px are retired as each component is finished. */
+  --sp-0h: 2px;
+  --sp-1: 4px;
+  --sp-1h: 6px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* Layers. A sheet orders its own siblings with a small offset on one of these (calc(var(--z-raised) + 2)); it never writes a literal. */
+  --z-below: -1;       /* Behind its own parent's content (decorative sweeps and veils). */
+  --z-base: 0;
+  --z-stage: 1;
+  --z-raised: 10;      /* Stage overlays, connectors. */
+  --z-sticky: 20;      /* Header, composer, rails. */
+  --z-panel: 30;       /* Files, Toolbox, floating windows. */
+  --z-popover: 40;     /* Menus, selects, popovers, tooltips. */
+  --z-dialog: 50;
+  --z-toast: 60;
+  --z-top: 100;        /* The topmost thing inside its own stacking context: hover reading, the Follow pill, menus under a header. */
+  --z-recovery: 180;   /* The connection-recovery banner sits above everything. */
+
+  /* Elevation. Panels stay flat with a 1 px hairline; only things that float get a shadow. */
+  --elev-pop: 0 8px 24px rgb(0 0 0 / .36), 0 0 0 1px var(--line-2);
+  --elev-dialog: 0 18px 48px rgb(0 0 0 / .48), 0 0 0 1px var(--line-2);
+
+  /* Motion (MOTION-4). Enter and exit use the same properties; the exit is faster. */
+  --ease-out: cubic-bezier(.23, 1, .32, 1);  /* Everything that enters or exits. */
+  --ease-move: cubic-bezier(.65, 0, .35, 1); /* Something travelling on screen: an indicator, a reflow. */
+  --dur-press: 120ms;      /* Press in. */
+  --dur-release: 160ms;    /* Press out. */
+  --dur-hover-in: 140ms;   /* Background, border, colour. */
+  --dur-hover-out: 200ms;
+  --dur-pop-in: 200ms;     /* Menus, selects, popovers. */
+  --dur-pop-out: 150ms;
+  --dur-tip-in: 140ms;     /* Tooltips. */
+  --dur-tip-out: 100ms;
+  --dur-dialog-in: 240ms;  /* Dialogs, floating windows. */
+  --dur-dialog-out: 180ms;
+  --dur-panel-in: 240ms;   /* Side panels, sheets, disclosure content. */
+  --dur-panel-out: 180ms;
+  --dur-move: 280ms;       /* Indicators sliding, list reflow. */
+  --dur-switch: 160ms;     /* A switch knob travelling. */
+  --dur-spin: 1s;          /* One turn of a spinner, or a one-off sweep. */
+  --dur-shimmer: 1.6s;     /* A skeleton's sweep. */
+}
+
+/* Light palettes (Paper, Tokyo) float on a lighter shadow. */
+:root[data-theme=light] {
+  --elev-pop: 0 8px 24px rgb(0 0 0 / .12), 0 0 0 1px var(--line-2);
+  --elev-dialog: 0 18px 48px rgb(0 0 0 / .18), 0 0 0 1px var(--line-2);
 }
 
 /* `<small>` otherwise shrinks relative to its parent, which lands off the scale. */
 small { font-size: var(--text-2xs); }
+
+/* Every count, duration, size and time sits on a fixed-width lining figure, so columns and live numbers do not jump. */
+.num, :is(td, th, .count, [data-count], time) { font-variant-numeric: tabular-nums lining-nums; }
+
+/* Group labels are sentence case, never tracked capitals. */
+.group-label { font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--t3); letter-spacing: 0; text-transform: none; }

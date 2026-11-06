@@ -8,8 +8,6 @@
 :root {
   --sans: 'Inter', 'Geist', 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --mono: 'Geist Mono', 'JetBrains Mono', 'Cascadia Code', 'Cascadia Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
-  --ease-out: cubic-bezier(.16, 1, .3, 1);
-  --ease-move: cubic-bezier(.4, 0, .2, 1);
   --radius: var(--round-md);
   --surface-edge: color-mix(in srgb, var(--t1) 4%, transparent);
   --lift: 0 1px 0 var(--surface-edge) inset, 0 10px 28px -16px #000000b3;
@@ -92,7 +90,7 @@ body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-re
 .crown { background: var(--chrome); border-bottom: 1px solid var(--line); }
 .brand { font-size: var(--text-sm); letter-spacing: -.01em; }
 .crown-title { font-weight: var(--weight-medium); font-size: var(--text-sm); }
-.crown .agent { padding: 4px 10px; border: 1px solid var(--line-2); background: var(--s1); transition: background-color 160ms ease-out, border-color 160ms ease-out; }
+.crown .agent { padding: 4px 10px; border: 1px solid var(--line-2); background: var(--s1); transition: background-color var(--dur-hover-in) var(--ease-out), border-color var(--dur-hover-in) var(--ease-out); }
 .crown .agent:hover { background: var(--s2); border-color: var(--line-3); }
 .crown .agent.on { border-color: var(--agent); background: color-mix(in srgb, var(--agent) 12%, var(--s1)); }
 .crown .agent-dot { background: var(--agent); }
@@ -106,7 +104,7 @@ body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-re
 .history .op.shape-reading { flex: 0 1 700px; }
 .history .op.shape-medium { flex: 0 1 360px; }
 .history .op.shape-compact { flex: 0 1 300px; }
-.history .op { border-radius: var(--radius); border-color: var(--line-2); max-height: 460px; box-shadow: var(--lift); transition: border-color 160ms ease-out, box-shadow 220ms var(--ease-out); }
+.history .op { border-radius: var(--radius); border-color: var(--line-2); max-height: 460px; box-shadow: var(--lift); transition: border-color var(--dur-hover-in) var(--ease-out), box-shadow var(--dur-panel-in) var(--ease-out); }
 .history .op:hover:not(.selected):not(.lit) { box-shadow: var(--lift-strong); }
 .history .op.selected, .history .op.lit { box-shadow: var(--lift-strong), 0 0 0 1px color-mix(in srgb, var(--focus) 35%, transparent); }
 .history .op-head, .history .material-terminal .op-head, .history .material-verification .op-head {
@@ -120,7 +118,7 @@ body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-re
 .history .prose { font-size: var(--text-sm); line-height: 1.8; max-width: 78ch; }
 .history .passage-head { margin-bottom: 10px; }
 .history .passage-agent { font-weight: var(--weight-medium); color: var(--t1); }
-.op-expand { border-radius: var(--round-sm); transition: color 140ms ease-out, background-color 140ms ease-out; }
+.op-expand { border-radius: var(--round-sm); transition: color var(--dur-hover-in) var(--ease-out), background-color var(--dur-hover-in) var(--ease-out); }
 .op-expand:hover { color: var(--t1); background: var(--s3); }
 .history .cmd { background: color-mix(in srgb, var(--bg) 70%, var(--s1)); }
 .search-bead { border-radius: var(--round-sm); }
@@ -155,7 +153,7 @@ body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-re
 .activity { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 140px; }
 .activity-strip { position: relative; flex: 1; height: 30px; min-width: 80px; border-radius: var(--round-sm); }
 .activity-strip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line-2); }
-.activity-mark { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 3px; height: 12px; border-radius: 1px; padding: 0; background: var(--t3); opacity: .85; transition: transform 140ms var(--ease-out), opacity 140ms ease-out; }
+.activity-mark { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 3px; height: 12px; border-radius: 1px; padding: 0; background: var(--t3); opacity: .85; transition: transform var(--dur-hover-in) var(--ease-out), opacity var(--dur-hover-in) var(--ease-out); }
 .activity-mark::after { content: ''; position: absolute; inset: -9px -4px; }
 .activity-mark:hover, .activity-mark:focus-visible { transform: translate(-50%, -50%) scaleY(1.45); opacity: 1; }
 .activity-mark.k-edit { background: var(--edited); }

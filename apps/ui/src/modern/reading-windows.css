@@ -4,7 +4,7 @@
 .reading-window-move {cursor:move;touch-action:none;}
 .reading-window-move svg {width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.4;}
 .adjustable-reading-window>header h2 {flex:1;min-width:0;}
-.adjustable-reading-window>.reading-window-edge {position:absolute;display:block;margin:0;touch-action:none;z-index:7;background:transparent;}
+.adjustable-reading-window>.reading-window-edge {position:absolute;display:block;margin:0;touch-action:none;z-index:calc(var(--z-stage) + 6);background:transparent;}
 .reading-window-edge.edge-left{left:0;top:8px;bottom:8px;width:8px;cursor:ew-resize;}
 .reading-window-edge.edge-right{right:0;top:8px;bottom:8px;width:8px;cursor:ew-resize;}
 .reading-window-edge.edge-top{top:0;left:8px;right:8px;height:8px;cursor:ns-resize;}
@@ -17,7 +17,7 @@
 @media(max-width:820px) {.reading-window-move,.reading-window-edge {display:none;}}
 
 /* File peeks share the world with the agent; only full Workspace owns the stage. */
-:root[data-ui-version=modern] .file-peek-reader[open] {position:fixed;inset:calc(var(--workspace-tools-bottom,124px) + 10px) 12px var(--peek-bottom,190px) auto;margin:0;width:clamp(360px,28vw,720px);height:auto;min-width:0;max-height:none;z-index:30;border-radius:var(--round-lg);overflow:hidden;}
+:root[data-ui-version=modern] .file-peek-reader[open] {position:fixed;inset:calc(var(--workspace-tools-bottom,124px) + 10px) 12px var(--peek-bottom,190px) auto;margin:0;width:clamp(360px,28vw,720px);height:auto;min-width:0;max-height:none;z-index:var(--z-panel);border-radius:var(--round-lg);overflow:hidden;}
 :root[data-ui-version=modern] .file-peek-reader>header {padding:10px 12px;min-height:44px;gap:8px;}
 :root[data-ui-version=modern] .file-peek-reader>header h2 {font:var(--text-xs)/1.5 var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .file-peek-reader .reading-window-tabs {flex:none;min-width:0;cursor:move;touch-action:none;}
@@ -44,9 +44,9 @@
  .file-peek-reader .reading-window-tabs {cursor:auto;touch-action:auto;}
 }
 
-:root[data-ui-version=modern] .file-peek-open :is(.history-transport,.follow-pill) {z-index:20;}
+:root[data-ui-version=modern] .file-peek-open :is(.history-transport,.follow-pill) {z-index:var(--z-sticky);}
 
-@media(max-width:1100px) {:root[data-ui-version=modern] .file-peek-open .folder-explorer {z-index:35;}}
+@media(max-width:1100px) {:root[data-ui-version=modern] .file-peek-open .folder-explorer {z-index:calc(var(--z-panel) + 5);}}
 
 /* Right navigation stays separate from the agent and its two readers. */
 :root[data-ui-version=modern][data-experience=classic] .workspace-secondary {flex-direction:column;align-items:flex-end;gap:7px;}
@@ -95,7 +95,7 @@
 .op-stat .del { color: var(--fail); font-weight: var(--weight-medium); }
 /* Provenance stays out of the way at rest: one note per card, revealed by hover, focus or touch. */
 .history .op { position: relative; }
-.op-info { position: absolute; right: 8px; bottom: 6px; z-index: 2; width: 20px; height: 20px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--t3); font: var(--text-xs)/1 var(--sans); opacity: 0; cursor: pointer; transition: opacity 140ms ease, color 140ms ease, background-color 140ms ease; }
+.op-info { position: absolute; right: 8px; bottom: 6px; z-index: calc(var(--z-stage) + 1); width: 20px; height: 20px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--t3); font: var(--text-xs)/1 var(--sans); opacity: 0; cursor: pointer; transition: opacity var(--dur-hover-in) var(--ease-out), color var(--dur-hover-in) var(--ease-out), background-color var(--dur-hover-in) var(--ease-out); }
 .history .op:hover .op-info, .history .op:focus-within .op-info, .op-info:focus-visible, .op-info[aria-expanded=true] { opacity: 1; }
 .op-info:hover { color: var(--t1); background: var(--s3); }
 .op-info:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
@@ -125,8 +125,8 @@
 .history .turn-ledger .good { color: var(--pass); }
 .history .turn-ledger .bad { color: var(--fail); }
 /* The ledger line folds the turn (TURN-1b): the chevron is the only added mark, and it turns rather than swapping. */
-.history .turn-fold { display: block; padding: 2px 0 2px 8px; border: 0; background: none; cursor: pointer; transition: color 150ms ease; }
-.history .turn-fold svg { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; transition: transform 200ms cubic-bezier(.23,1,.32,1); }
+.history .turn-fold { display: block; padding: 2px 0 2px 8px; border: 0; background: none; cursor: pointer; transition: color var(--dur-hover-in) var(--ease-out); }
+.history .turn-fold svg { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; transition: transform var(--dur-hover-out) cubic-bezier(.23,1,.32,1); }
 .history .turn-fold[aria-expanded=false] svg { transform: rotate(-90deg); }
 .history .turn-fold:hover, .history .turn-fold:focus-visible { color: var(--t1); }
 .history .turn-fold:focus-visible { outline: 1px solid var(--focus); outline-offset: 2px; border-radius: var(--round-xs); }
@@ -151,7 +151,7 @@
 
 /* AUDIT-1: the palette is an input and a list. Its title stays for assistive technology and takes no room. */
 :root[data-ui-version=modern] .workspace-navigation { top:14dvh;margin-block:0 auto; }
-:root[data-ui-version=modern] .workspace-navigation>header { position:absolute;right:6px;top:6px;padding:0;border:0;background:transparent;z-index:1; }
+:root[data-ui-version=modern] .workspace-navigation>header { position:absolute;right:6px;top:6px;padding:0;border:0;background:transparent;z-index:var(--z-stage); }
 :root[data-ui-version=modern] .workspace-navigation>header>h2 { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
 :root[data-ui-version=modern] .workspace-navigation-query { width:100%;margin:0;padding:14px 48px 14px 16px;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0;background:transparent!important;font:var(--text-md)/1.5 var(--sans);box-shadow:none!important;outline:0!important; }
 :root[data-ui-version=modern] .workspace-navigation-results { padding:6px; }

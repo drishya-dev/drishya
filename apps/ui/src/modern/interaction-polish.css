@@ -42,8 +42,8 @@
 :root[data-ui-version=modern] .folder-row>.folder-disclosure {display:inline-grid;place-items:center;transform:rotate(0deg);transform-origin:center;}
 :root[data-ui-version=modern] .folder-row[aria-expanded=true]>.folder-disclosure {transform:rotate(90deg);}
 @media(prefers-reduced-motion:no-preference) {
- :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .folder-row>.folder-disclosure {transition:transform 140ms var(--ease-out);}
- :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.modern-attachment,.composer-minimize,.toolbox-collapse,.desk-tab>button){transition:transform 130ms var(--ease-out),background-color 130ms var(--ease-out);}
+ :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .folder-row>.folder-disclosure {transition:transform var(--dur-hover-in) var(--ease-out);}
+ :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.modern-attachment,.composer-minimize,.toolbox-collapse,.desk-tab>button){transition:transform var(--dur-press) var(--ease-out),background-color var(--dur-press) var(--ease-out);}
  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.modern-attachment,.composer-minimize,.toolbox-collapse,.desk-tab>button):active:not(:disabled){transform:translateY(1px);}
 }
 :root[data-ui-version=modern] .product-dialog:not(.settings-dialog):not(.git-review-dialog)>header .icon-btn {
@@ -52,7 +52,7 @@
 @media(hover:hover) and (pointer:fine) {
   :root[data-ui-version=modern] .modern-session-header .workspace-utilities :is(.btn,summary):hover {background:var(--s2);color:var(--t1);}
   :root[data-ui-version=modern][data-ui-motion][data-ui-press] :is(.mh-home .btn,.mh-home .icon-btn,.workspace-utilities .btn) {
-    transition:background-color 150ms ease,color 150ms ease,transform 120ms var(--ease-out);
+    transition:background-color var(--dur-hover-in) var(--ease-out),color var(--dur-hover-in) var(--ease-out),transform var(--dur-hover-in) var(--ease-out);
   }
   :root[data-ui-version=modern][data-ui-motion][data-ui-press] :is(.mh-home .btn,.mh-home .icon-btn,.workspace-utilities .btn):active:not(:disabled) {transform:translateY(1px);}
 }

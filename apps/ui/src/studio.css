@@ -22,7 +22,7 @@
 .studio-action-identity .op-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .studio-action-identity .op-kind { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 :root[data-experience='classic'] .history .op-head .studio-action-identity .op-title { flex: 0 0 auto; }
-:root[data-experience='classic'] .studio-header .studio-actions { grid-column: 3; grid-row: 1; gap: 6px; margin: 0; position: relative; z-index: 2; }
+:root[data-experience='classic'] .studio-header .studio-actions { grid-column: 3; grid-row: 1; gap: 6px; margin: 0; position: relative; z-index: calc(var(--z-stage) + 1); }
 :root[data-experience='classic'] .studio-actions .btn { font-size: var(--text-xs); min-height: var(--control-lg); padding: 6px 10px; }
 :root[data-experience='classic'] .studio-actions .review-open { border: 1px solid var(--line-2); border-radius: var(--round-sm); background: var(--s1); }
 :root[data-experience='classic'] .workspace-menu > summary { width: 32px; height: 32px; display: grid; place-items: center; }
@@ -91,8 +91,8 @@
   :root[data-experience='classic'] .connected-workspace .history { left: 0; right: 0; }
   :root[data-experience='classic'] .connected-workspace .history-inner { padding-top: calc(var(--workspace-header-h, 64px) + 72px); padding-inline: 24px; }
   :root[data-experience='classic'] .connected-workspace > .workspace-bar { width: auto; left: 16px; top: calc(var(--workspace-header-h, 64px) + 12px); }
-  :root[data-experience='classic'] .connected-workspace .folder-explorer { width: min(280px, 80vw); left: 12px; background: var(--s1); border: 1px solid var(--line); border-radius: var(--round-md); z-index: 14; }
-  :root[data-experience='classic'] .connected-workspace .studio-dock { width: 220px; right: 12px; background: var(--s1); border: 1px solid var(--line); border-radius: var(--round-md); z-index: 14; }
+  :root[data-experience='classic'] .connected-workspace .folder-explorer { width: min(280px, 80vw); left: 12px; background: var(--s1); border: 1px solid var(--line); border-radius: var(--round-md); z-index: calc(var(--z-raised) + 4); }
+  :root[data-experience='classic'] .connected-workspace .studio-dock { width: 220px; right: 12px; background: var(--s1); border: 1px solid var(--line); border-radius: var(--round-md); z-index: calc(var(--z-raised) + 4); }
   :root[data-experience='classic'] .connected-workspace .prompt-composer.open { width: calc(100vw - 40px); bottom: 16px; }
   :root[data-experience='classic'] .studio-session h1 { max-width: 32vw; }
 }

@@ -1,6 +1,5 @@
 /* Classic is the active product. Its canvas stays centered; the evidence desk is
    brought over from Studio without importing Studio's alternative source layout. */
-:root { --ease-out: cubic-bezier(.23, 1, .32, 1); }
 .workspace-menu > div { max-height: min(70dvh, var(--menu-max-height, 70dvh)); overflow-y: auto; overscroll-behavior: contain; }
 .session-segments>summary {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px;cursor:pointer;font:var(--text-xs)/1.5 var(--sans);color:var(--t1);}
 .session-segments>div {position:static;width:auto;padding:0 8px 8px;border:0;box-shadow:none;background:none;}
@@ -10,13 +9,13 @@
 .session-segments>div>.btn>span {min-width:0;overflow-wrap:anywhere;}
 .session-segments>div>.btn>code {flex:none;font:var(--text-2xs) var(--mono);color:var(--t3);}
 .prompt-composer .native-options-menu { max-height: min(420px, var(--menu-max-height, 60dvh)); overscroll-behavior: contain; }
-:root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn, .icon-btn, .composer-add) { transition: transform 130ms var(--ease-out); }
+:root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn, .icon-btn, .composer-add) { transition: transform var(--dur-press) var(--ease-out); }
 :root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn, .icon-btn, .composer-add):not(:disabled):active { transform: scale(.97); }
 /* Native details retain their semantics. Supporting engines keep the real panel
    rendered for a finite exit; older engines simply open/close immediately. */
 @supports selector(details::details-content) and (transition-behavior: allow-discrete) {
-  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu]::details-content { transition: content-visibility 160ms allow-discrete; }
-  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu] > div { opacity: 0; transform: scale(.95); transform-origin: top right; transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu]::details-content { transition: content-visibility var(--dur-pop-in) allow-discrete; }
+  :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu] > div { opacity: 0; transform: scale(.95); transform-origin: top right; transition: opacity var(--dur-pop-in) var(--ease-out), transform var(--dur-pop-in) var(--ease-out); }
   :root[data-ui-motion]:not([data-low-resource]) .permission-policy[data-pointer-menu] > div { transform-origin: bottom left; }
   :root[data-ui-motion]:not([data-low-resource]) :is(.workspace-menu, .permission-policy, .desk-options)[data-pointer-menu][open] > div { opacity: 1; transform: none; }
   :is(.workspace-menu, .permission-policy, .desk-options):not([open]) > div { pointer-events: none; }
@@ -27,7 +26,7 @@
   }
 }
 @supports (transition-behavior: allow-discrete) {
-  :root[data-ui-motion]:not([data-low-resource]) .composer-add-menu[data-pointer-menu] { display: block; opacity: 1; transform: none; transform-origin: bottom left; transition: display 160ms allow-discrete, opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+  :root[data-ui-motion]:not([data-low-resource]) .composer-add-menu[data-pointer-menu] { display: block; opacity: 1; transform: none; transform-origin: bottom left; transition: display var(--dur-pop-in) allow-discrete, opacity var(--dur-pop-in) var(--ease-out), transform var(--dur-pop-in) var(--ease-out); }
   :root[data-ui-motion]:not([data-low-resource]) .composer-add-menu[data-pointer-menu][hidden] { display: none; opacity: 0; transform: scale(.95); pointer-events: none; }
   @starting-style { :root[data-ui-motion]:not([data-low-resource]) .composer-add-menu[data-pointer-menu]:not([hidden]) { opacity: 0; transform: scale(.95); } }
 }
@@ -195,7 +194,7 @@
 .captured-outcomes .verification-caption { flex-wrap: wrap; }
 .verification-tile.cancelled, .verification-tile.unknown { background: var(--t3); opacity: .7; }
 .verification-tile.errors { background: var(--fail); }
-.map-recovery { position: absolute; z-index: 34; top: calc(var(--workspace-header-h, 64px) + 12px); left: 50%; transform: translateX(-50%); max-width: min(360px, calc(100% - 24px)); padding: 12px; border: 1px solid var(--line-2); background: var(--s1); color: var(--t2); font-size: var(--text-xs); overflow-wrap: anywhere; }
+.map-recovery { position: absolute; z-index: calc(var(--z-panel) + 4); top: calc(var(--workspace-header-h, 64px) + 12px); left: 50%; transform: translateX(-50%); max-width: min(360px, calc(100% - 24px)); padding: 12px; border: 1px solid var(--line-2); background: var(--s1); color: var(--t2); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .map-recovery .btn { display: block; margin-top: 8px; }
 .verification-tile.deselected, .verification-tile.xfailed, .verification-tile.xpassed { background: var(--t3); }
 .connected-workspace :is(.search input, .prompt-composer textarea):focus-visible { outline: none; }
@@ -347,8 +346,8 @@
 .connected-workspace .history-prompt-marks button[data-proximity=near] .prompt-rail-tick { width: 24px; transform: scaleX(.666667); }
 .connected-workspace .search:popover-open { animation: none !important; }
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-ui-press][data-ui-motion]:not([data-low-resource]) .connected-workspace:not(.still) .search:popover-open { animation: compact-search-arrive 180ms var(--ease-out) !important; }
-  :root[data-ui-motion]:not([data-low-resource]) .connected-workspace .complete-prompt-rail:hover .prompt-rail-tick { transition: transform 150ms var(--ease-out), opacity 150ms var(--ease-out); }
+  :root[data-ui-press][data-ui-motion]:not([data-low-resource]) .connected-workspace:not(.still) .search:popover-open { animation: compact-search-arrive var(--dur-pop-in) var(--ease-out) !important; }
+  :root[data-ui-motion]:not([data-low-resource]) .connected-workspace .complete-prompt-rail:hover .prompt-rail-tick { transition: transform var(--dur-hover-in) var(--ease-out), opacity var(--dur-hover-in) var(--ease-out); }
 }
 :root[data-experience=classic] .workbench-station { gap: 12px; }
 :root[data-experience=classic] .workbench-review { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
@@ -379,7 +378,7 @@
 .connected-workspace .map-zoom { border-color: var(--line); border-radius: var(--round-md); }
 .connected-workspace .map-zoom .btn { border-color: transparent; border-radius: var(--round-sm); }
 .connected-workspace .map-camera-hint { color: var(--t3); }
-.connected-workspace .map-legend { z-index: 4; }
+.connected-workspace .map-legend { z-index: calc(var(--z-stage) + 3); }
 .connected-workspace .map-legend > button { pointer-events: auto; }
 @media (hover: hover) and (pointer: fine) {
   .product-dialog .btn:hover:not(:disabled), :root[data-experience=classic] .workbench-review .btn:hover:not(:disabled) { background: var(--s3); border-color: transparent; }
@@ -388,7 +387,7 @@
   .home .workspace-group-heading:hover { background: var(--s2); }
 }
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.product-dialog .btn,.theme-option,.folder-tree > button,.station-agents button,.instrument,.composer-add,.icon-btn) { transition: transform 130ms var(--ease-out), background-color 130ms var(--ease-out), color 130ms var(--ease-out); }
+  :root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.product-dialog .btn,.theme-option,.folder-tree > button,.station-agents button,.instrument,.composer-add,.icon-btn) { transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-press) var(--ease-out), color var(--dur-press) var(--ease-out); }
   :root[data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.theme-option,.station-agents button,.instrument):not(:disabled):active { transform: scale(.98); }
 }
 
@@ -417,7 +416,7 @@
 .settings-secondary details[open] summary { color: var(--t1); }
 .settings-dialog .shortcut-list { display: grid; gap: 8px; }
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-ui-motion]:not([data-low-resource]) .settings-dialog .setting-row input[type=checkbox]::after { transition: transform 150ms var(--ease-out); }
+  :root[data-ui-motion]:not([data-low-resource]) .settings-dialog .setting-row input[type=checkbox]::after { transition: transform var(--dur-switch) var(--ease-out); }
 }
 @media (max-width: 600px) {
   .settings-dialog > section { padding: 18px; }

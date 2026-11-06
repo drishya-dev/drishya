@@ -21,7 +21,7 @@
 .workbench-utilities kbd { font-size: var(--text-2xs); margin-left: 4px; }
 .workbench-utilities .workspace-menu > summary { min-width: 32px; text-align: center; }
 .workbench-utilities .prompt-popup { bottom: auto; top: 30px; left: auto; right: 0; }
-.workbench-sources { position: absolute; top: calc(var(--workspace-header-h, 76px) + 24px); left: 24px; bottom: 120px; width: calc(var(--stage-rail) - 40px); z-index: 9; display: flex; flex-direction: column; gap: 28px; pointer-events: none; }
+.workbench-sources { position: absolute; top: calc(var(--workspace-header-h, 76px) + 24px); left: 24px; bottom: 120px; width: calc(var(--stage-rail) - 40px); z-index: calc(var(--z-stage) + 8); display: flex; flex-direction: column; gap: 28px; pointer-events: none; }
 .workbench-sources > * { pointer-events: auto; }
 :root[data-experience=studio] .workbench-sources .workspace-bar { position: relative; inset: auto; height: auto; padding: 0; display: flex; flex-direction: column; background: none; border: 0; gap: 8px; }
 :root[data-experience=studio] .workspace-toggles { display: flex; gap: 4px; flex-wrap: wrap; border: 0; padding: 0; background: none; }
@@ -63,7 +63,7 @@
 :root[data-experience=studio] .history .turn { width: min(100%, 66ch); margin: 0 auto 28px; padding: 16px 20px; border: 1px solid var(--line); border-radius: var(--round-lg); background: color-mix(in srgb, var(--s2) 85%, transparent); }
 :root[data-experience=studio] .history .turn-who { font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: .1em; color: var(--focus); margin-bottom: 8px; }
 :root[data-experience=studio] .history .turn-text { font-size: var(--text-md); line-height: 1.8; }
-.workbench-station { position: absolute; right: 24px; top: calc(var(--workspace-header-h, 76px) + 24px); bottom: 120px; width: calc(var(--stage-rail) - 40px); z-index: 9; display: flex; flex-direction: column; gap: 22px; }
+.workbench-station { position: absolute; right: 24px; top: calc(var(--workspace-header-h, 76px) + 24px); bottom: 120px; width: calc(var(--stage-rail) - 40px); z-index: calc(var(--z-stage) + 8); display: flex; flex-direction: column; gap: 22px; }
 .workbench-review { padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 .desk-caption { font: var(--text-2xs) var(--sans); color: var(--t3); }
 .workbench-review > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
@@ -119,7 +119,7 @@
   :root[data-experience=studio] .workbench-station .dock { display: block; }
   :root[data-experience=studio] .connected-workspace .history-inner { padding-top: calc(var(--workspace-header-h, 76px) + 76px); }
   :root[data-experience=studio] .connected-workspace .prompt-composer.open { width: calc(100vw - 32px); bottom: 16px; }
-  :root[data-experience=studio] .folder-explorer { width: min(280px, 80vw); background: var(--s1); z-index: 14; border: 1px solid var(--line); border-radius: var(--round-md); }
+  :root[data-experience=studio] .folder-explorer { width: min(280px, 80vw); background: var(--s1); z-index: calc(var(--z-raised) + 4); border: 1px solid var(--line); border-radius: var(--round-md); }
 }
 @media (max-width: 600px) {
   .workbench-header { grid-template-columns: 1fr auto; padding: 12px 16px; gap: 12px; }

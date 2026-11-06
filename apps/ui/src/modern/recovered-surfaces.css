@@ -31,7 +31,7 @@
 .modern-toolbox .md-dock-heading { display:flex; align-items:center; justify-content:space-between; padding:9px 8px 13px; font:var(--weight-medium) var(--text-xs)/1.5 var(--sans); color:var(--t1); }
 .md-dock-led { width:4px; height:4px; border-radius:50%; background:var(--t3); }
 /* Repository review has its own home, paired with Files / Repository across the stage. */
-:root[data-ui-version=modern][data-experience=classic] .modern-review-control { position:absolute; top:calc(var(--workspace-header-h,56px) + 16px); right:18px; z-index:8; padding:3px; border:1px solid var(--line-2); border-radius:var(--round-md); background:var(--s1); }
+:root[data-ui-version=modern][data-experience=classic] .modern-review-control { position:absolute; top:calc(var(--workspace-header-h,56px) + 16px); right:18px; z-index:calc(var(--z-stage) + 7); padding:3px; border:1px solid var(--line-2); border-radius:var(--round-md); background:var(--s1); }
 .modern-review-control:empty { display:none; }
 :root[data-ui-version=modern] .modern-review-control .git-open { display:flex; align-items:center; gap:8px; min-height:32px; padding:6px 11px; border:0; border-radius:var(--round-sm); background:none; color:var(--t2); font:var(--text-xs)/1.5 var(--sans); }
 :root[data-ui-version=modern] .modern-review-control .git-open[aria-expanded=true] { background:var(--s3); color:var(--t1); }
@@ -62,8 +62,8 @@
 .modern-git-drawer .git-file-name :is(strong,small) {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .modern-git-drawer .git-file-name strong {font-weight:var(--weight-medium);font-size:var(--text-2xs);color:var(--t1);}
 .modern-git-drawer .git-file-name small {font-size:var(--text-2xs);color:var(--t3);}
-:root[data-ui-version=modern][data-experience=classic] .modern-git-drawer { position:fixed; inset:var(--drawer-top,calc(var(--workspace-header-h,56px) + 10px)) 16px auto auto; margin:0; width:min(var(--git-reader-width,680px),calc(100vw - 32px)); max-width:calc(100vw - 32px); height:auto; max-height:calc(100dvh - var(--drawer-top,calc(var(--workspace-header-h,56px) + 10px)) - 16px); z-index:40; border:1px solid var(--line-2); border-radius:var(--round-lg); background:var(--bg); box-shadow:-12px 10px 46px #0005; overflow:auto; }
-:root[data-ui-version=modern] .modern-git-drawer>header { position:sticky; top:0; z-index:3; padding:8px 14px; min-height:44px; background:var(--s1); }
+:root[data-ui-version=modern][data-experience=classic] .modern-git-drawer { position:fixed; inset:var(--drawer-top,calc(var(--workspace-header-h,56px) + 10px)) 16px auto auto; margin:0; width:min(var(--git-reader-width,680px),calc(100vw - 32px)); max-width:calc(100vw - 32px); height:auto; max-height:calc(100dvh - var(--drawer-top,calc(var(--workspace-header-h,56px) + 10px)) - 16px); z-index:var(--z-popover); border:1px solid var(--line-2); border-radius:var(--round-lg); background:var(--bg); box-shadow:-12px 10px 46px #0005; overflow:auto; }
+:root[data-ui-version=modern] .modern-git-drawer>header { position:sticky; top:0; z-index:calc(var(--z-stage) + 2); padding:8px 14px; min-height:44px; background:var(--s1); }
 :root[data-ui-version=modern] .modern-git-drawer>header h2 { display:flex; align-items:center; gap:9px; font:var(--weight-medium) var(--text-sm)/1.5 var(--sans); letter-spacing:0; }
 :root[data-ui-version=modern] .modern-git-drawer>header .icon-btn { width:28px; height:28px; font-size:var(--text-md); }
 .modern-git-context { display:flex; align-items:center; gap:10px; padding:10px 14px 0; font-size:var(--text-2xs); }
@@ -140,7 +140,7 @@
 :root[data-ui-version=modern] .connected-workspace .follow-pill:hover {background:var(--s3);}
 
 /* Quiet at rest: Expand belongs to the card in hand. */
-:root[data-ui-version=modern] .history .op:not(.expanded) .op-expand {opacity:0;transition:opacity 120ms ease-out;}
+:root[data-ui-version=modern] .history .op:not(.expanded) .op-expand {opacity:0;transition:opacity var(--dur-hover-in) var(--ease-out);}
 :root[data-ui-version=modern] .history .op:is(:hover,:focus-within) .op-expand {opacity:1;}
 
 /* A bounded preview ends in a fade only while there is more to scroll, never in half a line. */
@@ -155,7 +155,7 @@
 :root[data-ui-version=modern] .verification-basis.bad {color:var(--fail);}
 
 /* AUDIT-1, live: past queue receipts wait for the composer; an input still waiting always shows. */
-:root[data-ui-version=modern] .modern-native-composer>.queued-input-receipts:not([data-waiting]) { opacity:0;transition:opacity 120ms ease-out; }
+:root[data-ui-version=modern] .modern-native-composer>.queued-input-receipts:not([data-waiting]) { opacity:0;transition:opacity var(--dur-hover-in) var(--ease-out); }
 :root[data-ui-version=modern] .modern-native-composer:is(:hover,:focus-within)>.queued-input-receipts { opacity:1; }
 :root[data-ui-version=modern] .history .notice-line { padding-inline:6px; }
 .command-cd { color:var(--t3); }

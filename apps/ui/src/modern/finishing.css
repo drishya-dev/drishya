@@ -15,8 +15,8 @@
 :root[data-ui-version=modern] .workspace-menu>.workspace-utilities {max-height:calc(100dvh - var(--workspace-header-h,70px) - 24px);overflow-y:auto;overscroll-behavior:contain;}
 :root[data-ui-version=modern] .native-options-menu :is(small,button,label) {overflow-wrap:anywhere;}
 @media(hover:hover) and (pointer:fine) {
-  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) :is(.btn,.icon-btn,.theme-option,.setting-row input) {transition:background-color 120ms ease,border-color 120ms ease,color 120ms ease;}
-  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .setting-row input::before {transition:transform 120ms cubic-bezier(.2,.8,.2,1);}
+  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) :is(.btn,.icon-btn,.theme-option,.setting-row input) {transition:background-color var(--dur-hover-in) var(--ease-out),border-color var(--dur-hover-in) var(--ease-out),color var(--dur-hover-in) var(--ease-out);}
+  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .setting-row input::before {transition:transform var(--dur-hover-in) cubic-bezier(.2,.8,.2,1);}
   :root[data-ui-version=modern] :is(.saved-moment-list button,.investigation-entry button,.review-packet button):hover:not(:disabled) {background:var(--s2);border-color:var(--line-3);}
 }
 @media(max-width:600px) {

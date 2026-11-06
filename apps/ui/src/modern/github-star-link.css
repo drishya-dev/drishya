@@ -4,12 +4,12 @@
   gap:7px; min-height:34px; padding:6px 12px; overflow:hidden; flex:none;
   border:1px solid var(--line-2); border-radius:var(--round-full); background:var(--s1); color:var(--t2);
   font:var(--weight-medium) var(--text-xs)/20px var(--sans); text-decoration:none;
-  transition:color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  transition:color var(--dur-hover-in) var(--ease-out), border-color var(--dur-hover-in) var(--ease-out), box-shadow var(--dur-hover-in) var(--ease-out);
 }
-.home-github-star svg { width:15px; height:15px; flex:none; transition:color 160ms ease, fill 160ms ease; }
+.home-github-star svg { width:15px; height:15px; flex:none; transition:color var(--dur-hover-in) var(--ease-out), fill var(--dur-hover-in) var(--ease-out); }
 .home-github-arrow { color:var(--t3); }
 .home-github-star::before {
-  content:""; position:absolute; inset:-50% -20%; z-index:-1; pointer-events:none; opacity:0;
+  content:""; position:absolute; inset:-50% -20%; z-index:var(--z-below); pointer-events:none; opacity:0;
   background:linear-gradient(110deg,transparent 35%,color-mix(in srgb,var(--t1) 15%,transparent) 50%,transparent 65%);
   transform:translateX(-110%);
 }
@@ -17,7 +17,7 @@
 @media (hover:hover) and (pointer:fine) {
   .home-github-star:hover { color:var(--t1); border-color:var(--t3); box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--line); }
   .home-github-star:hover svg { color:var(--modern-accent,var(--t1)); fill:color-mix(in srgb,currentColor 20%,transparent); }
-  .home-github-star:hover::before { opacity:1; transform:translateX(110%); transition:transform 1s var(--ease-out,cubic-bezier(.23,1,.32,1)); }
+  .home-github-star:hover::before { opacity:1; transform:translateX(110%); transition:transform var(--dur-spin) var(--ease-out,cubic-bezier(.23,1,.32,1)); }
 }
 @media (prefers-reduced-motion:reduce), (forced-colors:active) {
   .home-github-star::before { display:none; }
