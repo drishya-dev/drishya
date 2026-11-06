@@ -134,9 +134,9 @@ test('Modern settings resets section reading, follows responsive tab orientation
   await expect(select).toBeFocused();await expect(select).toHaveValue('collapsed');await expect(settings).toBeVisible();
   await page.setViewportSize({width:390,height:844});await expect(nav).toHaveAttribute('aria-orientation','horizontal');
   await settings.getByRole('tab',{name:'Reading',exact:true}).focus();await page.keyboard.press('End');
-  // UI-4: the UI versions tab is a developer switch now, so Keyboard is the last section.
-  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toBeFocused();
-  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toHaveAttribute('aria-selected','true');
+  // CLARITY-1: the UI versions tab is offered to everyone again (Clarity), so it is the last section.
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toBeFocused();
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveAttribute('aria-selected','true');
   expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/settings-phone-navigation-refined.png')});
   await page.keyboard.press('Escape');await expect(settings).toHaveCount(0);
