@@ -8,7 +8,7 @@ The existing synthetic demo was inspected **before** source changes at 1440 × 90
 
 The dock keeps its native instruments and true source attributes. Its heading opens grouped content in a content-sized, modeless native-popover window. MCP servers, Agents, Run tools and the recorded inventory open their own existing material from the exact clicked summary. Expanding the minimized Toolbox also restores the dock instruments. Closing returns material and focus; the dock preference remains reversible.
 
-Stable portal target elements reparent between each part's home and the reader. React still owns one instance of each inventory and its query/filter state; no captured text clone or parallel inventory API was introduced. The browser top-layer frame stays **inside the connected viewer DOM** to retain that viewer's inert/visibility/evidence boundary. Session change, removed origins and unavailable viewers dismiss it. Resize, changing header/composer layout, resource/motion changes and hidden-page transitions settle or cancel in-flight motion.
+Stable portal target elements reparent between each part's home and the reader. React still owns one instance of each inventory and its query/filter state; no captured text clone or parallel inventory API was introduced. The browser top-layer frame stays **inside the connected viewer DOM** to retain that viewer's inert/visibility/evidence boundary. Session change, removed origins and unavailable viewers or owning docks dismiss it. Keyboard entry into Workspace returns the material immediately without taking focus from the newly selected control; nested origins inside moved material do not define dock availability. Resize, changing header/composer layout, resource/motion changes and hidden-page transitions settle or cancel in-flight motion.
 
 Allocation is centred within the visible viewer, below its header and above the composer's layout bounds. Raised native turn details, queue receipts, send confirmation and native options reserve their offset-parent layout extent too; temporary compositor scale is excluded. Layout-present hover-quiet receipts reserve their room in advance so revealing them cannot cover their controls. Local resize/mutation observers track arriving/removing boundaries. Long tool names wrap inside bounded local scrollers. Pointer motion uses only transform and opacity, reads MOTION-1's shared `--ease-out`, and lasts 160 ms in / 120 ms out; reversals sample the current visual frame. Keyboard actions are immediate; reduced motion and low resource use immediate/opacity-only presentation according to the existing motion preference.
 
@@ -30,18 +30,20 @@ Applied the official installed [Emil skill](C:/Users/Harsh%20Jain/.codex/skills/
 | A transition could restart from stale trigger bounds | Reversals sample the current visual rectangle | Opening and closing remain interruptible |
 | Dock disclosure owns in-place keyboard focus | Close, Escape and outside interaction have explicit focus handling | Return keyboard reading to its true origin without stealing an outside control's focus |
 | General page observers would also see other workspaces | Observer targets stay inside the connected viewer | Keep presentation lifecycle scoped to its evidence owner |
+| Keyboard Workspace activation hides the dock while its sibling top-layer reader remains | Viewer/dock availability and class changes dismiss immediately without focus restoration | Follow the actual presentation owner and leave the first Escape for Workspace |
 
 ## Authored guards — all UNRUN
 
-The new browser spec covers synthetic Claude/Codex-shaped recordings at 600/1440, 300 MCP/runtime tools (including long names), nested agents, recorded counts, one material, safe centring/scrolling, trail navigation by mouse and keyboard, retained query/filter, close/Escape/outside/focus, minimized restoration, paused-frame origin/reversal identity, resize/session change, keyboard/reduced/low-resource behavior, closed-state restoration, origin removal, viewer inertness, hidden-page settling, and raised composer controls under scale. Synthetic boundary insertion checks presentation geometry; it is not native-harness acceptance. The pure geometry unit covers desktop centring, short space, stage offset and current-visual transforms. Existing inventory/agent assertions retain cardinality, typography, scroll and filtering checks while following the new reader owner.
+The new browser spec covers synthetic Claude/Codex-shaped recordings at 600/1440, 300 MCP/runtime tools (including long names), nested agents, recorded counts, one material, safe centring/scrolling, trail navigation by mouse and keyboard, retained query/filter, close/Escape/outside/focus, minimized restoration, paused-frame origin/reversal identity, resize/session change, keyboard/reduced/low-resource behavior, closed-state restoration, origin removal, viewer inertness, keyboard Workspace dismissal with focus/material identity/first-Escape checks for whole and nested readers, hidden-page settling, and raised composer controls under scale. Synthetic boundary insertion checks presentation geometry; it is not native-harness acceptance. The pure geometry unit covers desktop centring, short space, stage offset and current-visual transforms. Existing inventory/agent assertions retain cardinality, typography, scroll and filtering checks while following the new reader owner.
 
 ## Harsh-run commands
 
-Run in this task worktree, with its own installed dependencies. These commands are instructions only; none has been executed by the agent. Canonicalize TEMP/TMP before any scratch/session command and prefer installed Edge.
+Run in this task worktree, with its own installed dependencies. These commands are instructions only; none has been executed by the agent. Use a dedicated long-path worktree-local TEMP/TMP before any scratch/session command and prefer installed Edge; resolving the inherited TEMP alone can retain its Windows 8.3 alias.
 
 ```powershell
 Set-Location -LiteralPath 'C:\Users\Harsh Jain\.codex\worktrees\live5-ui17-gate\drishya'
-$tools2Temp = (Resolve-Path -LiteralPath $env:TEMP).Path
+$tools2Temp = Join-Path (Get-Location).Path '.local\gate-tmp'
+New-Item -ItemType Directory -Path $tools2Temp -Force | Out-Null
 $env:TEMP = $tools2Temp
 $env:TMP = $tools2Temp
 $env:DRISHYA_BROWSER_CHANNEL = 'msedge'
@@ -54,7 +56,7 @@ pnpm exec playwright test fresh-workspace.spec.ts --project=parallel --workers=1
 pnpm check:real -- tools-available --pick 2
 ```
 
-The real-case command scans/imports/counts in its own temporary home and removes it; it does **not** establish browser geometry, MCP/agent coverage or a connected run's runtime section. For actual visual acceptance, select genuine journals containing MCP calls, sub-agents and long recorded lists for **both** harnesses. Import into another temporary Drishya home, never your actual home. The following only prints import counts/identity, filtering the CLI's title line:
+The real-case command scans/imports/counts in its own temporary home and removes it; it does **not** establish browser geometry, MCP/agent coverage or a connected run's runtime section. For actual visual acceptance, select genuine journals containing MCP calls, sub-agents and long recorded lists for **both** harnesses. Import into another temporary Drishya home, never your actual home. Keep all import stdout/stderr in private scratch files: the CLI's `Imported` line includes the full recording ID, so filtering that line is not a safe reporting step. Use the earlier `check:real` command for reportable counts, and report only session-ID prefixes, byte sizes and counts. Do not echo import logs, journal content or recording titles:
 
 ```powershell
 $tools2Scratch = Join-Path $tools2Temp ('drishya-tools2-' + [guid]::NewGuid().ToString('N'))
@@ -62,8 +64,10 @@ New-Item -ItemType Directory -Path $tools2Scratch | Out-Null
 $env:DRISHYA_HOME = $tools2Scratch
 $tools2ClaudeJournal = Read-Host 'Full path of the chosen genuine Claude Code journal'
 $tools2CodexJournal = Read-Host 'Full path of the chosen genuine Codex journal'
-pnpm drishya import $tools2ClaudeJournal | Select-String '^Imported '
-pnpm drishya import $tools2CodexJournal | Select-String '^Imported '
+pnpm drishya import $tools2ClaudeJournal *> (Join-Path $tools2Scratch 'claude-import.private.log')
+if ($LASTEXITCODE -ne 0) { throw 'Claude import failed; inspect its private log locally.' }
+pnpm drishya import $tools2CodexJournal *> (Join-Path $tools2Scratch 'codex-import.private.log')
+if ($LASTEXITCODE -ne 0) { throw 'Codex import failed; inspect its private log locally.' }
 pnpm drishya serve --no-open --port 7882
 ```
 

@@ -146,6 +146,29 @@ test('the frame belongs to its viewer; closing restores the same material and re
  await origin.click();await expect(reader).toBeVisible();await origin.evaluate(el=>el.remove());await expect(reader).toHaveCount(0);
 });
 
+for(const width of [600,1440])for(const nested of [false,true])test(`keyboard Workspace dismisses the ${nested?'nested':'whole'} reader without taking focus at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});await open(page);
+ await page.getByRole('button',{name:'Open toolbox',exact:true}).click();
+ const reader=windowFor(page);await expect(reader).toBeVisible();
+ // This trigger lives in the moved whole material, rather than in the dock DOM.
+ if(nested){await reader.locator('.md-server>summary').filter({hasText:'synthetic'}).click();await expect(reader).toHaveAccessibleName('MCP tools for synthetic');await expect(reader).toBeVisible();}
+ const material=page.locator(`[data-toolbox-part="${nested?'tools/mcp/synthetic':'toolbox'}"]`);
+ await expect(material).toHaveCount(1);await material.evaluate(el=>{(window as any).__workspaceToolboxMaterial=el;});
+ const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true});
+ await workspace.focus();await page.keyboard.press('Enter');
+ const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk).toBeVisible();
+ await expect(reader).toHaveCount(0);await expect(workspace).toBeFocused();await expect(workspace).toHaveAttribute('aria-pressed','true');
+ await expect(material).toHaveCount(1);
+ expect(await material.evaluate(el=>el===(window as any).__workspaceToolboxMaterial&&el.parentElement?.classList.contains('toolbox-part-home'))).toBe(true);
+ // The first Escape belongs to Workspace; no floating reader may consume it.
+ await desk.getByRole('button',{name:'Back to agent',exact:true}).focus();await page.keyboard.press('Escape');
+ await expect(desk).toHaveCount(0);await expect(workspace).toHaveAttribute('aria-pressed','false');
+ await page.getByRole('button',{name:'Open toolbox',exact:true}).click();await expect(reader).toBeVisible();
+ if(nested){await reader.locator('.md-server>summary').filter({hasText:'synthetic'}).click();await expect(reader).toHaveAccessibleName('MCP tools for synthetic');}
+ expect(await material.evaluate(el=>el===(window as any).__workspaceToolboxMaterial)).toBe(true);
+ await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+});
+
 test('composer layout changes re-centre the reader and an inert evidence owner dismisses it',async({page})=>{
  await page.setViewportSize({width:600,height:900});await open(page);
  await page.getByRole('button',{name:'Open toolbox',exact:true}).click();const reader=windowFor(page);await safe(page,reader);

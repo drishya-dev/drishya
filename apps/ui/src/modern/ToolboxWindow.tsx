@@ -124,6 +124,8 @@ export function ToolboxWindowOwner({children}:{children:ReactNode}){
  useLayoutEffect(()=>{
   if(!active)return;
   const node=frame.current!,viewer=anchor.current?.closest<HTMLElement>('.connected-workspace');
+  const dock=viewer?.querySelector<HTMLElement>('.modern-tool-station');
+  const unavailable=()=>!viewer?.isConnected||viewer.inert||!viewer.checkVisibility({visibilityProperty:true})||!dock?.isConnected||dock.inert||!dock.checkVisibility({visibilityProperty:true});
   const settle=()=>{if(closing.current){finish(false);return;}cancel();place();node.dataset.phase='open';};
   const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();close(false);}};
   const outside=(event:PointerEvent)=>{
@@ -147,16 +149,17 @@ export function ToolboxWindowOwner({children}:{children:ReactNode}){
   };
   observeBoundaries();
   const removed=new MutationObserver(()=>{
-   if(reading.current&&!reading.current.origin.isConnected){finish(false);return;}
+   if(unavailable()||reading.current&&!reading.current.origin.isConnected){finish(false);return;}
    observeBoundaries();const next=signature();if(next!==previous){previous=next;settle();}
   });
   if(viewer)removed.observe(viewer,{childList:true,subtree:true});
   const composerChanges=new MutationObserver(()=>{observeBoundaries();const next=signature();if(next!==previous){previous=next;settle();}});
   const composer=viewer?.querySelector('.prompt-composer');
   if(composer)composerChanges.observe(composer,{attributes:true,subtree:true,attributeFilter:['class','style','hidden','open']});
-  // Top-layer paint still belongs to this evidence owner. A blocked/hidden viewer cancels the reader.
-  const availability=new MutationObserver(()=>{if(viewer?.inert||!viewer?.checkVisibility())finish(false);});
-  if(viewer)availability.observe(viewer,{attributes:true,attributeFilter:['inert','style','hidden']});
+  // Workspace hides the dock, not this sibling top-layer frame. Observe its stable owner,
+  // never the moved material/origin, and preserve focus on the newly selected view control.
+  const availability=new MutationObserver(()=>{if(unavailable())finish(false);});
+  for(const owner of [viewer,dock])if(owner)availability.observe(owner,{attributes:true,attributeFilter:['class','inert','style','hidden']});
   document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',outside,true);document.addEventListener('visibilitychange',visibility);
   window.addEventListener('resize',settle);media.addEventListener('change',settle);
   return()=>{resize.disconnect();removed.disconnect();composerChanges.disconnect();availability.disconnect();document.removeEventListener('keydown',escape,true);document.removeEventListener('pointerdown',outside,true);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('resize',settle);media.removeEventListener('change',settle);};
