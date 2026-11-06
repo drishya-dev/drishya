@@ -1,8 +1,25 @@
 # UI-26 — stylesheet inventory and guard
 
-Status: guard prepared, not executed. No stylesheet, component, import routing, palette, asset, contrast assertion or typography assertion has changed. UI-26 remains open and PR #350 remains draft. Harsh owns every build, test, screenshot acceptance run and real-harness call. No baseline/control result exists yet.
+Status, **6 November 2026**: UI-26 execution is stopped at the builder's direction while FINISH-12 / Clarity becomes the active UI and Modern stays a frozen backup. No stylesheet, component, import routing, palette, asset, contrast assertion or typography assertion has changed. UI-26 is not completed; PR #350 stays draft and the claim stays held for the coordinator's disposition. No pixel baseline or control result exists.
 
-Updated **6 November 2026**: one consolidated source-review fix wave is recorded below. Every runtime check and acceptance result remains **UNRUN**. These edits do not authorize stylesheet migration.
+The builder briefly authorized agent execution ("run urself and complete it"), superseding the earlier user-only runtime restriction. The later instruction ("Leave that to yash and continue other task") stops further UI-26 execution. Earlier user-run and UNRUN sections below record their original handoffs; the executed evidence and remaining limits are recorded here.
+
+## Paused execution handoff
+
+On clean source `8befb2ae4d71d4c97213e0a6733221e5a8b42a19`, this worktree's own frozen dependency installation, actual typecheck and `ui:build` passed. Initial sandbox Corepack DNS failures occurred before checks ran; scoped escalation allowed the actual checks. No browser capture, palette/typography browser suite, 96-image freeze, positive control, negative control, candidate comparison or stylesheet migration ran.
+
+Genuine scratch-imported inputs were prepared, with native content and paths retained only in ignored `.local/ui26`:
+
+| Native prefix | Bytes | Observations / operations | Cases found |
+| --- | ---: | ---: | --- |
+| Claude `43745e02` | 1,854,455 | 379 / 86 | 47 edits, one MCP operation, one agent, a single recorded root, readable captured current source and four tracked changed files in its existing stopped audit worktree |
+| Codex `01a1b0f9` | 234,720 | 47 / 10 | Eight shell operations, one actual read-only MCP call, one native edit, one agent, a single recorded root and a tracked uncommitted patch |
+
+The Codex case was recorded by the genuine native harness against an explicitly synthetic throwaway checkout target, using its workspace sandbox and automatic approval review. No observations were fabricated. The MCP target was local and read-only; configuration was per invocation. Native journals, saved policies, credentials and the existing Claude workspace were not edited. The official Claude CLI was installed only under ignored `.local`; its existing-account status was logged out. A suitable existing Claude recording was subsequently found, so this task did not require login.
+
+Input preparation succeeded, but a pre-baseline identity check rejected an early change in the Claude workspace digest. Both native copies and the Codex workspace stayed unchanged. Later separated head/ref/status/file-content hashes stayed identical for 80 seconds, with no source files modified within an hour; the linked Git store had recent ref activity. The initial failure and detailed snapshots are preserved. Do not treat this as a frozen input, ignore ref changes or run against a changing workspace. No immutable baseline was created or reset.
+
+The private handoff contains prepared both-harness inputs, unchanged native copies, workspace/ref/content hashes, exact failures and three longer stopped Claude MCP/agent candidates useful for TOOLS-2, whose capture does not require current Git/source capability. Any resumption first needs a current builder decision on whether UI-26 remains useful, stable genuine inputs and all original fixed-tolerance controls. No wider stylesheet scope or shared-owner migration was approved.
 
 Claim: `895fde2` on main. Implementation source before this draft: `1fb2a737fa9fed924c83ff61d53048aeb71b7fcf`. UI design authority is the installed Emil skill at upstream `c8a79627b59d72d764d6ab6f2c87c09a48169833`, plus VISION and the repo contracts. This increment is guard/inventory only, so it makes no visual design or motion change.
 
