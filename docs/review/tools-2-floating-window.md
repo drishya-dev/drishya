@@ -1,8 +1,8 @@
-# TOOLS-2 — centred floating Toolbox (draft)
+# TOOLS-2 â€” centred floating Toolbox (draft)
 
 Source handoff, 6 November 2026. Claim `895fde2`; branch `codex/tools-2`; draft PR [349](https://github.com/drishya-dev/drishya/pull/349). **Acceptance is UNRUN. TOOLS-2 remains open.** Harsh explicitly owns all tests, typechecks, builds, scripts, native-harness calls and acceptance. No such commands were run by the implementation agent.
 
-The existing synthetic demo was inspected **before** source changes at 1440 × 900; its private frame is `.local/tools-2-before-1440.png`. It showed the right-edge tall Toolbox with dock instruments, closed MCP/Agents groups and recorded tools below. It had no runtime inventory. That observation is a baseline only. No post-edit demo/fixture/native screen has been observed, and no post-edit screenshot, animation, clipping, count, focus or performance result is claimed.
+The existing synthetic demo was inspected **before** source changes at 1440 Ã— 900; its private frame is `.local/tools-2-before-1440.png`. It showed the right-edge tall Toolbox with dock instruments, closed MCP/Agents groups and recorded tools below. It had no runtime inventory. That observation is a baseline only. No post-edit demo/fixture/native screen has been observed, and no post-edit screenshot, animation, clipping, count, focus or performance result is claimed.
 
 ## Implementation and ownership
 
@@ -12,7 +12,7 @@ Stable portal target elements reparent between each part's home and the reader. 
 
 Allocation is centred within the visible viewer, below its header and above the composer's layout bounds. Raised native turn details, queue receipts, send confirmation and native options reserve their offset-parent layout extent too; temporary compositor scale is excluded. Layout-present hover-quiet receipts reserve their room in advance so revealing them cannot cover their controls. Local resize/mutation observers track arriving/removing boundaries. Long tool names wrap inside bounded local scrollers. Pointer motion uses only transform and opacity, reads MOTION-1's shared `--ease-out`, and lasts 160 ms in / 120 ms out; reversals sample the current visual frame. Keyboard actions are immediate; reduced motion and low resource use immediate/opacity-only presentation according to the existing motion preference.
 
-`ToolList` keeps its legacy defaults. Modern labels distinguish **Run tools**, **Available tools · recorded** and **Tools used · recorded**. Recorded-list absence, unused-tool explanations, provenance, filters, replay boundaries and first/previous/next/last trail data still belong to the existing shared owners.
+`ToolList` keeps its legacy defaults. Modern labels distinguish **Run tools**, **Available tools Â· recorded** and **Tools used Â· recorded**. Recorded-list absence, unused-tool explanations, provenance, filters, replay boundaries and first/previous/next/last trail data still belong to the existing shared owners.
 
 The task touches 13 tracked paths including its plan and this report: three existing UI components; new owner, geometry helper and dedicated component CSS; new geometry unit and browser spec; three affected existing browser specs; plan/report. Coordinator-owned STATUS/TASKS would make 15. `tools-trail.spec.ts` is unchanged. No History, Viewer, SessionWorkspace, shared cascade, schema, daemon, native controller, dependency or persistent-body changes.
 
@@ -32,7 +32,7 @@ Applied the official installed [Emil skill](C:/Users/Harsh%20Jain/.codex/skills/
 | General page observers would also see other workspaces | Observer targets stay inside the connected viewer | Keep presentation lifecycle scoped to its evidence owner |
 | Keyboard Workspace activation hides the dock while its sibling top-layer reader remains | Viewer/dock availability and class changes dismiss immediately without focus restoration | Follow the actual presentation owner and leave the first Escape for Workspace |
 
-## Authored guards — all UNRUN
+## Authored guards â€” all UNRUN
 
 The new browser spec covers synthetic Claude/Codex-shaped recordings at 600/1440, 300 MCP/runtime tools (including long names), nested agents, recorded counts, one material, safe centring/scrolling, trail navigation by mouse and keyboard, retained query/filter, close/Escape/outside/focus, minimized restoration, paused-frame origin/reversal identity, resize/session change, keyboard/reduced/low-resource behavior, closed-state restoration, origin removal, viewer inertness, keyboard Workspace dismissal with focus/material identity/first-Escape checks for whole and nested readers, hidden-page settling, and raised composer controls under scale. Synthetic boundary insertion checks presentation geometry; it is not native-harness acceptance. The pure geometry unit covers desktop centring, short space, stage offset and current-visual transforms. Existing inventory/agent assertions retain cardinality, typography, scroll and filtering checks while following the new reader owner.
 
@@ -76,3 +76,8 @@ Use the launch URL printed by that temporary server. At 600 and 1440, inspect th
 If a genuine case is absent, have Harsh create a throwaway repository under canonical TEMP and run the relevant real harness there, asking it to call installed read-only MCP tools and delegate a read-only sub-agent; use its actual tool registry to obtain a long recorded list. Do not fabricate journal rows, alter harness settings or guess a native protocol invocation. A missing harness, signed-in session or installed MCP setup is an explicit acceptance limitation. No such case was created or inspected in this handoff.
 
 MOTION-3 must include the final Toolbox in its actual live/replay ten-minute evaluation. The coordinator owns the single finished-batch full gate after task acceptance, then any ready/merge/claim state. This draft has no acceptance receipts and is not ready for that state change.
+
+
+## 6 November scoped source re-review
+
+The independent reviewer confirms the original Workspace/dock lifecycle issue is corrected in source, with no confirmed important product-source regression in that fix wave. It identified one authored-regression mismatch: at 600 px the existing Workspace layout hides its own trigger, while the new test required that hidden trigger to remain focused. The coordinator corrected that expectation in 150e087: keep exact trigger identity including when hidden, require hidden/not-focused at 600 and focused at 1440, and retain pressed-state, window dismissal, material identity, first-Escape and reopen assertions at both widths. No timeout, retry, skip, geometry bound or content assertion was relaxed. The report's legacy Windows encoding is normalized to UTF-8. All checks and post-edit acceptance remain UNRUN; this is a user-validation candidate only.
