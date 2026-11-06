@@ -4,6 +4,8 @@ The composer already reserved its border-box height, but approval requests and q
 
 The raised extent is a separate CSS property so it cannot feed back into the composer's own height limits. Hidden queued-input controls contribute no clearance. Unmount removes both measured properties and disconnects the observers.
 
+**Review fix (6 Nov, Harsh):** the raised extent is measured from layout offsets (`layoutTop`), not bounding rectangles, because `useSurfaceReflow` scales the composer for 200 ms and a scaled rectangle stored a fraction of the real extent with nothing to remeasure afterwards. The mutation observer also watches `style`, `class`, `hidden` and `data-waiting`, so a receipt whose inline `visibility` flips with the Follow switch is remeasured. Two regressions in `approval-clearance.spec.ts` fail on the previous source (99 px short while scaled; 44 px stale after Follow turns off).
+
 ## Genuine acceptance, 5 November
 
 A real Claude Code session, `rec_abd88845` (564,237 bytes, 148 imported observations at the final check), was resumed through Drishya's composer in the throwaway repository made for HOME-3. Workspace consent and the idle-other-clients acknowledgement were given through the UI. The harness produced genuine Bash approval requests; the controller was not substituted.

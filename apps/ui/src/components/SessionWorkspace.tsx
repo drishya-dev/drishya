@@ -386,6 +386,12 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   </ReadingDialog>;
 }
 
+/** Distance from the top of the offset-parent chain, ignoring CSS transforms (unlike getBoundingClientRect). */
+export function layoutTop(element: HTMLElement): number {
+  let top = 0;
+  for (let current: HTMLElement | null = element; current; current = current.offsetParent as HTMLElement | null) top += current.offsetTop;
+  return top;
+}
 export function PromptComposer() {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId);
@@ -527,20 +533,23 @@ export function PromptComposer() {
     const observed = new Set<Element>();
     const measure = () => {
       viewer.style.setProperty('--composer-gap', `${node.offsetHeight + 24}px`);
-      const top = node.getBoundingClientRect().top;
+      // Layout offsets, not bounding rectangles: useSurfaceReflow scales this node (and so the approval inside it) for 200 ms,
+      // and a scaled rectangle would store only a fraction of the real raised extent with nothing to remeasure afterwards.
+      const top = layoutTop(node);
       let raised = 0;
       for (const surface of node.querySelectorAll<HTMLElement>('.native-turn-details, .queued-input-receipts')) {
         if (!observed.has(surface)) { observer.observe(surface); observed.add(surface); }
         if (!surface.getClientRects().length) continue;
         if (surface.matches('.queued-input-receipts') && surface.querySelector('button')?.checkVisibility({ visibilityProperty: true }) === false) continue;
-        raised = Math.max(raised, top - surface.getBoundingClientRect().top);
+        raised = Math.max(raised, top - layoutTop(surface));
       }
       viewer.style.setProperty('--composer-raised-gap', `${Math.ceil(raised)}px`);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     const children = new MutationObserver(measure);
-    children.observe(node, { childList: true, subtree: true });
+    // A receipt's visibility is an inline style that follows the Follow switch; it changes neither size nor children.
+    children.observe(node, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden', 'data-waiting'] });
     measure();
     return () => { observer.disconnect(); children.disconnect(); viewer.style.removeProperty('--composer-gap'); viewer.style.removeProperty('--composer-raised-gap'); };
   }, [source, id]);

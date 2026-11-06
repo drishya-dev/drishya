@@ -50,3 +50,54 @@ for(const width of [600,1440]) test(`approval clearance grows and releases witho
     await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeVisible();
   }
 });
+
+// Harsh's review of CONNECT-2: the measurement must not store geometry sampled while the composer is scaled
+// (useSurfaceReflow animates it for 200 ms), and must follow a receipt's visibility, which changes with Follow.
+const raisedGap = (page: import('@playwright/test').Page) => page.locator('.viewer').evaluate(el => parseFloat(getComputedStyle(el).getPropertyValue('--composer-raised-gap')) || 0);
+async function openComposer(page: import('@playwright/test').Page, recording: string, width: number) {
+  await page.setViewportSize({width, height: 900}); await page.goto(server.launchUrl); await page.locator('.mh-home').waitFor();
+  await page.goto(`${server.url}/#/r/${recording}`); await page.locator('.history').waitFor();
+  const composer = page.getByRole('region', {name: 'Harness prompt'});
+  const expand = composer.getByRole('button', {name: 'Expand prompt', exact: true}); if (await expand.count()) await expand.click();
+  await composer.locator('.native-options > summary').click();
+  const status = await (await page.request.get(`${server.url}/v1/recordings/${recording}/workspace`)).json();
+  if (!status.approved) await composer.getByRole('button', {name: 'Enable this workspace', exact: true}).click();
+  await composer.locator('.native-options > summary').click();
+  return composer;
+}
+
+for (const width of [600, 1440]) test(`approval clearance ignores geometry sampled while the composer is scaled at ${width}`, async ({page}) => {
+  const composer = await openComposer(page, id, width);
+  await composer.locator('textarea').fill('Synthetic approval regression');
+  await composer.getByRole('button', {name: 'Send prompt', exact: true}).click();
+  const idle = composer.getByRole('checkbox', {name: 'This session is idle in other clients'}); if (await idle.count()) { await idle.check(); await composer.getByRole('button', {name: 'Confirm and send', exact: true}).click(); }
+  await expect(composer.locator('.tool-approval')).toBeVisible();
+  await expect.poll(() => raisedGap(page)).toBeGreaterThan(100);
+  const settled = await raisedGap(page);
+  // Stand in for the middle of the 200 ms expand animation, then force a measurement while scaled.
+  await composer.evaluate(node => { node.style.transformOrigin = 'bottom left'; node.style.transform = 'scale(.4)'; const probe = document.createElement('span'); node.append(probe); probe.remove(); });
+  await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
+  expect(Math.abs(await raisedGap(page) - settled)).toBeLessThanOrEqual(1);
+  await composer.evaluate(node => { node.style.transform = ''; node.style.transformOrigin = ''; });
+  await composer.getByRole('button', {name: 'Decline', exact: true}).click();
+  await expect(composer.locator('.tool-approval')).toHaveCount(0);
+});
+
+for (const width of [600, 1440]) test(`a queue receipt's clearance follows the Follow switch at ${width}`, async ({page}) => {
+  const root = join(dir, 'repo'), journal = join(dir, 'queue-session.jsonl'), sessionId = '66666666-6666-4666-8666-666666666666';
+  const row = (n: number, type: string, extra: Record<string, unknown>) => JSON.stringify({type, uuid: `66666666-6666-4666-8666-${String(n).padStart(12, '0')}`, sessionId, cwd: root, timestamp: `2026-11-05T10:00:0${n}Z`, ...extra});
+  writeFileSync(journal, [row(1, 'user', {message: {role: 'user', content: 'Synthetic receipt prompt'}}), row(2, 'queue-operation', {operation: 'enqueue', content: 'Synthetic queued input'}), row(3, 'queue-operation', {operation: 'dequeue'})].join('\n') + '\n');
+  const queued = (await app.ingest.importSource('claude-code', journal)).recordingId;
+  const composer = await openComposer(page, queued, width);
+  const follow = page.getByRole('switch', {name: 'Automatically follow new work'});
+  await expect(composer.getByRole('button', {name: 'Read queued inputs', exact: true})).toHaveCount(1);
+  if (await follow.getAttribute('aria-checked') === 'true') await follow.click();
+  await expect(follow).toHaveAttribute('aria-checked', 'false');
+  // Follow off: the receipt's button is visibility:hidden, so it reserves nothing.
+  await expect.poll(() => raisedGap(page)).toBe(0);
+  // Follow on removes that inline style without changing a size or a child.
+  await follow.click();
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  await expect(composer.getByRole('button', {name: 'Read queued inputs', exact: true})).toBeVisible();
+  await expect.poll(() => raisedGap(page)).toBeGreaterThan(0);
+});
