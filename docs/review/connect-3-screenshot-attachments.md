@@ -23,7 +23,7 @@ A scratch Drishya home imported two native sessions from an isolated throwaway r
 | Codex | rec_13949e17 | 368600 | 27 | 2 / 2 | 1 | yes |
 | Claude Code | rec_69977fa0 | 354075 | 25 | 2 / 2 | 1 | yes |
 
-Prepared previews were checked at 600 and 1440 px for both sessions. Images were synthetic browser screenshots; native journal content was not printed. Screenshots and private acceptance scripts/counts remain under `.local/`.
+Prepared previews were checked at 600 and 1440 px for both sessions. Reading the scratch store back confirmed two captured image blobs in each genuine turn. Images were synthetic browser screenshots; native journal content was not printed. Screenshots and private acceptance scripts/counts remain under `.local/`.
 
 `pnpm check:real -- multi-image-prompts` also scanned both harnesses into a scratch home: 15 Claude sessions with 29 qualifying prompts, one Codex session with one. Selected Claude rec_64d5c199 (13.2 MB) presented all five qualifying prompts and 15 captured images; selected Codex rec_13949e17 (0.4 MB) presented one prompt and two captured images. The genuine connected Claude session above was checked separately so the scanner's highest-hit selection is not substituted for connected acceptance.
 
@@ -33,4 +33,4 @@ Prepared previews were checked at 600 and 1440 px for both sessions. Images were
 - `composer-screenshots.spec.ts`: 600 and 1440 px, actual clipboard paste, file chooser with generic MIME, decoded image previews, preview dialog, explicit errors, preserved draft, consent and exact image delivery to a synthetic protocol regression guard.
 - `pnpm check:affected`: both typechecks, 35 related unit passes / one existing skip, 26 browser passes. Edge; three configured browser workers, zero retries.
 - Named connected-workspace/composer-access checks: 21 passed on Edge, three configured workers, zero retries.
-- Isolated full gate: types/build/package verification and 1,209 units / one existing skip passed; full browsers pending.
+- Isolated full gate on source eb9c61cd: both typechecks, build, package verification, 1,209 unit passes / one existing skip (three workers), 632 parallel plus 33 serial browser passes / 28 existing skips / zero failures or retries (Edge; parallel three workers, serial one). Logs remain in the isolated gate worktree’s `.local/gate/`. Subsequent changes are documentation only.
