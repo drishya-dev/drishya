@@ -60,7 +60,8 @@ test('recorded usage stays sourced and hides absent values', async ({ page }) =>
 });
 
 // Harsh's review of USAGE-1: Codex parses its two rate-limit windows independently, so Limits shows whichever is valid.
-test('Limits shows a primary window, a secondary window or both, each on its own evidence', async ({ page }) => {
+for (const width of [600, 1440]) test(`Limits keeps independently valid windows at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
   await page.route(/\/v1\/.*controller/, route => route.fulfill({ status: 404, body: '{}' }));
   await page.route('**/live', route => route.fulfill({ contentType: 'application/json', body: '{"live":false}' }));
   const lines = readFileSync(resolve('fixtures/synthetic/usage/codex-rollout-usage.jsonl'), 'utf8').trim().split('\n');
@@ -68,6 +69,8 @@ test('Limits shows a primary window, a secondary window or both, each on its own
   const cases: [string, Record<string, unknown>, RegExp, RegExp][] = [
     ['primary-only', { plan_type: 'plus', primary }, /5-hour window/, /7-day window|rate_limits\.secondary/],
     ['secondary-only', { primary: null, secondary }, /7-day window/, /5-hour window|rate_limits\.primary/],
+    ['missing-primary', { secondary }, /7-day window/, /5-hour window|rate_limits\.primary/],
+    ['invalid-primary', { primary: { used_percent: 'invalid' }, secondary }, /7-day window/, /5-hour window|rate_limits\.primary/],
     ['both', { plan_type: 'plus', primary, secondary }, /5-hour window[\s\S]*7-day window/, /No plan limit recorded/],
   ];
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
@@ -84,6 +87,8 @@ test('Limits shows a primary window, a secondary window or both, each on its own
     await expect(section, name).toContainText(present);
     await expect(section, name).not.toContainText(absent);
     await expect(section.locator('.usage-share'), name).toHaveCount(name === 'both' ? 2 : 1);
+    await expect(section.locator('[title*="rate_limits.secondary"]'), name).toHaveCount(name === 'primary-only' ? 0 : 1);
+    expect(await page.locator('.usage-peek').evaluate(el => el.scrollWidth - el.clientWidth), name).toBeLessThanOrEqual(1);
   }
 });
 
