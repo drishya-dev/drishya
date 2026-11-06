@@ -2,11 +2,11 @@
 // shown as text, with explicit local file navigation when supplied. Everything is
 // React text — no HTML from a transcript is ever interpreted.
 
-import { createElement, useState, type ReactNode } from 'react';
+import { createElement, useContext, useState, type ReactNode } from 'react';
 import { FencedCode } from '../components/FencedCode.tsx';
 import { prosePath } from './prose-path.ts';
 import {fileName} from './file-identity.ts';
-import {OriginalToggle} from '../components/OriginalToggle.tsx';
+import {OriginalToggle,OriginalOwned} from '../components/OriginalToggle.tsx';
 import {tableCells, tableHeader} from './markdown-table.ts';
 import './markdown-table.css';
 
@@ -23,7 +23,8 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
   // making transcript rendering recursively unbounded.
   if (depth >= 32) return <FencedCode text={text} language="text" />;
   const blocks: ReactNode[] = [];
-  const lines = text.replace(/\r/g, '').split('\n');
+  const originalLines = text.split('\n');
+  const lines = originalLines.map(line=>line.replace(/\r/g,''));
   let i = 0;
   let key = 0;
   while (i < lines.length) {
@@ -35,7 +36,7 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
         const cells=tableCells(lines[i]!);if(!cells)break;
         rows.push(table.cells.map((_,column)=>cells[column]??''));i++;
       }
-      blocks.push(<MarkdownTable key={key++} headers={table.cells} rows={rows} align={table.align} raw={text.split('\n').slice(start,i).join('\n')} onPath={onPath} workspaceRoot={workspaceRoot} document={document}/>);continue;
+      blocks.push(<MarkdownTable key={key++} headers={table.cells} rows={rows} align={table.align} raw={originalLines.slice(start,i).join('\n')} onPath={onPath} workspaceRoot={workspaceRoot} document={document}/>);continue;
     }
     if (document && /^\s*>/.test(line)) {
       const quote:string[]=[];while(i<lines.length && /^\s*>/.test(lines[i]!))quote.push(lines[i++]!.replace(/^\s*> ?/,''));
@@ -108,10 +109,10 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
 }
 
 function MarkdownTable({headers,rows,align,raw,onPath,workspaceRoot,document}:{headers:string[];rows:string[][];align:('left'|'center'|'right'|undefined)[];raw:string;onPath?:PathAction;workspaceRoot?:string;document:boolean}) {
-  const [original,setOriginal]=useState(false);
+  const [original,setOriginal]=useState(false),owned=useContext(OriginalOwned);
   return <div className={document?'md-document-table':'md-prose-table'}>
     {original?<FencedCode text={raw} language="markdown"/>:<div className="md-table-scroll" role="region" aria-label="Markdown table" tabIndex={0}><table><thead><tr>{headers.map((cell,n)=><th scope="col" style={{textAlign:align[n]}} key={n}>{inline(cell,onPath,workspaceRoot,true)}</th>)}</tr></thead><tbody>{rows.map((row,n)=><tr key={n}>{row.map((cell,j)=><td style={{textAlign:align[j]}} key={j}>{inline(cell,onPath,workspaceRoot,true)}</td>)}</tr>)}</tbody></table></div>}
-    <OriginalToggle original={original} onToggle={()=>setOriginal(!original)}/>
+    {!document&&!owned&&<OriginalToggle original={original} onToggle={()=>setOriginal(!original)}/>}
   </div>;
 }
 

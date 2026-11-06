@@ -1,16 +1,16 @@
 /** GFM table cells: only unescaped pipes delimit cells, including inside code. */
 export function tableCells(line: string): string[] | undefined {
-  const cells: string[] = []; let cell = '', pipes = 0;
+  const cells: string[] = []; let cell = '', pipes = 0, lastPipe = -1;
   for (let i = 0; i < line.length; i++) {
     if (line[i] === '\\' && line[i + 1] === '\\') { cell += '\\\\'; i++; }
     else if (line[i] === '\\' && line[i + 1] === '|') { cell += '|'; i++; }
-    else if (line[i] === '|') { cells.push(cell.trim()); cell = ''; pipes++; }
+    else if (line[i] === '|') { cells.push(cell.trim()); cell = ''; pipes++; lastPipe = i; }
     else cell += line[i];
   }
   if (!pipes) return;
   cells.push(cell.trim());
   if (line.trimStart().startsWith('|')) cells.shift();
-  if (/\|\s*$/.test(line) && !/\\\|\s*$/.test(line)) cells.pop();
+  if (lastPipe >= 0 && !line.slice(lastPipe + 1).trim()) cells.pop();
   return cells;
 }
 
