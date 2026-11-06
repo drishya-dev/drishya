@@ -36,6 +36,7 @@ import { WholeSource } from './WholeSource.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 import { useNarrowWorkspace } from '../lib/responsive-workspace.ts';
+import { sendWaitReason } from '../lib/send-wait.ts';
 
 interface Connection {
   submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => Promise<void>;
@@ -534,7 +535,7 @@ export function PromptComposer() {
   const unavailable = !!connectionError || connection !== 'connected';
   const cannotSend = busy || loadingFiles || queuedFiles.current > 0 || !prompt.trim() || overLimit || unavailable || !workspace?.approved || !controller?.available;
   // AUDIT-1 (5 Nov): a disabled Send said only "Send prompt"; it now names the first thing it waits for.
-  const sendWaits = !workspace?.approved ? 'Enable this workspace in Connection & permissions to send' : !controller?.available ? 'Sending is not available for this session' : overLimit ? 'The prompt is over its size limit' : busy || loadingFiles || queuedFiles.current > 0 ? 'Waiting for the files to attach' : !prompt.trim() ? 'Write a prompt to send' : 'Send prompt';
+  const sendWaits = sendWaitReason({ unavailable, approved: !!workspace?.approved, cliAvailable: !!controller?.available, overLimit, attaching: busy || loadingFiles || queuedFiles.current > 0, hasPrompt: !!prompt.trim() });
   const statusLabel = unavailable ? 'Connection unavailable' : submitting ? 'Sending…' : busy ? 'Working…' : !controller ? 'Checking…' : !controller.available ? 'CLI unavailable' : !workspace?.approved ? 'Workspace access required' : controller.state === 'failed' ? 'Turn failed' : controller.state === 'stopped' ? 'Stopped' : controller.inputRequests?.length ? 'Answer requested' : controller.state === 'approval' ? 'Approval needed' : controller.state === 'connecting' ? 'Connecting…' : controller.state === 'running' ? controller.phase === 'thinking' ? 'Thinking…' : 'Running here' : 'Ready';
   // Watching needs no permission, so the live line may replace a state that only invites setup.
   const quietStatus = statusLabel === 'Ready' || statusLabel === 'Workspace access required';
