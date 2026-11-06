@@ -154,10 +154,14 @@ for(const width of [600,1440])for(const nested of [false,true])test(`keyboard Wo
  if(nested){await reader.locator('.md-server>summary').filter({hasText:'synthetic'}).click();await expect(reader).toHaveAccessibleName('MCP tools for synthetic');await expect(reader).toBeVisible();}
  const material=page.locator(`[data-toolbox-part="${nested?'tools/mcp/synthetic':'toolbox'}"]`);
  await expect(material).toHaveCount(1);await material.evaluate(el=>{(window as any).__workspaceToolboxMaterial=el;});
- const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true});
+ const workspace=page.getByRole('button',{name:'Open developer workspace',exact:true,includeHidden:true});
  await workspace.focus();await page.keyboard.press('Enter');
  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await expect(desk).toBeVisible();
- await expect(reader).toHaveCount(0);await expect(workspace).toBeFocused();await expect(workspace).toHaveAttribute('aria-pressed','true');
+ await expect(reader).toHaveCount(0);
+ // At 600 the existing Workspace layout hides this trigger; the wide header keeps it.
+ if(width===600){await expect(workspace).toBeHidden();await expect(workspace).not.toBeFocused();}
+ else await expect(workspace).toBeFocused();
+ await expect(workspace).toHaveAttribute('aria-pressed','true');
  await expect(material).toHaveCount(1);
  expect(await material.evaluate(el=>el===(window as any).__workspaceToolboxMaterial&&el.parentElement?.classList.contains('toolbox-part-home'))).toBe(true);
  // The first Escape belongs to Workspace; no floating reader may consume it.
