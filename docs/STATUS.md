@@ -31,6 +31,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| CLARITY-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/clarity-1` | 2026-11-06 | `lib/ui-version.ts`, `UIVersions.tsx`, `main.tsx`, `apps/ui/vite.config.ts`, new `apps/ui/src/clarity/`, `!important` guards in legacy sheets; scripts for the pixel guard. |
+| FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
+| FINISH-0b | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0b` | 2026-11-06 | New `components/overlay/*`; every file with a native select or a details menu; `ProductMenu.tsx`, `lib/dismiss-menus.ts`; after 0a. |
+| FINISH-0c | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0c` | 2026-11-06 | New state components; the empty and error call sites; the session-open loading path in `App.tsx`/`Viewer.tsx`; after 0a. |
+| FINISH-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-1` | 2026-11-06 | Home: `SessionHome.tsx`, `ModernSessions.tsx`, `Home.tsx`, `session-home.css`; concepts first. After #347. |
+| TOOLS-2 | @harsh + Codex | `codex/tools-2` | 2026-11-05 | Whole task, explicitly requested by Harsh. One agent owns ModernToolStation.tsx, ModernTools.tsx, ToolsPanel.tsx/tools-panel.css only if required, a dedicated floating-window motion/style owner, focused specs, docs/superpowers/plans/2026-11-05-tools-2.md and docs/review/tools-2-floating-window.md; target at most 15 files. Coordinator alone updates shared STATUS/TASKS. Preserve dock origins, tool trail, recorded/native inventory names, desktop 600/1440, one real material, interruptible motion and fallbacks. No edits to History.tsx, Viewer.tsx, SessionWorkspace.tsx, stage.css or modern/hud.css held by other claims. UI-26 owns stylesheet consolidation; coordinate tools-window styles as a per-component sheet. Harsh retains test/build execution: agents supply commands and never claim unrun acceptance. Required UI skill availability must be resolved before composition edits. Draft after first task commit; no merge. |
+| UI-26 | @harsh + Codex | `codex/ui-26` | 2026-11-05 | Whole task, explicitly requested by Harsh. One agent owns the pixel-diff guard and CSS/import inventory, modern canonical stylesheet and entry routing, named contrast/typography checks, docs/superpowers/plans/2026-11-05-ui-26.md and docs/review/ui-26-stylesheet-guard.md; inventory first, target at most 15 files and agree any required excess before expanding. Coordinator alone updates STATUS/TASKS. Guard must compare 600/1440 demo and genuine both-harness main surfaces against frozen baseline with fixed small tolerance before layer-by-layer migration. No TOOLS-2 components/styles or source/CSS owned by active AUDIT-1, CONNECT-2, LIVE-6/FLOW-1 or MOTION-3 claims. Harsh runs builds/tests; prepare guard first and hold migration until returned green evidence for each step. Preserve Classic, captured-content geometry and palette/typography assertions. Draft after first task commit; no merge. |
 | TEST-2 | @harsh + Codex | `codex/test2-source-readiness` | 2026-11-02 | Whole TEST-2 completion continues after merged #314. Harsh approved up to 26 files on 2 Nov after the manual gate returned two clean commands then a Workspace line-1200 failure. Current verified repair: tests/browser/workspace-shared-draft.spec.ts, one Go-enabled readiness assertion; controlled held-response proof and numeric traces are private. docs/review/test-2-live-anchor.md, STATUS/TASKS, AGENTS only when the measured worker gate is established. Retain the unresolved clean-main b2-live anchor diagnosis and all failed runs; any further reading/source edit must first have actual cause evidence and stay within the approved 26-path ceiling. Coordinate UI-21 string changes in the shared spec; this claim changes readiness logic only. No retries, relaxed assertions, larger timeouts or hidden failures. Full acceptance remains three consecutive complete commands; Harsh runs the manual full gate. |
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | USAGE-1 | @yash + Claude Opus 5.5 | `claude/usage-1` | 2026-11-04 | Usage and context surfaces (`RecordedUsage.tsx`, the context gauge and its popover), the usage projection fields they read, and their specs |
@@ -43,6 +50,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Claude — 6 Nov: the finishing pass moves into Clarity
+
+- **Plan:** the finishing pass is FINISH-0a to FINISH-13: one component at a time, with audit, UI and motion together. Method in [finish-pass.md](review/finish-pass.md).
+- **Clarity:** after the Home concepts, Yash asked for that look everywhere, as a new UI version. Modern is the frozen backup. CLARITY-1 (the scaffold and pixel guard) is being built by a Sonnet session on `claude/clarity-1`.
+  - The FINISH-0 spec is written for Clarity.
+  - Home is concept A, Ledger + Now ([canvas](https://claude.ai/artifact/F7R4ZjPx9ShBjNe2Xa31AB)).
+  - The look is in VISION §9.
+- **Lenses:** Impeccable and Taste are installed as Markdown only. Impeccable's detector on real sessions is effectively clean. Its critique scored Home 19/40 and the shared controls 17/40.
+- **PRs:**
+  - Harsh's review fixes are pushed to all four (#346, #347, #348, #344). #347 and #348 are re-requested for review.
+  - #346 and #344 stay draft. #346 waits on AUDIT-1's gate; #344 waits on the schema agreement.
+  - #351 (FINISH-0a in Modern's sheets) is closed as superseded.
+- **Next:** verify CLARITY-1, then FINISH-0a in Clarity (Inter, palettes, tokens, buttons, switch, inputs), then 0b, 0c and FINISH-1 (Home A).
 ### Yash with Codex — 5 Nov: HOME-3 complete
 
 - HOME-3: recently written discovered journals appear before opening, with a writing-time explanation, and open live. Both genuine harness runs passed at 600/1440 px, including expiry after the final write. [Acceptance](review/home-3-writing.md). PR #347 is separate from CONNECT-2; no PR was merged. Final gate numbers and its clean-main comparison are in the PR.
@@ -1394,6 +1414,10 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **6 Nov (later), Yash with Claude: Clarity, a new UI version; Modern is the frozen backup.** Yash liked the Home concepts' look ("clean, modern, accurate space, minimal but professional and premium") and asked for it everywhere. Rebuilding inside Modern would mean another layer over sixty, so Clarity starts as an exact replica of Modern with all older CSS in `@layer legacy` and its own winning layer, and every FINISH item lands there; Modern stays selectable in Settings. Home is concept A (Ledger + Now). The concepts looked cleaner partly because they use Inter; the app renders Outfit, a display face (Inter is named but never bundled). See [clarity-1-version.md](review/finish/clarity-1-version.md) and VISION §9.
+
+- **6 Nov, Yash with Claude: the finishing pass works one component at a time, audit, UI and motion at once; UI-26 is paused.** Separate passes left gaps at their handoffs (a menu restyled without its close, facts nobody owned the decision to drop), which Yash found within ten minutes on 5 Nov. FINISH-0 to FINISH-13 each finish one component to the fullest and absorb its open items; Opus walks, decides, specs and verifies, a fresh Sonnet session builds each spec, to save limits before the 18 Nov review. Lenses: Impeccable (Markdown only, no launcher or hooks), emil-design-eng, Taste's rules. UI-26's pixel guard would fail a pass that changes pixels on purpose, so it waits until FINISH-12 merges and then guards the finished look. See [finish-pass.md](review/finish-pass.md).
 
 - **4 Nov, Yash with Claude: formatted by default, one Original switch everywhere.** A reading that had its own raw button, or showed the original beneath the formatted view, now has one shared `Original` toggle that swaps the recorded text in place. A reader that owns the switch (a stored result) keeps nested readings from offering a second. Reason: Yash, 3 Nov, "formatted and original together doesnt look good. everywhere".
 
