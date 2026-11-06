@@ -355,7 +355,7 @@
 
 /* Do not clip the world above the composer: use document padding, not a shortened viewport. */
 .connected-workspace .history { bottom: 0; }
-.connected-workspace .history-inner { padding-bottom: calc(var(--composer-gap, 0px) + 36px); }
+.connected-workspace .history-inner { padding-bottom: calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px) + 36px); }
 
 /* The input stays stable during capture; workspace arrivals belong to work material. */
 .connected-workspace:not(.still) .prompt-composer.open { animation: none; }

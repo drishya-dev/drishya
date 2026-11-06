@@ -20,7 +20,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
   latestClose.current=close;
   const requestClose=()=>{
     const dialog=ref.current,state=useApp.getState();
-    const animate=dialog&&!modeless&&!className.includes('workspace-navigation')&&document.documentElement.dataset.uiVersion==='modern'&&document.documentElement.hasAttribute('data-ui-press')&&state.motion&&!state.lowResource&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const animate=dialog&&!className.includes('workspace-navigation')&&document.documentElement.dataset.uiVersion==='modern'&&document.documentElement.hasAttribute('data-ui-press')&&state.motion&&!state.lowResource&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(!animate){transition.current?.cancel();latestClose.current();return;}
     if(exiting.current)return;
     exiting.current=true;dialog.dataset.readerExiting='';
@@ -28,7 +28,8 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     const computed=getComputedStyle(dialog),opacity=computed.opacity,transform=computed.transform;
     transition.current?.cancel();
     const easing=getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim()||'cubic-bezier(.23,1,.32,1)';
-    const animation=dialog.animate([{opacity,transform},{opacity:0,transform:'translateY(4px) scale(.98)'}],{duration:140,easing,fill:'forwards'});
+    // MOTION-1: a reading window beside the work (modeless) leaves faster than a modal.
+    const animation=dialog.animate([{opacity,transform},{opacity:0,transform:'translateY(4px) scale(.98)'}],{duration:modeless?120:140,easing,fill:'forwards'});
     transition.current=animation;
     void animation.finished.then(()=>{if(dialog.isConnected)latestClose.current();},()=>{});
   };
@@ -43,8 +44,10 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     dialog.querySelector<HTMLElement>('[data-dialog-focus]')?.focus({ preventScroll: true });
     const state = useApp.getState();
     // Pointer-only feedback for an occasional modal. Keyboard reading/navigation is immediate.
-    const animate = !modeless && !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const arrival = animate ? dialog.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)' }) : undefined;
+    // MOTION-1: modeless reading windows (Git review, Git graph, file readers) open often, so theirs is shorter and smaller than a modal's.
+    const animate = !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const easing = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.23,1,.32,1)';
+    const arrival = animate ? dialog.animate([{ opacity: 0, transform: modeless ? 'translateY(4px) scale(.99)' : 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: modeless ? 160 : 200, easing }) : undefined;
     transition.current=arrival;
     // Menus preventDefault their own Escape first, so the order is menu, then newest reader.
     const escape = (event: KeyboardEvent) => {
