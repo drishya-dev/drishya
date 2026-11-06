@@ -8,6 +8,7 @@ it('separates the exact recorded desktop request and attachments, keeping raw so
 it('preserves request formatting, permits an image-only request, and supports CRLF',()=>{
  expect(desktopPrompt(envelope('first\n\nsecond').replace(/\n/g,'\r\n'))?.request).toBe('first\n\nsecond');
  expect(desktopPrompt(envelope('\n<image name=[Image #1] path="C:/synthetic/screenshot.png"></image>'))?.request).toBe('');
+ expect(desktopPrompt(envelope('<image name=[Image #1] path="C:/synthetic/screenshot.png"></image>'))?.request).toBe('');
 });
 it('keeps CLI text, partial wrappers and quoted wrapper instructions literal',()=>{
  for(const text of['Build the project.', '## My request:\nBuild it',envelope('Do this').replace(caution,'Different warning.'),'Explain this example:\n'+envelope('Do this'),envelope('Do this').replace('## notes.txt: C:/synthetic/notes.txt','Unknown metadata')])expect(desktopPrompt(text)).toBeUndefined();

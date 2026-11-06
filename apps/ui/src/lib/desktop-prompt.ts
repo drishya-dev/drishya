@@ -17,9 +17,9 @@ export function desktopPrompt(text:string):{request:string;attachments:DesktopAt
   let request=normalized.slice(at+boundary.length).replace(/^\n/,'');
   // Image tags are removed only as a complete trailing attachment suffix, and
   // only when every tagged path was explicitly listed as an image above.
-  const first=request.indexOf('\n<image name=');
-  if(first>=0){
-    const suffix=request.slice(first+1).trim();
+  const imageStart=/(^|\n)<image name=/.exec(request);
+  if(imageStart){
+    const first=imageStart.index,suffix=request.slice(first).trim();
     const tags=[...suffix.matchAll(/<image name=(?:\[[^\n<>]+\]|"[^"\n]+") path="([^"\n]+)">[\s\S]*?<\/image>/g)];
     const samePath=(a:string,b:string)=>a.replace(/\\/g,'/')===b.replace(/\\/g,'/');
     if(!tags.length||tags.map(t=>t[0]).join('').replace(/\s/g,'')!==suffix.replace(/\s/g,'')||tags.some(t=>!attachments.some(a=>a.image&&samePath(a.path,t[1]!))))return;
