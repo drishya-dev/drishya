@@ -69,9 +69,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
   - #346 and #344 stay draft. #346 waits on AUDIT-1's gate; #344 waits on the schema agreement.
   - #351 (FINISH-0a in Modern's sheets) is closed as superseded.
 - **Next:** verify CLARITY-1, then FINISH-0a in Clarity (Inter, palettes, tokens, buttons, switch, inputs), then 0b, 0c and FINISH-1 (Home A).
-### Yash with Codex — 5 Nov: HOME-3 complete
+### Yash with Codex — 7 Nov: FILES-12 claimed; awaiting destination decision
 
-- HOME-3: recently written discovered journals appear before opening, with a writing-time explanation, and open live. Both genuine harness runs passed at 600/1440 px, including expiry after the final write. [Acceptance](review/home-3-writing.md). PR #347 is separate from CONNECT-2; no PR was merged. Final gate numbers and its clean-main comparison are in the PR.
+- Diagnosis and real-session baseline are draft #357; no runtime change. Bare names, folders and outside paths bypass or fail the current lexical parser. Existing prose links open captured peek in genuine Codex and Claude sessions at 600/1440; the current browser contract passes.
+- The builder required a PR question before product/design decisions: FILES-12 changes the same prose-click destination that FILES-2 says to preserve. #357 asks whether prose text now reveals Files (peek retained on other evidence controls), or keeps peek with a separate icon action. Task remains unchecked and claimed. [Details](review/files-12-prose-destination.md).
+- #353, #354 and #355 remain separate ready PRs; none was merged here. No Clarity, History, motion, shared-style or native changes.
 
 ### Yash with Claude — 5 Nov: MOTION-1 merged, AUDIT-1 walk finished, A3 next
 

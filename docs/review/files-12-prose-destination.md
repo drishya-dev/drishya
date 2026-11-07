@@ -32,4 +32,4 @@ A scratch Drishya home imported genuine local sessions of both harnesses. At 600
 
 These are baseline checks of the existing destination, not FILES-12 acceptance. No completion checkbox is ticked. Full acceptance still needs every requested form (Markdown, inline, bare; files/folders; inside/outside), both native harnesses, correct icons, exact reveal/selection, unmatched literals and the agreed peek regression contract.
 
-Each worktree has its own frozen install. The current UI was built locally for this baseline. No full gate is run for this docs-only decision draft.
+Each worktree has its own frozen install. The current UI was built locally for this baseline. The existing `local prose links open exact source` browser regression passed on Edge, three configured workers (one spec worker), zero retries. No full gate is run for this docs-only decision draft.
