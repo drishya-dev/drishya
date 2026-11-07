@@ -1,7 +1,7 @@
 /* Clarity's one button system (FINISH-0a): primary, secondary, ghost, icon, danger and link, every state, plus the one segmented control.
    Variants set the colour variables; the states below read them, so every variant has hover, press, focus, disabled, loading and selected. */
 @layer clarity {
-:root[data-ui-skin=clarity] :is(.btn, .icon-btn) {
+:root[data-ui-skin=clarity] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary) {
   --btn-bg: var(--s2); --btn-border: var(--line-2); --btn-fg: var(--t1);
   --btn-bg-hover: var(--s3); --btn-border-hover: var(--line-3); --btn-fg-hover: var(--t1);
   box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1h);
@@ -10,23 +10,23 @@
   font: var(--weight-medium) var(--text-xs)/1 var(--sans); letter-spacing: 0; white-space: nowrap; text-decoration: none;
   box-shadow: none; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
 }
-:root[data-ui-skin=clarity] :is(.btn, .icon-btn) > svg { width: 16px; height: 16px; flex: none; }
+:root[data-ui-skin=clarity] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary) > svg { width: 16px; height: 16px; flex: none; }
 :root[data-ui-skin=clarity] .btn.sm { --btn-h: var(--control-sm); padding: 0 var(--sp-2); }
 :root[data-ui-skin=clarity] .btn.lg { --btn-h: var(--control-lg); }
 
 /* Variants. */
-:root[data-ui-skin=clarity] .btn.primary {
+:root[data-ui-skin=clarity] :is(.btn.primary, .send-prompt) {
   --btn-bg: var(--palette-active); --btn-border: transparent; --btn-fg: #fff;
   --btn-bg-hover: var(--palette-active-hover); --btn-border-hover: transparent; --btn-fg-hover: #fff;
 }
-:root[data-ui-skin=clarity] :is(.btn.ghost, .icon-btn) {
+:root[data-ui-skin=clarity] :is(.btn.ghost, .icon-btn, .modern-attachment, .composer-add, .workspace-menu > summary) {
   --btn-bg: transparent; --btn-border: transparent; --btn-fg: var(--t2);
   --btn-bg-hover: var(--s2); --btn-border-hover: transparent; --btn-fg-hover: var(--t1);
 }
 :root[data-ui-skin=clarity] .btn.danger {
   --btn-fg: var(--fail); --btn-bg-hover: color-mix(in srgb, var(--fail) 12%, var(--s2)); --btn-border-hover: color-mix(in srgb, var(--fail) 45%, var(--line-2)); --btn-fg-hover: var(--fail);
 }
-:root[data-ui-skin=clarity] .icon-btn { width: var(--btn-h, var(--control-md)); min-width: var(--btn-h, var(--control-md)); padding: 0; }
+:root[data-ui-skin=clarity] :is(.icon-btn, .modern-attachment, .composer-add, .workspace-menu > summary) { width: var(--btn-h, var(--control-md)); min-width: var(--btn-h, var(--control-md)); padding: 0; }
 :root[data-ui-skin=clarity] .icon-btn.sm { --btn-h: var(--control-sm); }
 :root[data-ui-skin=clarity] .icon-btn.txt { width: auto; padding: 0 var(--sp-2); }
 :root[data-ui-skin=clarity] .link { color: var(--source); text-decoration: none; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
@@ -34,31 +34,31 @@
 
 /* Hover: fine pointers only. */
 @media (hover: hover) {
-  :root[data-ui-skin=clarity] :is(.btn, .icon-btn):not(:disabled, [aria-disabled=true], [aria-pressed=true]):hover { background: var(--btn-bg-hover); border-color: var(--btn-border-hover); color: var(--btn-fg-hover); }
+  :root[data-ui-skin=clarity] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary):not(:disabled, [aria-disabled=true], [aria-pressed=true]):hover { background: var(--btn-bg-hover); border-color: var(--btn-border-hover); color: var(--btn-fg-hover); }
 }
 /* Selected (toggles): the raised fill, strong text, strong border. */
-:root[data-ui-skin=clarity] :is(.btn, .icon-btn):is([aria-pressed=true], .on):not(.workspace-follow) { background: var(--s3); border-color: var(--line-3); color: var(--t1); }
+:root[data-ui-skin=clarity] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary):is([aria-pressed=true], .on):not(.workspace-follow) { background: var(--s3); border-color: var(--line-3); color: var(--t1); }
 /* Disabled: the reason lives in a tooltip (FINISH-0b), not in the look. */
-:root[data-ui-skin=clarity] :is(.btn, .icon-btn):is(:disabled, [aria-disabled=true]) { opacity: .45; cursor: not-allowed; }
+:root[data-ui-skin=clarity] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary):is(:disabled, [aria-disabled=true]) { opacity: .45; cursor: not-allowed; }
 /* Loading: the label keeps its width (so nothing jumps) and a 12 px spinner sits over it. */
-:root[data-ui-skin=clarity] :is(.btn, .icon-btn)[aria-busy=true] { position: relative; color: transparent; pointer-events: none; }
-:root[data-ui-skin=clarity] :is(.btn, .icon-btn)[aria-busy=true] > * { opacity: 0; }
-:root[data-ui-skin=clarity] :is(.btn, .icon-btn)[aria-busy=true]::after {
+:root[data-ui-skin=clarity] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary)[aria-busy=true] { position: relative; color: transparent; pointer-events: none; }
+:root[data-ui-skin=clarity] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary)[aria-busy=true] > * { opacity: 0; }
+:root[data-ui-skin=clarity] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary)[aria-busy=true]::after {
   content: ''; position: absolute; inset: 0; margin: auto; width: 12px; height: 12px; box-sizing: border-box;
-  border: 1.5px solid var(--btn-fg); border-right-color: transparent; border-radius: 50%;
+  border: 2px solid var(--btn-fg); border-right-color: transparent; border-radius: 50%;
 }
-:root[data-ui-skin=clarity][data-ui-motion]:not([data-low-resource]) :is(.btn, .icon-btn)[aria-busy=true]::after { animation: cl-spin 800ms linear infinite; }
+:root[data-ui-skin=clarity][data-ui-motion]:not([data-low-resource]) :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary)[aria-busy=true]::after { animation: cl-spin var(--dur-spin) linear infinite; }
 @keyframes cl-spin { to { transform: rotate(360deg); } }
 
 /* Motion: colour fades (the gate), and the press scale only for pointers and only when reduced motion is not requested. */
-:root[data-ui-skin=clarity][data-ui-motion]:not([data-low-resource]) :is(.btn, .icon-btn) {
+:root[data-ui-skin=clarity][data-ui-motion]:not([data-low-resource]) :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary) {
   transition: background-color var(--dur-hover-out) var(--ease-out), border-color var(--dur-hover-out) var(--ease-out), color var(--dur-hover-out) var(--ease-out), opacity var(--dur-hover-out) var(--ease-out), transform var(--dur-release) var(--ease-out);
 }
-:root[data-ui-skin=clarity][data-ui-motion]:not([data-low-resource]) :is(.btn, .icon-btn):hover {
+:root[data-ui-skin=clarity][data-ui-motion]:not([data-low-resource]) :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary):hover {
   transition-duration: var(--dur-hover-in), var(--dur-hover-in), var(--dur-hover-in), var(--dur-hover-in), var(--dur-press);
 }
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn, .icon-btn):not(:disabled, [aria-disabled=true]):active { transform: scale(.97); transition-duration: var(--dur-hover-in), var(--dur-hover-in), var(--dur-hover-in), var(--dur-hover-in), var(--dur-press); }
+  :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary):not(:disabled, [aria-disabled=true]):active { transform: scale(.97); transition-duration: var(--dur-hover-in), var(--dur-hover-in), var(--dur-hover-in), var(--dur-hover-in), var(--dur-press); }
 }
 /* Icon-only buttons: the label stays in the markup for assistive technology; the box is the icon. */
 :root[data-ui-skin=clarity] :is(.workspace-view-slot > :is(.git-open, .workspace-open), .search-open, .settings-open, .workspace-secondary > button, .modern-review-control .git-open) {
@@ -95,4 +95,6 @@
 @media (prefers-reduced-motion: no-preference) {
   :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.seg, .workspace-toggles)[data-seg-move]::before { transition: transform var(--dur-move) var(--ease-move), width var(--dur-move) var(--ease-move), height var(--dur-move) var(--ease-move); }
 }
+/* The header's menu trigger sits on the same 28 px line as the icon buttons beside it. */
+:root[data-ui-skin=clarity] .modern-session-header .workspace-menu { height: var(--control-md); }
 }

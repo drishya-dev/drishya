@@ -24,6 +24,7 @@
   --dur-move: 280ms;
   --dur-switch: 160ms;
   --dur-focus: 140ms;
+  --dur-spin: 800ms;
 
   /* The one interface type scale stays where it is (`--text-2xs` 11 to `--text-3xl` 32): 11 px for marks and counts only,
      12 px the floor for any sentence or label, 13 px the body. */

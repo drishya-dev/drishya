@@ -30,4 +30,23 @@
   :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) .cl-switch:not(:disabled):active .cl-switch-knob { width: 14px; }
   :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) .cl-switch[aria-checked=true]:not(:disabled):active .cl-switch-knob { transform: translateX(10px); }
 }
+/* A switch inside a line of controls (Git review). */
+:root[data-ui-skin=clarity] .cl-switch.inline { width: auto; align-items: center; justify-content: flex-start; gap: var(--sp-2); padding: 0; font-size: var(--text-xs); }
+:root[data-ui-skin=clarity] .cl-switch.inline .cl-switch-label { font-size: var(--text-xs); color: var(--t2); }
+:root[data-ui-skin=clarity] .cl-switch.inline .cl-switch-track { margin-top: 0; }
+
+/* The Follow switch keeps its role and its markup; its track takes the same look. */
+:root[data-ui-skin=clarity] .mini-switch {
+  position: relative; flex: none; box-sizing: border-box; width: 28px; height: 16px; padding: 0;
+  border: 1px solid var(--line-2); border-radius: var(--round-full); background: var(--s3);
+}
+:root[data-ui-skin=clarity] .mini-switch::before { content: ''; position: absolute; left: 1px; top: 1px; width: 12px; height: 12px; border-radius: var(--round-full); background: var(--t3); transform: none; }
+:root[data-ui-skin=clarity] .mini-switch.on { background: var(--palette-active); border-color: var(--palette-active); }
+:root[data-ui-skin=clarity] .mini-switch.on::before { background: #fff; transform: translateX(12px); }
+:root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) .mini-switch { transition: background-color var(--dur-switch) var(--ease-out), border-color var(--dur-switch) var(--ease-out); }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) .mini-switch::before { transition: transform var(--dur-switch) var(--ease-out), background-color var(--dur-switch) var(--ease-out), width var(--dur-press) var(--ease-out); }
+  :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) :active > .mini-switch::before { width: 14px; }
+  :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) :active > .mini-switch.on::before { transform: translateX(10px); }
+}
 }

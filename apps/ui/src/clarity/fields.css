@@ -27,4 +27,36 @@
 @media (hover: hover) { :root[data-ui-skin=clarity] .cl-search-clear:hover { background: var(--s3); color: var(--t1); } }
 /* Home: the search takes the row, the filters sit at its end. */
 :root[data-ui-skin=clarity] .mh-filters .mh-search-field { flex: 1; }
+/* Home: below 650 px the search takes its own row. The filters (native selects until FINISH-0b) take the field look. */
+@media (max-width: 650px) { :root[data-ui-skin=clarity] .mh-filters .mh-search-field { flex: 1 1 100%; } }
+:root[data-ui-skin=clarity] :is(.mh-filters select, .settings-select select) {
+  box-sizing: border-box; height: var(--control-lg); min-height: var(--control-lg); padding: 0 var(--sp-2); border: 1px solid var(--line-2); border-radius: var(--round-sm);
+  background-color: var(--s1); color: var(--t1); font: var(--weight-regular) var(--text-sm)/1.2 var(--sans);
+}
+:root[data-ui-skin=clarity] .mh-filters .mh-search-field { --field-h: var(--control-lg); }
+@media (hover: hover) { :root[data-ui-skin=clarity] :is(.mh-filters select, .settings-select select):hover { border-color: var(--line-3); } }
+:root[data-ui-skin=clarity] :is(.mh-filters select, .settings-select select):focus-visible { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px var(--field-ring); }
+
+/* The composer's prompt: a field that sits inside its panel, so the panel takes the ring and the textarea none. */
+:root[data-ui-skin=clarity] .prompt-composer textarea { border-radius: var(--round-sm); font: var(--weight-regular) var(--text-sm)/1.5 var(--sans); color: var(--t1); }
+:root[data-ui-skin=clarity] .prompt-composer textarea::placeholder { color: var(--t4); opacity: 1; }
+:root[data-ui-skin=clarity] .prompt-composer textarea:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--field-ring); }
+
+/* Checkboxes that are choices in a list or an acknowledgement stay checkboxes: 14 px, --round-xs, a check that draws over 120 ms. */
+:root[data-ui-skin=clarity] input[type=checkbox] {
+  appearance: none; position: relative; flex: none; box-sizing: border-box; width: 14px; height: 14px; margin: 0; vertical-align: -2px;
+  border: 1px solid var(--line-3); border-radius: var(--round-xs); background: var(--s1); cursor: pointer;
+}
+:root[data-ui-skin=clarity] input[type=checkbox]::after {
+  content: ''; position: absolute; left: 4px; top: 1px; width: 3px; height: 7px; border: solid #fff; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); clip-path: inset(0 0 100% 0);
+}
+:root[data-ui-skin=clarity] input[type=checkbox]:checked { background: var(--palette-active); border-color: var(--palette-active); }
+:root[data-ui-skin=clarity] input[type=checkbox]:checked::after { clip-path: inset(0); }
+:root[data-ui-skin=clarity] input[type=checkbox]:disabled { opacity: .45; cursor: not-allowed; }
+@media (hover: hover) { :root[data-ui-skin=clarity] input[type=checkbox]:not(:checked, :disabled):hover { border-color: var(--t3); } }
+:root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) input[type=checkbox] { transition: background-color var(--dur-hover-out) var(--ease-out), border-color var(--dur-hover-out) var(--ease-out); }
+:root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) input[type=checkbox]::after { transition: clip-path var(--dur-press) var(--ease-out); }
+
+/* Settings: every sentence is at least 12 px (marks and counts keep 11). */
+:root[data-ui-skin=clarity] :is(.settings-dialog .setting-row small, .modern-settings-nav small, .modern-settings-nav p, .modern-settings-nav > div, .settings-dialog .muted.small, .settings-dialog p.small) { font-size: var(--text-xs); line-height: 1.5; }
 }
