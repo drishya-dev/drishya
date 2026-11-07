@@ -105,7 +105,21 @@ function WorkspaceViewer() {
     return ()=>{disposed=true;clearTimeout(timer);};
   },[source,recordingId,historyMode,catchupRetry]);
 
-  const scene = useMemo(() => historyPage?.scene ?? (projection ? compose(projection, { step, filter, selectedOperationId: selectedOp }) : undefined), [historyPage, projection, step, filter, selectedOp]);
+  const lastComposed = useRef<{ id?: string; step: number; since: number }>(undefined);
+  const composition = useMemo(() => {
+    if (historyPage) return { scene: historyPage.scene, since: historyPage.since ?? historyPage.scene.step - 1 };
+    if (!projection) return;
+    const applied = Math.max(0, Math.min(projection.timeline.length, step)), previous = lastComposed.current;
+    const since = !historyMode || !previous || previous.id !== recordingId || applied < previous.step ? applied - 1
+      : applied === previous.step ? previous.since : previous.step;
+    return { scene: compose(projection, { step, since, filter, selectedOperationId: selectedOp }), since };
+  }, [historyPage, projection, step, filter, selectedOp, historyMode, recordingId]);
+  const scene = composition?.scene;
+  useLayoutEffect(() => {
+    // Commit only what was actually shown. A re-render or same-step page retains
+    // its interval instead of stripping an in-flight arrival's class.
+    if (composition) lastComposed.current = { id: recordingId, step: composition.scene.step, since: composition.since };
+  }, [composition, recordingId]);
   const historical = useMemo(() => historyPage?.projection ?? (projection ? asOfProjection(projection, step) : undefined), [historyPage, projection, step]);
   const passagePaths = useMemo(() => {
     const passage = scene?.passages.find(ps => selectedOp ? ps.ops.some(op => op.id === selectedOp) : ps.id === (readingPassageId ?? scene.focus?.passageId));

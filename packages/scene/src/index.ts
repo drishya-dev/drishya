@@ -17,6 +17,8 @@ export const COMPOSER_VERSION = 'c1';
 export interface ComposeInput {
   /** Number of timeline items applied. 0 = before anything; timeline.length = the end. */
   step: number;
+  /** Last applied boundary. Changes in (since, step] move once; omitted preserves single-step replay. */
+  since?: number;
   /** Follow only this agent, tool or MCP server. Others remain, receded. */
   filter?: { agentId?: string; kind?: OperationKind; tool?: string; server?: string };
   /** Selected operation: it rises; playback holding is the caller's business. */
@@ -34,7 +36,7 @@ export interface SceneOp {
   state: OpState;
   /** CONTENT-3: stopped by a permission decision before it ran; `state` is 'error' but this is not a failure. */
   declined?: boolean;
-  /** arriving: started on the last applied step. settled: not in the agent's latest passage. */
+  /** arriving: started in the applied change interval. settled: not in the agent's latest passage. */
   phase: OpPhase;
   /** The step that completed it landed last: play the Resolve move once. */
   resolving: boolean;
@@ -151,6 +153,10 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   p = asOfProjection(p, input.step);
   const total = p.timeline.length;
   const step = Math.max(0, Math.min(total, Math.floor(input.step)));
+  const since = input.since === undefined || !Number.isFinite(input.since) ? step - 1 : Math.max(0, Math.min(step, Math.floor(input.since)));
+  // Map positions are zero-based; applied boundaries count entries. An entry at i
+  // belongs to (since, step] precisely when i >= since (and i < step).
+  const arrived = (position: number | undefined) => position !== undefined && position >= since && position < step;
   const applied = p.timeline.slice(0, step);
   const last = applied.at(-1);
   const ops = new Map(p.operations.map((o) => [o.id, o]));
@@ -211,8 +217,8 @@ export function compose(p: Projection, input: ComposeInput): Scene {
           tool: op.tool,
           state: stateOf(op),
           ...(op.declined ? { declined: true } : {}),
-          phase: started.get(id) === step - 1 ? 'arriving' : latestByAgent.get(ps.agentId) === ps.id ? 'present' : 'settled',
-          resolving: ended.get(id) === step - 1,
+          phase: arrived(started.get(id)) ? 'arriving' : latestByAgent.get(ps.agentId) === ps.id ? 'present' : 'settled',
+          resolving: arrived(ended.get(id)),
           origin: originOf(op),
           paths: op.paths.filter((x) => x.role !== 'search-hit').map((x) => x.path),
           matchesFilter: opMatches(op),
@@ -223,7 +229,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       .filter((id) => proseAt.has(id))
       .map((id) => {
         const pr = proseById.get(id)!;
-        return { id, role: pr.role, exposure: pr.exposure, arriving: proseAt.get(id) === step - 1 };
+        return { id, role: pr.role, exposure: pr.exposure, arriving: arrived(proseAt.get(id)) };
       });
     let low = 0;
     let high = turnAt.length;
@@ -244,7 +250,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       prose: sceneProse,
       ...(ps.compactionIds?.length ? { compactionIds: ps.compactionIds.filter(id => p.compactions?.some(c => c.id === id)) } : {}),
       ...(ps.compactionSummaryIds?.length ? { compactionSummaryIds: ps.compactionSummaryIds.filter(id => p.compactionSummaries?.some(s => s.id === id)) } : {}),
-      ...(ps.noticeIds?.some((id) => noticeAt.has(id)) ? { notices: ps.noticeIds.filter((id) => noticeAt.has(id)).map((id) => { const at = noticeAt.get(id)!, firstOp = Math.min(...ps.operationIds.map((op) => started.get(op) ?? Infinity)); return { id, arriving: at === step - 1, ...(at < firstOp ? { leading: true } : {}) }; }) } : {}),
+      ...(ps.noticeIds?.some((id) => noticeAt.has(id)) ? { notices: ps.noticeIds.filter((id) => noticeAt.has(id)).map((id) => { const at = noticeAt.get(id)!, firstOp = Math.min(...ps.operationIds.map((op) => started.get(op) ?? Infinity)); return { id, arriving: arrived(at), ...(at < firstOp ? { leading: true } : {}) }; }) } : {}),
       settled: latestByAgent.get(ps.agentId) !== ps.id,
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,

@@ -9,6 +9,10 @@ export interface HistoryQuery {
   start?: number;
   count?: number;
   step?: number;
+  /** Last composed applied boundary for a live update. Omit for single-step replay. */
+  since?: number;
+  /** Preserve the preceding interval if this request finds no new timeline entry. */
+  previousSince?: number;
   selectedOperationId?: string;
   observationId?: string;
   filter?: ComposeInput['filter'];
@@ -16,6 +20,8 @@ export interface HistoryQuery {
 }
 
 export interface HistoryPage {
+  /** Effective live change interval, retained through same-step paging/re-renders. */
+  since?: number;
   /** Last queue event visible at the exact replay cursor, even outside the resident timeline tail. */
   queueBoundary?: {ownerRecordingId: string; observationId: string};
   operationCount: number;

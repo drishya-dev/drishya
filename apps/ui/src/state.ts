@@ -249,7 +249,10 @@ export const useApp = create<State>((set, get) => ({
     const { source, recordingId, mode, step, filter, selectedOp } = get();
     if (!source?.history || !recordingId) return;
     const current = newest('projection');
-    const page = await source.history(recordingId, { step: mode === 'replay' ? step : undefined, filter, selectedOperationId: selectedOp, ...query });
+    const previous = get().historyPage;
+    const liveInterval = mode === 'history' && previous
+      ? { since: previous.scene.step, previousSince: Math.max(0, previous.since ?? previous.scene.step - 1) } : {};
+    const page = await source.history(recordingId, { step: mode === 'replay' ? step : undefined, ...liveInterval, filter, selectedOperationId: selectedOp, ...query });
     if (!current() || get().recordingId !== recordingId) return;
       set({ error: undefined, historyPage: page, projection: page.projection, renderedRevisions: page.revisions,
       step: mode === 'history' ? page.scene.total : page.scene.step });
