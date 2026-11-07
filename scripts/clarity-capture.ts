@@ -151,16 +151,14 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     await populated(page.getByRole('complementary', { name: 'Tools and agents', exact: true }));
     const minimized = page.getByRole('button', { name: 'Expand toolbox', exact: true });
     if (await minimized.isVisible()) await press(minimized);
+    // TOOLS-2 (#349): an MCP server or the Agents group now opens in the centred Toolbox window instead of a drawer, so the
+    // surface is that window over the dock when the session has a server (always on the demo), else the dock as recorded.
     const mcp = page.locator('.md-server').filter({ has: page.locator('[data-mcp-server]') }).first();
-    // Real sessions may record no MCP server or no sub-agent: show the toolbox as that session has it.
     if (c.id === 'demo' || await mcp.count()) {
-      await visible(mcp);
-      if (!await mcp.evaluate(el => (el as HTMLDetailsElement).open)) await press(mcp.locator(':scope > summary'));
-      await populated(mcp.locator('[data-mcp-tool]').first());
-    }
-    if (c.id === 'demo' || await page.locator('.md-agents').count()) {
-      await visible(page.locator('.md-agents'));
-      if (!await page.locator('.md-agents').evaluate(el => (el as HTMLDetailsElement).open)) await press(page.locator('.md-agents > summary'));
+      await press(mcp.locator(':scope > summary'));
+      const window = page.getByRole('dialog', { name: /^MCP tools for / });
+      await populated(window);
+      await page.waitForTimeout(400); // the window's arrival is 160 ms; reduced motion makes it instant, this covers both
     }
     return 'material';
   }
