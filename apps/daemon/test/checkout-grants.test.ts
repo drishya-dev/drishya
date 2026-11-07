@@ -126,4 +126,3 @@ for(const harness of ['codex','claude-code'])it.each(['signed-out','unsupported'
   const launch=((_bin:string,args:string[])=>spawn(process.execPath,['-e',state==='unavailable'?'setTimeout(()=>{},1000)':`process.stdout.write(${JSON.stringify(output(args))})`],{stdio:['ignore','pipe','pipe'],windowsHide:true})) as typeof spawn;
   expect((await nativeReadiness(harness,f.dir,{launch,resolveExecutable:()=>process.execPath,timeoutMs:state==='unavailable'?30:2000})).state).toBe(state);
 });
-

@@ -46,5 +46,3 @@ for(const width of [600,1440])test(`remembered checkout and connection acknowled
     await page.request.post(`${server.url}/v1/recordings/${id}/workspace/revoke`,{data:{}});await expect(rail.getByRole('button',{name:'Enable workspace reading',exact:false})).toBeVisible({timeout:6000});
   }finally{await server?.close();await app.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe scratch cleanup');rmSync(dir,{recursive:true,force:true});}
 });
-
-
