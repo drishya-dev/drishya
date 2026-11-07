@@ -31,6 +31,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| FILES-13 | @yash + Codex (Sol 6.1) | `codex/files-13` | 2026-11-07 | Whole item: investigate bare evidence paths and duplicate worktree labels on genuine Claude/Codex sessions first; worktree-files.ts root classification/identity-preserving rows, use-file-roots.ts and SessionWorkspace.tsx Files-tree consumers only if required; focused units/browser/real-case checks and completion docs, at most 15 paths. Preserve FILES-12 peek and Workspace destinations. No Clarity, style/design, History/Origins, Toolbox, native consent/controller or schema edits. Any required upstream source ownership or product decision is recorded before expansion. |
+| FLOW-1 | @yash + Codex (Sol 6.1) | `codex/flow-1` | 2026-11-07 | Whole item: diagnose the actual connector first; FlowConnections.tsx and lib/flow-route.ts endpoint/visibility logic only if implicated, focused unit/browser/real-session checks and completion docs, at most 15 paths. No connector restyling, Clarity, Toolbox, History/Origins motion edits or other claimed source without a separate reservation. Use existing classes/tokens and actual measured DOM endpoints only. |
+| LIVE-6 | @yash + Codex (Sol 6.1) | `codex/live-6` | 2026-11-07 | Whole task: packages/scene/src/index.ts optional since boundary; Viewer.tsx compose/history-query arguments only (builder explicitly reserved these sections alongside FINISH-0c, 7 November); packages/scene/src/history.ts query contract, state.ts history-query boundary bookkeeping only, daemon history-worker.ts/server.ts validation; focused unit/browser/genuine-live acceptance and completion docs, target at most 15 paths. Builder approved History.tsx outcome-animation guard only alongside MOTION-3 and at most 18 paths on 7 November, after the remount regression reproduced at both widths. No loading, Clarity, styles, animation design or Toolbox edits. Preserve replay defaults/goldens, stable same-step boundaries and pure composer. **Decision resolved (Yash, 7 November):** preserve the truthful no-travel fallback when a tool origin is hidden at narrow widths. All content and outcome resolution stay visible. Final whole-task checks now proceed; no Toolbox redesign. |
 | CLARITY-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/clarity-1` | 2026-11-06 | `lib/ui-version.ts`, `UIVersions.tsx`, `main.tsx`, `apps/ui/vite.config.ts`, new `apps/ui/src/clarity/`, `!important` guards in legacy sheets; scripts for the pixel guard. |
 | LAND-1 | @harsh + Codex | `codex/land-1-design-plan` | 2026-11-07 | `docs/superpowers/plans/2026-11-07-drishya-landing-page.md`, this claim and TASKS completion. Design plan only, including public demo and local app handoff. |
 | FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
@@ -49,6 +52,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — 7 Nov: assigned queue through CONNECT-4 proposal delivered
+
+- Ready, not merged: CONTENT-18 #361 (person-prompt counts), LIVE-6 #362 (batch/outcome handling, approved hidden-origin fallback), FLOW-1 #363 (real endpoint connectors), FILES-13 #364 (evidence-backed Files placement and worktree/state identities). Each PR carries its own acceptance, exact gate results/limits, task tick and claim removal; main's source claim rows remain until those PRs merge. Their completion docs may need a careful combined resolution; keep every finished tick/removal.
+- [CONNECT-4 proposal](review/connect-4-repository-setup-proposal.md) is delivered on main, not implemented. Its three product/permission questions await the builders. The checkbox stays open and the proposal claim is released. Per the assignment, stop before NATIVE-1; do not silently implement remembered consent or broaden native access.
+- IDEA-1–6's missing detail entries are repaired in TASKS; all remain unchecked/deferred, IDEA-6 explicitly parked/not planned. No idea implementation was claimed. `sync-tasks.ts` now has no missing-entry warnings.
+- A fresh developer/product review is the requested next assessment after the ready fixes are merged into one running build: component scores, strengths/weaknesses, switching verdict and prioritized improvements, using real sessions and no inherited implementation chat. It is not claimed run yet. TASKS remains the sole active work list.
 
 ### Harsh with Codex — 7 November: DOCS-1 product README
 
@@ -1441,6 +1451,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **7 November, Yash — LIVE-6 hidden-origin fallback:** when the tool instrument is hidden (including the current 600 px layout), mount the real card directly and retain its outcome animation; omit only travel from an unavailable origin. Do not fabricate a location or delay LIVE-6 for the Toolbox finishing pass. Visible origins still emit once. This is the explicit narrow-width acceptance exception for #362.
 
 - **6 Nov (later), Yash with Claude: Clarity, a new UI version; Modern is the frozen backup.** Yash liked the Home concepts' look ("clean, modern, accurate space, minimal but professional and premium") and asked for it everywhere. Rebuilding inside Modern would mean another layer over sixty, so Clarity starts as an exact replica of Modern with all older CSS in `@layer legacy` and its own winning layer, and every FINISH item lands there; Modern stays selectable in Settings. Home is concept A (Ledger + Now). The concepts looked cleaner partly because they use Inter; the app renders Outfit, a display face (Inter is named but never bundled). See [clarity-1-version.md](review/finish/clarity-1-version.md) and VISION §9.
 
