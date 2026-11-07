@@ -46,7 +46,7 @@ function ImageThumbnail({ src, image, label, onOpen }: { src: string; image: Ope
 }
 
 /** The whole image: fitted first, actual pixels on click; Escape or the backdrop closes it. */
-function ImageReader({ src, image, onClose, currentCaption }: { src: string; image: OperationImage; onClose: () => void; currentCaption?: string }) {
+export function ImageReader({ src, image, onClose, currentCaption }: { src: string; image: OperationImage; onClose: () => void; currentCaption?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [actual, setActual] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -55,7 +55,7 @@ function ImageReader({ src, image, onClose, currentCaption }: { src: string; ima
   const imageSrc = retry ? `${src}${src.includes('?') ? '&' : '?'}retry=${retry}` : src;
   useEffect(() => { dialog.current?.showModal(); }, []);
   const caption = currentCaption ?? `Image${image.width && image.height ? ` · ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${size(image.bytes)}` : ''}`;
-  return <dialog ref={dialog} className="image-reader" aria-label={currentCaption ? 'Current image reader' : 'Image reader'} onClose={onClose} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
+  return <dialog ref={dialog} className="image-reader" aria-label={currentCaption ? 'Current image reader' : 'Image reader'} onClose={onClose} onCancel={event=>event.stopPropagation()} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
     <div className="image-reader-bar">
       <span title={caption}>{caption}</span>
       <button type="button" disabled={failed} aria-pressed={actual} onClick={() => setActual((v) => !v)}>{actual ? 'Fit' : 'Actual size'}</button>

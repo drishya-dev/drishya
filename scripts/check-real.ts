@@ -33,13 +33,14 @@ import { contentParity } from './real-cases/content-parity.ts';
 import { sessionLineage, resetSessionLineageScan } from './real-cases/session-lineage.ts';
 import { midTurnInput } from './real-cases/mid-turn-input.ts';
 import {multiImagePrompts} from './real-cases/multi-image-prompts.ts';
+import {proseFileReferences} from './real-cases/prose-file-references.ts';
 import type { RealCase } from './real-cases/types.ts';
 import {desktopPrompts} from './real-cases/desktop-prompts.ts';
 import {markdownTables} from './real-cases/markdown-tables.ts';
 
 
 
-const cases: RealCase[] = [personPrompts, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables];
+const cases: RealCase[] = [personPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
