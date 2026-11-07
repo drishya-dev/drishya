@@ -97,4 +97,9 @@
 }
 /* The header's menu trigger sits on the same 28 px line as the icon buttons beside it. */
 :root[data-ui-skin=clarity] .modern-session-header .workspace-menu { height: var(--control-md); }
+/* Low resource: nothing animates in Clarity's controls. */
+:root[data-ui-skin=clarity][data-low-resource] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .modern-attachment, .composer-add, .workspace-menu > summary, .seg, .workspace-toggles, .seg > button, .workspace-toggles > button, .cl-switch, .cl-switch-track, .cl-switch-knob, .mini-switch, .cl-field, .cl-search, input[type=checkbox]) { transition: none; animation: none; }
+:root[data-ui-skin=clarity][data-low-resource] :is(.btn, .icon-btn, .send-prompt, .stop-turn, .seg, .workspace-toggles, .mini-switch, input[type=checkbox])::before { transition: none; animation: none; }
+:root[data-ui-skin=clarity][data-low-resource] :is(.btn, .icon-btn, .send-prompt, .stop-turn, input[type=checkbox])::after { transition: none; animation: none; }
+:root[data-ui-skin=clarity][data-low-resource] :focus-visible { animation: none; }
 }

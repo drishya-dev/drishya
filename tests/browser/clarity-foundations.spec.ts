@@ -255,3 +255,28 @@ test('the text field: height 28, hover, focus ring, placeholder and error states
   expect((await read('f-bad', ['border-top-color']))['border-top-color']).toBe(await color('--fail'));
   expect(await read('f-bad-error', ['color', 'font-size'])).toEqual({ color: await color('--fail'), 'font-size': '12px' });
 });
+
+test('reduced motion keeps colour fades but never moves or scales; low resource animates nothing', async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: 'reduce' }), page = await context.newPage();
+  await page.goto(url('clarity', { motion: true }));
+  // The app itself turns relationship motion off under reduced motion; force the attribute on, to read Clarity's own media-query rule.
+  await expect(page.locator('.mh-home, .history, #root > *').first()).toBeVisible(); await page.waitForTimeout(500);
+  await page.evaluate(() => document.documentElement.setAttribute('data-ui-motion', ''));
+  await addButtons(page);
+  // The press scale and the switch's travel are transforms: not under reduced motion. The colour fade is allowed.
+  await page.locator('#b-secondary').hover(); await page.mouse.down(); await page.waitForTimeout(250);
+  expect(await page.locator('#b-secondary').evaluate(el => getComputedStyle(el).transform)).toBe('none');
+  await page.mouse.up();
+  const settings = await openSettings(page, 'Reading');
+  expect(await settings.getByRole('switch').first().locator('.cl-switch-knob').evaluate(el => getComputedStyle(el).transitionProperty.includes('transform'))).toBe(false);
+  await context.close();
+  // Low resource turns every Clarity transition and animation off.
+  const low = await browser.newContext(), lowPage = await low.newPage();
+  await lowPage.goto(url('clarity', { motion: true }));
+  await expect(lowPage.locator('[data-ui-motion]').first()).toBeVisible(); // the app has mounted
+  await lowPage.evaluate(() => document.documentElement.setAttribute('data-low-resource', ''));
+  await addButtons(lowPage);
+  expect(await lowPage.locator('#b-secondary').evaluate(el => getComputedStyle(el).transitionDuration)).toBe('0s');
+  expect(await lowPage.locator('#b-busy').evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none');
+  await low.close();
+});
