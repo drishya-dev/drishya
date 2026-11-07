@@ -44,9 +44,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | USAGE-1 | @yash + Codex (Sol 6.1), requested takeover of #344 review revision; Claude retains finishing-pass UI | `claude/usage-1-secondary` | 2026-11-06 | Verify #344 secondary-window review fix, packages/adapter-codex, capture-core usage, contracts optional usage field already proposed, RecordedUsage.tsx and recorded-usage.spec.ts only if a proven defect requires it; acceptance/docs. No schema expansion or merge without both builders agreement; no FINISH work. |
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
-| LIVE-6, FLOW-1 | @yash + Claude Opus 5.5 (AUDIT-1 A3) | claude/audit-1-a3 | 2026-11-05 | LIVE-6: packages/scene/src/index.ts, apps/daemon/src/history-worker.ts, Viewer.tsx; FLOW-1: FlowConnections.tsx |
-| CONNECT-2 | @yash + Codex (Sol 6.1) | codex/connect-2 | 2026-11-05 | SessionWorkspace.tsx measured composer clearance, stage.css, modern/hud.css, focused approval test and task acceptance/docs. |
-| HOME-3 | @yash + Codex (Sol 6.1) | codex/home-3 | 2026-11-05 | Home.tsx, SessionHome.tsx, home-import.ts, home-active.css, focused tests and task acceptance/docs. |
 
 
 ---
