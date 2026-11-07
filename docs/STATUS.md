@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| FILES-13 | @yash + Codex (Sol 6.1) | `codex/files-13` | 2026-11-07 | Whole item: investigate bare evidence paths and duplicate worktree labels on genuine Claude/Codex sessions first; worktree-files.ts root classification/identity-preserving rows, use-file-roots.ts and SessionWorkspace.tsx Files-tree consumers only if required; focused units/browser/real-case checks and completion docs, at most 15 paths. Preserve FILES-12 peek and Workspace destinations. No Clarity, style/design, History/Origins, Toolbox, native consent/controller or schema edits. Any required upstream source ownership or product decision is recorded before expansion. |
 | LIVE-6 | @yash + Codex (Sol 6.1) | `codex/live-6` | 2026-11-07 | Whole task: packages/scene/src/index.ts optional since boundary; Viewer.tsx compose/history-query arguments only (builder explicitly reserved these sections alongside FINISH-0c, 7 November); packages/scene/src/history.ts query contract, state.ts history-query boundary bookkeeping only, daemon history-worker.ts/server.ts validation; focused unit/browser/genuine-live acceptance and completion docs, target at most 15 paths. Builder approved History.tsx outcome-animation guard only alongside MOTION-3 and at most 18 paths on 7 November, after the remount regression reproduced at both widths. No loading, Clarity, styles, animation design or Toolbox edits. Preserve replay defaults/goldens, stable same-step boundaries and pure composer. **Decision resolved (Yash, 7 November):** preserve the truthful no-travel fallback when a tool origin is hidden at narrow widths. All content and outcome resolution stay visible. Final whole-task checks now proceed; no Toolbox redesign. |
 | CLARITY-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/clarity-1` | 2026-11-06 | `lib/ui-version.ts`, `UIVersions.tsx`, `main.tsx`, `apps/ui/vite.config.ts`, new `apps/ui/src/clarity/`, `!important` guards in legacy sheets; scripts for the pixel guard. |
 | CONTENT-18 | @yash + Codex (Sol 6.1) | `codex/content-18` | 2026-11-07 | Shared person-prompt predicate and injected-message classifier, History.tsx prompt-count/rail selection only (no motion/layout), scene review/count consumers and projection/count callers as required, focused units/browser/real-case acceptance and completion docs. Existing tokens/classes; no Clarity, Toolbox or finishing-pass styling. Builder approved up to 24 source/test/docs paths on 7 November, including Changes/Git/search count consumers. |
@@ -51,6 +52,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — 7 Nov: assigned queue through CONNECT-4 proposal delivered
+
+- Ready, not merged: CONTENT-18 #361 (person-prompt counts), LIVE-6 #362 (batch/outcome handling, approved hidden-origin fallback), FLOW-1 #363 (real endpoint connectors), FILES-13 #364 (evidence-backed Files placement and worktree/state identities). Each PR carries its own acceptance, exact gate results/limits, task tick and claim removal; main's source claim rows remain until those PRs merge. Their completion docs may need a careful combined resolution; keep every finished tick/removal.
+- [CONNECT-4 proposal](review/connect-4-repository-setup-proposal.md) is delivered on main, not implemented. Its three product/permission questions await the builders. The checkbox stays open and the proposal claim is released. Per the assignment, stop before NATIVE-1; do not silently implement remembered consent or broaden native access.
+- IDEA-1–6's missing detail entries are repaired in TASKS; all remain unchecked/deferred, IDEA-6 explicitly parked/not planned. No idea implementation was claimed. `sync-tasks.ts` now has no missing-entry warnings.
+- A fresh developer/product review is the requested next assessment after the ready fixes are merged into one running build: component scores, strengths/weaknesses, switching verdict and prioritized improvements, using real sessions and no inherited implementation chat. It is not claimed run yet. TASKS remains the sole active work list.
 
 ### Harsh with Codex — 7 November: DOCS-1 product README
 
