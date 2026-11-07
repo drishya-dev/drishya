@@ -31,7 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SEC-1 | @harsh + Codex | `codex/sec-1` | 2026-11-07 | Whole dependency remediation: root and UI manifests, pnpm lockfile and affected synthetic shop manifest; Vitest runner config only if migration requires it. Verification report and STATUS/TASKS. Harsh requested a regular implementation PR before testing, followed by the full gate and results. No product source or schema changes. |
+| SEC-1 | @harsh + Codex | `codex/sec-1` | 2026-11-07 | Whole dependency remediation: root and UI manifests, pnpm lockfile and synthetic shop manifest and its generator; Vitest runner config only if migration requires it. Verification report and STATUS/TASKS. Harsh requested a regular implementation PR before testing, followed by the full gate and results. PR #365 passed the full gate and both audits. Claim stays open through the post-merge Dependabot rescan. |
 | FILES-13 | @yash + Codex (Sol 6.1) | `codex/files-13` | 2026-11-07 | Whole item: investigate bare evidence paths and duplicate worktree labels on genuine Claude/Codex sessions first; worktree-files.ts root classification/identity-preserving rows, use-file-roots.ts and SessionWorkspace.tsx Files-tree consumers only if required; focused units/browser/real-case checks and completion docs, at most 15 paths. Preserve FILES-12 peek and Workspace destinations. No Clarity, style/design, History/Origins, Toolbox, native consent/controller or schema edits. Any required upstream source ownership or product decision is recorded before expansion. |
 | FLOW-1 | @yash + Codex (Sol 6.1) | `codex/flow-1` | 2026-11-07 | Whole item: diagnose the actual connector first; FlowConnections.tsx and lib/flow-route.ts endpoint/visibility logic only if implicated, focused unit/browser/real-session checks and completion docs, at most 15 paths. No connector restyling, Clarity, Toolbox, History/Origins motion edits or other claimed source without a separate reservation. Use existing classes/tokens and actual measured DOM endpoints only. |
 | LIVE-6 | @yash + Codex (Sol 6.1) | `codex/live-6` | 2026-11-07 | Whole task: packages/scene/src/index.ts optional since boundary; Viewer.tsx compose/history-query arguments only (builder explicitly reserved these sections alongside FINISH-0c, 7 November); packages/scene/src/history.ts query contract, state.ts history-query boundary bookkeeping only, daemon history-worker.ts/server.ts validation; focused unit/browser/genuine-live acceptance and completion docs, target at most 15 paths. Builder approved History.tsx outcome-animation guard only alongside MOTION-3 and at most 18 paths on 7 November, after the remount regression reproduced at both widths. No loading, Clarity, styles, animation design or Toolbox edits. Preserve replay defaults/goldens, stable same-step boundaries and pure composer. **Decision resolved (Yash, 7 November):** preserve the truthful no-travel fallback when a tool origin is hidden at narrow widths. All content and outcome resolution stay visible. Final whole-task checks now proceed; no Toolbox redesign. |
@@ -54,6 +54,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 7 November: SEC-1 dependency remediation verified
+
+- [PR #365](https://github.com/drishya-dev/drishya/pull/365) opened before testing. Vite 8.3.6 and Vitest 4.1.12 resolve patched development dependencies. Workspace and standalone synthetic shop audits show zero findings. Scratch generation matches the patched shop manifest.
+- Full gate on 3f2204c passed the frozen install, typecheck, UI build and package verification, with 1,232 units at three workers and 695 browser tests at three parallel and one serial worker. Zero retries. The initial Windows TEMP alias failure and canonical-path confirmation are in the [verification report](review/sec-1-dependency-verification.md).
+- SEC-1 stays claimed until Dependabot confirms the default-branch alert closures after merge.
 
 ### Yash with Codex — 7 Nov: assigned queue through CONNECT-4 proposal delivered
 
