@@ -22,6 +22,10 @@ describe('evidence-backed prose files',()=>{
   expect(tree.resolve('C:/different/research/results/a.txt')).toMatchObject({path:'worktree-0123456789/research/results/a.txt'});
   expect(tree.resolve('research/results')).toMatchObject({path:'worktree-0123456789/research/results',folder:true});
  });
+ it('deduplicates the current tree and captured main-worktree identity without making unique names ambiguous',()=>{
+  const tree=proseFileIndex([{path:'docs/a.md',captured:false},{path:'worktree-0123456789/docs/a.md',captured:true}],'C:/repo',[{prefix:'worktree-0123456789',root:'C:/repo'}]);
+  for(const name of ['a.md','docs/a.md','C:/repo/docs/a.md'])expect(tree.resolve(name)).toMatchObject({path:'worktree-0123456789/docs/a.md',captured:true});
+ });
  it('renders file icons for bare, inline and Markdown references, while commands, fences, unknown names and text stay literal',()=>{
   const text='README.md, `src/main.ts` and [report](C:/outside/report.txt). unknown.md stays.\n\n```sh\ncat README.md\n```';
   const html=renderToStaticMarkup(createElement(ProseFiles.Provider,{value:{...index,open:()=>{}}},createElement(Markdown,{text,onPath:()=>{}})));

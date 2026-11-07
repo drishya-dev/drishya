@@ -20,13 +20,21 @@ export function proseFileIndex(files:readonly {path:string;captured:boolean}[],w
   const exact=new Map<string,ProseFileReference>(),aliases=new Map<string,ProseFileReference|null>();
   const alias=(name:string,ref:ProseFileReference)=>{if(aliases.size>=200000)return;const k=key(name),previous=aliases.get(k);aliases.set(k,previous===undefined?ref:previous&&previous.path===ref.path&&previous.folder===ref.folder?ref:null);};
   const root=workspaceRoot?.replace(/\\/g,'/').replace(/\/+$/,'');
-  for(const file of files.slice(0,20000)){
+  const logicalFiles=new Map<string,{reference:ProseFileReference;names:Set<string>}>();
+  for(const file of files){
     const parsed=clean(file.path);if(!parsed)continue;
-    let path=parsed.path;
-    if(absolute(path)&&root&&key(path).startsWith(key(root+'/')))path=path.slice(root.length+1);
-    const previous=exact.get(key(path));
-    const ref={path,folder:false,captured:file.captured||!!previous?.captured};exact.set(key(path),ref);
+    const located=roots.find(r=>parsed.path.startsWith(r.prefix+'/'));
+    let logical=parsed.path;
+    if(located&&root&&key(located.root.replace(/\\/g,'/').replace(/\/+$/,''))===key(root))logical=parsed.path.slice(located.prefix.length+1);
+    if(absolute(logical)&&root&&key(logical).startsWith(key(root+'/')))logical=logical.slice(root.length+1);
+    const k=key(logical),previous=logicalFiles.get(k);
+    if(!previous&&logicalFiles.size>=20000)continue;
+    const identity=located?parsed.path:logical;
+    const reference=previous?.reference.captured?previous.reference:{path:identity,folder:false,captured:file.captured};
+    const names=previous?.names??new Set<string>();names.add(parsed.path);names.add(logical);
+    logicalFiles.set(k,{reference,names});
   }
+  for(const {reference,names}of logicalFiles.values())for(const name of names)exact.set(key(name),reference);
   for(const ref of [...exact.values()]){
     const located=roots.find(r=>ref.path.startsWith(r.prefix+'/'));
     const relative=located?ref.path.slice(located.prefix.length+1):ref.path;

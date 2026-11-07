@@ -195,7 +195,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       if(typeof path!=='string'||!paths.some(file=>file.startsWith(path+'/')))return;
       const parents=path.split('/').map((_,i,parts)=>parts.slice(0,i+1).join('/'));
       pendingFolder.current=path;setRevealedFolder(path);setQuery('');setTouchedOnly(false);
-      setOpened(previous=>new Set(['',...previous,...(fileRoots.some(root=>path.startsWith(root.prefix+'/'))?['\u0000recorded-worktrees']:[]),...parents]));
+      setOpened(previous=>{const required=new Set(['',...(fileRoots.some(root=>path.startsWith(root.prefix+'/'))?['\u0000recorded-worktrees']:[]),...parents]);return new Set([...Array.from(previous).filter(path=>!required.has(path)).slice(-(256-required.size)),...required]);});
     };
     window.addEventListener('drishya-reveal-prose-folder',reveal);
     return()=>window.removeEventListener('drishya-reveal-prose-folder',reveal);
