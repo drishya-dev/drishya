@@ -6,7 +6,7 @@ import {FileReadingActions} from './FileReadingActions.tsx';
 import {useFileRoots} from '../lib/use-file-roots.ts';
 import { documentFits, documentLimitMessage } from '../lib/document-limit.ts';
 import {FileRowName} from './FileRowName.tsx';
-import {worktreeFileRows, currentWorkspacePath, UNPLACED_GROUP} from '../lib/worktree-files.ts';
+import {worktreeFileRows, currentWorkspacePath, UNPLACED_GROUP, canonicalFileFolders} from '../lib/worktree-files.ts';
 import {rememberCurrentFileOrigin,currentFileOrigin} from '../lib/current-file-origin.ts';
 import { FileEvidenceMarks, fileEvidenceDescription, useFileEvidence } from './FileEvidenceMarks.tsx';
 import { touchedFiles } from '../../../../packages/scene/src/file-evidence.ts';
@@ -166,6 +166,10 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const [query, setQuery] = useWorkspaceState('folders/query', '');
   const [approving,setApproving] = useState(false);
   const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
+  useLayoutEffect(()=>{
+    const next=canonicalFileFolders(opened,fileRoots,capturedRoot ?? projection.workspaceRoot);
+    if(next!==opened)setOpened(next);
+  },[opened,fileRoots,capturedRoot,projection.workspaceRoot,setOpened]);
   useEffect(()=>{const reveal=(event:Event)=>{const path=(event as CustomEvent).detail;if(typeof path==='string'){setQuery(path);setTouchedOnly(false);}};window.addEventListener('drishya-reveal-captured-file',reveal);return()=>window.removeEventListener('drishya-reveal-captured-file',reveal);},[setQuery,setTouchedOnly]);
   const treeElement = useRef<HTMLDivElement>(null);
   const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);

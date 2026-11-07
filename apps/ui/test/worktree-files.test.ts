@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {worktreeFileRows,WORKTREE_GROUP,UNPLACED_GROUP,currentWorkspacePath} from '../src/lib/worktree-files.ts';
+import {worktreeFileRows,WORKTREE_GROUP,UNPLACED_GROUP,currentWorkspacePath,canonicalFileFolders} from '../src/lib/worktree-files.ts';
 const roots=[{root:'C:\\repo',prefix:'worktree-main'},{root:'C:\\agents\\worker',prefix:'worktree-child'}];
 const paths=['worktree-child/src/a.ts','worktree-main/src/a.ts','worktree-main/README.md'];
 describe('recorded worktree file display',()=>{
@@ -96,4 +96,13 @@ it('does not confuse identical worktree names from different harness directories
  const rows=worktreeFileRows(['codex/a.ts','claude/a.ts'],roots,'C:/repo',new Set(['',WORKTREE_GROUP]));
  const labels=rows.filter(row=>row.parent===WORKTREE_GROUP).map(row=>row.name);
  expect(new Set(labels).size).toBe(2);expect(labels).toEqual(roots.slice(1).map(root=>root.root));
+});
+
+it('migrates retained old main folder keys once and leaves other worktrees open',()=>{
+ const before=new Set(['','worktree-main/src','worktree-child/src',WORKTREE_GROUP]);
+ const after=canonicalFileFolders(before,roots,'C:/repo');
+ expect(after).toEqual(new Set(['','src','worktree-child/src',WORKTREE_GROUP]));
+ expect(before.has('worktree-main/src')).toBe(true);
+ expect(canonicalFileFolders(after,roots,'C:/repo')).toBe(after);
+ expect(canonicalFileFolders(before,roots,undefined)).toBe(before);
 });

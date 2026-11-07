@@ -15,6 +15,17 @@ export function currentWorkspacePath(path:string, roots:RecordedFileRoot[], work
   return workspaceRoot && normalize(root.root)===normalize(workspaceRoot) ? path.slice(root.prefix.length+1) : undefined;
 }
 
+/** Upgrade retained main-folder keys without changing another worktree's identity. */
+export function canonicalFileFolders(opened:Set<string>, roots:RecordedFileRoot[], workspaceRoot:string|undefined):Set<string> {
+  let next:Set<string>|undefined;
+  for(const path of opened) {
+    const mapped=currentWorkspacePath(path,roots,workspaceRoot);
+    if(mapped===undefined||mapped===path)continue;
+    next??=new Set(opened);next.delete(path);next.add(mapped);
+  }
+  return next??opened;
+}
+
 /** Display structure only: every leaf keeps the projection's exact path identity. */
 export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], workspaceRoot: string | undefined, opened: Set<string>, query = '', placement?: FilePlacement): FileTreeRow[] {
   const byPrefix = new Map(roots.map(root => [root.prefix, root]));
