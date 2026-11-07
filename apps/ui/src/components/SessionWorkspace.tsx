@@ -1,3 +1,4 @@
+import {ProseFilesProvider} from './ProseFiles.tsx';
 import {QueuedInputs} from './QueuedInputs.tsx';
 import {currentReadingTarget,currentReadingFailure} from '../lib/file-reading.ts';
 import {CapturedFileFallback} from './FileHistory.tsx';
@@ -107,7 +108,7 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments, options); if (useApp.getState().source === source && useApp.getState().recordingId === id) { acceptInvestigation(source!,id!,state,prompt); ++revision.current; setController(state); } }
     finally { if (useApp.getState().source === source && useApp.getState().recordingId === id) setSubmitting(false); }
   };
-  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect }}>{children}</SessionContext.Provider>;
+  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect }}><ProseFilesProvider approved={!!workspace?.approved}>{children}</ProseFilesProvider></SessionContext.Provider>;
 }
 
 /** Native live receipt is separate from persisted evidence and disappears on capture. */
@@ -186,6 +187,19 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   }, [source, id, graph, graphRetry]);
   const paths = useMemo(() => [...new Set([...(graph?.nodes.map(n => n.path) ?? []), ...(files?.map(f => f.path) ?? [])].filter(p => !(graph?.temporal === 'current' && p.startsWith('.local/')) && !p.startsWith('/') && !/^[A-Za-z]:/.test(p) && (!touchedOnly || touched.paths.has(p))))].sort(), [graph, files, touchedOnly, touched]);
   const tree = useMemo(() => worktreeFileRows(paths,fileRoots,capturedRoot ?? projection.workspaceRoot,opened,query), [paths,fileRoots,capturedRoot,projection.workspaceRoot,query,opened]);
+  const [revealedFolder,setRevealedFolder]=useWorkspaceState<string|undefined>('folders/revealed',undefined);
+  const pendingFolder=useRef<string|undefined>(undefined);
+  useEffect(()=>{
+    const reveal=(event:Event)=>{
+      const path=(event as CustomEvent).detail;
+      if(typeof path!=='string'||!paths.some(file=>file.startsWith(path+'/')))return;
+      const parents=path.split('/').map((_,i,parts)=>parts.slice(0,i+1).join('/'));
+      pendingFolder.current=path;setRevealedFolder(path);setQuery('');setTouchedOnly(false);
+      setOpened(previous=>new Set(['',...previous,...(fileRoots.some(root=>path.startsWith(root.prefix+'/'))?['\u0000recorded-worktrees']:[]),...parents]));
+    };
+    window.addEventListener('drishya-reveal-prose-folder',reveal);
+    return()=>window.removeEventListener('drishya-reveal-prose-folder',reveal);
+  },[paths,fileRoots,setOpened,setQuery,setTouchedOnly,setRevealedFolder]);
   const siblingPositions = useMemo(() => {
     const groups = new Map<string, string[]>();
     for (const row of tree) {
@@ -246,6 +260,14 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     el.scrollTop = Math.max(0, Math.min(top, tree.length * rowHeight - el.clientHeight));
     setTreeScroll(el.scrollTop);
   }, [tree]);
+  useLayoutEffect(()=>{
+    const path=pendingFolder.current,element=treeElement.current;
+    if(!path||!element||!shown)return;
+    const index=tree.findIndex(row=>row.path===path);if(index<0)return;
+    pendingFolder.current=undefined;
+    element.scrollTop=Math.max(0,index*rowHeight-element.clientHeight/3);setTreeScroll(element.scrollTop);
+    requestAnimationFrame(()=>element.querySelector<HTMLElement>(`[data-tree-index="${index}"]`)?.focus({preventScroll:true}));
+  },[tree,shown,setTreeScroll]);
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
   if (!shown) return null;
   return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
@@ -277,7 +299,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       requestAnimationFrame(() => el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true }));
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
-      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-label={row.name} aria-description={fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined)} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-tree-path={row.path} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.location ?? (row.worktree ? row.name : row.path)} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
+      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-selected={row.path===revealedFolder} aria-label={row.name} aria-description={fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined)} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-tree-path={row.path} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.location ?? (row.worktree ? row.name : row.path)} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
         const currentPath=currentWorkspacePath(row.path,fileRoots,workspace?.root);
         if(!row.folder&&currentPath!==undefined&&source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);
         if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }

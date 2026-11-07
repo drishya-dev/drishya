@@ -6,13 +6,16 @@ import { createElement, useContext, useState, type ReactNode } from 'react';
 import { FencedCode } from '../components/FencedCode.tsx';
 import { prosePath } from './prose-path.ts';
 import {fileName} from './file-identity.ts';
+import {ProseFiles} from '../components/ProseFiles.tsx';
+import {ProseFileLink,ProseFileText} from '../components/ProseFileLink.tsx';
 import {OriginalToggle,OriginalOwned} from '../components/OriginalToggle.tsx';
 import {tableCells, tableHeader} from './markdown-table.ts';
 import './markdown-table.css';
 
 type PathAction = (path: string, line?: number) => void;
 export function Markdown({ text, onPath, document = false, workspaceRoot }: { text: string; onPath?: PathAction; document?: boolean; workspaceRoot?:string }) {
-  return renderMarkdown(text, onPath, document, 0, workspaceRoot);
+  const rendered=renderMarkdown(text, onPath, document, 0, workspaceRoot);
+  return document?<ProseFiles.Provider value={undefined}>{rendered}</ProseFiles.Provider>:rendered;
 }
 
 const listMarker = (line: string) => /^( *)([-+*]|\d{1,9}[.)])([ \t]+)(.*)$/.exec(line);
@@ -124,7 +127,7 @@ function inline(s: string, onPath?: PathAction, workspaceRoot?:string, tableLink
   let k = 0;
   for (const m of s.matchAll(re)) {
     const i = m.index ?? 0;
-    if (i > last) out.push(s.slice(last, i));
+    if (i > last) out.push(<ProseFileText key={`text-${i}`} text={s.slice(last,i)}/>);
     if (m[7]) {
       const attributes = new Map<string,string>();
       for (const attribute of m[7].matchAll(/([\w_]+)\s*=\s*("(?:\\.|[^"\\])*"|[^\s}]+)/g)) {
@@ -144,28 +147,31 @@ function inline(s: string, onPath?: PathAction, workspaceRoot?:string, tableLink
         const lastLine = end && /^[1-9]\d{0,8}$/.test(end) ? Number(end) : undefined;
         const label = `${fileName(path)}${line ? `:${line}${lastLine && lastLine > line ? `–${lastLine}` : ''}` : ''}`;
         const reference = prosePath(path, workspaceRoot, true);
-        out.push(reference && onPath
+        const fallback=reference && onPath
           ? <button type="button" key={k++} className="md-path md-link" title={path} aria-label={`Open work on ${reference.path}${line ? ` at line ${line}` : ''}`} onClick={() => onPath(reference.path, line)}><code>{label}</code></button>
-          : <span key={k++} className="md-link" title={path}><code>{label}</code></span>);
+          : <span key={k++} className="md-link" title={path}><code>{label}</code></span>;
+        out.push(<ProseFileLink key={k++} value={line?`${path}:${line}`:path} fallback={fallback}><code>{label}</code></ProseFileLink>);
       }
     } else if (m[1]) {
       const code = m[1].slice(1, -1);
       const reference = prosePath(code,workspaceRoot);
-      out.push(
+      const fallback=(
         reference && onPath ? (
           <button type="button" key={k++} className="md-path" aria-label={`Open work on ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path, reference.line)}><code>{code}</code></button>
         ) : (
           <code key={k++}>{code}</code>
-        ),
+        )
       );
+      out.push(<ProseFileLink key={k++} value={code} fallback={fallback}><code>{code}</code></ProseFileLink>);
     } else if (m[2]) out.push(<strong key={k++}>{inline(m[2].slice(2, -2), onPath, workspaceRoot,tableLinks)}</strong>);
     else if (m[6]) out.push(<em key={k++}>{inline(m[6].slice(1,-1), onPath, workspaceRoot,tableLinks)}</em>);
     else if (m[3]) {
       const reference=prosePath(m[5]!,workspaceRoot);
-      out.push(reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open work on ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:tableLinks&&/^https?:\/\/[^\s\x00-\x1f]+$/i.test(m[5]!)?<a key={k++} className="md-link" href={m[5]} target="_blank" rel="noopener noreferrer">{inline(m[4]!)}</a>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>);
+      const fallback=reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open work on ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:tableLinks&&/^https?:\/\/[^\s\x00-\x1f]+$/i.test(m[5]!)?<a key={k++} className="md-link" href={m[5]} target="_blank" rel="noopener noreferrer">{inline(m[4]!)}</a>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>;
+      out.push(<ProseFileLink key={k++} value={m[5]!} fallback={fallback}><span className="md-link" title={m[5]}>{inline(m[4]!)}</span></ProseFileLink>);
     }
     last = i + m[0].length;
   }
-  if (last < s.length) out.push(s.slice(last));
+  if (last < s.length) out.push(<ProseFileText key="tail" text={s.slice(last)}/>);
   return out;
 }
