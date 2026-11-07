@@ -29,3 +29,10 @@ for(const width of[600,1440])test(`prose file references show captured contents 
  await prose.getByRole('button',{name:'Open work on docs/preview.png',exact:true}).click();const image=page.getByRole('dialog',{name:'docs/preview.png',exact:true});await image.getByRole('button',{name:'Open current file',exact:true}).click();await expect(image.locator('.path-image-current img')).toBeVisible();await image.getByRole('button',{name:'Open current image reader',exact:true}).click();const full=page.getByRole('dialog',{name:'Current image reader',exact:true});await expect(full).toBeVisible();await page.keyboard.press('Escape');await expect(full).toHaveCount(0);await expect(image).toBeVisible();await page.keyboard.press('Escape');await expect(image).toHaveCount(0);await expect(page.locator('.developer-workspace')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+test('Legacy current-tree references use its existing file reader',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});await page.addInitScript(()=>{localStorage.setItem('drishya-dev-ui-versions','1');localStorage.setItem('drishya-experience-v4','classic');});
+ await page.route('**/v1/working-locations',r=>r.request().method()==='GET'?r.fulfill({json:{version:1,sessions:[]}}):r.continue());
+ await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=classic&motion=0#/r/${id}`);
+ const files=page.getByRole('complementary',{name:'Session folders'});await files.getByRole('button',{name:/Enable workspace reading/}).click();
+ await page.locator('.prose').getByRole('button',{name:'Open work on docs/current-only.md',exact:true}).click();await expect(page.getByRole('dialog',{name:/docs\/current-only.md/})).toContainText('CURRENT_ONLY_VALUE');await expect(page.locator('.developer-workspace')).toHaveCount(0);
+});

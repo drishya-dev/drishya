@@ -38,7 +38,12 @@ export function ProseFilesProvider({children,approved}:{children:ReactNode;appro
   }
   if(capturedImage){state.set({follow:false,held:true});setPathImage({source,id,path:capturedImage.path,op:capturedImage.op});return;}
   const current=currentWorkspacePath(reference.path,roots,root);
-  if(!reference.captured&&approved&&state.mode==='history'&&current!==undefined){state.set({developerWorkspace:false,explore:false,follow:false,held:true});window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:current}}));return;}
+  if(!reference.captured&&approved&&state.mode==='history'&&current!==undefined){
+   state.set({developerWorkspace:false,explore:false,follow:false,held:true});
+   if(document.documentElement.dataset.uiVersion==='modern')window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:current}}));
+   else state.set({currentFile:current,filePanel:undefined});
+   return;
+  }
   state.set({hoveredPath:reference.path,filePanel:reference.path,filePanelFocus:undefined,filePanelEvidence:undefined,filePanelLine:reference.line,currentFile:undefined,selectedOp:undefined,expandedOp:undefined,developerWorkspace:false,explore:false,follow:false,held:true});
  }}),[index,approved,roots,root,imageFiles,source,id]);
  return <ProseFiles.Provider value={value}>{children}{image&&image.source===source&&image.id===id&&projection?.operations.some(op=>op.id===image.operation&&op.endSequence!==undefined)&&<ImageReader src={image.url} image={image.image} onClose={()=>setImage(undefined)}/>}{pathImage&&pathImage.source===source&&pathImage.id===id&&projection?.operations.some(op=>op.id===pathImage.op.id)&&<ReadingDialog title={pathImage.path} close={()=>setPathImage(undefined)}><PathImage op={pathImage.op} path={pathImage.path}/></ReadingDialog>}</ProseFiles.Provider>;

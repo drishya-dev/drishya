@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-12 | @yash + Codex (Sol 6.1) | `codex/files-12` | 2026-11-07 | Evidence-resolved prose path module/provider, markdown.tsx inline/bare links only, SessionWorkspace.tsx provider wiring and Files folder reveal only, OpImages.tsx export its existing ImageReader and keep nested image Escape in its own dialog only (no appearance/motion changes); focused unit/browser/real-session tests and docs, at most 15 paths. Preserve FILES-2 peek links; no History/motion/scroll edits without a separate reservation. Existing classes/tokens only; look left to FINISH-3. Builder resolved #357: file references open the existing file preview and show contents; preserve captured/current consent and FILES-2. No extra icon action. |
 | CLARITY-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/clarity-1` | 2026-11-06 | `lib/ui-version.ts`, `UIVersions.tsx`, `main.tsx`, `apps/ui/vite.config.ts`, new `apps/ui/src/clarity/`, `!important` guards in legacy sheets; scripts for the pixel guard. |
 | FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
 | FINISH-0b | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0b` | 2026-11-06 | New `components/overlay/*`; every file with a native select or a details menu; `ProductMenu.tsx`, `lib/dismiss-menus.ts`; after 0a. |
@@ -84,11 +83,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
   - #346 and #344 stay draft. #346 waits on AUDIT-1's gate; #344 waits on the schema agreement.
   - #351 (FINISH-0a in Modern's sheets) is closed as superseded.
 - **Next:** verify CLARITY-1, then FINISH-0a in Clarity (Inter, palettes, tokens, buttons, switch, inputs), then 0b, 0c and FINISH-1 (Home A).
-### Yash with Codex — 7 Nov: FILES-12 file-preview behavior clarified
+### Yash with Codex — 7 Nov: FILES-12 complete, review #357
 
-- Diagnosis and real-session baseline are draft #357; no runtime change. Bare names, folders and outside paths bypass or fail the current lexical parser. Existing prose links open captured peek in genuine Codex and Claude sessions at 600/1440; the current browser contract passes.
-- Builder clarified that referenced files must open the file preview and show their contents. FILES-2 remains the file destination; FILES-12 adds evidence-backed recognition of missing references. Task remains unchecked during implementation. [Details](review/files-12-prose-destination.md).
-- #353, #354 and #355 remain separate ready PRs; none was merged here. No Clarity, History, motion, shared-style or native changes.
+- File references in agent prose now open the existing file preview and show contents. Captured contents remain the default; current bytes use existing consent. Known folders reveal Files; unmatched or ambiguous names remain literal. No Workspace navigation or visual redesign; the look remains with FINISH-3.
+- Genuine Codex and Claude sessions at 600/1440: 32 file openings across Markdown, inline and bare references, including captured outside-root paths; folder reveal and unknown-name behavior checked. An additional genuine Codex check verified Legacy current-file contents at 1440.
+- Corrected-reference revision full gate: both typechecks, 1,229 units / one existing skip, build/package, 691 browsers / 28 existing skips (Edge three parallel workers plus one serial; zero failures/retries). Subsequent Legacy-only fallback: five focused browsers, genuine Codex contents, both typechecks, all 1,229 units, build/package passed. The full browser suite was not repeated after that guarded fallback.
+- First-run failures, repaired exact-caption checks and the independently reproduced clean-main Toolbox animation flake remain in the [acceptance record](review/files-12-prose-destination.md). #357 is ready for the other builder's review; no merge here. No Clarity, History or stylesheet changes.
 
 ### Yash with Claude — 5 Nov: MOTION-1 merged, AUDIT-1 walk finished, A3 next
 
