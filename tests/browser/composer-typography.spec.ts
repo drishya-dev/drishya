@@ -188,6 +188,7 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
     await expect(composer.getByRole('button', { name: 'Expand prompt', exact: true })).toBeVisible();
     await everyPalette(page, `${width} unreachable (pill)`);
     await expand(composer);
+    await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toHaveAttribute('title', /Connection .* unavailable/);
     await everyPalette(page, `${width} unreachable (expanded)`);
   });
 }
