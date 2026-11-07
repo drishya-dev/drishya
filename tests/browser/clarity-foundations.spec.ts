@@ -232,3 +232,26 @@ test('Settings in Clarity: every sentence and label is at least 12 px, every con
     expect(small, section).toEqual([]);
   }
 });
+
+test('the text field: height 28, hover, focus ring, placeholder and error states', async ({ page }) => {
+  await page.goto(url('clarity', { motion: true }));
+  await expect(page.locator('[data-ui-motion]').first()).toBeVisible();
+  await page.evaluate(() => {
+    const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:8px;bottom:8px;width:240px;z-index:9999;padding:8px;background:var(--bg)';
+    host.innerHTML = '<input id="f-ok" class="cl-field" placeholder="Placeholder" aria-label="Plain"><input id="f-bad" class="cl-field" aria-invalid="true" aria-label="Invalid" aria-describedby="f-bad-error"><p id="f-bad-error" class="cl-field-error">Enter a number of lines, for example 200.</p>';
+    document.body.append(host);
+  });
+  const read = (id: string, names: string[]) => page.locator('#' + id).evaluate((el, props) => { const s = getComputedStyle(el); return Object.fromEntries(props.map(p => [p, s.getPropertyValue(p)])); }, names);
+  const color = (token: string) => page.evaluate(t => { const p = document.createElement('i'); p.style.color = `var(${t})`; document.body.append(p); const c = getComputedStyle(p).color; p.remove(); return c; }, token);
+  expect(await read('f-ok', ['height', 'border-top-left-radius', 'font-size'])).toEqual({ height: '28px', 'border-top-left-radius': '6px', 'font-size': '13px' });
+  expect((await read('f-ok', ['border-top-color']))['border-top-color']).toBe(await color('--line-2'));
+  await page.locator('#f-ok').hover(); await page.waitForTimeout(300);
+  expect((await read('f-ok', ['border-top-color']))['border-top-color']).toBe(await color('--line-3'));
+  await page.locator('#f-ok').focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab'); await page.waitForTimeout(300);
+  const focused = await read('f-ok', ['border-top-color', 'box-shadow']);
+  expect(focused['border-top-color']).toBe(await color('--focus')); expect(focused['box-shadow']).toContain('3px');
+  expect(await page.locator('#f-ok').evaluate(el => getComputedStyle(el, '::placeholder').color)).toBe(await color('--t4'));
+  // Error: a --fail border and a 12 px --fail message under the field.
+  expect((await read('f-bad', ['border-top-color']))['border-top-color']).toBe(await color('--fail'));
+  expect(await read('f-bad-error', ['color', 'font-size'])).toEqual({ color: await color('--fail'), 'font-size': '12px' });
+});

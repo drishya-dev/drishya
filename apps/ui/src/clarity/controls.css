@@ -76,7 +76,7 @@
   border: 1px solid var(--line); border-radius: var(--round-md); background: var(--s1); box-shadow: none; overflow: visible;
 }
 :root[data-ui-skin=clarity] :is(.seg, .workspace-toggles) > button {
-  position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1h); box-sizing: border-box;
+  position: relative; z-index: var(--z-stage); display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1h); box-sizing: border-box;
   height: var(--control-md); min-height: var(--control-md); padding: 0 var(--sp-3); margin: 0; border: 1px solid transparent; border-radius: var(--round-sm); background: transparent; box-shadow: none;
   color: var(--t2); font: var(--weight-medium) var(--text-xs)/1 var(--sans); letter-spacing: 0; white-space: nowrap; cursor: pointer;
 }
@@ -87,7 +87,7 @@
 /* With a single chosen option the pill draws the selection, so the button itself stays clear. */
 :root[data-ui-skin=clarity] :is(.seg, .workspace-toggles)[data-seg] > :is([aria-pressed=true], .on) { background: transparent; border-color: transparent; }
 :root[data-ui-skin=clarity] :is(.seg, .workspace-toggles)[data-seg]::before {
-  content: ''; position: absolute; z-index: 0; left: 0; top: 0; width: var(--seg-w); height: var(--seg-h); box-sizing: border-box;
+  content: ''; position: absolute; left: 0; top: 0; width: var(--seg-w); height: var(--seg-h); box-sizing: border-box;
   border: 1px solid var(--line-3); border-radius: var(--round-sm); background: var(--s3);
   transform: translate(var(--seg-x), var(--seg-y)); pointer-events: none;
 }

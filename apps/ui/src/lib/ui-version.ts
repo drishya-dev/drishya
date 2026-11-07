@@ -32,6 +32,8 @@ export function resolveUISkin(search: string, saved?: string | null): UISkin {
   return saved === 'clarity' ? 'clarity' : 'modern';
 }
 export function selectedUISkin(): UISkin {
+  // Units import the store without a page: no location means no Clarity.
+  if (typeof location === 'undefined') return 'modern';
   let saved: string | null = null;
   try { saved = localStorage.getItem(key); } catch { /* URL selection works without storage. */ }
   return resolveUISkin(location.search, saved);

@@ -8,9 +8,7 @@ import { nextMarker, type ComposeInput, type Marker } from '@drishya/scene';
 import type { Config, DataSource, ReaderRecording } from './api.ts';
 import { latestOnly } from './lib/sync.ts';
 import { selectedUISkin } from './lib/ui-version.ts';
-
-/** Declared before the store, which reads the saved theme while it is created. */
-export const CLARITY_THEME_KEY = 'drishya.clarity.theme';
+import { CLARITY_THEME_KEY, clarityPaletteFor, type ClarityPalette } from './clarity/palette.ts';
 import { materialCache } from './lib/artifact-cache.ts';
 import { workspaceMemory } from './lib/workspace-memory.ts';
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
@@ -340,18 +338,6 @@ export function setMapVisible(on: boolean) {
 
 /** Jet (stored as 'dark') is the signature default: matte black and champagne gold. Midnight is the cooler option. */
 export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system' | 'mocha' | 'tokyo' | 'nord' | 'gruvbox' | ClarityPalette;
-/** Clarity's two palettes (FINISH-0a). Stored under their own key, so Modern's saved palette is never touched. */
-export type ClarityPalette = 'graphite' | 'porcelain';
-
-/**
- * A Modern palette maps to the Clarity palette of the same scheme: the light ones (Daylight, Royal) to Porcelain, every dark one to Graphite.
- * Used until the person makes a Clarity choice of their own, which is then saved separately.
- */
-export function clarityPaletteFor(modern: string | null | undefined, prefersLight: boolean): ClarityPalette {
-  if (modern === 'light' || modern === 'tokyo') return 'porcelain';
-  if (modern === 'system') return prefersLight ? 'porcelain' : 'graphite';
-  return 'graphite';
-}
 function storedClarityTheme(): ClarityPalette {
   try {
     const own = localStorage.getItem(CLARITY_THEME_KEY);
