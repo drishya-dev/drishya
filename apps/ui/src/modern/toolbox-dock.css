@@ -28,6 +28,8 @@
 
 :root[data-ui-version=modern][data-experience=classic] .toolbox-rail > .modern-tool-station.toolbox-minimized {
   height: 42px;
+  overflow: visible;
+  scrollbar-gutter: auto;
 }
 
 :root[data-ui-version=modern] .modern-toolbox .tool-heading {

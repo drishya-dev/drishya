@@ -60,6 +60,11 @@ test('toolbox minimizes from actual bounds and keeps its compact icon and indepe
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
  expect((await toolbox.locator('[data-surface-label] svg').boundingBox())!.height).toBeLessThan(24);
  await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ const compact=toolbox.getByRole('button',{name:'Expand toolbox',exact:true});
+ expect(await compact.evaluate(button=>{
+  const box=button.getBoundingClientRect();
+  return button.contains(document.elementFromPoint(box.right-2,box.top+box.height/2));
+ })).toBe(true);
  await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
  await expect(page.getByRole('complementary',{name:'Tools and agents'})).toBeVisible();
  await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toHaveCount(0);

@@ -139,12 +139,21 @@ test('pointer disclosure recentres the same dock and reduced motion settles imme
   await expect.poll(() => dock.evaluate(node => node.getAnimations().length)).toBe(1);
   await dock.evaluate(node => {
     const animation = node.getAnimations()[0];
+    (window as unknown as { firstRecentering: Animation }).firstRecentering = animation;
     animation.currentTime = 70;
   });
   await group.locator('summary').first().click();
   await expect(group).not.toHaveAttribute('open', '');
-  await expect.poll(() => dock.evaluate(node => node.getAnimations().length)).toBe(1);
+  await expect.poll(() => dock.evaluate(node => {
+    const animations = node.getAnimations();
+    return animations.length === 1 && animations[0] !==
+      (window as unknown as { firstRecentering: Animation }).firstRecentering;
+  })).toBe(true);
+  await group.locator('summary').first().press('Enter');
+  await expect(group).toHaveAttribute('open', '');
+  expect(await dock.evaluate(node => node.getAnimations().length)).toBe(0);
   expect(await dock.evaluate(node => (window as unknown as { originalDock: Element }).originalDock === node)).toBe(true);
+  await group.locator('summary').first().press('Escape');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => dock.evaluate(node => node.getAnimations().length)).toBe(0);
   await group.locator('summary').first().click();
