@@ -7,6 +7,7 @@ import { redactText, sanitize } from '@drishya/privacy';
 import { App, HttpError } from './app.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { executable } from './native-executable.ts';
+import {nativeReadiness} from './native-readiness.ts';
 import { attachmentText, prepareAttachments, type PromptAttachment } from './prompt-attachments.ts';
 import { inspectNative, turnOptions, type NativeSettings, type TurnOptions, type NativeUsage } from './native-settings.ts';
 export { executable } from './native-executable.ts';
@@ -69,6 +70,10 @@ export class HarnessController {
     const rec = this.app.recording(id);
     const name = rec.harness === 'claude-code' ? 'claude' : rec.harness === 'codex' ? 'codex' : undefined;
     return this.runs.get(id)?.state ?? { state: 'idle', harness: rec.harness, available: !!name && !!(this.options.resolveExecutable ?? executable)(name), output: '', tools: [], inventory: 'unknown', approvals: [], settings: this.settings.get(id) };
+  }
+
+  async readiness(id:string) {
+    return nativeReadiness(this.app.recording(id).harness,this.app.store.dataDir,this.options);
   }
 
   async inspect(id: string): Promise<ControllerState> {

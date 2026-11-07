@@ -42,7 +42,8 @@ import { sendWaitReason } from '../lib/send-wait.ts';
 interface Connection {
   submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => Promise<void>;
   workspace?: WorkspaceStatus; controller?: ControllerStatus; error?: string;
-  refresh: () => Promise<void>; approve: () => Promise<void>; inspect?: () => Promise<void>;
+  acknowledged?:boolean; acknowledge?:(value:boolean)=>void;
+  refresh: () => Promise<void>; approve: (remember?:boolean) => Promise<void>; inspect?: () => Promise<void>;
 }
 const SessionContext = createContext<Connection>({ refresh: async () => {}, approve: async () => {}, submit: async () => {} });
 export const useSessionWorkspace = () => useContext(SessionContext);
@@ -50,6 +51,8 @@ export const useSessionWorkspace = () => useContext(SessionContext);
 export function SessionWorkspaceProvider({ children }: { children: ReactNode }) {
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
+  const connection=useApp(s=>s.connection),screen=useApp(s=>s.screen);
+  const [acknowledged,acknowledge]=useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceStatus>();
   const [controller, setController] = useState<ControllerStatus>();
   const [error, setError] = useState<string>();
@@ -69,10 +72,11 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     ]);
     if(!current())return;
     const errors=results.flatMap((result,index)=>result.status==='rejected'?[`${index===0?'Workspace':'Native runtime'}: ${result.reason.message}`]:[]);
+    if(errors.length)acknowledge(false);
     setError(errors.join(' · ')||undefined);
   };
   useEffect(() => {
-    setWorkspace(undefined); setController(undefined); setError(undefined); setSubmitting(false);
+    setWorkspace(undefined); setController(undefined); setError(undefined); setSubmitting(false); acknowledge(false);
     let active = true; let busy = false; let timer: ReturnType<typeof setTimeout>;
     const load = async () => {
       if (!active || busy) return;
@@ -87,11 +91,19 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     void load();
     return () => { active = false; clearTimeout(timer); revision.current++; wake.current = undefined; };
   }, [id, source]);
+  // Consent belongs to this selected-session connection, never to a saved checkout or turn.
+  useEffect(()=>{if(connection!=='connected'||screen!=='viewer'||controller?.state==='failed'||controller?.available===false||workspace?.approved===false)acknowledge(false);},[connection,screen,controller?.state,controller?.available,workspace?.approved]);
+  useEffect(()=>{
+    if(!eligible||!workspace?.approved)return;
+    let active=true;
+    void source!.graph(id!).then(graph=>{if(active&&useApp.getState().source===source&&useApp.getState().recordingId===id)useApp.setState({graph});}).catch(()=>{});
+    return()=>{active=false;};
+  },[id,source,workspace?.approved]);
   useEffect(() => { if (['connecting', 'running', 'approval'].includes(controller?.state ?? '')) wake.current?.(); }, [controller?.state]);
-  const approve = async () => {
+  const approve = async (remember=false) => {
     if (!eligible) return;
     ++revision.current;
-    const w = await workspaceApi.approve(id!);
+    const w = await workspaceApi.approve(id!,remember);
     const graph = await source!.graph(id!);
     if (useApp.getState().source !== source || useApp.getState().recordingId !== id) return;
     ++revision.current;
@@ -107,9 +119,10 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     setSubmitting(true);
     ++revision.current;
     try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments, options); if (useApp.getState().source === source && useApp.getState().recordingId === id) { acceptInvestigation(source!,id!,state,prompt); ++revision.current; setController(state); } }
+    catch(error){acknowledge(false);throw error;}
     finally { if (useApp.getState().source === source && useApp.getState().recordingId === id) setSubmitting(false); }
   };
-  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect }}><ProseFilesProvider approved={!!workspace?.approved}>{children}</ProseFilesProvider></SessionContext.Provider>;
+  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect, acknowledged, acknowledge }}><ProseFilesProvider approved={!!workspace?.approved}>{children}</ProseFilesProvider></SessionContext.Provider>;
 }
 
 /** Native live receipt is separate from persisted evidence and disappears on capture. */
@@ -165,6 +178,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const { workspace, approve } = useSessionWorkspace();
   const [query, setQuery] = useWorkspaceState('folders/query', '');
   const [approving,setApproving] = useState(false);
+  const [remember,setRemember]=useState(true);
   const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
   useEffect(()=>{const reveal=(event:Event)=>{const path=(event as CustomEvent).detail;if(typeof path==='string'){setQuery(path);setTouchedOnly(false);}};window.addEventListener('drishya-reveal-captured-file',reveal);return()=>window.removeEventListener('drishya-reveal-captured-file',reveal);},[setQuery,setTouchedOnly]);
   const treeElement = useRef<HTMLDivElement>(null);
@@ -280,7 +294,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         <div className="tree-evidence-filter-menu">{[{value:false,label:'All files'},{value:true,label:'Touched'}].map(option=><button key={option.label} type="button" aria-pressed={touchedOnly===option.value} onClick={event=>{setTouchedOnly(option.value);const menu=event.currentTarget.closest('details')!;menu.open=false;menu.querySelector('summary')?.focus();}}>{option.label}</button>)}<small>Activity in this session. Badges describe tool calls, not current Git status.</small></div>
       </details>
     </div>
-    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}
+    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <><button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve(document.documentElement.dataset.uiVersion==='modern'&&remember).catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>{document.documentElement.dataset.uiVersion==='modern'&&<label><input type="checkbox" checked={remember} disabled={approving} onChange={event=>setRemember(event.target.checked)} /> Remember for this checkout</label>}</>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
       if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
@@ -420,7 +434,7 @@ export function PromptComposer() {
   const id = useApp(s => s.recordingId);
   const recording = useApp(s => s.recording);
   const connection = useApp(s => s.connection);
-  const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect } = useSessionWorkspace();
+  const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect, acknowledged, acknowledge } = useSessionWorkspace();
   // 'auto' collapses an idle composer to its pill so it never covers the newest work; the person's own open/close choice always wins.
   const [choice,setChoice]=useWorkspaceState<'auto'|'open'|'closed'>('composer/choice','auto');
   const now = useNowText();
@@ -430,7 +444,7 @@ export function PromptComposer() {
   const [prompt, updatePrompt] = useState(() => source && id ? promptDrafts(source).get(id) : '');
   const setPrompt = (text: string) => { if (source && id) promptDrafts(source).set(id, text); updatePrompt(text); };
   useEffect(() => { const changed = () => { if (source && id) { setChoice('open'); updatePrompt(promptDrafts(source).get(id)); requestAnimationFrame(() => input.current?.focus({ preventScroll: true })); } }; window.addEventListener('drishya-composer-draft', changed); return () => window.removeEventListener('drishya-composer-draft', changed); }, [source, id]);
-  const [exclusive, setExclusive] = useState(false);
+  const exclusive=!!acknowledged, setExclusive=(value:boolean)=>acknowledge?.(value);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const element = useRef<HTMLElement>(null);
@@ -497,7 +511,7 @@ export function PromptComposer() {
     if (busy || controller && ['connecting', 'running', 'approval'].includes(controller.state)) { setError('Wait for the current turn, then attach the files again. They were not added.'); return; }
     if (files.length + queuedFiles.current + attachmentRef.current.length > 32) { setError('Select at most 32 files, including files being prepared.'); return; }
     queuedFiles.current += files.length;
-    setLoadingFiles(true); setError(undefined); setAddOpen(false); setConfirmSend(false); setExclusive(false);
+    setLoadingFiles(true); setError(undefined); setAddOpen(false); setConfirmSend(false);
     const task = fileQueue.current.then(async () => {
       if (!active.current) return;
       try {
@@ -600,8 +614,8 @@ export function PromptComposer() {
   const nativeOptions = <>      <details className="permission-policy native-options"><summary>{modern ? <><svg className="native-options-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Connection & permissions</span></> : <>{options.model ?? controller?.settings?.model ?? 'Native settings'} · {controller?.settings?.permission ?? 'Native policy'}</>}</summary><div className="native-options-menu">{modern && connectionSetup}<small title={workspace?.root}>Target: {workspace?.root ?? 'Workspace unavailable'} · recording {id.slice(-8)}</small><small>Native settings describe the last reported policy; the harness validates permissions when connecting.</small>
         <button disabled={!!running || busy || !workspace?.approved} onClick={() => inspect && void act(inspect)}>Read native settings</button>
         {!!controller?.settings && <><small>{controller.settings.scope === 'connected-session' ? 'Connected session' : 'Workspace defaults'} · {controller.settings.permission ?? 'Policy reported after connecting'}{controller.settings.sandbox && ` · ${controller.settings.sandbox}`}</small>
-          <label>Model<select disabled={!!running || busy} value={options.model ?? ''} onChange={e => { setOptions(e.target.value ? { model: e.target.value } : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>
-          <label>Effort<select disabled={!!running || busy} value={options.effort ?? ''} onChange={e => { setOptions({ ...options, effort: e.target.value || undefined }); setExclusive(false); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select></label>
+          <label>Model<select disabled={!!running || busy} value={options.model ?? ''} onChange={e => { setOptions(e.target.value ? { model: e.target.value } : {}); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>
+          <label>Effort<select disabled={!!running || busy} value={options.effort ?? ''} onChange={e => { setOptions({ ...options, effort: e.target.value || undefined }); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select></label>
         </>}
         <small>Each Allow once applies only to its native request. Full access and global settings remain in the native CLI.</small>
       </div></details></>;
@@ -615,11 +629,11 @@ export function PromptComposer() {
       {!modern && connectionSetup}
       <input hidden ref={fileInput} type="file" multiple aria-label="Choose prompt files" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <input hidden ref={folderInput} type="file" multiple {...{ webkitdirectory: '' }} aria-label="Choose prompt folder" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
-      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || cannotSend) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); attachmentRef.current = []; setAttachments([]); setPreview(undefined); rejectedFiles.current = []; setCanRetryFiles(false); setExclusive(false); setConfirmSend(false); }); }}>
-        {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<button type="button" className="attachment-preview" onClick={() => setPreview(a)} aria-label={`Preview attachment ${a.name}`}>{a.name}</button><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { attachmentRef.current = attachmentRef.current.filter((_, i) => i !== index); setAttachments(attachmentRef.current); if (preview === a) setPreview(undefined); setExclusive(false); setConfirmSend(false); }}>×</button></span>)}</div>}
-        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = pastedFiles(e.clipboardData); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
+      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || cannotSend) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); attachmentRef.current = []; setAttachments([]); setPreview(undefined); rejectedFiles.current = []; setCanRetryFiles(false); setConfirmSend(false); }); }}>
+        {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<button type="button" className="attachment-preview" onClick={() => setPreview(a)} aria-label={`Preview attachment ${a.name}`}>{a.name}</button><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { attachmentRef.current = attachmentRef.current.filter((_, i) => i !== index); setAttachments(attachmentRef.current); if (preview === a) setPreview(undefined); setConfirmSend(false); }}>×</button></span>)}</div>}
+        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = pastedFiles(e.clipboardData); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setConfirmSend(false); }} />
       <small id="prompt-size-status" className={sizeNote.over ? 'bad' : sizeNote.quiet ? 'sr-only' : 'muted'} role={sizeNote.over ? 'alert' : undefined}>{sizeNote.text}</small>
-        <div className="composer-actions">{modern ? <div className="modern-composer-input-tools"><button type="button" className="modern-attachment" title="Attach text or image" aria-label="Attach text or image files" disabled={!!running || busy || loadingFiles} onClick={() => fileInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 7-7a4 4 0 0 1 6 6L11 21a6 6 0 0 1-8-8L14 2m-6 10 7-7" /></svg></button><button type="button" className="modern-attachment" title="Attach folder contents" aria-label="Attach folder" disabled={!!running || busy || loadingFiles} onClick={() => folderInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg></button>{controller?.settings?.models.length ? <><select className="modern-model-select" aria-label="Native model" value={options.model ?? ''} disabled={!!running || busy} onChange={e => { setOptions(e.target.value ? {model:e.target.value} : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select>{!!controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.length && <select className="modern-effort-select" aria-label="Reasoning effort" value={options.effort ?? ''} disabled={!!running || busy} onChange={e => { setOptions({...options,effort:e.target.value || undefined}); setExclusive(false); setConfirmSend(false); }}><option value="">Default effort</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))!.efforts.map(effort => <option key={effort}>{effort}</option>)}</select>}</> : <span className="modern-native-model">{options.model ?? controller?.settings?.model ?? 'Native defaults'}</span>}</div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title={cannotSend ? sendWaits : 'Send prompt'} disabled={cannotSend}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg>{modern && <span>Send</span>}</button>}</div>
+        <div className="composer-actions">{modern ? <div className="modern-composer-input-tools"><button type="button" className="modern-attachment" title="Attach text or image" aria-label="Attach text or image files" disabled={!!running || busy || loadingFiles} onClick={() => fileInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 7-7a4 4 0 0 1 6 6L11 21a6 6 0 0 1-8-8L14 2m-6 10 7-7" /></svg></button><button type="button" className="modern-attachment" title="Attach folder contents" aria-label="Attach folder" disabled={!!running || busy || loadingFiles} onClick={() => folderInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg></button>{controller?.settings?.models.length ? <><select className="modern-model-select" aria-label="Native model" value={options.model ?? ''} disabled={!!running || busy} onChange={e => { setOptions(e.target.value ? {model:e.target.value} : {}); setConfirmSend(false); }}><option value="">Native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select>{!!controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.length && <select className="modern-effort-select" aria-label="Reasoning effort" value={options.effort ?? ''} disabled={!!running || busy} onChange={e => { setOptions({...options,effort:e.target.value || undefined}); setConfirmSend(false); }}><option value="">Default effort</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))!.efforts.map(effort => <option key={effort}>{effort}</option>)}</select>}</> : <span className="modern-native-model">{options.model ?? controller?.settings?.model ?? 'Native defaults'}</span>}</div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title={cannotSend ? sendWaits : 'Send prompt'} disabled={cannotSend}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg>{modern && <span>Send</span>}</button>}</div>
         {!modern && <div className="composer-add-menu" hidden={!addOpen} data-pointer-menu={addPointer ? '' : undefined}><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}
         {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || cannotSend}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
       </form>
