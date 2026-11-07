@@ -18,6 +18,24 @@ const projection={links:[]};function Fixture(){const[margin,setMargin]=useState(
   await expect(paths).toHaveCount(0);
   await page.getByRole('button', { name: 'Restore target' }).click();
   await expect(paths).toHaveCount(1);
+  const detachedDuringMotion = await page.evaluate(async () => {
+    const card = document.querySelector<HTMLElement>('.op')!;
+    const animation = card.animate([{ transform: 'translateY(0px)' }, { transform: 'translateY(90px)' }], { duration: 300 });
+    animation.id = 'surface-Reflow'; card.classList.add('moving');
+    let detached = 0;
+    while (animation.playState === 'running') {
+      await new Promise(requestAnimationFrame);
+      for (const path of document.querySelectorAll<SVGPathElement>('[data-flow-link]')) {
+        for (const [point, id] of [[path.getPointAtLength(0), path.dataset.flowFrom], [path.getPointAtLength(path.getTotalLength()), path.dataset.flowTo]] as const) {
+          const r = document.querySelector<HTMLElement>(`[data-op-id="${id}"]`)!.getBoundingClientRect();
+          if (point.x < r.left - 1 || point.x > r.right + 1 || point.y < r.top - 1 || point.y > r.bottom + 1) detached++;
+        }
+      }
+    }
+    animation.cancel(); card.classList.remove('moving'); return detached;
+  });
+  expect(detachedDuringMotion).toBe(0);
+  await expect(paths).toHaveCount(1);
   await page.locator('.op').first().evaluate(el => { el.style.height = '420px'; });
   await page.locator('.op').last().evaluate(el => { el.style.marginTop = '190px'; });
   await page.locator('.history').evaluate(el => { el.scrollTop = 100; el.dispatchEvent(new Event('scroll')); });
