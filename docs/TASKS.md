@@ -747,9 +747,20 @@ The launch date is decided at the 18 November review, from where the list stands
 - [x] **DATA-13 · Two tabs of one session save reading positions without conflict** · P3 · `data` — found by AUDIT-1 (B2). `PUT /v1/working-locations` answers 409 while two tabs of one session write.
   - **Accept:** two open tabs both keep their positions, or the later write wins quietly, with no failed requests.
 
+### IDEA — deferred detail entries
+
+These unchecked entries mirror the existing P3 priority rows. This is the requested checklist repair, not a scheduling or implementation decision. All six remain deferred; IDEA-6 remains explicitly parked, not planned.
+
+- [ ] **IDEA-1 · Explicit two-session comparison; measured density option** · P3 · `turn` `ui` — deferred idea. Preserve independent session evidence; any density choice needs its own measured usability/performance decision before implementation.
+- [ ] **IDEA-2 · Symbol timeline after reliable extraction** · P3 · `read` — deferred until reliable symbol extraction provides evidence-backed identities. No symbol history is inferred from filenames or nearby edits.
+- [ ] **IDEA-3 · Multi-repo mission control beyond the Home running-now strip** · P3 · `home` — deferred broader view; the existing Home running-now strip remains its implemented scope.
+- [ ] **IDEA-4 · Additional UI versions or themes after Modern is finished** · P3 · `ui` — deferred additional variants; this entry does not expand or replace the separately claimed Clarity finishing work.
+- [ ] **IDEA-5 · Keyword findings and copying selected captured commands** · P3 · `review` — deferred follow-up from closed PR110, building on the existing Commands/ReviewInsights owners rather than adding another resident review panel. Existing command-copy behaviour is not claimed as unfinished by this umbrella.
+- [ ] **IDEA-6 · AI-written explanations: narrator labels, turn summary and explain-this-hunk** · P3 · `explain` — parked, not planned. The unchecked umbrella tracks that deferral only. The design notes below are not implementation tasks; nothing here is built or scheduled.
+
 ### EXPLAIN — IDEA-6, a parked idea (not planned)
 
-**Not being done (Yash, 26 Oct):** kept as one idea, not as work. The notes below are design notes only, with no checkboxes and no claims; nothing here is built or scheduled.
+**Not being done (Yash, 26 Oct):** kept as one idea, not as work. The notes below are design notes only, with no subtask checkboxes and no implementation claims; the unchecked IDEA-6 umbrella above records its parked status only. Nothing here is built or scheduled.
 
 **Deferred by the builder:** this depends on an external service (Token Factory key, model ids, cost and latency we do not control). The product is built and finished without it; these items come back only after every item above is done. The code that exists (`packages/explain`, the opt-in briefing and explain routes) stays as it is, off unless `NEBIUS_API_KEY` is set, and nothing new is built on it.
 
