@@ -2,7 +2,7 @@ import type {Page} from '@playwright/test';
 interface Box { visible:boolean; wideDiff:boolean; id: string; l: number; r: number; t: number; b: number }
 interface Passage { cards: Box[]; gap: number; room: number }
 interface Wire { key: string; pts: { x: number; y: number }[] }
-interface Snapshot { passages: Passage[]; wires: Wire[] }
+interface Snapshot { passages: Passage[]; wires: Wire[]; viewport: { l: number; r: number; t: number; b: number } }
 
 export const snapshot = (page: Page): Promise<Snapshot> => page.evaluate(() => {
   const viewport=document.querySelector('.history')!.getBoundingClientRect();
@@ -18,7 +18,7 @@ export const snapshot = (page: Page): Promise<Snapshot> => page.evaluate(() => {
     key: path.dataset.flowLink!,
     pts: [...path.getAttribute('d')!.matchAll(/[ML] (\S+) (\S+)/g)].map(m => ({ x: +m[1]!, y: +m[2]! })),
   }));
-  return { passages, wires };
+  return { passages, wires, viewport: { l: Math.max(0,viewport.left), r: Math.min(innerWidth,viewport.right), t: Math.max(0,viewport.top), b: Math.min(innerHeight,viewport.bottom-20) } };
 });
 
 export const rowsOf = (cards: Box[]) => {
@@ -37,7 +37,7 @@ const crosses = (p: { x: number; y: number }, q: { x: number; y: number }, c: Bo
     : p.x > c.l + 1 && p.x < c.r - 1 && Math.max(p.y, q.y) > c.t + 1 && Math.min(p.y, q.y) < c.b - 1;
 
 /** Everything the READ-4 contract requires of one frame; an empty list means it holds. */
-export function violations({ passages, wires }: Snapshot): string[] {
+export function violations({ passages, wires, viewport }: Snapshot): string[] {
   const found: string[] = []; const all = passages.flatMap(p => p.cards);
   passages.forEach((passage, pi) => {
     const { cards, gap, room } = passage; const rows = rowsOf(cards);
@@ -61,7 +61,13 @@ export function violations({ passages, wires }: Snapshot): string[] {
       const a = cards[i - 1]!, b = cards[i]!;
       if(!a.visible||!b.visible)continue;
       const wire = wires.find(w => w.key === `${a.id}/${b.id}`);
-      if (!wire) { found.push(`passage ${pi}: no wire ${a.id} -> ${b.id}`); continue; }
+      if (!wire) {
+        // An intersecting card can have its chosen edge above the viewport.
+        // All fully visible neighbours still require their original wire.
+        const whole = (c: Box) => c.l >= viewport.l && c.r <= viewport.r && c.t >= viewport.t && c.b <= viewport.b;
+        if (whole(a) && whole(b)) found.push(`passage ${pi}: no wire ${a.id} -> ${b.id}`);
+        continue;
+      }
       const start = wire.pts[0]!, end = wire.pts.at(-1)!;
       if (!onEdge(start, a)) found.push(`wire ${a.id} -> ${b.id} does not leave the previous card's edge`);
       if (!onEdge(end, b)) found.push(`wire ${a.id} -> ${b.id} does not enter the next card's edge`);
@@ -69,6 +75,8 @@ export function violations({ passages, wires }: Snapshot): string[] {
       if (Math.abs(a.t - b.t) < 4 && !(wire.pts.length === 4 && start.y === end.y && Math.abs(start.x - a.r) < .5 && Math.abs(end.x - b.l) < .5)) found.push(`wire ${a.id} -> ${b.id}: neighbours on one row must join right edge to left edge`);
     }
   });
+  for (const wire of wires) for (const point of [wire.pts[0]!, wire.pts.at(-1)!])
+    if (point.x < viewport.l || point.x > viewport.r || point.y < viewport.t || point.y > viewport.b) found.push(`wire ${wire.key} has an off-screen endpoint`);
   for (const wire of wires) for (let k = 1; k < wire.pts.length; k++) for (const card of all)
     if (crosses(wire.pts[k - 1]!, wire.pts[k]!, card)) found.push(`wire ${wire.key} crosses ${card.id}`);
   return found;
