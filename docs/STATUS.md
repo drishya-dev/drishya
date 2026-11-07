@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| DOCS-1 | @harsh + Codex | `main` (docs only) | 2026-11-06 | README.md; docs/TASKS.md and docs/STATUS.md for this item's claim/completion only. Apply adewale/good-readme; verify examples against current source. No UI, runtime, publishing or other claimed work. |
 | CONNECT-3 | @yash + Codex (Sol 6.1) | `codex/connect-3` | 2026-11-06 | prompt-files.ts, SessionWorkspace.tsx attachment/paste handling only, controller attachment validation only if a proven cause requires it; focused tests, real screenshot acceptance and docs. No native policy changes or FINISH/Clarity redesign; look left to FINISH-4. |
 | CONTENT-17 | @yash + Codex (Sol 6.1) | `codex/content-17` | 2026-11-06 | Completed in ready PR #353; frozen pending review, no further source edits. Claim removed by that PR. |
 | CONTENT-16 | @yash + Codex (Sol 6.1) | `codex/content-16` | 2026-11-06 | New strict desktop-prompt parser and attachment presenter, History.tsx TurnBlock prompt/attachment section only (Yash explicitly approved); focused unit/browser/real-case tests and docs. No motion, scroll or layout edits. Look left to FINISH-3. |
@@ -54,6 +53,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 7 November: DOCS-1 product README
+
+- Reworked the root README as a product entry point: existing logo, current synthetic-only screenshot, purpose/audience, feature table, prerequisites and launch, demo and live reading, import/export/maintenance commands, privacy/native boundaries, troubleshooting, development/checks, architecture, roadmap and contribution/docs links.
+- At Harsh's follow-up request, compared README skills and selected [Softaworks crafting-effective-readmes](https://skills.sh/softaworks/agent-toolkit/crafting-effective-readmes) for audience-specific structure (directory showed 4.2K installs), with [good-readme](https://github.com/adewale/good-readme) source/CLI accuracy checks retained. Read skill/templates directly; no global installer, hooks, dependency or repository metadata changes.
+- Verification: Node 24.11.1, pnpm 10.34.5, `pnpm ui:build` passes; 28 local links/images, six anchors, balanced code fences, 11 package scripts checked. Scratch CLI entrypoint smoke passes help, genuine-format synthetic Claude/Codex imports, list, export, storage and forget; original fixtures intact. Screenshot inspected at 1440x900 using the built preview at step26 with motion disabled; no private session content. Additional direct HTTP probe hit sandbox loopback EACCES. Fresh clean installation and full/runtime/native/physical acceptance were not rerun for this docs-only task.
 
 ### Yash with Claude — 6 Nov: the finishing pass moves into Clarity
 
