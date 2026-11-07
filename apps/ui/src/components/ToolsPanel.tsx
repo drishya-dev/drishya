@@ -1,5 +1,5 @@
 import {Disclosure} from './Disclosure.tsx';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState,type MouseEvent,type ReactNode } from 'react';
 import { toolInventory, toolTrail, type ComposeInput, type ToolEntry, type ToolInventory, type ToolTrail } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import './tools-panel.css';
@@ -50,7 +50,7 @@ const isSelected = (entry: ToolEntry, filter: Filter) => !!entry.filterTool && f
 const LONG = 14;
 
 /** Every tool the harness listed as available, and every tool that was used, with how often. Shown by default. */
-export function ToolList() {
+export function ToolList({recordedLabel=false,onExpand,expanded,renderBody=(body)=>body}:{recordedLabel?:boolean;onExpand?:(event:MouseEvent<HTMLElement>)=>void;expanded?:boolean;renderBody?:(body:ReactNode)=>ReactNode}={}) {
   const inventory = useToolInventory();
   const filter = useApp(s => s.filter), setFilter = useApp(s => s.setFilter);
   const [query, setQuery] = useState(''), [unused, setUnused] = useState<string>();
@@ -61,7 +61,8 @@ export function ToolList() {
   for (const tool of tools) groups.set(tool.server ?? '', [...(groups.get(tool.server ?? '') ?? []), tool]);
   const usedCount = inventory.tools.filter(t => t.uses).length;
   return <Disclosure surface="tools/inventory" className="tool-list" aria-label="Available tools">
-    <summary className="tool-heading">{inventory.recorded ? 'Available tools' : 'Tools used'} <span title={inventory.recorded ? `${usedCount} used of ${inventory.tools.length} available` : undefined}>{inventory.recorded ? `${usedCount} of ${inventory.tools.length}` : inventory.tools.length}</span></summary>
+    <summary className="tool-heading" onClick={onExpand} aria-haspopup={onExpand?'dialog':undefined} aria-expanded={onExpand?expanded:undefined}>{inventory.recorded ? recordedLabel?'Available tools · recorded':'Available tools' : recordedLabel?'Tools used · recorded':'Tools used'} <span title={inventory.recorded ? `${usedCount} used of ${inventory.tools.length} available` : undefined}>{inventory.recorded ? `${usedCount} of ${inventory.tools.length}` : inventory.tools.length}</span></summary>
+    {renderBody(<>
     {!inventory.recorded && <p className="tool-note">This harness did not record which tools were available, so only the tools it used are shown.</p>}
     {inventory.tools.length > LONG && <input type="search" className="tool-search" aria-label="Search tools" placeholder="Search tools" value={query} onChange={event => setQuery(event.target.value)}/>}
     <div className="tool-groups" role="group" aria-label="Tools">
@@ -80,7 +81,7 @@ export function ToolList() {
         </button>)}
       </div>)}
       {!tools.length && <p className="tool-note">No tool matches.</p>}
-    </div>
+    </div></>)}
   </Disclosure>;
 }
 
