@@ -157,7 +157,13 @@ export interface DataSource {
 /** Presentation hints do not change the immutable captured event contract. */
 export interface ReaderRecording extends RecordingSummary { sourceBytes?: number }
 
-export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace' }
+export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace'; remembered?:boolean }
+export interface CheckoutIdentity {root:string;directory:string;checkout:{root:string;directory:string;gitDirectory?:{root:string;directory:string}};repository:{kind:'git';root:string;directory:string}|{kind:'directory'}}
+export interface CheckoutGrant {id:string;root:string;identity:CheckoutIdentity;createdAt:string}
+export interface WorkspaceSetup extends WorkspaceStatus {
+  identity?:CheckoutIdentity;
+  siblingApproved:boolean;reason?:string;native:{available:boolean;signedIn:boolean|null;supported:boolean|null;state:'ready'|'missing'|'signed-out'|'unsupported'|'unavailable';reason?:string};
+}
 export interface CurrentFile { path: string; scope: 'current-workspace'; text: string; start: number; totalLines: number; returnedLines: number; hasMore: boolean; redacted: boolean; modifiedAt: string }
 export interface PromptAttachment { name: string; type: 'text' | 'image'; data: string; mime?: string }
 export type { TurnOptions, NativeSettings } from '../../daemon/src/native-types.ts';
@@ -187,7 +193,11 @@ export const workspaceApi = {
   gitHistory:(id:string,query:{start?:number;referenceStart?:number;reference?:string;q?:string;generation?:string}={})=>req<import('../../daemon/src/git-types.ts').GitHistoryPage>(`/v1/recordings/${encodeURIComponent(id)}/git/history?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),
   gitCommit:(id:string,hash:string,parent=0,start=0,generation?:string)=>req<import('../../daemon/src/git-types.ts').GitCommitDetail>(`/v1/recordings/${encodeURIComponent(id)}/git/commit?${new URLSearchParams({hash,parent:String(parent),start:String(start),...(generation?{generation}:{})})}`),
   status: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace`),
-  approve: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {} }),
+  approve: (id: string,remember=false) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {remember} }),
+  revoke: (id:string)=>req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/revoke`,{method:'POST',json:{}}),
+  setup: (id:string)=>req<WorkspaceSetup>(`/v1/recordings/${encodeURIComponent(id)}/workspace/setup`),
+  checkoutGrants:()=>req<{items:CheckoutGrant[]}>('/v1/checkout-grants'),
+  revokeCheckout:(key:string)=>req<{revoked:boolean}>(`/v1/checkout-grants/${encodeURIComponent(key)}`,{method:'DELETE'}),
   file: (id: string, path: string, start: number) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/file?${new URLSearchParams({ path, start: String(start), count: '200' })}`),
   document: (id:string,path:string) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/document?${new URLSearchParams({path})}`),
   controller: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller`),
